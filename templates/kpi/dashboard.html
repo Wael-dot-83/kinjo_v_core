@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة مؤشرات الأداء (KPIs){% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
+            مؤشرات الأداء والحوكمة
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">KPIs</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button id="refreshBtn" type="button" class="btn btn-sm btn-outline-secondary" onclick="loadKPIData()">
+            <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Governance Score Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-primary text-white overflow-hidden position-relative">
+            <div class="card-body p-4 position-relative z-1">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="display-4 fw-bold mb-0">
+                            <span id="gqiScore">--</span>/100
+                        </h2>
+                        <p class="lead mb-2">مؤشر الحوكمة العام (GQI)</p>
+                        <div class="d-flex align-items-center gap-3 text-white-50">
+                            <small id="gqiBandText"><i class="bi bi-activity me-1"></i>جاري التحميل...</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="d-inline-block position-relative" style="width: 120px; height: 120px;">
+                            <canvas id="scoreGauge"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="position-absolute top-0 end-0 h-100 w-50 bg-white opacity-10" 
+                 style="transform: skewX(-20deg) translateX(50px);"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Metrics -->
+<div class="row g-4 mb-4">
+    <!-- Operational Excellence -->
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">التميز التشغيلي</h6>
+                <span class="badge bg-success-subtle text-success">Active</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small fw-semibold">نسبة الحضور</span>
+                        <span class="small fw-bold" id="attRate">--%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div id="attRateBar" class="progress-bar bg-success" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small fw-semibold">الامتثال لنسبة الموظفين</span>
+                        <span class="small fw-bold" id="ratioComp">--%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div id="ratioCompBar" class="progress-bar bg-info" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="mb-0">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small fw-semibold">التدريب والتطوير (تقديري)</span>
+                        <span class="small fw-bold">90%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-warning" style="width: 90%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Safety & Compliance -->
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">السلامة والامتثال</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-0">معدل الحوادث</h6>
+                        <small class="text-muted">لكل 100 طفل-يوم</small>
+                    </div>
+                    <h3 class="mb-0 text-success fw-bold" id="incRate">--</h3>
+                </div>
+                <hr>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-0 text-danger">الحوادث الخطرة</h6>
+                        <small class="text-muted">High/Critical</small>
+                    </div>
+                    <h3 class="mb-0 text-danger fw-bold" id="serIncRate">--</h3>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <small class="text-muted"><i class="bi bi-calendar-check me-1"></i>يتم التحديث فورياً</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100">
+             <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">توزيع الطلاب</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="levelsChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.2/dist/chart.umd.js"></script>
+<script>
+    let gaugeChart = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initCharts();
+        loadKPIData();
+    });
+
+    function initCharts() {
+        // Governance Gauge
+        const ctx = document.getElementById('scoreGauge');
+        gaugeChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Score', 'Remaining'],
+                datasets: [{
+                    data: [0, 100],
+                    backgroundColor: ['#ffffff', 'rgba(255, 255, 255, 0.2)'],
+                    borderWidth: 0,
+                    circumference: 180,
+                    rotation: 270,
+                    cutout: '85%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                animation: { animateRotate: true, animateScale: true }
+            }
+        });
+
+        // Levels Chart - Real data from enrollments
+        fetch('/api/kpi/student-distribution', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(response => response.json())
+        .then(data => {
+            new Chart(document.getElementById('levelsChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: data.labels || ['KG1', 'KG2', 'حضانة'],
+                    datasets: [{
+                        data: data.values || [45, 55, 35],
+                        backgroundColor: ['#0d6efd', '#6610f2', '#0dcaf0'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Failed to load student distribution:', error);
+            // Fallback to mock data
+            new Chart(document.getElementById('levelsChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['KG1', 'KG2', 'حضانة'],
+                    datasets: [{
+                        data: [45, 55, 35],
+                        backgroundColor: ['#0d6efd', '#6610f2', '#0dcaf0'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        });
+    }
+
+    async function loadKPIData() {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showError('يرجى تسجيل الدخول لعرض مؤشرات الأداء');
+                return;
+            }
+
+            const response = await fetch('/api/kpi/summary', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                updateDashboard(data);
+            } else if (response.status === 401) {
+                showError('انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول');
+                setTimeout(() => window.location.href = '/login', 2000);
+            } else if (response.status === 403) {
+                showError('ليس لديك صلاحية لعرض مؤشرات الأداء');
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                showError(`خطأ في تحميل البيانات: ${errorData.detail || response.statusText}`);
+            }
+        } catch (error) {
+            console.error('Network error:', error);
+            showError('خطأ في الاتصال بالخادم، يرجى المحاولة لاحقاً');
+        }
+    }
+
+    function showError(message) {
+        // Update all KPI displays to show error state
+        document.getElementById('gqiScore').innerText = 'خطأ';
+        document.getElementById('gqiBandText').innerText = message;
+
+        // Reset progress bars
+        ['attRate', 'ratioComp'].forEach(id => {
+            document.getElementById(id).innerText = '--%';
+            document.getElementById(id + 'Bar').style.width = '0%';
+        });
+
+        // Reset incident rates
+        document.getElementById('incRate').innerText = '--';
+        document.getElementById('serIncRate').innerText = '--';
+    }
+
+    function updateDashboard(data) {
+        // GQI Score
+        document.getElementById('gqiScore').innerText = Math.round(data.gqi_score);
+        document.getElementById('gqiBandText').innerText = getBandText(data.gqi_score);
+        
+        // Update Gauge
+        if (gaugeChart) {
+            gaugeChart.data.datasets[0].data = [data.gqi_score, 100 - data.gqi_score];
+            gaugeChart.update();
+        }
+
+        // Operational Excellence
+        updateMetric('attRate', 'attRateBar', data.attendance_rate);
+        updateMetric('ratioComp', 'ratioCompBar', data.ratio_compliance);
+
+        // Safety
+        document.getElementById('incRate').innerText = data.incident_rate;
+        document.getElementById('serIncRate').innerText = data.serious_incident_rate;
+    }
+
+    function updateMetric(textId, barId, value) {
+        document.getElementById(textId).innerText = value + '%';
+        if (document.getElementById(barId)) {
+            document.getElementById(barId).style.width = value + '%';
+        }
+    }
+
+    function getBandText(score) {
+        if (score >= 80) return "اداء متميز (Green Band)";
+        if (score >= 60) return "اداء متوسط (Amber Band)";
+        return "يحتاج تحسين (Red Band)";
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block title %}التقارير اليومية{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-journal-text me-2 text-primary"></i>
+            التقارير اليومية
+        </h1>
+        <nav aria-label="breadcrumb">
+             <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">التقارير</li>
+            </ol>
+        </nav>
+    </div>
+    {% if current_user.role.value in ['teacher', 'admin', 'supervisor'] %}
+    <div class="btn-toolbar">
+         <a href="/reports/create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>إنشاء تقرير جديد
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Main Feed -->
+    <div class="col-lg-8">
+        <!-- Date Filter -->
+        <div class="d-flex align-items-center mb-4 bg-white p-3 rounded shadow-sm border">
+            <span class="fw-bold me-3">عرض تقارير يوم:</span>
+            <input type="date" class="form-control w-auto me-3" id="dateFilter" value="{{ today }}">
+            <button class="btn btn-outline-primary" onclick="loadReports()">
+                تحديث
+            </button>
+        </div>
+
+        <div id="reportsContainer">
+            <!-- Example Reports -->
+            <div class="card mb-3 report-card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                             <i class="bi bi-person"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">أحمد محمد</h6>
+                            <small class="text-muted">شعبة الفراشات • 25 تشرين الأول 2023</small>
+                        </div>
+                    </div>
+                    <a href="/reports/1" class="btn btn-sm btn-outline-primary rounded-pill px-3">عرض التفاصيل</a>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center g-0">
+                         <div class="col-3 border-end">
+                             <div class="text-muted small mb-1">المزاج</div>
+                             <div class="fs-4">😊</div>
+                         </div>
+                         <div class="col-3 border-end">
+                             <div class="text-muted small mb-1">الأكل</div>
+                             <div class="fs-4">⭐⭐⭐</div>
+                         </div>
+                         <div class="col-3 border-end">
+                             <div class="text-muted small mb-1">النوم</div>
+                             <div class="fw-bold">45 دقيقة</div>
+                         </div>
+                         <div class="col-3">
+                             <div class="text-muted small mb-1">الحمام</div>
+                             <div class="fw-bold">3 مرات</div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+            
+             <div class="card mb-3 report-card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-sm bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                             <i class="bi bi-person"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">سارة علي</h6>
+                            <small class="text-muted">شعبة الفراشات • 25 تشرين الأول 2023</small>
+                        </div>
+                    </div>
+                    <a href="/reports/2" class="btn btn-sm btn-outline-primary rounded-pill px-3">عرض التفاصيل</a>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center g-0">
+                         <div class="col-3 border-end">
+                             <div class="text-muted small mb-1">المزاج</div>
+                             <div class="fs-4">😴</div>
+                         </div>
+                         <div class="col-3 border-end">
+                             <div class="text-muted small mb-1">الأكل</div>
+                             <div class="fs-4">⭐⭐</div>
+                         </div>
+                         <div class="col-3 border-end">
+                             <div class="text-muted small mb-1">النوم</div>
+                             <div class="fw-bold">90 دقيقة</div>
+                         </div>
+                         <div class="col-3">
+                             <div class="text-muted small mb-1">الحمام</div>
+                             <div class="fw-bold">2 مرات</div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pagination or Load More -->
+         <div class="text-center mt-4">
+            <button class="btn btn-outline-secondary">تحميل المزيد</button>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Stats -->
+        <div class="card mb-4">
+            <div class="card-header"><h6 class="mb-0">ملخص اليوم</h6></div>
+            <div class="card-body">
+                 <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                     <span>عدد التقارير المرسلة</span>
+                     <span class="fw-bold">18/20</span>
+                 </div>
+                 <div class="d-flex justify-content-between mb-2">
+                     <span>الأكثر تناولا للطعام</span>
+                     <span class="fw-bold text-success">85%</span>
+                 </div>
+            </div>
+        </div>
+        
+        <!-- Pending Reports (For Teachers) -->
+        {% if current_user.role.value in ['teacher', 'supervisor'] %}
+        <div class="card">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h6 class="mb-0 text-warning text-dark"><i class="bi bi-clock-history me-2"></i>بانتظار التقرير</h6>
+            </div>
+            <div class="list-group list-group-flush">
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>ليلى حسن</span>
+                    <a href="/reports/create?child_id=104" class="btn btn-sm btn-outline-primary">إنشاء</a>
+                </div>
+                 <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>يوسف إبراهيم</span>
+                     <a href="/reports/create?child_id=105" class="btn btn-sm btn-outline-primary">إنشاء</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadReports() {
+        const date = document.getElementById('dateFilter').value;
+        showLoading();
+        // api.getDailyReports(date)...
+        setTimeout(() => hideLoading(), 500);
+    }
+</script>
+{% endblock %}

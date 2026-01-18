@@ -1,0 +1,602 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ kindergarten.name_ar }}{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-building me-2 text-primary"></i>
+            {{ kindergarten.name_ar }}
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="/kindergartens">الروضات</a></li>
+                <li class="breadcrumb-item active">{{ kindergarten.name_ar }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar gap-2">
+        <a href="/kindergartens/{{ kindergarten.id }}/edit" class="btn btn-outline-primary">
+            <i class="bi bi-pencil me-2"></i>تعديل
+        </a>
+        <button class="btn btn-danger" onclick="confirmDelete()">
+            <i class="bi bi-trash me-2"></i>حذف
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Info Column -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">معلومات الروضة</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="text-muted small">الاسم بالإنجليزية</label>
+                    <div class="fw-bold">{{ kindergarten.name_en or '-' }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="text-muted small">الحالة</label>
+                    <div>
+                        {% if kindergarten.status == 'active' %}
+                        <span class="badge bg-success">نشط</span>
+                        {% elif kindergarten.status == 'inactive' %}
+                        <span class="badge bg-secondary">غير نشط</span>
+                        {% elif kindergarten.status == 'suspended' %}
+                        <span class="badge bg-danger">موقوف</span>
+                        {% elif kindergarten.status == 'pending' %}
+                        <span class="badge bg-warning text-dark">قيد المراجعة</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ kindergarten.status }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="mb-3">
+                    <label class="text-muted small">الموقع</label>
+                    <div><i class="bi bi-geo-alt text-primary me-2"></i>{{ kindergarten.governorate }}، {{ kindergarten.city }}</div>
+                    <div class="ms-4 small text-muted">{{ kindergarten.area }}</div>
+                    <div class="ms-4 small text-muted">{{ kindergarten.address_line }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="text-muted small">التواصل</label>
+                    <div><i class="bi bi-telephone text-primary me-2"></i>{{ kindergarten.contact_phone }}</div>
+                    <div><i class="bi bi-envelope text-primary me-2"></i>{{ kindergarten.contact_email }}</div>
+                </div>
+                
+                <hr>
+                
+                <div class="mb-3">
+                    <label class="text-muted small">ساعات العمل</label>
+                    <div><i class="bi bi-clock text-primary me-2"></i>{{ kindergarten.operating_hours_start }} - {{ kindergarten.operating_hours_end }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="text-muted small">الترخيص</label>
+                    <div><i class="bi bi-card-checklist text-primary me-2"></i>{{ kindergarten.license_number or 'غير متوفر' }}</div>
+                    {% if kindergarten.license_valid_until %}
+                    <div class="ms-4 small text-muted">ينتهي في: {{ kindergarten.license_valid_until }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- KPI Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">ملخص الأداء</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>نسبة الإشغال</span>
+                    <span class="fw-bold text-success">85%</span>
+                </div>
+                <div class="progress mb-3" style="height: 6px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 85%" aria-label="نسبة الإشغال" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span>تقييم الحوكمة</span>
+                    <span class="fw-bold text-primary">92/100</span>
+                </div>
+                <div class="progress mb-3" style="height: 6px;">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: 92%" aria-label="تقييم الحوكمة" aria-valuenow="92" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span>رضا أولياء الأمور</span>
+                    <span class="fw-bold text-info">4.8/5</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-info" role="progressbar" style="width: 96%" aria-label="رضا أولياء الأمور" aria-valuenow="96" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Content Column -->
+    <div class="col-md-8">
+        <!-- Tabs -->
+        <ul class="nav nav-tabs mb-4" id="kgTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#classes">الشعب الصفية</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#staff">الكادر</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#services">الخدمات والمرافق</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#audit">سجل التدقيق</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="kgTabContent">
+            <!-- Classes Tab -->
+            <div class="tab-pane fade show active" id="classes">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">الشعب الصفية</h5>
+                    <button class="btn btn-sm btn-primary" onclick="addClass()">
+                        <i class="bi bi-plus-lg me-1"></i>إضافة شعبة
+                    </button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>اسم الشعبة</th>
+                                <th>المرحلة</th>
+                                <th>السعة</th>
+                                <th>المشرف الحالي</th>
+                                <th>الطلاب المسجلين</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classesTable">
+                            <!-- Populated via JS -->
+                            <tr><td colspan="5" class="text-center text-muted">جاري التحميل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Staff Tab -->
+            <div class="tab-pane fade" id="staff">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">الكادر الإداري والتعليمي</h5>
+                    <button class="btn btn-sm btn-primary" onclick="addStaff()">
+                        <i class="bi bi-plus-lg me-1"></i>إضافة موظف
+                    </button>
+                </div>
+                <!-- Staff list would go here -->
+                <div class="alert alert-light text-center border">لا يوجد موظفين مسجلين حالياً</div>
+            </div>
+            
+            <!-- Services Tab -->
+            <div class="tab-pane fade" id="services">
+                <h5 class="mb-3">الخدمات والمرافق</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" checked disabled>
+                            <label class="form-check-label">ساحة ألعاب خارجية</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" checked disabled>
+                            <label class="form-check-label">وجبات صحية</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" checked disabled>
+                            <label class="form-check-label">مواصلات</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audit Tab -->
+            <div class="tab-pane fade" id="audit">
+                 <h5 class="mb-3">سجل العمليات</h5>
+                 <div class="alert alert-light text-center border">سجل العمليات فارغ</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Class Modal -->
+<div class="modal fade" id="addClassModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إضافة شعبة صفية</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addClassForm">
+                    <div class="mb-3">
+                        <label class="form-label required">اسم الشعبة</label>
+                        <input type="text" class="form-control" name="name" required placeholder="مثال: الفراشات">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">المرحلة</label>
+                        <select class="form-select" name="level">
+                            <option value="kg1">روضة أولى (KG1)</option>
+                            <option value="kg2">روضة ثانية (KG2)</option>
+                            <option value="nursery">حضانة</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">السعة القصوى</label>
+                        <input type="number" class="form-control" name="capacity" value="20" min="1" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="submitClass()">حفظ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Supervisor Modal -->
+<div class="modal fade" id="assignSupervisorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تعيين مشرف للشعبة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assignSupervisorForm">
+                    <input type="hidden" name="class_id">
+                    <div class="mb-3">
+                        <label class="form-label">الشعبة الصفية</label>
+                        <input type="text" class="form-control" name="class_name" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">المشرف</label>
+                        <select class="form-select" name="supervisor_id" required>
+                            <option value="">اختر مشرف...</option>
+                            <!-- Populated via JS -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">تاريخ البدء</label>
+                        <input type="date" class="form-control" name="start_date" required>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="is_primary" checked>
+                        <label class="form-check-label">مشرف رئيسي</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="submitSupervisorAssignment()">حفظ التعيين</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const kindergartenId = JSON.parse('{{ kindergarten.id | tojson }}');
+    
+    // Auth helper
+    function getHeaders() {
+        const token = localStorage.getItem('access_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await Promise.all([loadClasses(), loadStaff()]);
+    });
+    
+    async function loadClasses() {
+        try {
+            const response = await fetch(`/api/classes?kindergarten_id=${kindergartenId}`, {
+                headers: getHeaders()
+            });
+            
+            if (!response.ok) throw new Error('Failed to load classes');
+            
+            const data = await response.json();
+            const classes = data.classes || [];
+            
+            const tbody = document.getElementById('classesTable');
+            
+            if (classes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد شعب صفية مسجلة</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = classes.map(c => `
+                <tr>
+                    <td><strong>${c.name_ar || c.name_en}</strong></td>
+                    <td><span class="badge bg-info text-dark">${formatAgeRange(c.min_age_months, c.max_age_months)}</span></td>
+                    <td>${c.capacity_total}</td>
+                    <td>${c.current_supervisor ? 
+                        `<span class="badge bg-success">${c.current_supervisor.name}</span>` : 
+                        `<span class="text-muted small">غير معين</span>`}
+                    </td>
+                    <td>-</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick="openAssignSupervisorModal(${c.id}, '${c.name_ar || c.name_en}', ${c.current_supervisor ? c.current_supervisor.id : 'null'})">
+                            <i class="bi bi-person-check"></i> تعيين
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('classesTable').innerHTML = 
+                '<tr><td colspan="6" class="text-center text-danger">خطأ في تحميل البيانات</td></tr>';
+        }
+    }
+    
+    // Store loaded staff to populate supervisor dropdown
+    let loadedStaff = [];
+
+    async function loadStaff() {
+        try {
+            const response = await fetch(`/api/users?kindergarten_id=${kindergartenId}`, {
+                headers: getHeaders()
+            });
+            
+            if (!response.ok) return; // Silent fail if no perms or error
+            
+            loadedStaff = await response.json();
+            const container = document.getElementById('staff');
+            
+            if (loadedStaff.length === 0) {
+                // Keep default message but ensure button exists if needed
+                container.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">الكادر الإداري والتعليمي</h5>
+                        <button class="btn btn-sm btn-primary" onclick="addStaff()">
+                            <i class="bi bi-plus-lg me-1"></i>إضافة موظف
+                        </button>
+                    </div>
+                    <div class="alert alert-light text-center border">لا يوجد موظفين مسجلين حالياً</div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">الكادر الإداري والتعليمي</h5>
+                    <button class="btn btn-sm btn-primary" onclick="addStaff()">
+                        <i class="bi bi-plus-lg me-1"></i>إضافة موظف
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>الاسم</th>
+                                <th>الدور</th>
+                                <th>البريد الإلكتروني</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            html += loadedStaff.map(u => `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-light rounded-circle text-center d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px">
+                                <i class="bi bi-person"></i>
+                            </div>
+                            ${u.username}
+                        </div>
+                    </td>
+                    <td><span class="badge bg-light text-dark border">${translateRole(u.role)}</span></td>
+                    <td>${u.email}</td>
+                    <td>${getStatusBadge(u.status)}</td>
+                </tr>
+            `).join('');
+            
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+            
+        } catch (error) {
+            console.error('Error loading staff:', error);
+        }
+    }
+    
+    function formatAgeRange(min, max) {
+        if (min === 0 && max <= 36) return 'حضانة';
+        if (min >= 36 && max <= 48) return 'روضة أولى (KG1)';
+        if (min >= 48) return 'روضة ثانية (KG2)';
+        return `${min}-${max} شهر`;
+    }
+    
+    function translateRole(role) {
+        const roles = {
+            'ADMIN': 'مدير النظام',
+            'MANAGER': 'مدير الروضة',
+            'SUPERVISOR': 'مشرف',
+            'TEACHER': 'معلم',
+            'PARENT': 'ولي أمر'
+        };
+        return roles[role] || role;
+    }
+    
+    function getStatusBadge(status) {
+        const badges = {
+            'active': '<span class="badge bg-success">نشط</span>',
+            'inactive': '<span class="badge bg-secondary">غير نشط</span>',
+            'suspended': '<span class="badge bg-danger">موقوف</span>'
+        };
+        return badges[status] || status;
+    }
+    
+    function getProgressBarColor(current, max) {
+        const percentage = (current / max) * 100;
+        if (percentage > 90) return 'bg-danger';
+        if (percentage > 75) return 'bg-warning';
+        return 'bg-success';
+    }
+    
+    function addClass() {
+        const modal = new bootstrap.Modal(document.getElementById('addClassModal'));
+        modal.show();
+    }
+    
+    function addStaff() {
+        window.location.href = `/admin/users/create?kindergarten_id=${kindergartenId}`;
+    }
+    
+    async function submitClass() {
+        const form = document.querySelector('#addClassModal form');
+        const formData = new FormData(form);
+        const level = formData.get('level');
+        
+        // Map level to months
+        let minAge = 36, maxAge = 48;
+        if (level === 'nursery') { minAge = 0; maxAge = 36; }
+        else if (level === 'kg2') { minAge = 48; maxAge = 60; }
+        
+        const payload = {
+            kindergarten_id: kindergartenId,
+            name_ar: formData.get('name'),
+            name_en: formData.get('name'), // Use same name for EN as fallback
+            capacity_total: parseInt(formData.get('capacity')),
+            min_age_months: minAge,
+            max_age_months: maxAge,
+            is_active: true
+        };
+        
+        try {
+            const response = await fetch('/api/classes', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            
+            if (response.ok) {
+                showToast('تم إضافة الشعبة بنجاح', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('addClassModal')).hide();
+                form.reset();
+                loadClasses();
+            } else {
+                const err = await response.json();
+                alert('خطأ: ' + (err.detail || 'فشل الحفظ'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('حدث خطأ في الاتصال');
+        }
+    }
+    
+    
+    // Supervisor Assignment Logic
+    let assignModal;
+    
+    function openAssignSupervisorModal(classId, className, currentSupervisorId) {
+        if (!assignModal) {
+            assignModal = new bootstrap.Modal(document.getElementById('assignSupervisorModal'));
+        }
+        
+        const form = document.getElementById('assignSupervisorForm');
+        form.elements['class_id'].value = classId;
+        form.elements['class_name'].value = className;
+        form.elements['start_date'].valueAsDate = new Date();
+        
+        // Populate supervisor dropdown
+        const select = form.elements['supervisor_id'];
+        select.innerHTML = '<option value="">اختر مشرف...</option>';
+        
+        // Filter for supervisors
+        const supervisors = loadedStaff.filter(s => s.role === 'SUPERVISOR');
+        
+        if (supervisors.length === 0) {
+            select.innerHTML = '<option value="">لا يوجد مشرفين متاحين</option>';
+        } else {
+            supervisors.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.username; // User model uses username
+                if (currentSupervisorId && s.id === currentSupervisorId) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
+            });
+        }
+        
+        assignModal.show();
+    }
+    
+    async function submitSupervisorAssignment() {
+        const form = document.getElementById('assignSupervisorForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        const payload = {
+            class_id: parseInt(form.elements['class_id'].value),
+            supervisor_id: parseInt(form.elements['supervisor_id'].value),
+            start_date: form.elements['start_date'].value,
+            is_primary: form.elements['is_primary'].checked
+        };
+        
+        try {
+            const response = await fetch('/api/supervisor/assign', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            
+            if (response.ok) {
+                showToast('تم تعيين المشرف بنجاح', 'success');
+                assignModal.hide();
+                loadClasses(); // Reload to show new supervisor
+            } else {
+                const err = await response.json();
+                alert('خطأ: ' + (err.detail || 'فشل التعيين'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('حدث خطأ أثناء التعيين');
+        }
+    }
+
+    function confirmDelete() {
+        if (confirm('هل أنت متأكد من حذف هذه الروضة؟ لا يمكن التراجع عن هذا الإجراء.')) {
+            fetch(`/api/kindergartens/${kindergartenId}`, {
+                method: 'DELETE',
+                headers: getHeaders()
+            })
+            .then(res => {
+                if (res.ok) {
+                    showToast('تم حذف الروضة', 'success');
+                    setTimeout(() => window.location.href = '/kindergartens', 1000);
+                } else {
+                    alert('فشل الحذف. تأكد من عدم وجود بيانات مرتبطة.');
+                }
+            })
+            .catch(err => alert('حدث خطأ في الاتصال'));
+        }
+    }
+</script>
+{% endblock %}

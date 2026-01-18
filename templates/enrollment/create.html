@@ -1,0 +1,431 @@
+{% extends 'base.html' %}
+
+{% block title %}تسجيل طفل جديد{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-person-plus me-2 text-primary"></i>
+            تسجيل طفل جديد
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="/enrollments">التسجيل</a></li>
+                <li class="breadcrumb-item active">طلب جديد</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Progress Indicator -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="step-item active" data-step="1">
+                        <div class="step-number">1</div>
+                        <div class="step-label">الروضة</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step-item" data-step="2">
+                        <div class="step-number">2</div>
+                        <div class="step-label">بيانات الطفل</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step-item" data-step="3">
+                        <div class="step-number">3</div>
+                        <div class="step-label">بيانات الأم</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step-item" data-step="4">
+                        <div class="step-number">4</div>
+                        <div class="step-label">مراجعة</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <form id="enrollmentForm" class="needs-validation" novalidate>
+            <!-- Step 1: Select Kindergarten -->
+            <div class="enrollment-step" id="step1">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-building me-2"></i>اختيار الروضة</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="kindergartenId" class="form-label required">الروضة</label>
+                            <select class="form-select form-select-lg" id="kindergartenId" name="kindergarten_id" required>
+                                <option value="">اختر الروضة...</option>
+                                {% for kg in kindergartens %}
+                                <option value="{{ kg.id }}">{{ kg.name_ar }} - {{ kg.area }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">يرجى اختيار الروضة</div>
+                        </div>
+                        
+                        <div id="kindergartenInfo" class="alert alert-info d-none">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-end">
+                        <button type="button" class="btn btn-primary" onclick="goToStep(2)">
+                            التالي <i class="bi bi-arrow-left ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 2: Child Information -->
+            <div class="enrollment-step d-none" id="step2">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-emoji-smile me-2"></i>بيانات الطفل</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="childFirstName" class="form-label required">الاسم الأول</label>
+                                <input type="text" class="form-control" id="childFirstName" name="first_name" required>
+                                <div class="invalid-feedback">يرجى إدخال الاسم الأول</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="childLastName" class="form-label required">اسم العائلة</label>
+                                <input type="text" class="form-control" id="childLastName" name="last_name" required>
+                                <div class="invalid-feedback">يرجى إدخال اسم العائلة</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="childGender" class="form-label required">الجنس</label>
+                                <select class="form-select" id="childGender" name="gender" required>
+                                    <option value="">اختر...</option>
+                                    <option value="male">ذكر</option>
+                                    <option value="female">أنثى</option>
+                                </select>
+                                <div class="invalid-feedback">يرجى اختيار الجنس</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="childDob" class="form-label required">تاريخ الميلاد</label>
+                                <input type="date" class="form-control" id="childDob" name="date_of_birth" required>
+                                <div class="invalid-feedback">يرجى إدخال تاريخ الميلاد</div>
+                                <div id="ageDisplay" class="form-text"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="fatherName" class="form-label required">اسم الأب</label>
+                            <input type="text" class="form-control" id="fatherName" name="father_name" required>
+                            <div class="invalid-feedback">يرجى إدخال اسم الأب</div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(1)">
+                            <i class="bi bi-arrow-right me-2"></i> السابق
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="goToStep(3)">
+                            التالي <i class="bi bi-arrow-left ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 3: Mother Information -->
+            <div class="enrollment-step d-none" id="step3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-person-heart me-2"></i>بيانات الأم</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="motherFirstName" class="form-label required">الاسم الأول</label>
+                                <input type="text" class="form-control" id="motherFirstName" name="mother_first_name" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="motherLastName" class="form-label required">اسم العائلة</label>
+                                <input type="text" class="form-control" id="motherLastName" name="mother_last_name" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="motherNationality" class="form-label required">الجنسية</label>
+                                <select class="form-select" id="motherNationality" name="mother_nationality" required>
+                                    <option value="">اختر...</option>
+                                    <option value="Jordanian">أردني</option>
+                                    <option value="Palestinian">فلسطيني</option>
+                                    <option value="Syrian">سوري</option>
+                                    <option value="Other">أخرى</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3" id="motherNationalIdGroup">
+                                <label for="motherNationalId" class="form-label required">الرقم الوطني</label>
+                                <input type="text" class="form-control" id="motherNationalId" name="mother_national_id" 
+                                       pattern="^\d{10}$">
+                                <div class="invalid-feedback">يرجى إدخال رقم وطني صحيح (10 أرقام)</div>
+                            </div>
+                            <div class="col-md-6 mb-3 d-none" id="motherPassportGroup">
+                                <label for="motherPassport" class="form-label required">رقم جواز السفر</label>
+                                <input type="text" class="form-control" id="motherPassport" name="mother_passport_number">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(2)">
+                            <i class="bi bi-arrow-right me-2"></i> السابق
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="goToStep(4)">
+                            التالي <i class="bi bi-arrow-left ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 4: Review -->
+            <div class="enrollment-step d-none" id="step4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>مراجعة البيانات</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            يرجى مراجعة البيانات قبل إرسال الطلب
+                        </div>
+                        
+                        <div id="reviewSummary">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                        
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" id="confirmData" required>
+                            <label class="form-check-label" for="confirmData">
+                                أؤكد صحة جميع البيانات المدخلة
+                            </label>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(3)">
+                            <i class="bi bi-arrow-right me-2"></i> السابق
+                        </button>
+                        <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
+                            <span class="btn-text">
+                                <i class="bi bi-check-circle me-2"></i>إرسال الطلب
+                            </span>
+                            <span class="btn-loading d-none">
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                جاري الإرسال...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .step-item {
+        text-align: center;
+        flex: 1;
+    }
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #6c757d;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .step-item.active .step-number {
+        background-color: #0d6efd;
+        color: white;
+    }
+    .step-item.completed .step-number {
+        background-color: #198754;
+        color: white;
+    }
+    .step-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    .step-line {
+        flex: 1;
+        height: 2px;
+        background-color: #e9ecef;
+        margin: 0 1rem;
+        align-self: flex-start;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentStep = 1;
+    
+    // Handle mother nationality change
+    document.getElementById('motherNationality').addEventListener('change', function() {
+        const isJordanian = this.value === 'Jordanian';
+        document.getElementById('motherNationalIdGroup').classList.toggle('d-none', !isJordanian);
+        document.getElementById('motherPassportGroup').classList.toggle('d-none', isJordanian);
+        
+        document.getElementById('motherNationalId').required = isJordanian;
+        document.getElementById('motherPassport').required = !isJordanian;
+    });
+    
+    // Calculate age on DOB change
+    document.getElementById('childDob').addEventListener('change', function() {
+        const dob = new Date(this.value);
+        const today = new Date();
+        const ageMonths = (today.getFullYear() - dob.getFullYear()) * 12 + 
+                         (today.getMonth() - dob.getMonth());
+        const ageDays = Math.floor((today - dob) / (1000 * 60 * 60 * 24));
+        
+        let ageText = '';
+        let isEligible = true;
+        
+        if (ageDays < 70) {
+            ageText = `العمر: ${ageDays} يوم - غير مؤهل (الحد الأدنى 70 يوم)`;
+            isEligible = false;
+        } else if (ageMonths > 56) {
+            ageText = `العمر: ${ageMonths} شهر - غير مؤهل (الحد الأقصى 56 شهر)`;
+            isEligible = false;
+        } else {
+            ageText = `العمر: ${ageMonths} شهر - مؤهل للتسجيل`;
+        }
+        
+        const display = document.getElementById('ageDisplay');
+        display.textContent = ageText;
+        display.classList.toggle('text-danger', !isEligible);
+        display.classList.toggle('text-success', isEligible);
+    });
+    
+    // Navigation
+    function goToStep(step) {
+        // Validate current step
+        if (step > currentStep && !validateStep(currentStep)) {
+            return;
+        }
+        
+        // Update steps display
+        document.querySelectorAll('.enrollment-step').forEach(el => el.classList.add('d-none'));
+        document.getElementById(`step${step}`).classList.remove('d-none');
+        
+        // Update progress indicator
+        document.querySelectorAll('.step-item').forEach(el => {
+            const stepNum = parseInt(el.dataset.step);
+            el.classList.remove('active', 'completed');
+            if (stepNum < step) el.classList.add('completed');
+            if (stepNum === step) el.classList.add('active');
+        });
+        
+        currentStep = step;
+        
+        // Generate review if on step 4
+        if (step === 4) {
+            generateReview();
+        }
+    }
+    
+    function validateStep(step) {
+        const stepElement = document.getElementById(`step${step}`);
+        const inputs = stepElement.querySelectorAll('[required]');
+        let isValid = true;
+        
+        inputs.forEach(input => {
+            if (!input.checkValidity()) {
+                input.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                input.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            showToast('يرجى ملء جميع الحقول المطلوبة', 'warning');
+        }
+        
+        return isValid;
+    }
+    
+    function generateReview() {
+        const form = document.getElementById('enrollmentForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        const kindergartenSelect = document.getElementById('kindergartenId');
+        const kindergartenName = kindergartenSelect.options[kindergartenSelect.selectedIndex].text;
+        
+        document.getElementById('reviewSummary').innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-primary"><i class="bi bi-building me-2"></i>الروضة</h6>
+                    <p>${kindergartenName}</p>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-primary"><i class="bi bi-emoji-smile me-2"></i>بيانات الطفل</h6>
+                    <p><strong>الاسم:</strong> ${data.first_name} ${data.last_name}</p>
+                    <p><strong>الجنس:</strong> ${data.gender === 'male' ? 'ذكر' : 'أنثى'}</p>
+                    <p><strong>تاريخ الميلاد:</strong> ${data.date_of_birth}</p>
+                    <p><strong>اسم الأب:</strong> ${data.father_name}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-primary"><i class="bi bi-person-heart me-2"></i>بيانات الأم</h6>
+                    <p><strong>الاسم:</strong> ${data.mother_first_name} ${data.mother_last_name}</p>
+                    <p><strong>الجنسية:</strong> ${data.mother_nationality}</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Form submission
+    document.getElementById('enrollmentForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!document.getElementById('confirmData').checked) {
+            showToast('يرجى تأكيد صحة البيانات', 'warning');
+            return;
+        }
+        
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.querySelector('.btn-text').classList.add('d-none');
+        submitBtn.querySelector('.btn-loading').classList.remove('d-none');
+        submitBtn.disabled = true;
+        
+        try {
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            await api.createEnrollment(data);
+            
+            showToast('تم إرسال طلب التسجيل بنجاح!', 'success');
+            
+            setTimeout(() => {
+                window.location.href = '/enrollments';
+            }, 2000);
+            
+        } catch (error) {
+            submitBtn.querySelector('.btn-text').classList.remove('d-none');
+            submitBtn.querySelector('.btn-loading').classList.add('d-none');
+            submitBtn.disabled = false;
+            
+            showToast(error.message || 'حدث خطأ في إرسال الطلب', 'error');
+        }
+    });
+</script>
+{% endblock %}

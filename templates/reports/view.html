@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block title %}تفاصيل التقرير اليومي{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-journal-check me-2 text-primary"></i>
+            تقرير يومي: {{ report.child_name }}
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="/reports">التقارير</a></li>
+                <li class="breadcrumb-item active">{{ report.date }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar">
+         <button class="btn btn-outline-primary" onclick="window.print()">
+            <i class="bi bi-printer me-2"></i>طباعة
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Header Card -->
+        <div class="card mb-4 border-0 shadow-sm bg-primary bg-opacity-10">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                         <div class="avatar-lg bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm me-3" 
+                              style="width: 64px; height: 64px;">
+                             <i class="bi bi-person fs-3 text-primary"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1 text-primary fw-bold">{{ report.child_name }}</h4>
+                            <div class="text-muted">
+                                <i class="bi bi-calendar-event me-2"></i>{{ report.date }}
+                                <span class="mx-2">•</span>
+                                <i class="bi bi-person-badge me-2"></i>المعلمة: {{ report.teacher_name }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center bg-white p-3 rounded shadow-sm">
+                        <div class="small text-muted mb-1">المزاج</div>
+                        <div class="fs-1" title="{{ report.mood_text }}">{{ report.mood_emoji }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <!-- Meals -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0 card-title text-white"><i class="bi bi-egg-fried me-2"></i>الوجبات</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>الفطور</span>
+                                <span class="badge bg-success rounded-pill px-3">{{ report.meals.breakfast }}</span>
+                            </li>
+                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>الغداء</span>
+                                <span class="badge bg-primary rounded-pill px-3">{{ report.meals.lunch }}</span>
+                            </li>
+                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>سناك</span>
+                                <span class="badge bg-info rounded-pill px-3">{{ report.meals.snack }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sleep & Bathroom -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0 card-title text-white"><i class="bi bi-moon-stars me-2"></i>الراحة والنظافة</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center mb-4">
+                            <div class="col-6 border-end">
+                                <h6 class="text-muted">النوم</h6>
+                                <h3 class="fw-bold text-info">{{ report.sleep_minutes }}</h3>
+                                <small class="text-muted">دقيقة</small>
+                            </div>
+                             <div class="col-6">
+                                <h6 class="text-muted">الحمام</h6>
+                                <h3 class="fw-bold text-info">{{ report.bathroom_count }}</h3>
+                                <small class="text-muted">مرات</small>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-light p-3 rounded">
+                            <h6 class="mb-2 fw-bold small">تغيير الحفاظ:</h6>
+                            <div class="d-flex gap-2">
+                                {% if report.diaper.wet %}
+                                <span class="badge bg-secondary text-dark">مبلل</span>
+                                {% endif %}
+                                {% if report.diaper.soiled %}
+                                <span class="badge bg-secondary text-dark">متسخ</span>
+                                {% endif %}
+                                {% if not report.diaper.wet and not report.diaper.soiled %}
+                                <span class="text-muted small">لا يوجد</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Activities & Notes -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning">
+                 <h5 class="mb-0 card-title text-dark"><i class="bi bi-stars me-2"></i>الأنشطة والملاحظات</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6 class="fw-bold text-muted mb-3">أنشطة اليوم</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for activity in report.activities %}
+                        <span class="badge bg-warning text-dark border border-warning fs-6 px-3 py-2">
+                            <i class="bi bi-check-circle me-1"></i>{{ activity }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="p-3 bg-light rounded border-start border-4 border-warning">
+                    <h6 class="fw-bold mb-2">ملاحظات المعلمة:</h6>
+                    <p class="mb-0 text-muted">{{ report.notes or 'لا توجد ملاحظات إضافية' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Photos -->
+        {% if report.photos %}
+        <div class="card mb-4">
+             <div class="card-header">
+                 <h5 class="mb-0 card-title">صور من اليوم</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    {% for photo in report.photos %}
+                    <div class="col-6 col-md-3">
+                         <img src="{{ photo.url }}" class="img-fluid rounded shadow-sm" alt="نشاط يومي">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

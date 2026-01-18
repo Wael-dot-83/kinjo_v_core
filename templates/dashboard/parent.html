@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة ولي الأمر{% endblock %}
+
+{% block page_header %}
+<div class="dashboard-header">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
+        <div>
+            <h1 class="h2 mb-1">
+                <i class="bi bi-house-heart me-2 text-primary"></i>
+                مرحباً بك
+            </h1>
+            <p class="text-muted mb-0">تابع أخبار أطفالك وتقاريرهم اليومية</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Children Overview -->
+<div class="row g-4 mb-4" id="childrenCards">
+    <!-- Populated by JavaScript -->
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">جاري تحميل بيانات أطفالك...</p>
+    </div>
+</div>
+
+<!-- Quick Actions for Parents -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="/enroll" class="btn btn-primary btn-lg w-100 py-3">
+                            <i class="bi bi-person-plus fs-3 d-block mb-2"></i>
+                            تسجيل طفل جديد
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/my-reports" class="btn btn-success btn-lg w-100 py-3">
+                            <i class="bi bi-journal-text fs-3 d-block mb-2"></i>
+                            التقارير اليومية
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/messages" class="btn btn-info btn-lg w-100 py-3">
+                            <i class="bi bi-chat-dots fs-3 d-block mb-2"></i>
+                            الرسائل
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/profile" class="btn btn-secondary btn-lg w-100 py-3">
+                            <i class="bi bi-gear fs-3 d-block mb-2"></i>
+                            الإعدادات
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Latest Reports Section -->
+<div class="row g-3">
+    <div class="col-12 col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-journal-text me-2"></i>
+                    آخر التقارير اليومية
+                </h5>
+                <a href="/my-reports" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="latestReports">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12 col-lg-4">
+        <!-- Upcoming Events -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-calendar-event me-2"></i>
+                    الفعاليات القادمة
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="upcomingEvents">
+                    <div class="list-group-item text-center text-muted py-4">
+                        <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-25"></i>
+                        <small>لا توجد فعاليات قادمة</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contact Support -->
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-headset fs-1 text-primary mb-3"></i>
+                <h5>تحتاج مساعدة؟</h5>
+                <p class="text-muted small">تواصل مع إدارة الروضة</p>
+                <a href="/contact" class="btn btn-outline-primary">
+                    <i class="bi bi-chat me-2"></i>تواصل معنا
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auth helper
+    function getHeaders() {
+        const token = localStorage.getItem('access_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    }
+    
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        return new Date(dateStr).toLocaleDateString('ar-SA'); // or suitable locale
+    }
+    
+    function getStatusBadge(status) {
+        const badges = {
+            'approved': '<span class="badge bg-success">معتمد</span>',
+            'submitted': '<span class="badge bg-warning text-dark">قيد المراجعة</span>',
+            'draft': '<span class="badge bg-secondary">مسودة</span>'
+        };
+        return badges[status] || '<span class="badge bg-light text-dark">غير معروف</span>';
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadParentDashboard();
+    });
+    
+    async function loadParentDashboard() {
+        try {
+            const resp = await fetch('/api/parent/dashboard', { headers: getHeaders() });
+            if (!resp.ok) throw new Error("Failed to load dashboard");
+            
+            const data = await resp.json();
+            const children = data.children || [];
+            
+            renderChildrenCards(children);
+            
+            // Fetch latest reports for all children
+            const reportsPromises = children.map(child => 
+                fetch(`/api/daily-reports/child/${child.id}`, { headers: getHeaders() })
+                    .then(r => r.ok ? r.json() : { reports: [] })
+                    .then(d => d.reports.map(r => ({ ...r, child_name: child.first_name, child_id: child.id })))
+            );
+            
+            const results = await Promise.all(reportsPromises);
+            const allReports = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            renderLatestReports(allReports.slice(0, 5)); // Show top 5
+            
+        } catch (error) {
+            console.error('Error loading parent dashboard:', error);
+            document.getElementById('childrenCards').innerHTML = 
+                '<div class="col-12 text-center text-danger">خطأ في تحميل البيانات</div>';
+        }
+    }
+    
+    function renderChildrenCards(children) {
+        const container = document.getElementById('childrenCards');
+        
+        if (!children || children.length === 0) {
+            container.innerHTML = `
+                <div class="col-12">
+                    <div class="card border-dashed">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-person-plus fs-1 text-primary mb-3"></i>
+                            <h5>لم تقم بتسجيل أي طفل بعد</h5>
+                            <p class="text-muted">ابدأ بتسجيل طفلك في إحدى الروضات</p>
+                            <a href="/enroll" class="btn btn-primary btn-lg">
+                                <i class="bi bi-plus-circle me-2"></i>تسجيل طفل
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = children.map(child => {
+            const isPresent = child.attendance_today && child.attendance_today.checked_in && !child.attendance_today.checked_out;
+            const hasReport = child.latest_report_date === new Date().toISOString().split('T')[0];
+            
+            return `
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 ${isPresent ? 'border-success' : ''}">
+                    <div class="card-body text-center">
+                        <div class="position-relative d-inline-block mb-3">
+                            <div class="avatar-lg bg-primary bg-opacity-10 rounded-circle 
+                                        d-flex align-items-center justify-content-center mx-auto">
+                                <i class="bi bi-emoji-smile text-primary fs-1"></i>
+                            </div>
+                            ${isPresent ? `
+                                <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-success">
+                                    <i class="bi bi-check-lg"></i> حاضر
+                                </span>
+                            ` : ''}
+                        </div>
+                        <h4 class="card-title mb-1">${child.first_name} ${child.last_name}</h4>
+                        <p class="text-muted mb-2">${child.enrollment ? 'مسجل' : 'بانتظار التسجيل'}</p>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="/children/${child.id}" class="btn btn-outline-primary">
+                                <i class="bi bi-person me-2"></i>الملف الشخصي
+                            </a>
+                            <a href="/my-reports?child_id=${child.id}" class="btn btn-outline-success">
+                                <i class="bi bi-journal-text me-2"></i>التقارير
+                            </a>
+                        </div>
+                    </div>
+                    ${hasReport ? `
+                        <div class="card-footer bg-success bg-opacity-10 text-success text-center">
+                            <i class="bi bi-check-circle me-1"></i>
+                            تقرير اليوم متاح
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+    
+    function renderLatestReports(reports) {
+        const container = document.getElementById('latestReports');
+        
+        if (!reports || reports.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-journal d-block fs-2 mb-2 opacity-25"></i>
+                    <small>لا توجد تقارير حالياً</small>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = reports.map(report => `
+            <div class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">${report.child_name}</h6>
+                        <p class="mb-1 text-muted small">${report.notes || 'لا توجد ملاحظات'}</p>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar me-1"></i>${formatDate(report.date)}
+                        </small>
+                    </div>
+                    ${getStatusBadge(report.status)}
+                </div>
+            </div>
+        `).join('');
+    }
+</script>
+{% endblock %}

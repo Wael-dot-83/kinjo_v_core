@@ -1,0 +1,423 @@
+{% extends 'base.html' %}
+
+{% block title %}المهام{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-check2-square me-2 text-primary"></i>
+            قائمة المهام
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">المهام</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#taskModal">
+            <i class="bi bi-plus-circle me-2"></i>مهمة جديدة
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filter Tabs -->
+<ul class="nav nav-tabs mb-4" id="statusTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="all-tab" data-filter="" type="button">
+            الكل <span class="badge bg-secondary ms-1" id="countAll">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pending-tab" data-filter="pending" type="button">
+            قيد الانتظار <span class="badge bg-warning ms-1" id="countPending">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="progress-tab" data-filter="in_progress" type="button">
+            قيد التنفيذ <span class="badge bg-info ms-1" id="countProgress">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="completed-tab" data-filter="completed" type="button">
+            مكتملة <span class="badge bg-success ms-1" id="countCompleted">0</span>
+        </button>
+    </li>
+</ul>
+
+<!-- Filter Options -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">الأولوية</label>
+                <select class="form-select" id="priorityFilter">
+                    <option value="">الكل</option>
+                    <option value="urgent">عاجل</option>
+                    <option value="high">عالية</option>
+                    <option value="medium">متوسطة</option>
+                    <option value="low">منخفضة</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">المهام المُسندة</label>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="assignedToMeFilter">
+                    <label class="form-check-label" for="assignedToMeFilter">
+                        المهام المُسندة لي
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">المهام المُنشأة</label>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="createdByMeFilter">
+                    <label class="form-check-label" for="createdByMeFilter">
+                        المهام التي أنشأتها
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-secondary w-100" onclick="loadTasks()">
+                    <i class="bi bi-funnel me-2"></i>تطبيق الفلاتر
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tasks Grid -->
+<div class="row g-4" id="tasksContainer">
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span class="ms-2">جاري التحميل...</span>
+    </div>
+</div>
+
+<!-- Task Modal (Create/Edit) -->
+<div class="modal fade" id="taskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="taskModalTitle">مهمة جديدة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <input type="hidden" id="taskId">
+
+                    <div class="mb-3">
+                        <label for="taskTitle" class="form-label">العنوان <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="taskTitle" required maxlength="255">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="taskDescription" class="form-label">الوصف</label>
+                        <textarea class="form-control" id="taskDescription" rows="3"></textarea>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="taskPriority" class="form-label">الأولوية</label>
+                            <select class="form-select" id="taskPriority">
+                                <option value="low">منخفضة</option>
+                                <option value="medium" selected>متوسطة</option>
+                                <option value="high">عالية</option>
+                                <option value="urgent">عاجل</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="taskDueDate" class="form-label">تاريخ الاستحقاق</label>
+                            <input type="datetime-local" class="form-control" id="taskDueDate">
+                        </div>
+                    </div>
+
+                    <div class="mb-3 mt-3">
+                        <label for="taskAssignedTo" class="form-label">تعيين إلى (اختياري)</label>
+                        <input type="number" class="form-control" id="taskAssignedTo" placeholder="معرف المستخدم">
+                        <div class="form-text">اتركه فارغًا لتعيينه لنفسك</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="saveTask()">حفظ</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let tasks = [];
+    let currentFilter = '';
+    let currentPriority = '';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadTasks();
+        setupTabHandlers();
+    });
+
+    async function loadTasks() {
+        try {
+            const params = {};
+
+            if (currentFilter) params.status_filter = currentFilter;
+            if (currentPriority) params.priority_filter = currentPriority;
+            if (document.getElementById('assignedToMeFilter').checked) params.assigned_to_me = true;
+            if (document.getElementById('createdByMeFilter').checked) params.created_by_me = true;
+
+            const response = await fetch('/tasks?' + new URLSearchParams(params), {
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                }
+            });
+
+            if (!response.ok) throw new Error('فشل تحميل المهام');
+
+            tasks = await response.json();
+            updateCounts(tasks);
+            renderTasks(tasks);
+
+        } catch (error) {
+            console.error('Error loading tasks:', error);
+            showToast('حدث خطأ في تحميل المهام', 'error');
+        }
+    }
+
+    function updateCounts(data) {
+        const counts = {
+            all: data.length,
+            pending: data.filter(t => t.status === 'PENDING').length,
+            progress: data.filter(t => t.status === 'IN_PROGRESS').length,
+            completed: data.filter(t => t.status === 'COMPLETED').length
+        };
+
+        document.getElementById('countAll').textContent = counts.all;
+        document.getElementById('countPending').textContent = counts.pending;
+        document.getElementById('countProgress').textContent = counts.progress;
+        document.getElementById('countCompleted').textContent = counts.completed;
+    }
+
+    function renderTasks(data) {
+        const container = document.getElementById('tasksContainer');
+
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <i class="bi bi-inbox fs-1 text-muted d-block mb-2 opacity-25"></i>
+                    <p class="text-muted mb-0">لا توجد مهام</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = data.map(task => `
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 ${task.status === 'COMPLETED' ? 'border-success' : ''}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title ${task.status === 'COMPLETED' ? 'text-decoration-line-through text-muted' : ''}">
+                                ${task.title}
+                            </h5>
+                            ${getPriorityBadge(task.priority)}
+                        </div>
+
+                        ${task.description ? `<p class="card-text text-muted small">${task.description}</p>` : ''}
+
+                        <div class="mb-3">
+                            ${getStatusBadge(task.status)}
+                            ${task.due_date ? `
+                                <small class="text-muted ms-2">
+                                    <i class="bi bi-calendar-event"></i>
+                                    ${formatDate(task.due_date)}
+                                </small>
+                            ` : ''}
+                        </div>
+
+                        <div class="btn-group w-100">
+                            <button class="btn btn-sm btn-outline-primary" onclick="toggleTaskStatus(${task.id})">
+                                <i class="bi bi-${task.status === 'COMPLETED' ? 'arrow-counterclockwise' : 'check-circle'}"></i>
+                                ${task.status === 'COMPLETED' ? 'إعادة فتح' : 'إكمال'}
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="editTask(${task.id})">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteTask(${task.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-0">
+                        <small class="text-muted">
+                            <i class="bi bi-clock"></i>
+                            تم الإنشاء: ${formatDate(task.created_at)}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function setupTabHandlers() {
+        document.querySelectorAll('#statusTabs button').forEach(tab => {
+            tab.addEventListener('click', async (e) => {
+                document.querySelectorAll('#statusTabs button').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+
+                currentFilter = e.target.dataset.filter;
+                await loadTasks();
+            });
+        });
+
+        document.getElementById('priorityFilter').addEventListener('change', (e) => {
+            currentPriority = e.target.value;
+        });
+    }
+
+    function getPriorityBadge(priority) {
+        const badges = {
+            'URGENT': '<span class="badge bg-danger">عاجل</span>',
+            'HIGH': '<span class="badge bg-warning">عالية</span>',
+            'MEDIUM': '<span class="badge bg-info">متوسطة</span>',
+            'LOW': '<span class="badge bg-secondary">منخفضة</span>'
+        };
+        return badges[priority] || '';
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'PENDING': '<span class="badge bg-warning">قيد الانتظار</span>',
+            'IN_PROGRESS': '<span class="badge bg-info">قيد التنفيذ</span>',
+            'COMPLETED': '<span class="badge bg-success">مكتملة</span>',
+            'CANCELLED': '<span class="badge bg-secondary">ملغاة</span>'
+        };
+        return badges[status] || '';
+    }
+
+    async function saveTask() {
+        const taskId = document.getElementById('taskId').value;
+        const data = {
+            title: document.getElementById('taskTitle').value,
+            description: document.getElementById('taskDescription').value,
+            priority: document.getElementById('taskPriority').value,
+            due_date: document.getElementById('taskDueDate').value || null,
+            assigned_to_id: document.getElementById('taskAssignedTo').value || null
+        };
+
+        try {
+            const url = taskId ? `/tasks/${taskId}` : '/tasks';
+            const method = taskId ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) throw new Error('فشل حفظ المهمة');
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
+            modal.hide();
+
+            showToast('تم حفظ المهمة بنجاح', 'success');
+            await loadTasks();
+            resetForm();
+
+        } catch (error) {
+            showToast(error.message || 'حدث خطأ', 'error');
+        }
+    }
+
+    async function toggleTaskStatus(id) {
+        try {
+            const response = await fetch(`/tasks/${id}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                }
+            });
+
+            if (!response.ok) throw new Error('فشل تحديث حالة المهمة');
+
+            showToast('تم تحديث حالة المهمة', 'success');
+            await loadTasks();
+
+        } catch (error) {
+            showToast(error.message || 'حدث خطأ', 'error');
+        }
+    }
+
+    function editTask(id) {
+        const task = tasks.find(t => t.id === id);
+        if (!task) return;
+
+        document.getElementById('taskModalTitle').textContent = 'تعديل المهمة';
+        document.getElementById('taskId').value = task.id;
+        document.getElementById('taskTitle').value = task.title;
+        document.getElementById('taskDescription').value = task.description || '';
+        document.getElementById('taskPriority').value = task.priority.toLowerCase();
+        document.getElementById('taskDueDate').value = task.due_date ? task.due_date.slice(0, 16) : '';
+        document.getElementById('taskAssignedTo').value = task.assigned_to_id || '';
+
+        const modal = new bootstrap.Modal(document.getElementById('taskModal'));
+        modal.show();
+    }
+
+    async function deleteTask(id) {
+        if (!confirm('هل أنت متأكد من حذف هذه المهمة؟')) return;
+
+        try {
+            const response = await fetch(`/tasks/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                }
+            });
+
+            if (!response.ok) throw new Error('فشل حذف المهمة');
+
+            showToast('تم حذف المهمة', 'success');
+            await loadTasks();
+
+        } catch (error) {
+            showToast(error.message || 'حدث خطأ', 'error');
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('taskModalTitle').textContent = 'مهمة جديدة';
+        document.getElementById('taskForm').reset();
+        document.getElementById('taskId').value = '';
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ar-EG', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function showToast(message, type = 'info') {
+        // Use Bootstrap toast or simple alert
+        alert(message);
+    }
+
+    // Reset form when modal is closed
+    document.getElementById('taskModal').addEventListener('hidden.bs.modal', resetForm);
+</script>
+{% endblock %}

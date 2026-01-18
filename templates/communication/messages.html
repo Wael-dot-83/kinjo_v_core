@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{% block title %}صندوق الرسائل{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-1">
+            <i class="bi bi-envelope me-2 text-primary"></i>
+            صندوق الرسائل
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
+                <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
+                <li class="breadcrumb-item active">الرسائل</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
+            <i class="bi bi-plus-lg me-1"></i> رسالة جديدة
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <input type="text" class="form-control" id="msgSearch" placeholder="بحث في الرسائل...">
+            </div>
+            <div class="col-md-8 text-md-end mt-2 mt-md-0">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" onclick="filterMsgs('all')">الكل</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="filterMsgs('direct')">مباشر</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="filterMsgs('broadcast')">تعميم</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="list-group list-group-flush" id="messagesList">
+        <!-- Loading State -->
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">جاري التحميل...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reuse the New Message Modal -->
+{% include 'communication/modals/new_message.html' %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allMessages = [];
+
+    document.addEventListener('DOMContentLoaded', loadMessages);
+
+    async function loadMessages() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/comm/messages', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                allMessages = await response.json();
+                renderMessages(allMessages);
+            } else {
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">فشل تحميل الرسائل (Session expired or invalid)</div>`;
+            }
+        } catch (error) {
+            console.error(error);
+            document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">خطأ في الاتصال</div>`;
+        }
+    }
+
+    function renderMessages(messages) {
+        const container = document.getElementById('messagesList');
+        container.innerHTML = '';
+
+        if (messages.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox fs-1 mb-2 d-block"></i>
+                    لا توجد رسائل
+                </div>
+            `;
+            return;
+        }
+
+        const sorted = [...messages].reverse();
+
+        sorted.forEach(msg => {
+            let icon = 'bi-envelope';
+            let badgeClass = 'bg-secondary';
+            let badgeText = 'رسالة';
+
+            if (msg.thread_type === 'BROADCAST') {
+                icon = 'bi-megaphone';
+                badgeClass = 'bg-warning text-dark';
+                badgeText = 'تعميم';
+            } else if (msg.thread_type === 'CLASS') {
+                icon = 'bi-people';
+                badgeClass = 'bg-info text-dark';
+                badgeText = 'فصل';
+            }
+
+            const item = document.createElement('a');
+            item.className = 'list-group-item list-group-item-action py-3';
+            item.href = '#';
+            item.innerHTML = `
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">
+                        <i class="bi ${icon} me-2 text-muted"></i>
+                        ${msg.subject || 'بدون عنوان'}
+                    </h5>
+                    <small class="text-muted">#${msg.id}</small>
+                </div>
+                <div class="mb-1 text-break" style="max-height: 100px; overflow: hidden; text-overflow: ellipsis;">
+                    ${msg.message_body}
+                </div>
+                <div class="mt-2">
+                    <span class="badge ${badgeClass}">${badgeText}</span>
+                </div>
+            `;
+            container.appendChild(item);
+        });
+    }
+
+    function filterMsgs(type) {
+        document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+
+        if (type === 'all') {
+            renderMessages(allMessages);
+        } else {
+            const filtered = allMessages.filter(m => m.thread_type === type.toUpperCase());
+            renderMessages(filtered);
+        }
+    }
+    
+    document.getElementById('msgSearch').addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = allMessages.filter(m => 
+            (m.subject && m.subject.toLowerCase().includes(term)) || 
+            (m.message_body && m.message_body.toLowerCase().includes(term))
+        );
+        renderMessages(filtered);
+    });
+</script>
+{% endblock %}
+

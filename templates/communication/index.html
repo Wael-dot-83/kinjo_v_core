@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}مركز التواصل{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">مركز التواصل</h1>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
+    <!-- Messages Card -->
+    <div class="col">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <div class="display-4 text-primary mb-3">
+                    <i class="bi bi-chat-dots-fill"></i>
+                </div>
+                <h5 class="card-title">الرسائل</h5>
+                <p class="card-text">المراسلات المباشرة مع أولياء الأمور والموظفين.</p>
+                <div class="d-grid gap-2">
+                    <a href="/communication/messages" class="btn btn-outline-primary">فتح البريد الوارد</a>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
+                        <i class="bi bi-plus-lg"></i> رسالة جديدة
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Events Card -->
+    <div class="col">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <div class="display-4 text-success mb-3">
+                    <i class="bi bi-calendar-event-fill"></i>
+                </div>
+                <h5 class="card-title">الفعاليات</h5>
+                <p class="card-text">إدارة التقويم المدرسي ودعوة أولياء الأمور.</p>
+                <div class="d-grid gap-2">
+                    <a href="/communication/events" class="btn btn-outline-success">عرض الفعاليات</a>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newEventModal">
+                        <i class="bi bi-plus-lg"></i> فعالية جديدة
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Surveys Card -->
+    <div class="col">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <div class="display-4 text-warning mb-3">
+                    <i class="bi bi-clipboard-data-fill"></i>
+                </div>
+                <h5 class="card-title">الاستبيانات</h5>
+                <p class="card-text">قياس رضا أولياء الأمور وجمع الملاحظات.</p>
+                <div class="d-grid gap-2">
+                    <a href="/communication/surveys" class="btn btn-outline-warning">إدارة الاستبيانات</a>
+                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#newSurveyModal">
+                        <i class="bi bi-plus-lg"></i> استبيان جديد
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">آخر النشاطات</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>النوع</th>
+                                <th>العنوان</th>
+                                <th>التاريخ</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentActivityTable">
+                            <!-- Populated by JS -->
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">جاري تحميل البيانات...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals for Quick Actions -->
+{% include 'communication/modals/new_message.html' %}
+{% include 'communication/modals/new_event.html' %}
+{% include 'communication/modals/new_survey.html' %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Placeholder for loading recent activity
+    document.addEventListener('DOMContentLoaded', async function() {
+        console.log('Communication center loaded');
+        // Future: Fetch recent messages/events and populate table
+    });
+</script>
+{% endblock %}

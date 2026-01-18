@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if kindergarten %}تعديل روضة{% else %}إضافة روضة جديدة{% endif %}{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-building me-2 text-primary"></i>
+            {% if kindergarten %}تعديل روضة{% else %}إضافة روضة جديدة{% endif %}
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="/kindergartens">الروضات</a></li>
+                <li class="breadcrumb-item active">{% if kindergarten %}تعديل{% else %}إضافة{% endif %}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <form id="kindergartenForm" class="needs-validation" novalidate>
+                    <!-- Basic Information -->
+                    <h5 class="border-bottom pb-2 mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        المعلومات الأساسية
+                    </h5>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="nameAr" class="form-label required">اسم الروضة (عربي)</label>
+                            <input type="text" class="form-control" id="nameAr" name="name_ar" 
+                                   value="{{ kindergarten.name_ar if kindergarten else '' }}" required>
+                            <div class="invalid-feedback">يرجى إدخال اسم الروضة</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="nameEn" class="form-label">اسم الروضة (إنجليزي)</label>
+                            <input type="text" class="form-control" id="nameEn" name="name_en" 
+                                   value="{{ kindergarten.name_en if kindergarten else '' }}">
+                        </div>
+                    </div>
+                    
+                    <!-- Location -->
+                    <h5 class="border-bottom pb-2 mb-3 mt-4">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        الموقع
+                    </h5>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label for="governorate" class="form-label required">المحافظة</label>
+                            <select class="form-select" id="governorate" name="governorate" required>
+                                <option value="">اختر...</option>
+                                <option value="عمان">عمان</option>
+                                <option value="إربد">إربد</option>
+                                <option value="الزرقاء">الزرقاء</option>
+                                <option value="العقبة">العقبة</option>
+                                <option value="السلط">السلط</option>
+                                <option value="الكرك">الكرك</option>
+                                <option value="جرش">جرش</option>
+                                <option value="عجلون">عجلون</option>
+                                <option value="مادبا">مادبا</option>
+                                <option value="المفرق">المفرق</option>
+                                <option value="معان">معان</option>
+                                <option value="الطفيلة">الطفيلة</option>
+                            </select>
+                            <div class="invalid-feedback">يرجى اختيار المحافظة</div>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label for="city" class="form-label required">المدينة</label>
+                            <input type="text" class="form-control" id="city" name="city" 
+                                   value="{{ kindergarten.city if kindergarten else '' }}" required>
+                            <div class="invalid-feedback">يرجى إدخال المدينة</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="area" class="form-label required">المنطقة</label>
+                            <input type="text" class="form-control" id="area" name="area" 
+                                   value="{{ kindergarten.area if kindergarten else '' }}" required>
+                            <div class="invalid-feedback">يرجى إدخال المنطقة</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="addressLine" class="form-label required">العنوان التفصيلي</label>
+                        <textarea class="form-control" id="addressLine" name="address_line" rows="2" 
+                                  required>{{ kindergarten.address_line if kindergarten else '' }}</textarea>
+                        <div class="invalid-feedback">يرجى إدخال العنوان</div>
+                    </div>
+                    
+                    <!-- Contact Information -->
+                    <h5 class="border-bottom pb-2 mb-3 mt-4">
+                        <i class="bi bi-telephone me-2"></i>
+                        معلومات التواصل
+                    </h5>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="contactPhone" class="form-label required">رقم الهاتف</label>
+                            <input type="tel" class="form-control" id="contactPhone" name="contact_phone" 
+                                   value="{{ kindergarten.contact_phone if kindergarten else '' }}" 
+                                   pattern="^(\+962|00962|0)[0-9]{9}$" required>
+                            <div class="invalid-feedback">يرجى إدخال رقم هاتف صحيح</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="contactEmail" class="form-label required">البريد الإلكتروني</label>
+                            <input type="email" class="form-control" id="contactEmail" name="contact_email" 
+                                   value="{{ kindergarten.contact_email if kindergarten else '' }}" required>
+                            <div class="invalid-feedback">يرجى إدخال بريد إلكتروني صحيح</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Operating Hours -->
+                    <h5 class="border-bottom pb-2 mb-3 mt-4">
+                        <i class="bi bi-clock me-2"></i>
+                        ساعات العمل
+                    </h5>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="operatingStart" class="form-label">بداية الدوام</label>
+                            <input type="time" class="form-control" id="operatingStart" name="operating_hours_start" 
+                                   value="{{ kindergarten.operating_hours_start if kindergarten else '07:00' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="operatingEnd" class="form-label">نهاية الدوام</label>
+                            <input type="time" class="form-control" id="operatingEnd" name="operating_hours_end" 
+                                   value="{{ kindergarten.operating_hours_end if kindergarten else '16:00' }}">
+                        </div>
+                    </div>
+                    
+                    <!-- License Information -->
+                    <h5 class="border-bottom pb-2 mb-3 mt-4">
+                        <i class="bi bi-card-checklist me-2"></i>
+                        معلومات الترخيص
+                    </h5>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="licenseNumber" class="form-label">رقم الترخيص</label>
+                            <input type="text" class="form-control" id="licenseNumber" name="license_number" 
+                                   value="{{ kindergarten.license_number if kindergarten else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="licenseValidUntil" class="form-label">تاريخ انتهاء الترخيص</label>
+                            <input type="date" class="form-control" id="licenseValidUntil" name="license_valid_until" 
+                                   value="{{ kindergarten.license_valid_until if kindergarten else '' }}">
+                        </div>
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between border-top pt-4">
+                        <a href="/kindergartens" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>إلغاء
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <span class="btn-text">
+                                <i class="bi bi-check-circle me-2"></i>
+                                {% if kindergarten %}حفظ التغييرات{% else %}إضافة الروضة{% endif %}
+                            </span>
+                            <span class="btn-loading d-none">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                جاري الحفظ...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const kindergartenId = JSON.parse('{{ (kindergarten.id if kindergarten else None) | tojson }}');
+    
+    document.getElementById('kindergartenForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const form = e.target;
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            return;
+        }
+        
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.querySelector('.btn-text').classList.add('d-none');
+        submitBtn.querySelector('.btn-loading').classList.remove('d-none');
+        submitBtn.disabled = true;
+        
+        try {
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            if (kindergartenId) {
+                await api.updateKindergarten(kindergartenId, data);
+                showToast('تم تحديث الروضة بنجاح', 'success');
+            } else {
+                await api.createKindergarten(data);
+                showToast('تم إضافة الروضة بنجاح', 'success');
+            }
+
+            setTimeout(() => {
+                window.location.href = '/kindergartens';
+            }, 1500);
+
+        } catch (error) {
+            submitBtn.querySelector('.btn-text').classList.remove('d-none');
+            submitBtn.querySelector('.btn-loading').classList.add('d-none');
+            submitBtn.disabled = false;
+
+            // Best practice: show specific error for duplicate
+            if (error && error.message && error.message.includes('روضة بنفس الاسم')) {
+                showToast('يوجد روضة بنفس الاسم أو رقم الهاتف أو البريد الإلكتروني.', 'error');
+                // Optionally focus the first conflicting field
+                const fields = ['nameAr', 'nameEn', 'contactPhone', 'contactEmail'];
+                for (const f of fields) {
+                    const el = document.getElementById(f);
+                    if (el) { el.focus(); break; }
+                }
+            } else {
+                showToast(error.message || 'حدث خطأ في حفظ البيانات', 'error');
+            }
+        }
+    });
+</script>
+{% endblock %}

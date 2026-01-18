@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}تسجيل حادث جديد{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-1">
+            <i class="bi bi-file-medical me-2 text-danger"></i>
+            تسجيل حادث جديد
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
+                <li class="breadcrumb-item"><a href="/safety">الصحة والسلامة</a></li>
+                <li class="breadcrumb-item active">تسجيل حادث</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <form id="incidentForm" onsubmit="submitIncident(event)">
+                    <div class="mb-3">
+                        <label for="childId" class="form-label">رقم الطفل (ID)</label>
+                        <input type="number" class="form-control" id="childId" required placeholder="أدخل رقم هوية النظام للطفل">
+                        <div class="form-text">سيتم استبدال هذا بقائمة منسدلة في النسخة القادمة.</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="type" class="form-label">نوع الحادث</label>
+                            <select class="form-select" id="type" required>
+                                <option value="" selected disabled>اختر النوع...</option>
+                                <option value="INJURY">إصابة جسدية</option>
+                                <option value="BEHAVIOR">سلوك</option>
+                                <option value="ILLNESS">مرض</option>
+                                <option value="OTHER">آخر</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="severity" class="form-label">درجة الخطورة</label>
+                            <select class="form-select" id="severity" required>
+                                <option value="" selected disabled>اختر الدرجة...</option>
+                                <option value="LOW">منخفضة (Low)</option>
+                                <option value="MEDIUM">متوسطة (Medium)</option>
+                                <option value="HIGH">عالية (High)</option>
+                                <option value="CRITICAL">حرجة (Critical)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="occurredAt" class="form-label">وقت الحدوث</label>
+                        <input type="datetime-local" class="form-control" id="occurredAt" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">وصف تفصيلي للحادث</label>
+                        <textarea class="form-control" id="description" rows="5" required placeholder="صف ما حدث بالضبط، المكان، ومن كان موجوداً..."></textarea>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="followupRequired">
+                        <label class="form-check-label" for="followupRequired">
+                            يتطلب متابعة لاحقة؟
+                        </label>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="/safety" class="btn btn-outline-secondary">إلغاء</a>
+                        <button type="submit" class="btn btn-danger px-4">تسجيل الحادث</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('occurredAt').value = new Date().toISOString().slice(0, 16);
+
+    async function submitIncident(e) {
+        e.preventDefault();
+        
+        const data = {
+            child_id: parseInt(document.getElementById('childId').value),
+            type: document.getElementById('type').value,
+            severity_level: document.getElementById('severity').value,
+            description: document.getElementById('description').value,
+            occurred_at: new Date(document.getElementById('occurredAt').value).toISOString(),
+            followup_required_flag: document.getElementById('followupRequired').checked
+        };
+
+        try {
+            const token = localStorage.getItem('token'); // Assuming standard token storage
+            const response = await fetch('/api/incidents', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                alert('تم تسجيل الحادث بنجاح');
+                window.location.href = '/safety';
+            } else {
+                const err = await response.json();
+                alert('خطأ: ' + (err.detail || 'فشل التسجيل'));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('حدث خطأ في الاتصال');
+        }
+    }
+</script>
+{% endblock %}

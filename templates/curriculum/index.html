@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}المنهج والملاحظات{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-1">
+            <i class="bi bi-journal-richtext me-2 text-success"></i>
+            المنهج والملاحظات
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
+                <li class="breadcrumb-item active">المنهج والملاحظات</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/curriculum/observations/new" class="btn btn-success">
+            <i class="bi bi-eye me-1"></i>
+            تسجيل ملاحظة
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="alert alert-info shadow-sm">
+    <h5 class="alert-heading"><i class="bi bi-info-circle me-2"></i>وحدة المنهج</h5>
+    <p class="mb-0">
+        يمكن للمشرفين والمعلمات تسجيل ملاحظات نمائية للأطفال بناءً على مجالات التعلم (الاجتماعي، المعرفي، الحركي، اللغوي).
+        كما يمكن رفع أعمال الأطفال إلى المحفظة الرقمية (Upcoming).
+    </p>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-success">آخر الملاحظات المسجلة</h5>
+            </div>
+            <div class="card-body text-center py-5 text-muted">
+                <i class="bi bi-journal-x fs-1 mb-3 d-block opacity-25"></i>
+                <p>يرجى اختيار ملف طفل محدد لعرض سجل ملاحظاته الكامل.</p>
+                <button class="btn btn-outline-success">
+                    <i class="bi bi-search me-1"></i>
+                    بحث عن طفل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

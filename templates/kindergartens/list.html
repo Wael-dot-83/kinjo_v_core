@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block title %}إدارة الروضات{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-building me-2 text-primary"></i>
+            إدارة الروضات
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">الروضات</li>
+            </ol>
+        </nav>
+    </div>
+    {% if current_user.role.value == 'ADMIN' %}
+    <div class="btn-toolbar">
+        <a href="/kindergartens/create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>إضافة روضة جديدة
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="filterForm" class="row g-3">
+            <div class="col-md-3">
+                <label for="filterGovernorate" class="form-label">المحافظة</label>
+                <select class="form-select" id="filterGovernorate" name="governorate">
+                    <option value="">الكل</option>
+                    <option value="عمان">عمان</option>
+                    <option value="إربد">إربد</option>
+                    <option value="الزرقاء">الزرقاء</option>
+                    <option value="العقبة">العقبة</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="filterStatus" class="form-label">الحالة</label>
+                <select class="form-select" id="filterStatus" name="status">
+                    <option value="">الكل</option>
+                    <option value="active">نشط</option>
+                    <option value="draft">مسودة</option>
+                    <option value="inactive">غير نشط</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="searchQuery" class="form-label">البحث</label>
+                <input type="text" class="form-control" id="searchQuery" placeholder="ابحث بالاسم أو المنطقة...">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-search me-1"></i>بحث
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Kindergartens Grid/Table -->
+<div class="row g-4" id="kindergartensGrid">
+    <!-- Populated by JavaScript -->
+</div>
+
+<!-- Pagination -->
+<nav class="mt-4" id="paginationNav" style="display: none;">
+    <ul class="pagination justify-content-center">
+        <li class="page-item disabled">
+            <a class="page-link" href="#" tabindex="-1">السابق</a>
+        </li>
+        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+        <li class="page-item"><a class="page-link" href="#">2</a></li>
+        <li class="page-item"><a class="page-link" href="#">3</a></li>
+        <li class="page-item">
+            <a class="page-link" href="#">التالي</a>
+        </li>
+    </ul>
+</nav>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let kindergartens = [];
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadKindergartens();
+    });
+    
+    async function loadKindergartens() {
+        try {
+            showLoading();
+            
+            const params = new FormData(document.getElementById('filterForm'));
+            const queryParams = Object.fromEntries(params.entries());
+            
+            const response = await api.getKindergartens(queryParams);
+            kindergartens = response.kindergartens || [];
+            
+            renderKindergartens(kindergartens);
+            hideLoading();
+            
+        } catch (error) {
+            hideLoading();
+            showToast('حدث خطأ في تحميل البيانات', 'error');
+        }
+    }
+    
+    function renderKindergartens(data) {
+        const grid = document.getElementById('kindergartensGrid');
+        
+        if (!data || data.length === 0) {
+            grid.innerHTML = `
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="bi bi-building fs-1 text-muted mb-3 d-block opacity-25"></i>
+                            <h5 class="text-muted">لا توجد روضات مسجلة</h5>
+                            <p class="text-muted">ابدأ بإضافة روضة جديدة</p>
+                            <a href="/kindergartens/create" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-2"></i>إضافة روضة
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        grid.innerHTML = data.map(kg => `
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary bg-opacity-10">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0 text-primary">
+                                <i class="bi bi-building me-2"></i>
+                                ${kg.name_ar}
+                            </h5>
+                            ${getStatusBadge(kg.status)}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        ${kg.name_en ? `<p class="text-muted small mb-2">${kg.name_en}</p>` : ''}
+                        
+                        <div class="mb-3">
+                            <i class="bi bi-geo-alt text-primary me-2"></i>
+                            <span>${kg.governorate}، ${kg.city}، ${kg.area}</span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <i class="bi bi-telephone text-primary me-2"></i>
+                            <a href="tel:${kg.contact_phone}" class="text-decoration-none">${kg.contact_phone}</a>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <i class="bi bi-envelope text-primary me-2"></i>
+                            ${kg.contact_email ? `<a href="mailto:${kg.contact_email}" class="text-decoration-none">${kg.contact_email}</a>` : `<span class="text-muted">—</span>`}
+                        </div>
+                        
+                        ${kg.operating_hours_start && kg.operating_hours_end ? `
+                            <div class="mb-3">
+                                <i class="bi bi-clock text-primary me-2"></i>
+                                <span>${kg.operating_hours_start} - ${kg.operating_hours_end}</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${kg.license_number ? `
+                            <div class="mb-0">
+                                <i class="bi bi-card-checklist text-primary me-2"></i>
+                                <span>ترخيص: ${kg.license_number}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex gap-2">
+                            <a href="/kindergartens/${kg.id}" class="btn btn-outline-primary flex-fill">
+                                <i class="bi bi-eye me-1"></i>عرض
+                            </a>
+                            <a href="/kindergartens/${kg.id}/edit" class="btn btn-outline-secondary flex-fill">
+                                <i class="bi bi-pencil me-1"></i>تعديل
+                            </a>
+                            <button onclick="confirmDelete(${kg.id}, '${kg.name_ar}')" class="btn btn-outline-danger flex-fill">
+                                <i class="bi bi-trash me-1"></i>حذف
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Delete functionality
+    window.confirmDelete = (id, name) => {
+        if(confirm(`هل أنت متأكد من رغبتك في حذف روضة "${name}"؟ هذا الإجراء لا يمكن التراجع عنه.`)) {
+            api.delete(`/kindergartens/${id}`)
+                .then(() => {
+                    showToast('تم حذف الروضة بنجاح', 'success');
+                    loadKindergartens(); // Reload list
+                })
+                .catch(err => {
+                    console.error('Delete error', err);
+                    showToast(err.message || 'حدث خطأ أثناء الحذف', 'error');
+                });
+        }
+    };
+    
+    // Filter form submission
+    document.getElementById('filterForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await loadKindergartens();
+    });
+    
+    // Search debounce
+    let searchTimeout;
+    document.getElementById('searchQuery').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const query = e.target.value.toLowerCase();
+            const filtered = kindergartens.filter(kg => 
+                kg.name_ar.toLowerCase().includes(query) ||
+                (kg.name_en && kg.name_en.toLowerCase().includes(query)) ||
+                kg.area.toLowerCase().includes(query)
+            );
+            renderKindergartens(filtered);
+        }, 300);
+    });
+</script>
+{% endblock %}

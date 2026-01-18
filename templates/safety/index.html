@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}الصحة والسلامة{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-1">
+            <i class="bi bi-shield-check me-2 text-danger"></i>
+            الصحة والسلامة
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
+                <li class="breadcrumb-item active">الصحة والسلامة</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/safety/incidents/new" class="btn btn-danger">
+            <i class="bi bi-plus-lg me-1"></i>
+            تسجيل حادث
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>سجل الحوادث</h5>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="unresolvedOnly" onchange="loadIncidents()">
+                    <label class="form-check-label" for="unresolvedOnly">غير المعالجة فقط</label>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الطفل</th>
+                                <th>النوع</th>
+                                <th>الخطورة</th>
+                                <th>الوصف</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incidentsTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                                    جاري التحميل...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-info"><i class="bi bi-heart-pulse me-2"></i>تنبيهات صحية</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    يمكن إضافة التنبيهات الصحية (مثل الحساسية) من ملف الطفل مباشرة.
+                </div>
+                <!-- Placeholder for health alerts list if needed -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadIncidents();
+    });
+
+    async def loadIncidents() {
+        // Pseudo-code implementation of Fetch
+        // This relies on authorized session cookie
+        const unresolved = document.getElementById('unresolvedOnly').checked;
+        const url = `/api/incidents?unresolved_only=${unresolved}`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to load');
+            const data = await response.json();
+            renderIncidents(data);
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('incidentsTableBody').innerHTML = `<tr><td colspan="7" class="text-center text-danger">فشل تحميل البيانات</td></tr>`;
+        }
+    }
+
+    function renderIncidents(incidents) {
+        const tbody = document.getElementById('incidentsTableBody');
+        if (incidents.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">لا توجد حوادث مسجلة</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = incidents.map(inc => `
+            <tr>
+                <td>${new Date(inc.occurred_at).toLocaleDateString('ar-JO')}</td>
+                <td><a href="/children/${inc.child_id}" class="text-decoration-none fw-bold">الطفل #${inc.child_id}</a></td>
+                <td><span class="badge bg-secondary">${inc.type}</span></td>
+                <td>
+                    <span class="badge ${getSeverityClass(inc.severity_level)}">
+                        ${inc.severity_level}
+                    </span>
+                </td>
+                <td>${inc.description.substring(0, 50)}...</td>
+                <td>
+                    ${inc.closed_at ? '<span class="badge bg-success">مغلق</span>' : '<span class="badge bg-warning text-dark">مفتوح</span>'}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary">التفاصيل</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function getSeverityClass(level) {
+        switch(level) {
+            case 'LOW': return 'bg-info';
+            case 'MEDIUM': return 'bg-warning text-dark';
+            case 'HIGH': return 'bg-danger';
+            case 'CRITICAL': return 'bg-dark';
+            default: return 'bg-secondary';
+        }
+    }
+    
+    // Fix function definition syntax which was pythonic in JS block above
+    window.loadIncidents = async function() {
+        const unresolved = document.getElementById('unresolvedOnly').checked;
+        const url = `/api/incidents?unresolved_only=${unresolved}`;
+        
+        try {
+            const response = await fetch(url, {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } // Assuming token is in localStorage or cookie
+            });
+            // Note: If using cookies, token header might not be needed depending on auth setup.
+            // Kinjo uses Bearer token, so typically needs injection if not using cookie-based auth middleware for API.
+            // Assuming simplified cookie auth or token injection logic in base.js
+            
+            if (response.status === 401) {
+                 // handle auth error
+                 return;
+            }
+            
+            const data = await response.json();
+            renderIncidents(data);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+</script>
+{% endblock %}

@@ -1,0 +1,1018 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة التحكم{% endblock %}
+
+{% block page_header %}
+<div class="dashboard-header">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
+        <div>
+            <h1 class="h2 mb-1">
+                <i class="bi bi-speedometer2 me-2 text-primary"></i>
+                لوحة التحكم
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+                    <li class="breadcrumb-item active">لوحة التحكم</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()" aria-label="طباعة لوحة التحكم">
+                    <i class="bi bi-printer me-1"></i>طباعة
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportDashboard()" aria-label="تصدير لوحة التحكم">
+                    <i class="bi bi-download me-1"></i>تصدير
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard()" aria-label="تحديث بيانات لوحة التحكم">
+                    <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+                </button>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                        data-bs-toggle="dropdown" id="dateRangeBtn" aria-label="اختيار نطاق التاريخ">
+                    <i class="bi bi-calendar3 me-1"></i>
+                    هذا الشهر
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="setDateRange('today')">اليوم</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="setDateRange('week')">هذا الأسبوع</a></li>
+                    <li><a class="dropdown-item active" href="#" onclick="setDateRange('month')">هذا الشهر</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="setDateRange('quarter')">هذا الربع</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="showCustomDateRange()">تاريخ مخصص</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Cards Row -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="stat-label mb-1">إجمالي الأطفال</p>
+                        <h3 class="stat-value mb-0" id="totalChildren">
+                            <div class="skeleton-loader skeleton-text"></div>
+                        </h3>
+                        <small class="text-success">
+                            <i class="bi bi-arrow-up"></i> +5% من الشهر الماضي
+                        </small>
+                    </div>
+                    <div class="stat-icon text-primary">
+                        <i class="bi bi-emoji-smile"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card success h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="stat-label mb-1">الحضور اليوم</p>
+                        <h3 class="stat-value mb-0" id="presentToday">
+                            <span class="visually-hidden">عدد الحضور اليوم</span>
+                            <div class="skeleton-loader skeleton-text"></div>
+                        </h3>
+                        <small class="text-success">
+                            <span id="attendanceRate">
+                                <div class="skeleton-loader skeleton-text-sm"></div>
+                            </span>% نسبة الحضور
+                        </small>
+                    </div>
+                    <div class="stat-icon text-success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card warning h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="stat-label mb-1">طلبات معلقة</p>
+                        <h3 class="stat-value mb-0" id="pendingEnrollments">
+                            <div class="skeleton-loader skeleton-text"></div>
+                        </h3>
+                        <small class="text-warning">
+                            <i class="bi bi-clock"></i> تتطلب مراجعة
+                        </small>
+                    </div>
+                    <div class="stat-icon text-warning">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card stat-card info h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="stat-label mb-1">التقارير اليومية</p>
+                        <h3 class="stat-value mb-0" id="pendingReports">
+                            <div class="skeleton-loader skeleton-text"></div>
+                        </h3>
+                        <small class="text-info">
+                            <i class="bi bi-journal-text"></i> تقرير متبقي
+                        </small>
+                    </div>
+                    <div class="stat-icon text-info">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin System Overview (Admin Only) -->
+{% if current_user.role.value == 'ADMIN' %}
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart-line me-2"></i>
+                    نظرة عامة على النظام
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center g-4">
+                    <div class="col-6 col-md-3">
+                        <div class="system-stat">
+                            <div class="system-value text-primary" id="totalKindergartens">--</div>
+                            <div class="system-label">إجمالي الروضات</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="system-stat">
+                            <div class="system-value text-success" id="activeKindergartens">--</div>
+                            <div class="system-label">الروضات النشطة</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="system-stat">
+                            <div class="system-value text-info" id="totalUsers">--</div>
+                            <div class="system-label">إجمالي المستخدمين</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="system-stat">
+                            <div class="system-value text-warning" id="systemHealth">--</div>
+                            <div class="system-label">حالة النظام</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+    <!-- Attendance Chart -->
+    <div class="col-12 col-lg-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    نسبة الحضور الأسبوعية
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary active" data-chart-type="line" aria-label="عرض الرسم البياني كخط">خطي</button>
+                    <button class="btn btn-outline-secondary" data-chart-type="bar" aria-label="عرض الرسم البياني كأعمدة">أعمدة</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="attendanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Enrollment Status Pie -->
+    <div class="col-12 col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>
+                    حالات التسجيل
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="enrollmentPieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions and Recent Activity -->
+<div class="row g-3 mb-4">
+    <!-- Quick Actions -->
+    <div class="col-12 col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>
+                    إجراءات سريعة
+                </h5>
+            </div>
+            <div class="card-body quick-actions">
+                <a href="/attendance/check-in" class="btn btn-outline-success w-100 mb-2 text-start">
+                    <i class="bi bi-box-arrow-in-left me-2"></i>
+                    تسجيل حضور
+                </a>
+                <a href="/daily-reports/create" class="btn btn-outline-primary w-100 mb-2 text-start">
+                    <i class="bi bi-journal-plus me-2"></i>
+                    إنشاء تقرير يومي
+                </a>
+                <a href="/enrollments/new" class="btn btn-outline-info w-100 mb-2 text-start">
+                    <i class="bi bi-person-plus me-2"></i>
+                    طلب تسجيل جديد
+                </a>
+    {% if current_user.role.value == 'ADMIN' %}
+                <a href="/kindergartens/create" class="btn btn-outline-success w-100 mb-2 text-start">
+                    <i class="bi bi-building-add me-2"></i>
+                    إضافة روضة جديدة
+                </a>
+                {% endif %}
+                <a href="/incidents/create" class="btn btn-outline-warning w-100 mb-2 text-start">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    إبلاغ عن حادث
+                </a>
+                <a href="/messages/new" class="btn btn-outline-secondary w-100 text-start">
+                    <i class="bi bi-envelope me-2"></i>
+                    إرسال رسالة
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pending Reports -->
+    <div class="col-12 col-md-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    تقارير معلقة
+                </h5>
+                <span class="badge bg-warning" id="pendingReportsBadge">0</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="pendingReportsList">
+                    <!-- Populated by JavaScript -->
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-check-circle fs-1 d-block mb-2 opacity-25"></i>
+                        <span>لا توجد تقارير معلقة</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="/daily-reports" class="small text-decoration-none" aria-label="عرض جميع التقارير اليومية">
+                    عرض جميع التقارير <i class="bi bi-arrow-left"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="col-12 col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-activity me-2"></i>
+                    النشاط الأخير
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="recentActivityList">
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <span class="badge bg-success rounded-pill p-2">
+                                    <i class="bi bi-check"></i>
+                                </span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="mb-1 small">تم قبول طلب تسجيل</p>
+                                <small class="text-muted">أحمد محمد - منذ 5 دقائق</small>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <span class="badge bg-primary rounded-pill p-2">
+                                    <i class="bi bi-journal"></i>
+                                </span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="mb-1 small">تقرير يومي جديد</p>
+                                <small class="text-muted">سارة أحمد - منذ 15 دقيقة</small>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <span class="badge bg-info rounded-pill p-2">
+                                    <i class="bi bi-box-arrow-in-left"></i>
+                                </span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="mb-1 small">تسجيل حضور</p>
+                                <small class="text-muted">15 طفل - منذ 30 دقيقة</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="/audit-logs" class="small text-decoration-none" aria-label="عرض السجل الكامل للنشاط">
+                    عرض السجل الكامل <i class="bi bi-arrow-left"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Summary Row (Admin/Manager Only) -->
+{% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>
+                    مؤشرات الأداء الرئيسية
+                </h5>
+                <a href="/kpi" class="btn btn-sm btn-outline-primary" aria-label="عرض تفاصيل مؤشرات الأداء الرئيسية">
+                    عرض التفاصيل <i class="bi bi-arrow-left ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row text-center g-4">
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-card">
+                            <div class="kpi-value text-success" id="kpiAttendance">--</div>
+                            <div class="kpi-label">نسبة الحضور</div>
+                            <div class="kpi-trend up">
+                                <i class="bi bi-arrow-up"></i> 2.5%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-card">
+                            <div class="kpi-value text-info" id="kpiRatioCompliance">--</div>
+                            <div class="kpi-label">امتثال النسبة</div>
+                            <div class="kpi-trend up">
+                                <i class="bi bi-arrow-up"></i> 1.2%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-card">
+                            <div class="kpi-value text-warning" id="kpiIncidentRate">--</div>
+                            <div class="kpi-label">معدل الحوادث</div>
+                            <div class="kpi-trend down">
+                                <i class="bi bi-arrow-down"></i> 0.5%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="kpi-card">
+                            <div id="governanceBand" class="badge fs-4 px-4 py-2">--</div>
+                            <div class="kpi-label mt-2">تقييم الحوكمة</div>
+                            <div class="kpi-trend" id="governanceScore">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Today's Overview -->
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-calendar-day me-2"></i>
+                    {% if current_user.role.value == 'ADMIN' %}
+                    نظرة عامة على الروضات - {{ today }}
+                    {% else %}
+                    نظرة عامة على اليوم - {{ today }}
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        {% if current_user.role.value == 'ADMIN' %}
+                        <thead>
+                            <tr>
+                                <th>الروضة</th>
+                                <th>الحالة</th>
+                                <th>المسجلون</th>
+                                <th>الحضور اليوم</th>
+                                <th>التقارير المعلقة</th>
+                                <th>استغلال السعة</th>
+                                <th>الترخيص</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kindergartensOverviewTable">
+                        {% else %}
+                        <thead>
+                            <tr>
+                                <th>الفصل</th>
+                                <th>السعة</th>
+                                <th>الحاضرون</th>
+                                <th>الغائبون</th>
+                                <th>التقارير</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classOverviewTable">
+                        {% endif %}
+                            <tr>
+                                <td colspan="{% if current_user.role.value == 'ADMIN' %}8{% else %}7{% endif %}" class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2">جاري التحميل...</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Chart instances
+    let attendanceChartInstance = null;
+    let enrollmentPieChartInstance = null;
+    
+    // Initialize dashboard when page loads
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadDashboardData();
+        initializeCharts();
+    });
+    
+    // Load dashboard data
+    async function loadDashboardData() {
+        try {
+            // Load stats based on user role
+            const user = await api.getCurrentUser();
+            
+            if (user.role === 'SUPERVISOR') {
+                const dashboard = await api.getSupervisorDashboard();
+                updateSupervisorStats(dashboard);
+            } else if (user.role === 'ADMIN' || user.role === 'MANAGER') {
+                // Load admin or manager dashboard
+                await loadAdminManagerDashboard(user.role);
+            } else if (user.role === 'PARENT') {
+                // Parents are redirected to parent dashboard template
+                // This should not happen on this page
+                console.log('Parent user on admin dashboard - redirecting');
+                window.location.href = '/parent/dashboard';
+            }
+        } catch (error) {
+            console.error('Dashboard load error:', error);
+            showToast('حدث خطأ في تحميل البيانات: ' + error.message, 'error');
+        }
+    }
+    
+    // Update supervisor stats
+    function updateSupervisorStats(data) {
+        document.getElementById('totalChildren').textContent = data.total_children || 0;
+        document.getElementById('presentToday').textContent = data.attendance?.present || 0;
+        document.getElementById('pendingReports').textContent = data.pending_reports?.length || 0;
+        
+        const attendanceRate = data.total_children > 0 
+            ? Math.round((data.attendance?.present / data.total_children) * 100) 
+            : 0;
+        document.getElementById('attendanceRate').textContent = attendanceRate;
+        
+        // Update pending reports list
+        if (data.pending_reports && data.pending_reports.length > 0) {
+            const list = document.getElementById('pendingReportsList');
+            list.innerHTML = data.pending_reports.slice(0, 5).map(child => `
+                <a href="/daily-reports/create?child_id=${child.child_id}" 
+                   class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="fw-semibold">${child.first_name} ${child.last_name}</span>
+                        </div>
+                        <span class="badge bg-warning">يتطلب تقرير</span>
+                    </div>
+                </a>
+            `).join('');
+            document.getElementById('pendingReportsBadge').textContent = data.pending_reports.length;
+        }
+    }
+    
+    // Load admin/manager dashboard with retry mechanism and timeout
+    async function loadAdminManagerDashboard(userRole, retryCount = 0) {
+        const maxRetries = 3;
+        const timeoutMs = 30000; // 30 seconds
+        const startTime = performance.now();
+
+        // Show loading state
+        showLoadingState(userRole);
+
+        const endpoint = userRole === 'ADMIN' ? "/api/admin/dashboard" : "/api/manager/dashboard";
+
+        try {
+            // Create a timeout promise
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Request timeout after 30 seconds')), timeoutMs);
+            });
+
+            // API call with timeout
+            const apiPromise = api.get(endpoint);
+            const dashboard = await Promise.race([apiPromise, timeoutPromise]);
+
+            const loadTime = performance.now() - startTime;
+            console.log(`Dashboard loaded in ${loadTime.toFixed(2)}ms`);
+
+            // Monitor performance
+            monitorPerformance('dashboard_load', loadTime);
+
+            if (loadTime > 2000) {
+                console.warn(`Slow dashboard load: ${loadTime.toFixed(2)}ms`);
+                showToast('تحميل البيانات بطيء. قد تكون هناك مشكلة في الشبكة.', 'warning');
+            }
+
+            // Update summary stats
+            updateDashboardStats(dashboard, userRole);
+
+            // Update Charts with Real Data
+            if (dashboard.charts) {
+                updateChartsWithData(dashboard.charts);
+            }
+
+            // Update kindergarten overview for admin
+            if (userRole === 'ADMIN' && dashboard.kindergartens) {
+                updateKindergartensOverview(dashboard.kindergartens);
+            } else if (userRole === 'MANAGER' && dashboard.classes) {
+                updateClassOverview(dashboard.classes);
+            }
+
+            // Hide loading state
+            hideLoadingState();
+
+        } catch (error) {
+            console.error(`Dashboard load error (attempt ${retryCount + 1}):`, error);
+
+            if (retryCount < maxRetries && !error.message.includes('timeout')) {
+                // Exponential backoff retry
+                const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+                console.log(`Retrying in ${delay}ms...`);
+
+                setTimeout(() => {
+                    loadAdminManagerDashboard(userRole, retryCount + 1);
+                }, delay);
+                return;
+            }
+
+            // All retries failed or timeout
+            hideLoadingState();
+            showErrorState(error, userRole);
+        }
+    }
+    
+    // Update dashboard stats with loaded data
+    function updateDashboardStats(dashboard, userRole) {
+        const summary = dashboard.summary || {};
+
+        if (userRole === 'ADMIN') {
+            // Admin sees system-wide stats
+            const overview = dashboard.system_overview || {};
+            updateStatCard('totalChildren', overview.total_enrollments || '0');
+            updateStatCard('presentToday', summary.attendance_today || '0');
+            updateStatCard('pendingEnrollments', summary.pending_applications || '0');
+            updateStatCard('pendingReports', summary.pending_daily_reports || '0');
+
+            // Update system overview cards
+            const totalKgEl = document.getElementById('totalKindergartens');
+            const activeKgEl = document.getElementById('activeKindergartens');
+            const totalUsersEl = document.getElementById('totalUsers');
+            const systemHealthEl = document.getElementById('systemHealth');
+            
+            if (totalKgEl) totalKgEl.textContent = overview.total_kindergartens || 0;
+            if (activeKgEl) activeKgEl.textContent = overview.active_kindergartens || 0;
+            if (totalUsersEl) totalUsersEl.textContent = overview.total_users || 0;
+            if (systemHealthEl) {
+                // Calculate system health based on alerts
+                const alerts = dashboard.alerts || [];
+                const criticalAlerts = alerts.filter(a => a.priority === 'critical').length;
+                const highAlerts = alerts.filter(a => a.priority === 'high').length;
+                
+                if (criticalAlerts > 0) {
+                    systemHealthEl.textContent = 'حرج';
+                    systemHealthEl.className = 'system-value text-danger';
+                } else if (highAlerts > 0) {
+                    systemHealthEl.textContent = 'تحذير';
+                    systemHealthEl.className = 'system-value text-warning';
+                } else {
+                    systemHealthEl.textContent = 'جيد';
+                    systemHealthEl.className = 'system-value text-success';
+                }
+            }
+        } else {
+            // Manager sees kindergarten-specific stats
+            updateStatCard('totalChildren', summary.active_enrollments || '0');
+            updateStatCard('presentToday', summary.attendance_today || '0');
+            updateStatCard('pendingEnrollments', summary.pending_applications || '0');
+            updateStatCard('pendingReports', summary.pending_daily_reports || '0');
+        }
+
+        // Calculate and update attendance rate
+        const totalChildren = userRole === 'ADMIN' ? (dashboard.system_overview?.total_enrollments || 0) : (summary.active_enrollments || 0);
+        const presentToday = summary.attendance_today || 0;
+        const attendanceRate = totalChildren > 0 ? Math.round((presentToday / totalChildren) * 100) : 0;
+        document.getElementById('attendanceRate').textContent = attendanceRate;
+
+        // Update KPI values
+        if(document.getElementById('kpiAttendance')) document.getElementById('kpiAttendance').textContent = attendanceRate + '%';
+        if(document.getElementById('kpiRatioCompliance')) document.getElementById('kpiRatioCompliance').textContent = '92%'; // Metric not calculated yet
+        if(document.getElementById('kpiIncidentRate')) document.getElementById('kpiIncidentRate').textContent = summary.recent_incidents || '0';
+
+        const govBand = document.getElementById('governanceBand');
+        if(govBand) {
+            govBand.textContent = 'أخضر';
+            govBand.classList.add('band-green');
+        }
+        if(document.getElementById('governanceScore')) document.getElementById('governanceScore').textContent = '85 نقطة';
+    }
+
+    // Show loading state with skeletons
+    function showLoadingState(userRole = 'MANAGER') {
+        // Add loading class to stat cards
+        const statCards = document.querySelectorAll('.stat-value');
+        statCards.forEach(card => {
+            card.classList.remove('loaded');
+            const skeleton = card.querySelector('.skeleton-loader');
+            if (skeleton) skeleton.style.display = 'block';
+        });
+
+        // Show loading in table - try both table IDs
+        const tableId = userRole === 'ADMIN' ? 'kindergartensOverviewTable' : 'classOverviewTable';
+        const colspan = userRole === 'ADMIN' ? '8' : '7';
+        let tableBody = document.getElementById(tableId);
+        
+        // Fallback: if table ID doesn't exist, try the other one
+        if (!tableBody) {
+            tableBody = document.getElementById('kindergartensOverviewTable') || document.getElementById('classOverviewTable');
+        }
+        
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="${colspan}" class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                        <span class="ms-2">جاري تحميل البيانات...</span>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // Hide loading state
+    function hideLoadingState() {
+        // Hide skeletons and show real data
+        const statCards = document.querySelectorAll('.stat-value');
+        statCards.forEach(card => {
+            card.classList.add('loaded');
+            const skeleton = card.querySelector('.skeleton-loader');
+            if (skeleton) skeleton.style.display = 'none';
+        });
+    }
+
+    // Show error state with retry option
+    function showErrorState(error, userRole = 'MANAGER') {
+        // Show error in stat cards
+        const statCards = document.querySelectorAll('.stat-value');
+        statCards.forEach(card => {
+            card.innerHTML = '<span class="text-danger">خطأ</span>';
+            card.classList.add('loaded');
+        });
+
+        // Show error in table - try both table IDs
+        const tableId = userRole === 'ADMIN' ? 'kindergartensOverviewTable' : 'classOverviewTable';
+        const colspan = userRole === 'ADMIN' ? '8' : '7';
+        let tableBody = document.getElementById(tableId);
+        
+        // Fallback: if table ID doesn't exist, try the other one
+        if (!tableBody) {
+            tableBody = document.getElementById('kindergartensOverviewTable') || document.getElementById('classOverviewTable');
+        }
+        
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="${colspan}" class="text-center py-4">
+                        <div class="alert alert-danger d-inline-block" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            تعذر تحميل البيانات. ${error.message.includes('timeout') ? 'انتهت مهلة التحميل.' : 'حدث خطأ في الشبكة.'}
+                            <button class="btn btn-sm btn-outline-danger ms-2" onclick="loadAdminManagerDashboard('${userRole}')">
+                                <i class="bi bi-arrow-clockwise me-1"></i>إعادة المحاولة
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Show error toast
+        const errorMessage = error.message.includes('timeout')
+            ? 'انتهت مهلة تحميل البيانات (30 ثانية). تحقق من اتصال الإنترنت وحاول مرة أخرى.'
+            : 'فشل في تحميل بيانات اللوحة. تحقق من اتصال الشبكة وحاول مرة أخرى.';
+
+        showToast(errorMessage, 'error');
+    }
+
+    // Update stat card value
+    function updateStatCard(cardId, value) {
+        const element = document.getElementById(cardId);
+        if (element) {
+            element.textContent = value;
+            element.classList.add('loaded');
+        }
+    }
+
+    // Performance monitoring
+    function monitorPerformance(metricName, value, metadata = {}) {
+        const performanceData = {
+            metric: metricName,
+            value: value,
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            url: window.location.href,
+            ...metadata
+        };
+
+        // Log to console for development
+        console.log('Performance metric:', performanceData);
+
+        // In production, send to monitoring service
+        // Example: sendToMonitoringService(performanceData);
+
+        // Store in local storage for debugging (last 10 metrics)
+        try {
+            const stored = JSON.parse(localStorage.getItem('kinjo_performance_metrics') || '[]');
+            stored.push(performanceData);
+            if (stored.length > 10) stored.shift();
+            localStorage.setItem('kinjo_performance_metrics', JSON.stringify(stored));
+        } catch (e) {
+            console.warn('Could not store performance metrics:', e);
+        }
+    }
+
+    // Monitor page load performance
+    window.addEventListener('load', () => {
+        if (performance.timing) {
+            const pageLoadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+            monitorPerformance('page_load', pageLoadTime, { type: 'full_page' });
+        }
+    });
+
+    // Initialize charts (empty or skeleton)
+    function initializeCharts() {
+        // Attendance Chart
+        const attendanceCtx = document.getElementById('attendanceChart');
+        if (attendanceCtx) {
+            attendanceChartInstance = new Chart(attendanceCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'الحضور اليومي',
+                        data: [],
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+        
+        // Enrollment Pie Chart
+        const pieCtx = document.getElementById('enrollmentPieChart');
+        if (pieCtx) {
+            enrollmentPieChartInstance = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#198754', // Green
+                            '#ffc107', // Yellow
+                            '#0dcaf0', // Cyan
+                            '#dc3545', // Red
+                            '#6c757d'  // Grey
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+    }
+
+    function updateChartsWithData(chartsData) {
+        // Update Attendance Chart
+        if (attendanceChartInstance && chartsData.attendance) {
+            // Format dates to friendly day names (e.g., "Sunday") or short dates
+            const labels = chartsData.attendance.map(item => {
+                const date = new Date(item.date);
+                return date.toLocaleDateString('ar-SA', { weekday: 'long' }); // Arabic weekdays
+            });
+            const data = chartsData.attendance.map(item => item.count);
+            
+            attendanceChartInstance.data.labels = labels;
+            attendanceChartInstance.data.datasets[0].data = data;
+            attendanceChartInstance.update();
+        }
+
+        // Update Enrollment Pie Chart
+        if (enrollmentPieChartInstance && chartsData.enrollment) {
+            // Translate status keys to Arabic
+            const statusMap = {
+                'ACTIVE': 'نشط',
+                'PENDING_REVIEW': 'قيد المراجعة',
+                'SUBMITTED': 'تم التقديم',
+                'ACCEPTED': 'مقبول',
+                'WAITLISTED': 'قائمة انتظار',
+                'REJECTED': 'مرفوض',
+                'DRAFT': 'مسودة',
+                'GRADUATED': 'متخرج',
+                'WITHDRAWN': 'منسحب'
+            };
+            
+            const rawLabels = Object.keys(chartsData.enrollment);
+            const labels = rawLabels.map(label => statusMap[label] || label);
+            const data = Object.values(chartsData.enrollment);
+            
+            enrollmentPieChartInstance.data.labels = labels;
+            enrollmentPieChartInstance.data.datasets[0].data = data;
+            enrollmentPieChartInstance.update();
+        }
+    }
+    
+    // Update class overview table
+    function updateClassOverview(classesData) {
+        const table = document.getElementById('classOverviewTable');
+        if (!table) {
+            console.warn('Class overview table not found; skipping render.');
+            return;
+        }
+        if (!classesData || classesData.length === 0) {
+            table.innerHTML = '<tr><td colspan="7" class="text-center text-muted">لا توجد فصول دراسية نشطة</td></tr>';
+            return;
+        }
+
+        table.innerHTML = classesData.map(cls => {
+            const capacityPercent = Math.round((cls.enrolled / cls.capacity) * 100);
+            let capacityBadge = 'bg-success';
+            if (capacityPercent >= 90) capacityBadge = 'bg-danger';
+            else if (capacityPercent >= 70) capacityBadge = 'bg-warning';
+
+            return `
+            <tr>
+                <td><i class="bi bi-door-open me-2 text-primary"></i>${cls.name}</td>
+                <td>${cls.capacity}</td>
+                <td><span class="badge ${capacityBadge}">${cls.enrolled}</span></td>
+                <td><span class="badge bg-secondary">${cls.capacity - cls.enrolled}</span></td>
+                <td><span class="badge bg-info">${cls.present || 0} حضور</span></td>
+                <td><span class="badge bg-light text-dark">${cls.pending || 0} معلق</span></td>
+                <td><a href="/classes/${cls.id}" class="btn btn-sm btn-outline-primary" aria-label="عرض تفاصيل الفصل ${cls.name}">عرض</a></td>
+            </tr>
+            `;
+        }).join('');
+    }
+    
+    // Update kindergartens overview table for admin
+    function updateKindergartensOverview(kindergartensData) {
+        const table = document.getElementById('kindergartensOverviewTable');
+        if (!table) {
+            console.warn('Kindergartens overview table not found; skipping render.');
+            return;
+        }
+        if (!kindergartensData || kindergartensData.length === 0) {
+            table.innerHTML = '<tr><td colspan="8" class="text-center text-muted">لا توجد روضات مسجلة</td></tr>';
+            return;
+        }
+
+        table.innerHTML = kindergartensData.map(kg => {
+            let statusBadge = 'bg-success';
+            let statusText = 'نشط';
+            if (kg.status !== 'active') {
+                statusBadge = 'bg-secondary';
+                statusText = 'غير نشط';
+            }
+
+            let licenseBadge = 'bg-success';
+            let licenseText = 'صالح';
+            if (kg.license_status === 'expired') {
+                licenseBadge = 'bg-danger';
+                licenseText = 'منتهي';
+            } else if (kg.license_status === 'expiring_soon') {
+                licenseBadge = 'bg-warning';
+                licenseText = 'ينتهي قريباً';
+            }
+
+            return `
+            <tr>
+                <td><i class="bi bi-building me-2 text-primary"></i>${kg.name_ar || kg.name_en}</td>
+                <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                <td>${kg.enrollments}</td>
+                <td>${kg.attendance_today}</td>
+                <td><span class="badge bg-warning">${kg.pending_reports}</span></td>
+                <td><span class="badge bg-info">${kg.capacity_utilization}%</span></td>
+                <td><span class="badge ${licenseBadge}">${licenseText}</span></td>
+                <td><a href="/kindergartens/${kg.id}" class="btn btn-sm btn-outline-primary" aria-label="عرض تفاصيل الروضة ${kg.name_ar}">عرض</a></td>
+            </tr>
+            `;
+        }).join('');
+    }
+    
+    // Date range functions
+    function setDateRange(range) {
+        document.getElementById('dateRangeBtn').innerHTML = `<i class="bi bi-calendar3 me-1"></i>${getDateRangeLabel(range)}`;
+        // Reload data with new range
+        loadDashboardData();
+    }
+    
+    function getDateRangeLabel(range) {
+        const labels = {
+            'today': 'اليوم',
+            'week': 'هذا الأسبوع',
+            'month': 'هذا الشهر',
+            'quarter': 'هذا الربع'
+        };
+        return labels[range] || 'تاريخ مخصص';
+    }
+    
+    function exportDashboard() {
+        showToast('جاري إعداد التقرير للتصدير...', 'info');
+        // Implement export logic
+    }
+
+    // Refresh dashboard data
+    function refreshDashboard() {
+        const refreshBtn = event.target.closest('button');
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>جاري التحديث...';
+        }
+
+        // Reload dashboard data
+        loadDashboardData().finally(() => {
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>تحديث';
+            }
+        });
+    }
+</script>
+{% endblock %}

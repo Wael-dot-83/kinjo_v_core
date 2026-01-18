@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+
+{% block title %}طلبات التسجيل{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-clipboard-check me-2 text-primary"></i>
+            طلبات التسجيل
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">طلبات التسجيل</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar">
+        <a href="/enrollments/create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>طلب جديد
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Status Tabs -->
+<ul class="nav nav-tabs mb-4" id="statusTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-status="" type="button">
+            الكل <span class="badge bg-secondary ms-1" id="countAll">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-status="pending_review" type="button">
+            معلق <span class="badge bg-warning ms-1" id="countPending">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="accepted-tab" data-bs-toggle="tab" data-status="accepted" type="button">
+            مقبول <span class="badge bg-success ms-1" id="countAccepted">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-status="rejected" type="button">
+            مرفوض <span class="badge bg-danger ms-1" id="countRejected">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="waitlist-tab" data-bs-toggle="tab" data-status="waitlisted" type="button">
+            انتظار <span class="badge bg-info ms-1" id="countWaitlist">0</span>
+        </button>
+    </li>
+</ul>
+
+<!-- Enrollments Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="input-group" style="max-width: 300px;">
+            <input type="text" class="form-control" id="searchInput" placeholder="بحث...">
+            <button class="btn btn-outline-secondary" type="button" aria-label="بحث">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="exportEnrollments()">
+                <i class="bi bi-download me-1"></i>تصدير
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم الطفل</th>
+                        <th>ولي الأمر</th>
+                        <th>الروضة</th>
+                        <th>تاريخ التقديم</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="enrollmentsTable">
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span class="ms-2">جاري التحميل...</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">مراجعة طلب التسجيل</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div id="enrollmentDetails" class="mb-4">
+                    <!-- Populated by JavaScript -->
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">القرار</label>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-success flex-fill" onclick="submitDecision('accepted')">
+                            <i class="bi bi-check-circle me-1"></i>قبول
+                        </button>
+                        <button type="button" class="btn btn-warning flex-fill" onclick="submitDecision('waitlisted')">
+                            <i class="bi bi-hourglass me-1"></i>انتظار
+                        </button>
+                        <button type="button" class="btn btn-danger flex-fill" onclick="submitDecision('rejected')">
+                            <i class="bi bi-x-circle me-1"></i>رفض
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mb-3" id="reasonGroup" style="display: none;">
+                    <label for="decisionReason" class="form-label">السبب</label>
+                    <textarea class="form-control" id="decisionReason" rows="3" 
+                              placeholder="أدخل سبب القرار..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let enrollments = [];
+    let currentEnrollmentId = null;
+    let currentFilter = '';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await waitForAuthentication();
+        await loadEnrollments();
+        setupTabHandlers();
+    });
+
+    async function waitForAuthentication() {
+        return new Promise((resolve) => {
+            const checkAuth = () => {
+                if (api.isAuthenticated()) {
+                    console.log('User authenticated, loading enrollments data...');
+                    resolve();
+                } else {
+                    // Check again in 500ms
+                    setTimeout(checkAuth, 500);
+                }
+            };
+            checkAuth();
+        });
+    }
+
+    async function loadEnrollments() {
+        // Check authentication before loading data
+        if (!api.isAuthenticated()) {
+            showToast('يجب تسجيل الدخول أولاً', 'warning');
+            return;
+        }
+
+        try {
+            const params = currentFilter ? { status: currentFilter } : {};
+            const response = await api.getEnrollments(params);
+            enrollments = response.enrollments || [];
+            
+            updateCounts(response);
+            renderEnrollments(enrollments);
+            
+        } catch (error) {
+            console.error('Error loading enrollments:', error);
+            showToast('حدث خطأ في تحميل البيانات', 'error');
+        }
+    }
+    
+    function updateCounts(data) {
+        // Update badge counts
+        document.getElementById('countAll').textContent = data.total || 0;
+        // These would come from the API response
+    }
+    
+    function renderEnrollments(data) {
+        const table = document.getElementById('enrollmentsTable');
+        
+        if (!data || data.length === 0) {
+            table.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <i class="bi bi-inbox fs-1 text-muted d-block mb-2 opacity-25"></i>
+                        <p class="text-muted mb-0">لا توجد طلبات تسجيل</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        table.innerHTML = data.map((e, index) => `
+            <tr>
+                <td>${index + 1}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle 
+                                    d-flex align-items-center justify-content-center me-2">
+                            <i class="bi bi-person text-primary"></i>
+                        </div>
+                        <div>
+                            <span class="fw-semibold">${e.child_name || 'غير محدد'}</span>
+                        </div>
+                    </div>
+                </td>
+                <td>${e.parent_name || 'غير محدد'}</td>
+                <td>${e.kindergarten_name || 'غير محدد'}</td>
+                <td>${formatDate(e.created_at)}</td>
+                <td>${getStatusBadge(e.status)}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="viewEnrollment(${e.id})" title="عرض">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        ${e.status === 'pending_review' || e.status === 'submitted' ? `
+                            <button class="btn btn-outline-success" onclick="openReviewModal(${e.id})" title="مراجعة">
+                                <i class="bi bi-check-square"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function setupTabHandlers() {
+        document.querySelectorAll('#statusTabs button').forEach(tab => {
+            tab.addEventListener('click', async (e) => {
+                // Check authentication before changing tabs
+                if (!api.isAuthenticated()) {
+                    showToast('يجب تسجيل الدخول أولاً', 'warning');
+                    return;
+                }
+
+                // Update active state
+                document.querySelectorAll('#statusTabs button').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+
+                // Update filter and reload
+                currentFilter = e.target.dataset.status;
+                await loadEnrollments();
+            });
+        });
+    }
+    
+    function viewEnrollment(id) {
+        window.location.href = `/enrollments/${id}`;
+    }
+    
+    function openReviewModal(id) {
+        currentEnrollmentId = id;
+        const enrollment = enrollments.find(e => e.id === id);
+        
+        if (enrollment) {
+            document.getElementById('enrollmentDetails').innerHTML = `
+                <div class="mb-2"><strong>الطفل:</strong> ${enrollment.child_name}</div>
+                <div class="mb-2"><strong>ولي الأمر:</strong> ${enrollment.parent_name}</div>
+                <div class="mb-2"><strong>الروضة:</strong> ${enrollment.kindergarten_name}</div>
+            `;
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('reviewModal'));
+        modal.show();
+    }
+    
+    async function submitDecision(decision) {
+        if (!currentEnrollmentId) return;
+        
+        const reason = document.getElementById('decisionReason').value;
+        
+        try {
+            await api.reviewEnrollment(currentEnrollmentId, decision, reason);
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('reviewModal'));
+            modal.hide();
+            
+            showToast('تم حفظ القرار بنجاح', 'success');
+            await loadEnrollments();
+            
+        } catch (error) {
+            showToast(error.message || 'حدث خطأ', 'error');
+        }
+    }
+    
+    // Show reason field for reject decision
+    document.querySelectorAll('[onclick*="submitDecision"]').forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            const decision = this.onclick.toString().match(/'(\w+)'/)[1];
+            document.getElementById('reasonGroup').style.display = 
+                decision === 'rejected' ? 'block' : 'none';
+        });
+    });
+    
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const filtered = enrollments.filter(e => 
+            (e.child_name && e.child_name.toLowerCase().includes(query)) ||
+            (e.parent_name && e.parent_name.toLowerCase().includes(query))
+        );
+        renderEnrollments(filtered);
+    });
+    
+    function exportEnrollments() {
+        showToast('جاري تحضير الملف للتصدير...', 'info');
+        // Implement export logic
+    }
+</script>
+{% endblock %}

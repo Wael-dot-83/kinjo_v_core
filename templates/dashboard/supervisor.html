@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة المشرف{% endblock %}
+
+{% block page_header %}
+<div class="dashboard-header">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
+        <div>
+            <h1 class="h2 mb-1">
+                <i class="bi bi-person-badge me-2 text-primary"></i>
+                لوحة المشرف
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+                    <li class="breadcrumb-item active">لوحة المشرف</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <span class="text-muted me-3">
+                <i class="bi bi-calendar3 me-1"></i>
+                {{ today }}
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Welcome Message -->
+<div class="alert alert-primary d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-sun fs-4 me-3"></i>
+    <div>
+        <strong>صباح الخير، {{ current_user.username }}!</strong>
+        <span class="d-block small">لديك <span id="taskCount">0</span> مهام تحتاج اهتمامك اليوم.</span>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-emoji-smile text-primary fs-2 mb-2"></i>
+                <h3 class="mb-1" id="myChildrenCount">--</h3>
+                <small class="text-muted">أطفال الفصل</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card success h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle text-success fs-2 mb-2"></i>
+                <h3 class="mb-1" id="presentCount">--</h3>
+                <small class="text-muted">حاضر</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card danger h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-x-circle text-danger fs-2 mb-2"></i>
+                <h3 class="mb-1" id="absentCount">--</h3>
+                <small class="text-muted">غائب</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card warning h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-journal-text text-warning fs-2 mb-2"></i>
+                <h3 class="mb-1" id="pendingReportsCount">--</h3>
+                <small class="text-muted">تقارير معلقة</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row g-3">
+    <!-- Attendance Section -->
+    <div class="col-12 col-lg-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-calendar-check me-2"></i>
+                    الحضور والغياب - اليوم
+                </h5>
+                <a href="/attendance" class="btn btn-sm btn-primary">
+                    <i class="bi bi-box-arrow-in-left me-1"></i>
+                    تسجيل الحضور
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="attendance-grid" id="attendanceGrid">
+                    <!-- Populated by JavaScript -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <span class="ms-2">جاري التحميل...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <div class="d-flex justify-content-between align-items-center small">
+                    <span>
+                        <span class="badge bg-success me-2">●</span> حاضر
+                        <span class="badge bg-light text-dark me-2 ms-3">●</span> لم يصل بعد
+                    </span>
+                    <a href="/attendance/history" class="text-decoration-none">
+                        سجل الحضور <i class="bi bi-arrow-left"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="col-12 col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>
+                    إجراءات سريعة
+                </h5>
+            </div>
+            <div class="card-body d-grid gap-2">
+                <a href="/attendance/check-in" class="btn btn-success btn-lg">
+                    <i class="bi bi-box-arrow-in-left me-2"></i>
+                    تسجيل حضور
+                </a>
+                <a href="/daily-reports/create" class="btn btn-primary btn-lg">
+                    <i class="bi bi-journal-plus me-2"></i>
+                    إنشاء تقرير يومي
+                </a>
+                <a href="/supervisor/observations" class="btn btn-info btn-lg">
+                    <i class="bi bi-eye me-2"></i>
+                    تسجيل ملاحظة
+                </a>
+                <a href="/incidents/create" class="btn btn-warning btn-lg">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    إبلاغ عن حادث
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Reports Section -->
+<div class="row g-3 mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-hourglass-split me-2"></i>
+                    التقارير اليومية المعلقة
+                </h5>
+                <span class="badge bg-warning" id="pendingBadge">0</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="pendingReportsList">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- My Classes Section -->
+<div class="row g-3 mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-door-open me-2"></i>
+                    الفصول المسندة إلي
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3" id="myClassesList">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Helper to get headers with token
+    function getHeaders() {
+        const token = localStorage.getItem('access_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadDashboard();
+    });
+    
+    async function loadDashboard() {
+        try {
+            // 1. Get Dashboard Stats (Counters)
+            const statsRes = await fetch('/api/supervisor/dashboard', { headers: getHeaders() });
+            const stats = await statsRes.json();
+            
+            // 2. Get Children Details (For Grid & Precise Counts)
+            const childrenRes = await fetch('/api/supervisor/children', { headers: getHeaders() });
+            const childrenData = await childrenRes.json();
+            const children = childrenData.children || [];
+            
+            // Calculate real-time stats from children list
+            const presentCount = children.filter(c => c.attendance_status === 'present').length;
+            const totalChildren = children.length;
+            const absentCount = totalChildren - presentCount; // checked_out is also present today essentially, but let's stick to "present" = currently here
+            
+            // Update UI Counters
+            document.getElementById('myChildrenCount').textContent = totalChildren;
+            document.getElementById('presentCount').textContent = presentCount;
+            document.getElementById('absentCount').textContent = absentCount;
+            document.getElementById('pendingReportsCount').textContent = stats.pending_reports || 0;
+            
+            // Task count: simple logic
+            const taskCount = stats.pending_reports || 0;
+            document.getElementById('taskCount').textContent = taskCount;
+            
+            // Render Grid
+            renderAttendanceGrid(children);
+            
+            // Load Classes
+            await loadMyClasses();
+            
+            // Render Pending Reporting (Mock logic: list children without reports if we had that data, 
+            // for now we'll just show a generic list or empty if 0)
+            renderPendingReportsList(stats.pending_reports);
+            
+        } catch (error) {
+            console.error('Error loading dashboard:', error);
+            // Don't show toast on load unless critical failure
+        }
+    }
+    
+    function renderAttendanceGrid(children) {
+        const grid = document.getElementById('attendanceGrid');
+        
+        if (!children || children.length === 0) {
+            grid.innerHTML = `
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-emoji-smile fs-1 d-block mb-2 opacity-25"></i>
+                    <span>لا يوجد أطفال مسجلين في الفصل</span>
+                </div>
+            `;
+            return;
+        }
+        
+        // Use a flex/grid layout for cells
+        // CSS likely expects .attendance-grid to be a grid container
+        // If not, we can inline style or assume existing CSS works for divs
+        
+        grid.innerHTML = children.map(child => {
+            const isPresent = child.attendance_status === 'present';
+            const isCheckedOut = child.attendance_status === 'checked_out';
+            const statusClass = isPresent ? 'bg-success text-white' : (isCheckedOut ? 'bg-secondary text-white' : 'bg-light');
+            const icon = isPresent ? 'check-lg' : (isCheckedOut ? 'box-arrow-right' : 'person');
+            
+            return `
+            <div class="text-center p-2 m-1 border rounded" style="width: 100px; display: inline-block; cursor: pointer;"
+                 onclick="toggleChildAttendance(${child.id}, '${child.attendance_status}')">
+                <div class="avatar-md mx-auto mb-2 rounded-circle ${statusClass} 
+                            d-flex align-items-center justify-content-center" style="width:48px;height:48px">
+                    <i class="bi bi-${icon} fs-5"></i>
+                </div>
+                <div class="small fw-semibold text-truncate w-100">${child.first_name}</div>
+                <div class="small text-muted text-truncate w-100">${child.last_name}</div>
+                ${child.check_in_time ? `<div class="small text-success mt-1" style="font-size:0.7rem">${child.check_in_time}</div>` : ''}
+            </div>
+            `;
+        }).join('');
+    }
+    
+    async function toggleChildAttendance(childId, currentStatus) {
+        // Quick toggle logic
+        // If absent -> check-in
+        // If present -> check-out
+        // If checked_out -> do nothing or re-check-in?
+        
+        try {
+            if (currentStatus === 'absent') {
+                const method = 'manual'; // Supervisor manual checkin
+                await fetch(`/api/attendance/check-in?child_id=${childId}&method=${method}&dropped_by_name=Supervisor`, {
+                    method: 'POST',
+                    headers: getHeaders()
+                });
+                showToast('تم تسجيل الحضور', 'success');
+            } else if (currentStatus === 'present') {
+                if(confirm('هل تريد تسجيل خروج الطفل؟')) {
+                    await fetch(`/api/attendance/check-out?child_id=${childId}&picked_by_name=Guardian`, {
+                        method: 'POST',
+                        headers: getHeaders()
+                    });
+                    showToast('تم تسجيل الخروج', 'success');
+                } else {
+                    return;
+                }
+            } else {
+                return; // Already checked out
+            }
+            
+            // Reload to update UI
+            await loadDashboard();
+            
+        } catch (error) {
+            console.error(error);
+            showToast('حدث خطأ في العملية', 'error');
+        }
+    }
+    
+    function renderPendingReportsList(count) {
+        const list = document.getElementById('pendingReportsList');
+        const badge = document.getElementById('pendingBadge');
+        if(badge) badge.textContent = count || 0;
+        
+        if (!count || count === 0) {
+            list.innerHTML = `
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-check-circle fs-1 d-block mb-2 opacity-25"></i>
+                    <span>جميع التقارير مكتملة!</span>
+                </div>
+            `;
+            return;
+        }
+        
+        // Since we don't have the details of WHICH reports are pending from the dashboard endpoint yet,
+        // we'll show a generic link to the reports page.
+        list.innerHTML = `
+             <a href="/daily-reports" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-warning bg-opacity-10 rounded-circle me-3 p-2">
+                        <i class="bi bi-journal-text text-warning"></i>
+                    </div>
+                    <div>
+                        <span class="fw-semibold">لديك ${count} تقرير مسودة</span>
+                        <small class="d-block text-muted">انقر لإكمال التقارير</small>
+                    </div>
+                </div>
+                <i class="bi bi-chevron-left text-muted"></i>
+            </a>
+        `;
+    }
+    
+    async function loadMyClasses() {
+        try {
+            const response = await fetch('/api/supervisor/my-classes', { headers: getHeaders() });
+            const data = await response.json();
+            const container = document.getElementById('myClassesList');
+            
+            if (!data.classes || data.classes.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-4 text-muted">
+                        <i class="bi bi-door-open fs-1 d-block mb-2 opacity-25"></i>
+                        <span>لم يتم إسناد أي فصول لك</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = data.classes.map(cls => `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-primary border-opacity-25">
+                        <div class="card-body text-center">
+                            <i class="bi bi-door-open text-primary fs-1 mb-2"></i>
+                            <h5 class="card-title mb-1">${cls.name_ar}</h5>
+                            ${cls.name_en ? `<small class="text-muted d-block mb-2">${cls.name_en}</small>` : ''}
+                            <div class="mt-3">
+                                <span class="badge ${cls.is_primary ? 'bg-primary' : 'bg-secondary'}">
+                                    ${cls.is_primary ? 'مشرف رئيسي' : 'مشرف مساعد'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error('Error loading classes:', error);
+        }
+    }
+</script>
+{% endblock %}

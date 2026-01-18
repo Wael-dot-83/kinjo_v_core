@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}سجل الحضور والغياب{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-calendar-check me-2 text-primary"></i>
+            الحضور والغياب
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">الحضور</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar gap-2">
+         <div class="input-group">
+            <span class="input-group-text bg-white"><i class="bi bi-calendar"></i></span>
+            <input type="date" class="form-control" id="attendanceDate" value="{{ today }}">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Selection Card -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="classSelect" class="form-label">الشعبة الصفية</label>
+                <select class="form-select" id="classSelect">
+                    <option value="">اختر الشعبة...</option>
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" onclick="loadAttendance()" id="loadBtn">
+                        عرض القائمة
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="markAll('present')" title="تحضير الكل">
+                        <i class="bi bi-check-all"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4 text-start">
+                <div class="d-inline-flex align-items-center gap-3 bg-light px-3 py-2 rounded">
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-success rounded-circle p-1 me-2"> </span>
+                        <small>حضور: <span id="countPresent" class="fw-bold">0</span></small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                         <span class="badge bg-danger rounded-circle p-1 me-2"> </span>
+                        <small>غياب: <span id="countAbsent" class="fw-bold">0</span></small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                         <span class="badge bg-warning rounded-circle p-1 me-2"> </span>
+                        <small>تأخر: <span id="countLate" class="fw-bold">0</span></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Grid -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th>اسم الطفل</th>
+                        <th>الحالة</th>
+                        <th>وقت الوصول</th>
+                        <th>وقت المغادرة</th>
+                        <th>استلام من قبل</th>
+                        <th>ملاحظات</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceTable">
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="bi bi-arrow-up-circle fs-1 text-muted d-block mb-3 opacity-25"></i>
+                            <p class="text-muted">يرجى اختيار الشعبة لعرض القائمة</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-light" id="tableFooter" style="display: none;">
+        <div class="d-flex justify-content-end">
+            <button class="btn btn-success px-4" onclick="saveAttendance()">
+                <i class="bi bi-save me-2"></i>حفظ السجل
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Check-in Modal -->
+<div class="modal fade" id="checkInModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تسجيل دخول</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modalChildId">
+                <div class="mb-3">
+                    <label class="form-label">وقت الوصول</label>
+                    <input type="time" class="form-control" id="checkInTime">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">مُسلّم من قبل</label>
+                    <input type="text" class="form-control" id="droppedBy" placeholder="اسم الشخص (اختياري)">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">فحص الصحة الصباحي</label>
+                    <div class="form-check">
+                         <input class="form-check-input" type="checkbox" id="healthCheckDisplay" checked>
+                        <label class="form-check-label">حرارة طبيعية ولا توجد أعراض</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="confirmCheckIn()">تسجيل</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentStudents = [];
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Set today as default
+        document.getElementById('attendanceDate').valueAsDate = new Date();
+        
+        // Load classes for dropdown
+        // await loadClasses();
+        
+        // Mock classes
+        const classes = [
+             {id: 1, name: 'الفراشات (KG1)'},
+             {id: 2, name: 'الزهور (KG2)'},
+             {id: 3, name: 'النجوم (Nursery)'}
+        ];
+        const select = document.getElementById('classSelect');
+        classes.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.name;
+            select.appendChild(opt);
+        });
+    });
+    
+    async function loadAttendance() {
+        const classId = document.getElementById('classSelect').value;
+        if (!classId) {
+            showToast('يرجى اختيار الشعبة', 'warning');
+            return;
+        }
+
+        showLoading();
+        
+        // Mock data
+        setTimeout(() => {
+            currentStudents = [
+                {id: 101, name: 'أحمد محمد', status: 'present', check_in: '07:45', check_out: '', pickup_by: '', notes: ''},
+                {id: 102, name: 'سارة علي', status: 'present', check_in: '08:00', check_out: '', pickup_by: '', notes: ''},
+                {id: 103, name: 'خالد عمر', status: 'absent', check_in: '', check_out: '', pickup_by: '', notes: 'إجازة مرضية'},
+                {id: 104, name: 'ليلى حسن', status: 'pending', check_in: '', check_out: '', pickup_by: '', notes: ''},
+                {id: 105, name: 'يوسف إبراهيم', status: 'pending', check_in: '', check_out: '', pickup_by: '', notes: ''},
+            ];
+            
+            renderTable();
+            updateStats();
+            document.getElementById('tableFooter').style.display = 'block';
+            hideLoading();
+        }, 500);
+    }
+    
+    function renderTable() {
+        const tbody = document.getElementById('attendanceTable');
+        tbody.innerHTML = currentStudents.map((s, idx) => `
+            <tr id="row-${s.id}">
+                <td>${idx + 1}</td>
+                <td class="fw-bold">${s.name}</td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="status-${s.id}" id="present-${s.id}" value="present" 
+                               ${s.status === 'present' ? 'checked' : ''} onchange="updateStatus(${s.id}, 'present')">
+                        <label class="btn btn-outline-success" for="present-${s.id}">حضور</label>
+
+                        <input type="radio" class="btn-check" name="status-${s.id}" id="late-${s.id}" value="late"
+                               ${s.status === 'late' ? 'checked' : ''} onchange="updateStatus(${s.id}, 'late')">
+                        <label class="btn btn-outline-warning" for="late-${s.id}">تأخر</label>
+
+                        <input type="radio" class="btn-check" name="status-${s.id}" id="absent-${s.id}" value="absent"
+                               ${s.status === 'absent' ? 'checked' : ''} onchange="updateStatus(${s.id}, 'absent')">
+                        <label class="btn btn-outline-danger" for="absent-${s.id}">غياب</label>
+                    </div>
+                </td>
+                <td>
+                    <input type="time" class="form-control form-control-sm" value="${s.check_in}" 
+                           onchange="updateField(${s.id}, 'check_in', this.value)">
+                </td>
+                <td>
+                    <input type="time" class="form-control form-control-sm" value="${s.check_out}"
+                            onchange="updateField(${s.id}, 'check_out', this.value)">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm" placeholder="اسم المستلم" 
+                           value="${s.pickup_by}" onchange="updateField(${s.id}, 'pickup_by', this.value)">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm" placeholder="ملاحظات" 
+                           value="${s.notes}" onchange="updateField(${s.id}, 'notes', this.value)">
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function updateStatus(id, status) {
+        const student = currentStudents.find(s => s.id === id);
+        if (student) {
+            student.status = status;
+            
+            // Auto fill check-in time if marked present/late
+            if ((status === 'present' || status === 'late') && !student.check_in) {
+                 const now = new Date();
+                 const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                                   now.getMinutes().toString().padStart(2, '0');
+                 student.check_in = timeString;
+                 renderTable(); // Re-render to show time
+            }
+            
+            updateStats();
+        }
+    }
+    
+    function updateField(id, field, value) {
+        const student = currentStudents.find(s => s.id === id);
+        if (student) student[field] = value;
+    }
+    
+    function updateStats() {
+        document.getElementById('countPresent').textContent = currentStudents.filter(s => s.status === 'present').length;
+        document.getElementById('countAbsent').textContent = currentStudents.filter(s => s.status === 'absent').length;
+        document.getElementById('countLate').textContent = currentStudents.filter(s => s.status === 'late').length;
+    }
+    
+    function markAll(status) {
+        if (!currentStudents.length) return;
+        currentStudents.forEach(s => updateStatus(s.id, status));
+        renderTable(); // Mass re-render
+    }
+    
+    async function saveAttendance() {
+        // api.saveAttendanceBatch(currentStudents)...
+        showToast('تم حفظ سجل الحضور بنجاح', 'success');
+    }
+</script>
+{% endblock %}

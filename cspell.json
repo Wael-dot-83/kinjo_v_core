@@ -1,0 +1,25 @@
+{
+    "version": "0.2",
+    "language": "en",
+    "words": [
+        "autouse",
+        "waitlisted",
+        "kinjo",
+        "pydantic",
+        "fastapi",
+        "sqlalchemy",
+        "alembic",
+        "uvicorn",
+        "jinja",
+        "sessionmaker",
+        "Rawdat",
+        "Shmeisani",
+        "fromisoformat"
+    ],
+    "ignorePaths": [
+        "node_modules",
+        ".git",
+        "*.min.js",
+        "*.min.css"
+    ]
+}

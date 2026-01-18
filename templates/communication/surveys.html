@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}الاستبيانات{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-1">
+            <i class="bi bi-chat-square-text me-2 text-info"></i>
+            الاستبيانات
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
+                <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
+                <li class="breadcrumb-item active">الاستبيانات</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#newSurveyModal">
+            <i class="bi bi-plus-lg me-1"></i> استبيان جديد
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div id="surveysContainer">
+            <!-- Loading -->
+            <div class="text-center py-5">
+                <div class="spinner-border text-info" role="status"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'communication/modals/new_survey.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', loadSurveys);
+
+    async function loadSurveys() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/comm/surveys?active_only=true', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const surveys = await response.json();
+                renderSurveys(surveys);
+            } else {
+                document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">فشل تحميل الاستبيانات</div>`;
+            }
+        } catch (error) {
+            console.error(error);
+            document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">خطأ في الاتصال</div>`;
+        }
+    }
+
+    function renderSurveys(surveys) {
+        const container = document.getElementById('surveysContainer');
+        container.innerHTML = '';
+
+        if (surveys.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-clipboard-check fs-1 mb-2 d-block"></i>
+                    لا توجد استبيانات نشطة حالياً
+                </div>
+            `;
+            return;
+        }
+
+        surveys.forEach(survey => {
+            const card = document.createElement('div');
+            card.className = 'card shadow-sm mb-3';
+            
+            // Basic view
+            let html = `
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <h5 class="card-title">${survey.title}</h5>
+                        <small class="text-muted">ينتهي: ${survey.end_date}</small>
+                    </div>
+                    <p class="card-text text-secondary">${survey.description || ''}</p>
+                    
+                    <hr>
+                    <form onsubmit="submitSurvey(event, ${survey.id})">
+                        ${survey.nps_question_enabled ? `
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ما مدى رضاك (0 - 10)؟</label>
+                            <div class="d-flex justify-content-between px-2">
+                                ${[0,1,2,3,4,5,6,7,8,9,10].map(n => `
+                                    <div class="form-check form-check-inline me-0 text-center">
+                                        <input class="form-check-input mx-auto d-block" type="radio" name="nps_${survey.id}" value="${n}" required>
+                                        <label class="form-check-label small text-muted">${n}</label>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ملاحظاتك</label>
+                            <textarea class="form-control" name="feedback" rows="2" placeholder="اكتب رأيك هنا..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-sm">إرسال المشاركة</button>
+                    </form>
+                </div>
+            `;
+            
+            card.innerHTML = html;
+            container.appendChild(card);
+        });
+    }
+
+    async function submitSurvey(e, surveyId) {
+        e.preventDefault();
+        const form = e.target;
+        const npsInput = form.querySelector(`input[name="nps_${surveyId}"]:checked`);
+        const feedback = form.querySelector('textarea[name="feedback"]').value;
+
+        const data = {
+            nps_score: npsInput ? parseInt(npsInput.value) : null,
+            feedback_text: feedback
+        };
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/comm/surveys/${surveyId}/submit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                alert('شكراً لمشاركتك!');
+                form.reset();
+            } else {
+                const err = await response.json();
+                alert('خطأ: ' + (err.detail || 'فشل الإرسال'));
+            }
+
+        } catch (error) {
+            console.error(error);
+            alert('خطأ في الاتصال');
+        }
+    }
+</script>
+{% endblock %}
+

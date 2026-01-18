@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}الفعاليات والتقويم{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-1">
+            <i class="bi bi-calendar-event me-2 text-success"></i>
+            الفعاليات والتقويم
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
+                <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
+                <li class="breadcrumb-item active">الفعاليات</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newEventModal">
+            <i class="bi bi-plus-lg me-1"></i> فعالية جديدة
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4">الأحداث القادمة</h5>
+                <div id="eventsContainer" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    <!-- Loaded via JS -->
+                    <div class="col-12 text-center py-5">
+                       <div class="spinner-border text-success" role="status"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'communication/modals/new_event.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', loadEvents);
+
+    async function loadEvents() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/comm/events', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const events = await response.json();
+                renderEvents(events);
+            } else {
+                document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">فشل تحميل الفعاليات</div>`;
+            }
+        } catch (error) {
+            console.error(error);
+            document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">خطأ في الاتصال</div>`;
+        }
+    }
+
+    function renderEvents(events) {
+        const container = document.getElementById('eventsContainer');
+        container.innerHTML = '';
+
+        if (events.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center py-5 text-muted">
+                    <i class="bi bi-calendar-x fs-1 mb-2 d-block"></i>
+                    لا توجد فعاليات قادمة
+                </div>
+            `;
+            return;
+        }
+
+        // Sort by date (nearest first)
+        events.sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
+
+        events.forEach(evt => {
+            const range = formatEventDate(evt.start_at, evt.end_at);
+            const consentBadge = evt.requires_consent_flag 
+                ? '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> يتطلب موافقة</span>' 
+                : '';
+
+            const card = document.createElement('div');
+            card.className = 'col';
+            card.innerHTML = `
+                <div class="card h-100 border-start border-4 border-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">${evt.title}</h5>
+                            <span class="badge bg-light text-dark border">${evt.type}</span>
+                        </div>
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="bi bi-clock me-1"></i> ${range}
+                        </h6>
+                        <p class="card-text text-secondary mb-3">${evt.description || 'لا يوجد وصف'}</p>
+                        ${consentBadge}
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function formatEventDate(start, end) {
+        const s = new Date(start);
+        const e = new Date(end);
+        
+        const dateOpt = { year: 'numeric', month: 'short', day: 'numeric' };
+        const timeOpt = { hour: '2-digit', minute: '2-digit' };
+
+        // Same day?
+        if (s.toDateString() === e.toDateString()) {
+            return `${s.toLocaleDateString('ar-JO', dateOpt)} (${s.toLocaleTimeString('ar-JO', timeOpt)} - ${e.toLocaleTimeString('ar-JO', timeOpt)})`;
+        }
+        return `${s.toLocaleDateString('ar-JO')} - ${e.toLocaleDateString('ar-JO')}`;
+    }
+</script>
+{% endblock %}
+
