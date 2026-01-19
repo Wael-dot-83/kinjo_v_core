@@ -2,20 +2,51 @@
 Missing Critical Endpoints - Implementation
 Adds CRUD operations and complete workflows
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 import models
 import validators
+from config import settings
 from database import get_db
 from dependencies import get_current_user
 
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
+if settings.TESTING:
+    limiter.enabled = False
+
+
+def _log_access_denied(
+    db: Session,
+    user: models.User,
+    action: str,
+    details: Optional[str],
+    request: Request,
+    entity_type: str = "User"
+) -> None:
+    ip_address = request.client.host if request.client else None
+    try:
+        validators.log_audit_action(
+            db=db,
+            user_id=user.id,
+            action="ACCESS_DENIED",
+            entity_type=entity_type,
+            entity_id=None,
+            details=f"{action}: {details}" if details else action,
+            ip_address=ip_address,
+            sensitivity_level=2
+        )
+    except Exception:
+        pass
 
 DUPLICATE_ERROR_MAP = {
     "name_ar": {"code": "error_duplicate_name_ar", "message": "This Arabic name is already registered."},
@@ -79,6 +110,7 @@ class UserUpdate(BaseModel):
 
 @router.get("/users")
 def list_users(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
     role: Optional[models.UserRole] = None,
@@ -95,6 +127,8 @@ def list_users(
         # Admin can filter by any kindergarten_id
         if kindergarten_id:
             query = query.filter(models.User.kindergarten_id == kindergarten_id)
+        # Prevent admins from seeing or filtering for other admin users
+        query = query.filter(models.User.role != models.UserRole.ADMIN)
     elif current_user.role == models.UserRole.MANAGER:
         # Manager is restricted to their own kindergarten
         query = query.filter(models.User.kindergarten_id == current_user.kindergarten_id)
@@ -104,9 +138,14 @@ def list_users(
              # Let's stricter:
              query = query.filter(models.User.kindergarten_id == kindergarten_id) 
     else:
+        _log_access_denied(db, current_user, "list_users", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if role:
+        # Prevent admins from filtering by ADMIN role
+        if role == models.UserRole.ADMIN and current_user.role == models.UserRole.ADMIN:
+            _log_access_denied(db, current_user, "list_users", "Cannot filter by ADMIN role", request)
+            raise HTTPException(status_code=403, detail="Cannot filter by ADMIN role")
         query = query.filter(models.User.role == role)
 
     if status:
@@ -136,6 +175,7 @@ def list_users(
 
 @router.post("/users", status_code=status.HTTP_201_CREATED)
 def create_user(
+    request: Request,
     user_data: UserCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -148,14 +188,17 @@ def create_user(
     elif current_user.role == models.UserRole.MANAGER:
         # Manager can only create non-admin, non-manager roles for their own KG
         if user_data.role in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+            _log_access_denied(db, current_user, "create_user", "Manager attempted privileged role", request)
             raise HTTPException(status_code=403, detail="Managers cannot create Admin or Manager accounts")
         
         # Enforce Kindergarten ID
         if user_data.kindergarten_id and user_data.kindergarten_id != current_user.kindergarten_id:
+             _log_access_denied(db, current_user, "create_user", "Cross-kindergarten creation attempt", request)
              raise HTTPException(status_code=403, detail="Cannot create users for other kindergartens")
         
         user_data.kindergarten_id = current_user.kindergarten_id
     else:
+        _log_access_denied(db, current_user, "create_user", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # Check if exists
@@ -200,6 +243,7 @@ def create_user(
 
 @router.get("/users/{user_id}")
 def get_user(
+    request: Request,
     user_id: int,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -208,6 +252,7 @@ def get_user(
     if current_user.role != models.UserRole.ADMIN:
         # Can view self
         if current_user.id != user_id:
+             _log_access_denied(db, current_user, "get_user", "Non-admin access to other user", request)
              raise HTTPException(status_code=403, detail="Not authorized")
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -226,6 +271,7 @@ def get_user(
 
 @router.put("/users/{user_id}")
 def update_user(
+    request: Request,
     user_id: int,
     user_data: UserUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -235,6 +281,7 @@ def update_user(
     if current_user.role != models.UserRole.ADMIN:
         # User update self? Maybe restrict for now or allow only password
         if current_user.id != user_id:
+            _log_access_denied(db, current_user, "update_user", "Non-admin update of other user", request)
             raise HTTPException(status_code=403, detail="Not authorized")
             
     user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -286,12 +333,14 @@ def update_user(
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
+    request: Request,
     user_id: int,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Delete user (Admin only)"""
     if current_user.role != models.UserRole.ADMIN:
+        _log_access_denied(db, current_user, "delete_user", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Not authorized")
         
     if current_user.id == user_id:
@@ -327,10 +376,13 @@ class PasswordResetConfirm(BaseModel):
     new_password: str
 
 class AdminPasswordReset(BaseModel):
-    new_password: str
+    new_password: str = Field(..., min_length=8)
+    admin_password: str = Field(..., min_length=8)
 
 @router.post("/users/{user_id}/admin-reset-password")
+@limiter.limit("5/minute")
 def admin_reset_password(
+    request: Request,
     user_id: int,
     reset_data: AdminPasswordReset,
     current_user: models.User = Depends(get_current_user),
@@ -338,13 +390,27 @@ def admin_reset_password(
 ):
     """Admin forces password reset for a user"""
     if current_user.role != models.UserRole.ADMIN:
+        _log_access_denied(db, current_user, "admin_reset_password", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Admin access required")
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    from auth import get_password_hash
+    from auth import get_password_hash, verify_password
+    ip_address = request.client.host if request.client else None
+    if not verify_password(reset_data.admin_password, current_user.hashed_password):
+        validators.log_audit_action(
+            db=db,
+            user_id=current_user.id,
+            action="ADMIN_PASSWORD_RESET_FAILED",
+            entity_type="User",
+            entity_id=user.id,
+            details="Admin password verification failed",
+            ip_address=ip_address,
+            sensitivity_level=3
+        )
+        raise HTTPException(status_code=401, detail="Admin password verification failed")
     user.hashed_password = get_password_hash(reset_data.new_password)
 
     db.commit()
@@ -355,6 +421,8 @@ def admin_reset_password(
         action="ADMIN_PASSWORD_RESET",
         entity_type="User",
         entity_id=user.id,
+        details="Admin password reset",
+        ip_address=ip_address,
         sensitivity_level=3
     )
 
@@ -440,12 +508,14 @@ class BulkCreateRequest(BaseModel):
 
 @router.post("/users/bulk-status-update")
 def bulk_update_status(
+    request: Request,
     bulk_data: BulkStatusUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Bulk update user status (Admin only)"""
     if current_user.role != models.UserRole.ADMIN:
+        _log_access_denied(db, current_user, "bulk_status_update", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Admin access required")
 
     if not bulk_data.user_ids:
@@ -473,12 +543,14 @@ def bulk_update_status(
 
 @router.post("/users/bulk-delete")
 def bulk_delete_users(
+    request: Request,
     bulk_data: BulkDeleteRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Bulk delete users (Admin only)"""
     if current_user.role != models.UserRole.ADMIN:
+        _log_access_denied(db, current_user, "bulk_delete_users", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Admin access required")
 
     if not bulk_data.user_ids:
@@ -518,12 +590,14 @@ def bulk_delete_users(
 
 @router.post("/users/bulk-create")
 def bulk_create_users(
+    request: Request,
     bulk_data: BulkCreateRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Bulk create users (Admin only)"""
     if current_user.role != models.UserRole.ADMIN:
+        _log_access_denied(db, current_user, "bulk_create_users", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Admin access required")
 
     if not bulk_data.users:
@@ -541,7 +615,11 @@ def bulk_create_users(
             ).first()
 
             if existing:
-                errors.append(f"Row {i+1}: Username or email already exists")
+                errors.append({
+                    "row": i + 1,
+                    "field": "username/email",
+                    "message": "Username or email already exists"
+                })
                 continue
 
             from auth import get_password_hash
@@ -567,7 +645,11 @@ def bulk_create_users(
             })
 
         except Exception as e:
-            errors.append(f"Row {i+1}: {str(e)}")
+            errors.append({
+                "row": i + 1,
+                "field": "unknown",
+                "message": str(e)
+            })
 
     db.commit()
 
@@ -623,6 +705,12 @@ class KindergartenCreate(BaseModel):
     @field_validator("contact_phone")
     def strip_phone(cls, value):
         return value.strip() if isinstance(value, str) else value
+
+    @field_validator("governorate")
+    def validate_governorate(cls, value):
+        if not validators.validate_jordan_governorate(value):
+            raise ValueError(f"Invalid governorate: {value}. Must be one of: {', '.join(settings.JORDAN_GOVERNORATES)}")
+        return value
 
 
 def detect_kindergarten_duplicate(db: Session, data: KindergartenCreate, exclude_id: Optional[int] = None) -> Optional[str]:
@@ -712,6 +800,9 @@ def list_kindergartens(
     status: Optional[str] = None,
     governorate: Optional[str] = None,
     city: Optional[str] = None,
+    phone: Optional[str] = None,
+    name: Optional[str] = None,
+    include_inactive: bool = False,
     skip: int = 0,
     limit: int = 100,
     current_user: models.User = Depends(get_current_user),
@@ -726,9 +817,18 @@ def list_kindergartens(
         query = query.filter(models.Kindergarten.governorate == governorate)
     if city:
         query = query.filter(models.Kindergarten.city == city)
+    if phone:
+        query = query.filter(models.Kindergarten.contact_phone.ilike(f"%{phone}%"))
+    if name:
+        query = query.filter(
+            or_(
+                models.Kindergarten.name_ar.ilike(f"%{name}%"),
+                models.Kindergarten.name_en.ilike(f"%{name}%")
+            )
+        )
 
-    # For non-admins, only show active kindergartens
-    if current_user.role != models.UserRole.ADMIN:
+    # For non-admins, only show active kindergartens unless explicitly requested
+    if current_user.role != models.UserRole.ADMIN and not include_inactive:
         query = query.filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
 
     kindergartens = query.offset(skip).limit(limit).all()
@@ -806,47 +906,286 @@ def update_kindergarten(
     return kindergarten
 
 
-@router.delete("/kindergartens/{kindergarten_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/kindergartens/{kindergarten_id}")
 def delete_kindergarten(
     kindergarten_id: int,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Delete kindergarten (Admin only)"""
+    """Delete or archive kindergarten based on dependencies"""
+    kindergarten = db.query(models.Kindergarten).filter(
+        models.Kindergarten.id == kindergarten_id
+    ).first()
+
+    if not kindergarten:
+        raise HTTPException(status_code=404, detail="الروضة غير موجودة")
+
+    # Check permissions
     if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Only admins can delete kindergartens")
+        if current_user.role == models.UserRole.MANAGER and current_user.kindergarten_id == kindergarten_id:
+            # Managers can archive their own kindergarten
+            pass
+        else:
+            raise HTTPException(status_code=403, detail="غير مصرح لك بحذف هذه الروضة")
+
+    # Check for dependent records
+    active_children = db.query(models.Child).filter(models.Child.kindergarten_id == kindergarten_id).count()
+    active_classes = db.query(models.Class).filter(
+        models.Class.kindergarten_id == kindergarten_id,
+        models.Class.is_active == True
+    ).count()
+    active_staff = db.query(models.User).filter(
+        models.User.kindergarten_id == kindergarten_id,
+        models.User.status == models.UserStatus.ACTIVE
+    ).count()
+
+    has_dependencies = active_children > 0 or active_classes > 0 or active_staff > 0
+
+    if has_dependencies:
+        if current_user.role != models.UserRole.ADMIN:
+            raise HTTPException(
+                status_code=409,
+                detail="لا يمكن حذف الروضة لأنها تحتوي على بيانات نشطة. يرجى أرشفتها بدلاً من ذلك."
+            )
+        # Admin can force archive even with dependencies
+        kindergarten.status = models.KindergartenStatus.INACTIVE
+        action = "archived"
+        message = "تم أرشفة الروضة بنجاح"
+        audit_action = "KINDERGARTEN_ARCHIVED"
+    else:
+        # No dependencies - allow hard delete
+        db.delete(kindergarten)
+        action = "deleted"
+        message = "تم حذف الروضة نهائياً"
+        audit_action = "KINDERGARTEN_DELETED"
+
+    db.commit()
+
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action=audit_action,
+        entity_type="Kindergarten",
+        entity_id=kindergarten_id,
+        details=f"Action: {action}, Dependencies: children={active_children}, classes={active_classes}, staff={active_staff}",
+        sensitivity_level=3
+    )
+
+    return {
+        "action": action,
+        "message": message,
+        "kindergarten_id": kindergarten_id
+    }
+
+
+@router.post("/kindergartens/{kindergarten_id}/archive")
+def archive_kindergarten(
+    kindergarten_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Archive kindergarten (soft delete)"""
+    kindergarten = db.query(models.Kindergarten).filter(
+        models.Kindergarten.id == kindergarten_id
+    ).first()
+
+    if not kindergarten:
+        raise HTTPException(status_code=404, detail="الروضة غير موجودة")
+
+    # Check permissions
+    if current_user.role != models.UserRole.ADMIN:
+        if current_user.role == models.UserRole.MANAGER and current_user.kindergarten_id == kindergarten_id:
+            # Managers can archive their own kindergarten
+            pass
+        else:
+            raise HTTPException(status_code=403, detail="غير مصرح لك بأرشفة هذه الروضة")
+
+    if kindergarten.status == models.KindergartenStatus.INACTIVE:
+        raise HTTPException(status_code=400, detail="الروضة مأرشفة بالفعل")
+
+    kindergarten.status = models.KindergartenStatus.INACTIVE
+    db.commit()
+
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action="KINDERGARTEN_ARCHIVED",
+        entity_type="Kindergarten",
+        entity_id=kindergarten_id,
+        sensitivity_level=2
+    )
+
+    return {
+        "action": "archived",
+        "message": "تم أرشفة الروضة بنجاح",
+        "kindergarten_id": kindergarten_id
+    }
+
+
+@router.post("/kindergartens/{kindergarten_id}/restore")
+def restore_kindergarten(
+    kindergarten_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Restore archived kindergarten"""
+    if current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="فقط المدير يمكنه استعادة الروضات المأرشفة")
 
     kindergarten = db.query(models.Kindergarten).filter(
         models.Kindergarten.id == kindergarten_id
     ).first()
 
     if not kindergarten:
-        raise HTTPException(status_code=404, detail="Kindergarten not found")
+        raise HTTPException(status_code=404, detail="الروضة غير موجودة")
 
-    # Check for active children to prevent data inconsistency
-    active_children = db.query(models.Child).filter(models.Child.kindergarten_id == kindergarten_id).count()
-    if active_children > 0:
-         # Instead of deleting, just archive it if children exist (safer)
-         # But usually delete implies strict removal. I'll block it.
-        raise HTTPException(status_code=400, detail="Cannot delete kindergarten with associated children data.")
+    if kindergarten.status != models.KindergartenStatus.INACTIVE:
+        raise HTTPException(status_code=400, detail="الروضة غير مأرشفة")
 
-    db.delete(kindergarten)
+    kindergarten.status = models.KindergartenStatus.ACTIVE
     db.commit()
 
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="KINDERGARTEN_DELETED",
+        action="KINDERGARTEN_RESTORED",
         entity_type="Kindergarten",
         entity_id=kindergarten_id,
-        sensitivity_level=3
+        sensitivity_level=2
     )
-    return None
+
+    return {
+        "action": "restored",
+        "message": "تم استعادة الروضة بنجاح",
+        "kindergarten_id": kindergarten_id
+    }
 
 
 # ============================================================================
 # Class CRUD Endpoints
 # ============================================================================
+
+# ============================================================================
+# Kindergarten Services/Facilities CRUD Endpoints
+# ============================================================================
+
+class KindergartenServiceCreate(BaseModel):
+    kindergarten_id: int
+    service_name: str
+    description: str
+    enabled_flag: Optional[bool] = True
+
+class KindergartenServiceResponse(KindergartenServiceCreate):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class KindergartenServiceUpdate(BaseModel):
+    service_name: Optional[str] = None
+    description: Optional[str] = None
+    enabled_flag: Optional[bool] = None
+
+@router.get("/kindergartens/{kindergarten_id}/services", response_model=List[KindergartenServiceResponse])
+def list_kindergarten_services(
+    kindergarten_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List all services/facilities for a kindergarten"""
+    validators.validate_kindergarten_scope(current_user, kindergarten_id)
+    services = db.query(models.KindergartenService).filter(models.KindergartenService.kindergarten_id == kindergarten_id).all()
+    return services
+
+@router.post("/kindergartens/{kindergarten_id}/services", status_code=status.HTTP_201_CREATED, response_model=KindergartenServiceResponse)
+def create_kindergarten_service(
+    kindergarten_id: int,
+    service_data: KindergartenServiceCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new service/facility for a kindergarten"""
+    validators.validate_manager_role(current_user)
+    validators.validate_kindergarten_scope(current_user, kindergarten_id)
+    service = models.KindergartenService(
+        kindergarten_id=kindergarten_id,
+        service_name=service_data.service_name,
+        description=service_data.description,
+        enabled_flag=service_data.enabled_flag if service_data.enabled_flag is not None else True
+    )
+    db.add(service)
+    db.commit()
+    db.refresh(service)
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action="KINDERGARTEN_SERVICE_CREATED",
+        entity_type="KindergartenService",
+        entity_id=service.id,
+        sensitivity_level=2
+    )
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=201, content=KindergartenServiceResponse.model_validate(service).model_dump())
+
+@router.put("/kindergartens/{kindergarten_id}/services/{service_id}", response_model=KindergartenServiceResponse)
+def update_kindergarten_service(
+    kindergarten_id: int,
+    service_id: int,
+    service_data: KindergartenServiceUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update a service/facility for a kindergarten"""
+    validators.validate_manager_role(current_user)
+    validators.validate_kindergarten_scope(current_user, kindergarten_id)
+    service = db.query(models.KindergartenService).filter(
+        models.KindergartenService.id == service_id,
+        models.KindergartenService.kindergarten_id == kindergarten_id
+    ).first()
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    for field, value in service_data.model_dump(exclude_unset=True).items():
+        setattr(service, field, value)
+    db.commit()
+    db.refresh(service)
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action="KINDERGARTEN_SERVICE_UPDATED",
+        entity_type="KindergartenService",
+        entity_id=service.id,
+        sensitivity_level=2
+    )
+    return service
+
+@router.delete("/kindergartens/{kindergarten_id}/services/{service_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_kindergarten_service(
+    kindergarten_id: int,
+    service_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a service/facility from a kindergarten"""
+    validators.validate_manager_role(current_user)
+    validators.validate_kindergarten_scope(current_user, kindergarten_id)
+    service = db.query(models.KindergartenService).filter(
+        models.KindergartenService.id == service_id,
+        models.KindergartenService.kindergarten_id == kindergarten_id
+    ).first()
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    db.delete(service)
+    db.commit()
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action="KINDERGARTEN_SERVICE_DELETED",
+        entity_type="KindergartenService",
+        entity_id=service_id,
+        sensitivity_level=2
+    )
+    return Response(status_code=204)
 
 class ClassCreate(BaseModel):
     kindergarten_id: int
@@ -861,6 +1200,14 @@ class ClassResponse(ClassCreate):
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+class ClassUpdate(BaseModel):
+    name_ar: Optional[str] = None
+    name_en: Optional[str] = None
+    capacity_total: Optional[int] = None
+    min_age_months: Optional[int] = None
+    max_age_months: Optional[int] = None
+    is_active: Optional[bool] = None
 
 @router.post("/classes", status_code=status.HTTP_201_CREATED, response_model=ClassResponse)
 def create_class(
@@ -980,6 +1327,156 @@ def get_class_capacity_status(
         "available_spots": class_obj.capacity_total - enrolled_count,
         "utilization_percent": round((enrolled_count / class_obj.capacity_total) * 100, 2) if class_obj.capacity_total > 0 else 0
     }
+
+
+@router.get("/classes/{class_id}", response_model=ClassResponse)
+def get_class(
+    class_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific class by ID"""
+    class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    # Check permissions - admin can see all, others only their kindergarten's classes
+    if current_user.role != models.UserRole.ADMIN:
+        if class_obj.kindergarten_id != current_user.kindergarten_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    return class_obj
+
+
+@router.put("/classes/{class_id}", response_model=ClassResponse)
+def update_class(
+    class_id: int,
+    class_data: ClassUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update class details (Manager or Admin)"""
+    validators.validate_manager_role(current_user)
+
+    class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    validators.validate_kindergarten_scope(current_user, class_obj.kindergarten_id)
+
+    # Validate age range if provided
+    if hasattr(class_data, 'max_age_months') and hasattr(class_data, 'min_age_months'):
+        if class_data.max_age_months is not None and class_data.min_age_months is not None:
+            if class_data.max_age_months < class_data.min_age_months:
+                raise HTTPException(status_code=400, detail="Max age must be >= min age")
+
+    # Update fields
+    update_data = class_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(class_obj, field, value)
+
+    db.commit()
+    db.refresh(class_obj)
+
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action="CLASS_UPDATED",
+        entity_type="Class",
+        entity_id=class_obj.id,
+        sensitivity_level=2
+    )
+
+    return class_obj
+
+
+@router.put("/classes/{class_id}/deactivate")
+def deactivate_class(
+    class_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Deactivate class (soft delete - Manager or Admin)"""
+    validators.validate_manager_role(current_user)
+
+    class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    validators.validate_kindergarten_scope(current_user, class_obj.kindergarten_id)
+
+    if not class_obj.is_active:
+        raise HTTPException(status_code=400, detail="Class is already inactive")
+
+    # Check if class has active enrollments
+    active_enrollments = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.class_id == class_id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    ).count()
+
+    if active_enrollments > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot deactivate class with {active_enrollments} active enrollment(s). Move children to other classes first."
+        )
+
+    class_obj.is_active = False
+    db.commit()
+
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action="CLASS_DEACTIVATED",
+        entity_type="Class",
+        entity_id=class_obj.id,
+        sensitivity_level=2
+    )
+
+    return {"message": "Class deactivated successfully", "class_id": class_id}
+
+
+@router.delete("/classes/{class_id}")
+def delete_class(
+    class_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Hard delete class (Admin only, when no dependencies exist)"""
+    if current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required for permanent deletion")
+
+    class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    # Check for any dependencies
+    enrollment_count = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.class_id == class_id
+    ).count()
+
+    supervisor_assignment_count = db.query(models.SupervisorAssignment).filter(
+        models.SupervisorAssignment.class_id == class_id
+    ).count()
+
+    if enrollment_count > 0 or supervisor_assignment_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete class with existing dependencies: {enrollment_count} enrollment(s), {supervisor_assignment_count} supervisor assignment(s)"
+        )
+
+    db.delete(class_obj)
+    db.commit()
+
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action="CLASS_DELETED",
+        entity_type="Class",
+        entity_id=class_id,
+        sensitivity_level=3
+    )
+
+    return {"message": "Class permanently deleted", "class_id": class_id}
 
 
 # ============================================================================
@@ -1947,6 +2444,12 @@ class ParentRegistrationRequest(BaseModel):
     email: str
     password: str
 
+    @field_validator("home_governorate")
+    def validate_home_governorate(cls, value):
+        if not validators.validate_jordan_governorate(value):
+            raise ValueError(f"Invalid governorate: {value}. Must be one of: {', '.join(settings.JORDAN_GOVERNORATES)}")
+        return value
+
 
 @router.post("/register/parent", status_code=status.HTTP_201_CREATED)
 def register_parent(
@@ -2284,6 +2787,228 @@ def check_out_child(
         "check_out_at": attendance.check_out_at.isoformat() if attendance.check_out_at else None,
         "picked_by_name": attendance.picked_by_name
     }
+
+
+# ============================================================================
+# Attendance Report Endpoint
+# ============================================================================
+
+class AttendanceReportRequest(BaseModel):
+    kindergarten_id: int
+    class_ids: Optional[List[int]] = None
+    child_ids: Optional[List[int]] = None
+    period_type: str = Field(..., pattern="^(day|week|month|range)$")
+    date: Optional[str] = None  # For day/week/month
+    start_date: Optional[str] = None  # For range
+    end_date: Optional[str] = None  # For range
+
+    @field_validator("period_type", "date", "start_date", "end_date")
+    def validate_dates(cls, v, info):
+        if info.field_name == "period_type":
+            period_type = v
+        else:
+            period_type = info.data.get("period_type")
+
+        if period_type == "range":
+            if not info.data.get("start_date") or not info.data.get("end_date"):
+                raise ValueError("start_date and end_date required for range period")
+        elif period_type in ["day", "week", "month"]:
+            if not info.data.get("date"):
+                raise ValueError("date required for day/week/month period")
+        return v
+
+
+class AttendanceReportResponse(BaseModel):
+    meta: dict
+    dates: List[str]
+    children: List[dict]
+    matrix: dict
+    totals: dict
+    chart_data: dict
+
+
+@router.get("/attendance/report", response_model=AttendanceReportResponse)
+def get_attendance_report(
+    request: AttendanceReportRequest = Depends(),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get attendance report matrix for specified period"""
+    # Authorization: Admin can see all, others only their kindergarten
+    if current_user.role != models.UserRole.ADMIN:
+        validators.validate_supervisor_role(current_user)
+
+    # Validate kindergarten exists and user has access
+    kindergarten = db.query(models.Kindergarten).filter(
+        models.Kindergarten.id == request.kindergarten_id
+    ).first()
+    if not kindergarten:
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
+
+    if current_user.role != models.UserRole.ADMIN:
+        validators.validate_kindergarten_scope(current_user, request.kindergarten_id)
+
+    # Determine date range
+    if request.period_type == "range":
+        try:
+            start_date = date.fromisoformat(request.start_date)
+            end_date = date.fromisoformat(request.end_date)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid date format")
+    else:
+        try:
+            anchor_date = date.fromisoformat(request.date)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid date format")
+
+        if request.period_type == "day":
+            start_date = end_date = anchor_date
+        elif request.period_type == "week":
+            start_date = anchor_date - timedelta(days=anchor_date.weekday())
+            end_date = start_date + timedelta(days=6)
+        elif request.period_type == "month":
+            start_date = anchor_date.replace(day=1)
+            if anchor_date.month == 12:
+                end_date = anchor_date.replace(year=anchor_date.year + 1, month=1, day=1) - timedelta(days=1)
+            else:
+                end_date = anchor_date.replace(month=anchor_date.month + 1, day=1) - timedelta(days=1)
+
+    # Validate date range (max 62 days)
+    if (end_date - start_date).days > 62:
+        raise HTTPException(status_code=422, detail="Date range cannot exceed 62 days")
+
+    # Get target children
+    children_query = db.query(models.Child).join(
+        models.EnrollmentApplication,
+        models.Child.id == models.EnrollmentApplication.child_id
+    ).filter(
+        models.EnrollmentApplication.kindergarten_id == request.kindergarten_id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    )
+
+    if request.class_ids:
+        # Validate classes belong to kindergarten
+        valid_classes = db.query(models.Class.id).filter(
+            models.Class.kindergarten_id == request.kindergarten_id,
+            models.Class.id.in_(request.class_ids)
+        ).all()
+        valid_class_ids = [c[0] for c in valid_classes]
+        if len(valid_class_ids) != len(request.class_ids):
+            raise HTTPException(status_code=422, detail="Some class_ids do not belong to this kindergarten")
+
+        children_query = children_query.filter(
+            models.EnrollmentApplication.class_id.in_(valid_class_ids)
+        )
+
+    if request.child_ids:
+        children_query = children_query.filter(models.Child.id.in_(request.child_ids))
+
+    children = children_query.all()
+
+    # Get attendance data efficiently
+    attendance_data = db.query(
+        models.AttendanceLog.child_id,
+        models.AttendanceLog.date,
+        models.AttendanceLog.check_in_at,
+        models.AttendanceLog.check_out_at
+    ).filter(
+        models.AttendanceLog.child_id.in_([c.id for c in children]),
+        models.AttendanceLog.date >= start_date,
+        models.AttendanceLog.date <= end_date
+    ).all()
+
+    # Build matrix
+    dates = []
+    current = start_date
+    while current <= end_date:
+        dates.append(current.isoformat())
+        current += timedelta(days=1)
+
+    matrix = {}
+    totals = {"per_child": {}, "per_day": {}, "overall": {"present": 0, "absent": 0}}
+
+    for child in children:
+        child_id = child.id
+        matrix[child_id] = {}
+        totals["per_child"][child_id] = {"present": 0, "absent": 0}
+
+        for date_str in dates:
+            # Check if child was present on this date
+            present = any(a.child_id == child_id and a.date.isoformat() == date_str for a in attendance_data)
+            status = "present" if present else "absent"
+            matrix[child_id][date_str] = {"status": status, "label": "حاضر" if present else "غائب"}
+
+            if present:
+                totals["per_child"][child_id]["present"] += 1
+                totals["overall"]["present"] += 1
+            else:
+                totals["per_child"][child_id]["absent"] += 1
+                totals["overall"]["absent"] += 1
+
+    # Per day totals
+    for date_str in dates:
+        present_count = sum(1 for child_id in matrix if matrix[child_id][date_str]["status"] == "present")
+        totals["per_day"][date_str] = present_count
+
+    # Children info
+    children_info = []
+    for child in children:
+        enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == child.id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        ).first()
+        class_info = db.query(models.Class).filter(models.Class.id == enrollment.class_id).first() if enrollment else None
+
+        children_info.append({
+            "id": child.id,
+            "name_ar": f"{child.first_name_ar} {child.last_name_ar}",
+            "name_en": f"{child.first_name_en or ''} {child.last_name_en or ''}".strip(),
+            "class_id": enrollment.class_id if enrollment else None,
+            "class_name": class_info.name if class_info else None
+        })
+
+    # Chart data
+    total_days = len(dates)
+    total_children = len(children)
+    attendance_rate = (totals["overall"]["present"] / (total_children * total_days)) * 100 if total_children * total_days > 0 else 0
+
+    chart_data = {
+        "breakdown_by_status": {
+            "present": totals["overall"]["present"],
+            "absent": totals["overall"]["absent"]
+        },
+        "trend_present_by_day": [{"date": d, "count": totals["per_day"][d]} for d in dates]
+    }
+
+    return AttendanceReportResponse(
+        meta={
+            "kindergarten": {
+                "id": kindergarten.id,
+                "name_ar": kindergarten.name_ar,
+                "name_en": kindergarten.name_en,
+                "governorate": kindergarten.governorate,
+                "city": kindergarten.city,
+                "area": kindergarten.area,
+                "phone": kindergarten.contact_phone,
+                "address": kindergarten.address_line
+            },
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "period_type": request.period_type
+        },
+        dates=dates,
+        children=children_info,
+        matrix=matrix,
+        totals={
+            **totals,
+            "summary": {
+                "total_children": total_children,
+                "total_school_days": total_days,
+                "attendance_rate": round(attendance_rate, 2)
+            }
+        },
+        chart_data=chart_data
+    )
 
 
 # ============================================================================
@@ -3155,6 +3880,58 @@ def get_supervisor_children(
         })
         
     return {"children": results}
+
+
+@router.get("/children")
+def list_children(
+    kindergarten_id: Optional[int] = None,
+    class_id: Optional[int] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List children with optional filtering by kindergarten or class"""
+    query = db.query(models.Child).join(
+        models.EnrollmentApplication,
+        models.Child.id == models.EnrollmentApplication.child_id
+    ).filter(
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    )
+
+    # Filter by kindergarten for non-admins
+    if current_user.role != models.UserRole.ADMIN:
+        query = query.filter(models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id)
+    elif kindergarten_id:
+        query = query.filter(models.EnrollmentApplication.kindergarten_id == kindergarten_id)
+
+    if class_id:
+        query = query.filter(models.EnrollmentApplication.class_id == class_id)
+
+    children = query.all()
+
+    result = []
+    for child in children:
+        # Get enrollment info
+        enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == child.id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        ).first()
+
+        child_info = {
+            "id": child.id,
+            "first_name": child.first_name,
+            "last_name": child.last_name,
+            "first_name_ar": child.first_name_ar,
+            "last_name_ar": child.last_name_ar,
+            "gender": child.gender.value if child.gender else None,
+            "date_of_birth": child.date_of_birth.isoformat() if child.date_of_birth else None,
+            "photo_url": child.photo_url,
+            "enrollment_id": enrollment.id if enrollment else None,
+            "class_id": enrollment.class_id if enrollment else None,
+            "kindergarten_id": enrollment.kindergarten_id if enrollment else None
+        }
+        result.append(child_info)
+
+    return {"children": result}
 
 
 @router.get("/supervisor/my-classes")

@@ -56,7 +56,6 @@
             <div class="col-md-3">
                 <select class="form-select" id="roleFilter">
                     <option value="">كل الأدوار</option>
-                    <option value="ADMIN">مدير النظام (Admin)</option>
                     <option value="MANAGER">مدير روضة (Manager)</option>
                     <option value="SUPERVISOR">مشرف (Supervisor)</option>
                     <option value="PARENT">ولي أمر (Parent)</option>
@@ -215,6 +214,24 @@
         const importBtn = document.getElementById('importBtn');
         if (importBtn) {
             importBtn.addEventListener('click', performImport);
+        }
+
+
+        const usersTableBody = document.getElementById('usersTableBody');
+        if (usersTableBody) {
+            usersTableBody.addEventListener('click', (event) => {
+                const actionBtn = event.target.closest('button[data-action]');
+                if (!actionBtn) return;
+
+                const userId = parseInt(actionBtn.dataset.userId, 10);
+                const username = actionBtn.dataset.username || '';
+
+                if (actionBtn.dataset.action === 'reset-password') {
+                    handleResetPassword(userId, username);
+                } else if (actionBtn.dataset.action === 'delete-user') {
+                    handleDeleteUser(userId, username);
+                }
+            });
         }
 
         // Add keyboard support for sortable headers
@@ -394,12 +411,12 @@
                             <i class="bi bi-pencil" aria-hidden="true"></i>
                         </a>
                         ${currentUserRole === 'ADMIN' ? `
-                        <button onclick="resetPassword(${user.id}, '${safeUsername.replace(/'/g, "\\'")}')" class="btn btn-sm btn-outline-warning" title="إعادة تعيين كلمة المرور" aria-label="إعادة تعيين كلمة مرور ${safeUsername}">
+                        <button data-action="reset-password" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-warning js-user-action" title="إعادة تعيين كلمة المرور" aria-label="إعادة تعيين كلمة مرور ${safeUsername}">
                             <i class="bi bi-key" aria-hidden="true"></i>
                         </button>
                         ` : ''}
                         ${currentUserRole === 'ADMIN' && user.role !== 'ADMIN' ? `
-                        <button onclick="deleteUser(${user.id}, '${safeUsername.replace(/'/g, "\\'")}')" class="btn btn-sm btn-outline-danger" title="حذف" aria-label="حذف ${safeUsername}">
+                        <button data-action="delete-user" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-danger js-user-action" title="حذف" aria-label="حذف ${safeUsername}">
                             <i class="bi bi-trash" aria-hidden="true"></i>
                         </button>
                         ` : ''}
@@ -428,7 +445,7 @@
         return badges[status] || `<span class="badge bg-light text-dark">${status}</span>`;
     }
 
-    window.deleteUser = async (id, name) => {
+    async function handleDeleteUser(id, name) {
         if (confirm(`هل أنت متأكد من رغبتك في حذف المستخدم "${name}"؟\nهذا الإجراء لا رجعة فيه.`)) {
             try {
                 await api.delete(`/api/users/${id}`);
@@ -440,7 +457,7 @@
         }
     }
 
-    window.resetPassword = async (id, name) => {
+    async function handleResetPassword(id, name) {
         // Check if we're on the edit page or list page
         if (typeof showPasswordResetModal !== 'undefined') {
             showPasswordResetModal(id, name);
@@ -659,11 +676,20 @@
             }
 
             if (response.errors && response.errors.length > 0) {
+                const formattedErrors = response.errors.map((error) => {
+                    if (typeof error === 'string') {
+                        return escapeHtml(error);
+                    }
+                    const row = error.row ? `Row ${error.row}` : 'Row';
+                    const field = error.field ? ` (${escapeHtml(error.field)})` : '';
+                    const message = error.message ? escapeHtml(error.message) : 'Unknown error';
+                    return `${row}${field}: ${message}`;
+                });
                 document.getElementById('importErrors').classList.remove('d-none');
                 document.getElementById('importErrors').innerHTML = `
                     <i class="bi bi-exclamation-triangle me-2"></i>
                     <strong>أخطاء:</strong><br>
-                    ${response.errors.map(error => `• ${error}`).join('<br>')}
+                    ${formattedErrors.map(err => `- ${err}`).join('<br>')}
                 `;
             }
 

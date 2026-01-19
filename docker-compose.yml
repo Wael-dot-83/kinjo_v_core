@@ -1,27 +1,30 @@
-version: "3.8"
-
 services:
+  db:
+    image: postgres:15
+    container_name: kinjo_postgres
+    environment:
+      POSTGRES_USER: kinjo
+      POSTGRES_PASSWORD: kinjo_password
+      POSTGRES_DB: kinjo_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - kinjo_pgdata:/var/lib/postgresql/data
+
   web:
     build: .
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - .:/app
       - ./data:/app/data
     environment:
-      - DATABASE_URL=sqlite:///./data/kinjo.db
-      - SECRET_KEY=changeme_in_production_secret_key_12345
-      - ENVIRONMENT=development
+      DATABASE_URL: postgresql+psycopg2://kinjo:kinjo_password@db:5432/kinjo_db
+      SECRET_KEY: changeme_in_production_secret_key_12345
+      ENVIRONMENT: development
+    depends_on:
+      - db
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-  # Optional: PostgreSQL service for production simulation
-  # db:
-  #   image: postgres:15
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   environment:
-  #     - POSTGRES_USER=kinjo
-  #     - POSTGRES_PASSWORD=kinjo_password
-  #     - POSTGRES_DB=kinjo_db
-# volumes:
-#   postgres_data:
+volumes:
+  kinjo_pgdata:

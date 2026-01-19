@@ -10,11 +10,13 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "postgresql://user:password@localhost:5432/kinjo_db"
+    TESTING: bool = False
 
     # Security
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES_REMEMBER: int = 60 * 24 * 7
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -35,6 +37,10 @@ class Settings(BaseSettings):
 
     # Jordan-specific
     JORDAN_PHONE_PATTERN: str = r"^(\+962|00962|0)[0-9]{9}$"
+    JORDAN_GOVERNORATES: List[str] = [
+        "عمان", "إربد", "الزرقاء", "العقبة", "المفرق",
+        "جرش", "عجلون", "الطفيلة", "الكرك", "معان", "السلط", "مادبا"
+    ]
 
     class Config:
         env_file = ".env"

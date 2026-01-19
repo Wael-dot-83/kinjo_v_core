@@ -216,3 +216,209 @@ def test_enrollment_class_assignment(client, test_db, manager_token, manager_use
     assert dash["summary"]["active_enrollments"] >= 1
 
 
+def test_class_update_manager(client, test_db, manager_token, manager_user, sample_kindergarten):
+    """Test Class update functionality"""
+    
+    # Ensure manager is linked to sample KG
+    manager_user.kindergarten_id = sample_kindergarten.id
+    test_db.commit()
+    
+    headers = {"Authorization": f"Bearer {manager_token}"}
+    
+    # 1. Create Class
+    class_data = {
+        "kindergarten_id": sample_kindergarten.id,
+        "name_ar": "الصف الأول",
+        "name_en": "Grade 1",
+        "capacity_total": 15,
+        "min_age_months": 48,
+        "max_age_months": 60
+    }
+    
+    response = client.post("/api/classes", json=class_data, headers=headers)
+    assert response.status_code == 201
+    class_id = response.json()["id"]
+    
+    # 2. Update Class
+    update_data = {
+        "name_ar": "الصف الأول المحدث",
+        "name_en": "Updated Grade 1",
+        "capacity_total": 20,
+        "min_age_months": 50,
+        "max_age_months": 65
+    }
+    
+    response = client.put(f"/api/classes/{class_id}", json=update_data, headers=headers)
+    assert response.status_code == 200
+    updated_class = response.json()
+    assert updated_class["name_ar"] == "الصف الأول المحدث"
+    assert updated_class["name_en"] == "Updated Grade 1"
+    assert updated_class["capacity_total"] == 20
+    assert updated_class["min_age_months"] == 50
+    assert updated_class["max_age_months"] == 65
+
+
+def test_class_deactivate_manager(client, test_db, manager_token, manager_user, sample_kindergarten):
+    """Test Class deactivation (soft delete)"""
+    
+    # Ensure manager is linked to sample KG
+    manager_user.kindergarten_id = sample_kindergarten.id
+    test_db.commit()
+    
+    headers = {"Authorization": f"Bearer {manager_token}"}
+    
+    # 1. Create Class
+    class_data = {
+        "kindergarten_id": sample_kindergarten.id,
+        "name_ar": "الصف الثاني",
+        "name_en": "Grade 2",
+        "capacity_total": 12,
+        "min_age_months": 60,
+        "max_age_months": 72
+    }
+    
+    response = client.post("/api/classes", json=class_data, headers=headers)
+    assert response.status_code == 201
+    class_id = response.json()["id"]
+    
+    # 2. Deactivate Class
+    response = client.put(f"/api/classes/{class_id}/deactivate", headers=headers)
+    assert response.status_code == 200
+    result = response.json()
+    assert "deactivated successfully" in result["message"]
+    
+    # 3. Verify class is inactive
+    response = client.get("/api/classes", headers=headers)
+    assert response.status_code == 200
+    classes = response.json()["classes"]
+    class_obj = next(c for c in classes if c["id"] == class_id)
+    assert class_obj["is_active"] == False
+
+
+def test_class_delete_admin_only(client, test_db, admin_token, manager_token, sample_kindergarten):
+    """Test Class hard delete (admin only)"""
+    
+    headers_admin = {"Authorization": f"Bearer {admin_token}"}
+    headers_manager = {"Authorization": f"Bearer {manager_token}"}
+    
+    # 1. Create Class as admin
+    class_data = {
+        "kindergarten_id": sample_kindergarten.id,
+        "name_ar": "الصف المؤقت",
+        "name_en": "Temp Class",
+        "capacity_total": 5,
+        "min_age_months": 24,
+        "max_age_months": 36
+    }
+    
+    response = client.post("/api/classes", json=class_data, headers=headers_admin)
+    assert response.status_code == 201
+    class_id = response.json()["id"]
+    
+    # 2. Try to delete as manager (should fail)
+    response = client.delete(f"/api/classes/{class_id}", headers=headers_manager)
+    assert response.status_code == 403
+    
+    # 3. Delete as admin (should succeed)
+    response = client.delete(f"/api/classes/{class_id}", headers=headers_admin)
+    assert response.status_code == 200
+    result = response.json()
+    assert "permanently deleted" in result["message"]
+    
+    # 4. Verify class is gone
+    response = client.get(f"/api/classes/{class_id}", headers=headers_admin)
+    assert response.status_code == 404
+
+
+def test_class_deactivate_with_enrollments_fails(client, test_db, manager_token, manager_user, sample_kindergarten, parent_user):
+    """Test that class deactivation fails when it has active enrollments"""
+    
+    # Ensure manager is linked to sample KG
+    manager_user.kindergarten_id = sample_kindergarten.id
+    test_db.commit()
+    
+    headers = {"Authorization": f"Bearer {manager_token}"}
+    
+    # 1. Create Class
+    class_data = {
+        "kindergarten_id": sample_kindergarten.id,
+        "name_ar": "الصف المشغول",
+        "name_en": "Busy Class",
+        "capacity_total": 10,
+        "min_age_months": 36,
+        "max_age_months": 48
+    }
+    
+    response = client.post("/api/classes", json=class_data, headers=headers)
+    assert response.status_code == 201
+    class_id = response.json()["id"]
+    
+    # 2. Create child and enrollment directly in database (since no API endpoint exists)
+    child = models.Child(
+        parent_id=parent_user.id,
+        first_name="Test",
+        last_name="Child",
+        date_of_birth=date.today() - timedelta(days=40*30),
+        gender=models.Gender.MALE,
+        father_name="Test Father",
+        mother_first_name="Test Mother",
+        mother_last_name="Test Mother Last",
+        mother_nationality="Jordanian"
+    )
+    test_db.add(child)
+    test_db.flush()
+    
+    enrollment = models.EnrollmentApplication(
+        child_id=child.id,
+        kindergarten_id=sample_kindergarten.id,
+        status=models.EnrollmentStatus.ACTIVE
+    )
+    test_db.add(enrollment)
+    test_db.flush()
+    
+    # Assign to class
+    response = client.post(f"/api/enrollments/{enrollment.id}/assign-class?class_id={class_id}", headers=headers)
+    assert response.status_code == 200
+    
+    # 3. Try to deactivate class (should fail)
+    response = client.put(f"/api/classes/{class_id}/deactivate", headers=headers)
+    assert response.status_code == 400
+    result = response.json()
+    assert "active enrollment" in result["detail"]
+
+
+def test_class_reactivate_via_update(client, test_db, manager_token, manager_user, sample_kindergarten):
+    """Test reactivating a class via update endpoint"""
+    
+    # Ensure manager is linked to sample KG
+    manager_user.kindergarten_id = sample_kindergarten.id
+    test_db.commit()
+    
+    headers = {"Authorization": f"Bearer {manager_token}"}
+    
+    # 1. Create and deactivate Class
+    class_data = {
+        "kindergarten_id": sample_kindergarten.id,
+        "name_ar": "الصف الخامل",
+        "name_en": "Inactive Class",
+        "capacity_total": 8,
+        "min_age_months": 30,
+        "max_age_months": 42
+    }
+    
+    response = client.post("/api/classes", json=class_data, headers=headers)
+    assert response.status_code == 201
+    class_id = response.json()["id"]
+    
+    # Deactivate
+    response = client.put(f"/api/classes/{class_id}/deactivate", headers=headers)
+    assert response.status_code == 200
+    
+    # 2. Reactivate via update
+    update_data = {"is_active": True}
+    response = client.put(f"/api/classes/{class_id}", json=update_data, headers=headers)
+    assert response.status_code == 200
+    updated_class = response.json()
+    assert updated_class["is_active"] == True
+
+

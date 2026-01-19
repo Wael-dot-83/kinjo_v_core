@@ -31,7 +31,7 @@
 <div class="card mb-4">
     <div class="card-body">
         <form id="filterForm" class="row g-3">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="filterGovernorate" class="form-label">المحافظة</label>
                 <select class="form-select" id="filterGovernorate" name="governorate">
                     <option value="">الكل</option>
@@ -39,9 +39,17 @@
                     <option value="إربد">إربد</option>
                     <option value="الزرقاء">الزرقاء</option>
                     <option value="العقبة">العقبة</option>
+                    <option value="المفرق">المفرق</option>
+                    <option value="جرش">جرش</option>
+                    <option value="عجلون">عجلون</option>
+                    <option value="الطفيلة">الطفيلة</option>
+                    <option value="الكرك">الكرك</option>
+                    <option value="معان">معان</option>
+                    <option value="السلط">السلط</option>
+                    <option value="مادبا">مادبا</option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="filterStatus" class="form-label">الحالة</label>
                 <select class="form-select" id="filterStatus" name="status">
                     <option value="">الكل</option>
@@ -50,8 +58,16 @@
                     <option value="inactive">غير نشط</option>
                 </select>
             </div>
-            <div class="col-md-4">
-                <label for="searchQuery" class="form-label">البحث</label>
+            <div class="col-md-2">
+                <label for="filterPhone" class="form-label">رقم الهاتف</label>
+                <input type="text" class="form-control" id="filterPhone" name="phone" placeholder="رقم الهاتف...">
+            </div>
+            <div class="col-md-3">
+                <label for="filterName" class="form-label">اسم الروضة</label>
+                <input type="text" class="form-control" id="filterName" name="name" placeholder="اسم الروضة...">
+            </div>
+            <div class="col-md-3">
+                <label for="searchQuery" class="form-label">البحث العام</label>
                 <input type="text" class="form-control" id="searchQuery" placeholder="ابحث بالاسم أو المنطقة...">
             </div>
             <div class="col-md-2 d-flex align-items-end">
@@ -184,9 +200,14 @@
                             <a href="/kindergartens/${kg.id}/edit" class="btn btn-outline-secondary flex-fill">
                                 <i class="bi bi-pencil me-1"></i>تعديل
                             </a>
-                            <button onclick="confirmDelete(${kg.id}, '${kg.name_ar}')" class="btn btn-outline-danger flex-fill">
-                                <i class="bi bi-trash me-1"></i>حذف
-                            </button>
+                            ${kg.status === 'ACTIVE' ? 
+                                `<button onclick="confirmArchive(${kg.id}, '${kg.name_ar}')" class="btn btn-outline-warning flex-fill">
+                                    <i class="bi bi-archive me-1"></i>أرشفة
+                                </button>` :
+                                `<button onclick="confirmRestore(${kg.id}, '${kg.name_ar}')" class="btn btn-outline-success flex-fill">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>استعادة
+                                </button>`
+                            }
                         </div>
                     </div>
                 </div>
@@ -194,20 +215,66 @@
         `).join('');
     }
 
-    // Delete functionality
-    window.confirmDelete = (id, name) => {
-        if(confirm(`هل أنت متأكد من رغبتك في حذف روضة "${name}"؟ هذا الإجراء لا يمكن التراجع عنه.`)) {
-            api.delete(`/kindergartens/${id}`)
-                .then(() => {
-                    showToast('تم حذف الروضة بنجاح', 'success');
-                    loadKindergartens(); // Reload list
-                })
-                .catch(err => {
-                    console.error('Delete error', err);
-                    showToast(err.message || 'حدث خطأ أثناء الحذف', 'error');
-                });
+    // Archive/Restore functionality
+    window.confirmArchive = (id, name) => {
+        if(confirm(`هل أنت متأكد من رغبتك في أرشفة روضة "${name}"؟ سيتم إخفاؤها من القوائم النشطة.`)) {
+            archiveKindergarten(id);
         }
     };
+
+    window.confirmRestore = (id, name) => {
+        if(confirm(`هل أنت متأكد من رغبتك في استعادة روضة "${name}"؟`)) {
+            restoreKindergarten(id);
+        }
+    };
+
+    async function archiveKindergarten(id) {
+        try {
+            const response = await fetch(`/api/kindergartens/${id}/archive`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token')}`
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                showToast(result.message, 'success');
+                loadKindergartens(); // Reload list
+            } else {
+                const error = await response.json();
+                showToast(error.detail || 'فشل في الأرشفة', 'error');
+            }
+        } catch (error) {
+            console.error('Archive error:', error);
+            showToast('حدث خطأ في الأرشفة', 'error');
+        }
+    }
+
+    async function restoreKindergarten(id) {
+        try {
+            const response = await fetch(`/api/kindergartens/${id}/restore`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token')}`
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                showToast(result.message, 'success');
+                loadKindergartens(); // Reload list
+            } else {
+                const error = await response.json();
+                showToast(error.detail || 'فشل في الاستعادة', 'error');
+            }
+        } catch (error) {
+            console.error('Restore error:', error);
+            showToast('حدث خطأ في الاستعادة', 'error');
+        }
+    }
     
     // Filter form submission
     document.getElementById('filterForm').addEventListener('submit', async (e) => {

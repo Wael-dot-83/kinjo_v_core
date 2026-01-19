@@ -13,6 +13,36 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 from database import Base
 
+# =============================================================================
+# Analytics & Reporting Enums (must be defined before models that use them)
+# =============================================================================
+
+class AnalyticsDimensionType(str, PyEnum):
+    """Dimension types for analytics aggregation"""
+    NETWORK = "NETWORK"
+    GOVERNORATE = "GOVERNORATE"
+    KINDERGARTEN = "KINDERGARTEN"
+    CLASS = "CLASS"
+    CHILD = "CHILD"
+    CITY = "CITY"
+    AREA = "AREA"
+    STAFF = "STAFF"
+    PARENT = "PARENT"
+
+class AnalyticsPeriodType(str, PyEnum):
+    """Period types for analytics aggregation"""
+    DAILY = "DAILY"
+    WEEKLY = "WEEKLY"
+    MONTHLY = "MONTHLY"
+    QUARTERLY = "QUARTERLY"
+    YEARLY = "YEARLY"
+
+class ExportStatus(str, PyEnum):
+    """Export job status"""
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 # Enums
 class UserRole(str, enum.Enum):
@@ -681,6 +711,60 @@ class AnalyticsDimensionType(str, PyEnum):
     GOVERNORATE = "GOVERNORATE"
     KINDERGARTEN = "KINDERGARTEN"
     CLASS = "CLASS"
+    CHILD = "CHILD"
+    CITY = "CITY"
+    AREA = "AREA"
+    STAFF = "STAFF"
+    PARENT = "PARENT"
+# Advanced Analytics Cache for multi-dimensional, advanced, and predictive metrics
+class AdvancedAnalyticsCache(Base):
+    """
+    Multi-dimensional analytics cache with advanced, predictive, and correlation metrics.
+    """
+    __tablename__ = "advanced_analytics_cache"
+
+    id = Column(Integer, primary_key=True, index=True)
+    dimension_type = Column(Enum(AnalyticsDimensionType), nullable=False)
+    dimension_id = Column(String(100), nullable=False)
+    period_type = Column(Enum(AnalyticsPeriodType), nullable=False)
+    period_start = Column(Date, nullable=False)
+    period_end = Column(Date, nullable=False)
+
+    # Core KPIs
+    attendance_rate = Column(Float)
+    chronic_absence_rate = Column(Float)
+    incident_rate_per_100 = Column(Float)
+    serious_incident_rate = Column(Float)
+    ratio_compliance_rate = Column(Float)
+    report_completion_rate = Column(Float)
+
+    # Advanced Metrics
+    parent_satisfaction_nps = Column(Float)
+    child_development_index = Column(Float)
+    staff_turnover_rate = Column(Float)
+    regulatory_compliance_score = Column(Float)
+
+    # Predictive Indicators
+    attendance_trend_slope = Column(Float)
+    risk_score = Column(Float)
+    improvement_velocity = Column(Float)
+
+    # Correlations
+    attendance_incident_correlation = Column(Float)
+    staffing_quality_correlation = Column(Float)
+
+    # Health/Curriculum/Alerts
+    health_alerts_count = Column(Integer)
+    curriculum_progress = Column(Float)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        Index('ix_adv_analytics_cache_dim', 'dimension_type', 'dimension_id'),
+        Index('ix_adv_analytics_cache_period', 'period_type', 'period_start', 'period_end'),
+        Index('ix_adv_analytics_cache_lookup', 'dimension_type', 'dimension_id', 'period_type', 'period_start', 'period_end', unique=True),
+    )
 
 
 class AnalyticsPeriodType(str, PyEnum):

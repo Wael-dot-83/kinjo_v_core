@@ -308,6 +308,17 @@ class TestSessionSecurity:
         assert response.status_code in [401, 403]
 
 
+def test_testing_bypass_blocked_in_production(monkeypatch):
+    """Ensure TESTING bypass cannot be enabled in production."""
+    import main
+
+    monkeypatch.setattr(main.settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(main.settings, "TESTING", True)
+
+    with pytest.raises(RuntimeError):
+        main.ensure_not_testing_in_production()
+
+
 # ============================================================================
 # Data Exposure Prevention Tests
 # ============================================================================

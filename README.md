@@ -95,10 +95,56 @@ KinJo is a comprehensive platform built according to IEEE Software Requirements 
 
 - **Framework**: FastAPI 0.115.0
 - **Database**: PostgreSQL with SQLAlchemy 2.0
-- **Authentication**: JWT with OAuth2
+- **Authentication**: JWT with OAuth2 (default 30 min TTL; remember-me TTL via `ACCESS_TOKEN_EXPIRE_MINUTES_REMEMBER`)
 - **Validation**: Pydantic with custom 5-level framework
 - **Testing**: Pytest with comprehensive coverage
 - **API Documentation**: Auto-generated OpenAPI/Swagger
+- **Password Policy**: bcrypt-based, min 8 chars, max 72 UTF-8 bytes (bcrypt limit; requests exceeding 72 bytes are rejected)
+
+## Production Checklist (Quick)
+
+Before deploying:
+
+1. **Environment**
+
+- Set:
+  - `ENVIRONMENT=production`
+  - `TESTING=false`
+  - `DATABASE_URL=postgresql+psycopg2://...` (PostgreSQL required in prod)
+  - `ACCESS_TOKEN_EXPIRE_MINUTES_REMEMBER=10080` (optional; 7 days)
+
+2. **Migrations**
+
+- Apply DB migrations:
+  - `alembic upgrade head`
+- Confirm:
+  - `alembic current` matches `alembic heads`
+
+3. **Run the app**
+
+- Start with workers (example):
+  - `uvicorn main:app --host 0.0.0.0 --port <port> --workers 4`
+
+4. **Security sanity**
+
+- Confirm `TESTING` is **off** (app will refuse to start if `ENVIRONMENT=production` and `TESTING=true`).
+- Ensure secrets are set (e.g., `SECRET_KEY`) and not using dev defaults.
+
+5. **Health & docs**
+
+- Verify:
+  - App: `http://<host>:<port>/`
+  - API docs: `http://<host>:<port>/docs`
+  - Note: In Docker Compose dev for this repo, the host port maps to `8001`.
+
+## Maintenance Note: Pydantic Deprecation Warnings
+
+The test suite currently emits Pydantic deprecation warnings. These do not fail tests, but should be addressed during a planned cleanup to maintain forward compatibility with upcoming Pydantic releases.
+
+Recommendation:
+
+- Keep warnings visible in CI/dev logs.
+- Schedule a refactor pass to update deprecated patterns (schemas/validators/config usage) once the codebase is stable for dependency upgrades.
 
 ## Installation
 
@@ -211,6 +257,9 @@ pytest tests/test_integration_comprehensive.py -v
 # Run security tests
 pytest tests/test_security.py -v
 
+# Run RBAC user management tests
+pytest tests/test_rbac_users.py -v
+
 # Run with coverage report
 pytest --cov=. --cov-report=html --cov-report=term-missing
 
@@ -240,6 +289,7 @@ xdg-open htmlcov/index.html  # Linux
 | `test_integration.py`                     | Integration workflows   | ~30   |
 | `tests/test_integration_comprehensive.py` | Full workflow tests     | ~40   |
 | `tests/test_security.py`                  | Security boundary tests | ~25   |
+| `tests/test_rbac_users.py`                | RBAC user management    | 5     |
 
 ## API Endpoints
 
@@ -395,7 +445,8 @@ The platform implements a 5-level validation hierarchy:
 - Password hashing with bcrypt
 - Role-based access control (RBAC)
 - Kindergarten scope isolation
-- Audit logging for sensitive actions
+- Audit logging for auth events and sensitive actions
+- Admin password resets require step-up verification
 - Data masking for exports
 - Consent-gated media sharing
 - Restricted safeguarding access
@@ -462,10 +513,9 @@ The project includes optimal Docker configuration for deployment.
    ```
 
    This will:
-
    - Build the container using `python:3.9-slim`
-   - Start the web service on port 8000
-   - Mount a volume for the SQLite database so data persists
+   - Start the web service (host port maps to 8001 by default in this repo)
+   - Start PostgreSQL with a named volume for data persistence
 
 2. **Manual Docker Build**:
 
@@ -493,6 +543,29 @@ python -c "from database import init_db; init_db()"
 # Or using Alembic
 alembic upgrade head
 ```
+
+## Importing Kindergartens from CSV
+
+A helper script is available to import kindergartens from a CSV into the database. It performs idempotent upserts (no duplicates) by matching on `name_ar + city + area`, validates required columns, and defaults to a safe dry-run. Use with caution on production and always backup before committing.
+
+Basic usage (dry-run):
+
+```bash
+python scripts/import_kindergartens.py -f "C:\\path\\to\\145.csv"
+```
+
+To apply changes:
+
+```bash
+python scripts/import_kindergartens.py -f "C:\\path\\to\\145.csv" --commit --backup backup_kindergartens.csv
+```
+
+Notes:
+
+- Required columns: `name_ar`, `governorate`, `city`, `area`, `address_line`, `contact_phone`.
+- Phone numbers are validated against the Jordan phone pattern and normalized.
+- Default status for new records: `ACTIVE` (configurable via `--status`).
+- The script uses a dry-run by default; only `--commit` writes to DB.
 
 ## Future Enhancements
 

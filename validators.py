@@ -23,6 +23,11 @@ def validate_jordan_phone(phone: str) -> bool:
     return bool(re.match(pattern, phone))
 
 
+def validate_jordan_governorate(governorate: str) -> bool:
+    """Validate governorate is a valid Jordanian governorate"""
+    return governorate in settings.JORDAN_GOVERNORATES
+
+
 def validate_child_age(date_of_birth: date) -> bool:
     """Validate child age is within acceptable range (70 days to 56 months)"""
     today = date.today()

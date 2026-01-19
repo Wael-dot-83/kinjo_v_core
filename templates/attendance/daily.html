@@ -1,137 +1,279 @@
 {% extends 'base.html' %}
 
-{% block title %}سجل الحضور والغياب{% endblock %}
+{% block title %}تقرير الحضور اليومي{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
-            <i class="bi bi-calendar-check me-2 text-primary"></i>
-            الحضور والغياب
+            <i class="bi bi-bar-chart-line me-2 text-primary"></i>
+            تقرير الحضور اليومي
         </h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">الحضور</li>
+                <li class="breadcrumb-item active">تقارير الحضور</li>
             </ol>
         </nav>
-    </div>
-    <div class="btn-toolbar gap-2">
-         <div class="input-group">
-            <span class="input-group-text bg-white"><i class="bi bi-calendar"></i></span>
-            <input type="date" class="form-control" id="attendanceDate" value="{{ today }}">
-        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- Selection Card -->
+<!-- Multi-Step Filter Workflow -->
 <div class="card mb-4">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="filterTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1" type="button" role="tab">
+                    <i class="bi bi-building me-1"></i>1. اختيار الروضة
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link disabled" id="step2-tab" data-bs-toggle="tab" data-bs-target="#step2" type="button" role="tab">
+                    <i class="bi bi-diagram-3 me-1"></i>2. اختيار الشعب
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link disabled" id="step3-tab" data-bs-toggle="tab" data-bs-target="#step3" type="button" role="tab">
+                    <i class="bi bi-people me-1"></i>3. اختيار الأطفال
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link disabled" id="step4-tab" data-bs-toggle="tab" data-bs-target="#step4" type="button" role="tab">
+                    <i class="bi bi-calendar me-1"></i>4. تحديد الفترة
+                </button>
+            </li>
+        </ul>
+    </div>
     <div class="card-body">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label for="classSelect" class="form-label">الشعبة الصفية</label>
-                <select class="form-select" id="classSelect">
-                    <option value="">اختر الشعبة...</option>
+        <div class="tab-content" id="filterTabsContent">
+            <!-- Step 1: Kindergarten Selection -->
+            <div class="tab-pane fade show active" id="step1" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">البحث بالروضة</label>
+                        <input type="text" class="form-control" id="kgSearch" placeholder="اسم الروضة...">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">المحافظة</label>
+                        <select class="form-select" id="kgGovernorate">
+                            <option value="">جميع المحافظات</option>
+                            <option value="عمان">عمان</option>
+                            <option value="إربد">إربد</option>
+                            <option value="الزرقاء">الزرقاء</option>
+                            <option value="العقبة">العقبة</option>
+                            <option value="المفرق">المفرق</option>
+                            <option value="جرش">جرش</option>
+                            <option value="عجلون">عجلون</option>
+                            <option value="الطفيلة">الطفيلة</option>
+                            <option value="الكرك">الكرك</option>
+                            <option value="معان">معان</option>
+                            <option value="السلط">السلط</option>
+                            <option value="مادبا">مادبا</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">رقم الهاتف</label>
+                        <input type="text" class="form-control" id="kgPhone" placeholder="رقم الهاتف...">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-primary w-100" onclick="searchKindergartens()">
+                            <i class="bi bi-search me-1"></i>بحث
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <select class="form-select" id="kindergartenSelect" size="5">
+                        <option value="">اختر روضة...</option>
+                    </select>
+                </div>
+                <div class="mt-3 text-end">
+                    <button class="btn btn-success" onclick="nextStep(1)">
+                        التالي: اختيار الشعب <i class="bi bi-arrow-left me-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Class Selection -->
+            <div class="tab-pane fade" id="step2" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="classSelection" id="allClasses" value="all" checked>
+                            <label class="form-check-label fw-bold" for="allClasses">
+                                جميع الشعب في الروضة المحددة
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="classSelection" id="specificClasses" value="specific">
+                            <label class="form-check-label fw-bold" for="specificClasses">
+                                اختيار شعب محددة
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div id="classSelectionArea" class="mt-3" style="display: none;">
+                    <div class="border rounded p-3 bg-light">
+                        <label class="form-label">اختر الشعب:</label>
+                        <div id="classCheckboxes" class="row g-2">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex justify-content-between">
+                    <button class="btn btn-outline-secondary" onclick="prevStep(2)">
+                        <i class="bi bi-arrow-right me-1"></i> السابق
+                    </button>
+                    <button class="btn btn-success" onclick="nextStep(2)">
+                        التالي: اختيار الأطفال <i class="bi bi-arrow-left me-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3: Child Selection -->
+            <div class="tab-pane fade" id="step3" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="childSelection" id="allChildren" value="all" checked>
+                            <label class="form-check-label fw-bold" for="allChildren">
+                                جميع الأطفال في الشعب المحددة
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="childSelection" id="specificChildren" value="specific">
+                            <label class="form-check-label fw-bold" for="specificChildren">
+                                اختيار أطفال محددين
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div id="childSelectionArea" class="mt-3" style="display: none;">
+                    <div class="border rounded p-3 bg-light">
+                        <label class="form-label">اختر الأطفال:</label>
+                        <div id="childCheckboxes" class="row g-2">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 d-flex justify-content-between">
+                    <button class="btn btn-outline-secondary" onclick="prevStep(3)">
+                        <i class="bi bi-arrow-right me-1"></i> السابق
+                    </button>
+                    <button class="btn btn-success" onclick="nextStep(3)">
+                        التالي: تحديد الفترة <i class="bi bi-arrow-left me-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 4: Date/Period Selection -->
+            <div class="tab-pane fade" id="step4" role="tabpanel">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">نوع الفترة</label>
+                        <select class="form-select" id="periodType" onchange="toggleDateInputs()">
+                            <option value="day">يوم واحد</option>
+                            <option value="week">أسبوع</option>
+                            <option value="month">شهر</option>
+                            <option value="range">فترة مخصصة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3" id="singleDateGroup">
+                        <label class="form-label">التاريخ</label>
+                        <input type="date" class="form-control" id="singleDate" value="{{ today }}">
+                    </div>
+                    <div class="col-md-3" id="startDateGroup" style="display: none;">
+                        <label class="form-label">من تاريخ</label>
+                        <input type="date" class="form-control" id="startDate">
+                    </div>
+                    <div class="col-md-3" id="endDateGroup" style="display: none;">
+                        <label class="form-label">إلى تاريخ</label>
+                        <input type="date" class="form-control" id="endDate">
+                    </div>
+                </div>
+                <div class="mt-3 d-flex justify-content-between">
+                    <button class="btn btn-outline-secondary" onclick="prevStep(4)">
+                        <i class="bi bi-arrow-right me-1"></i> السابق
+                    </button>
+                    <button class="btn btn-primary" onclick="generateReport()">
+                        <i class="bi bi-bar-chart me-1"></i> إنشاء التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Display Area -->
+<div id="reportArea" style="display: none;">
+    <!-- Report Header -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-file-earmark-bar-graph me-2"></i>
+                تقرير الحضور - <span id="reportPeriod"></span>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3" id="reportHeader">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4" id="summaryCards">
+        <!-- Populated by JS -->
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">توزيع الحضور</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">اتجاه الحضور اليومي</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matrix Table -->
+    <div class="card">
+        <div class="card-header">
+            <h6 class="mb-0">جدول الحضور التفصيلي</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0" id="attendanceMatrix">
                     <!-- Populated by JS -->
-                </select>
-            </div>
-            <div class="col-md-4">
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary" onclick="loadAttendance()" id="loadBtn">
-                        عرض القائمة
-                    </button>
-                    <button class="btn btn-outline-secondary" onclick="markAll('present')" title="تحضير الكل">
-                        <i class="bi bi-check-all"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-4 text-start">
-                <div class="d-inline-flex align-items-center gap-3 bg-light px-3 py-2 rounded">
-                    <div class="d-flex align-items-center">
-                        <span class="badge bg-success rounded-circle p-1 me-2"> </span>
-                        <small>حضور: <span id="countPresent" class="fw-bold">0</span></small>
-                    </div>
-                    <div class="d-flex align-items-center">
-                         <span class="badge bg-danger rounded-circle p-1 me-2"> </span>
-                        <small>غياب: <span id="countAbsent" class="fw-bold">0</span></small>
-                    </div>
-                    <div class="d-flex align-items-center">
-                         <span class="badge bg-warning rounded-circle p-1 me-2"> </span>
-                        <small>تأخر: <span id="countLate" class="fw-bold">0</span></small>
-                    </div>
-                </div>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Attendance Grid -->
-<div class="card">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width: 50px;">#</th>
-                        <th>اسم الطفل</th>
-                        <th>الحالة</th>
-                        <th>وقت الوصول</th>
-                        <th>وقت المغادرة</th>
-                        <th>استلام من قبل</th>
-                        <th>ملاحظات</th>
-                    </tr>
-                </thead>
-                <tbody id="attendanceTable">
-                    <tr>
-                        <td colspan="7" class="text-center py-5">
-                            <i class="bi bi-arrow-up-circle fs-1 text-muted d-block mb-3 opacity-25"></i>
-                            <p class="text-muted">يرجى اختيار الشعبة لعرض القائمة</p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="card-footer bg-light" id="tableFooter" style="display: none;">
-        <div class="d-flex justify-content-end">
-            <button class="btn btn-success px-4" onclick="saveAttendance()">
-                <i class="bi bi-save me-2"></i>حفظ السجل
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Check-in Modal -->
-<div class="modal fade" id="checkInModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">تسجيل دخول</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="d-none">
+    <div class="d-flex justify-content-center align-items-center" style="height: 200px;">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">جاري التحميل...</span>
             </div>
-            <div class="modal-body">
-                <input type="hidden" id="modalChildId">
-                <div class="mb-3">
-                    <label class="form-label">وقت الوصول</label>
-                    <input type="time" class="form-control" id="checkInTime">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">مُسلّم من قبل</label>
-                    <input type="text" class="form-control" id="droppedBy" placeholder="اسم الشخص (اختياري)">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">فحص الصحة الصباحي</label>
-                    <div class="form-check">
-                         <input class="form-check-input" type="checkbox" id="healthCheckDisplay" checked>
-                        <label class="form-check-label">حرارة طبيعية ولا توجد أعراض</label>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" onclick="confirmCheckIn()">تسجيل</button>
-            </div>
+            <p class="mt-2 text-muted">جاري إنشاء التقرير...</p>
         </div>
     </div>
 </div>
@@ -139,135 +281,399 @@
 
 {% block extra_js %}
 <script>
-    let currentStudents = [];
-    
-    document.addEventListener('DOMContentLoaded', async () => {
-        // Set today as default
-        document.getElementById('attendanceDate').valueAsDate = new Date();
-        
-        // Load classes for dropdown
-        // await loadClasses();
-        
-        // Mock classes
-        const classes = [
-             {id: 1, name: 'الفراشات (KG1)'},
-             {id: 2, name: 'الزهور (KG2)'},
-             {id: 3, name: 'النجوم (Nursery)'}
-        ];
-        const select = document.getElementById('classSelect');
-        classes.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.id;
-            opt.textContent = c.name;
-            select.appendChild(opt);
-        });
+let currentStep = 1;
+let selectedKindergarten = null;
+let selectedClasses = [];
+let selectedChildren = [];
+let reportData = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize date inputs
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('singleDate').value = today;
+
+    // Event listeners
+    document.querySelectorAll('input[name="classSelection"]').forEach(radio => {
+        radio.addEventListener('change', toggleClassSelection);
     });
-    
-    async function loadAttendance() {
-        const classId = document.getElementById('classSelect').value;
-        if (!classId) {
-            showToast('يرجى اختيار الشعبة', 'warning');
+    document.querySelectorAll('input[name="childSelection"]').forEach(radio => {
+        radio.addEventListener('change', toggleChildSelection);
+    });
+});
+
+function toggleDateInputs() {
+    const periodType = document.getElementById('periodType').value;
+    const singleDateGroup = document.getElementById('singleDateGroup');
+    const startDateGroup = document.getElementById('startDateGroup');
+    const endDateGroup = document.getElementById('endDateGroup');
+
+    if (periodType === 'range') {
+        singleDateGroup.style.display = 'none';
+        startDateGroup.style.display = 'block';
+        endDateGroup.style.display = 'block';
+    } else {
+        singleDateGroup.style.display = 'block';
+        startDateGroup.style.display = 'none';
+        endDateGroup.style.display = 'none';
+    }
+}
+
+async function searchKindergartens() {
+    const search = document.getElementById('kgSearch').value;
+    const governorate = document.getElementById('kgGovernorate').value;
+    const phone = document.getElementById('kgPhone').value;
+
+    console.log('Search parameters:', { search, governorate, phone });
+
+    try {
+        const response = await api.searchKindergartens({ search, governorate, phone });
+        console.log('API response:', response);
+
+        const select = document.getElementById('kindergartenSelect');
+        select.innerHTML = '<option value="">اختر روضة...</option>';
+
+        if (response.kindergartens && response.kindergartens.length > 0) {
+            response.kindergartens.forEach(kg => {
+                const option = document.createElement('option');
+                option.value = kg.id;
+                option.textContent = `${kg.name_ar} - ${kg.governorate}`;
+                select.appendChild(option);
+            });
+            showToast(`تم العثور على ${response.kindergartens.length} روضة`, 'success');
+        } else {
+            showToast('لم يتم العثور على روضات مطابقة', 'info');
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        showToast(`خطأ في البحث عن الروضات: ${error.message}`, 'error');
+    }
+}
+
+function nextStep(currentStep) {
+    if (currentStep === 1) {
+        const kgId = document.getElementById('kindergartenSelect').value;
+        if (!kgId) {
+            showToast('يرجى اختيار روضة', 'warning');
             return;
         }
-
-        showLoading();
-        
-        // Mock data
-        setTimeout(() => {
-            currentStudents = [
-                {id: 101, name: 'أحمد محمد', status: 'present', check_in: '07:45', check_out: '', pickup_by: '', notes: ''},
-                {id: 102, name: 'سارة علي', status: 'present', check_in: '08:00', check_out: '', pickup_by: '', notes: ''},
-                {id: 103, name: 'خالد عمر', status: 'absent', check_in: '', check_out: '', pickup_by: '', notes: 'إجازة مرضية'},
-                {id: 104, name: 'ليلى حسن', status: 'pending', check_in: '', check_out: '', pickup_by: '', notes: ''},
-                {id: 105, name: 'يوسف إبراهيم', status: 'pending', check_in: '', check_out: '', pickup_by: '', notes: ''},
-            ];
-            
-            renderTable();
-            updateStats();
-            document.getElementById('tableFooter').style.display = 'block';
-            hideLoading();
-        }, 500);
+        selectedKindergarten = kgId;
+        loadClasses();
+    } else if (currentStep === 2) {
+        // Classes already selected via radio/checkboxes
+        loadChildren();
+    } else if (currentStep === 3) {
+        // Children already selected
     }
-    
-    function renderTable() {
-        const tbody = document.getElementById('attendanceTable');
-        tbody.innerHTML = currentStudents.map((s, idx) => `
-            <tr id="row-${s.id}">
-                <td>${idx + 1}</td>
-                <td class="fw-bold">${s.name}</td>
-                <td>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <input type="radio" class="btn-check" name="status-${s.id}" id="present-${s.id}" value="present" 
-                               ${s.status === 'present' ? 'checked' : ''} onchange="updateStatus(${s.id}, 'present')">
-                        <label class="btn btn-outline-success" for="present-${s.id}">حضور</label>
 
-                        <input type="radio" class="btn-check" name="status-${s.id}" id="late-${s.id}" value="late"
-                               ${s.status === 'late' ? 'checked' : ''} onchange="updateStatus(${s.id}, 'late')">
-                        <label class="btn btn-outline-warning" for="late-${s.id}">تأخر</label>
+    // Enable next tab and switch
+    const nextTab = document.getElementById(`step${currentStep + 1}-tab`);
+    nextTab.classList.remove('disabled');
+    nextTab.click();
+}
 
-                        <input type="radio" class="btn-check" name="status-${s.id}" id="absent-${s.id}" value="absent"
-                               ${s.status === 'absent' ? 'checked' : ''} onchange="updateStatus(${s.id}, 'absent')">
-                        <label class="btn btn-outline-danger" for="absent-${s.id}">غياب</label>
-                    </div>
-                </td>
-                <td>
-                    <input type="time" class="form-control form-control-sm" value="${s.check_in}" 
-                           onchange="updateField(${s.id}, 'check_in', this.value)">
-                </td>
-                <td>
-                    <input type="time" class="form-control form-control-sm" value="${s.check_out}"
-                            onchange="updateField(${s.id}, 'check_out', this.value)">
-                </td>
-                <td>
-                    <input type="text" class="form-control form-control-sm" placeholder="اسم المستلم" 
-                           value="${s.pickup_by}" onchange="updateField(${s.id}, 'pickup_by', this.value)">
-                </td>
-                <td>
-                    <input type="text" class="form-control form-control-sm" placeholder="ملاحظات" 
-                           value="${s.notes}" onchange="updateField(${s.id}, 'notes', this.value)">
-                </td>
-            </tr>
-        `).join('');
+function prevStep(currentStep) {
+    const prevTab = document.getElementById(`step${currentStep - 1}-tab`);
+    prevTab.click();
+}
+
+async function loadClasses() {
+    try {
+        const response = await api.getKindergartenClasses(selectedKindergarten);
+        const container = document.getElementById('classCheckboxes');
+        container.innerHTML = '';
+
+        response.classes.forEach(cls => {
+            const div = document.createElement('div');
+            div.className = 'col-md-4';
+            div.innerHTML = `
+                <div class="form-check">
+                    <input class="form-check-input class-checkbox" type="checkbox" id="class-${cls.id}" value="${cls.id}">
+                    <label class="form-check-label" for="class-${cls.id}">
+                        ${cls.name_ar || cls.name_en}
+                    </label>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    } catch (error) {
+        showToast('خطأ في تحميل الشعب', 'error');
     }
-    
-    function updateStatus(id, status) {
-        const student = currentStudents.find(s => s.id === id);
-        if (student) {
-            student.status = status;
-            
-            // Auto fill check-in time if marked present/late
-            if ((status === 'present' || status === 'late') && !student.check_in) {
-                 const now = new Date();
-                 const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
-                                   now.getMinutes().toString().padStart(2, '0');
-                 student.check_in = timeString;
-                 renderTable(); // Re-render to show time
-            }
-            
-            updateStats();
+}
+
+async function loadChildren() {
+    const classSelection = document.querySelector('input[name="classSelection"]:checked').value;
+    let classIds = null;
+    if (classSelection === 'specific') {
+        classIds = Array.from(document.querySelectorAll('.class-checkbox:checked')).map(cb => cb.value);
+        if (classIds.length === 0) {
+            showToast('يرجى اختيار شعبة واحدة على الأقل', 'warning');
+            return;
         }
     }
-    
-    function updateField(id, field, value) {
-        const student = currentStudents.find(s => s.id === id);
-        if (student) student[field] = value;
+
+    try {
+        const response = await api.getKindergartenChildren(selectedKindergarten, classIds);
+        const container = document.getElementById('childCheckboxes');
+        container.innerHTML = '';
+
+        response.children.forEach(child => {
+            const div = document.createElement('div');
+            div.className = 'col-md-4';
+            div.innerHTML = `
+                <div class="form-check">
+                    <input class="form-check-input child-checkbox" type="checkbox" id="child-${child.id}" value="${child.id}">
+                    <label class="form-check-label" for="child-${child.id}">
+                        ${child.first_name_ar || child.first_name} ${child.last_name_ar || child.last_name}
+                    </label>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    } catch (error) {
+        showToast('خطأ في تحميل الأطفال', 'error');
     }
-    
-    function updateStats() {
-        document.getElementById('countPresent').textContent = currentStudents.filter(s => s.status === 'present').length;
-        document.getElementById('countAbsent').textContent = currentStudents.filter(s => s.status === 'absent').length;
-        document.getElementById('countLate').textContent = currentStudents.filter(s => s.status === 'late').length;
+}
+
+function toggleClassSelection() {
+    const selection = document.querySelector('input[name="classSelection"]:checked').value;
+    const area = document.getElementById('classSelectionArea');
+    area.style.display = selection === 'specific' ? 'block' : 'none';
+}
+
+function toggleChildSelection() {
+    const selection = document.querySelector('input[name="childSelection"]:checked').value;
+    const area = document.getElementById('childSelectionArea');
+    area.style.display = selection === 'specific' ? 'block' : 'none';
+}
+
+async function generateReport() {
+    // Collect parameters
+    const periodType = document.getElementById('periodType').value;
+    let params = {
+        kindergarten_id: selectedKindergarten,
+        period_type: periodType
+    };
+
+    // Add class selection
+    const classSelection = document.querySelector('input[name="classSelection"]:checked').value;
+    if (classSelection === 'specific') {
+        params.class_ids = Array.from(document.querySelectorAll('.class-checkbox:checked')).map(cb => cb.value);
     }
-    
-    function markAll(status) {
-        if (!currentStudents.length) return;
-        currentStudents.forEach(s => updateStatus(s.id, status));
-        renderTable(); // Mass re-render
+
+    // Add child selection
+    const childSelection = document.querySelector('input[name="childSelection"]:checked').value;
+    if (childSelection === 'specific') {
+        params.child_ids = Array.from(document.querySelectorAll('.child-checkbox:checked')).map(cb => cb.value);
     }
-    
-    async function saveAttendance() {
-        // api.saveAttendanceBatch(currentStudents)...
-        showToast('تم حفظ سجل الحضور بنجاح', 'success');
+
+    // Add date parameters
+    if (periodType === 'range') {
+        params.start_date = document.getElementById('startDate').value;
+        params.end_date = document.getElementById('endDate').value;
+    } else {
+        params.date = document.getElementById('singleDate').value;
     }
+
+    // Show loading
+    document.getElementById('loadingOverlay').classList.remove('d-none');
+    document.getElementById('reportArea').style.display = 'none';
+
+    try {
+        const response = await api.getAttendanceReport(params);
+        reportData = response;
+        renderReport();
+        document.getElementById('reportArea').style.display = 'block';
+    } catch (error) {
+        showToast('خطأ في إنشاء التقرير', 'error');
+    } finally {
+        document.getElementById('loadingOverlay').classList.add('d-none');
+    }
+}
+
+function renderReport() {
+    // Header
+    const header = document.getElementById('reportHeader');
+    const kg = reportData.meta.kindergarten;
+    header.innerHTML = `
+        <div class="col-md-6">
+            <h6>${kg.name_ar}</h6>
+            <p class="mb-1"><strong>المحافظة:</strong> ${kg.governorate}</p>
+            <p class="mb-1"><strong>المدينة:</strong> ${kg.city}</p>
+            <p class="mb-0"><strong>الهاتف:</strong> ${kg.phone || 'غير محدد'}</p>
+        </div>
+        <div class="col-md-6">
+            <h6>فترة التقرير</h6>
+            <p class="mb-1"><strong>من:</strong> ${formatDate(reportData.meta.start_date)}</p>
+            <p class="mb-1"><strong>إلى:</strong> ${formatDate(reportData.meta.end_date)}</p>
+            <p class="mb-0"><strong>نوع الفترة:</strong> ${getPeriodTypeLabel(reportData.meta.period_type)}</p>
+        </div>
+    `;
+
+    document.getElementById('reportPeriod').textContent = `${formatDate(reportData.meta.start_date)} - ${formatDate(reportData.meta.end_date)}`;
+
+    // Summary cards
+    const summary = reportData.totals.summary;
+    const cards = document.getElementById('summaryCards');
+    cards.innerHTML = `
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">${summary.total_children}</h3>
+                    <p class="mb-0">إجمالي الأطفال</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-info">${summary.total_school_days}</h3>
+                    <p class="mb-0">أيام الدراسة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">${summary.attendance_rate}%</h3>
+                    <p class="mb-0">معدل الحضور</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">${reportData.totals.overall.present}</h3>
+                    <p class="mb-0">إجمالي الحضور</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Charts
+    renderCharts();
+
+    // Matrix table
+    renderMatrix();
+}
+
+function renderCharts() {
+    // Status breakdown chart
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['حاضر', 'غائب'],
+            datasets: [{
+                data: [reportData.totals.overall.present, reportData.totals.overall.absent],
+                backgroundColor: ['#28a745', '#dc3545']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Trend chart
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: reportData.dates.map(d => formatDate(d)),
+            datasets: [{
+                label: 'عدد الحاضرين',
+                data: reportData.dates.map(d => reportData.totals.per_day[d]),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function renderMatrix() {
+    const table = document.getElementById('attendanceMatrix');
+    let html = '<thead class="table-light"><tr><th rowspan="2" class="sticky-col">الطفل</th><th rowspan="2">الشعبة</th>';
+
+    // Date headers
+    reportData.dates.forEach(date => {
+        html += `<th class="text-center">${formatDateShort(date)}</th>`;
+    });
+    html += '<th rowspan="2" class="text-center">الحضور</th><th rowspan="2" class="text-center">الغياب</th></tr>';
+
+    // Day totals row
+    html += '<tr>';
+    reportData.dates.forEach(date => {
+        const count = reportData.totals.per_day[date];
+        html += `<th class="text-center bg-light">${count}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    // Child rows
+    reportData.children.forEach(child => {
+        html += `<tr>
+            <td class="sticky-col fw-bold">${child.name_ar}</td>
+            <td>${child.class_name || 'غير محدد'}</td>`;
+
+        let presentCount = 0;
+        let absentCount = 0;
+
+        reportData.dates.forEach(date => {
+            const status = reportData.matrix[child.id][date];
+            const badgeClass = status.status === 'present' ? 'bg-success' : 'bg-danger';
+            const icon = status.status === 'present' ? '✓' : '✗';
+            html += `<td class="text-center"><span class="badge ${badgeClass}">${icon}</span></td>`;
+
+            if (status.status === 'present') presentCount++;
+            else absentCount++;
+        });
+
+        html += `<td class="text-center fw-bold text-success">${presentCount}</td>
+                 <td class="text-center fw-bold text-danger">${absentCount}</td>
+                 </tr>`;
+    });
+
+    html += '</tbody>';
+    table.innerHTML = html;
+}
+
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ar-JO', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+}
+
+function formatDateShort(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ar-JO', {
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+function getPeriodTypeLabel(type) {
+    const labels = {
+        'day': 'يوم واحد',
+        'week': 'أسبوع',
+        'month': 'شهر',
+        'range': 'فترة مخصصة'
+    };
+    return labels[type] || type;
+}
 </script>
 {% endblock %}

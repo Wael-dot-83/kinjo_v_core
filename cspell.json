@@ -14,7 +14,10 @@
         "sessionmaker",
         "Rawdat",
         "Shmeisani",
-        "fromisoformat"
+        "fromisoformat",
+        "governorates",
+        "drilldown",
+        "Drilldown"
     ],
     "ignorePaths": [
         "node_modules",

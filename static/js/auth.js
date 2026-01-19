@@ -17,6 +17,7 @@ const AUTH_CONFIG = {
   refreshEndpoint: "/api/auth/refresh",
   meEndpoint: "/users/me",
   sessionTimeout: 30 * 60 * 1000, // 30 minutes in milliseconds
+  rememberMeMaxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
   tokenRefreshBuffer: 5 * 60 * 1000, // Refresh 5 minutes before expiry
 };
 
@@ -27,6 +28,7 @@ const AUTH_CONFIG = {
 class AuthStorage {
   constructor(rememberMe = false) {
     this.storage = rememberMe ? localStorage : sessionStorage;
+    this.rememberMe = rememberMe;
   }
 
   static getActiveStorage() {
@@ -41,7 +43,9 @@ class AuthStorage {
     this.storage.setItem(AUTH_CONFIG.tokenKey, token);
     this.storage.setItem(AUTH_CONFIG.tokenTypeKey, tokenType);
     // Also set as cookie for server-side access
-    const maxAge = this.storage === localStorage ? 604800 : 3600; // 7 days or 1 hour
+    const maxAge = this.rememberMe
+      ? AUTH_CONFIG.rememberMeMaxAgeSeconds
+      : Math.floor(AUTH_CONFIG.sessionTimeout / 1000);
     // Add Secure flag in production (HTTPS)
     const isSecure = window.location.protocol === "https:";
     const secureFlag = isSecure ? "; Secure" : "";
@@ -303,6 +307,7 @@ class AuthService {
     formData.append("username", username);
     formData.append("password", password);
     formData.append("grant_type", "password");
+    formData.append("remember_me", rememberMe ? "true" : "false");
 
     const response = await fetch(AUTH_CONFIG.loginEndpoint, {
       method: "POST",

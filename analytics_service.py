@@ -1,3 +1,125 @@
+from fastapi import APIRouter, Depends, Query, HTTPException, status, BackgroundTasks
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
+from datetime import date
+import models
+from database import get_db
+from sqlalchemy.orm import Session
+from dependencies import get_current_user
+
+# ...existing code...
+
+# =============================================================================
+# Pydantic Schemas for API
+# =============================================================================
+
+class AdvancedAnalyticsCacheResponse(BaseModel):
+    dimension_type: str
+    dimension_id: str
+    period_type: str
+    period_start: date
+    period_end: date
+    attendance_rate: Optional[float] = None
+    chronic_absence_rate: Optional[float] = None
+    incident_rate_per_100: Optional[float] = None
+    serious_incident_rate: Optional[float] = None
+    ratio_compliance_rate: Optional[float] = None
+    report_completion_rate: Optional[float] = None
+    parent_satisfaction_nps: Optional[float] = None
+    child_development_index: Optional[float] = None
+    staff_turnover_rate: Optional[float] = None
+    regulatory_compliance_score: Optional[float] = None
+    attendance_trend_slope: Optional[float] = None
+    risk_score: Optional[float] = None
+    improvement_velocity: Optional[float] = None
+    attendance_incident_correlation: Optional[float] = None
+    staffing_quality_correlation: Optional[float] = None
+    health_alerts_count: Optional[int] = None
+    curriculum_progress: Optional[float] = None
+    class Config:
+        orm_mode = True
+
+class InvalidateCacheRequest(BaseModel):
+    dimension_type: Optional[str] = None
+    dimension_id: Optional[str] = None
+    period_type: Optional[str] = None
+    period_start: Optional[date] = None
+    period_end: Optional[date] = None
+
+class WarmCacheRequest(BaseModel):
+    dimension_type: str
+    dimension_ids: List[str]
+    period_type: str
+    period_start: date
+    period_end: date
+
+# =============================================================================
+# API Endpoints for Advanced Analytics Cache
+# =============================================================================
+
+router = APIRouter(tags=["Analytics"])
+
+@router.get("/advanced-cache", response_model=AdvancedAnalyticsCacheResponse)
+def get_advanced_analytics_cache(
+    dimension_type: str = Query(...),
+    dimension_id: str = Query(...),
+    period_type: str = Query(...),
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Enforce authentication (current_user will raise 401 if not authenticated)
+    # RBAC: Only admin/supervisor/manager can access
+    if current_user.role not in {models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER}:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    cache = AnalyticsService.get_advanced_analytics_cache(
+        db,
+        models.AnalyticsDimensionType(dimension_type),
+        dimension_id,
+        models.AnalyticsPeriodType(period_type),
+        period_start,
+        period_end
+    )
+    if not cache:
+        raise HTTPException(status_code=404, detail="No cache found")
+    return cache
+
+@router.post("/advanced-cache/invalidate")
+def invalidate_advanced_analytics_cache(
+    req: InvalidateCacheRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin only")
+    count = AnalyticsService.invalidate_advanced_analytics_cache(
+        db,
+        models.AnalyticsDimensionType(req.dimension_type) if req.dimension_type else None,
+        req.dimension_id,
+        models.AnalyticsPeriodType(req.period_type) if req.period_type else None,
+        req.period_start,
+        req.period_end
+    )
+    return {"deleted": count}
+
+@router.post("/advanced-cache/warm")
+def warm_advanced_analytics_cache(
+    req: WarmCacheRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin only")
+    count = AnalyticsService.warm_advanced_analytics_cache(
+        db,
+        models.AnalyticsDimensionType(req.dimension_type),
+        req.dimension_ids,
+        models.AnalyticsPeriodType(req.period_type),
+        req.period_start,
+        req.period_end
+    )
+    return {"created": count}
 """
 Analytics and Reporting Services for Admin Dashboard
 Implements drill-down analytics from Network → Governorate → Kindergarten → Class → Child
@@ -37,7 +159,9 @@ class NetworkSummary(BaseModel):
     enrollment_rate: float
     attendance_rate: float
     incident_rate: float
-    report_completion_rate: float
+    report_submission_rate: float
+    report_approval_rate: float
+    report_completion_rate: float = Field(alias="report_approval_rate")  # Backward compatibility
     governance_avg_score: float
 
 
@@ -61,7 +185,9 @@ class KindergartenMetrics(BaseModel):
     enrollment_rate: float
     attendance_rate: float
     incident_rate: float
-    report_completion_rate: float
+    report_submission_rate: float
+    report_approval_rate: float
+    report_completion_rate: float = Field(alias="report_approval_rate")  # Backward compatibility
     ratio_compliance: float
     governance_score: float
     governance_band: str
@@ -122,7 +248,197 @@ class ExportRequest(BaseModel):
 # =============================================================================
 
 class AnalyticsService:
-    """Service for computing analytics and generating reports"""
+    @staticmethod
+    def invalidate_advanced_analytics_cache(
+        db: Session,
+        dimension_type: models.AnalyticsDimensionType = None,
+        dimension_id: str = None,
+        period_type: models.AnalyticsPeriodType = None,
+        period_start: date = None,
+        period_end: date = None
+    ) -> int:
+        """
+        Invalidate (delete) advanced analytics cache entries matching the given filters.
+        Returns number of rows deleted.
+        """
+        query = db.query(models.AdvancedAnalyticsCache)
+        if dimension_type:
+            query = query.filter(models.AdvancedAnalyticsCache.dimension_type == dimension_type)
+        if dimension_id:
+            query = query.filter(models.AdvancedAnalyticsCache.dimension_id == str(dimension_id))
+        if period_type:
+            query = query.filter(models.AdvancedAnalyticsCache.period_type == period_type)
+        if period_start:
+            query = query.filter(models.AdvancedAnalyticsCache.period_start == period_start)
+        if period_end:
+            query = query.filter(models.AdvancedAnalyticsCache.period_end == period_end)
+        count = query.delete(synchronize_session=False)
+        db.commit()
+        return count
+
+    @staticmethod
+    def warm_advanced_analytics_cache(
+        db: Session,
+        dimension_type: models.AnalyticsDimensionType,
+        dimension_ids: list,
+        period_type: models.AnalyticsPeriodType,
+        period_start: date,
+        period_end: date
+    ) -> int:
+        """
+        Precompute and store advanced analytics cache for a list of dimension_ids.
+        Returns number of cache entries created.
+        """
+        created = 0
+        for dim_id in dimension_ids:
+            AnalyticsService.compute_advanced_analytics(
+                db, dimension_type, dim_id, period_type, period_start, period_end
+            )
+            created += 1
+        return created
+
+    @staticmethod
+    def compute_advanced_analytics(
+        db: Session,
+        dimension_type: models.AnalyticsDimensionType,
+        dimension_id: str,
+        period_type: models.AnalyticsPeriodType,
+        period_start: date,
+        period_end: date
+    ) -> models.AdvancedAnalyticsCache:
+        """
+        Compute and store advanced analytics metrics for a given dimension and period.
+        Overwrites existing cache entry for the same dimension/period.
+        """
+        # Remove any existing cache for this dimension/period
+        existing = db.query(models.AdvancedAnalyticsCache).filter(
+            models.AdvancedAnalyticsCache.dimension_type == dimension_type,
+            models.AdvancedAnalyticsCache.dimension_id == str(dimension_id),
+            models.AdvancedAnalyticsCache.period_type == period_type,
+            models.AdvancedAnalyticsCache.period_start == period_start,
+            models.AdvancedAnalyticsCache.period_end == period_end
+        ).first()
+        if existing:
+            db.delete(existing)
+            db.commit()
+
+        # Compute core KPIs (example for KINDERGARTEN, extend for others as needed)
+        attendance_rate = None
+        chronic_absence_rate = None
+        incident_rate_per_100 = None
+        serious_incident_rate = None
+        ratio_compliance_rate = None
+        report_completion_rate = None
+
+        parent_satisfaction_nps = None
+        child_development_index = None
+        staff_turnover_rate = None
+        regulatory_compliance_score = None
+
+        attendance_trend_slope = None
+        risk_score = None
+        improvement_velocity = None
+
+        attendance_incident_correlation = None
+        staffing_quality_correlation = None
+
+        health_alerts_count = None
+        curriculum_progress = None
+
+        # Example: KINDERGARTEN-level metrics
+        if dimension_type == models.AnalyticsDimensionType.KINDERGARTEN:
+            kg_id = int(dimension_id)
+            attendance_rate = KPIService.compute_attendance_rate(db, kg_id, period_start, period_end)
+            chronic_absence_rate = KPIService.compute_chronic_absence_rate(db, kg_id, period_start, period_end)
+            incident_rate_per_100 = KPIService.compute_incident_rate(db, kg_id, period_start, period_end)
+            serious_incident_rate = KPIService.compute_serious_incident_rate(db, kg_id, period_start, period_end)
+            ratio_compliance_rate = KPIService.compute_ratio_compliance(db, kg_id, period_start, period_end)
+            # Report completion rate: use daily reports
+            total_reports = db.query(models.DailyReport).join(models.Child).join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id).filter(
+                models.EnrollmentApplication.kindergarten_id == kg_id,
+                models.DailyReport.date >= period_start,
+                models.DailyReport.date <= period_end
+            ).count()
+            sent_reports = db.query(models.DailyReport).join(models.Child).join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id).filter(
+                models.EnrollmentApplication.kindergarten_id == kg_id,
+                models.DailyReport.date >= period_start,
+                models.DailyReport.date <= period_end,
+                models.DailyReport.status == models.DailyReportStatus.SUBMITTED
+            ).count()
+            report_completion_rate = (sent_reports / total_reports * 100) if total_reports > 0 else 0
+
+            # Health alerts
+            health_alerts_count = db.query(models.HealthAlert).join(models.Child).join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id).filter(
+                models.EnrollmentApplication.kindergarten_id == kg_id,
+                models.HealthAlert.created_at >= period_start,
+                models.HealthAlert.created_at <= period_end
+            ).count()
+
+            # Curriculum progress (placeholder: set to None or compute if available)
+            curriculum_progress = None
+
+            # Advanced, predictive, and correlation metrics (placeholders)
+            # TODO: Implement real calculations for these metrics
+            parent_satisfaction_nps = None
+            child_development_index = None
+            staff_turnover_rate = None
+            regulatory_compliance_score = None
+            attendance_trend_slope = None
+            risk_score = None
+            improvement_velocity = None
+            attendance_incident_correlation = None
+            staffing_quality_correlation = None
+
+        # TODO: Add logic for other dimension types (NETWORK, GOVERNORATE, etc.)
+
+        cache = models.AdvancedAnalyticsCache(
+            dimension_type=dimension_type,
+            dimension_id=str(dimension_id),
+            period_type=period_type,
+            period_start=period_start,
+            period_end=period_end,
+            attendance_rate=attendance_rate,
+            chronic_absence_rate=chronic_absence_rate,
+            incident_rate_per_100=incident_rate_per_100,
+            serious_incident_rate=serious_incident_rate,
+            ratio_compliance_rate=ratio_compliance_rate,
+            report_completion_rate=report_completion_rate,
+            parent_satisfaction_nps=parent_satisfaction_nps,
+            child_development_index=child_development_index,
+            staff_turnover_rate=staff_turnover_rate,
+            regulatory_compliance_score=regulatory_compliance_score,
+            attendance_trend_slope=attendance_trend_slope,
+            risk_score=risk_score,
+            improvement_velocity=improvement_velocity,
+            attendance_incident_correlation=attendance_incident_correlation,
+            staffing_quality_correlation=staffing_quality_correlation,
+            health_alerts_count=health_alerts_count,
+            curriculum_progress=curriculum_progress
+        )
+        db.add(cache)
+        db.commit()
+        db.refresh(cache)
+        return cache
+
+    @staticmethod
+    def get_advanced_analytics_cache(
+        db: Session,
+        dimension_type: models.AnalyticsDimensionType,
+        dimension_id: str,
+        period_type: models.AnalyticsPeriodType,
+        period_start: date,
+        period_end: date
+    ) -> models.AdvancedAnalyticsCache:
+        """
+        Retrieve advanced analytics cache for a given dimension and period.
+        """
+        return db.query(models.AdvancedAnalyticsCache).filter(
+            models.AdvancedAnalyticsCache.dimension_type == dimension_type,
+            models.AdvancedAnalyticsCache.dimension_id == str(dimension_id),
+            models.AdvancedAnalyticsCache.period_type == period_type,
+            models.AdvancedAnalyticsCache.period_start == period_start,
+            models.AdvancedAnalyticsCache.period_end == period_end
+        ).first()
 
     @staticmethod
     def get_network_summary(
@@ -188,9 +504,21 @@ class AnalyticsService:
         submitted_reports = db.query(func.count(models.DailyReport.id)).filter(
             models.DailyReport.date >= period_start,
             models.DailyReport.date <= period_end,
-            models.DailyReport.status == models.DailyReportStatus.SENT
+            models.DailyReport.status.in_([
+                models.DailyReportStatus.SUBMITTED,
+                models.DailyReportStatus.APPROVED
+            ])
         ).scalar() or 0
-        report_completion_rate = (submitted_reports / expected_reports * 100) if expected_reports > 0 else 0
+
+        approved_reports = db.query(func.count(models.DailyReport.id)).filter(
+            models.DailyReport.date >= period_start,
+            models.DailyReport.date <= period_end,
+            models.DailyReport.status == models.DailyReportStatus.APPROVED
+        ).scalar() or 0
+
+        report_submission_rate = (submitted_reports / expected_reports * 100) if expected_reports > 0 else 0
+        report_approval_rate = (approved_reports / submitted_reports * 100) if submitted_reports > 0 else 0
+        report_completion_rate = report_submission_rate  # Same as submission rate for backward compatibility
 
         # Average governance score
         avg_governance = db.query(func.avg(models.GovernanceScore.final_governance_score)).filter(
@@ -206,6 +534,8 @@ class AnalyticsService:
             enrollment_rate=round(enrollment_rate, 2),
             attendance_rate=round(attendance_rate, 2),
             incident_rate=round(incident_rate, 4),
+            report_submission_rate=round(report_submission_rate, 2),
+            report_approval_rate=round(report_approval_rate, 2),
             report_completion_rate=round(report_completion_rate, 2),
             governance_avg_score=round(avg_governance, 2)
         )
@@ -349,9 +679,27 @@ class AnalyticsService:
             models.EnrollmentApplication.kindergarten_id == kindergarten_id,
             models.DailyReport.date >= period_start,
             models.DailyReport.date <= period_end,
-            models.DailyReport.status == models.DailyReportStatus.SENT
+            models.DailyReport.status.in_([
+                models.DailyReportStatus.SUBMITTED,
+                models.DailyReportStatus.APPROVED
+            ])
         ).scalar() or 0
-        report_completion_rate = (submitted_reports / expected_reports * 100) if expected_reports > 0 else 0
+
+        approved_reports = db.query(func.count(models.DailyReport.id)).join(
+            models.Child
+        ).join(
+            models.EnrollmentApplication,
+            models.EnrollmentApplication.child_id == models.Child.id
+        ).filter(
+            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+            models.DailyReport.date >= period_start,
+            models.DailyReport.date <= period_end,
+            models.DailyReport.status == models.DailyReportStatus.APPROVED
+        ).scalar() or 0
+
+        report_submission_rate = (submitted_reports / expected_reports * 100) if expected_reports > 0 else 0
+        report_approval_rate = (approved_reports / submitted_reports * 100) if submitted_reports > 0 else 0
+        report_completion_rate = report_submission_rate
 
         # Ratio compliance
         ratio_compliance = KPIService.compute_ratio_compliance(
@@ -372,6 +720,8 @@ class AnalyticsService:
             enrollment_rate=round(enrollment_rate, 2),
             attendance_rate=attendance_rate,
             incident_rate=incident_rate,
+            report_submission_rate=round(report_submission_rate, 2),
+            report_approval_rate=round(report_approval_rate, 2),
             report_completion_rate=round(report_completion_rate, 2),
             ratio_compliance=ratio_compliance,
             governance_score=gov_score,
@@ -573,9 +923,9 @@ class AnalyticsService:
         day_distribution = {}
         for i in range(7):
             day_name = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"][i]
-            # SQLite uses strftime, PostgreSQL uses extract
+            from sqlalchemy import extract
             count = query.filter(
-                func.strftime('%w', models.AttendanceLog.date) == str(i)
+                extract('dow', models.AttendanceLog.date) == i
             ).count()
             day_distribution[day_name] = count
 
@@ -759,11 +1109,32 @@ def get_analytics_overview(
     summary = AnalyticsService.get_network_summary(db, period_start, period_end)
     governorates = AnalyticsService.get_governorate_breakdown(db, period_start, period_end)
 
+    # Include all Jordan governorates for filter dropdown, even if no data
+    from config import settings
+    all_governorates = []
+    for gov_name in settings.JORDAN_GOVERNORATES:
+        # Find if we have data for this governorate
+        existing = next((g for g in governorates if g.governorate == gov_name), None)
+        if existing:
+            all_governorates.append(existing)
+        else:
+            # Add empty entry for governorates with no data
+            all_governorates.append(GovernorateMetrics(
+                governorate=gov_name,
+                kindergartens_count=0,
+                capacity_total=0,
+                children_count=0,
+                attendance_rate=0.0,
+                incident_rate=0.0,
+                ratio_compliance=0.0,
+                governance_avg_score=0.0
+            ))
+
     return {
         "period_start": period_start.isoformat(),
         "period_end": period_end.isoformat(),
         "summary": summary,
-        "governorates": governorates
+        "governorates": all_governorates
     }
 
 

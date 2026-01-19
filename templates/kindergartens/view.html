@@ -21,8 +21,11 @@
         <a href="/kindergartens/{{ kindergarten.id }}/edit" class="btn btn-outline-primary">
             <i class="bi bi-pencil me-2"></i>تعديل
         </a>
-        <button class="btn btn-danger" onclick="confirmDelete()">
-            <i class="bi bi-trash me-2"></i>حذف
+        <button class="btn btn-warning" onclick="confirmArchive()" id="archiveBtn">
+            <i class="bi bi-archive me-2"></i>أرشفة
+        </button>
+        <button class="btn btn-danger" onclick="confirmDelete()" id="deleteBtn" style="display: none;">
+            <i class="bi bi-trash me-2"></i>حذف نهائي
         </button>
     </div>
 </div>
@@ -166,7 +169,7 @@
                         </thead>
                         <tbody id="classesTable">
                             <!-- Populated via JS -->
-                            <tr><td colspan="5" class="text-center text-muted">جاري التحميل...</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted">جاري التحميل...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -186,24 +189,92 @@
             
             <!-- Services Tab -->
             <div class="tab-pane fade" id="services">
-                <h5 class="mb-3">الخدمات والمرافق</h5>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" checked disabled>
-                            <label class="form-check-label">ساحة ألعاب خارجية</label>
-                        </div>
-                        <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" checked disabled>
-                            <label class="form-check-label">وجبات صحية</label>
-                        </div>
-                        <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" checked disabled>
-                            <label class="form-check-label">مواصلات</label>
-                        </div>
-                    </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">الخدمات والمرافق</h5>
+                    <button class="btn btn-sm btn-primary" onclick="openAddServiceModal()">
+                        <i class="bi bi-plus-lg me-1"></i>إضافة خدمة/مرفق
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>اسم الخدمة/المرفق</th>
+                                <th>الوصف</th>
+                                <th>الحالة</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="servicesTable">
+                            <tr><td colspan="4" class="text-center text-muted">جاري التحميل...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
+<!-- Add Service Modal -->
+<div class="modal fade" id="addServiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إضافة خدمة/مرفق</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addServiceForm">
+                    <div class="mb-3">
+                        <label class="form-label required">اسم الخدمة/المرفق</label>
+                        <input type="text" class="form-control" name="service_name" required placeholder="مثال: ساحة ألعاب خارجية">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">الوصف</label>
+                        <textarea class="form-control" name="description" required placeholder="وصف مختصر"></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="enabled_flag" checked>
+                        <label class="form-check-label">مفعل</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="submitService()">حفظ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Service Modal -->
+<div class="modal fade" id="editServiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تعديل الخدمة/المرفق</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editServiceForm">
+                    <input type="hidden" name="service_id">
+                    <div class="mb-3">
+                        <label class="form-label required">اسم الخدمة/المرفق</label>
+                        <input type="text" class="form-control" name="service_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">الوصف</label>
+                        <textarea class="form-control" name="description" required></textarea>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="enabled_flag">
+                        <label class="form-check-label">مفعل</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="submitEditService()">حفظ التغييرات</button>
+            </div>
+        </div>
+    </div>
+</div>
 
             <!-- Audit Tab -->
             <div class="tab-pane fade" id="audit">
@@ -289,6 +360,95 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Class Modal -->
+<div class="modal fade" id="editClassModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تعديل الشعبة الصفية</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editClassForm">
+                    <input type="hidden" name="class_id">
+                    <div class="mb-3">
+                        <label class="form-label required">اسم الشعبة بالعربية</label>
+                        <input type="text" class="form-control" name="name_ar" required placeholder="مثال: الفراشات">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">اسم الشعبة بالإنجليزية</label>
+                        <input type="text" class="form-control" name="name_en" placeholder="مثال: Butterflies">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">السعة القصوى</label>
+                        <input type="number" class="form-control" name="capacity_total" min="1" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label required">العمر الأدنى (بالأشهر)</label>
+                            <input type="number" class="form-control" name="min_age_months" min="0" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">العمر الأقصى (بالأشهر)</label>
+                            <input type="number" class="form-control" name="max_age_months" min="0" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="submitEditClass()">حفظ التغييرات</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Staff Modal -->
+<div class="modal fade" id="editStaffModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تعديل الموظف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editStaffForm">
+                    <input type="hidden" name="staff_id">
+                    <div class="mb-3">
+                        <label class="form-label required">اسم المستخدم</label>
+                        <input type="text" class="form-control" name="username" required placeholder="اسم المستخدم">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">البريد الإلكتروني</label>
+                        <input type="email" class="form-control" name="email" required placeholder="البريد الإلكتروني">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">الدور</label>
+                        <select class="form-select" name="role" required>
+                            <option value="TEACHER">معلم</option>
+                            <option value="SUPERVISOR">مشرف</option>
+                            <option value="MANAGER">مدير</option>
+                            <option value="ADMIN">مدير نظام</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">الحالة</label>
+                        <select class="form-select" name="status" required>
+                            <option value="ACTIVE">نشط</option>
+                            <option value="INACTIVE">غير نشط</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="submitEditStaff()">حفظ التغييرات</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -304,8 +464,175 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-        await Promise.all([loadClasses(), loadStaff()]);
+        await Promise.all([loadClasses(), loadStaff(), loadServices()]);
+        await checkDeletePermissions();
+
+        // Services CRUD logic
+        async function loadServices() {
+            try {
+                const response = await fetch(`/api/kindergartens/${kindergartenId}/services`, {
+                    headers: getHeaders()
+                });
+                const services = response.ok ? await response.json() : [];
+                const tbody = document.getElementById('servicesTable');
+                if (!Array.isArray(services) || services.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">لا توجد خدمات أو مرافق مسجلة</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = services.map(s => `
+                    <tr>
+                        <td>${s.service_name}</td>
+                        <td>${s.description}</td>
+                        <td>${s.enabled_flag ? '<span class="badge bg-success">مفعل</span>' : '<span class="badge bg-secondary">معطل</span>'}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-outline-secondary" onclick="editService(${s.id}, '${encodeURIComponent(s.service_name)}', '${encodeURIComponent(s.description)}', ${s.enabled_flag})" title="تعديل"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-outline-danger" onclick="confirmDeleteService(${s.id}, '${encodeURIComponent(s.service_name)}')" title="حذف"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading services:', error);
+                document.getElementById('servicesTable').innerHTML = '<tr><td colspan="4" class="text-center text-danger">خطأ في تحميل البيانات</td></tr>';
+            }
+        }
+
+        function openAddServiceModal() {
+            const modal = new bootstrap.Modal(document.getElementById('addServiceModal'));
+            document.getElementById('addServiceForm').reset();
+            modal.show();
+        }
+
+        async function submitService() {
+            const form = document.getElementById('addServiceForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            const formData = new FormData(form);
+            const payload = {
+                kindergarten_id: kindergartenId,
+                service_name: formData.get('service_name'),
+                description: formData.get('description'),
+                enabled_flag: formData.get('enabled_flag') === 'on'
+            };
+            try {
+                const response = await fetch(`/api/kindergartens/${kindergartenId}/services`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    showToast('تمت إضافة الخدمة/المرفق بنجاح', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('addServiceModal')).hide();
+                    form.reset();
+                    loadServices();
+                } else {
+                    const err = await response.json();
+                    alert('خطأ: ' + (err.detail || 'فشل الحفظ'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('حدث خطأ في الاتصال');
+            }
+        }
+
+        function editService(id, name, desc, enabled) {
+            const form = document.getElementById('editServiceForm');
+            form.elements['service_id'].value = id;
+            form.elements['service_name'].value = decodeURIComponent(name);
+            form.elements['description'].value = decodeURIComponent(desc);
+            form.elements['enabled_flag'].checked = enabled;
+            const modal = new bootstrap.Modal(document.getElementById('editServiceModal'));
+            modal.show();
+        }
+
+        async function submitEditService() {
+            const form = document.getElementById('editServiceForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            const formData = new FormData(form);
+            const serviceId = formData.get('service_id');
+            const payload = {
+                service_name: formData.get('service_name'),
+                description: formData.get('description'),
+                enabled_flag: formData.get('enabled_flag') === 'on'
+            };
+            try {
+                const response = await fetch(`/api/kindergartens/${kindergartenId}/services/${serviceId}`, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    showToast('تم تحديث الخدمة/المرفق بنجاح', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('editServiceModal')).hide();
+                    loadServices();
+                } else {
+                    const err = await response.json();
+                    alert('خطأ: ' + (err.detail || 'فشل التحديث'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('حدث خطأ في الاتصال');
+            }
+        }
+
+        function confirmDeleteService(id, name) {
+            if (confirm(`هل أنت متأكد من حذف الخدمة/المرفق "${decodeURIComponent(name)}" نهائياً؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+                deleteService(id);
+            }
+        }
+
+        async function deleteService(id) {
+            try {
+                const response = await fetch(`/api/kindergartens/${kindergartenId}/services/${id}`, {
+                    method: 'DELETE',
+                    headers: getHeaders()
+                });
+                if (response.ok) {
+                    showToast('تم حذف الخدمة/المرفق بنجاح', 'success');
+                    loadServices();
+                } else {
+                    const err = await response.json();
+                    showToast(err.detail || 'فشل في حذف الخدمة', 'error');
+                }
+            } catch (error) {
+                console.error('Delete service error:', error);
+                showToast('حدث خطأ في حذف الخدمة', 'error');
+            }
+        }
     });
+    
+    async function checkDeletePermissions() {
+        try {
+            // Check if kindergarten has dependencies
+            const classesRes = await fetch(`/api/classes?kindergarten_id=${kindergartenId}`, { headers: getHeaders() });
+            const classes = classesRes.ok ? (await classesRes.json()).classes || [] : [];
+            const activeClasses = classes.filter(c => c.is_active).length;
+            
+            const staffRes = await fetch('/api/users', { headers: getHeaders() });
+            const users = staffRes.ok ? (await staffRes.json()).users || [] : [];
+            const activeStaff = users.filter(u => u.kindergarten_id === kindergartenId && u.status === 'ACTIVE').length;
+            
+            // Show appropriate button based on dependencies and user role
+            const hasDependencies = activeClasses > 0 || activeStaff > 0;
+            const isAdmin = {{ 'true' if current_user.role.name == 'ADMIN' else 'false' }};
+            
+            if (hasDependencies || !isAdmin) {
+                document.getElementById('archiveBtn').style.display = 'inline-block';
+                document.getElementById('deleteBtn').style.display = 'none';
+            } else {
+                document.getElementById('archiveBtn').style.display = 'none';
+                document.getElementById('deleteBtn').style.display = 'inline-block';
+            }
+        } catch (error) {
+            console.error('Error checking permissions:', error);
+        }
+    }
     
     async function loadClasses() {
         try {
@@ -336,9 +663,27 @@
                     </td>
                     <td>-</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary" 
+                        <button class="btn btn-sm btn-outline-primary me-1" 
                                 onclick="openAssignSupervisorModal(${c.id}, '${c.name_ar || c.name_en}', ${c.current_supervisor ? c.current_supervisor.id : 'null'})">
-                            <i class="bi bi-person-check"></i> تعيين
+                            <i class="bi bi-person-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary me-1" 
+                                onclick="editClass(${c.id}, '${c.name_ar || c.name_en}', '${c.name_en || ''}', ${c.capacity_total}, ${c.min_age_months}, ${c.max_age_months})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        ${c.is_active ? 
+                            `<button class="btn btn-sm btn-outline-warning me-1" 
+                                    onclick="confirmDeactivateClass(${c.id}, '${c.name_ar || c.name_en}')">
+                                <i class="bi bi-pause-circle"></i>
+                            </button>` : 
+                            `<button class="btn btn-sm btn-outline-success me-1" 
+                                    onclick="reactivateClass(${c.id}, '${c.name_ar || c.name_en}')">
+                                <i class="bi bi-play-circle"></i>
+                            </button>`
+                        }
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="confirmDeleteClass(${c.id}, '${c.name_ar || c.name_en}')">
+                            <i class="bi bi-trash"></i>
                         </button>
                     </td>
                 </tr>
@@ -394,6 +739,7 @@
                                 <th>الدور</th>
                                 <th>البريد الإلكتروني</th>
                                 <th>الحالة</th>
+                                <th>إجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -412,6 +758,37 @@
                     <td><span class="badge bg-light text-dark border">${translateRole(u.role)}</span></td>
                     <td>${u.email}</td>
                     <td>${getStatusBadge(u.status)}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-outline-secondary" 
+                                    onclick="editStaff(${u.id}, '${u.username}', '${u.email}', '${u.role}', '${u.status}')"
+                                    title="تعديل">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            ${u.status === 'ACTIVE' ? 
+                                `<button class="btn btn-outline-warning" 
+                                        onclick="confirmDeactivateStaff(${u.id}, '${u.username}')"
+                                        title="إلغاء تفعيل">
+                                    <i class="bi bi-pause-circle"></i>
+                                </button>` : 
+                                `<button class="btn btn-outline-success" 
+                                        onclick="reactivateStaff(${u.id}, '${u.username}')"
+                                        title="إعادة تفعيل">
+                                    <i class="bi bi-play-circle"></i>
+                                </button>`
+                            }
+                            <button class="btn btn-outline-danger" 
+                                    onclick="confirmRemoveStaff(${u.id}, '${u.username}')"
+                                    title="حذف">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            <button class="btn btn-outline-info" 
+                                    onclick="confirmResetStaffPassword(${u.id}, '${u.username}')"
+                                    title="إعادة تعيين كلمة المرور">
+                                <i class="bi bi-key"></i>
+                            </button>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
             
@@ -581,21 +958,319 @@
         }
     }
 
-    function confirmDelete() {
-        if (confirm('هل أنت متأكد من حذف هذه الروضة؟ لا يمكن التراجع عن هذا الإجراء.')) {
-            fetch(`/api/kindergartens/${kindergartenId}`, {
+    // Class CRUD Functions
+    function editClass(classId, nameAr, nameEn, capacity, minAge, maxAge) {
+        const form = document.getElementById('editClassForm');
+        form.elements['class_id'].value = classId;
+        form.elements['name_ar'].value = nameAr;
+        form.elements['name_en'].value = nameEn;
+        form.elements['capacity_total'].value = capacity;
+        form.elements['min_age_months'].value = minAge;
+        form.elements['max_age_months'].value = maxAge;
+        
+        const modal = new bootstrap.Modal(document.getElementById('editClassModal'));
+        modal.show();
+    }
+
+    async function submitEditClass() {
+        const form = document.getElementById('editClassForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        const classId = form.elements['class_id'].value;
+        const payload = {
+            name_ar: form.elements['name_ar'].value,
+            name_en: form.elements['name_en'].value || null,
+            capacity_total: parseInt(form.elements['capacity_total'].value),
+            min_age_months: parseInt(form.elements['min_age_months'].value),
+            max_age_months: parseInt(form.elements['max_age_months'].value)
+        };
+        
+        try {
+            const response = await fetch(`/api/classes/${classId}`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            
+            if (response.ok) {
+                showToast('تم تحديث الشعبة بنجاح', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('editClassModal')).hide();
+                loadClasses();
+            } else {
+                const err = await response.json();
+                alert('خطأ: ' + (err.detail || 'فشل التحديث'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('حدث خطأ في التحديث');
+        }
+    }
+
+    function confirmDeactivateClass(classId, className) {
+        if (confirm(`هل أنت متأكد من إلغاء تفعيل الشعبة "${className}"؟ سيتم إخفاؤها من القوائم النشطة.`)) {
+            deactivateClass(classId);
+        }
+    }
+
+    async function deactivateClass(classId) {
+        try {
+            const response = await fetch(`/api/classes/${classId}/deactivate`, {
+                method: 'PUT',
+                headers: getHeaders()
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast(result.message, 'success');
+                loadClasses();
+            } else {
+                showToast(result.detail || 'فشل في إلغاء التفعيل', 'error');
+            }
+        } catch (error) {
+            console.error('Deactivate error:', error);
+            showToast('حدث خطأ في إلغاء التفعيل', 'error');
+        }
+    }
+
+    async function reactivateClass(classId, className) {
+        // Reactivation is done via update endpoint
+        const payload = { is_active: true };
+        
+        try {
+            const response = await fetch(`/api/classes/${classId}`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            
+            if (response.ok) {
+                showToast('تم إعادة تفعيل الشعبة بنجاح', 'success');
+                loadClasses();
+            } else {
+                const err = await response.json();
+                showToast(err.detail || 'فشل في إعادة التفعيل', 'error');
+            }
+        } catch (error) {
+            console.error('Reactivate error:', error);
+            showToast('حدث خطأ في إعادة التفعيل', 'error');
+        }
+    }
+
+    function confirmDeleteClass(classId, className) {
+        if (confirm(`هل أنت متأكد من حذف الشعبة "${className}" نهائياً؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+            deleteClass(classId);
+        }
+    }
+
+    async function deleteClass(classId) {
+        try {
+            const response = await fetch(`/api/classes/${classId}`, {
                 method: 'DELETE',
                 headers: getHeaders()
-            })
-            .then(res => {
-                if (res.ok) {
-                    showToast('تم حذف الروضة', 'success');
-                    setTimeout(() => window.location.href = '/kindergartens', 1000);
-                } else {
-                    alert('فشل الحذف. تأكد من عدم وجود بيانات مرتبطة.');
-                }
-            })
-            .catch(err => alert('حدث خطأ في الاتصال'));
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast(result.message, 'success');
+                loadClasses();
+            } else {
+                showToast(result.detail || 'فشل في الحذف', 'error');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            showToast('حدث خطأ في الحذف', 'error');
+        }
+    }
+
+    function confirmArchive() {
+        if (confirm('هل أنت متأكد من أرشفة هذه الروضة؟ سيتم إخفاؤها من القوائم النشطة ولكن يمكن استعادتها لاحقاً.')) {
+            archiveKindergarten();
+        }
+    }
+
+    function confirmDelete() {
+        if (confirm('هل أنت متأكد من حذف هذه الروضة نهائياً؟ لا يمكن التراجع عن هذا الإجراء وستفقد جميع البيانات المرتبطة.')) {
+            deleteKindergarten();
+        }
+    }
+
+    async function archiveKindergarten() {
+        try {
+            const response = await fetch(`/api/kindergartens/${kindergartenId}/archive`, {
+                method: 'POST',
+                headers: getHeaders()
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast(result.message, 'success');
+                setTimeout(() => window.location.href = '/kindergartens', 1000);
+            } else {
+                showToast(result.detail || 'فشل في الأرشفة', 'error');
+            }
+        } catch (error) {
+            console.error('Archive error:', error);
+            showToast('حدث خطأ في الأرشفة', 'error');
+        }
+    }
+
+    async function deleteKindergarten() {
+        try {
+            const response = await fetch(`/api/kindergartens/${kindergartenId}`, {
+                method: 'DELETE',
+                headers: getHeaders()
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast(result.message, 'success');
+                setTimeout(() => window.location.href = '/kindergartens', 1000);
+            } else {
+                showToast(result.detail || 'فشل في الحذف', 'error');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            showToast('حدث خطأ في الحذف', 'error');
+        }
+    }
+
+    // Staff Management Functions
+    function editStaff(id, username, email, role, status) {
+        document.querySelector('#editStaffForm [name="staff_id"]').value = id;
+        document.querySelector('#editStaffForm [name="username"]').value = username;
+        document.querySelector('#editStaffForm [name="email"]').value = email;
+        document.querySelector('#editStaffForm [name="role"]').value = role;
+        document.querySelector('#editStaffForm [name="status"]').value = status;
+        
+        const modal = new bootstrap.Modal(document.getElementById('editStaffModal'));
+        modal.show();
+    }
+
+    async function submitEditStaff() {
+        const form = document.getElementById('editStaffForm');
+        const formData = new FormData(form);
+        const staffId = formData.get('staff_id');
+        
+        const data = {
+            username: formData.get('username'),
+            email: formData.get('email'),
+            role: formData.get('role'),
+            status: formData.get('status')
+        };
+        
+        try {
+            const response = await fetch(`/api/users/${staffId}`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast(result.message || 'تم تحديث الموظف بنجاح', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('editStaffModal')).hide();
+                loadStaff(); // Reload staff list
+            } else {
+                showToast(result.detail || 'فشل في تحديث الموظف', 'error');
+            }
+        } catch (error) {
+            console.error('Edit staff error:', error);
+            showToast('حدث خطأ في تحديث الموظف', 'error');
+        }
+    }
+
+    function confirmDeactivateStaff(id, username) {
+        if (confirm(`هل أنت متأكد من إلغاء تفعيل الموظف "${username}"؟`)) {
+            toggleStaffStatus(id, 'INACTIVE');
+        }
+    }
+
+    function reactivateStaff(id, username) {
+        if (confirm(`هل أنت متأكد من إعادة تفعيل الموظف "${username}"؟`)) {
+            toggleStaffStatus(id, 'ACTIVE');
+        }
+    }
+
+    async function toggleStaffStatus(id, status) {
+        try {
+            const response = await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify({ status: status })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast(result.message || 'تم تحديث حالة الموظف بنجاح', 'success');
+                loadStaff(); // Reload staff list
+            } else {
+                showToast(result.detail || 'فشل في تحديث حالة الموظف', 'error');
+            }
+        } catch (error) {
+            console.error('Toggle staff status error:', error);
+            showToast('حدث خطأ في تحديث حالة الموظف', 'error');
+        }
+    }
+
+    function confirmRemoveStaff(id, username) {
+        if (confirm(`هل أنت متأكد من حذف الموظف "${username}" نهائياً؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+            removeStaff(id);
+        }
+    }
+
+    async function removeStaff(id) {
+        try {
+            const response = await fetch(`/api/users/${id}`, {
+                method: 'DELETE',
+                headers: getHeaders()
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast(result.message || 'تم حذف الموظف بنجاح', 'success');
+                loadStaff(); // Reload staff list
+            } else {
+                showToast(result.detail || 'فشل في حذف الموظف', 'error');
+            }
+        } catch (error) {
+            console.error('Remove staff error:', error);
+            showToast('حدث خطأ في حذف الموظف', 'error');
+        }
+    }
+
+    function confirmResetStaffPassword(id, username) {
+        if (confirm(`هل أنت متأكد من إعادة تعيين كلمة مرور الموظف "${username}"؟ سيتم إرسال كلمة مرور مؤقتة إلى بريده الإلكتروني.`)) {
+            resetStaffPassword(id);
+        }
+    }
+
+    async function resetStaffPassword(id) {
+        try {
+            const response = await fetch(`/api/users/${id}/admin-reset-password`, {
+                method: 'POST',
+                headers: getHeaders()
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast(result.message || 'تم إعادة تعيين كلمة المرور بنجاح', 'success');
+            } else {
+                showToast(result.detail || 'فشل في إعادة تعيين كلمة المرور', 'error');
+            }
+        } catch (error) {
+            console.error('Reset password error:', error);
+            showToast('حدث خطأ في إعادة تعيين كلمة المرور', 'error');
         }
     }
 </script>

@@ -6,7 +6,10 @@
 class KinJoAPI {
   constructor() {
     this.baseURL = "";
-    this.token = localStorage.getItem("kinjo_token");
+    // Check both localStorage and sessionStorage for token (consistent with AuthStorage)
+    this.token =
+      localStorage.getItem("kinjo_token") ||
+      sessionStorage.getItem("kinjo_token");
   }
 
   /**
@@ -215,6 +218,10 @@ class KinJoAPI {
     return this.put(`/api/kindergartens/${id}`, data);
   }
 
+  async deleteKindergarten(id) {
+    return this.delete(`/api/kindergartens/${id}`);
+  }
+
   // =========================================================================
   // Class Endpoints
   // =========================================================================
@@ -285,6 +292,30 @@ class KinJoAPI {
     return this.get("/api/attendance/today", {
       kindergarten_id: kindergartenId,
     });
+  }
+
+  async searchKindergartens(params = {}) {
+    const queryParams = {};
+    if (params.search) queryParams.name = params.search;
+    if (params.governorate) queryParams.governorate = params.governorate;
+    if (params.phone) queryParams.phone = params.phone;
+    return this.get("/api/kindergartens", queryParams);
+  }
+
+  async getKindergartenClasses(kindergartenId) {
+    return this.get("/api/classes", { kindergarten_id: kindergartenId });
+  }
+
+  async getKindergartenChildren(kindergartenId, classIds = null) {
+    const params = { kindergarten_id: kindergartenId };
+    if (classIds && classIds.length > 0) {
+      params.class_id = classIds.join(",");
+    }
+    return this.get("/api/children", params);
+  }
+
+  async getAttendanceReport(params) {
+    return this.get("/api/attendance/report", params);
   }
 
   // =========================================================================

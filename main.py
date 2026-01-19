@@ -3,7 +3,8 @@ KInJo - Kindergarten Management Platform
 Main FastAPI Application
 """
 from datetime import timedelta
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Response
+from typing import Optional
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Response, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,15 +25,27 @@ class UTF8ContentTypeMiddleware(BaseHTTPMiddleware):
             response.headers["content-type"] = "text/html; charset=utf-8"
         return response
 
+import os
 import models
 from database import get_db, init_db
 from auth import authenticate_user, create_access_token, get_password_hash
 from config import settings
-from dependencies import get_current_user, RedirectToLogin
+from dependencies import get_current_user, get_current_user_optional, RedirectToLogin
 from fastapi.responses import RedirectResponse
+import validators
+
+# Safety guard: never allow TESTING bypass in production
+def ensure_not_testing_in_production() -> None:
+    if settings.ENVIRONMENT.lower() == "production" and settings.TESTING:
+        raise RuntimeError("Refusing to start with TESTING=true in production environment.")
+
+ensure_not_testing_in_production()
 
 # Rate limiter setup
 limiter = Limiter(key_func=get_remote_address)
+# Disable rate limiting during automated tests to avoid flakiness
+if settings.TESTING:
+    limiter.enabled = False
 
 # Import routers
 from missing_endpoints import router as api_router
@@ -42,6 +55,7 @@ from safety_service import router as safety_router
 from curriculum_service import router as curriculum_router
 from kpi_service import router as kpi_router
 from analytics_service import router as analytics_router
+from analytics_ws import router as analytics_ws_router
 
 # =============================================================================
 # Lifespan Event Handler
@@ -110,20 +124,76 @@ except:
 # Authentication Endpoints (defined BEFORE routers to take precedence)
 # =============================================================================
 
-async def _do_login(form_data: OAuth2PasswordRequestForm, db: Session):
+def _get_request_ip(request: Request) -> Optional[str]:
+    client = request.client
+    return client.host if client else None
+
+
+def _log_auth_event(
+    db: Session,
+    user_id: Optional[int],
+    action: str,
+    details: Optional[str],
+    ip_address: Optional[str],
+    sensitivity_level: int = 2
+) -> None:
+    try:
+        validators.log_audit_action(
+            db=db,
+            user_id=user_id,
+            action=action,
+            entity_type="Auth",
+            entity_id=user_id,
+            details=details,
+            ip_address=ip_address,
+            sensitivity_level=sensitivity_level
+        )
+    except Exception:
+        # Avoid blocking auth flows if audit logging fails.
+        pass
+
+
+async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: Session):
     """Internal login logic"""
+    ip_address = _get_request_ip(request)
+    form = await request.form()
+    remember_raw = form.get("remember_me")
+    remember_me = str(remember_raw).lower() in {"1", "true", "on", "yes"}
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
+        _log_auth_event(
+            db=db,
+            user_id=None,
+            action="LOGIN_FAILED",
+            details=f"username={form_data.username}",
+            ip_address=ip_address,
+            sensitivity_level=3
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(
+        minutes=(
+            settings.ACCESS_TOKEN_EXPIRE_MINUTES_REMEMBER
+            if remember_me
+            else settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+    )
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role.value},
         expires_delta=access_token_expires
+    )
+
+    _log_auth_event(
+        db=db,
+        user_id=user.id,
+        action="LOGIN_SUCCESS",
+        details=f"Login successful (remember_me={remember_me})",
+        ip_address=ip_address,
+        sensitivity_level=2
     )
 
     return {
@@ -146,7 +216,7 @@ async def token_login(
     db: Session = Depends(get_db)
 ):
     """OAuth2 token endpoint (for frontend)"""
-    return await _do_login(form_data, db)
+    return await _do_login(request, form_data, db)
 
 
 @app.post("/api/auth/login")
@@ -157,12 +227,25 @@ async def api_login(
     db: Session = Depends(get_db)
 ):
     """API login endpoint"""
-    return await _do_login(form_data, db)
+    return await _do_login(request, form_data, db)
 
 
 @app.post("/api/auth/logout")
-async def logout():
+async def logout(
+    request: Request,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
     """Logout endpoint - client should clear tokens"""
+    if current_user:
+        _log_auth_event(
+            db=db,
+            user_id=current_user.id,
+            action="LOGOUT",
+            details="Logout",
+            ip_address=_get_request_ip(request),
+            sensitivity_level=1
+        )
     return {"message": "Logged out successfully"}
 
 
@@ -192,14 +275,15 @@ app.include_router(safety_router, prefix="/api", tags=["Safety"])
 app.include_router(curriculum_router, prefix="/api", tags=["Curriculum"])
 app.include_router(kpi_router, prefix="/api", tags=["KPI"])
 app.include_router(analytics_router, prefix="/api", tags=["Analytics"])
+app.include_router(analytics_ws_router)
 app.include_router(frontend_router)
 
 
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
 async def register(
-    username: str,
-    email: str,
-    password: str,
+    username: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
     db: Session = Depends(get_db)
 ):
     """Register a new parent user"""

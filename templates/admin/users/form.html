@@ -51,11 +51,11 @@
                         <div class="col-md-6">
                             <label for="password" class="form-label {% if not user_obj %}required{% endif %}">كلمة المرور</label>
                             <input type="password" class="form-control" id="password" name="password" 
-                                   {% if not user_obj %}required{% endif %} minlength="6">
+                                   {% if not user_obj %}required{% endif %} minlength="8">
                             {% if user_obj %}
                             <div class="form-text">اتركها فارغة للإبقاء على كلمة المرور الحالية.</div>
                             {% endif %}
-                            <div class="invalid-feedback">كلمة المرور يجب أن تكون 6 أحرف على الأقل</div>
+                            <div class="invalid-feedback">كلمة المرور يجب أن تكون 8 أحرف على الأقل</div>
                         </div>
                         
                         <div class="col-md-6">
@@ -64,21 +64,46 @@
                                 <option value="">اختر الدور...</option>
                                 {% if current_user.role.value == 'ADMIN' %}
                                 <option value="ADMIN" {% if user_obj and user_obj.role.value == 'ADMIN' %}selected{% endif %}>مدير النظام (Admin)</option>
+                                {% endif %}
+                                {% if current_user.role.value == 'ADMIN' %}
                                 <option value="MANAGER" {% if user_obj and user_obj.role.value == 'MANAGER' %}selected{% endif %}>مدير روضة (Manager)</option>
                                 {% endif %}
                                 <option value="SUPERVISOR" {% if user_obj and user_obj.role.value == 'SUPERVISOR' %}selected{% endif %}>مشرف (Supervisor)</option>
                                 <option value="PARENT" {% if user_obj and user_obj.role.value == 'PARENT' %}selected{% endif %}>ولي أمر (Parent)</option>
                             </select>
+                            <div class="form-text" id="roleHelp"></div>
                             <div class="invalid-feedback">يرجى اختيار الصلاحية</div>
                         </div>
                     </div>
 
-                    <div id="kindergartenSection" class="mb-4 {% if user_obj and user_obj.role.value == 'ADMIN' %}d-none{% endif %}">
-                        <label for="kindergarten_id" class="form-label">الروضة التابع لها</label>
+                                        <div id="kindergartenSection" class="mb-4 {% if user_obj and user_obj.role.value == 'ADMIN' %}d-none{% endif %}">
+                        <label for="kindergarten_id" class="form-label">?????? ?????? ???</label>
+                        <div class="row g-2 mb-3" id="kgFilters">
+                            <div class="col-md-6">
+                                <label for="kgGovernorateFilter" class="form-label">????????</label>
+                                <select class="form-select" id="kgGovernorateFilter">
+                                    <option value="">?? ?????????</option>
+                                    {% set govs = namespace(items=[]) %}
+                                    {% for kg in kindergartens %}
+                                        {% if kg.governorate and kg.governorate not in govs.items %}
+                                            {% set _ = govs.items.append(kg.governorate) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% for gov in govs.items %}
+                                    <option value="{{ gov }}">{{ gov }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="kgSearch" class="form-label">??? ?????? ?? ??????</label>
+                                <input type="text" class="form-control" id="kgSearch" placeholder="???? ?????? ?? ??????">
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mb-2" id="kgNoResults" style="display: none;">?? ???? ????? ??????.</small>
                         <select class="form-select" id="kindergarten_id" name="kindergarten_id">
-                            <option value="">-- اختر الروضة --</option>
+                            <option value="">-- ???? ?????? --</option>
                             {% for kg in kindergartens %}
-                            <option value="{{ kg.id }}" 
+                            <option value="{{ kg.id }}" data-governorate="{{ kg.governorate or '' }}" data-name="{{ (kg.name_ar or '') }} {{ (kg.name_en or '') }}" data-phone="{{ kg.contact_phone or '' }}"
                                 {% if user_obj and user_obj.kindergarten_id == kg.id %}selected
                                 {% elif not user_obj and request.query_params.get('kindergarten_id') and request.query_params.get('kindergarten_id')|int == kg.id %}selected
                                 {% endif %}>
@@ -136,23 +161,28 @@
                     <div class="mb-3">
                         <label for="resetPassword" class="form-label fw-semibold">كلمة المرور الجديدة</label>
                         <div class="input-group">
-                            <input type="password" class="form-control" id="resetPassword" required minlength="6" autocomplete="new-password" aria-describedby="resetPasswordHelp">
+                            <input type="password" class="form-control" id="resetPassword" required minlength="8" autocomplete="new-password" aria-describedby="resetPasswordHelp">
                             <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('resetPassword', this)" aria-label="إظهار كلمة المرور">
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
-                        <div id="resetPasswordHelp" class="form-text">كلمة المرور يجب أن تكون 6 أحرف على الأقل</div>
+                        <div id="resetPasswordHelp" class="form-text">كلمة المرور يجب أن تكون 8 أحرف على الأقل</div>
                     </div>
                     <div class="mb-3">
                         <label for="confirmResetPassword" class="form-label fw-semibold">تأكيد كلمة المرور</label>
                         <div class="input-group">
-                            <input type="password" class="form-control" id="confirmResetPassword" required minlength="6" autocomplete="new-password">
+                            <input type="password" class="form-control" id="confirmResetPassword" required minlength="8" autocomplete="new-password">
                             <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('confirmResetPassword', this)" aria-label="إظهار كلمة المرور">
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
                     </div>
-                </form>
+                                    <div class="mb-3">
+                        <label for="adminPassword" class="form-label fw-semibold">كلمة مرور المدير</label>
+                        <input type="password" class="form-control" id="adminPassword" required minlength="8" autocomplete="current-password">
+                        <div class="form-text">أدخل كلمة مرورك الحالية للتأكيد.</div>
+                    </div>
+</form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
@@ -203,41 +233,131 @@
         }
     }
     
+    function updateRoleHelp(role) {
+        const roleHelp = document.getElementById('roleHelp');
+        if (!roleHelp) return;
+
+        const messages = {
+            MANAGER: '?????? ????? ????? ????? ???? ?????? ??????.',
+            SUPERVISOR: '?????? ????? ????? ????? ?????? ???? ??????.',
+            PARENT: '??? ????? ???? ???? ????? (???????).',
+            ADMIN: '???? ?????? ????? ????? ??????.'
+        };
+
+        roleHelp.textContent = messages[role] || '';
+    }
+
+    function filterKindergartenOptions() {
+        const kgSelect = document.getElementById('kindergarten_id');
+        const governorateFilter = document.getElementById('kgGovernorateFilter');
+        const searchInput = document.getElementById('kgSearch');
+        const noResults = document.getElementById('kgNoResults');
+
+        if (!kgSelect) return;
+
+        const governorate = governorateFilter ? governorateFilter.value.trim().toLowerCase() : '';
+        const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+        let visibleCount = 0;
+        Array.from(kgSelect.options).forEach((option, index) => {
+            if (index == 0) {
+                return;
+            }
+
+            const optGovernorate = (option.dataset.governorate || '').toLowerCase();
+            const optName = (option.dataset.name || '').toLowerCase();
+            const optPhone = (option.dataset.phone || '').toLowerCase();
+
+            let matches = true;
+            if (governorate && optGovernorate !== governorate) {
+                matches = false;
+            }
+
+            if (query && !(optName.includes(query) || optPhone.includes(query))) {
+                matches = false;
+            }
+
+            if (option.selected) {
+                matches = true;
+            }
+
+            option.hidden = !matches;
+            if (matches) {
+                visibleCount += 1;
+            }
+        });
+
+        if (noResults) {
+            noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
+    }
+
+    function initKindergartenFilters() {
+        const governorateFilter = document.getElementById('kgGovernorateFilter');
+        const searchInput = document.getElementById('kgSearch');
+
+        if (governorateFilter) {
+            governorateFilter.addEventListener('change', filterKindergartenOptions);
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', filterKindergartenOptions);
+        }
+
+        filterKindergartenOptions();
+    }
+
     function toggleKindergartenField() {
         const role = document.getElementById('role').value;
         const section = document.getElementById('kindergartenSection');
         const kgSelect = document.getElementById('kindergarten_id');
 
-        // Admin usually doesn't need a specific KG, others do
+        updateRoleHelp(role);
+
+        if (!section || !kgSelect) {
+            return;
+        }
+
         if (role === 'ADMIN') {
             section.classList.add('d-none');
-            kgSelect.value = ''; 
+            kgSelect.value = '';
             kgSelect.removeAttribute('required');
-        } else {
-            section.classList.remove('d-none');
-            // Required if a role is selected (and not Admin)
-            if (role) {
-                kgSelect.setAttribute('required', 'required');
-            } else {
-                kgSelect.removeAttribute('required');
-            }
+            return;
         }
+
+        section.classList.remove('d-none');
+
+        if (role === 'MANAGER' || role === 'SUPERVISOR') {
+            kgSelect.setAttribute('required', 'required');
+        } else {
+            kgSelect.removeAttribute('required');
+        }
+
+        filterKindergartenOptions();
     }
 
     // Run on load
-    document.addEventListener('DOMContentLoaded', toggleKindergartenField);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        toggleKindergartenField();
+        initKindergartenFilters();
+    });
 
     // Check for password reset parameter
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('reset_password') === '1' && userId) {
-        // Get user info and show modal
-        api.get(`/api/users/${userId}`)
-            .then(user => {
-                showPasswordResetModal(userId, user.username);
-            })
-            .catch(error => {
-                console.error('Error fetching user info:', error);
-            });
+    if (urlParams.get('reset_password') === '1') {
+        const userId = getUserID();
+        if (userId) {
+            // Get user info and show modal
+            api.get(`/api/users/${userId}`)
+                .then(user => {
+                    showPasswordResetModal(userId, user.username);
+                })
+                .catch(error => {
+                    console.error('Error fetching user info:', error);
+                    showToast('حدث خطأ في تحميل بيانات المستخدم', 'error');
+                });
+        }
     }
 
     document.getElementById('userForm').addEventListener('submit', async (e) => {
@@ -310,14 +430,25 @@
     document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
         const password = document.getElementById('resetPassword').value;
         const confirmPassword = document.getElementById('confirmResetPassword').value;
+        const adminPassword = document.getElementById('adminPassword').value;
 
         if (password !== confirmPassword) {
             showToast('كلمات المرور غير متطابقة', 'error');
             return;
         }
 
-        if (password.length < 6) {
-            showToast('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+        if (password.length < 8) {
+            showToast('كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'error');
+            return;
+        }
+
+        if (!adminPassword) {
+            showToast('يرجى إدخال كلمة مرور المدير', 'error');
+            return;
+        }
+
+        if (adminPassword.length < 8) {
+            showToast('كلمة مرور المدير يجب أن تكون 8 أحرف على الأقل', 'error');
             return;
         }
 
@@ -331,7 +462,8 @@
 
         try {
             await api.post(`/api/users/${currentResetUserId}/admin-reset-password`, {
-                new_password: password
+                new_password: password,
+                admin_password: adminPassword
             });
 
             showToast('تم إعادة تعيين كلمة المرور بنجاح', 'success');

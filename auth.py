@@ -3,35 +3,37 @@ Authentication and authorization services
 """
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from config import settings
 import models
 
-
-# Password hashing - explicitly set backend to avoid bcrypt compatibility issues
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
-
-# Handle bcrypt compatibility issues
-try:
-    import bcrypt
-    # Check if bcrypt has the __about__ attribute
-    if not hasattr(bcrypt, '__about__'):
-        # For newer bcrypt versions, manually set the version
-        bcrypt.__about__ = type('about', (), {'__version__': '4.0.0'})()
-except ImportError:
-    pass
+# Bcrypt limits: enforce up front (bytes, not characters)
+MIN_PASSWORD_LENGTH = 8
+MAX_PASSWORD_BYTES = 72
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    password_bytes = plain_password.encode("utf-8")
+    return bcrypt.checkpw(password_bytes, hashed_password.encode())
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password"""
-    return pwd_context.hash(password)
+    """
+    Hash a password with bcrypt, enforcing safe length limits to avoid
+    bcrypt's 72-byte truncation/ValueError edge cases.
+    """
+    password_bytes = password.encode("utf-8")
+
+    if len(password) < MIN_PASSWORD_LENGTH:
+        raise ValueError("Password must be at least 8 characters long.")
+
+    if len(password_bytes) > MAX_PASSWORD_BYTES:
+        raise ValueError("Password cannot exceed 72 bytes when UTF-8 encoded.")
+
+    return bcrypt.hashpw(password_bytes, bcrypt.gensalt(rounds=12)).decode()
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
