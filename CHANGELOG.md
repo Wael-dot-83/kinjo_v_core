@@ -1,5 +1,26 @@
 # KinJo Platform - Final Changelog Report
 
+## Version 1.0.2 - API Endpoint Fixes & Test Enhancements
+
+### Release Date: January 22, 2026
+
+### 🐛 Bug Fixes
+
+- **Endpoint Status Codes**: Fixed supervisor assignment, observation recording, and daily report creation endpoints to return HTTP 201 Created instead of 200 OK for successful resource creation.
+- **Import Error**: Corrected missing `validators.` prefix in enrollment review endpoint, resolving NameError during enrollment processing.
+
+### 🧪 Testing Improvements
+
+- **Dual Parameter Support**: Added comprehensive tests to ensure supervisor assignment and observation recording endpoints accept both JSON request bodies and query parameters, preventing future regressions.
+- **Status Code Validation**: Updated integration tests to expect correct HTTP status codes for creation operations.
+
+### 🔧 API Compatibility
+
+- Maintained backward compatibility for endpoints that support both JSON and query parameter inputs.
+- Ensured consistent API behavior across all supervisor and reporting endpoints.
+
+---
+
 ## Version 1.0.1 - Post-Release Fixes & Enhancements
 
 ### Release Date: January 15, 2026
