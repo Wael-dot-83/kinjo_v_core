@@ -31,7 +31,7 @@ class TestAuthenticationWorkflow:
 
     def test_unauthenticated_access_denied(self, client):
         """Sad path: Unauthenticated requests should be denied"""
-        response = client.get("/supervisor/dashboard")
+        response = client.get("/api/supervisor/dashboard")
         assert response.status_code == 401
 
 
@@ -46,7 +46,7 @@ class TestSupervisorAssignmentWorkflow:
     ):
         """Happy path: Manager assigns supervisor to class"""
         response = client.post(
-            "/supervisor/assign",
+            "/api/supervisor/assign",
             headers=auth_headers_manager,
             params={
                 "supervisor_id": supervisor_user.id,
@@ -81,7 +81,7 @@ class TestSupervisorAssignmentWorkflow:
 
         # Assign primary supervisor first
         client.post(
-            "/supervisor/assign",
+            "/api/supervisor/assign",
             headers=auth_headers_manager,
             params={
                 "supervisor_id": supervisor_user.id,
@@ -96,7 +96,7 @@ class TestSupervisorAssignmentWorkflow:
         end_date = date.today() + timedelta(days=14)
 
         response = client.post(
-            "/supervisor/assign-replacement",
+            "/api/supervisor/assign-replacement",
             headers=auth_headers_manager,
             params={
                 "class_id": sample_class.id,
@@ -132,7 +132,7 @@ class TestSupervisorAssignmentWorkflow:
 
         # Assign to first class
         response = client.post(
-            "/supervisor/assign",
+            "/api/supervisor/assign",
             headers=auth_headers_manager,
             params={
                 "supervisor_id": supervisor_user.id,
@@ -145,7 +145,7 @@ class TestSupervisorAssignmentWorkflow:
 
         # Try to assign to second class (overlapping dates) - should fail
         response = client.post(
-            "/supervisor/assign",
+            "/api/supervisor/assign",
             headers=auth_headers_manager,
             params={
                 "supervisor_id": supervisor_user.id,
@@ -179,7 +179,7 @@ class TestSupervisorOperations:
 
         # Get assigned classes
         response = client.get(
-            "/supervisor/my-classes",
+            "/api/supervisor/my-classes",
             headers=auth_headers_supervisor
         )
         assert response.status_code == 200
@@ -203,7 +203,7 @@ class TestSupervisorOperations:
 
         # Get dashboard
         response = client.get(
-            "/supervisor/dashboard",
+            "/api/supervisor/dashboard",
             headers=auth_headers_supervisor
         )
         assert response.status_code == 200
@@ -241,7 +241,7 @@ class TestSupervisorOperations:
 
         # Record observation
         response = client.post(
-            "/supervisor/observations/record",
+            "/api/supervisor/observations/record",
             headers=auth_headers_supervisor,
             params={
                 "child_id": sample_child.id,
@@ -279,7 +279,7 @@ class TestAttendanceWorkflow:
 
         # Check-in
         response = client.post(
-            "/attendance/check-in",
+            "/api/attendance/check-in",
             headers=auth_headers_manager,
             params={
                 "child_id": sample_child.id,
@@ -294,7 +294,7 @@ class TestAttendanceWorkflow:
 
         # Check-out
         response = client.post(
-            "/attendance/check-out",
+            "/api/attendance/check-out",
             headers=auth_headers_manager,
             params={
                 "child_id": sample_child.id,
@@ -323,7 +323,7 @@ class TestAttendanceWorkflow:
 
         # First check-in
         response = client.post(
-            "/attendance/check-in",
+            "/api/attendance/check-in",
             headers=auth_headers_manager,
             params={
                 "child_id": sample_child.id,
@@ -335,7 +335,7 @@ class TestAttendanceWorkflow:
 
         # Second check-in should fail
         response = client.post(
-            "/attendance/check-in",
+            "/api/attendance/check-in",
             headers=auth_headers_manager,
             params={
                 "child_id": sample_child.id,
@@ -388,7 +388,7 @@ class TestDailyReportWorkflow:
 
         # Create daily report
         response = client.post(
-            "/daily-reports/create",
+            "/api/daily-reports/create",
             headers=auth_headers_supervisor,
             json={
                 "child_id": sample_child.id,
@@ -410,13 +410,168 @@ class TestDailyReportWorkflow:
 
         # Submit daily report
         response = client.post(
-            f"/daily-reports/{report_id}/submit",
+            f"/api/daily-reports/{report_id}/submit",
             headers=auth_headers_supervisor
         )
         assert response.status_code == 200
         submitted = response.json()
         assert submitted["status"] == "submitted"
 
+    def test_duplicate_daily_report_fails(self, client, test_db, supervisor_user, auth_headers_supervisor, sample_kindergarten, sample_class, sample_child):
+        """Creating a second daily report for same child/date should return 409"""
+        # Setup: Assign supervisor and enroll child
+        assignment = models.SupervisorAssignment(
+            class_id=sample_class.id,
+            supervisor_id=supervisor_user.id,
+            is_primary=True,
+            start_date=date.today()
+        )
+        test_db.add(assignment)
+
+        enrollment = models.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=sample_kindergarten.id,
+            status=models.EnrollmentStatus.ACTIVE, source="online",
+            submitted_at=datetime.now(),
+            enrollment_start_date=date.today(),
+            class_id=sample_class.id,
+            class_assignment_date=date.today()
+        )
+        test_db.add(enrollment)
+        test_db.commit()
+
+        payload = {
+            "child_id": sample_child.id,
+            "date": date.today().isoformat(),
+            "arrival_time": "07:30",
+            "leave_time": "14:00"
+        }
+        # First creation succeeds
+        response = client.post("/api/daily-reports/create", headers=auth_headers_supervisor, json=payload)
+        assert response.status_code == 201
+
+        # Second creation for same day should fail
+        response = client.post("/api/daily-reports/create", headers=auth_headers_supervisor, json=payload)
+        assert response.status_code == 409
+
+    def test_create_report_on_non_working_day_fails(self, client, test_db, supervisor_user, auth_headers_supervisor, sample_kindergarten, sample_class, sample_child):
+        """Creating a report on a day marked closed in OperatingCalendar should return 400"""
+        # Setup: Assign supervisor and enroll child
+        assignment = models.SupervisorAssignment(
+            class_id=sample_class.id,
+            supervisor_id=supervisor_user.id,
+            is_primary=True,
+            start_date=date.today()
+        )
+        test_db.add(assignment)
+
+        enrollment = models.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=sample_kindergarten.id,
+            status=models.EnrollmentStatus.ACTIVE, source="online",
+            submitted_at=datetime.now(),
+            enrollment_start_date=date.today(),
+            class_id=sample_class.id,
+            class_assignment_date=date.today()
+        )
+        test_db.add(enrollment)
+
+        # Mark today as closed and ensure profile is complete
+        cal = models.OperatingCalendar(
+            kindergarten_id=sample_kindergarten.id,
+            date=date.today(),
+            is_open=False,
+            reason="Holiday"
+        )
+        test_db.add(cal)
+
+        # Mark child and parent profiles as complete so only the operating calendar causes failure
+        child = test_db.query(models.Child).filter(models.Child.id == sample_child.id).first()
+        parent = child.parent
+        child.profile_complete = True
+        parent.profile_complete = True
+
+        test_db.commit()
+
+        payload = {
+            "child_id": sample_child.id,
+            "date": date.today().isoformat(),
+            "arrival_time": "07:30",
+            "leave_time": "14:00"
+        }
+
+        response = client.post("/api/daily-reports/create", headers=auth_headers_supervisor, json=payload)
+        assert response.status_code == 400
+
+    def test_profile_incomplete_blocks_actions(self, client, test_db, supervisor_user, auth_headers_supervisor, auth_headers_manager, auth_headers_parent, sample_kindergarten, sample_class, sample_child):
+        """If profile is incomplete, accept enrollment, assign class, and create report should be blocked"""
+
+    def test_parent_and_child_update_auto_mark_complete(self, client, test_db, auth_headers_parent, parent_user, sample_child, sample_kindergarten, sample_class, auth_headers_manager, auth_headers_supervisor):
+        """Updating parent and child profiles should auto-mark profile_complete when requirements met"""
+        # Make profiles explicitly incomplete
+        child = test_db.query(models.Child).filter(models.Child.id == sample_child.id).first()
+        parent = child.parent
+        child.profile_complete = False
+        parent.profile_complete = False
+        test_db.commit()
+
+        # Update parent profile with missing phone and address (via API)
+        update_parent_payload = {"phone_number": "+962777777777", "home_address_line": "Main St"}
+        p_resp = client.put(f"/api/parent-profiles/{parent.id}", headers=auth_headers_parent, json=update_parent_payload)
+        assert p_resp.status_code == 200
+
+        # Update child with any missing child info (via API)
+        update_child_payload = {"father_name": "Father Name"}
+        c_resp = client.put(f"/api/children/{child.id}", headers=auth_headers_parent, json=update_child_payload)
+        assert c_resp.status_code == 200
+        body = c_resp.json()
+        assert body.get("profile_complete") is True
+        # Verify in DB as well
+        test_db.refresh(child)
+        test_db.refresh(parent)
+        assert child.profile_complete is True
+        assert parent.profile_complete is True
+        # Ensure child and parent profiles are incomplete
+        child = test_db.query(models.Child).filter(models.Child.id == sample_child.id).first()
+        parent = child.parent
+        child.profile_complete = False
+        parent.profile_complete = False
+
+        test_db.commit()
+
+        # Create an enrollment via the public API as parent (ensure the server sees it)
+        apply_payload = {
+            "first_name": "New",
+            "last_name": "Child",
+            "gender": "male",
+            "date_of_birth": (date.today().replace(year=date.today().year - 2)).isoformat(),
+            "father_name": "Father",
+            "mother_first_name": "Mother",
+            "mother_last_name": "Name",
+            "mother_nationality": "Jordanian",
+            "mother_national_id": "2222222222",
+            "kindergarten_id": sample_kindergarten.id
+        }
+        resp = client.post("/api/enrollment/apply", headers=auth_headers_parent, json=apply_payload)
+        assert resp.status_code == 201
+        enrollment_resp = resp.json()
+        new_enrollment_id = enrollment_resp["id"]
+
+        # Manager tries to accept the enrollment but should be blocked due to incomplete child/parent profile
+        response = client.post(f"/api/enrollment/{new_enrollment_id}/review?decision=accept", headers=auth_headers_manager)
+        assert response.status_code == 400
+
+        # Force enrollment to active in DB to test assign-class blocking (simulate system state)
+        e = test_db.query(models.EnrollmentApplication).filter(models.EnrollmentApplication.id == new_enrollment_id).first()
+        e.status = models.EnrollmentStatus.ACTIVE
+        test_db.commit()
+
+        response = client.post(f"/api/enrollments/{new_enrollment_id}/assign-class?class_id={sample_class.id}", headers=auth_headers_manager)
+        assert response.status_code == 400
+        # Try to create a daily report (blocked)
+        payload = {"child_id": sample_child.id, "date": date.today().isoformat(), "arrival_time": "07:30", "leave_time": "14:00"}
+        response = client.post("/api/daily-reports/create", headers=auth_headers_supervisor, json=payload)
+        assert response.status_code == 400
 
 class TestPermissionsAndSecurity:
     """
@@ -471,7 +626,7 @@ class TestPermissionsAndSecurity:
 
         # Try to record observation for child from other kindergarten
         response = client.post(
-            "/supervisor/observations/record",
+            "/api/supervisor/observations/record",
             headers=auth_headers_supervisor,
             params={
                 "child_id": other_child.id,
@@ -514,7 +669,178 @@ class TestPermissionsAndSecurity:
 
         # Try to get other child's daily reports
         response = client.get(
-            f"/daily-reports/child/{other_child.id}",
+            f"/api/daily-reports/child/{other_child.id}",
             headers=auth_headers_parent
         )
         assert response.status_code in [403, 404]
+
+
+class TestDualParameterSupport:
+    """
+    Test that updated endpoints accept both JSON bodies and query parameters
+    to prevent regressions.
+    """
+
+    def test_supervisor_assign_json_body(
+        self, client, test_db, manager_user, supervisor_user,
+        auth_headers_manager, sample_class
+    ):
+        """Test supervisor assign with JSON body"""
+        response = client.post(
+            "/api/supervisor/assign",
+            headers=auth_headers_manager,
+            json={
+                "supervisor_id": supervisor_user.id,
+                "class_id": sample_class.id,
+                "start_date": date.today().isoformat(),
+                "is_primary": True
+            }
+        )
+        assert response.status_code == 201
+        assignment = response.json()
+        assert assignment["is_primary"] is True
+
+    def test_supervisor_assign_query_params(
+        self, client, test_db, manager_user, supervisor_user,
+        auth_headers_manager, sample_class
+    ):
+        """Test supervisor assign with query parameters"""
+        response = client.post(
+            "/api/supervisor/assign",
+            headers=auth_headers_manager,
+            params={
+                "supervisor_id": supervisor_user.id,
+                "class_id": sample_class.id,
+                "start_date": date.today().isoformat(),
+                "is_primary": True
+            }
+        )
+        assert response.status_code == 201
+        assignment = response.json()
+        assert assignment["is_primary"] is True
+
+    def test_observation_record_json_body(
+        self, client, test_db, supervisor_user, auth_headers_supervisor,
+        sample_class, sample_child, sample_kindergarten
+    ):
+        """Test observation record with JSON body"""
+        # Setup assignment and enrollment
+        assignment = models.SupervisorAssignment(
+            class_id=sample_class.id,
+            supervisor_id=supervisor_user.id,
+            is_primary=True,
+            start_date=date.today()
+        )
+        test_db.add(assignment)
+        
+        enrollment = models.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=sample_kindergarten.id,
+            status=models.EnrollmentStatus.ACTIVE,
+            source="online",
+            class_id=sample_class.id
+        )
+        test_db.add(enrollment)
+        test_db.commit()
+        
+        response = client.post(
+            "/api/supervisor/observations/record",
+            headers=auth_headers_supervisor,
+            json={
+                "child_id": sample_child.id,
+                "domain": "social_emotional",
+                "observation_text": "Test observation",
+                "mastery_level": "meets"
+            }
+        )
+        assert response.status_code == 201
+
+    def test_observation_record_query_params(
+        self, client, test_db, supervisor_user, auth_headers_supervisor,
+        sample_class, sample_child, sample_kindergarten
+    ):
+        """Test observation record with query parameters"""
+        # Setup assignment and enrollment
+        assignment = models.SupervisorAssignment(
+            class_id=sample_class.id,
+            supervisor_id=supervisor_user.id,
+            is_primary=True,
+            start_date=date.today()
+        )
+        test_db.add(assignment)
+        
+        enrollment = models.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=sample_kindergarten.id,
+            status=models.EnrollmentStatus.ACTIVE,
+            source="online",
+            class_id=sample_class.id
+        )
+        test_db.add(enrollment)
+        test_db.commit()
+        
+        response = client.post(
+            "/api/supervisor/observations/record",
+            headers=auth_headers_supervisor,
+            params={
+                "child_id": sample_child.id,
+                "domain": "social_emotional",
+                "observation_text": "Test observation via params",
+                "mastery_level": "meets"
+            }
+        )
+        assert response.status_code == 201
+
+    def test_daily_report_create_json_body(
+        self, client, test_db, supervisor_user, auth_headers_supervisor,
+        sample_class, sample_child, sample_kindergarten
+    ):
+        """Test daily report create with JSON body"""
+        # Setup assignment and enrollment
+        assignment = models.SupervisorAssignment(
+            class_id=sample_class.id,
+            supervisor_id=supervisor_user.id,
+            is_primary=True,
+            start_date=date.today()
+        )
+        test_db.add(assignment)
+        
+        enrollment = models.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=sample_kindergarten.id,
+            status=models.EnrollmentStatus.ACTIVE,
+            source="online",
+            class_id=sample_class.id
+        )
+        test_db.add(enrollment)
+        
+        attendance = models.AttendanceLog(
+            child_id=sample_child.id,
+            date=date.today(),
+            check_in_at=datetime.now(),
+            method=models.AttendanceMethod.PIN
+        )
+        test_db.add(attendance)
+        test_db.commit()
+        
+        report_data = {
+            "child_id": sample_child.id,
+            "date": date.today().isoformat(),
+            "arrival_time": "07:45",
+            "leave_time": "14:30",
+            "breakfast": True,
+            "snack": True,
+            "milk": True,
+            "lunch": True,
+            "nap_start": "12:00",
+            "nap_end": "13:30",
+            "activities": "Test activities",
+            "notes": "Test notes"
+        }
+        
+        response = client.post(
+            "/api/daily-reports/create",
+            headers=auth_headers_supervisor,
+            json=report_data
+        )
+        assert response.status_code == 201

@@ -2,7 +2,7 @@
 Missing Critical Endpoints - Implementation
 Adds CRUD operations and complete workflows
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
@@ -127,7 +127,7 @@ def list_users(
         # Admin can filter by any kindergarten_id
         if kindergarten_id:
             query = query.filter(models.User.kindergarten_id == kindergarten_id)
-        # Prevent admins from seeing or filtering for other admin users
+        # Admin cannot see or manage other admin users
         query = query.filter(models.User.role != models.UserRole.ADMIN)
     elif current_user.role == models.UserRole.MANAGER:
         # Manager is restricted to their own kindergarten
@@ -173,6 +173,59 @@ def list_users(
         for u in users
     ]
 
+@router.get("/users/export")
+def export_users(
+    format: str = Query("csv", regex="^(csv)$"),
+    role: Optional[models.UserRole] = None,
+    status_filter: Optional[models.UserStatus] = Query(None, alias="status"),
+    kindergarten_id: Optional[int] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Export users list (Admin only)"""
+    if current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    query = db.query(models.User)
+
+    if kindergarten_id:
+        query = query.filter(models.User.kindergarten_id == kindergarten_id)
+
+    # Exclude admin users from export
+    query = query.filter(models.User.role != models.UserRole.ADMIN)
+
+    if role:
+        query = query.filter(models.User.role == role)
+    if status_filter:
+        query = query.filter(models.User.status == status_filter)
+
+    users = query.all()
+
+    import csv
+    import io
+    from fastapi.responses import Response
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Username", "Email", "Role", "Status", "Kindergarten ID", "Created At"])
+
+    for u in users:
+        writer.writerow([
+            u.id,
+            u.username,
+            u.email,
+            u.role.value,
+            u.status.value,
+            u.kindergarten_id or "N/A",
+            u.created_at
+        ])
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=users_export_{date.today()}.csv"}
+    )
+
 @router.post("/users", status_code=status.HTTP_201_CREATED)
 def create_user(
     request: Request,
@@ -184,7 +237,10 @@ def create_user(
     
     # Permission Check
     if current_user.role == models.UserRole.ADMIN:
-        pass # Allowed all
+        # Admin cannot create other admin users
+        if user_data.role == models.UserRole.ADMIN:
+            _log_access_denied(db, current_user, "create_user", "Cannot create admin users", request)
+            raise HTTPException(status_code=403, detail="Cannot create admin users")
     elif current_user.role == models.UserRole.MANAGER:
         # Manager can only create non-admin, non-manager roles for their own KG
         if user_data.role in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
@@ -249,15 +305,19 @@ def get_user(
     db: Session = Depends(get_db)
 ):
     """Get user details"""
-    if current_user.role != models.UserRole.ADMIN:
-        # Can view self
-        if current_user.id != user_id:
-             _log_access_denied(db, current_user, "get_user", "Non-admin access to other user", request)
-             raise HTTPException(status_code=403, detail="Not authorized")
-
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Admin cannot view other admin users
+    if current_user.role == models.UserRole.ADMIN:
+        if user.role == models.UserRole.ADMIN and user.id != current_user.id:
+            _log_access_denied(db, current_user, "get_user", "Cannot access other admin user", request)
+            raise HTTPException(status_code=403, detail="Cannot access admin users")
+    elif current_user.id != user_id:
+        # Non-admin can only view self
+        _log_access_denied(db, current_user, "get_user", "Non-admin access to other user", request)
+        raise HTTPException(status_code=403, detail="Not authorized")
         
     return {
         "id": user.id,
@@ -278,16 +338,24 @@ def update_user(
     db: Session = Depends(get_db)
 ):
     """Update user"""
-    if current_user.role != models.UserRole.ADMIN:
-        # User update self? Maybe restrict for now or allow only password
-        if current_user.id != user_id:
-            _log_access_denied(db, current_user, "update_user", "Non-admin update of other user", request)
-            raise HTTPException(status_code=403, detail="Not authorized")
-            
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-        
+
+    if current_user.role == models.UserRole.ADMIN:
+        # Admin cannot update other admin users
+        if user.role == models.UserRole.ADMIN and user.id != current_user.id:
+            _log_access_denied(db, current_user, "update_user", "Cannot update other admin users", request)
+            raise HTTPException(status_code=403, detail="Cannot update admin users")
+        # Admin cannot promote users to admin role
+        if user_data.role == models.UserRole.ADMIN:
+            _log_access_denied(db, current_user, "update_user", "Cannot promote to admin role", request)
+            raise HTTPException(status_code=403, detail="Cannot promote users to admin role")
+    elif current_user.id != user_id:
+        # Non-admin can only update self
+        _log_access_denied(db, current_user, "update_user", "Non-admin update of other user", request)
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     if user_data.email:
         # Check uniqueness
         existing = db.query(models.User).filter(
@@ -342,17 +410,19 @@ def delete_user(
     if current_user.role != models.UserRole.ADMIN:
         _log_access_denied(db, current_user, "delete_user", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Not authorized")
-        
+
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own admin account")
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-        
-    # Check dependencies before deleting? typically cascade or strict.
-    # We will hard delete for now as per instructions.
-    
+
+    # Admin cannot delete other admin users
+    if user.role == models.UserRole.ADMIN:
+        _log_access_denied(db, current_user, "delete_user", "Cannot delete admin users", request)
+        raise HTTPException(status_code=403, detail="Cannot delete admin users")
+
     db.delete(user)
     db.commit()
     
@@ -396,6 +466,11 @@ def admin_reset_password(
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Admin cannot reset other admin users' passwords
+    if user.role == models.UserRole.ADMIN:
+        _log_access_denied(db, current_user, "admin_reset_password", "Cannot reset admin passwords", request)
+        raise HTTPException(status_code=403, detail="Cannot reset admin passwords")
 
     from auth import get_password_hash, verify_password
     ip_address = request.client.host if request.client else None
@@ -521,10 +596,23 @@ def bulk_update_status(
     if not bulk_data.user_ids:
         raise HTTPException(status_code=400, detail="No user IDs provided")
 
-    # Update users
+    # Check for admin users in the list - cannot update admin status
+    admin_users = db.query(models.User).filter(
+        models.User.id.in_(bulk_data.user_ids),
+        models.User.role == models.UserRole.ADMIN
+    ).all()
+
+    if admin_users:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Cannot update admin accounts: {', '.join([u.username for u in admin_users])}"
+        )
+
+    # Update only non-admin users
     updated_count = db.query(models.User).filter(
-        models.User.id.in_(bulk_data.user_ids)
-    ).update({"status": bulk_data.new_status})
+        models.User.id.in_(bulk_data.user_ids),
+        models.User.role != models.UserRole.ADMIN
+    ).update({"status": bulk_data.new_status}, synchronize_session=False)
 
     db.commit()
 
@@ -608,6 +696,15 @@ def bulk_create_users(
 
     for i, user_data in enumerate(bulk_data.users):
         try:
+            # Cannot create admin users via bulk create
+            if user_data.role == models.UserRole.ADMIN:
+                errors.append({
+                    "row": i + 1,
+                    "field": "role",
+                    "message": "Cannot create admin users"
+                })
+                continue
+
             # Check if username or email already exists
             existing = db.query(models.User).filter(
                 or_(models.User.username == user_data.username,
@@ -1501,12 +1598,24 @@ def assign_child_to_class(
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
 
+
     # Validate enrollment is active
     if enrollment.status != models.EnrollmentStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Can only assign active enrollments")
 
     # Validate kindergarten scope
     validators.validate_kindergarten_scope(current_user, enrollment.kindergarten_id)
+
+    # Ensure child and parent profiles are explicitly marked complete before assigning
+    child = enrollment.child
+    parent_profile = child.parent
+    if not getattr(child, 'profile_complete', False) or not getattr(parent_profile, 'profile_complete', False):
+        raise HTTPException(status_code=400, detail={"message": "Child or parent profile not marked complete", "missing_fields": ["child.profile_complete", "parent.profile_complete"]})
+
+    # Also validate required fields are present
+    ok, missing = validators.check_profile_complete(db, enrollment.child_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail={"message": "Child profile incomplete", "missing_fields": missing})
 
     # Get class
     class_obj = db.query(models.Class).filter(
@@ -2639,7 +2748,7 @@ def submit_enrollment(
     enrollment.submitted_at = datetime.now()
     db.commit()
     db.refresh(enrollment)
-    
+
     return {
         "id": enrollment.id,
         "status": enrollment.status.value.lower(),
@@ -2650,39 +2759,45 @@ def submit_enrollment(
 @router.post("/enrollment/{enrollment_id}/review")
 def review_enrollment(
     enrollment_id: int,
-    decision: str = Query(..., description="accept or reject"),
-    reason: Optional[str] = None,
+    decision: str = Query(..., regex="^(accept|reject)$"),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Review and decide on enrollment application (Manager only)"""
-    validators.validate_manager_role(current_user)
-    
+    """Manager reviews (accept/reject) an enrollment application"""
     enrollment = db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.id == enrollment_id
     ).first()
     
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
-    
-    validators.validate_kindergarten_scope(current_user, enrollment.kindergarten_id)
-    
+
     if enrollment.status != models.EnrollmentStatus.SUBMITTED:
         raise HTTPException(status_code=400, detail="Only submitted applications can be reviewed")
-    
+
+    # Only managers or admins can review
+    if current_user.role not in [models.UserRole.MANAGER, models.UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Only managers can review applications")
+
+    # Ensure manager is in the same kindergarten
+    validators.validate_kindergarten_scope(current_user, enrollment.kindergarten_id)
+
     if decision == "accept":
+        # Verify profile completeness before accepting
+        child = enrollment.child
+        ok, missing = validators.check_profile_complete(db, child.id)
+        if not ok:
+            # Block acceptance until profile complete
+            raise HTTPException(status_code=400, detail={"missing_fields": missing})
         enrollment.status = models.EnrollmentStatus.ACTIVE
-        enrollment.enrollment_start_date = date.today()
-    elif decision == "reject":
-        enrollment.status = models.EnrollmentStatus.REJECTED
-        enrollment.status_reason = reason
+        enrollment.accepted_at = datetime.now()
     else:
-        raise HTTPException(status_code=400, detail="Decision must be 'accept' or 'reject'")
-    
-    enrollment.decision_by = current_user.id
-    enrollment.decision_at = datetime.now()
+        enrollment.status = models.EnrollmentStatus.REJECTED
+        enrollment.rejected_at = datetime.now()
+
     db.commit()
     db.refresh(enrollment)
+
+    return {"id": enrollment.id, "status": enrollment.status.value.lower()}
     
     return {
         "id": enrollment.id,
@@ -3030,7 +3145,7 @@ class DailyReportCreateRequest(BaseModel):
     notes: Optional[str] = None
 
 
-@router.post("/daily-reports/create")
+@router.post("/daily-reports/create", status_code=status.HTTP_201_CREATED)
 def create_daily_report(
     report_data: DailyReportCreateRequest,
     current_user: models.User = Depends(get_current_user),
@@ -3060,7 +3175,36 @@ def create_daily_report(
     report_date = date.fromisoformat(report_data.date)
     if report_date > date.today():
         raise HTTPException(status_code=400, detail="Cannot create reports for future dates")
-    
+
+    # Ensure child profile is complete before creating a report
+    ok, missing = validators.check_profile_complete(db, report_data.child_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail={"message": "Child profile incomplete", "missing_fields": missing})
+
+    # Working day validation
+    if not validators.is_working_day(db, active_enrollment.kindergarten_id, report_date):
+        raise HTTPException(status_code=400, detail="Date is not a working day for this kindergarten")
+
+    # Ensure only one report per child per day
+    existing = db.query(models.DailyReport).filter(
+        models.DailyReport.child_id == report_data.child_id,
+        models.DailyReport.date == report_date
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Daily report for this child and date already exists")
+
+    # If supervisor, ensure they are assigned to the child's class on that date
+    if current_user.role == models.UserRole.SUPERVISOR:
+        assignment = db.query(models.SupervisorAssignment).join(
+            models.Class, models.Class.id == models.SupervisorAssignment.class_id
+        ).filter(
+            models.SupervisorAssignment.supervisor_id == current_user.id,
+            models.SupervisorAssignment.class_id == active_enrollment.class_id,
+            models.SupervisorAssignment.start_date <= report_date,
+            (models.SupervisorAssignment.end_date == None) | (models.SupervisorAssignment.end_date >= report_date)
+        ).first()
+        if not assignment:
+            raise HTTPException(status_code=403, detail="Supervisor not assigned to this class on the report date")
     report = models.DailyReport(
         child_id=report_data.child_id,
         date=report_date,
@@ -3078,9 +3222,17 @@ def create_daily_report(
         notes=report_data.notes
     )
     db.add(report)
-    db.commit()
+    try:
+        db.commit()
+    except Exception as exc:
+        # Handle race condition where another report was inserted concurrently
+        db.rollback()
+        from sqlalchemy.exc import IntegrityError
+        if isinstance(exc, IntegrityError):
+            raise HTTPException(status_code=409, detail="Daily report for this child and date already exists")
+        raise
     db.refresh(report)
-    
+
     return {
         "id": report.id,
         "child_id": report.child_id,
@@ -3153,6 +3305,17 @@ def get_child_daily_reports(
     db: Session = Depends(get_db)
 ):
     """Get daily reports for a child (parents only see approved reports)"""
+    # Verify child exists
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    # If requester is a parent, ensure they own the child
+    if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
+        if not parent_profile or parent_profile.id != child.parent_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     query = db.query(models.DailyReport).filter(models.DailyReport.child_id == child_id)
     
     # Parents only see approved reports
@@ -3174,6 +3337,145 @@ def get_child_daily_reports(
             }
             for r in reports
         ]
+    }
+
+
+# ============================================================================
+# Parent Profile & Child Update Endpoints
+# ============================================================================
+
+
+class ParentProfileUpdateRequest(BaseModel):
+    first_name: Optional[str] = None
+    second_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    home_governorate: Optional[str] = None
+    home_city: Optional[str] = None
+    home_area: Optional[str] = None
+    home_address_line: Optional[str] = None
+    correspondence_preference: Optional[bool] = None
+
+
+@router.put("/parent-profiles/{parent_id}")
+def update_parent_profile(
+    parent_id: int,
+    payload: ParentProfileUpdateRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update parent profile. Parents may update their own profile; Admin can update any."""
+    parent = db.query(models.ParentProfile).filter(models.ParentProfile.id == parent_id).first()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent profile not found")
+
+    # Authorization
+    if current_user.role == models.UserRole.PARENT and parent.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this profile")
+
+    # Apply updates
+    changed = False
+    for field in ['first_name','second_name','last_name','phone_number','home_governorate','home_city','home_area','home_address_line','correspondence_preference']:
+        val = getattr(payload, field)
+        if val is not None:
+            setattr(parent, field, val)
+            changed = True
+
+    if changed:
+        db.commit()
+        db.refresh(parent)
+
+    # After update, try to mark profiles complete for any children of this parent
+    children = db.query(models.Child).filter(models.Child.parent_id == parent.id).all()
+    completed_children = []
+    missing_map = {}
+    for child in children:
+        ok, missing = validators.mark_profile_complete_if_ready(db, child.id)
+        if ok:
+            completed_children.append(child.id)
+        else:
+            missing_map[child.id] = missing
+
+    return {
+        "parent_id": parent.id,
+        "profile_complete": bool(parent.profile_complete),
+        "completed_children": completed_children,
+        "children_missing_fields": missing_map
+    }
+
+
+class ChildUpdateRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[str] = None  # ISO date
+    father_name: Optional[str] = None
+    mother_first_name: Optional[str] = None
+    mother_second_name: Optional[str] = None
+    mother_last_name: Optional[str] = None
+    mother_nationality: Optional[str] = None
+    mother_national_id: Optional[str] = None
+    mother_passport_number: Optional[str] = None
+
+
+@router.put("/children/{child_id}")
+def update_child_profile(
+    child_id: int,
+    payload: ChildUpdateRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update child profile. Parent can update their child; Admin/Manager can as well."""
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    # Authorization: parent owns child or admin/manager
+    if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
+        if not parent_profile or child.parent_id != parent_profile.id:
+            raise HTTPException(status_code=403, detail="Not authorized to update this child")
+
+    if current_user.role not in [models.UserRole.PARENT, models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR]:
+        raise HTTPException(status_code=403, detail="Not authorized to update child profiles")
+
+    # Apply updates
+    changed = False
+    if payload.first_name is not None:
+        child.first_name = payload.first_name
+        changed = True
+    if payload.last_name is not None:
+        child.last_name = payload.last_name
+        changed = True
+    if payload.gender is not None:
+        try:
+            child.gender = models.Gender(payload.gender.upper())
+            changed = True
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid gender")
+    if payload.date_of_birth is not None:
+        try:
+            child.date_of_birth = date.fromisoformat(payload.date_of_birth)
+            changed = True
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid date_of_birth")
+    for field in ['father_name','mother_first_name','mother_second_name','mother_last_name','mother_nationality','mother_national_id','mother_passport_number']:
+        val = getattr(payload, field)
+        if val is not None:
+            setattr(child, field, val)
+            changed = True
+
+    if changed:
+        db.commit()
+        db.refresh(child)
+
+    # After update, attempt to mark profile complete
+    ok, missing = validators.mark_profile_complete_if_ready(db, child.id)
+
+    return {
+        "child_id": child.id,
+        "profile_complete": bool(child.profile_complete),
+        "missing_fields": missing
     }
 
 
@@ -3606,15 +3908,30 @@ class SupervisorAssignmentRequest(BaseModel):
     is_primary: bool = False
 
 
-@router.post("/supervisor/assign")
+@router.post("/supervisor/assign", status_code=status.HTTP_201_CREATED)
 def assign_supervisor(
-    assignment_data: SupervisorAssignmentRequest,
+    assignment_data: Optional[SupervisorAssignmentRequest] = Body(None),
+    supervisor_id: Optional[int] = Query(None),
+    class_id: Optional[int] = Query(None),
+    start_date: Optional[str] = Query(None),
+    is_primary: bool = Query(False),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Assign supervisor to class (Manager only)"""
+    """Assign supervisor to class (Manager only). Accepts either JSON body or query params for compatibility."""
     validators.validate_manager_role(current_user)
-    
+
+    # Build assignment_data from query params if body not provided
+    if assignment_data is None:
+        if supervisor_id is None or class_id is None or start_date is None:
+            raise HTTPException(status_code=422, detail="Missing required assignment parameters")
+        assignment_data = SupervisorAssignmentRequest(
+            supervisor_id=supervisor_id,
+            class_id=class_id,
+            start_date=start_date,
+            is_primary=is_primary
+        )
+
     # Verify class exists
     class_obj = db.query(models.Class).filter(models.Class.id == assignment_data.class_id).first()
     if not class_obj:
@@ -3629,6 +3946,18 @@ def assign_supervisor(
     ).first()
     if not supervisor:
         raise HTTPException(status_code=404, detail="Supervisor not found")
+
+    # If assigning as primary, ensure supervisor is not already primary in another class on that date
+    if assignment_data.is_primary:
+        new_start = date.fromisoformat(assignment_data.start_date)
+        conflict = db.query(models.SupervisorAssignment).filter(
+            models.SupervisorAssignment.supervisor_id == assignment_data.supervisor_id,
+            models.SupervisorAssignment.is_primary == True,
+            models.SupervisorAssignment.start_date <= new_start,
+            or_(models.SupervisorAssignment.end_date.is_(None), models.SupervisorAssignment.end_date >= new_start)
+        ).first()
+        if conflict:
+            raise HTTPException(status_code=400, detail="Supervisor already primary in another class on this date")
     
     assignment = models.SupervisorAssignment(
         class_id=assignment_data.class_id,
@@ -3646,6 +3975,53 @@ def assign_supervisor(
         "class_id": assignment.class_id,
         "is_primary": assignment.is_primary,
         "start_date": assignment.start_date.isoformat()
+    }
+
+
+@router.post("/supervisor/assign-replacement", status_code=status.HTTP_201_CREATED)
+def assign_replacement_supervisor(
+    class_id: int = Query(...),
+    replacement_supervisor_id: int = Query(...),
+    start_date: str = Query(...),
+    end_date: str = Query(...),
+    reason: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Assign a replacement supervisor for a class (Manager only)"""
+    validators.validate_manager_role(current_user)
+
+    # Verify class exists
+    class_obj = db.query(models.Class).filter(models.Class.id == class_id).first()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    validators.validate_kindergarten_scope(current_user, class_obj.kindergarten_id)
+
+    # Verify replacement supervisor exists and has correct role
+    supervisor = db.query(models.User).filter(
+        models.User.id == replacement_supervisor_id,
+        models.User.role == models.UserRole.SUPERVISOR
+    ).first()
+    if not supervisor:
+        raise HTTPException(status_code=404, detail="Replacement supervisor not found")
+
+    assignment = models.SupervisorAssignment(
+        class_id=class_id,
+        supervisor_id=replacement_supervisor_id,
+        start_date=date.fromisoformat(start_date),
+        end_date=date.fromisoformat(end_date)
+    )
+    db.add(assignment)
+    db.commit()
+    db.refresh(assignment)
+
+    return {
+        "id": assignment.id,
+        "replacement_supervisor_id": assignment.supervisor_id,
+        "class_id": assignment.class_id,
+        "start_date": assignment.start_date.isoformat(),
+        "end_date": assignment.end_date.isoformat() if assignment.end_date else None
     }
 
 
@@ -3771,21 +4147,48 @@ class ObservationRecordRequest(BaseModel):
     observed_at: Optional[str] = None  # ISO format datetime string
 
 
-@router.post("/supervisor/observations/record")
+@router.post("/supervisor/observations/record", status_code=status.HTTP_201_CREATED)
 def record_observation(
-    observation_data: ObservationRecordRequest,
+    observation_data: Optional[ObservationRecordRequest] = Body(None),
+    child_id: Optional[int] = Query(None),
+    domain: Optional[str] = Query(None),
+    observation_text: Optional[str] = Query(None),
+    mastery_level: Optional[str] = Query(None),
+    observed_at: Optional[str] = Query(None),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Record child observation (Supervisor only)"""
+    """Record child observation (Supervisor only). Accepts either JSON body or query params for compatibility."""
     if current_user.role != models.UserRole.SUPERVISOR:
         raise HTTPException(status_code=403, detail="Only supervisors can record observations")
+
+    # Build observation_data from query params if body not provided
+    if observation_data is None:
+        if child_id is None or domain is None or observation_text is None:
+            raise HTTPException(status_code=422, detail="Missing required observation parameters")
+        observation_data = ObservationRecordRequest(
+            child_id=child_id,
+            domain=domain,
+            observation_text=observation_text,
+            mastery_level=mastery_level,
+            observed_at=observed_at
+        )
     
     # Verify child exists
     child = db.query(models.Child).filter(models.Child.id == observation_data.child_id).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
-    
+
+    # Verify active enrollment and supervisor scope
+    active_enrollment = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.child_id == child.id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    ).first()
+    if not active_enrollment:
+        raise HTTPException(status_code=400, detail="Child not active in any class")
+
+    validators.validate_kindergarten_scope(current_user, active_enrollment.kindergarten_id)
+
     # Map domain string to enum (case-insensitive)
     domain_str = observation_data.domain.upper().replace("-", "_")
     domain_map = {
@@ -3824,7 +4227,7 @@ def record_observation(
     return {
         "id": observation.id,
         "child_id": observation.child_id,
-        "domain": observation.domain.value,
+        "domain": observation.domain.value.lower(),
         "mastery_level": observation.mastery_level.value if observation.mastery_level else None,
         "observed_at": observation.observed_at.isoformat()
     }
@@ -4007,11 +4410,24 @@ def get_supervisor_dashboard(
         models.DailyReport.status == models.DailyReportStatus.DRAFT
     ).scalar() or 0
     
+    # Build class details list
+    classes_detail = []
+    for a in assignments:
+        class_obj = db.query(models.Class).filter(models.Class.id == a.class_id).first()
+        if class_obj:
+            classes_detail.append({
+                "id": class_obj.id,
+                "name_ar": class_obj.name_ar,
+                "name_en": class_obj.name_en,
+                "kindergarten_id": class_obj.kindergarten_id,
+                "is_primary": a.is_primary
+            })
+
     return {
         "supervisor_id": current_user.id,
-        "assigned_classes": len(class_ids),
+        "classes": classes_detail,
+        "attendance_summary": {"today": today_attendance},
         "total_children": total_children,
-        "today_attendance": today_attendance,
         "pending_reports": pending_reports,
         "date": today.isoformat()
     }
@@ -4213,90 +4629,6 @@ def publish_portfolio_entry(
         "id": portfolio.id,
         "status": portfolio.status.value,
         "published_at": portfolio.published_at.isoformat()
-    }
-
-
-# ============================================================================
-# Curriculum Outcomes Endpoints
-# ============================================================================
-
-class CurriculumOutcomeResponse(BaseModel):
-    id: int
-    domain: str
-    age_band_min_months: int
-    age_band_max_months: int
-    indicator_code: str
-    description: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-@router.get("/curriculum/outcomes")
-def list_curriculum_outcomes(
-    domain: Optional[str] = None,
-    age_band_min: Optional[int] = None,
-    age_band_max: Optional[int] = None,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """List curriculum outcomes (learning indicators) with optional filtering"""
-    query = db.query(models.CurriculumOutcome)
-
-    if domain:
-        try:
-            domain_enum = models.LearningDomain(domain.upper())
-            query = query.filter(models.CurriculumOutcome.domain == domain_enum)
-        except ValueError:
-            pass
-
-    # Filter by age band overlap
-    if age_band_min is not None:
-        query = query.filter(models.CurriculumOutcome.age_band_max_months >= age_band_min)
-    
-    if age_band_max is not None:
-        query = query.filter(models.CurriculumOutcome.age_band_min_months <= age_band_max)
-
-    outcomes = query.order_by(
-        models.CurriculumOutcome.domain,
-        models.CurriculumOutcome.age_band_min_months
-    ).all()
-
-    return {
-        "outcomes": [
-            {
-                "id": o.id,
-                "domain": o.domain.value,
-                "age_band_min_months": o.age_band_min_months,
-                "age_band_max_months": o.age_band_max_months,
-                "indicator_code": o.indicator_code,
-                "description": o.description
-            }
-            for o in outcomes
-        ]
-    }
-
-
-@router.get("/curriculum/outcomes/{outcome_id}")
-def get_curriculum_outcome(
-    outcome_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get specific curriculum outcome details"""
-    outcome = db.query(models.CurriculumOutcome).filter(
-        models.CurriculumOutcome.id == outcome_id
-    ).first()
-
-    if not outcome:
-        raise HTTPException(status_code=404, detail="Curriculum outcome not found")
-
-    return {
-        "id": outcome.id,
-        "domain": outcome.domain.value,
-        "age_band_min_months": outcome.age_band_min_months,
-        "age_band_max_months": outcome.age_band_max_months,
-        "indicator_code": outcome.indicator_code,
-        "description": outcome.description
     }
 
 

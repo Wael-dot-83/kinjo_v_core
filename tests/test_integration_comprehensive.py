@@ -441,7 +441,7 @@ class TestDailyReportsIntegration:
             headers=auth_headers_supervisor,
             json=report_data
         )
-        assert create_response.status_code == 200
+        assert create_response.status_code == 201
         report = create_response.json()
         report_id = report["id"]
         assert report["status"] == "draft"
@@ -595,7 +595,7 @@ class TestSupervisorOperationsIntegration:
                 "is_primary": True
             }
         )
-        assert response.status_code == 200
+        assert response.status_code == 201
         assignment = response.json()
         assert assignment["is_primary"] is True
 
@@ -633,7 +633,7 @@ class TestSupervisorOperationsIntegration:
                 "mastery_level": "exceeds"
             }
         )
-        assert response.status_code == 200
+        assert response.status_code == 201
 
 
 # ============================================================================
