@@ -1,0 +1,71 @@
+--- a/models.py
++++ b/models.py
+@@ -539,3 +539,63 @@
+     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+ 
+ 
++class TrainingStatus(str, enum.Enum):
++    PENDING = "PENDING"
++    COMPLETED = "COMPLETED"
++    FAILED = "FAILED"
++    EXEMPT = "EXEMPT"
++
++
++class TrainingModule(Base):
++    __tablename__ = "training_modules"
++
++    id = Column(Integer, primary_key=True, index=True)
++    name = Column(String(255), nullable=False, unique=True)
++    description = Column(Text, nullable=True)
++    is_mandatory = Column(Boolean, nullable=False, default=True)
++    target_roles = Column(JSON, nullable=True)  # List of UserRole values
++    created_at = Column(DateTime(timezone=True), server_default=func.now())
++    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
++
++    completions = relationship("StaffTrainingCompletion", back_populates="module")
++
++
++class StaffTrainingCompletion(Base):
++    __tablename__ = "staff_training_completions"
++
++    id = Column(Integer, primary_key=True, index=True)
++    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
++    module_id = Column(Integer, ForeignKey("training_modules.id"), nullable=False)
++    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True) # Optional, if training is global
++    completion_date = Column(Date, nullable=False)
++    score = Column(Float, nullable=True)
++    status = Column(Enum(TrainingStatus), nullable=False, default=TrainingStatus.COMPLETED)
++    created_at = Column(DateTime(timezone=True), server_default=func.now())
++    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
++
++    user = relationship("User", backref="training_completions")
++    module = relationship("TrainingModule", back_populates="completions")
++    kindergarten = relationship("Kindergarten") # Direct relationship for filtering
++
++    __table_args__ = (
++        UniqueConstraint("user_id", "module_id", name="uq_user_module_completion"),
++        Index("ix_staff_training_user_module", "user_id", "module_id"),
++        Index("ix_staff_training_kindergarten", "kindergarten_id"),
++    )
++
++
++class KPITarget(Base):
++    __tablename__ = "kpi_targets"
++
++    id = Column(Integer, primary_key=True, index=True)
++    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True) # Null for network-wide targets
++    kpi_name = Column(String(100), nullable=False) # e.g., "attendance_rate", "gcei"
++    target_value = Column(Float, nullable=False)
++    threshold_red = Column(Float, nullable=False)
++    threshold_amber = Column(Float, nullable=False)
++    effective_date = Column(Date, nullable=False)
++    created_at = Column(DateTime(timezone=True), server_default=func.now())
++    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
++
++    kindergarten = relationship("Kindergarten") # Optional relationship
++
++    __table_args__ = (
++        UniqueConstraint("kindergarten_id", "kpi_name", "effective_date", name="uq_kpi_target"),
++        Index("ix_kpi_target_lookup", "kindergarten_id", "kpi_name", "effective_date"),
++    )
++

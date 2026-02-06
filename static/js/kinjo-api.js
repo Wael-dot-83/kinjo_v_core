@@ -1,103 +1,45 @@
 /**
  * KinJo API Client
  * Handles all communication with the backend API
+ * Uses centralized AuthService for authentication
  */
 
 class KinJoAPI {
   constructor() {
     this.baseURL = "";
-    // Check both localStorage and sessionStorage for token (consistent with AuthStorage)
-    this.token =
-      localStorage.getItem("kinjo_token") ||
-      sessionStorage.getItem("kinjo_token");
-  }
-
-  /**
-   * Set authentication token
-   */
-  setToken(token) {
-    this.token = token;
-    if (token) {
-      localStorage.setItem("kinjo_token", token);
-    } else {
-      localStorage.removeItem("kinjo_token");
-    }
-  }
-
-  /**
-   * Get current token
-   */
-  getToken() {
-    return this.token;
   }
 
   /**
    * Check if user is authenticated
    */
   isAuthenticated() {
-    return !!this.token;
+    return AuthService && AuthService.isAuthenticated();
   }
 
   /**
-   * Generic request method
+   * Generic request method using centralized auth
    */
   async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
+    const response = await fetchWithAuth(`${this.baseURL}${endpoint}`, options);
 
-    const defaultHeaders = {
-      "Content-Type": "application/json",
-    };
-
-    if (this.token) {
-      defaultHeaders["Authorization"] = `Bearer ${this.token}`;
+    // fetchWithAuth already throws on non-OK responses and redirects on 401,
+    // so at this point we should have a valid response object (or null when redirected).
+    if (!response) {
+      throw new Error("Authentication required");
     }
 
-    const config = {
-      ...options,
-      headers: {
-        ...defaultHeaders,
-        ...options.headers,
-      },
-    };
-
-    try {
-      const response = await fetch(url, config);
-
-      // Handle authentication errors
-      if (response.status === 401) {
-        this.setToken(null);
-        window.location.href = "/login?expired=true";
-        throw new Error("Session expired");
-      }
-
-      // Handle other errors
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const detail = errorData.detail;
-        let message = `HTTP ${response.status}`;
-        let code = null;
-        if (typeof detail === "string") {
-          message = detail;
-        } else if (detail && typeof detail === "object") {
-          message = detail.message || message;
-          code = detail.code || null;
-        }
-        const err = new Error(message);
-        if (code) err.code = code;
-        throw err;
-      }
-
-      // Handle empty responses
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        return await response.json();
-      }
-
+    // Some endpoints may return no content (204)
+    if (response.status === 204) {
       return null;
-    } catch (error) {
-      console.error("API Error:", error);
-      throw error;
     }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return await response.json();
+    }
+
+    // Fallback: return text for non-JSON responses
+    return await response.text();
   }
 
   /**
@@ -420,46 +362,147 @@ class KinJoAPI {
     return this.get("/api/admin/dashboard");
   }
 
-  // User Management
+  // User Management (Hardened Admin Endpoints)
   async getUsers(params = {}) {
-    return this.get("/api/users", params);
+    // Use new paginated admin endpoint
+    return this.get("/api/admin/users", params);
   }
 
   async getUser(id) {
-    return this.get(`/api/users/${id}`);
+    return this.get(`/api/admin/users/${id}`);
   }
 
   async createUser(data) {
-    return this.post("/api/users", data);
+    return this.post("/api/admin/users", data);
   }
 
   async updateUser(id, data) {
-    return this.put(`/api/users/${id}`, data);
+    return this.put(`/api/admin/users/${id}`, data);
   }
 
   async deleteUser(id) {
-    return this.delete(`/api/users/${id}`);
+    return this.delete(`/api/admin/users/${id}`);
   }
 
-  async bulkCreateUsers(users) {
-    return this.post("/api/users/bulk-create", { users });
+  /**
+   * Bulk create users with optional dry-run
+   * @param {Array} users - Array of user objects
+   * @param {boolean} dryRun - If true, validate without creating
+   */
+  async bulkCreateUsers(users, dryRun = false) {
+    return this.post("/api/admin/users/bulk-create", {
+      users,
+      dry_run: dryRun,
+    });
   }
 
-  async bulkUpdateUserStatus(userIds, newStatus) {
-    return this.post("/api/users/bulk-status-update", {
+  /**
+   * Bulk update user status with confirmation support
+   * @param {Array} userIds - Array of user IDs
+   * @param {string} newStatus - New status (ACTIVE, SUSPENDED, INACTIVE)
+   * @param {string} confirmationToken - Token for confirming large operations
+   * @param {boolean} dryRun - If true, preview without applying
+   */
+  async bulkUpdateUserStatus(
+    userIds,
+    newStatus,
+    confirmationToken = null,
+    dryRun = false,
+  ) {
+    const payload = {
       user_ids: userIds,
       new_status: newStatus,
-    });
+      dry_run: dryRun,
+    };
+    if (confirmationToken) {
+      payload.confirmation_token = confirmationToken;
+    }
+    return this.post("/api/admin/users/bulk-status-update", payload);
   }
 
-  async bulkDeleteUsers(userIds) {
-    return this.post("/api/users/bulk-delete", { user_ids: userIds });
+  /**
+   * Bulk delete users with confirmation support
+   * @param {Array} userIds - Array of user IDs
+   * @param {string} confirmationToken - Required confirmation token
+   * @param {boolean} dryRun - If true, preview without applying
+   */
+  async bulkDeleteUsers(userIds, confirmationToken = null, dryRun = false) {
+    const payload = {
+      user_ids: userIds,
+      dry_run: dryRun,
+    };
+    if (confirmationToken) {
+      payload.confirmation_token = confirmationToken;
+    }
+    return this.post("/api/admin/users/bulk-delete", payload);
   }
 
-  async adminResetPassword(userId, newPassword) {
-    return this.post(`/api/users/${userId}/admin-reset-password`, {
+  /**
+   * Admin password reset with verification
+   * @param {number} userId - Target user ID
+   * @param {string} newPassword - New password for user
+   * @param {string} adminPassword - Admin's own password for verification
+   */
+  async adminResetPassword(userId, newPassword, adminPassword) {
+    return this.post(`/api/admin/users/${userId}/admin-reset-password`, {
       new_password: newPassword,
+      admin_password: adminPassword,
     });
+  }
+
+  /**
+   * Import users from CSV
+   * @param {File} file - CSV file
+   * @param {boolean} dryRun - If true, validate without importing
+   */
+  async importUsersCSV(file, dryRun = false) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const url = `/api/admin/users/import-csv?dry_run=${dryRun}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const message =
+        errorData.error?.message || errorData.detail || "Import failed";
+      const err = new Error(message);
+      err.status = response.status;
+      throw err;
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Export users to CSV/JSON
+   * @param {string} format - 'csv' or 'json'
+   * @param {Object} filters - Optional filters (role, status, kindergarten_id)
+   */
+  async exportUsers(format = "csv", filters = {}) {
+    const params = { format, ...filters };
+    // This returns a file, handle differently
+    const queryString = new URLSearchParams(params).toString();
+    const url = `/api/admin/users/export?${queryString}`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Export failed");
+    }
+
+    return response.blob();
   }
 
   // =========================================================================
@@ -490,6 +533,9 @@ class KinJoAPI {
 
 // Global API instance
 const api = new KinJoAPI();
+
+// Make API instance globally available
+window.api = api;
 
 // Export for module usage
 if (typeof module !== "undefined" && module.exports) {

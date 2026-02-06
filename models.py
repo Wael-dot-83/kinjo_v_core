@@ -137,8 +137,27 @@ class PortfolioStatus(str, enum.Enum):
 
 class MessageThreadType(str, enum.Enum):
     DIRECT = "DIRECT"
+    ANNOUNCEMENT = "ANNOUNCEMENT"
     CLASS = "CLASS"
     BROADCAST = "BROADCAST"
+
+
+class NotificationChannel(str, enum.Enum):
+    EMAIL = "EMAIL"
+    PUSH = "PUSH"
+    IN_APP = "IN_APP"
+
+
+class NotificationStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    SENT = "SENT"
+    FAILED = "FAILED"
+
+
+class DevicePlatform(str, enum.Enum):
+    IOS = "IOS"
+    ANDROID = "ANDROID"
+    WEB = "WEB"
 
 
 class EventType(str, enum.Enum):
@@ -200,7 +219,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(100), unique=True, index=True, nullable=False)
-    email = Column(String(255), unique=True, index=True, nullable=False)
+    email = Column(String(255), index=True, nullable=True)
     hashed_password = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), nullable=False)
     status = Column(Enum(UserStatus), nullable=False, default=UserStatus.ACTIVE)
@@ -217,6 +236,7 @@ class User(Base):
     observations = relationship("Observation", back_populates="observer")
     messages_sent = relationship("Message", foreign_keys="Message.sender_id", back_populates="sender")
     messages_received = relationship("Message", foreign_keys="Message.recipient_id", back_populates="recipient")
+    message_states = relationship("MessageUserState", back_populates="user")
 
 
 class PasswordResetToken(Base):
@@ -254,6 +274,8 @@ class ParentProfile(Base):
     home_address_line = Column(Text, nullable=False)
     work_address = Column(Text, nullable=True)
     correspondence_preference = Column(Boolean, nullable=False, default=True)
+    profile_complete = Column(Boolean, nullable=False, default=False)
+    profile_completed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -280,6 +302,8 @@ class Child(Base):
     mother_passport_number = Column(String(50), nullable=True)
     media_consent = Column(Boolean, nullable=False, default=False)
     correspondence_flag = Column(Boolean, nullable=False, default=True)
+    profile_complete = Column(Boolean, nullable=False, default=False)
+    profile_completed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -298,7 +322,7 @@ class Class(Base):
     __tablename__ = "classes"
 
     id = Column(Integer, primary_key=True, index=True)
-    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True)
     name_ar = Column(String(100), nullable=False)
     name_en = Column(String(100), nullable=True)
     capacity_total = Column(Integer, nullable=False)
@@ -335,7 +359,7 @@ class KindergartenService(Base):
     __tablename__ = "kindergarten_services"
 
     id = Column(Integer, primary_key=True, index=True)
-    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True)
     service_name = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
     enabled_flag = Column(Boolean, nullable=False, default=True)
@@ -444,6 +468,11 @@ class DailyReport(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    __table_args__ = (
+        UniqueConstraint("child_id", "date", name="uq_daily_report_child_date"),
+        Index("ix_daily_reports_child_date", "child_id", "date")
+    )
+
     # Relationships
     child = relationship("Child", back_populates="daily_reports")
     submitter = relationship("User", foreign_keys=[submitted_by], back_populates="daily_reports_submitted")
@@ -528,9 +557,18 @@ class Message(Base):
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     # Add recipient_id for direct messages
     recipient_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
+    thread_id = Column(Integer, ForeignKey("messages.id"), nullable=True)
+    reply_to_id = Column(Integer, ForeignKey("messages.id"), nullable=True)
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True)
     subject = Column(String(255), nullable=True)
     message_body = Column(Text, nullable=False)
+    allow_replies = Column(Boolean, nullable=False, default=True)
+    target_mode = Column(String(50), nullable=True)
+    target_roles = Column(JSON, nullable=True)
+    target_governorates = Column(JSON, nullable=True)
+    target_kindergarten_ids = Column(JSON, nullable=True)
+    target_search = Column(String(255), nullable=True)
+    recipient_count = Column(Integer, nullable=True)
     translated_text = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -538,7 +576,132 @@ class Message(Base):
     sender = relationship("User", foreign_keys=[sender_id], back_populates="messages_sent")
     # Add relationship for recipient if needed, or just use foreign key
     recipient = relationship("User", foreign_keys=[recipient_id], back_populates="messages_received")
+    thread_root = relationship("Message", remote_side=[id], foreign_keys=[thread_id], backref="thread_messages")
+    reply_to = relationship("Message", remote_side=[id], foreign_keys=[reply_to_id], backref="replies")
     kindergarten = relationship("Kindergarten", back_populates="messages")
+    user_states = relationship("MessageUserState", back_populates="message", cascade="all, delete-orphan")
+    attachments = relationship("MessageAttachment", back_populates="message", cascade="all, delete-orphan")
+    recipients = relationship("MessageRecipient", back_populates="message", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("ix_messages_kindergarten_created_at", "kindergarten_id", "created_at"),
+        Index("ix_messages_sender_id", "sender_id"),
+        Index("ix_messages_recipient_id", "recipient_id"),
+        Index("ix_messages_thread_id", "thread_id"),
+        Index("ix_messages_thread_type", "thread_type"),
+    )
+
+
+class MessageRecipient(Base):
+    """Recipients for announcement messages (many-to-many relationship)"""
+    __tablename__ = "message_recipients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
+    recipient_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    delivered_at = Column(DateTime(timezone=True), nullable=True)
+    read_at = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(20), nullable=False, default="queued")  # queued, sent, failed
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    message = relationship("Message", back_populates="recipients")
+    recipient = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("message_id", "recipient_user_id", name="uq_message_recipient"),
+        Index("ix_message_recipients_message_id", "message_id"),
+        Index("ix_message_recipients_recipient_user_id", "recipient_user_id"),
+        Index("ix_message_recipients_status", "status"),
+    )
+
+
+class MessageUserState(Base):
+    __tablename__ = "message_user_states"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    read_at = Column(DateTime(timezone=True), nullable=True)
+    archived_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    message = relationship("Message", back_populates="user_states")
+    user = relationship("User", back_populates="message_states")
+
+    __table_args__ = (
+        UniqueConstraint("message_id", "user_id", name="uq_message_user_state"),
+        Index("ix_message_user_state_user_read", "user_id", "read_at"),
+        Index("ix_message_user_state_user_archived", "user_id", "archived_at"),
+        Index("ix_message_user_state_user_deleted", "user_id", "deleted_at"),
+    )
+
+
+class MessageAttachment(Base):
+    __tablename__ = "message_attachments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
+    uploaded_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    file_name = Column(String(255), nullable=False)
+    content_type = Column(String(100), nullable=False)
+    file_size = Column(Integer, nullable=False)
+    storage_provider = Column(String(50), nullable=False)
+    storage_key = Column(String(500), nullable=False)
+    url = Column(String(500), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    message = relationship("Message", back_populates="attachments")
+    uploaded_by = relationship("User")
+
+    __table_args__ = (
+        Index("ix_message_attachments_message_id", "message_id"),
+        Index("ix_message_attachments_uploaded_by", "uploaded_by_id"),
+    )
+
+
+class UserDeviceToken(Base):
+    __tablename__ = "user_device_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token = Column(String(500), nullable=False, unique=True)
+    platform = Column(Enum(DevicePlatform), nullable=False)
+    device_name = Column(String(255), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("ix_user_device_tokens_user_id", "user_id"),
+        Index("ix_user_device_tokens_platform", "platform"),
+    )
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=True)
+    channel = Column(Enum(NotificationChannel), nullable=False)
+    status = Column(Enum(NotificationStatus), nullable=False, default=NotificationStatus.PENDING)
+    payload = Column(JSON, nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    sent_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User")
+    message = relationship("Message")
+
+    __table_args__ = (
+        Index("ix_notifications_user_status", "user_id", "status"),
+        Index("ix_notifications_message", "message_id"),
+        Index("ix_notifications_channel", "channel"),
+    )
 
 
 class Event(Base):
@@ -604,16 +767,6 @@ class AuditLog(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
-class CurriculumOutcome(Base):
-    __tablename__ = "curriculum_outcomes"
-
-    id = Column(Integer, primary_key=True, index=True)
-    domain = Column(Enum(LearningDomain), nullable=False)
-    age_band_min_months = Column(Integer, nullable=False)
-    age_band_max_months = Column(Integer, nullable=False)
-    indicator_code = Column(String(50), unique=True, nullable=False)
-    description = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class StaffPresenceLog(Base):
@@ -701,6 +854,61 @@ class Task(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
+class TrainingStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    OVERDUE = "OVERDUE"
+
+class TrainingModule(Base):
+    __tablename__ = "training_modules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    is_mandatory = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+class StaffTrainingCompletion(Base):
+    __tablename__ = "staff_training_completion"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    training_module_id = Column(Integer, ForeignKey("training_modules.id"), nullable=False)
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True) # Optional, for network-level trainings
+    completion_date = Column(Date, nullable=True)
+    status = Column(Enum(TrainingStatus), nullable=False, default=TrainingStatus.PENDING)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    user = relationship("User", backref="training_completions")
+    training_module = relationship("TrainingModule")
+    kindergarten = relationship("Kindergarten") # Optional relationship
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "training_module_id", name="uq_staff_training"),
+        Index("ix_staff_training_kindergarten", "kindergarten_id"),
+    )
+
+class KPITarget(Base):
+    __tablename__ = "kpi_targets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    kpi_name = Column(String(100), nullable=False)
+    target_value = Column(Float, nullable=False)
+    effective_date = Column(Date, nullable=False)
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True) # NULL for network-wide target
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    kindergarten = relationship("Kindergarten")
+
+    __table_args__ = (
+        UniqueConstraint("kpi_name", "effective_date", "kindergarten_id", name="uq_kpi_target"),
+        Index("ix_kpi_target_name_date", "kpi_name", "effective_date"),
+    )
+
+
 # =============================================================================
 # Analytics & Reporting Models
 # =============================================================================
@@ -753,9 +961,8 @@ class AdvancedAnalyticsCache(Base):
     attendance_incident_correlation = Column(Float)
     staffing_quality_correlation = Column(Float)
 
-    # Health/Curriculum/Alerts
+    # Health/Alerts
     health_alerts_count = Column(Integer)
-    curriculum_progress = Column(Float)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -1,294 +1,928 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
-{% block title %}لوحة مؤشرات الأداء (KPIs){% endblock %}
+{% block title %}لوحة مؤشرات الأداء{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
             <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
-            مؤشرات الأداء والحوكمة
+            لوحة مؤشرات الأداء والحكومة
+            {% if current_user and current_user.role.value == 'MANAGER' %}
+            <span class="badge bg-info-subtle text-info ms-2 align-middle" title="عرض بيانات الروضة المرتبطة بك فقط">روضتي</span>
+            {% endif %}
         </h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">KPIs</li>
+                <li class="breadcrumb-item active">مؤشرات الأداء</li>
             </ol>
         </nav>
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <button id="refreshBtn" type="button" class="btn btn-sm btn-outline-secondary" onclick="loadKPIData()">
-            <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+        <button id="refreshBtn" type="button" class="btn btn-sm btn-outline-secondary"
+            onclick="document.getElementById('applyFiltersBtn').click()">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            تحديث
         </button>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- Governance Score Card -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card bg-primary text-white overflow-hidden position-relative">
-            <div class="card-body p-4 position-relative z-1">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <h2 class="display-4 fw-bold mb-0">
-                            <span id="gqiScore">--</span>/100
-                        </h2>
-                        <p class="lead mb-2">مؤشر الحوكمة العام (GQI)</p>
-                        <div class="d-flex align-items-center gap-3 text-white-50">
-                            <small id="gqiBandText"><i class="bi bi-activity me-1"></i>جاري التحميل...</small>
+<style>
+    /* Professional KPI Dashboard Styles */
+    .card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .progress {
+        border-radius: 3px;
+        background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .badge {
+        font-weight: 600;
+        border-radius: 6px;
+    }
+
+    .list-group-item {
+        border: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Chart container improvements */
+    .card-body canvas {
+        max-height: 120px;
+    }
+
+    /* Gauge chart improvements */
+    #gceiGauge {
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .display-5 {
+            font-size: 2rem;
+        }
+
+        .card-body canvas {
+            max-height: 100px;
+        }
+    }
+
+    /* Loading states */
+    .skeleton-text {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+    }
+
+    @keyframes loading {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
+    }
+</style>
+
+<div id="kpiDashboardRoot" data-user-role="{{ current_user.role.value if current_user else '' }}"
+    data-user-kindergarten="{{ current_user.kindergarten_id or '' }}">
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-sm-6 col-md-3">
+                    <label class="form-label small text-muted" for="periodStart">تاريخ البداية</label>
+                    <input type="date" id="periodStart" class="form-control form-control-sm" />
+                </div>
+                <div class="col-sm-6 col-md-3">
+                    <label class="form-label small text-muted" for="periodEnd">تاريخ النهاية</label>
+                    <input type="date" id="periodEnd" class="form-control form-control-sm" />
+                </div>
+                <div class="col-sm-6 col-md-3" id="kgFilterCol">
+                    <label class="form-label small text-muted" for="kindergartenSelect">الروضات</label>
+                    <select id="kindergartenSelect" class="form-select form-select-sm" size="4"></select>
+                    <small class="text-muted d-block mt-1" id="kindergartenHint">حدد الروضات التي تظهر في
+                        التقرير.</small>
+                </div>
+                <div class="col-sm-6 col-md-3" id="govFilterCol">
+                    <label class="form-label small text-muted" for="governorateSelect">المحافظة</label>
+                    <select id="governorateSelect" class="form-select form-select-sm">
+                        <option value="">جميع المحافظات</option>
+                    </select>
+                    <small class="text-muted d-block mt-1">فلترة حسب المحافظات.</small>
+                </div>
+            </div>
+            <div class="row g-3 align-items-end mt-2">
+                <div class="col-sm-6 col-md-3">
+                    <label class="form-label small text-muted" for="granularitySelect">دقة التتبع</label>
+                    <select id="granularitySelect" class="form-select form-select-sm">
+                        <option value="daily">يومي</option>
+                        <option value="weekly" selected>أسبوعي</option>
+                        <option value="monthly">شهري</option>
+                    </select>
+                </div>
+                <div class="col-sm-6 col-md-3 d-grid gap-2">
+                    <button class="btn btn-primary btn-sm" id="applyFiltersBtn">
+                        <i class="bi bi-funnel me-1"></i>
+                        تطبيق
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" id="resetFiltersBtn">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>
+                        إعادة ضبط
+                    </button>
+                </div>
+                <div class="col-12">
+                    <p class="small text-muted mb-0" id="filterStatus">جارٍ جلب البيانات...</p>
+                    <p class="small text-danger mb-0 d-none" id="filterError"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="dashboardAlerts" class="alert alert-warning d-none" role="alert">
+        <div class="d-flex align-items-center gap-2" aria-label="{{ title }}">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <strong>التنبيهات</strong>
+        </div>
+        <ul class="mb-0 mt-2 ps-3" id="dashboardAlertsList"></ul>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3"
+                        aria-label="مؤشر الحوكمة والتجربة GCEI">
+                        <div class="flex-grow-1">
+                            <p class="small text-muted text-uppercase mb-1">مؤشر الحوكمة والتجربة</p>
+                            <h2 class="display-5 fw-bold d-none" id="gceiValue">--</h2>
+                            <h2 class="display-5 fw-bold" id="gceiValuePlaceholder">--</h2>
+                            <p class="mb-0 small text-muted" id="gceiBand">—</p>
+                        </div>
+                        <div class="position-relative d-flex align-items-center justify-content-center ms-3"
+                            style="width: 120px; height: 120px;">
+                            <canvas id="gceiGauge" width="120" height="120"></canvas>
+                            <div class="position-absolute text-center small text-muted fw-bold"
+                                style="top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px;">مؤشر
+                                الحوكمة</div>
                         </div>
                     </div>
-                    <div class="col-md-4 text-center">
-                        <div class="d-inline-block position-relative" style="width: 120px; height: 120px;">
-                            <canvas id="scoreGauge"></canvas>
+                    <div class="mt-3">
+                        <div class="skeleton-text w-50" data-skeleton="gceiGauge"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <p class="small text-muted mb-1">مؤشرات سريعة</p>
+                    <div class="row g-3">
+                        <div class="col-4">
+                            <p class="text-muted small mb-1">التحققات الحالية</p>
+                            <h3 class="fw-bold d-none" data-value="active_enrollments">--</h3>
+                            <span class="skeleton-text w-50" data-skeleton="active_enrollments"></span>
+                        </div>
+                        <div class="col-4">
+                            <p class="text-muted small mb-1">التحققات الجديدة</p>
+                            <h3 class="fw-bold d-none" data-value="new_enrollments">--</h3>
+                            <span class="skeleton-text w-50" data-skeleton="new_enrollments"></span>
+                        </div>
+                        <div class="col-4">
+                            <p class="text-muted small mb-1">نسبة الطاقة</p>
+                            <h3 class="fw-bold d-none" data-value="capacity_utilization_rate">--</h3>
+                            <span class="skeleton-text w-50" data-skeleton="capacity_utilization_rate"></span>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="position-absolute top-0 end-0 h-100 w-50 bg-white opacity-10" 
-                 style="transform: skewX(-20deg) translateX(50px);"></div>
         </div>
     </div>
-</div>
-
-<!-- Detailed Metrics -->
-<div class="row g-4 mb-4">
-    <!-- Operational Excellence -->
-    <div class="col-md-6 col-xl-4">
-        <div class="card h-100">
-            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold">التميز التشغيلي</h6>
-                <span class="badge bg-success-subtle text-success">Active</span>
-            </div>
-            <div class="card-body">
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="small fw-semibold">نسبة الحضور</span>
-                        <span class="small fw-bold" id="attRate">--%</span>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4">
+        {% set ops = [
+        ('attendance_rate','نسبة الحضور','success'),
+        ('ratio_compliance','نسبة الالتزام','info'),
+        ('training_completion_rate','اكتمال التدريب','primary'),
+        ('report_submission_rate','إرسال التقارير','warning')
+        ] %}
+        {% for metric,title,color in ops %}
+        <div class="col">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <p class="small text-muted text-uppercase mb-2 fw-semibold">{{ title }}</p>
+                    <div class="d-flex align-items-center justify-content-between" aria-label="{{ title }}">
+                        <span class="display-6 fw-bold d-none" data-value="{{ metric }}">--</span>
+                        <span class="skeleton-text w-50" data-skeleton="{{ metric }}"></span>
+                        <span class="badge bg-{{ color }}-subtle text-{{ color }} small d-none"
+                            data-band="{{ metric }}"></span>
                     </div>
-                    <div class="progress" style="height: 6px;">
-                        <div id="attRateBar" class="progress-bar bg-success" style="width: 0%"></div>
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="small fw-semibold">الامتثال لنسبة الموظفين</span>
-                        <span class="small fw-bold" id="ratioComp">--%</span>
-                    </div>
-                    <div class="progress" style="height: 6px;">
-                        <div id="ratioCompBar" class="progress-bar bg-info" style="width: 0%"></div>
-                    </div>
-                </div>
-                <div class="mb-0">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="small fw-semibold">التدريب والتطوير (تقديري)</span>
-                        <span class="small fw-bold">90%</span>
-                    </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-warning" style="width: 90%"></div>
+                    <div class="progress mt-3" style="height: 6px;">
+                        <div class="progress-bar bg-{{ color }}" role="progressbar"
+                            aria-label="Progress for {{ metric }}" data-progress="{{ metric }}" style="width: 0;"></div>
                     </div>
                 </div>
             </div>
         </div>
+        {% endfor %}
     </div>
-
-    <!-- Safety & Compliance -->
-    <div class="col-md-6 col-xl-4">
-        <div class="card h-100">
-            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold">السلامة والامتثال</h6>
-            </div>
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-0">معدل الحوادث</h6>
-                        <small class="text-muted">لكل 100 طفل-يوم</small>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4">
+        {% set safety = [
+        ('incident_rate','معدل الحوادث'),
+        ('serious_incident_rate','الحوادث الخطرة'),
+        ('incident_followup_sla','متابعة الحوادث'),
+        ('chronic_absence_rate','الغياب المزمن')
+        ] %}
+        {% for metric,title in safety %}
+        <div class="col">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <p class="small text-muted mb-2 fw-semibold">{{ title }}</p>
+                    <div class="d-flex align-items-center justify-content-between" aria-label="{{ title }}">
+                        <span class="display-6 fw-bold d-none" data-value="{{ metric }}">--</span>
+                        <span class="skeleton-text w-50" data-skeleton="{{ metric }}"></span>
+                        <span class="badge bg-danger-subtle text-danger small d-none" data-band="{{ metric }}"></span>
                     </div>
-                    <h3 class="mb-0 text-success fw-bold" id="incRate">--</h3>
                 </div>
-                <hr>
-                <div class="d-flex align-items-center mb-3">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-0 text-danger">الحوادث الخطرة</h6>
-                        <small class="text-muted">High/Critical</small>
-                    </div>
-                    <h3 class="mb-0 text-danger fw-bold" id="serIncRate">--</h3>
-                </div>
-            </div>
-            <div class="card-footer bg-transparent">
-                <small class="text-muted"><i class="bi bi-calendar-check me-1"></i>يتم التحديث فورياً</small>
             </div>
         </div>
+        {% endfor %}
     </div>
-
-    <!-- Charts -->
-    <div class="col-md-6 col-xl-4">
-        <div class="card h-100">
-             <div class="card-header bg-transparent">
-                <h5 class="card-title mb-0">توزيع الطلاب</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="levelsChart" height="200"></canvas>
+    {% set dist_col_class = 'col-12' if current_user and current_user.role.value == 'MANAGER' else 'col-lg-6' %}
+    <div class="row g-4 mb-4">
+        <div class="{{ dist_col_class }}">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">توزيع الطلاب</h6>
+                        <small class="text-muted">حسب السنوات</small>
+                    </div>
+                    <canvas id="distributionChart" height="180" aria-label="مخطط توزيع الطلاب حسب الروضات"
+                        role="img"></canvas>
+                </div>
             </div>
         </div>
+        {% if current_user and current_user.role.value == 'ADMIN' %}
+        <div class="col-lg-6" id="rankingColumn">
+            <div class="row g-3 h-100">
+                <div class="col-12">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="mb-3 text-primary">أعلى 5 روضات في الأداء</h6>
+                            <ul class="list-group list-group-flush flex-grow-1" id="topPerformersList"></ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="mb-3 text-warning">أدنى 5 روضات في الأداء</h6>
+                            <ul class="list-group list-group-flush flex-grow-1" id="lowPerformersList"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3">
+        {% set trends = [
+        ('attendanceTrendChart','اتجاه نسبة الحضور','success'),
+        ('incidentsTrendChart','اتجاه الحوادث','danger'),
+        ('enrollmentTrendChart','اتجاه التسجيلات','info'),
+        ('gceiTrendChart','اتجاه مؤشر الحوكمة','primary')
+        ] %}
+        {% for chartId,title,color in trends %}
+        <div class="col">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <p class="small text-muted mb-3 fw-semibold">{{ title }}</p>
+                    <div class="flex-grow-1 d-flex align-items-center">
+                        <canvas id="{{ chartId }}" height="120" aria-label="{{ title }}" role="img"
+                            class="w-100"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.2/dist/chart.umd.js"></script>
 <script>
-    let gaugeChart = null;
+    (function () {
+        const root = document.getElementById('kpiDashboardRoot');
+        const userRole = root ? (root.dataset.userRole || '').toUpperCase() : '';
+        const userKindergartenId = root ? Number(root.dataset.userKindergarten || 0) : 0;
+        const isManagerView = userRole === 'MANAGER';
 
-    document.addEventListener('DOMContentLoaded', function() {
-        initCharts();
-        loadKPIData();
-    });
+        const state = {
+            startDate: '',
+            endDate: '',
+            granularity: 'weekly',
+            governorate: '',
+            kindergartenIds: [],
+            isLoading: false
+        };
 
-    function initCharts() {
-        // Governance Gauge
-        const ctx = document.getElementById('scoreGauge');
-        gaugeChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Score', 'Remaining'],
-                datasets: [{
-                    data: [0, 100],
-                    backgroundColor: ['#ffffff', 'rgba(255, 255, 255, 0.2)'],
-                    borderWidth: 0,
-                    circumference: 180,
-                    rotation: 270,
-                    cutout: '85%'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                animation: { animateRotate: true, animateScale: true }
+        const KPI_CARD_CONFIG = {
+            attendance_rate: { value: null, skeleton: null, progress: null, band: null },
+            ratio_compliance: { value: null, skeleton: null, progress: null, band: null },
+            training_completion_rate: { value: null, skeleton: null, progress: null, band: null },
+            report_submission_rate: { value: null, skeleton: null, progress: null, band: null },
+            incident_rate: { value: null, skeleton: null, band: null },
+            serious_incident_rate: { value: null, skeleton: null, band: null },
+            incident_followup_sla: { value: null, skeleton: null, band: null },
+            chronic_absence_rate: { value: null, skeleton: null, band: null },
+            capacity_utilization_rate: { value: null, skeleton: null },
+            active_enrollments: { value: null, skeleton: null },
+            new_enrollments: { value: null, skeleton: null }
+        };
+
+        let gceiGaugeChart = null;
+        let attendanceTrendChart = null;
+        let incidentsTrendChart = null;
+        let enrollmentTrendChart = null;
+        let gceiTrendChart = null;
+        let distributionChart = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initState();
+            bindUI();
+            initCharts();
+            loadKindergartenOptions();
+            loadDashboardData();
+        });
+        function initState() {
+            const today = new Date();
+            const start = new Date(today.getFullYear(), today.getMonth(), 1);
+            const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            state.startDate = toInputDate(start);
+            state.endDate = toInputDate(end);
+            document.getElementById('periodStart').value = state.startDate;
+            document.getElementById('periodEnd').value = state.endDate;
+            state.granularity = 'weekly';
+            document.getElementById('granularitySelect').value = state.granularity;
+            state.governorate = '';
+            state.kindergartenIds = [];
+            state.isLoading = true;
+            setFilterStatus('جارٍ جلب البيانات...');
+        }
+
+        function bindUI() {
+            document.getElementById('applyFiltersBtn').addEventListener('click', () => {
+                if (!updateStateFromFilters(true)) return;
+                loadDashboardData();
+            });
+            document.getElementById('resetFiltersBtn').addEventListener('click', () => {
+                resetFilters();
+            });
+            if (isManagerView) {
+                // Hide irrelevant filters for managers
+                ['kgFilterCol', 'govFilterCol', 'granularitySelect'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        // granularitySelect is the select, wrap to parent if needed
+                        const target = el.closest('.col-sm-6') || el;
+                        target.style.display = 'none';
+                    }
+                });
+                // Force kindergarten filter to manager's KG
+                if (userKindergartenId) {
+                    state.kindergartenIds = [String(userKindergartenId)];
+                    const kgSelect = document.getElementById('kindergartenSelect');
+                    if (kgSelect) {
+                        kgSelect.innerHTML = '';
+                        const opt = document.createElement('option');
+                        opt.value = userKindergartenId;
+                        opt.textContent = 'روضتي';
+                        kgSelect.appendChild(opt);
+                        kgSelect.value = String(userKindergartenId);
+                        kgSelect.disabled = true;
+                        kgSelect.multiple = false;
+                        document.getElementById('kindergartenHint').innerText = 'البيانات مقصورة على الروضة المرتبطة بك.';
+                    }
+                }
+                setFilterStatus('عرض مؤشرات الروضة المرتبطة بالمدير فقط');
             }
-        });
+        }
 
-        // Levels Chart - Real data from enrollments
-        fetch('/api/kpi/student-distribution', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(response => response.json())
-        .then(data => {
-            new Chart(document.getElementById('levelsChart'), {
+        function updateStateFromFilters(validate = false) {
+            state.startDate = document.getElementById('periodStart').value || state.startDate;
+            state.endDate = document.getElementById('periodEnd').value || state.endDate;
+            state.granularity = document.getElementById('granularitySelect').value || state.granularity;
+            state.governorate = document.getElementById('governorateSelect').value || '';
+            const select = document.getElementById('kindergartenSelect');
+            const selected = select
+                ? Array.from(select.selectedOptions).map(opt => parseInt(opt.value, 10)).filter(Number.isFinite)
+                : [];
+            if (isManagerView && userKindergartenId) {
+                state.kindergartenIds = [userKindergartenId];
+                if (select) select.value = String(userKindergartenId);
+            } else {
+                state.kindergartenIds = selected;
+            }
+            if (validate) {
+                const validation = validateDateRange(state.startDate, state.endDate);
+                if (!validation.valid) {
+                    showFilterError(validation.message);
+                    return false;
+                }
+            }
+            hideFilterError();
+            setFilterStatus(buildFilterSummary('جارٍ تطبيق المرشحات...'));
+            return true;
+        }
+
+        function resetFilters() {
+            initState();
+            document.getElementById('governorateSelect').value = '';
+            const select = document.getElementById('kindergartenSelect');
+            select.selectedIndex = -1;
+            if (isManagerView && userKindergartenId) {
+                select.value = String(userKindergartenId);
+            }
+            loadDashboardData();
+        }
+
+        function setFilterStatus(text) {
+            document.getElementById('filterStatus').textContent = text;
+        }
+
+        function toInputDate(date) {
+            const tzOffset = date.getTimezoneOffset() * 60000;
+            return new Date(date - tzOffset).toISOString().slice(0, 10);
+        }
+
+        function governorateLabel(value) {
+            if (!value) return 'جميع المحافظات';
+            return value;
+        }
+
+        function validateDateRange(start, end) {
+            if (!start || !end) {
+                return { valid: false, message: 'يرجى اختيار تاريخ بداية ونهاية.' };
+            }
+            if (new Date(start) > new Date(end)) {
+                return { valid: false, message: 'تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية.' };
+            }
+            return { valid: true };
+        }
+
+        function showFilterError(msg) {
+            const el = document.getElementById('filterError');
+            el.textContent = msg;
+            el.classList.remove('d-none');
+        }
+
+        function hideFilterError() {
+            const el = document.getElementById('filterError');
+            el.classList.add('d-none');
+            el.textContent = '';
+        }
+
+        function buildFilterSummary(prefix = 'تم تطبيق المرشحات') {
+            if (isManagerView) {
+                return `${prefix}: الروضة الخاصة بك | ${state.startDate} → ${state.endDate}`;
+            }
+            const parts = [`${state.startDate} → ${state.endDate}`];
+            parts.push(`المحافظة: ${governorateLabel(state.governorate)}`);
+            parts.push(`الروضات: ${state.kindergartenIds.length || 'الكل'}`);
+            return `${prefix}: ${parts.join(' | ')}`;
+        }
+
+        async function loadKindergartenOptions() {
+            try {
+                const response = await fetchWithAuth('/api/kpi/filters?locale=ar');
+                if (!response) return;
+                const payload = await response.json();
+                const data = payload.data || payload;
+
+                // Load kindergartens
+                const kgList = data.kindergartens || [];
+                const kgSelect = document.getElementById('kindergartenSelect');
+                const seen = new Set();
+                kgList
+                    .filter(kg => {
+                        if (seen.has(kg.id)) return false;
+                        seen.add(kg.id);
+                        return true;
+                    })
+                    .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
+                    .forEach(kg => {
+                        const option = document.createElement('option');
+                        option.value = kg.id;
+                        option.textContent = kg.name;
+                        kgSelect.appendChild(option);
+                    });
+
+                // Load governorates
+                const govList = data.governorates || [];
+                const govSelect = document.getElementById('governorateSelect');
+                govList.forEach(gov => {
+                    const option = document.createElement('option');
+                    option.value = gov.id;
+                    option.textContent = gov.name;
+                    govSelect.appendChild(option);
+                });
+
+                if (userRole === 'MANAGER' && userKindergartenId) {
+                    kgSelect.value = String(userKindergartenId);
+                    kgSelect.multiple = false;
+                    kgSelect.disabled = true;
+                    document.getElementById('kindergartenHint').innerText = 'الروضة المرتبطة بالمدير لا يمكن تغييرها.';
+                }
+            } catch (error) {
+                console.warn('Failed to load filters', error);
+            }
+        }
+
+        function initCharts() {
+            const gaugeCtx = document.getElementById('gceiGauge');
+            gceiGaugeChart = new Chart(gaugeCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: data.labels || ['KG1', 'KG2', 'حضانة'],
+                    labels: ['المؤشر', 'المتبقي'],
                     datasets: [{
-                        data: data.values || [45, 55, 35],
-                        backgroundColor: ['#0d6efd', '#6610f2', '#0dcaf0'],
+                        data: [0, 100],
+                        backgroundColor: ['#28a745', 'rgba(40, 167, 69, 0.1)'],
+                        borderWidth: 2,
+                        borderColor: ['#28a745', 'rgba(40, 167, 69, 0.2)'],
+                        circumference: 180,
+                        rotation: 270,
+                        cutout: '75%'
                     }]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { position: 'bottom' } }
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            callbacks: {
+                                label: function (context) {
+                                    return context.label + ': ' + context.parsed + '%';
+                                }
+                            }
+                        }
+                    }
                 }
             });
-        })
-        .catch(error => {
-            console.error('Failed to load student distribution:', error);
-            // Fallback to mock data
-            new Chart(document.getElementById('levelsChart'), {
+
+            attendanceTrendChart = buildTrendChart('attendanceTrendChart', 'نسبة الحضور');
+            incidentsTrendChart = buildTrendChart('incidentsTrendChart', 'معدل الحوادث');
+            enrollmentTrendChart = buildTrendChart('enrollmentTrendChart', 'التسجيلات الجديدة');
+            gceiTrendChart = buildTrendChart('gceiTrendChart', 'مؤشر الحوكمة');
+
+            const distCtx = document.getElementById('distributionChart');
+            distributionChart = new Chart(distCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['KG1', 'KG2', 'حضانة'],
+                    labels: ['KG1', 'KG2', 'KG3'],
                     datasets: [{
-                        data: [45, 55, 35],
+                        data: [0, 0, 0],
                         backgroundColor: ['#0d6efd', '#6610f2', '#0dcaf0'],
+                        borderWidth: 2,
+                        borderColor: ['#ffffff', '#ffffff', '#ffffff'],
+                        hoverBorderWidth: 3
                     }]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { position: 'bottom' } }
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            cornerRadius: 6,
+                            callbacks: {
+                                label: function (context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                    return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    }
                 }
             });
-        });
-    }
 
-    async function loadKPIData() {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                showError('يرجى تسجيل الدخول لعرض مؤشرات الأداء');
+            Object.keys(KPI_CARD_CONFIG).forEach(key => {
+                const config = KPI_CARD_CONFIG[key];
+                config.value = document.querySelector(`[data-value="${key}"]`);
+                config.skeleton = document.querySelector(`[data-skeleton="${key}"]`);
+                config.progress = document.querySelector(`[data-progress="${key}"]`);
+                config.band = document.querySelector(`[data-band="${key}"]`);
+            });
+        }
+
+        function buildTrendChart(canvasId, label) {
+            const ctx = document.getElementById(canvasId);
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['...'],
+                    datasets: [{
+                        label,
+                        data: [0],
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#0d6efd',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                autoSkip: true,
+                                maxTicksLimit: 7
+                            }
+                        },
+                        y: {
+                            display: true,
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)',
+                                lineWidth: 1
+                            },
+                            ticks: {
+                                callback: function (value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            cornerRadius: 6,
+                            displayColors: false,
+                            callbacks: {
+                                label: function (context) {
+                                    return context.dataset.label + ': ' + context.parsed.y + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        async function loadDashboardData() {
+            state.isLoading = true;
+            const btn = document.getElementById('applyFiltersBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>جاري';
+
+            const params = new URLSearchParams();
+            params.append('period_start', state.startDate);
+            params.append('period_end', state.endDate);
+            params.append('locale', 'ar'); // Always use Arabic for now
+
+            let endpoint = '/api/kpi/dashboard-data';
+            if (userRole === 'MANAGER') {
+                // Managers use the dedicated manager endpoint
+                endpoint = '/api/kpi/manager/dashboard';
+            } else {
+                // Admins can use filters
+                params.append('granularity', state.granularity);
+                if (state.governorate) {
+                    params.append('governorate', state.governorate);
+                }
+                if (state.kindergartenIds.length) {
+                    state.kindergartenIds.forEach(id => params.append('kindergarten_ids', id));
+                }
+            }
+
+            try {
+                const response = await fetchWithAuth(`${endpoint}?${params.toString()}`);
+                if (!response) {
+                    throw new Error('تعذر التواصل مع الخادم.');
+                }
+                if (!response.ok) {
+                    const payload = await response.json().catch(() => ({}));
+                    throw new Error(payload.detail || 'تعذر تحميل البيانات.');
+                }
+                const payload = await response.json();
+                renderDashboard(payload);
+                setFilterStatus(buildFilterSummary());
+                if (typeof showToast === 'function') {
+                    showToast('تم تحديث البيانات', 'success');
+                }
+            } catch (error) {
+                showAlert(error.message || 'تعذر تحميل البيانات');
+                setFilterStatus('تعذر تطبيق المرشحات');
+            } finally {
+                state.isLoading = false;
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-funnel me-1"></i>تطبيق';
+            }
+        }
+        function renderDashboard(data) {
+            hideSkeleton('gceiGauge');
+            document.getElementById('gceiValue').textContent = formatValue(data.overall_gcei.value);
+            document.getElementById('gceiValue').classList.remove('d-none');
+            document.getElementById('gceiValuePlaceholder').classList.add('d-none');
+            document.getElementById('gceiBand').textContent = data.overall_gcei.band || '—';
+            const score = Number(data.overall_gcei.value) || 0;
+            gceiGaugeChart.data.datasets[0].data = [score, Math.max(0, 100 - score)];
+            gceiGaugeChart.update();
+
+            Object.keys(KPI_CARD_CONFIG).forEach(key => {
+                const value = data[key];
+                if (value) {
+                    updateCard(key, value);
+                }
+            });
+
+            renderStudentDistribution(data.student_distribution || []);
+            if (!isManagerView) {
+                renderRankingList('topPerformersList', data.top_performers_by_gcei || [], 'لا توجد بيانات');
+                renderRankingList('lowPerformersList', data.low_performers_by_gcei || [], 'لا توجد بيانات');
+            }
+
+            updateTrendChart(attendanceTrendChart, data.attendance_trend || []);
+            updateTrendChart(incidentsTrendChart, data.incidents_trend || []);
+            updateTrendChart(enrollmentTrendChart, data.enrollment_trend || []);
+            updateTrendChart(gceiTrendChart, data.gcei_trend || []);
+
+            renderAlerts(data.alerts || []);
+        }
+
+        function updateCard(key, payload) {
+            const config = KPI_CARD_CONFIG[key];
+            if (!config || !payload) return;
+            const numericValue = Number(payload.value);
+            if (config.value) {
+                config.value.textContent = payload.unit ? `${formatValue(numericValue)} ${payload.unit}` : formatValue(numericValue);
+                config.value.classList.remove('d-none');
+            }
+            if (config.skeleton) {
+                config.skeleton.classList.add('d-none');
+            }
+            if (config.band && payload.band) {
+                config.band.textContent = payload.band;
+                config.band.classList.remove('d-none');
+            }
+            if (config.progress && Number.isFinite(numericValue)) {
+                config.progress.style.width = `${Math.min(Math.max(numericValue, 0), 100)}%`;
+            }
+        }
+
+        function updateTrendChart(chart, points) {
+            const labels = points.map(p => p.date);
+            const values = points.map(p => Number(p.value) || 0);
+            chart.data.labels = labels.length ? labels : ['لا توجد بيانات'];
+            chart.data.datasets[0].data = values.length ? values : [0];
+            chart.update();
+        }
+
+        function renderStudentDistribution(items) {
+            if (!distributionChart) return;
+            if (!items.length) {
+                distributionChart.data.labels = ['لا توجد بيانات'];
+                distributionChart.data.datasets[0].data = [0];
+                distributionChart.update();
                 return;
             }
+            distributionChart.data.labels = items.map(item => item.label);
+            distributionChart.data.datasets[0].data = items.map(item => Number(item.value) || 0);
+            distributionChart.update();
+        }
 
-            const response = await fetch('/api/kpi/summary', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                updateDashboard(data);
-            } else if (response.status === 401) {
-                showError('انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول');
-                setTimeout(() => window.location.href = '/login', 2000);
-            } else if (response.status === 403) {
-                showError('ليس لديك صلاحية لعرض مؤشرات الأداء');
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                showError(`خطأ في تحميل البيانات: ${errorData.detail || response.statusText}`);
+        function renderRankingList(listId, items, emptyLabel) {
+            const list = document.getElementById(listId);
+            list.innerHTML = '';
+            if (!items || !items.length) {
+                const li = document.createElement('li');
+                li.className = 'list-group-item text-muted text-center py-4';
+                li.textContent = emptyLabel;
+                list.appendChild(li);
+                return;
             }
-        } catch (error) {
-            console.error('Network error:', error);
-            showError('خطأ في الاتصال بالخادم، يرجى المحاولة لاحقاً');
+            items.forEach((entry, index) => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center px-3 py-2';
+                const info = document.createElement('div');
+                info.className = 'd-flex align-items-center';
+                const rankBadge = document.createElement('span');
+                rankBadge.className = 'badge bg-secondary me-3 fw-bold';
+                rankBadge.textContent = `${index + 1}`;
+                rankBadge.style.minWidth = '30px';
+                const textInfo = document.createElement('div');
+                textInfo.innerHTML = `<div class="fw-semibold">${entry.name}</div><small class="text-muted">${entry.governorate || ''}</small>`;
+                info.appendChild(rankBadge);
+                info.appendChild(textInfo);
+                const meta = document.createElement('div');
+                meta.className = 'text-end';
+                const valueBadge = document.createElement('span');
+                valueBadge.className = 'badge bg-primary fw-bold px-2 py-1';
+                valueBadge.textContent = formatValue(entry.value);
+                meta.appendChild(valueBadge);
+                li.appendChild(info);
+                li.appendChild(meta);
+                list.appendChild(li);
+            });
         }
-    }
-
-    function showError(message) {
-        // Update all KPI displays to show error state
-        document.getElementById('gqiScore').innerText = 'خطأ';
-        document.getElementById('gqiBandText').innerText = message;
-
-        // Reset progress bars
-        ['attRate', 'ratioComp'].forEach(id => {
-            document.getElementById(id).innerText = '--%';
-            document.getElementById(id + 'Bar').style.width = '0%';
-        });
-
-        // Reset incident rates
-        document.getElementById('incRate').innerText = '--';
-        document.getElementById('serIncRate').innerText = '--';
-    }
-
-    function updateDashboard(data) {
-        // GQI Score
-        document.getElementById('gqiScore').innerText = Math.round(data.gqi_score);
-        document.getElementById('gqiBandText').innerText = getBandText(data.gqi_score);
-        
-        // Update Gauge
-        if (gaugeChart) {
-            gaugeChart.data.datasets[0].data = [data.gqi_score, 100 - data.gqi_score];
-            gaugeChart.update();
+        function renderAlerts(alerts) {
+            const container = document.getElementById('dashboardAlerts');
+            const list = document.getElementById('dashboardAlertsList');
+            list.innerHTML = '';
+            container.classList.remove('alert-danger');
+            container.classList.add('alert-warning');
+            if (!alerts || !alerts.length) {
+                container.classList.add('d-none');
+                return;
+            }
+            alerts.forEach(alert => {
+                const li = document.createElement('li');
+                li.textContent = alert.message;
+                list.appendChild(li);
+            });
+            const retryBtn = document.createElement('button');
+            retryBtn.type = 'button';
+            retryBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
+            retryBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>إعادة المحاولة';
+            retryBtn.onclick = () => loadDashboardData();
+            const retryLi = document.createElement('li');
+            retryLi.appendChild(retryBtn);
+            list.appendChild(retryLi);
+            container.classList.remove('d-none');
         }
 
-        // Operational Excellence
-        updateMetric('attRate', 'attRateBar', data.attendance_rate);
-        updateMetric('ratioComp', 'ratioCompBar', data.ratio_compliance);
-
-        // Safety
-        document.getElementById('incRate').innerText = data.incident_rate;
-        document.getElementById('serIncRate').innerText = data.serious_incident_rate;
-    }
-
-    function updateMetric(textId, barId, value) {
-        document.getElementById(textId).innerText = value + '%';
-        if (document.getElementById(barId)) {
-            document.getElementById(barId).style.width = value + '%';
+        function showAlert(message) {
+            const container = document.getElementById('dashboardAlerts');
+            const list = document.getElementById('dashboardAlertsList');
+            list.innerHTML = '';
+            const li = document.createElement('li');
+            li.textContent = message;
+            list.appendChild(li);
+            container.classList.remove('d-none');
+            container.classList.remove('alert-warning');
+            container.classList.add('alert-danger');
+            const retryBtn = document.createElement('button');
+            retryBtn.type = 'button';
+            retryBtn.className = 'btn btn-sm btn-light ms-2';
+            retryBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>إعادة المحاولة';
+            retryBtn.onclick = () => loadDashboardData();
+            list.appendChild(retryBtn);
         }
-    }
 
-    function getBandText(score) {
-        if (score >= 80) return "اداء متميز (Green Band)";
-        if (score >= 60) return "اداء متوسط (Amber Band)";
-        return "يحتاج تحسين (Red Band)";
-    }
+        function formatValue(value) {
+            if (!Number.isFinite(value)) return '--';
+            if (Number.isInteger(value)) return value;
+            return value.toFixed(1);
+        }
+
+        function hideSkeleton(key) {
+            const skeleton = document.querySelector(`[data-skeleton="${key}"]`);
+            if (skeleton) {
+                skeleton.classList.add('d-none');
+            }
+        }
+    })();
 </script>
 {% endblock %}

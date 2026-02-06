@@ -116,27 +116,80 @@ def list_users(
     role: Optional[models.UserRole] = None,
     status: Optional[models.UserStatus] = None,
     kindergarten_id: Optional[int] = None,
+    phone: Optional[str] = None,
+    governorate: Optional[str] = None,
     search: Optional[str] = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """List users. Admins see all. Managers see only their kindergarten's staff."""
     query = db.query(models.User)
+    active_parent_statuses = (
+        models.EnrollmentStatus.ACCEPTED,
+        models.EnrollmentStatus.ACTIVE
+    )
+
+    if phone or governorate:
+        query = query.outerjoin(
+            models.ParentProfile,
+            models.ParentProfile.user_id == models.User.id
+        ).outerjoin(
+            models.Kindergarten,
+            models.Kindergarten.id == models.User.kindergarten_id
+        )
 
     if current_user.role == models.UserRole.ADMIN:
-        # Admin can filter by any kindergarten_id
         if kindergarten_id:
-            query = query.filter(models.User.kindergarten_id == kindergarten_id)
+            parent_ids_query = db.query(models.ParentProfile.user_id).join(
+                models.Child,
+                models.Child.parent_id == models.ParentProfile.id
+            ).join(
+                models.EnrollmentApplication,
+                models.EnrollmentApplication.child_id == models.Child.id
+            ).filter(
+                models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+                models.EnrollmentApplication.status.in_(active_parent_statuses)
+            ).distinct()
+            query = query.filter(
+                or_(
+                    and_(
+                        models.User.role == models.UserRole.PARENT,
+                        models.User.id.in_(parent_ids_query)
+                    ),
+                    and_(
+                        models.User.role != models.UserRole.PARENT,
+                        models.User.kindergarten_id == kindergarten_id
+                    )
+                )
+            )
         # Admin cannot see or manage other admin users
         query = query.filter(models.User.role != models.UserRole.ADMIN)
     elif current_user.role == models.UserRole.MANAGER:
-        # Manager is restricted to their own kindergarten
-        query = query.filter(models.User.kindergarten_id == current_user.kindergarten_id)
-        # If they requested a specific kindergarten_id, it must match theirs (already filtered, but for clarity)
-        if kindergarten_id and kindergarten_id != current_user.kindergarten_id:
-             # Return empty? or just ignore?
-             # Let's stricter:
-             query = query.filter(models.User.kindergarten_id == kindergarten_id) 
+        if not current_user.kindergarten_id:
+            _log_access_denied(db, current_user, "list_users", "Missing kindergarten", request)
+            raise HTTPException(status_code=400, detail="Manager must be assigned to a kindergarten")
+        if role == models.UserRole.PARENT:
+            if kindergarten_id and kindergarten_id != current_user.kindergarten_id:
+                query = query.filter(models.User.id == -1)
+            else:
+                parent_ids_query = db.query(models.ParentProfile.user_id).join(
+                    models.Child,
+                    models.Child.parent_id == models.ParentProfile.id
+                ).join(
+                    models.EnrollmentApplication,
+                    models.EnrollmentApplication.child_id == models.Child.id
+                ).filter(
+                    models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+                    models.EnrollmentApplication.status.in_(active_parent_statuses)
+                ).distinct()
+                query = query.filter(
+                    models.User.role == models.UserRole.PARENT,
+                    models.User.id.in_(parent_ids_query)
+                )
+        else:
+            query = query.filter(models.User.kindergarten_id == current_user.kindergarten_id)
+            if kindergarten_id and kindergarten_id != current_user.kindergarten_id:
+                query = query.filter(models.User.kindergarten_id == kindergarten_id)
     else:
         _log_access_denied(db, current_user, "list_users", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -155,6 +208,18 @@ def list_users(
         query = query.filter(or_(
             models.User.username.ilike(f"%{search}%"),
             models.User.email.ilike(f"%{search}%")
+        ))
+
+    if phone:
+        query = query.filter(or_(
+            models.ParentProfile.phone_number.ilike(f"%{phone}%"),
+            models.Kindergarten.contact_phone.ilike(f"%{phone}%")
+        ))
+
+    if governorate:
+        query = query.filter(or_(
+            models.ParentProfile.home_governorate.ilike(f"%{governorate}%"),
+            models.Kindergarten.governorate.ilike(f"%{governorate}%")
         ))
     
     users = query.offset(skip).limit(limit).all()
@@ -296,6 +361,102 @@ def create_user(
         "role": new_user.role.value,
         "status": new_user.status.value
     }
+
+
+class StaffCreate(BaseModel):
+    username: str
+    email: Optional[str] = None
+    password: str
+    kindergarten_id: Optional[int] = None
+    role: Optional[models.UserRole] = models.UserRole.SUPERVISOR
+
+
+@router.post("/staff/create", status_code=status.HTTP_201_CREATED)
+def create_staff(
+    request: Request,
+    staff_data: StaffCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new staff member (Supervisor or Teacher).
+    Managers can create staff for their own kindergarten.
+    Admins can create staff for any kindergarten.
+    """
+    # Permission check
+    if current_user.role == models.UserRole.ADMIN:
+        kindergarten_id = staff_data.kindergarten_id
+        if not kindergarten_id:
+            raise HTTPException(status_code=400, detail="Admin must specify kindergarten_id")
+    elif current_user.role == models.UserRole.MANAGER:
+        kindergarten_id = current_user.kindergarten_id
+        if staff_data.kindergarten_id and staff_data.kindergarten_id != kindergarten_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Managers can only create staff for their own kindergarten"
+            )
+    else:
+        raise HTTPException(status_code=403, detail="Only Admins and Managers can create staff")
+
+    # Only allow non-privileged roles
+    allowed_roles = [models.UserRole.SUPERVISOR, models.UserRole.PARENT]
+    if staff_data.role not in allowed_roles:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Staff role must be one of: {[r.value for r in allowed_roles]}"
+        )
+
+    # Verify kindergarten exists
+    kg = db.query(models.Kindergarten).filter(
+        models.Kindergarten.id == kindergarten_id
+    ).first()
+    if not kg:
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
+
+    # Check for duplicate username or email
+    existing = db.query(models.User).filter(
+        or_(
+            models.User.username == staff_data.username,
+            (models.User.email == staff_data.email) if staff_data.email else False
+        )
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Username or email already exists")
+
+    from auth import get_password_hash
+    hashed_password = get_password_hash(staff_data.password)
+
+    new_staff = models.User(
+        username=staff_data.username,
+        email=staff_data.email,
+        hashed_password=hashed_password,
+        role=staff_data.role,
+        kindergarten_id=kindergarten_id,
+        status=models.UserStatus.ACTIVE
+    )
+
+    db.add(new_staff)
+    db.commit()
+    db.refresh(new_staff)
+
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action="STAFF_CREATED",
+        entity_type="User",
+        entity_id=new_staff.id,
+        sensitivity_level=2
+    )
+
+    return {
+        "id": new_staff.id,
+        "username": new_staff.username,
+        "email": new_staff.email,
+        "role": new_staff.role.value,
+        "kindergarten_id": new_staff.kindergarten_id,
+        "status": new_staff.status.value
+    }
+
 
 @router.get("/users/{user_id}")
 def get_user(
@@ -805,9 +966,10 @@ class KindergartenCreate(BaseModel):
 
     @field_validator("governorate")
     def validate_governorate(cls, value):
-        if not validators.validate_jordan_governorate(value):
-            raise ValueError(f"Invalid governorate: {value}. Must be one of: {', '.join(settings.JORDAN_GOVERNORATES)}")
-        return value
+        try:
+            return validators.validate_jordan_governorate(value)
+        except validators.ValidationError as e:
+            raise ValueError(str(e))
 
 
 def detect_kindergarten_duplicate(db: Session, data: KindergartenCreate, exclude_id: Optional[int] = None) -> Optional[str]:
@@ -911,9 +1073,14 @@ def list_kindergartens(
     if status:
         query = query.filter(models.Kindergarten.status == models.KindergartenStatus(status))
     if governorate:
-        query = query.filter(models.Kindergarten.governorate == governorate)
+        normalized_governorate = governorate
+        try:
+            normalized_governorate = validators.validate_jordan_governorate(governorate)
+        except validators.ValidationError:
+            normalized_governorate = governorate
+        query = query.filter(models.Kindergarten.governorate.ilike(f"%{normalized_governorate}%"))
     if city:
-        query = query.filter(models.Kindergarten.city == city)
+        query = query.filter(models.Kindergarten.city.ilike(f"%{city}%"))
     if phone:
         query = query.filter(models.Kindergarten.contact_phone.ilike(f"%{phone}%"))
     if name:
@@ -1505,16 +1672,23 @@ def deactivate_class(
     if not class_obj.is_active:
         raise HTTPException(status_code=400, detail="Class is already inactive")
 
-    # Check if class has active enrollments
-    active_enrollments = db.query(models.EnrollmentApplication).filter(
+    active_like_statuses = [
+        models.EnrollmentStatus[status]
+        for status in settings.ACTIVE_LIKE_ENROLLMENT_STATUSES
+        if status in models.EnrollmentStatus.__members__
+    ]
+    if not active_like_statuses:
+        active_like_statuses = [models.EnrollmentStatus.ACTIVE]
+
+    active_like_enrollments = db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.class_id == class_id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        models.EnrollmentApplication.status.in_(active_like_statuses)
     ).count()
 
-    if active_enrollments > 0:
+    if active_like_enrollments > 0:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot deactivate class with {active_enrollments} active enrollment(s). Move children to other classes first."
+            detail=f"Cannot deactivate class with {active_like_enrollments} active enrollment(s). Move children to other classes first."
         )
 
     class_obj.is_active = False
@@ -1606,16 +1780,10 @@ def assign_child_to_class(
     # Validate kindergarten scope
     validators.validate_kindergarten_scope(current_user, enrollment.kindergarten_id)
 
-    # Ensure child and parent profiles are explicitly marked complete before assigning
-    child = enrollment.child
-    parent_profile = child.parent
-    if not getattr(child, 'profile_complete', False) or not getattr(parent_profile, 'profile_complete', False):
-        raise HTTPException(status_code=400, detail={"message": "Child or parent profile not marked complete", "missing_fields": ["child.profile_complete", "parent.profile_complete"]})
-
-    # Also validate required fields are present
-    ok, missing = validators.check_profile_complete(db, enrollment.child_id)
-    if not ok:
-        raise HTTPException(status_code=400, detail={"message": "Child profile incomplete", "missing_fields": missing})
+    # Auto-mark profiles complete if all required data is present
+    profile_complete, missing_fields = validators.mark_profile_complete_if_ready(db, enrollment.child_id)
+    if not profile_complete:
+        raise HTTPException(status_code=400, detail={"message": "Child profile incomplete", "missing_fields": missing_fields})
 
     # Get class
     class_obj = db.query(models.Class).filter(
@@ -2555,9 +2723,10 @@ class ParentRegistrationRequest(BaseModel):
 
     @field_validator("home_governorate")
     def validate_home_governorate(cls, value):
-        if not validators.validate_jordan_governorate(value):
-            raise ValueError(f"Invalid governorate: {value}. Must be one of: {', '.join(settings.JORDAN_GOVERNORATES)}")
-        return value
+        try:
+            return validators.validate_jordan_governorate(value)
+        except validators.ValidationError as e:
+            raise ValueError(str(e))
 
 
 @router.post("/register/parent", status_code=status.HTTP_201_CREATED)
@@ -3019,18 +3188,21 @@ def get_attendance_report(
         children_query = children_query.filter(models.Child.id.in_(request.child_ids))
 
     children = children_query.all()
+    child_ids = [child.id for child in children]
 
     # Get attendance data efficiently
-    attendance_data = db.query(
-        models.AttendanceLog.child_id,
-        models.AttendanceLog.date,
-        models.AttendanceLog.check_in_at,
-        models.AttendanceLog.check_out_at
-    ).filter(
-        models.AttendanceLog.child_id.in_([c.id for c in children]),
-        models.AttendanceLog.date >= start_date,
-        models.AttendanceLog.date <= end_date
-    ).all()
+    attendance_data = []
+    if child_ids:
+        attendance_data = db.query(
+            models.AttendanceLog.child_id,
+            models.AttendanceLog.date,
+            models.AttendanceLog.check_in_at,
+            models.AttendanceLog.check_out_at
+        ).filter(
+            models.AttendanceLog.child_id.in_(child_ids),
+            models.AttendanceLog.date >= start_date,
+            models.AttendanceLog.date <= end_date
+        ).all()
 
     # Build matrix
     dates = []
@@ -3079,7 +3251,7 @@ def get_attendance_report(
             "name_ar": f"{child.first_name_ar} {child.last_name_ar}",
             "name_en": f"{child.first_name_en or ''} {child.last_name_en or ''}".strip(),
             "class_id": enrollment.class_id if enrollment else None,
-            "class_name": class_info.name if class_info else None
+            "class_name": class_info.name_ar if class_info else None
         })
 
     # Chart data
@@ -4279,7 +4451,8 @@ def get_supervisor_children(
             "class_id": enrollment.class_id if enrollment else None,
             "attendance_status": status,
             "check_in_time": check_in_time,
-            "check_out_time": check_out_time
+            "check_out_time": check_out_time,
+            "name": f"{child.first_name_ar} {child.last_name_ar}" # Add Arabic full name
         })
         
     return {"children": results}
@@ -4328,10 +4501,12 @@ def list_children(
             "gender": child.gender.value if child.gender else None,
             "date_of_birth": child.date_of_birth.isoformat() if child.date_of_birth else None,
             "photo_url": child.photo_url,
-            "enrollment_id": enrollment.id if enrollment else None,
-            "class_id": enrollment.class_id if enrollment else None,
-            "kindergarten_id": enrollment.kindergarten_id if enrollment else None
         }
+        if enrollment:
+            child_info["enrollment_id"] = enrollment.id
+            child_info["class_id"] = enrollment.class_id
+            child_info["kindergarten_id"] = enrollment.kindergarten_id
+            
         result.append(child_info)
 
     return {"children": result}

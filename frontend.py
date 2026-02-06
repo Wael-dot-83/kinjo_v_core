@@ -2,19 +2,45 @@ from fastapi import APIRouter, Request, Depends, status, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+import models
 from sqlalchemy.orm import Session
 from datetime import date
 import typing
+import secrets
 
 from database import get_db
 from dependencies import get_current_user_optional, get_current_user, get_current_user_or_redirect
 from models import User, UserRole, Kindergarten, EnrollmentApplication, AttendanceLog, DailyReport
+from config import settings
 
 # Setup templates with UTF-8 encoding
 templates = Jinja2Templates(directory="templates")
 templates.env.globals['encoding'] = 'utf-8'
 # Ensure auto_reload for development
 templates.env.auto_reload = True
+
+# Custom Jinja2 filters
+def status_color(status: str) -> str:
+    """Map enrollment/application status to Bootstrap color class"""
+    color_map = {
+        'PENDING': 'warning',
+        'SUBMITTED': 'info',
+        'UNDER_REVIEW': 'primary',
+        'APPROVED': 'success',
+        'REJECTED': 'danger',
+        'WAITLISTED': 'secondary',
+        'ENROLLED': 'success',
+        'ACTIVE': 'success',
+        'WITHDRAWN': 'dark',
+        'GRADUATED': 'info',
+        'CANCELLED': 'danger',
+        'DRAFT': 'secondary',
+        'SENT': 'success',
+        'VIEWED': 'info',
+    }
+    return color_map.get(status, 'secondary')
+
+templates.env.filters['status_color'] = status_color
 
 router = APIRouter(include_in_schema=False)
 
@@ -30,11 +56,11 @@ async def index(request: Request, current_user: typing.Optional[User] = Depends(
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse(request=request, name="auth/login.html")
+    return templates.TemplateResponse(request=request, name="auth/login.html", context={"current_user": None, "messages": []})
 
 @router.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    return templates.TemplateResponse(request=request, name="auth/register.html")
+    return templates.TemplateResponse(request=request, name="auth/register.html", context={"current_user": None, "messages": []})
 
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
@@ -207,19 +233,6 @@ async def create_incident_page(request: Request, current_user: User = Depends(ge
 
 
 # -----------------------------------------------------------------------------
-# Curriculum
-# -----------------------------------------------------------------------------
-
-@router.get("/curriculum", response_class=HTMLResponse)
-async def curriculum_dashboard(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    return templates.TemplateResponse(request=request, name="curriculum/index.html", context={"current_user": current_user})
-
-@router.get("/curriculum/observations/new", response_class=HTMLResponse)
-async def create_observation_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    return templates.TemplateResponse(request=request, name="curriculum/observation_form.html", context={"current_user": current_user})
-
-
-# -----------------------------------------------------------------------------
 # Additional Missing Routes
 # -----------------------------------------------------------------------------
 
@@ -333,10 +346,6 @@ async def contact_page(request: Request, current_user: User = Depends(get_curren
     return templates.TemplateResponse(request=request, name="static/contact.html", context={"current_user": current_user})
 
 
-@router.get("/supervisor/observations", response_class=HTMLResponse)
-async def supervisor_observations(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Supervisor observations - redirects to curriculum observations"""
-    return RedirectResponse(url="/curriculum/observations/new")
 
 
 @router.get("/audit-logs", response_class=HTMLResponse)
@@ -390,6 +399,21 @@ async def edit_user_page(request: Request, user_id: int, db: Session = Depends(g
     return templates.TemplateResponse(request=request, name="admin/users/form.html", context={"current_user": current_user, "kindergartens": kgs, "user_obj": user_obj})
 
 
+@router.get("/admin/messages/compose", response_class=HTMLResponse)
+async def admin_message_compose(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/messages/compose.html",
+        context={
+            "current_user": current_user,
+            "governorates": settings.JORDAN_GOVERNORATES,
+            "governorates_en": settings.JORDAN_GOVERNORATES_ENGLISH
+        }
+    )
+
+
 # -----------------------------------------------------------------------------
 # Admin Analytics & Reporting
 # -----------------------------------------------------------------------------
@@ -401,7 +425,95 @@ async def admin_analytics(request: Request, current_user: User = Depends(get_cur
         return RedirectResponse("/dashboard")
     return templates.TemplateResponse(
         request=request,
-        name="admin/analytics/index.html",
+        name="admin/analytics/dashboard.html",
         context={"current_user": current_user, "today": date.today()}
     )
+
+@router.get("/admin/analytics/reports", response_class=HTMLResponse)
+async def admin_reports(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin centralized reports page"""
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/analytics/reports.html",
+        context={"current_user": current_user, "today": date.today()}
+    )
+
+
+@router.get("/admin/messages", response_class=HTMLResponse)
+async def admin_messages_list(
+    request: Request,
+    current_user: User = Depends(get_current_user_or_redirect),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    messages = (
+        db.query(models.Message)
+        .order_by(models.Message.created_at.desc())
+        .limit(25)
+        .all()
+    )
+    message_list = [
+        {
+            "id": msg.id,
+            "subject": msg.subject or "Ø¨Ø¯ÙˆÙ† ÙˆØµÙˆÙ„",
+            "created_at": msg.created_at,
+            "recipient_count": msg.recipient_count or 0,
+            "thread_type": msg.thread_type.value,
+            "allow_replies": msg.allow_replies,
+            "target_mode": msg.target_mode,
+            "target_roles": msg.target_roles,
+        }
+        for msg in messages
+    ]
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/messages/list.html",
+        context={"current_user": current_user, "messages": message_list}
+    )
+
+
+@router.get("/admin/analytics/drilldown/{dimension_type}/{dimension_id}", response_class=HTMLResponse)
+async def admin_analytics_drilldown(
+    request: Request,
+    dimension_type: str,
+    dimension_id: str,
+    current_user: User = Depends(get_current_user_or_redirect)
+):
+    """Drilldown page for analytics."""
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/analytics/drilldown.html",
+        context={
+            "current_user": current_user,
+            "dimension_type": dimension_type,
+            "dimension_id": dimension_id,
+            "today": date.today()
+        }
+    )
+
+
+# ----------------------------------------------------------------------------- 
+# Public Pages
+# -----------------------------------------------------------------------------
+
+@router.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request):
+    """Help center page"""
+    return templates.TemplateResponse(request=request, name="help.html", context={"current_user": None})
+
+@router.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(request: Request):
+    """Privacy policy page"""
+    return templates.TemplateResponse(request=request, name="privacy.html", context={"current_user": None})
+
+@router.get("/terms", response_class=HTMLResponse)
+async def terms_page(request: Request):
+    """Terms of service page"""
+    return templates.TemplateResponse(request=request, name="terms.html", context={"current_user": None})
 

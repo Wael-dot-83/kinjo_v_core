@@ -11,8 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 
@@ -25,7 +23,9 @@ class UTF8ContentTypeMiddleware(BaseHTTPMiddleware):
             response.headers["content-type"] = "text/html; charset=utf-8"
         return response
 
+
 import os
+import logging
 import models
 from database import get_db, init_db
 from auth import authenticate_user, create_access_token, get_password_hash
@@ -33,6 +33,9 @@ from config import settings
 from dependencies import get_current_user, get_current_user_optional, RedirectToLogin
 from fastapi.responses import RedirectResponse
 import validators
+from admin_security import CorrelationIdMiddleware, APIError, api_error_handler
+from rate_limiter import limiter, rate_limit_exceeded_handler
+
 
 # Safety guard: never allow TESTING bypass in production
 def ensure_not_testing_in_production() -> None:
@@ -41,21 +44,30 @@ def ensure_not_testing_in_production() -> None:
 
 ensure_not_testing_in_production()
 
-# Rate limiter setup
-limiter = Limiter(key_func=get_remote_address)
-# Disable rate limiting during automated tests to avoid flakiness
-if settings.TESTING:
-    limiter.enabled = False
+# Logging configuration (best practice)
+def configure_logging():
+    log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+    handlers = [logging.StreamHandler()]
+    if settings.ENVIRONMENT.lower() == "production":
+        handlers.append(logging.FileHandler(settings.LOG_FILE))
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        handlers=handlers
+    )
+
+configure_logging()
 
 # Import routers
 from missing_endpoints import router as api_router
 from frontend import router as frontend_router
 from communication_service import router as communication_router
 from safety_service import router as safety_router
-from curriculum_service import router as curriculum_router
 from kpi_service import router as kpi_router
 from analytics_service import router as analytics_router
 from analytics_ws import router as analytics_ws_router
+import audit_service
+from admin_endpoints import router as admin_router
 
 # =============================================================================
 # Lifespan Event Handler
@@ -82,7 +94,7 @@ app = FastAPI(
 
 # Add rate limiter to app state
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 
 # Handle redirect to login for unauthenticated frontend requests
@@ -113,11 +125,19 @@ app.add_middleware(
 # Add UTF-8 Content-Type middleware for proper Arabic text encoding
 app.add_middleware(UTF8ContentTypeMiddleware)
 
+# Add Correlation ID middleware for request tracking
+app.add_middleware(CorrelationIdMiddleware)
+
+# Register custom exception handler for APIError
+app.add_exception_handler(APIError, api_error_handler)
+
 # Mount static files
 try:
     app.mount("/static", StaticFiles(directory="static"), name="static")
 except:
     pass  # Static folder might not exist
+
+# Include API routers
 
 
 # =============================================================================
@@ -269,12 +289,13 @@ async def refresh_token(
 
 
 # Include routers AFTER auth endpoints
+app.include_router(admin_router, prefix="/api", tags=["Admin"])
 app.include_router(api_router, prefix="/api", tags=["API"])
 app.include_router(communication_router, prefix="/comm", tags=["Communication"])
 app.include_router(safety_router, prefix="/api", tags=["Safety"])
-app.include_router(curriculum_router, prefix="/api", tags=["Curriculum"])
 app.include_router(kpi_router, prefix="/api", tags=["KPI"])
 app.include_router(analytics_router, prefix="/api", tags=["Analytics"])
+app.include_router(audit_service.router, prefix="/api", tags=["Audit"])
 app.include_router(analytics_ws_router)
 app.include_router(frontend_router)
 
@@ -347,5 +368,5 @@ async def api_health_check(db: Session = Depends(get_db)):
 # The if __name__ == "__main__" block is only for running with `python main.py`
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
 

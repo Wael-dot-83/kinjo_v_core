@@ -11,14 +11,3 @@ async def create_incident_page(request: Request, current_user: User = Depends(ge
     # In a real app, we might pass list of children here for the dropdown
     return templates.TemplateResponse(request=request, name="safety/incident_form.html", context={"current_user": current_user})
 
-# -----------------------------------------------------------------------------
-# Curriculum
-# -----------------------------------------------------------------------------
-
-@router.get("/curriculum", response_class=HTMLResponse)
-async def curriculum_dashboard(request: Request, current_user: User = Depends(get_current_user)):
-    return templates.TemplateResponse(request=request, name="curriculum/index.html", context={"current_user": current_user})
-
-@router.get("/curriculum/observations/new", response_class=HTMLResponse)
-async def create_observation_page(request: Request, current_user: User = Depends(get_current_user)):
-    return templates.TemplateResponse(request=request, name="curriculum/observation_form.html", context={"current_user": current_user})

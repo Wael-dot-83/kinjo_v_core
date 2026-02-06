@@ -110,6 +110,39 @@ GET    /api/staff/{id}                   → Get staff details
 PUT    /api/staff/{id}                   → Update staff
 ```
 
+### Messaging (Communication)
+
+```
+POST   /comm/messages                    Send message (direct/class/broadcast)
+GET    /comm/messages                    List messages (pagination + filters)
+GET    /comm/messages/{id}               Get message details
+POST   /comm/messages/{id}/read          Mark message as read
+DELETE /comm/messages/{id}               Soft delete for current user
+POST   /comm/messages/{id}/archive       Archive message
+POST   /comm/messages/{id}/unarchive     Unarchive message
+GET    /comm/messages/unread/count       Unread count for current user
+POST   /comm/messages/{id}/replies       Reply to direct message
+GET    /comm/messages/{id}/replies       Get thread (root + replies)
+POST   /comm/messages/{id}/attachments   Upload attachment (multipart)
+GET    /comm/messages/{id}/attachments   List message attachments
+GET    /comm/messages/attachments/{id}   Download attachment
+POST   /comm/messages/bulk               Bulk read/archive/delete
+POST   /comm/notifications/devices       Register push device token
+DELETE /comm/notifications/devices/{id}  Remove push device token
+```
+
+Message list query params (examples):
+
+```
+?page=1&page_size=25&thread_type=direct&search=welcome&unread_only=true
+?archived_only=true
+```
+
+Notes:
+- Attachments enforce `MAX_ATTACHMENT_SIZE_MB` and use `STORAGE_PROVIDER` (`local` or `s3`) with `S3_*` settings when enabled.
+- Rate-limited endpoints return 429 with `Retry-After` and `{ error: { code: "RATE_LIMITED" } }`.
+
+
 ---
 
 ## Dashboard Endpoints
@@ -318,26 +351,21 @@ Response:
 
 ```json
 {
-  "detail": "Error message in English",
-  "message": "رسالة الخطأ بالعربية",
-  "status_code": 400,
-  "timestamp": "2026-01-16T10:30:00"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Message body is required",
+    "fields": {
+      "message_body": "required"
+    },
+    "correlation_id": "b3a1c5e4-1234-4cdd-9a2d-9d9d0d8a1c2f"
+  }
 }
 ```
-
----
-
 ## Rate Limits & Pagination
 
-**Default pagination:** 50 items per page
-**Maximum per page:** 1000 items
-**No rate limiting:** Currently unlimited requests
+**Pagination:** `page` + `page_size` (defaults 25, max 100)
+**Rate limiting:** Enabled; tune via `RATE_LIMIT_*` settings in `.env`
 
----
-
-## Test Credentials
-
-```
 Username: admin
 Password: Admin123!
 Role: ADMIN

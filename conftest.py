@@ -3,6 +3,7 @@ Pytest configuration and fixtures for integration tests
 """
 import os
 import pytest
+import secrets
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -200,7 +201,9 @@ def parent_user(test_db):
     test_db.commit()
     test_db.refresh(profile)
 
-    user.parent = profile
+    user.parent_profile = profile
+    test_db.commit()
+    test_db.refresh(user)
     return user
 
 
@@ -210,7 +213,7 @@ def sample_child(test_db, parent_user):
     Create a sample child for testing
     """
     child = models.Child(
-        parent_id=parent_user.id,
+        parent_id=parent_user.parent_profile.id,
         first_name="Layla",
         last_name="Al-Rashid",
         gender=models.Gender.FEMALE,
@@ -226,6 +229,22 @@ def sample_child(test_db, parent_user):
     test_db.commit()
     test_db.refresh(child)
     return child
+
+
+@pytest.fixture
+def parent_enrollment(test_db, sample_child, sample_kindergarten):
+    """
+    Create an active enrollment for the sample child
+    """
+    enrollment = models.EnrollmentApplication(
+        child_id=sample_child.id,
+        kindergarten_id=sample_kindergarten.id,
+        status=models.EnrollmentStatus.ACCEPTED
+    )
+    test_db.add(enrollment)
+    test_db.commit()
+    test_db.refresh(enrollment)
+    return enrollment
 
 
 @pytest.fixture
@@ -297,7 +316,12 @@ def auth_headers_admin(admin_token):
     """
     Get authentication headers for admin
     """
-    return {"Authorization": f"Bearer {admin_token}"}
+    csrf_token = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {admin_token}",
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"kinjo_csrf_token={csrf_token}"
+    }
 
 
 @pytest.fixture

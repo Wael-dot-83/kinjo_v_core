@@ -71,13 +71,7 @@
                     السلامة والحوادث
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link {% if '/curriculum' in request.url.path %}active{% endif %}" href="/curriculum">
-                    <i class="bi bi-book me-2"></i>
-                    المنهج والملاحظات
-                </a>
-            </li>
-            {% endif %}
+{% endif %}
 
             {% if current_user.role.value == 'PARENT' %}
             <li class="nav-item">
@@ -114,6 +108,14 @@
                     مؤشرات الأداء
                 </a>
             </li>
+            {% if current_user.role.value == 'ADMIN' %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/admin/messages' in request.url.path %}active{% endif %}" href="/admin/messages/compose">
+                    <i class="bi bi-megaphone me-2"></i>
+                    إرسال رسالة إدارية
+                </a>
+            </li>
+            {% endif %}
             {% if current_user.role.value == 'ADMIN' %}
             <li class="nav-item">
                 <a class="nav-link {% if '/admin/analytics' in request.url.path %}active{% endif %}" href="/admin/analytics">

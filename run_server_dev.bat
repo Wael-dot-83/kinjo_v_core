@@ -52,5 +52,5 @@ echo Launching Uvicorn...
 echo Access the API at http://127.0.0.1:8000/docs
 echo Access the KPI Dashboard at http://127.0.0.1:8000/kpi/dashboard
 echo.
-uvicorn main:app --reload --host 127.0.0.1 --port 8000
+uvicorn main:app --host 127.0.0.1 --port 8000
 pause

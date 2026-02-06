@@ -1,0 +1,69 @@
+<!-- Help Express Modal -->
+<div class="modal fade" id="helpExpressModal" tabindex="-1" aria-labelledby="helpExpressModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="helpExpressModalLabel">
+                    <i class="bi bi-life-preserver me-2 text-primary"></i>
+                    <span id="helpModalTitle">دليل المساعدة</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Dynamic Content Container -->
+                <div id="helpModalContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">فهمت</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const helpModal = document.getElementById('helpExpressModal');
+        if (helpModal) {
+            helpModal.addEventListener('show.bs.modal', function (event) {
+                // Get the button that triggered the modal
+                const button = event.relatedTarget;
+
+                // Get help content from page-specific hidden div
+                const pageHelpContent = document.getElementById('pageHelpContent');
+                const modalBody = document.getElementById('helpModalContent');
+                const modalTitle = document.getElementById('helpModalTitle');
+
+                if (pageHelpContent) {
+                    // Clone content to modal
+                    modalBody.innerHTML = pageHelpContent.innerHTML;
+
+                    // Update title if provided
+                    const titleAttr = pageHelpContent.getAttribute('data-help-title');
+                    if (titleAttr) {
+                        modalTitle.textContent = titleAttr;
+                    }
+                } else {
+                    // Fallback content
+                    modalBody.innerHTML = `
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-info-circle display-4 mb-3"></i>
+                            <p class="lead">لا توجد معلومات مساعدة محددة لهذه الصفحة حالياً.</p>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        // Initialize Bootstrap Tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+</script>

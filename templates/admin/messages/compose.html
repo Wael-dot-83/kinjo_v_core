@@ -1,0 +1,486 @@
+{% extends 'base.html' %}
+
+{% block title %}إنشاء رسالة جديدة{% endblock %}
+
+{% block page_header %}
+<div class="dashboard-header">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
+        <div>
+            <h1 class="h2 mb-1">
+                <i class="bi bi-envelope-plus me-2 text-primary"></i>
+                إنشاء رسالة جديدة
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
+                    <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                    <li class="breadcrumb-item">الرسائل</li>
+                    <li class="breadcrumb-item active">إنشاء رسالة</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Message Form -->
+    <div class="col-12 col-lg-8">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">تفاصيل الرسالة</h5>
+            </div>
+            <div class="card-body">
+                <form id="composeForm">
+                    <div id="composeStatus" class="visually-hidden text-danger small mb-2" role="status" aria-live="polite"></div>
+                    <!-- Subject -->
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">الموضوع <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="subject" name="subject" required
+                            placeholder="أدخل عنوان الرسالة">
+                    </div>
+
+                    <!-- Message Body -->
+                    <div class="mb-3">
+                        <label for="messageBody" class="form-label">نص الرسالة <span
+                                class="text-danger">*</span></label>
+                        <textarea class="form-control" id="messageBody" name="messageBody" rows="10" required
+                            placeholder="اكتب محتوى الرسالة هنا..."></textarea>
+                    </div>
+
+                    <!-- Allow Replies -->
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="allowReplies" checked>
+                            <label class="form-check-label" for="allowReplies">السماح بالردود</label>
+                        </div>
+                        <div class="form-text">عند التفعيل، سيتمكن المستلمون من الرد على هذه الرسالة.</div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Targeting Options -->
+    <div class="col-12 col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">تحديد المستلمين</h5>
+            </div>
+            <div class="card-body">
+                <!-- Target Mode -->
+                <div class="mb-3">
+                    <label for="targetMode" class="form-label">توجيه إلى <span class="text-danger">*</span></label>
+                    <select class="form-select" id="targetMode" onchange="handleTargetModeChange()">
+                        <option value="ALL_USERS">جميع المستخدمين</option>
+                        <option value="ALL_MANAGERS">جميع المدراء</option>
+                        <option value="ALL_PARENTS">جميع أولياء الأمور</option>
+                        <option value="GOVERNORATE">حسب المحافظة</option>
+                        <option value="KINDERGARTENS">حسب الروضة</option>
+                    </select>
+                </div>
+
+                <!-- Filters Container -->
+                <div id="filtersContainer" class="d-none border-top pt-3 mt-3">
+                    <!-- Governorate Filter -->
+                    <div id="governorateFilter" class="mb-3 d-none">
+                        <label for="governorateSelect" class="form-label">المحافظة</label>
+                        <select class="form-select" id="governorateSelect">
+                            <option value="">اختر المحافظة...</option>
+                            {% for gov in governorates %}
+                            <option value="{{ gov }}">{{ gov }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Kindergarten Filter -->
+                    <div id="kindergartenFilter" class="mb-3 d-none">
+                        <label for="kindergartenSelect" class="form-label">الروضات</label>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control form-control-sm" id="kgSearch"
+                                placeholder="بحث عن روضة..." onkeyup="filterKgList()">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        </div>
+                        <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;"
+                            id="kgListContainer">
+                            <div class="text-center text-muted small py-2">جاري التحميل...</div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Roles Filter (Optional) -->
+                    <div id="rolesFilter" class="mb-3">
+                        <label class="form-label d-block">الأدوار المستهدفة</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="roleManager" value="MANAGER" checked
+                                disabled>
+                            <label class="form-check-label" for="roleManager">مدراء</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="roleSupervisor" value="SUPERVISOR"
+                                checked disabled>
+                            <label class="form-check-label" for="roleSupervisor">مشرفين</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="roleParent" value="PARENT" checked
+                                disabled>
+                            <label class="form-check-label" for="roleParent">أولياء أمور</label>
+                        </div>
+                    </div>
+
+                    <!-- Search Filter -->
+                    <div class="mb-3">
+                        <label for="userSearch" class="form-label">بحث إضافي (اختياري)</label>
+                        <input type="text" class="form-control form-control-sm" id="userSearch"
+                            placeholder="الاسم أو البريد الإلكتروني...">
+                        <div class="form-text small">لتصفية النتائج بشكل أدق.</div>
+                    </div>
+                </div>
+
+                <!-- Preview Actions -->
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="previewRecipients()">
+                        <i class="bi bi-eye me-2"></i> معاينة المستلمين
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Results -->
+        <div class="card d-none" id="previewCard">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0 small text-uppercase text-muted">نتيجة المعاينة</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <h2 class="display-6 fw-bold mb-0 text-primary" id="recipientCount">0</h2>
+                    <p class="text-muted small">مستلم متوقع</p>
+                </div>
+
+                <div id="previewBreakdown" class="small mb-3">
+                    <!-- Breakdown injected via JS -->
+                </div>
+
+                <hr>
+                <h6 class="small fw-bold mb-2">عينة من المستلمين:</h6>
+                <ul class="list-unstyled small mb-0" id="sampleRecipientsList">
+                    <!-- Sample list injected via JS -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body d-flex justify-content-end gap-2">
+                <a href="/dashboard" class="btn btn-secondary">إلغاء</a>
+                <button type="button" class="btn btn-primary px-4" onclick="sendMessage()" id="sendBtn">
+                    <i class="bi bi-send me-2"></i> إرسال الرسالة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const KG_PAGE_SIZE = 500;
+const STATUS_EL = document.getElementById('composeStatus');
+let kindergartensLoaded = false;
+let allKindergartens = [];
+let kgLoading = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+    handleTargetModeChange();
+    const kgSearch = document.getElementById('kgSearch');
+    if (kgSearch) {
+        kgSearch.addEventListener('input', filterKgList);
+    }
+});
+
+function showComposeStatus(message = '', { variant = 'danger', visible = !!message } = {}) {
+    if (!STATUS_EL) return;
+    STATUS_EL.textContent = message;
+    STATUS_EL.classList.remove('visually-hidden', 'text-danger', 'text-success', 'text-warning');
+    STATUS_EL.classList.add('small', 'mb-2', `text-${variant}`);
+    if (!visible) {
+        STATUS_EL.classList.add('visually-hidden');
+    } else {
+        STATUS_EL.classList.remove('visually-hidden');
+    }
+}
+
+async function handleTargetModeChange() {
+    const mode = document.getElementById('targetMode').value;
+    const filtersContainer = document.getElementById('filtersContainer');
+    const govFilter = document.getElementById('governorateFilter');
+    const kgFilter = document.getElementById('kindergartenFilter');
+
+    filtersContainer.classList.remove('d-none');
+    govFilter.classList.add('d-none');
+    kgFilter.classList.add('d-none');
+
+    if (mode === 'GOVERNORATE') {
+        govFilter.classList.remove('d-none');
+    } else if (mode === 'KINDERGARTENS') {
+        kgFilter.classList.remove('d-none');
+        if (!kindergartensLoaded && !kgLoading) {
+            await loadKindergartens();
+        }
+    }
+}
+
+async function loadKindergartens() {
+    kgLoading = true;
+    const container = document.getElementById('kgListContainer');
+    container.innerHTML = '<div class="text-center text-muted small py-2"><span class="spinner-border spinner-border-sm"></span> جاري التحميل...</div>';
+    const accumulated = [];
+    let page = 1;
+
+    try {
+        while (true) {
+            const params = new URLSearchParams({ page, page_size: KG_PAGE_SIZE });
+            const response = await fetch(`/api/admin/options/kindergartens?${params}`);
+            if (!response.ok) throw new Error('فشل في تحميل الروضات');
+            const data = await response.json();
+            accumulated.push(...(data.kindergartens || []));
+            const pagination = data.pagination || {};
+            const totalPages = pagination.total_pages || Math.ceil((pagination.total || accumulated.length) / KG_PAGE_SIZE);
+
+            if (!pagination.total_pages || page >= totalPages) {
+                break;
+            }
+            if (pagination.total && accumulated.length >= pagination.total) {
+                break;
+            }
+            page += 1;
+        }
+
+        allKindergartens = accumulated;
+        renderKgList(allKindergartens);
+        kindergartensLoaded = true;
+    } catch (error) {
+        console.error(error);
+        container.innerHTML = '<div class="text-danger small text-center">فشل في تحميل قائمة الروضات</div>';
+    } finally {
+        kgLoading = false;
+    }
+}
+
+function renderKgList(items) {
+    const container = document.getElementById('kgListContainer');
+    if (items.length === 0) {
+        container.innerHTML = '<div class="text-muted small text-center">لا توجد نتائج</div>';
+        return;
+    }
+
+    container.innerHTML = items.map(kg => `
+        <div class="form-check">
+            <input class="form-check-input kg-checkbox" type="checkbox" value="${kg.id}" id="kg_${kg.id}">
+            <label class="form-check-label small" for="kg_${kg.id}">
+                ${kg.name_ar || kg.name} <span class="text-muted">(${kg.city})</span>
+            </label>
+        </div>
+    `).join('');
+}
+
+function filterKgList() {
+    const term = document.getElementById('kgSearch').value.toLowerCase();
+    const filtered = allKindergartens.filter(kg =>
+        (kg.name_ar && kg.name_ar.toLowerCase().includes(term)) ||
+        (kg.name_en && kg.name_en.toLowerCase().includes(term)) ||
+        (kg.city && kg.city.toLowerCase().includes(term))
+    );
+    renderKgList(filtered);
+}
+
+function getTargetData() {
+    const mode = document.getElementById('targetMode').value;
+    const target = {
+        mode,
+        search: document.getElementById('userSearch').value || null
+    };
+
+    if (['GOVERNORATE', 'KINDERGARTENS'].includes(mode)) {
+        target.roles = ['MANAGER', 'SUPERVISOR', 'PARENT'];
+    }
+
+    if (mode === 'GOVERNORATE') {
+        const gov = document.getElementById('governorateSelect').value;
+        if (gov) target.governorates = [gov];
+    } else if (mode === 'KINDERGARTENS') {
+        const checked = document.querySelectorAll('.kg-checkbox:checked');
+        if (checked.length > 0) {
+            target.kindergarten_ids = Array.from(checked).map(cb => parseInt(cb.value));
+        }
+    }
+
+    return target;
+}
+
+async function safeRequest(url, options = {}, retries = 2) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            const response = await fetch(url, options);
+            const payload = await response.json().catch(() => null);
+            if (!response.ok) {
+                const message = payload?.detail || payload?.message || `خطأ ${response.status}`;
+                throw new Error(message);
+            }
+            return payload;
+        } catch (error) {
+            if (attempt === retries) {
+                throw error;
+            }
+            await new Promise(res => setTimeout(res, 250 * (attempt + 1)));
+        }
+    }
+}
+
+async function previewRecipients() {
+    const target = getTargetData();
+    if (target.mode === 'GOVERNORATE' && !target.governorates) {
+        swal.fire('تنبيه', 'الرجاء اختيار المحافظة', 'warning');
+        return;
+    }
+    if (target.mode === 'KINDERGARTENS' && !target.kindergarten_ids) {
+        swal.fire('تنبيه', 'الرجاء اختيار روضة واحدة على الأقل', 'warning');
+        return;
+    }
+
+    const previewCard = document.getElementById('previewCard');
+    const countEl = document.getElementById('recipientCount');
+    const sampleList = document.getElementById('sampleRecipientsList');
+    const breakdownEl = document.getElementById('previewBreakdown');
+    setPreviewLoading(true);
+    showComposeStatus('', { visible: false });
+    previewCard.classList.remove('d-none');
+    countEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    sampleList.innerHTML = '<li class="text-muted small text-center">جاري التحديث...</li>';
+    breakdownEl.innerHTML = '';
+
+    try {
+        const params = new URLSearchParams();
+        params.append('mode', target.mode);
+        if (target.search) params.append('search', target.search);
+        if (target.roles) target.roles.forEach(r => params.append('roles', r));
+        if (target.governorates) target.governorates.forEach(g => params.append('governorates', g));
+        if (target.kindergarten_ids) target.kindergarten_ids.forEach(k => params.append('kindergarten_ids', k));
+
+        const data = await safeRequest(`/api/admin/message-recipients/preview?${params.toString()}`, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        countEl.textContent = new Intl.NumberFormat('ar').format(data.total_count);
+        updatePreviewBreakdown(data);
+        renderPreviewSamples(data.sample_recipients);
+
+        if (data.total_count === 0) {
+            showComposeStatus('لا يوجد مستلمين مطابقين', { variant: 'warning', visible: true });
+        }
+    } catch (error) {
+        console.error(error);
+        countEl.textContent = '-';
+        breakdownEl.innerHTML = '';
+        sampleList.innerHTML = '<li class="text-muted fst-italic">تعذر تحميل النتائج</li>';
+        showComposeStatus(error.message || 'فشل في المعاينة', { variant: 'danger', visible: true });
+        swal.fire('خطأ', error.message || 'فشل في تحميل معاينة المستلمين', 'error');
+    } finally {
+        setPreviewLoading(false);
+    }
+}
+
+function setPreviewLoading(isLoading) {
+    const previewBtn = document.querySelector('[onclick="previewRecipients()"]');
+    if (previewBtn) {
+        previewBtn.disabled = isLoading;
+    }
+}
+
+function updatePreviewBreakdown(data) {
+    const breakdownEl = document.getElementById('previewBreakdown');
+    const parts = [];
+    if (data.by_role) {
+        if (data.by_role.MANAGER) parts.push(`${data.by_role.MANAGER} مدير`);
+        if (data.by_role.SUPERVISOR) parts.push(`${data.by_role.SUPERVISOR} مشرف`);
+        if (data.by_role.PARENT) parts.push(`${data.by_role.PARENT} أولياء أمور`);
+    }
+    breakdownEl.innerHTML = parts.join(' • ');
+}
+
+function renderPreviewSamples(samples) {
+    const sampleList = document.getElementById('sampleRecipientsList');
+    if (!samples || samples.length === 0) {
+        sampleList.innerHTML = '<li class="text-muted fst-italic">لا يوجد بيانات عينة</li>';
+        return;
+    }
+    sampleList.innerHTML = samples.map(u => `
+        <li class="mb-1 text-truncate" title="${u.display_name}">
+            <i class="bi bi-person text-secondary me-1"></i>
+            ${u.display_name}
+            <span class="text-muted opacity-75">(${u.role})</span>
+        </li>
+    `).join('');
+}
+
+async function sendMessage() {
+    const subject = document.getElementById('subject').value.trim();
+    const messageBody = document.getElementById('messageBody').value.trim();
+    const allowReplies = document.getElementById('allowReplies').checked;
+    const target = getTargetData();
+    const btn = document.getElementById('sendBtn');
+    const originalText = btn.innerHTML;
+
+    if (!subject || !messageBody) {
+        swal.fire('تنبيه', 'الرجاء تعبئة الموضوع ونص الرسالة', 'warning');
+        return;
+    }
+    if (target.mode === 'GOVERNORATE' && !target.governorates) {
+        swal.fire('تنبيه', 'الرجاء اختيار المحافظة', 'warning');
+        return;
+    }
+    if (target.mode === 'KINDERGARTENS' && !target.kindergarten_ids) {
+        swal.fire('تنبيه', 'الرجاء اختيار روضة واحدة على الأقل', 'warning');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> جاري الإرسال...';
+    showComposeStatus('', { visible: false });
+
+    try {
+        const payload = {
+            subject,
+            message_body: messageBody,
+            allow_replies: allowReplies,
+            target
+        };
+
+        await safeRequest('/api/admin/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        }, 1);
+
+        await swal.fire({
+            title: 'تم الإرسال!',
+            text: 'تم إرسال الرسالة بنجاح.',
+            icon: 'success',
+            confirmButtonText: 'حسنًا'
+        });
+
+        window.location.href = '/admin/messages';
+    } catch (error) {
+        console.error(error);
+        showComposeStatus(error.message || 'فشل في الإرسال', { variant: 'danger', visible: true });
+        swal.fire('خطأ', error.message || 'فشل في إرسال الرسالة', 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+</script>
+{% endblock %}

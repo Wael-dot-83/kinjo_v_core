@@ -59,9 +59,13 @@ KinJo is a comprehensive platform built according to IEEE Software Requirements 
 - Automated nap duration calculation
 - Parents see only approved reports
 
-### Module 7: Communication (Basic)
+### Module 7: Communication (Messaging)
 
-- Messaging infrastructure
+- Direct/class/broadcast messaging with read tracking
+- Replies/threads, unread count, search, and pagination
+- Soft delete, archive, and bulk actions
+- Attachments with local/S3 storage
+- Email/push notification hooks
 - Events with RSVP and consent tracking
 - Survey support with NPS
 
@@ -200,6 +204,16 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
+
+### Background Workers (Notifications)
+
+Messaging notifications (email/push) run via Celery when enabled:
+
+```bash
+celery -A celery_app.celery_app worker -l info
+```
+
+Set the SMTP/FCM and `NOTIFICATIONS_*` variables in `.env` before starting the worker.
 
 ### Access API Documentation
 

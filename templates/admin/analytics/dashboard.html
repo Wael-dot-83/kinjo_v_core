@@ -1,0 +1,483 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة التحليلات المركزية{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-bar-chart-line-fill me-2 text-primary"></i>
+            التحليلات المركزية
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active" aria-current="page">التحليلات</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="input-group me-2">
+            <span class="input-group-text bg-light border-end-0">
+                <i class="bi bi-calendar3"></i>
+            </span>
+            <input type="date" class="form-control border-start-0 ps-0" id="periodStart" aria-label="تاريخ البداية">
+            <span class="input-group-text border-0 bg-transparent">-</span>
+            <input type="date" class="form-control" id="periodEnd" aria-label="تاريخ النهاية">
+        </div>
+        <button id="refreshBtn" type="button" class="btn btn-outline-primary me-2" onclick="loadAdminAnalytics()"
+            aria-label="تحديث البيانات">
+            <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+        </button>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal"
+            aria-label="تصدير التقارير">
+            <i class="bi bi-box-arrow-down me-1"></i>تصدير
+        </button>
+    </div>
+</div>
+
+<!-- Page Help Content -->
+<div id="pageHelpContent" class="d-none" data-help-title="دليل لوحة التحليلات">
+    <div class="mb-4">
+        <h6 class="fw-bold text-primary"><i class="bi bi-speedometer2 me-2"></i>نظرة عامة</h6>
+        <p>توفر هذه اللوحة نظرة شاملة على أداء شبكة الروضات، مع التركيز على السلامة والامتثال.</p>
+    </div>
+
+    <div class="mb-4">
+        <h6 class="fw-bold text-primary"><i class="bi bi-info-circle me-2"></i>المؤشرات الرئيسية</h6>
+        <ul class="list-unstyled">
+            <li class="mb-2"><strong><i class="bi bi-check-circle text-success me-2"></i>نسبة الحضور:</strong> متوسط
+                الحضور اليومي للأطفال عبر الشبكة.</li>
+            <li class="mb-2"><strong><i class="bi bi-exclamation-triangle text-warning me-2"></i>معدل الحوادث:</strong>
+                عدد الحوادث المسجلة لكل 100 طفل.</li>
+            <li class="mb-2"><strong><i class="bi bi-shield-check text-info me-2"></i>مؤشر الحوكمة:</strong> تقييم شامل
+                لامتثال الروضات للمعايير (أخضر=ممتاز، أحمر=يحتاج تحسين).</li>
+        </ul>
+    </div>
+
+    <div class="mb-4">
+        <h6 class="fw-bold text-primary"><i class="bi bi-tools me-2"></i>الأدوات المتاحة</h6>
+        <ul class="list-unstyled">
+            <li class="mb-2"><strong>تحليل المحافظات:</strong> جدول يقارن الأداء بين المناطق الجغرافية.</li>
+            <li class="mb-2"><strong>تصدير CSV:</strong> استخدم الزر في قسم "تحليل المحافظات" لتحميل تقرير مفصل.</li>
+            <li class="mb-2"><strong>تصفية الوقت:</strong> استخدم محدد التاريخ في الأعلى لتغيير الفترة الزمنية للتقرير.
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-dashboard">
+    <!-- Network Overview Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Kindergartens Count -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 border-start border-4 border-primary shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="text-muted mb-0 fw-semibold">عدد الروضات</h6>
+                        <div class="icon-circle bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
+                            title="إجمالي عدد الروضات النشطة في الشبكة">
+                            <i class="bi bi-building fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="mb-2 fw-bold text-primary" id="totalKg" aria-label="عدد الروضات">
+                        <div class="skeleton-text w-50"></div>
+                    </h3>
+                    <small class="text-success fw-medium" id="kpiKgGrowth">
+                        <i class="bi bi-arrow-up-short"></i>
+                        <div class="skeleton-text w-75"></div>
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Children Count -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 border-start border-4 border-info shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="text-muted mb-0 fw-semibold">إجمالي الأطفال</h6>
+                        <div class="icon-circle bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
+                            title="مجموع الأطفال المسجلين في النظام">
+                            <i class="bi bi-people fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="mb-2 fw-bold text-info" id="totalChildren" aria-label="إجمالي الأطفال">
+                        <div class="skeleton-text w-50"></div>
+                    </h3>
+                    <div class="progress mt-2 mb-2" style="height: 6px;">
+                        <div class="progress-bar bg-info" id="enrollmentRateBar" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted d-block">نسبة الإشغال: <span class="fw-medium" id="enrollmentRate">
+                            <div class="skeleton-text w-25 d-inline-block"></div>
+                        </span></small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Avg Attendance -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 border-start border-4 border-success shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="text-muted mb-0 fw-semibold">نسبة الحضور</h6>
+                        <div class="icon-circle bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
+                            title="متوسط نسبة حضور الأطفال خلال الفترة المحددة">
+                            <i class="bi bi-check-circle fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="mb-2 fw-bold text-success" id="avgAttendance" aria-label="نسبة الحضور">
+                        <div class="skeleton-text w-50"></div>
+                    </h3>
+                    <small class="text-muted" id="attendanceTrend">
+                        <div class="skeleton-text w-75"></div>
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Incident Rate -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 border-start border-4 border-warning shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="text-muted mb-0 fw-semibold">معدل الحوادث</h6>
+                        <div class="icon-circle bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
+                            title="عدد الحوادث المسجلة لكل 100 يوم-طفل (مؤشر السلامة)">
+                            <i class="bi bi-exclamation-triangle fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="mb-2 fw-bold text-warning" id="incidentRate" aria-label="معدل الحوادث">
+                        <div class="skeleton-text w-50"></div>
+                    </h3>
+                    <small class="text-muted" id="incidentTrend">
+                        <div class="skeleton-text w-75"></div>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Governorate Breakdown -->
+        <div class="col-lg-8">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center border-bottom">
+                    <h5 class="card-title mb-0 fw-bold">
+                        <i class="bi bi-geo-alt me-2 text-primary"></i>تحليل المحافظات
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary" onclick="refreshGovernorateData()">
+                            <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+                        </button>
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
+                            <i class="bi bi-download me-1"></i>تصدير CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="governorateTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-semibold text-muted border-0 ps-4">
+                                        <i class="bi bi-geo-alt me-1"></i>المحافظة
+                                    </th>
+                                    <th class="text-center fw-semibold text-muted border-0">الروضات</th>
+                                    <th class="text-center fw-semibold text-muted border-0">الطلاب</th>
+                                    <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
+                                        <i class="bi bi-check-circle me-1"></i>الحضور
+                                    </th>
+                                    <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>الحوادث
+                                    </th>
+                                    <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
+                                        <i class="bi bi-shield-check me-1"></i>مؤشر الحوكمة
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="governorateTableBody">
+                                <tr class="skeleton-row">
+                                    <td class="ps-4">
+                                        <div class="skeleton-text w-75"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-75 mx-auto"></div>
+                                    </td>
+                                </tr>
+                                <tr class="skeleton-row">
+                                    <td class="ps-4">
+                                        <div class="skeleton-text w-75"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-75 mx-auto"></div>
+                                    </td>
+                                </tr>
+                                <tr class="skeleton-row">
+                                    <td class="ps-4">
+                                        <div class="skeleton-text w-75"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-50 mx-auto"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="skeleton-text w-75 mx-auto"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Governance Distribution -->
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-transparent border-bottom">
+                    <h5 class="card-title mb-0 fw-bold">
+                        <i class="bi bi-pie-chart me-2 text-info"></i>توزيع تقييم الحوكمة
+                    </h5>
+                </div>
+                <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                    <div style="width: 200px; height: 200px;">
+                        <canvas id="governancePieChart"></canvas>
+                    </div>
+                    <div class="mt-4 w-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span><i class="bi bi-circle-fill text-success me-2"></i>متميز (Green)</span>
+                            <span class="fw-bold" id="countGreen">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span><i class="bi bi-circle-fill text-warning me-2"></i>متوسط (Amber)</span>
+                            <span class="fw-bold" id="countAmber">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-circle-fill text-danger me-2"></i>يحتاج تحسين (Red)</span>
+                            <span class="fw-bold" id="countRed">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trends & Advanced Analytics -->
+    <div class="row g-4 mb-4">
+        <!-- Trend Chart -->
+        <div class="col-lg-8">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-gradient-primary text-white border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0 fw-bold">
+                            <i class="bi bi-graph-up me-2"></i>تحليل الاتجاهات الزمنية
+                        </h5>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Trend selection">
+                            <input type="radio" class="btn-check" name="trendType" id="attendanceTrend"
+                                autocomplete="off" checked>
+                            <label class="btn btn-outline-light active" for="attendanceTrend">
+                                <i class="bi bi-check-circle me-1"></i>الحضور
+                            </label>
+                            <input type="radio" class="btn-check" name="trendType" id="incidentsTrend"
+                                autocomplete="off">
+                            <label class="btn btn-outline-light" for="incidentsTrend">
+                                <i class="bi bi-exclamation-triangle me-1"></i>الحوادث
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div style="height: 320px; position: relative;">
+                        <canvas id="trendChart" style="max-width: 100%; max-height: 100%;"></canvas>
+                        <div id="trendChartOverlay" class="d-none position-absolute top-50 start-50 translate-middle">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">جاري التحميل...</span>
+                                </div>
+                                <div class="mt-2 text-muted small">جاري تحميل البيانات...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Predictive Risk Radar -->
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-warning border-2">
+                <div class="card-header bg-warning bg-opacity-10 text-dark border-bottom border-warning">
+                    <h5 class="card-title mb-0 fw-bold">
+                        <i class="bi bi-shield-exclamation me-2 text-warning"></i>مؤشر الخطر الذكي
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning border-0 small mb-3">
+                        <i class="bi bi-robot me-1"></i>
+                        يقوم النظام بتحليل البيانات لتحديد الروضات التي تحتاج انتباه عاجل.
+                    </div>
+                    <div id="riskListContainer">
+                        <ul class="list-group list-group-flush" id="riskList">
+                            <li class="list-group-item d-flex justify-content-between align-items-center border-0">
+                                <div>
+                                    <span class="fw-bold d-block">روضة الأمل</span>
+                                    <small class="text-danger">معدل غياب مرتفع</small>
+                                </div>
+                                <span class="badge bg-danger rounded-pill">92% خطر</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="noRiskData" class="text-center text-muted d-none">
+                        <i class="bi bi-check-circle fs-1 text-success mb-2"></i>
+                        <div class="small">لا توجد حالات خطر مسجلة</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparative Analysis -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm border-start border-success border-4">
+                <div
+                    class="card-header bg-success bg-opacity-10 text-success fw-bold border-bottom border-success border-opacity-25">
+                    <i class="bi bi-trophy-fill me-2"></i>أفضل 5 روضات أداءً
+                    <small class="float-end text-success-emphasis fw-normal">مؤشر الحوكمة</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="topPerformersList">
+                        <div class="list-group-item text-muted text-center py-4 border-0">
+                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
+                            <div class="skeleton-text w-50 mx-auto"></div>
+                        </div>
+                        <div class="list-group-item text-muted text-center py-4 border-0">
+                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
+                            <div class="skeleton-text w-50 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm border-start border-danger border-4">
+                <div
+                    class="card-header bg-danger bg-opacity-10 text-danger fw-bold border-bottom border-danger border-opacity-25">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>الروضات تحتاج دعم عاجل
+                    <small class="float-end text-danger-emphasis fw-normal">مؤشر الحوكمة</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="lowPerformersList">
+                        <div class="list-group-item text-muted text-center py-4 border-0">
+                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
+                            <div class="skeleton-text w-50 mx-auto"></div>
+                        </div>
+                        <div class="list-group-item text-muted text-center py-4 border-0">
+                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
+                            <div class="skeleton-text w-50 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exportModalLabel">تصدير التقارير</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="exportForm">
+                    <div class="mb-3">
+                        <label for="exportReportType" class="form-label">نوع التقرير</label>
+                        <select class="form-select" id="exportReportType" name="reportType" required>
+                            <option value="">اختر نوع التقرير</option>
+                            <option value="overview">نظرة عامة للشبكة</option>
+                            <option value="attendance">تقرير الحضور</option>
+                            <option value="incidents">تقرير الحوادث</option>
+                            <option value="compliance">تقرير الامتثال</option>
+                            <option value="governorate">تفصيل المحافظات</option>
+                            <option value="full_audit">سجل التدقيق الكامل</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="exportFormat" class="form-label">صيغة التصدير</label>
+                        <select class="form-select" id="exportFormat" name="exportFormat" required>
+                            <option value="CSV">CSV</option>
+                            <!-- <option value="PDF" disabled>PDF (قريباً)</option> -->
+                            <!-- <option value="EXCEL" disabled>Excel (قريباً)</option> -->
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="exportStartDate" class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="exportStartDate" name="startDate" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="exportEndDate" class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="exportEndDate" name="endDate" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" form="exportForm" class="btn btn-primary">
+                    <span id="exportSpinner" class="spinner-border spinner-border-sm d-none" role="status"
+                        aria-hidden="true"></span>
+                    تصدير
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.2/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tablesort@5.3.0/dist/tablesort.min.js"></script>
+<script src="/static/js/admin_analytics.js"></script>
+{% endblock %}

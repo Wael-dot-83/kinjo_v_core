@@ -27,6 +27,34 @@
         </button>
     </div>
 </div>
+</div>
+
+<!-- Page Help Content -->
+<div id="pageHelpContent" class="d-none" data-help-title="دليل سجلات التدقيق">
+    <div class="mb-4">
+        <h6 class="fw-bold text-primary"><i class="bi bi-journal-text me-2"></i>مراقبة النشاط</h6>
+        <p>تسمح لك هذه الصفحة بمتابعة جميع الأنشطة والعمليات التي تتم في النظام لضمان الأمان والشفافية.</p>
+    </div>
+
+    <div class="mb-4">
+        <h6 class="fw-bold text-primary"><i class="bi bi-funnel me-2"></i>خيارات التصفية</h6>
+        <ul class="list-unstyled">
+            <li class="mb-2"><strong>نوع الإجراء:</strong> تصفية حسب نوع العملية (إنشاء، تحديث، حذف، دخول).</li>
+            <li class="mb-2"><strong>الكيان:</strong> التركيز على التغييرات التي طرأت على كيان معين مثل "الأطفال" أو
+                "المستخدمين".</li>
+            <li class="mb-2"><strong>المستخدم:</strong> البحث عن نشاط مستخدم محدد باسم المستخدم.</li>
+        </ul>
+    </div>
+
+    <div class="mb-4">
+        <h6 class="fw-bold text-primary"><i class="bi bi-shield-lock me-2"></i>مستويات الأهمية</h6>
+        <ul class="list-unstyled">
+            <li class="mb-2"><span class="badge bg-danger">عالي</span>: عمليات حساسة مثل الحذف أو تغيير الصلاحيات.</li>
+            <li class="mb-2"><span class="badge bg-warning">متوسط</span>: تعديل البيانات المهمة.</li>
+            <li class="mb-2"><span class="badge bg-info text-dark">منخفض</span>: عمليات المتابعة والنشاط اليومي.</li>
+        </ul>
+    </div>
+</div>
 {% endblock %}
 
 {% block content %}
@@ -153,6 +181,6 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script src="/static/js/audit-logs.js"></script>
 {% endblock %}

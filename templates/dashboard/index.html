@@ -848,10 +848,21 @@
 
     // Monitor page load performance
     window.addEventListener('load', () => {
-        if (performance.timing) {
-            const pageLoadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
-            monitorPerformance('page_load', pageLoadTime, { type: 'full_page' });
-        }
+        // Use setTimeout to ensure loadEventEnd is populated
+        setTimeout(() => {
+            let pageLoadTime;
+            // Try modern PerformanceNavigationTiming API first
+            const navEntries = performance.getEntriesByType('navigation');
+            if (navEntries && navEntries.length > 0) {
+                pageLoadTime = navEntries[0].loadEventEnd;
+            } else if (performance.timing && performance.timing.loadEventEnd > 0) {
+                // Fallback to deprecated timing API
+                pageLoadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+            }
+            if (pageLoadTime && pageLoadTime > 0) {
+                monitorPerformance('page_load', pageLoadTime, { type: 'full_page' });
+            }
+        }, 0);
     });
 
     // Initialize charts (empty or skeleton)

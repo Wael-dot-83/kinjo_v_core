@@ -20,6 +20,10 @@ const AUTH_CONFIG = {
   rememberMeMaxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
   tokenRefreshBuffer: 5 * 60 * 1000, // Refresh 5 minutes before expiry
 };
+const CSRF_CONFIG = {
+  cookieName: "kinjo_csrf_token",
+  tokenLengthBytes: 32,
+};
 
 // ============================================================================
 // Auth Storage Manager
@@ -50,6 +54,34 @@ class AuthStorage {
     const isSecure = window.location.protocol === "https:";
     const secureFlag = isSecure ? "; Secure" : "";
     document.cookie = `kinjo_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax${secureFlag}`;
+    const csrfToken = AuthStorage.generateCsrfToken();
+    AuthStorage.setCookie(
+      CSRF_CONFIG.cookieName,
+      csrfToken,
+      maxAge,
+      secureFlag,
+    );
+  }
+
+  static generateCsrfToken() {
+    const array = new Uint8Array(CSRF_CONFIG.tokenLengthBytes);
+    window.crypto.getRandomValues(array);
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+      "",
+    );
+  }
+
+  static setCookie(name, value, maxAge, secureFlag) {
+    document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Strict${secureFlag}`;
+  }
+
+  static getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop().split(";").shift();
+    }
+    return null;
   }
 
   setUser(user) {
@@ -92,6 +124,7 @@ class AuthStorage {
     // Clear cookie
     document.cookie =
       "kinjo_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = `${CSRF_CONFIG.cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
   }
 
   static isAuthenticated() {
@@ -119,7 +152,7 @@ class HttpInterceptor {
         "/register/parent",
       ];
       const isAuthEndpoint = noAuthEndpoints.some((endpoint) =>
-        url.includes(endpoint)
+        url.includes(endpoint),
       );
 
       if (token && !isAuthEndpoint) {
@@ -127,6 +160,17 @@ class HttpInterceptor {
           ...options.headers,
           Authorization: `${tokenType} ${token}`,
         };
+      }
+
+      const method = (options.method || "GET").toUpperCase();
+      if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+        const csrfToken = AuthStorage.getCookie(CSRF_CONFIG.cookieName);
+        if (csrfToken) {
+          options.headers = {
+            ...options.headers,
+            "X-CSRF-Token": csrfToken,
+          };
+        }
       }
 
       try {
@@ -321,7 +365,7 @@ class AuthService {
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(
-        error.detail || "فشل تسجيل الدخول. يرجى التحقق من البيانات."
+        error.detail || "فشل تسجيل الدخول. يرجى التحقق من البيانات.",
       );
     }
 
@@ -564,9 +608,12 @@ function initAuth() {
 
   // Setup token refresh interval (every 25 minutes)
   if (AuthStorage.isAuthenticated()) {
-    setInterval(() => {
-      AuthService.refreshToken();
-    }, 25 * 60 * 1000);
+    setInterval(
+      () => {
+        AuthService.refreshToken();
+      },
+      25 * 60 * 1000,
+    );
   }
 
   console.log("Auth module initialized");
@@ -613,6 +660,48 @@ window.AuthService = AuthService;
 window.AuthGuard = AuthGuard;
 window.handleLogin = handleLogin;
 window.handleLogout = handleLogout;
+
+// ============================================================================
+// Authenticated Fetch Helper
+// ============================================================================
+
+/**
+ * Fetch with automatic authentication headers and 401 handling
+ * @param {string} url - The URL to fetch
+ * @param {object} options - Fetch options
+ * @returns {Promise<Response|null>} - The response or null if redirected
+ */
+async function fetchWithAuth(url, options = {}) {
+  const token = AuthStorage.getToken();
+  if (!token) {
+    window.location.href = "/login";
+    return null;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (response.status === 401) {
+    // Token expired, redirect to login
+    window.location.href = "/login";
+    return null;
+  }
+
+  if (!response.ok) {
+    console.error("API Error:", response.statusText);
+    throw new Error(response.statusText);
+  }
+
+  return response;
+}
+
+// Make fetchWithAuth globally available
+window.fetchWithAuth = fetchWithAuth;
 
 // Initialize on DOM ready
 document.addEventListener("DOMContentLoaded", initAuth);

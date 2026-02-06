@@ -171,7 +171,7 @@ def test_enrollment_class_assignment(client, test_db, manager_token, manager_use
     # Setup: Create a child (approx 40 months old to fit class)
     dob = date.today() - timedelta(days=40*30) 
     child = models.Child(
-        parent_id=parent_user.id, # Using parent_user fixture's ID
+        parent_id=parent_user.parent_profile.id, # Using parent_user's parent_profile ID
         first_name="Leo",
         last_name="Test",
         date_of_birth=dob,

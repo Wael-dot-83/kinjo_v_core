@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}تقرير الحضور اليومي{% endblock %}
+{% block title %}الحضور والغياب{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
             <i class="bi bi-bar-chart-line me-2 text-primary"></i>
-            تقرير الحضور اليومي
+            الحضور والغياب
         </h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
@@ -25,22 +25,26 @@
     <div class="card-header">
         <ul class="nav nav-tabs card-header-tabs" id="filterTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1" type="button" role="tab">
+                <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1"
+                    type="button" role="tab">
                     <i class="bi bi-building me-1"></i>1. اختيار الروضة
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link disabled" id="step2-tab" data-bs-toggle="tab" data-bs-target="#step2" type="button" role="tab">
+                <button class="nav-link disabled" id="step2-tab" data-bs-toggle="tab" data-bs-target="#step2"
+                    type="button" role="tab">
                     <i class="bi bi-diagram-3 me-1"></i>2. اختيار الشعب
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link disabled" id="step3-tab" data-bs-toggle="tab" data-bs-target="#step3" type="button" role="tab">
+                <button class="nav-link disabled" id="step3-tab" data-bs-toggle="tab" data-bs-target="#step3"
+                    type="button" role="tab">
                     <i class="bi bi-people me-1"></i>3. اختيار الأطفال
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link disabled" id="step4-tab" data-bs-toggle="tab" data-bs-target="#step4" type="button" role="tab">
+                <button class="nav-link disabled" id="step4-tab" data-bs-toggle="tab" data-bs-target="#step4"
+                    type="button" role="tab">
                     <i class="bi bi-calendar me-1"></i>4. تحديد الفترة
                 </button>
             </li>
@@ -52,11 +56,11 @@
             <div class="tab-pane fade show active" id="step1" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">البحث بالروضة</label>
+                        <label class="form-label" for="kgSearch">البحث بالروضة</label>
                         <input type="text" class="form-control" id="kgSearch" placeholder="اسم الروضة...">
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">المحافظة</label>
+                        <label class="form-label" for="kgGovernorate">المحافظة</label>
                         <select class="form-select" id="kgGovernorate">
                             <option value="">جميع المحافظات</option>
                             <option value="عمان">عمان</option>
@@ -74,7 +78,7 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">رقم الهاتف</label>
+                        <label class="form-label" for="kgPhone">رقم الهاتف</label>
                         <input type="text" class="form-control" id="kgPhone" placeholder="رقم الهاتف...">
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
@@ -100,13 +104,15 @@
                 <div class="row g-3">
                     <div class="col-12">
                         <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="classSelection" id="allClasses" value="all" checked>
+                            <input class="form-check-input" type="radio" name="classSelection" id="allClasses"
+                                value="all" checked>
                             <label class="form-check-label fw-bold" for="allClasses">
                                 جميع الشعب في الروضة المحددة
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="classSelection" id="specificClasses" value="specific">
+                            <input class="form-check-input" type="radio" name="classSelection" id="specificClasses"
+                                value="specific">
                             <label class="form-check-label fw-bold" for="specificClasses">
                                 اختيار شعب محددة
                             </label>
@@ -115,7 +121,7 @@
                 </div>
                 <div id="classSelectionArea" class="mt-3" style="display: none;">
                     <div class="border rounded p-3 bg-light">
-                        <label class="form-label">اختر الشعب:</label>
+                        <p class="form-label fw-bold mb-2">اختر الشعب:</p>
                         <div id="classCheckboxes" class="row g-2">
                             <!-- Populated by JS -->
                         </div>
@@ -136,13 +142,15 @@
                 <div class="row g-3">
                     <div class="col-12">
                         <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="childSelection" id="allChildren" value="all" checked>
+                            <input class="form-check-input" type="radio" name="childSelection" id="allChildren"
+                                value="all" checked>
                             <label class="form-check-label fw-bold" for="allChildren">
                                 جميع الأطفال في الشعب المحددة
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="childSelection" id="specificChildren" value="specific">
+                            <input class="form-check-input" type="radio" name="childSelection" id="specificChildren"
+                                value="specific">
                             <label class="form-check-label fw-bold" for="specificChildren">
                                 اختيار أطفال محددين
                             </label>
@@ -151,7 +159,7 @@
                 </div>
                 <div id="childSelectionArea" class="mt-3" style="display: none;">
                     <div class="border rounded p-3 bg-light">
-                        <label class="form-label">اختر الأطفال:</label>
+                        <p class="form-label fw-bold mb-2">اختر الأطفال:</p>
                         <div id="childCheckboxes" class="row g-2">
                             <!-- Populated by JS -->
                         </div>
@@ -171,7 +179,7 @@
             <div class="tab-pane fade" id="step4" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-md-3">
-                        <label class="form-label">نوع الفترة</label>
+                        <label class="form-label" for="periodType">نوع الفترة</label>
                         <select class="form-select" id="periodType" onchange="toggleDateInputs()">
                             <option value="day">يوم واحد</option>
                             <option value="week">أسبوع</option>
@@ -180,15 +188,15 @@
                         </select>
                     </div>
                     <div class="col-md-3" id="singleDateGroup">
-                        <label class="form-label">التاريخ</label>
+                        <label class="form-label" for="singleDate">التاريخ</label>
                         <input type="date" class="form-control" id="singleDate" value="{{ today }}">
                     </div>
                     <div class="col-md-3" id="startDateGroup" style="display: none;">
-                        <label class="form-label">من تاريخ</label>
+                        <label class="form-label" for="startDate">من تاريخ</label>
                         <input type="date" class="form-control" id="startDate">
                     </div>
                     <div class="col-md-3" id="endDateGroup" style="display: none;">
-                        <label class="form-label">إلى تاريخ</label>
+                        <label class="form-label" for="endDate">إلى تاريخ</label>
                         <input type="date" class="form-control" id="endDate">
                     </div>
                 </div>
@@ -281,111 +289,111 @@
 
 {% block extra_js %}
 <script>
-let currentStep = 1;
-let selectedKindergarten = null;
-let selectedClasses = [];
-let selectedChildren = [];
-let reportData = null;
+    let currentStep = 1;
+    let selectedKindergarten = null;
+    let selectedClasses = [];
+    let selectedChildren = [];
+    let reportData = null;
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize date inputs
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('singleDate').value = today;
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize date inputs
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('singleDate').value = today;
 
-    // Event listeners
-    document.querySelectorAll('input[name="classSelection"]').forEach(radio => {
-        radio.addEventListener('change', toggleClassSelection);
+        // Event listeners
+        document.querySelectorAll('input[name="classSelection"]').forEach(radio => {
+            radio.addEventListener('change', toggleClassSelection);
+        });
+        document.querySelectorAll('input[name="childSelection"]').forEach(radio => {
+            radio.addEventListener('change', toggleChildSelection);
+        });
     });
-    document.querySelectorAll('input[name="childSelection"]').forEach(radio => {
-        radio.addEventListener('change', toggleChildSelection);
-    });
-});
 
-function toggleDateInputs() {
-    const periodType = document.getElementById('periodType').value;
-    const singleDateGroup = document.getElementById('singleDateGroup');
-    const startDateGroup = document.getElementById('startDateGroup');
-    const endDateGroup = document.getElementById('endDateGroup');
+    function toggleDateInputs() {
+        const periodType = document.getElementById('periodType').value;
+        const singleDateGroup = document.getElementById('singleDateGroup');
+        const startDateGroup = document.getElementById('startDateGroup');
+        const endDateGroup = document.getElementById('endDateGroup');
 
-    if (periodType === 'range') {
-        singleDateGroup.style.display = 'none';
-        startDateGroup.style.display = 'block';
-        endDateGroup.style.display = 'block';
-    } else {
-        singleDateGroup.style.display = 'block';
-        startDateGroup.style.display = 'none';
-        endDateGroup.style.display = 'none';
-    }
-}
-
-async function searchKindergartens() {
-    const search = document.getElementById('kgSearch').value;
-    const governorate = document.getElementById('kgGovernorate').value;
-    const phone = document.getElementById('kgPhone').value;
-
-    console.log('Search parameters:', { search, governorate, phone });
-
-    try {
-        const response = await api.searchKindergartens({ search, governorate, phone });
-        console.log('API response:', response);
-
-        const select = document.getElementById('kindergartenSelect');
-        select.innerHTML = '<option value="">اختر روضة...</option>';
-
-        if (response.kindergartens && response.kindergartens.length > 0) {
-            response.kindergartens.forEach(kg => {
-                const option = document.createElement('option');
-                option.value = kg.id;
-                option.textContent = `${kg.name_ar} - ${kg.governorate}`;
-                select.appendChild(option);
-            });
-            showToast(`تم العثور على ${response.kindergartens.length} روضة`, 'success');
+        if (periodType === 'range') {
+            singleDateGroup.style.display = 'none';
+            startDateGroup.style.display = 'block';
+            endDateGroup.style.display = 'block';
         } else {
-            showToast('لم يتم العثور على روضات مطابقة', 'info');
+            singleDateGroup.style.display = 'block';
+            startDateGroup.style.display = 'none';
+            endDateGroup.style.display = 'none';
         }
-    } catch (error) {
-        console.error('Search error:', error);
-        showToast(`خطأ في البحث عن الروضات: ${error.message}`, 'error');
-    }
-}
-
-function nextStep(currentStep) {
-    if (currentStep === 1) {
-        const kgId = document.getElementById('kindergartenSelect').value;
-        if (!kgId) {
-            showToast('يرجى اختيار روضة', 'warning');
-            return;
-        }
-        selectedKindergarten = kgId;
-        loadClasses();
-    } else if (currentStep === 2) {
-        // Classes already selected via radio/checkboxes
-        loadChildren();
-    } else if (currentStep === 3) {
-        // Children already selected
     }
 
-    // Enable next tab and switch
-    const nextTab = document.getElementById(`step${currentStep + 1}-tab`);
-    nextTab.classList.remove('disabled');
-    nextTab.click();
-}
+    async function searchKindergartens() {
+        const search = document.getElementById('kgSearch').value;
+        const governorate = document.getElementById('kgGovernorate').value;
+        const phone = document.getElementById('kgPhone').value;
 
-function prevStep(currentStep) {
-    const prevTab = document.getElementById(`step${currentStep - 1}-tab`);
-    prevTab.click();
-}
+        console.log('Search parameters:', { search, governorate, phone });
 
-async function loadClasses() {
-    try {
-        const response = await api.getKindergartenClasses(selectedKindergarten);
-        const container = document.getElementById('classCheckboxes');
-        container.innerHTML = '';
+        try {
+            const response = await api.searchKindergartens({ search, governorate, phone });
+            console.log('API response:', response);
 
-        response.classes.forEach(cls => {
-            const div = document.createElement('div');
-            div.className = 'col-md-4';
-            div.innerHTML = `
+            const select = document.getElementById('kindergartenSelect');
+            select.innerHTML = '<option value="">اختر روضة...</option>';
+
+            if (response.kindergartens && response.kindergartens.length > 0) {
+                response.kindergartens.forEach(kg => {
+                    const option = document.createElement('option');
+                    option.value = kg.id;
+                    option.textContent = `${kg.name_ar} - ${kg.governorate}`;
+                    select.appendChild(option);
+                });
+                showToast(`تم العثور على ${response.kindergartens.length} روضة`, 'success');
+            } else {
+                showToast('لم يتم العثور على روضات مطابقة', 'info');
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            showToast(`خطأ في البحث عن الروضات: ${error.message}`, 'error');
+        }
+    }
+
+    function nextStep(currentStep) {
+        if (currentStep === 1) {
+            const kgId = document.getElementById('kindergartenSelect').value;
+            if (!kgId) {
+                showToast('يرجى اختيار روضة', 'warning');
+                return;
+            }
+            selectedKindergarten = kgId;
+            loadClasses();
+        } else if (currentStep === 2) {
+            // Classes already selected via radio/checkboxes
+            loadChildren();
+        } else if (currentStep === 3) {
+            // Children already selected
+        }
+
+        // Enable next tab and switch
+        const nextTab = document.getElementById(`step${currentStep + 1}-tab`);
+        nextTab.classList.remove('disabled');
+        nextTab.click();
+    }
+
+    function prevStep(currentStep) {
+        const prevTab = document.getElementById(`step${currentStep - 1}-tab`);
+        prevTab.click();
+    }
+
+    async function loadClasses() {
+        try {
+            const response = await api.getKindergartenClasses(selectedKindergarten);
+            const container = document.getElementById('classCheckboxes');
+            container.innerHTML = '';
+
+            response.classes.forEach(cls => {
+                const div = document.createElement('div');
+                div.className = 'col-md-4';
+                div.innerHTML = `
                 <div class="form-check">
                     <input class="form-check-input class-checkbox" type="checkbox" id="class-${cls.id}" value="${cls.id}">
                     <label class="form-check-label" for="class-${cls.id}">
@@ -393,33 +401,33 @@ async function loadClasses() {
                     </label>
                 </div>
             `;
-            container.appendChild(div);
-        });
-    } catch (error) {
-        showToast('خطأ في تحميل الشعب', 'error');
-    }
-}
-
-async function loadChildren() {
-    const classSelection = document.querySelector('input[name="classSelection"]:checked').value;
-    let classIds = null;
-    if (classSelection === 'specific') {
-        classIds = Array.from(document.querySelectorAll('.class-checkbox:checked')).map(cb => cb.value);
-        if (classIds.length === 0) {
-            showToast('يرجى اختيار شعبة واحدة على الأقل', 'warning');
-            return;
+                container.appendChild(div);
+            });
+        } catch (error) {
+            showToast('خطأ في تحميل الشعب', 'error');
         }
     }
 
-    try {
-        const response = await api.getKindergartenChildren(selectedKindergarten, classIds);
-        const container = document.getElementById('childCheckboxes');
-        container.innerHTML = '';
+    async function loadChildren() {
+        const classSelection = document.querySelector('input[name="classSelection"]:checked').value;
+        let classIds = null;
+        if (classSelection === 'specific') {
+            classIds = Array.from(document.querySelectorAll('.class-checkbox:checked')).map(cb => cb.value);
+            if (classIds.length === 0) {
+                showToast('يرجى اختيار شعبة واحدة على الأقل', 'warning');
+                return;
+            }
+        }
 
-        response.children.forEach(child => {
-            const div = document.createElement('div');
-            div.className = 'col-md-4';
-            div.innerHTML = `
+        try {
+            const response = await api.getKindergartenChildren(selectedKindergarten, classIds);
+            const container = document.getElementById('childCheckboxes');
+            container.innerHTML = '';
+
+            response.children.forEach(child => {
+                const div = document.createElement('div');
+                div.className = 'col-md-4';
+                div.innerHTML = `
                 <div class="form-check">
                     <input class="form-check-input child-checkbox" type="checkbox" id="child-${child.id}" value="${child.id}">
                     <label class="form-check-label" for="child-${child.id}">
@@ -427,74 +435,74 @@ async function loadChildren() {
                     </label>
                 </div>
             `;
-            container.appendChild(div);
-        });
-    } catch (error) {
-        showToast('خطأ في تحميل الأطفال', 'error');
-    }
-}
-
-function toggleClassSelection() {
-    const selection = document.querySelector('input[name="classSelection"]:checked').value;
-    const area = document.getElementById('classSelectionArea');
-    area.style.display = selection === 'specific' ? 'block' : 'none';
-}
-
-function toggleChildSelection() {
-    const selection = document.querySelector('input[name="childSelection"]:checked').value;
-    const area = document.getElementById('childSelectionArea');
-    area.style.display = selection === 'specific' ? 'block' : 'none';
-}
-
-async function generateReport() {
-    // Collect parameters
-    const periodType = document.getElementById('periodType').value;
-    let params = {
-        kindergarten_id: selectedKindergarten,
-        period_type: periodType
-    };
-
-    // Add class selection
-    const classSelection = document.querySelector('input[name="classSelection"]:checked').value;
-    if (classSelection === 'specific') {
-        params.class_ids = Array.from(document.querySelectorAll('.class-checkbox:checked')).map(cb => cb.value);
+                container.appendChild(div);
+            });
+        } catch (error) {
+            showToast('خطأ في تحميل الأطفال', 'error');
+        }
     }
 
-    // Add child selection
-    const childSelection = document.querySelector('input[name="childSelection"]:checked').value;
-    if (childSelection === 'specific') {
-        params.child_ids = Array.from(document.querySelectorAll('.child-checkbox:checked')).map(cb => cb.value);
+    function toggleClassSelection() {
+        const selection = document.querySelector('input[name="classSelection"]:checked').value;
+        const area = document.getElementById('classSelectionArea');
+        area.style.display = selection === 'specific' ? 'block' : 'none';
     }
 
-    // Add date parameters
-    if (periodType === 'range') {
-        params.start_date = document.getElementById('startDate').value;
-        params.end_date = document.getElementById('endDate').value;
-    } else {
-        params.date = document.getElementById('singleDate').value;
+    function toggleChildSelection() {
+        const selection = document.querySelector('input[name="childSelection"]:checked').value;
+        const area = document.getElementById('childSelectionArea');
+        area.style.display = selection === 'specific' ? 'block' : 'none';
     }
 
-    // Show loading
-    document.getElementById('loadingOverlay').classList.remove('d-none');
-    document.getElementById('reportArea').style.display = 'none';
+    async function generateReport() {
+        // Collect parameters
+        const periodType = document.getElementById('periodType').value;
+        let params = {
+            kindergarten_id: selectedKindergarten,
+            period_type: periodType
+        };
 
-    try {
-        const response = await api.getAttendanceReport(params);
-        reportData = response;
-        renderReport();
-        document.getElementById('reportArea').style.display = 'block';
-    } catch (error) {
-        showToast('خطأ في إنشاء التقرير', 'error');
-    } finally {
-        document.getElementById('loadingOverlay').classList.add('d-none');
+        // Add class selection
+        const classSelection = document.querySelector('input[name="classSelection"]:checked').value;
+        if (classSelection === 'specific') {
+            params.class_ids = Array.from(document.querySelectorAll('.class-checkbox:checked')).map(cb => cb.value);
+        }
+
+        // Add child selection
+        const childSelection = document.querySelector('input[name="childSelection"]:checked').value;
+        if (childSelection === 'specific') {
+            params.child_ids = Array.from(document.querySelectorAll('.child-checkbox:checked')).map(cb => cb.value);
+        }
+
+        // Add date parameters
+        if (periodType === 'range') {
+            params.start_date = document.getElementById('startDate').value;
+            params.end_date = document.getElementById('endDate').value;
+        } else {
+            params.date = document.getElementById('singleDate').value;
+        }
+
+        // Show loading
+        document.getElementById('loadingOverlay').classList.remove('d-none');
+        document.getElementById('reportArea').style.display = 'none';
+
+        try {
+            const response = await api.getAttendanceReport(params);
+            reportData = response;
+            renderReport();
+            document.getElementById('reportArea').style.display = 'block';
+        } catch (error) {
+            showToast('خطأ في إنشاء التقرير', 'error');
+        } finally {
+            document.getElementById('loadingOverlay').classList.add('d-none');
+        }
     }
-}
 
-function renderReport() {
-    // Header
-    const header = document.getElementById('reportHeader');
-    const kg = reportData.meta.kindergarten;
-    header.innerHTML = `
+    function renderReport() {
+        // Header
+        const header = document.getElementById('reportHeader');
+        const kg = reportData.meta.kindergarten;
+        header.innerHTML = `
         <div class="col-md-6">
             <h6>${kg.name_ar}</h6>
             <p class="mb-1"><strong>المحافظة:</strong> ${kg.governorate}</p>
@@ -509,12 +517,12 @@ function renderReport() {
         </div>
     `;
 
-    document.getElementById('reportPeriod').textContent = `${formatDate(reportData.meta.start_date)} - ${formatDate(reportData.meta.end_date)}`;
+        document.getElementById('reportPeriod').textContent = `${formatDate(reportData.meta.start_date)} - ${formatDate(reportData.meta.end_date)}`;
 
-    // Summary cards
-    const summary = reportData.totals.summary;
-    const cards = document.getElementById('summaryCards');
-    cards.innerHTML = `
+        // Summary cards
+        const summary = reportData.totals.summary;
+        const cards = document.getElementById('summaryCards');
+        cards.innerHTML = `
         <div class="col-md-3">
             <div class="card text-center">
                 <div class="card-body">
@@ -549,131 +557,131 @@ function renderReport() {
         </div>
     `;
 
-    // Charts
-    renderCharts();
+        // Charts
+        renderCharts();
 
-    // Matrix table
-    renderMatrix();
-}
+        // Matrix table
+        renderMatrix();
+    }
 
-function renderCharts() {
-    // Status breakdown chart
-    const statusCtx = document.getElementById('statusChart').getContext('2d');
-    new Chart(statusCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['حاضر', 'غائب'],
-            datasets: [{
-                data: [reportData.totals.overall.present, reportData.totals.overall.absent],
-                backgroundColor: ['#28a745', '#dc3545']
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
+    function renderCharts() {
+        // Status breakdown chart
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['حاضر', 'غائب'],
+                datasets: [{
+                    data: [reportData.totals.overall.present, reportData.totals.overall.absent],
+                    backgroundColor: ['#28a745', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
                 }
             }
-        }
-    });
+        });
 
-    // Trend chart
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: reportData.dates.map(d => formatDate(d)),
-            datasets: [{
-                label: 'عدد الحاضرين',
-                data: reportData.dates.map(d => reportData.totals.per_day[d]),
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
+        // Trend chart
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: reportData.dates.map(d => formatDate(d)),
+                datasets: [{
+                    label: 'عدد الحاضرين',
+                    data: reportData.dates.map(d => reportData.totals.per_day[d]),
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
                 }
             }
-        }
-    });
-}
+        });
+    }
 
-function renderMatrix() {
-    const table = document.getElementById('attendanceMatrix');
-    let html = '<thead class="table-light"><tr><th rowspan="2" class="sticky-col">الطفل</th><th rowspan="2">الشعبة</th>';
+    function renderMatrix() {
+        const table = document.getElementById('attendanceMatrix');
+        let html = '<thead class="table-light"><tr><th rowspan="2" class="sticky-col">الطفل</th><th rowspan="2">الشعبة</th>';
 
-    // Date headers
-    reportData.dates.forEach(date => {
-        html += `<th class="text-center">${formatDateShort(date)}</th>`;
-    });
-    html += '<th rowspan="2" class="text-center">الحضور</th><th rowspan="2" class="text-center">الغياب</th></tr>';
+        // Date headers
+        reportData.dates.forEach(date => {
+            html += `<th class="text-center">${formatDateShort(date)}</th>`;
+        });
+        html += '<th rowspan="2" class="text-center">الحضور</th><th rowspan="2" class="text-center">الغياب</th></tr>';
 
-    // Day totals row
-    html += '<tr>';
-    reportData.dates.forEach(date => {
-        const count = reportData.totals.per_day[date];
-        html += `<th class="text-center bg-light">${count}</th>`;
-    });
-    html += '</tr></thead><tbody>';
+        // Day totals row
+        html += '<tr>';
+        reportData.dates.forEach(date => {
+            const count = reportData.totals.per_day[date];
+            html += `<th class="text-center bg-light">${count}</th>`;
+        });
+        html += '</tr></thead><tbody>';
 
-    // Child rows
-    reportData.children.forEach(child => {
-        html += `<tr>
+        // Child rows
+        reportData.children.forEach(child => {
+            html += `<tr>
             <td class="sticky-col fw-bold">${child.name_ar}</td>
             <td>${child.class_name || 'غير محدد'}</td>`;
 
-        let presentCount = 0;
-        let absentCount = 0;
+            let presentCount = 0;
+            let absentCount = 0;
 
-        reportData.dates.forEach(date => {
-            const status = reportData.matrix[child.id][date];
-            const badgeClass = status.status === 'present' ? 'bg-success' : 'bg-danger';
-            const icon = status.status === 'present' ? '✓' : '✗';
-            html += `<td class="text-center"><span class="badge ${badgeClass}">${icon}</span></td>`;
+            reportData.dates.forEach(date => {
+                const status = reportData.matrix[child.id][date];
+                const badgeClass = status.status === 'present' ? 'bg-success' : 'bg-danger';
+                const icon = status.status === 'present' ? '✓' : '✗';
+                html += `<td class="text-center"><span class="badge ${badgeClass}">${icon}</span></td>`;
 
-            if (status.status === 'present') presentCount++;
-            else absentCount++;
-        });
+                if (status.status === 'present') presentCount++;
+                else absentCount++;
+            });
 
-        html += `<td class="text-center fw-bold text-success">${presentCount}</td>
+            html += `<td class="text-center fw-bold text-success">${presentCount}</td>
                  <td class="text-center fw-bold text-danger">${absentCount}</td>
                  </tr>`;
-    });
+        });
 
-    html += '</tbody>';
-    table.innerHTML = html;
-}
+        html += '</tbody>';
+        table.innerHTML = html;
+    }
 
-function formatDate(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ar-JO', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('ar-JO', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
 
-function formatDateShort(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ar-JO', {
-        month: 'short',
-        day: 'numeric'
-    });
-}
+    function formatDateShort(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('ar-JO', {
+            month: 'short',
+            day: 'numeric'
+        });
+    }
 
-function getPeriodTypeLabel(type) {
-    const labels = {
-        'day': 'يوم واحد',
-        'week': 'أسبوع',
-        'month': 'شهر',
-        'range': 'فترة مخصصة'
-    };
-    return labels[type] || type;
-}
+    function getPeriodTypeLabel(type) {
+        const labels = {
+            'day': 'يوم واحد',
+            'week': 'أسبوع',
+            'month': 'شهر',
+            'range': 'فترة مخصصة'
+        };
+        return labels[type] || type;
+    }
 </script>
 {% endblock %}

@@ -106,3 +106,24 @@ def test_404_template(test_client):
     response = test_client.get("/kindergartens/999999")  # Assuming 999999 doesn't exist
     assert response.status_code == 404
     assert "404" in response.text
+
+
+def test_help_page(test_client):
+    response = test_client.get("/help")
+    assert response.status_code == 200
+    assert "مركز المساعدة" in response.text
+    assert "مساعدة" in response.text
+
+
+def test_privacy_page(test_client):
+    response = test_client.get("/privacy")
+    assert response.status_code == 200
+    assert "سياسة الخصوصية" in response.text
+    assert "خصوصية" in response.text
+
+
+def test_terms_page(test_client):
+    response = test_client.get("/terms")
+    assert response.status_code == 200
+    assert "شروط الاستخدام" in response.text
+    assert "شروط" in response.text

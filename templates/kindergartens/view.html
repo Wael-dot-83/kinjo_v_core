@@ -620,9 +620,8 @@
             
             // Show appropriate button based on dependencies and user role
             const hasDependencies = activeClasses > 0 || activeStaff > 0;
-            const isAdmin = {{ 'true' if current_user.role.name == 'ADMIN' else 'false' }};
-            
-            if (hasDependencies || !isAdmin) {
+            const isAdmin = "{{ 'true' if current_user.role.name == 'ADMIN' else 'false' }}";
+            if (hasDependencies || isAdmin !== 'true') {
                 document.getElementById('archiveBtn').style.display = 'inline-block';
                 document.getElementById('deleteBtn').style.display = 'none';
             } else {
