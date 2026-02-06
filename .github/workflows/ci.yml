@@ -9,6 +9,10 @@ on:
 jobs:
   build-test-lint:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: test-secret
+      DATABASE_URL: sqlite:///:memory:
+      TESTING: "true"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,8 +41,11 @@ jobs:
         run: |
           find . -name "*.py" | xargs pylint --exit-zero
 
+      - name: Run P0 tests
+        run: pytest -m "p0" --maxfail=1
+
       - name: Run tests with coverage
-        run: pytest --cov=. --cov-report=xml
+        run: pytest -m "p0" --cov=. --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
