@@ -1,25 +1,26 @@
 <!-- Footer -->
-<footer class="footer mt-auto py-3 bg-light border-top">
+<footer class="footer mt-auto py-3 border-top" style="background-color: var(--kinjo-surface-muted, #f8fafc);">
     <div class="container-fluid">
         <div class="row align-items-center">
             <div class="col-md-6 text-center text-md-start">
                 <span class="text-muted small">
                     {% if ui_lang == 'en' %}
-                    &copy; 2026 KinJo - Kindergarten Management Platform | All rights reserved
+                    &copy; 2026 <strong>KinJo</strong> &mdash; Kindergarten Management Platform
                     {% else %}
-                    &copy; 2026 KinJo - منصة إدارة الروضات | جميع الحقوق محفوظة
+                    &copy; 2026 <strong>KinJo</strong> &mdash; منصة إدارة الروضات
                     {% endif %}
                 </span>
+                <span class="text-muted small ms-2 d-none d-md-inline" style="opacity: 0.6;">v2.0</span>
             </div>
-            <div class="col-md-6 text-center text-md-end">
-                <a href="/help" class="text-muted small text-decoration-none me-3">
+            <div class="col-md-6 text-center text-md-end mt-2 mt-md-0">
+                <a href="/help" class="text-muted small text-decoration-none me-3" style="transition: color 0.15s;">
                     <i class="bi bi-question-circle me-1"></i>{% if ui_lang == 'en' %}Help{% else %}المساعدة{% endif %}
                 </a>
-                <a href="/privacy" class="text-muted small text-decoration-none me-3">
+                <a href="/privacy" class="text-muted small text-decoration-none me-3" style="transition: color 0.15s;">
                     <i class="bi bi-shield-lock me-1"></i>{% if ui_lang == 'en' %}Privacy{% else %}الخصوصية{% endif %}
                 </a>
-                <a href="/terms" class="text-muted small text-decoration-none">
-                    <i class="bi bi-file-text me-1"></i>{% if ui_lang == 'en' %}Terms and Conditions{% else %}الشروط والأحكام{% endif %}
+                <a href="/terms" class="text-muted small text-decoration-none" style="transition: color 0.15s;">
+                    <i class="bi bi-file-text me-1"></i>{% if ui_lang == 'en' %}Terms{% else %}الشروط{% endif %}
                 </a>
             </div>
         </div>

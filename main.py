@@ -1,8 +1,3 @@
-from fastapi import APIRouter, Request, WebSocket
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from starlette.responses import FileResponse
-import os
 """
 KInJo - Kindergarten Management Platform
 Main FastAPI Application
@@ -13,9 +8,11 @@ import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Response, Form
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Response, Form, APIRouter, WebSocket
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
+from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -56,14 +53,12 @@ class UTF8StaticFiles(StaticFiles):
         return response
 
 
-import os
 import logging
 import models
 from database import get_db, init_db
 from auth import authenticate_user, create_access_token, get_password_hash
 from config import settings
 from dependencies import get_current_user, get_current_user_optional, RedirectToLogin
-from fastapi.responses import RedirectResponse, JSONResponse
 import validators
 from admin_security import CorrelationIdMiddleware, APIError, api_error_handler
 from rate_limiter import limiter, rate_limit_exceeded_handler
@@ -191,7 +186,7 @@ api_docs_enabled = settings.API_DOCS_ENABLED and settings.ENVIRONMENT.lower() !=
 app = FastAPI(
     title="KInJo - Kindergarten Management Platform",
     description="Enterprise-grade management system for kindergartens in Jordan",
-    version="1.0.0",
+    version="2.0.0",
     docs_url="/docs" if api_docs_enabled else None,
     redoc_url="/redoc" if api_docs_enabled else None,
     lifespan=lifespan

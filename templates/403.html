@@ -1,16 +1,29 @@
 {% extends "base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Unauthorized - KinJo{% else %}غير مصرح - كينجو{% endif %}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Access Denied - KinJo{% else %}الوصول مرفوض - كينجو{% endif %}{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center justify-content-center vh-100 bg-light">
-    <div class="text-center">
-        <h1 class="display-1 fw-bold text-warning">403</h1>
-        <p class="fs-3"> <span class="text-danger">{% if ui_lang == 'en' %}Unauthorized!{% else %}غير مصرح!{% endif %}</span> {% if ui_lang == 'en' %}You do not have access permission.{% else %}ليس لديك صلاحية الوصول.{% endif %}</p>
-        <p class="lead">
-            {% if ui_lang == 'en' %}You do not have the required permissions to access this page.{% else %}عذراً، ليس لديك الصلاحيات اللازمة للوصول إلى هذه الصفحة.{% endif %}
+<div class="d-flex align-items-center justify-content-center" style="min-height: 70vh;">
+    <div class="text-center px-3" style="max-width: 480px;">
+        <div class="mb-4">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 80px; height: 80px; background: linear-gradient(135deg, #fef3c7, #fde68a);">
+                <i class="bi bi-shield-lock" style="font-size: 2.5rem; color: #d97706;"></i>
+            </div>
+        </div>
+        <h2 class="fw-bold mb-3">{% if ui_lang == 'en' %}Access Denied{% else %}الوصول مرفوض{% endif %}</h2>
+        <p class="text-muted mb-4">
+            {% if ui_lang == 'en' %}You don't have permission to access this page. If you believe this is an error, contact your administrator.{% else %}ليس لديك الصلاحيات اللازمة للوصول إلى هذه الصفحة. إذا كنت تعتقد أن هذا خطأ، تواصل مع المسؤول.{% endif %}
         </p>
-        <a href="/dashboard" class="btn btn-primary">{% if ui_lang == 'en' %}Back to Dashboard{% else %}العودة للرئيسية{% endif %}</a>
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <a href="/dashboard" class="btn btn-primary px-4">
+                <i class="bi bi-house me-1"></i>
+                {% if ui_lang == 'en' %}Back to Dashboard{% else %}العودة للرئيسية{% endif %}
+            </a>
+            <button onclick="history.back()" class="btn btn-outline-secondary px-4">
+                <i class="bi bi-arrow-{{ 'left' if ui_dir == 'ltr' else 'right' }} me-1"></i>
+                {% if ui_lang == 'en' %}Go Back{% else %}الرجوع{% endif %}
+            </button>
+        </div>
     </div>
 </div>
 {% endblock %}

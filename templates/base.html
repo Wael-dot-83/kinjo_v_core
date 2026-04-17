@@ -8,9 +8,15 @@
     <meta name="description"
         content="{% if ui_lang == 'en' %}KinJo - Kindergarten and child care management platform{% else %}KinJo - منصة إدارة الروضات ورعاية الأطفال{% endif %}">
     <meta name="author" content="KinJo">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="color-scheme" content="light">
     <title>{% block title %}KinJo{% endblock %} {% if ui_lang == 'en' %}| Kindergarten Management Platform{% else %}| منصة إدارة الروضات{% endif %}</title>
 
-    <!-- Google Fonts -->
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="apple-touch-icon" href="/static/favicon.svg">
+
+    <!-- Google Fonts - preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -160,10 +166,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- Custom JavaScript -->
-    <script src="/static/js/auth.js?v=1.1"></script>
-    <script src="/static/js/kinjo-api.js?v=1.1"></script>
-    <script src="/static/js/app_i18n.js?v=1.0"></script>
-    <script src="/static/js/kinjo-app.js?v=1.1"></script>
+    <script src="/static/js/auth.js?v=2.0"></script>
+    <script src="/static/js/kinjo-api.js?v=2.0"></script>
+    <script src="/static/js/app_i18n.js?v=2.0"></script>
+    <script src="/static/js/kinjo-app.js?v=2.0"></script>
 
     {% block extra_js %}{% endblock %}
 
