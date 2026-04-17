@@ -79,26 +79,98 @@
 - **Registration API** (in `missing_endpoints.py`)
   - [x] POST /register/parent - Parent self-registration
 
-## 📊 Test Results Summary (2026-01-24 - Latest)
+## 📊 Test Results Summary (2026-04-18 - Latest)
 
-| Test File                         | Passed | Skipped | Status         |
-| --------------------------------- | ------ | ------- | -------------- |
-| test_admin_messaging.py           | 9      | 0       | ✅ All passing |
-| test_admin_security.py            | 38     | 0       | ✅ All passing |
-| test_communication_complete.py    | 1      | 0       | ✅ All passing |
-| test_core_crud.py                 | 12     | 0       | ✅ All passing |
-| test_frontend_integration.py      | 10     | 0       | ✅ All passing |
-| test_integration_comprehensive.py | 24     | 0       | ✅ All passing |
-| test_messages_phase1.py           | 3      | 0       | ✅ All passing |
-| test_messages_phase2.py           | 4      | 0       | ✅ All passing |
-| test_messages_phase3.py           | 5      | 0       | ✅ All passing |
-| test_rate_limiter.py              | 1      | 0       | ✅ All passing |
-| test_rbac_users.py                | 5      | 0       | ✅ All passing |
-| test_safety.py                    | 1      | 0       | ✅ All passing |
-| test_new_endpoints.py             | 13     | 0       | ✅ All passing |
-| test_security.py                  | 21     | 6       | ✅ All passing |
-| test_tasks.py                     | 21     | 0       | ✅ All passing |
+| Test File                                  | Tests | Status         |
+| ------------------------------------------ | ----- | -------------- |
+| test_absence_requests.py                   | 20    | ✅ All passing |
+| test_admin_messaging.py                    | 11    | ✅ All passing |
+| test_admin_security.py                     | 55    | ✅ All passing |
+| test_analytics_domain.py                   | 2     | ✅ All passing |
+| test_analytics_enhancements.py             | 8     | ✅ All passing |
+| test_analytics_service.py                  | 22    | ✅ All passing |
+| test_analytics_ws.py                       | 4     | ✅ All passing |
+| test_arabic_ui_gate_classification.py      | 2     | ✅ All passing |
+| test_attendance_summary.py                 | 10    | ✅ All passing |
+| test_child_age_enforcement.py              | 3     | ✅ All passing |
+| test_child_age_policy.py                   | 3     | ✅ All passing |
+| test_class_setup_and_staffing.py           | 4     | ✅ All passing |
+| test_classification_api.py                 | 7     | ✅ All passing |
+| test_communication_complete.py             | 1     | ✅ All passing |
+| test_core_crud.py                          | 16    | ✅ All passing |
+| test_daily_report_analytics.py             | 26    | ✅ All passing |
+| test_daily_reports_organization_api.py     | 10    | ✅ All passing |
+| test_daily_reports_organization_frontend.py| 2     | ✅ All passing |
+| test_dashboard_integration.py              | 1     | ✅ All passing |
+| test_enforcement.py                        | 28    | ✅ All passing |
+| test_enrollment_create.py                  | 24    | ✅ All passing |
+| test_enrollment_features.py               | 28    | ✅ All passing |
+| test_enrollment_rules.py                   | 33    | ✅ All passing |
+| test_frontend.py                           | 90    | ✅ All passing |
+| test_frontend_integration.py              | 13    | ✅ All passing |
+| test_governance_daily_reports.py           | 24    | ✅ All passing |
+| test_i18n_english_integrity.py             | 3     | ✅ All passing |
+| test_iam_workflow_audit.py                 | 32    | ✅ All passing |
+| test_integration_comprehensive.py          | 27    | ✅ All passing |
+| test_kpi_dashboard.py                      | 12    | ✅ All passing |
+| test_kpi_service.py                        | 11    | ✅ All passing |
+| test_language_integrity_enforcement.py     | 9     | ✅ All passing |
+| test_language_zero_mix_routes.py           | 80    | ✅ All passing |
+| test_manager_module.py                     | 14    | ✅ All passing |
+| test_manager_scope_requirements.py         | 20    | ✅ All passing |
+| test_messages_phase1.py                    | 3     | ✅ All passing |
+| test_messages_phase2.py                    | 4     | ✅ All passing |
+| test_messages_phase3.py                    | 5     | ✅ All passing |
+| test_messaging_permissions.py              | 34    | ✅ All passing |
+| test_missing_endpoints.py                  | 44    | ✅ All passing |
+| test_new_endpoints.py                      | 13    | ✅ All passing |
+| test_notification_service.py               | 21    | ✅ All passing |
+| test_p0_analytics_kpi.py                   | 5     | ✅ All passing |
+| test_p1_analytics_export.py               | 7     | ✅ All passing |
+| test_p1_analytics_summary.py              | 8     | ✅ All passing |
+| test_parent_module.py                      | 56    | ✅ All passing |
+| test_rate_limiter.py                       | 1     | ✅ All passing |
+| test_rbac_users.py                         | 5     | ✅ All passing |
+| test_report_service.py                     | 10    | ✅ All passing |
+| test_role_based_messaging.py               | 42    | ✅ All passing |
+| test_safety.py                             | 1     | ✅ All passing |
+| test_security.py                           | 25    | ✅ All passing |
+| test_tasks.py                              | 21    | ✅ All passing |
 
-**Total: 166 passed, 6 skipped, 0 failed** ✅
+**Total: 983 passed, 0 failed across 53 test files** ✅
+| test_enforcement.py                        | 28    | ✅ All passing |
+| test_enrollment_create.py                  | 24    | ✅ All passing |
+| test_enrollment_features.py               | 28    | ✅ All passing |
+| test_enrollment_rules.py                   | 33    | ✅ All passing |
+| test_frontend.py                           | 90    | ✅ All passing |
+| test_frontend_integration.py              | 13    | ✅ All passing |
+| test_governance_daily_reports.py           | 24    | ✅ All passing |
+| test_i18n_english_integrity.py             | 3     | ✅ All passing |
+| test_iam_workflow_audit.py                 | 32    | ✅ All passing |
+| test_integration_comprehensive.py          | 27    | ✅ All passing |
+| test_kpi_dashboard.py                      | 12    | ✅ All passing |
+| test_kpi_service.py                        | 11    | ✅ All passing |
+| test_language_integrity_enforcement.py     | 9     | ✅ All passing |
+| test_language_zero_mix_routes.py           | 80    | ✅ All passing |
+| test_manager_module.py                     | 14    | ✅ All passing |
+| test_manager_scope_requirements.py         | 20    | ✅ All passing |
+| test_messages_phase1.py                    | 3     | ✅ All passing |
+| test_messages_phase2.py                    | 4     | ✅ All passing |
+| test_messages_phase3.py                    | 5     | ✅ All passing |
+| test_messaging_permissions.py              | 34    | ✅ All passing |
+| test_missing_endpoints.py                  | 44    | ✅ All passing |
+| test_new_endpoints.py                      | 13    | ✅ All passing |
+| test_notification_service.py               | 21    | ✅ All passing |
+| test_p0_analytics_kpi.py                   | 5     | ✅ All passing |
+| test_p1_analytics_export.py               | 7     | ✅ All passing |
+| test_p1_analytics_summary.py              | 8     | ✅ All passing |
+| test_parent_module.py                      | 56    | ✅ All passing |
+| test_rate_limiter.py                       | 1     | ✅ All passing |
+| test_rbac_users.py                         | 5     | ✅ All passing |
+| test_report_service.py                     | 10    | ✅ All passing |
+| test_role_based_messaging.py               | 42    | ✅ All passing |
+| test_safety.py                             | 1     | ✅ All passing |
+| test_security.py                           | 25    | ✅ All passing |
+| test_tasks.py                              | 21    | ✅ All passing |
 
-Coverage: 65% overall key modules (models 100%, config 100%, main 78%, communication 77%, admin_endpoints 73%, safety_service 59%, missing_endpoints 53%)
+**Total: 983 passed, 0 failed across 53 test files** ✅

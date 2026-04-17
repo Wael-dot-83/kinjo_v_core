@@ -4,7 +4,7 @@ Absence Request endpoints
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, UTC
 from typing import Optional
 from pydantic import BaseModel, field_validator
 
@@ -228,11 +228,10 @@ def approve_absence_request(
     if absence.status == models.AbsenceRequestStatus.APPROVED:
         raise HTTPException(status_code=400, detail="Already approved")
 
-    from datetime import datetime
     absence.status = models.AbsenceRequestStatus.APPROVED
     absence.manager_id = current_user.id
     absence.decision_note = payload.decision_note
-    absence.decided_at = datetime.utcnow()
+    absence.decided_at = datetime.now(UTC)
     db.flush()
 
     # Create attendance records for each day in range
@@ -283,11 +282,10 @@ def reject_absence_request(
     if not absence:
         raise HTTPException(status_code=404, detail="Not found")
 
-    from datetime import datetime
     absence.status = models.AbsenceRequestStatus.REJECTED
     absence.manager_id = current_user.id
     absence.decision_note = payload.decision_note
-    absence.decided_at = datetime.utcnow()
+    absence.decided_at = datetime.now(UTC)
     db.commit()
     db.refresh(absence)
 

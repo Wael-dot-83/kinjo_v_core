@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, UTC
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -765,10 +765,9 @@ def request_password_reset(
 
     # Generate secure token
     import secrets
-    from datetime import datetime, timedelta
 
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(hours=24)
+    expires_at = datetime.now(UTC) + timedelta(hours=24)
 
     # Save token
     reset_token = models.PasswordResetToken(
@@ -790,12 +789,11 @@ def reset_password(
     db: Session = Depends(get_db)
 ):
     """Reset password using token"""
-    from datetime import datetime
 
     token_record = db.query(models.PasswordResetToken).filter(
         models.PasswordResetToken.token == reset_data.token,
         models.PasswordResetToken.used == False,
-        models.PasswordResetToken.expires_at > datetime.utcnow()
+        models.PasswordResetToken.expires_at > datetime.now(UTC)
     ).first()
 
     if not token_record:
