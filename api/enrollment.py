@@ -211,6 +211,7 @@ def submit_enrollment(
 def review_enrollment(
     enrollment_id: int,
     decision: str = Query(..., regex="^(accept|reject)$"),
+    reason: Optional[str] = Query(None),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -232,26 +233,37 @@ def review_enrollment(
     # Ensure manager is in the same kindergarten
     validators.validate_kindergarten_scope(current_user, enrollment.kindergarten_id)
 
-    if decision == "accept":
+    if decision == "reject":
+        if not reason or not reason.strip():
+            raise HTTPException(status_code=400, detail="سبب الرفض مطلوب")
+        enrollment.status = models.EnrollmentStatus.REJECTED
+        enrollment.rejected_at = datetime.now()
+        audit_action = "REJECT"
+    else:
         # Verify profile completeness before accepting
         child = enrollment.child
         ok, missing = validators.check_profile_complete(db, child.id)
         if not ok:
-            # Block acceptance until profile complete
             raise HTTPException(status_code=400, detail={"missing_fields": missing})
+        # Verify required documents are uploaded
+        docs_ok, missing_docs = validators.validate_required_documents(db, child.id)
+        if not docs_ok:
+            raise HTTPException(status_code=400, detail={"missing_documents": missing_docs})
         enrollment.status = models.EnrollmentStatus.ACTIVE
         enrollment.accepted_at = datetime.now()
-    else:
-        enrollment.status = models.EnrollmentStatus.REJECTED
-        enrollment.rejected_at = datetime.now()
+        audit_action = "ACCEPT"
 
     db.commit()
     db.refresh(enrollment)
 
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action=audit_action,
+        entity_type="EnrollmentApplication",
+        entity_id=enrollment.id,
+        details=reason if reason else None,
+        sensitivity_level=2
+    )
+
     return {"id": enrollment.id, "status": enrollment.status.value.lower()}
-    
-    return {
-        "id": enrollment.id,
-        "status": enrollment.status.value.lower(),
-        "decision_at": enrollment.decision_at.isoformat() if enrollment.decision_at else None
-    }

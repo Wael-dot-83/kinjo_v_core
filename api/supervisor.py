@@ -58,7 +58,7 @@ def assign_supervisor(
     # Verify supervisor exists and has correct role
     supervisor = db.query(models.User).filter(
         models.User.id == assignment_data.supervisor_id,
-        models.User.role == models.UserRole.SUPERVISOR
+        models.User.role.in_([models.UserRole.SUPERVISOR, models.UserRole.MANAGER])
     ).first()
     if not supervisor:
         raise HTTPException(status_code=404, detail="Supervisor not found")

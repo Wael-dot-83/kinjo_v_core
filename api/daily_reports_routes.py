@@ -226,3 +226,74 @@ def get_child_daily_reports(
             for r in reports
         ]
     }
+
+
+@router.get("/daily-reports/{report_id}")
+def get_daily_report_by_id(
+    report_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a single daily report by ID"""
+    report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Daily report not found")
+
+    # Parents can only see approved reports for their own children
+    if current_user.role == models.UserRole.PARENT:
+        child = db.query(models.Child).filter(models.Child.id == report.child_id).first()
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        if not parent_profile or not child or child.parent_id != parent_profile.id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        if report.status != models.DailyReportStatus.APPROVED:
+            raise HTTPException(status_code=403, detail="Report not available")
+
+    return {
+        "id": report.id,
+        "child_id": report.child_id,
+        "kindergarten_id": report.kindergarten_id,
+        "date": report.date.isoformat(),
+        "status": report.status.value,
+        "arrival_time": report.arrival_time,
+        "leave_time": report.leave_time,
+        "activities": getattr(report, "activities", None),
+        "notes": getattr(report, "notes", None),
+        "mood": getattr(report, "mood", None),
+        "submitted_by": report.submitted_by,
+    }
+
+
+@router.get("/supervisor/daily-reports")
+def list_supervisor_daily_reports(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List daily reports accessible to the current supervisor/manager/admin"""
+    if current_user.role == models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Parents cannot access this endpoint")
+
+    query = db.query(models.DailyReport)
+
+    # Scope to kindergarten for non-admins
+    if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id:
+        query = query.filter(models.DailyReport.kindergarten_id == current_user.kindergarten_id)
+
+    reports = query.order_by(models.DailyReport.date.desc()).all()
+
+    return [
+        {
+            "id": r.id,
+            "child_id": r.child_id,
+            "kindergarten_id": r.kindergarten_id,
+            "date": r.date.isoformat(),
+            "status": r.status.value,
+            "arrival_time": r.arrival_time,
+            "leave_time": r.leave_time,
+            "activities": getattr(r, "activities", None),
+            "notes": getattr(r, "notes", None),
+            "submitted_by": r.submitted_by,
+        }
+        for r in reports
+    ]

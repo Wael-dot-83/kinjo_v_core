@@ -105,6 +105,16 @@ def register_parent(
     db.add(parent_profile)
     db.commit()
 
+    validators.log_audit_action(
+        db=db,
+        user_id=user.id,
+        action="REGISTER",
+        entity_type="User",
+        entity_id=user.id,
+        details="Parent registration",
+        sensitivity_level=1
+    )
+
     return {
         "id": user.id,
         "email": user.email,

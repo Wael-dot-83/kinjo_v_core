@@ -95,6 +95,35 @@ def get_current_user_info(
 
 
 # ============================================================================
+# Change Password Endpoint
+# ============================================================================
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+    confirm_password: str
+
+
+@router.post("/users/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change the current user's password"""
+    from auth import verify_password, change_user_password
+
+    if payload.new_password != payload.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    change_user_password(db, current_user, payload.new_password)
+    return {"message": "Password changed successfully"}
+
+
+# ============================================================================
 # Admin User Management Endpoints
 # ============================================================================
 
@@ -373,6 +402,12 @@ class StaffCreate(BaseModel):
     password: str
     kindergarten_id: Optional[int] = None
     role: Optional[models.UserRole] = models.UserRole.SUPERVISOR
+    full_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    nationality: Optional[str] = None
+    national_id: Optional[str] = None
+    passport_number: Optional[str] = None
 
 
 @router.post("/staff/create", status_code=status.HTTP_201_CREATED)
@@ -427,6 +462,15 @@ def create_staff(
     if existing:
         raise HTTPException(status_code=400, detail="Username or email already exists")
 
+    # Validate identity by nationality if provided
+    if staff_data.nationality:
+        try:
+            validators.validate_identity_by_nationality(
+                staff_data.nationality, staff_data.national_id, staff_data.passport_number
+            )
+        except validators.ValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
     from auth import get_password_hash
     hashed_password = get_password_hash(staff_data.password)
 
@@ -436,7 +480,14 @@ def create_staff(
         hashed_password=hashed_password,
         role=staff_data.role,
         kindergarten_id=kindergarten_id,
-        status=models.UserStatus.ACTIVE
+        status=models.UserStatus.ACTIVE,
+        must_change_password=True,
+        full_name=staff_data.full_name,
+        phone_number=staff_data.phone_number,
+        address=staff_data.address,
+        nationality=staff_data.nationality,
+        national_id=staff_data.national_id,
+        passport_number=staff_data.passport_number,
     )
 
     db.add(new_staff)
@@ -458,7 +509,13 @@ def create_staff(
         "email": new_staff.email,
         "role": new_staff.role.value,
         "kindergarten_id": new_staff.kindergarten_id,
-        "status": new_staff.status.value
+        "status": new_staff.status.value,
+        "full_name": new_staff.full_name,
+        "phone_number": new_staff.phone_number,
+        "address": new_staff.address,
+        "nationality": new_staff.nationality,
+        "national_id": new_staff.national_id,
+        "passport_number": new_staff.passport_number,
     }
 
 

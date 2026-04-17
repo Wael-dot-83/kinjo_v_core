@@ -66,6 +66,16 @@ def check_in_child(
     db.commit()
     db.refresh(attendance)
     
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action="ATTENDANCE_CHECK_IN",
+        entity_type="AttendanceLog",
+        entity_id=attendance.id,
+        details=f"Child {child_id} checked in",
+        sensitivity_level=1
+    )
+
     return {
         "id": attendance.id,
         "child_id": attendance.child_id,
@@ -101,6 +111,16 @@ def check_out_child(
     db.commit()
     db.refresh(attendance)
     
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action="ATTENDANCE_CHECK_OUT",
+        entity_type="AttendanceLog",
+        entity_id=attendance.id,
+        details=f"Child {child_id} checked out",
+        sensitivity_level=1
+    )
+
     return {
         "id": attendance.id,
         "child_id": attendance.child_id,

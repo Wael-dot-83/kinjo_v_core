@@ -256,7 +256,18 @@ def update_kindergarten(
         sensitivity_level=2
     )
 
-    return kindergarten
+    return {
+        "id": kindergarten.id,
+        "name_ar": kindergarten.name_ar,
+        "name_en": kindergarten.name_en,
+        "governorate": kindergarten.governorate,
+        "city": kindergarten.city,
+        "area": kindergarten.area,
+        "address_line": kindergarten.address_line,
+        "contact_phone": kindergarten.contact_phone,
+        "contact_email": kindergarten.contact_email,
+        "status": kindergarten.status.value if kindergarten.status else None,
+    }
 
 
 @router.delete("/kindergartens/{kindergarten_id}")
@@ -282,7 +293,10 @@ def delete_kindergarten(
             raise HTTPException(status_code=403, detail="غير مصرح لك بحذف هذه الروضة")
 
     # Check for dependent records
-    active_children = db.query(models.Child).filter(models.Child.kindergarten_id == kindergarten_id).count()
+    active_children = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    ).count()
     active_classes = db.query(models.Class).filter(
         models.Class.kindergarten_id == kindergarten_id,
         models.Class.is_active == True

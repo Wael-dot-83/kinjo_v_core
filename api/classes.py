@@ -28,11 +28,12 @@ class ClassCreate(BaseModel):
     capacity_total: int
     min_age_months: int
     max_age_months: int
-    supervisor_id: Optional[int] = None
+    supervisor_id: int
 
 class ClassResponse(ClassCreate):
     id: int
     is_active: bool
+    supervisor_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -57,6 +58,15 @@ def create_class(
 
     if class_data.max_age_months < class_data.min_age_months:
         raise HTTPException(status_code=400, detail="Max age must be >= min age")
+
+    # Validate supervisor belongs to the same kindergarten
+    supervisor = db.query(models.User).filter(
+        models.User.id == class_data.supervisor_id
+    ).first()
+    if not supervisor:
+        raise HTTPException(status_code=400, detail="Supervisor not found")
+    if supervisor.kindergarten_id != class_data.kindergarten_id:
+        raise HTTPException(status_code=400, detail="Supervisor must belong to the same kindergarten")
 
     class_dict = class_data.model_dump(exclude={"supervisor_id"})
     class_obj = models.Class(
