@@ -1,0 +1,16 @@
+{% macro submit_button(text=None, icon="bi-check-lg", color="primary", id=None, classes="", disabled=false, label=None,
+loading_label=None, btn_class=None) %}
+{% set lang = ui_lang | default('ar') %}
+{% set default_text = 'Save' if lang == 'en' else 'حفظ' %}
+{% set resolved_text = text if text is not none else default_text %}
+{% set button_text = label or text %}
+{% set button_classes = btn_class or "btn-" + color %}
+{% if classes %}
+{% set button_classes = button_classes + " " + classes %}
+{% endif %}
+<button type="submit" class="btn {{ button_classes }}" {% if id %} id="{{ id }}" {% endif %}{% if disabled %} disabled{%
+    endif %}>
+    <i class="bi {{ icon }} me-2"></i>
+    {{ button_text or resolved_text }}
+</button>
+{% endmacro %}

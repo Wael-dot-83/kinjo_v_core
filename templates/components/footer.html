@@ -4,18 +4,22 @@
         <div class="row align-items-center">
             <div class="col-md-6 text-center text-md-start">
                 <span class="text-muted small">
+                    {% if ui_lang == 'en' %}
+                    &copy; 2026 KinJo - Kindergarten Management Platform | All rights reserved
+                    {% else %}
                     &copy; 2026 KinJo - منصة إدارة الروضات | جميع الحقوق محفوظة
+                    {% endif %}
                 </span>
             </div>
             <div class="col-md-6 text-center text-md-end">
                 <a href="/help" class="text-muted small text-decoration-none me-3">
-                    <i class="bi bi-question-circle me-1"></i>المساعدة
+                    <i class="bi bi-question-circle me-1"></i>{% if ui_lang == 'en' %}Help{% else %}المساعدة{% endif %}
                 </a>
                 <a href="/privacy" class="text-muted small text-decoration-none me-3">
-                    <i class="bi bi-shield-lock me-1"></i>الخصوصية
+                    <i class="bi bi-shield-lock me-1"></i>{% if ui_lang == 'en' %}Privacy{% else %}الخصوصية{% endif %}
                 </a>
                 <a href="/terms" class="text-muted small text-decoration-none">
-                    <i class="bi bi-file-text me-1"></i>الشروط والأحكام
+                    <i class="bi bi-file-text me-1"></i>{% if ui_lang == 'en' %}Terms and Conditions{% else %}الشروط والأحكام{% endif %}
                 </a>
             </div>
         </div>

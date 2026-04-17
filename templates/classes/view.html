@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{{ class.name_ar }}{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+title=class.name_ar,
+icon="bi-people-fill",
+breadcrumbs=[
+{"label": "لوحة التحكم", "url": "/dashboard"},
+{"label": "الشعب الصفية", "url": "/classes"},
+{"label": class.name_ar}
+]
+) }}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>معلومات الصف</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">الاسم بالعربية</dt>
+                            <dd class="col-sm-7">{{ class.name_ar }}</dd>
+
+                            <dt class="col-sm-5">الاسم بالإنجليزية</dt>
+                            <dd class="col-sm-7">{{ class.name_en or '-' }}</dd>
+
+                            <dt class="col-sm-5">السعة الكلية</dt>
+                            <dd class="col-sm-7">{{ class.capacity_total or '-' }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">العمر الأدنى (شهور)</dt>
+                            <dd class="col-sm-7">{{ class.min_age_months or '-' }}</dd>
+
+                            <dt class="col-sm-5">العمر الأقصى (شهور)</dt>
+                            <dd class="col-sm-7">{{ class.max_age_months or '-' }}</dd>
+
+                            <dt class="col-sm-5">الحالة</dt>
+                            <dd class="col-sm-7">
+                                {% if class.is_active %}
+                                <span class="badge bg-success">نشط</span>
+                                {% else %}
+                                <span class="badge bg-secondary">غير نشط</span>
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>الإجراءات</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/classes/{{ class.id }}/edit" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-2"></i>تعديل البيانات
+                    </a>
+                    <a href="/attendance?class_id={{ class.id }}" class="btn btn-outline-success">
+                        <i class="bi bi-calendar-check me-2"></i>سجل الحضور
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

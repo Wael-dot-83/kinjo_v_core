@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}صندوق الرسائل{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Messages Inbox{% else %}صندوق الرسائل{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
@@ -8,8 +8,9 @@
         <h1 class="h2 mb-1">
             <i class="bi bi-envelope me-2 text-primary"></i>
             صندوق الرسائل
+            <span id="unreadCountBadge" class="badge bg-primary ms-2 d-none">0</span>
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
                 <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
@@ -30,15 +31,47 @@
     <div class="card-header bg-white py-3">
         <div class="row align-items-center">
             <div class="col-md-4">
-                <input type="text" class="form-control" id="msgSearch" placeholder="بحث في الرسائل...">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="msgSearch" placeholder="ابحث في الرسائل...">
+                    <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">مسح</button>
+                </div>
             </div>
             <div class="col-md-8 text-md-end mt-2 mt-md-0">
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" onclick="filterMsgs('all')">الكل</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="filterMsgs('direct')">مباشر</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="filterMsgs('broadcast')">تعميم</button>
+                    <button type="button" class="btn btn-outline-secondary active"
+                        onclick="filterMsgs('all', this)">الكل</button>
+                    <button type="button" class="btn btn-outline-secondary"
+                        onclick="filterMsgs('direct', this)">مباشرة</button>
+                    <button type="button" class="btn btn-outline-secondary"
+                        onclick="filterMsgs('announcement', this)">الإعلانات</button>
                 </div>
+                <div class="form-check form-switch d-inline-block ms-3 align-middle">
+                    <input class="form-check-input" type="checkbox" id="unreadOnlyToggle">
+                    <label class="form-check-label" for="unreadOnlyToggle">غير المقروء فقط</label>
+                </div>
+                <div class="form-check form-switch d-inline-block ms-3 align-middle">
+                    <input class="form-check-input" type="checkbox" id="archivedOnlyToggle">
+                    <label class="form-check-label" for="archivedOnlyToggle">مؤرشف</label>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm ms-3" id="refreshMessagesBtn">
+                    <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+                </button>
             </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <div class="form-check me-2">
+                    <input class="form-check-input" type="checkbox" id="selectAllMessages">
+                    <label class="form-check-label" for="selectAllMessages">تحديد الكل</label>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkReadBtn">تحديد كمقروء</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkArchiveBtn">أرشفة</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkUnarchiveBtn">إلغاء
+                    الأرشفة</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="bulkDeleteBtn">حذف</button>
+            </div>
+            <small class="text-muted" id="bulkSelectedCount">0 محدد</small>
         </div>
     </div>
     <div class="list-group list-group-flush" id="messagesList">
@@ -49,36 +82,222 @@
             </div>
         </div>
     </div>
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="prevPageBtn">السابق</button>
+        <small id="paginationInfo" class="text-muted"></small>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="nextPageBtn">التالي</button>
+    </div>
 </div>
 
 <!-- Reuse the New Message Modal -->
 {% include 'communication/modals/new_message.html' %}
 
+<!-- Message Detail Modal -->
+<div class="modal fade" id="messageDetailModal" tabindex="-1" aria-labelledby="messageDetailModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageDetailModalLabel">الرسالة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 id="messageDetailSubject" class="mb-0"></h5>
+                    <small id="messageDetailTimestamp" class="text-muted"></small>
+                </div>
+                <div id="messageDetailMeta" class="text-muted small mb-3"></div>
+                <div id="messageDetailBody" class="text-break"></div>
+                <div id="messageAttachments" class="mt-3"></div>
+                <div id="messageReplies" class="mt-3"></div>
+                <div id="replySection" class="mt-4">
+                    <label for="messageReplyBody" class="form-label">الرد</label>
+                    <textarea class="form-control" id="messageReplyBody" rows="3" placeholder="اكتب الرد..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" id="deleteMessageBtn">حذف</button>
+                <button type="button" class="btn btn-outline-secondary" id="archiveMessageBtn">أرشفة</button>
+                <button type="button" class="btn btn-primary" id="sendReplyBtn">إرسال الرد</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
     let allMessages = [];
+    let refreshTimer = null;
+    let authExpiredHandled = false;
+    let currentPage = 1;
+    const pageSize = 25;
+    var currentUserId = {{ current_user.id }};
+    let currentFilter = 'all';
+    let currentSearch = '';
+    let unreadOnly = false;
+    let totalPages = 1;
+    let archivedOnly = false;
+    let selectedMessageIds = new Set();
 
-    document.addEventListener('DOMContentLoaded', loadMessages);
+    function stopMessagesAutoRefresh() {
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+            refreshTimer = null;
+        }
+    }
+
+    function handleUnauthorizedResponse(response) {
+        if (!response || ![401, 403].includes(response.status)) {
+            return false;
+        }
+        stopMessagesAutoRefresh();
+        if (authExpiredHandled) {
+            return true;
+        }
+        authExpiredHandled = true;
+        if (window.AuthStorage && typeof AuthStorage.clearAll === 'function') {
+            AuthStorage.clearAll();
+        }
+        if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login?expired=true';
+        }
+        return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadMessages();
+        refreshTimer = setInterval(loadMessages, 30000);
+        document.getElementById('refreshMessagesBtn').addEventListener('click', () => loadMessages());
+        document.getElementById('clearSearchBtn').addEventListener('click', clearSearch);
+        document.getElementById('selectAllMessages').addEventListener('change', toggleSelectAll);
+        document.getElementById('unreadOnlyToggle').addEventListener('change', (e) => {
+            unreadOnly = e.target.checked;
+            currentPage = 1;
+            loadMessages();
+        });
+        document.getElementById('archivedOnlyToggle').addEventListener('change', (e) => {
+            archivedOnly = e.target.checked;
+            currentPage = 1;
+            loadMessages();
+        });
+        document.getElementById('prevPageBtn').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage -= 1;
+                loadMessages();
+            }
+        });
+        document.getElementById('nextPageBtn').addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage += 1;
+                loadMessages();
+            }
+        });
+        document.getElementById('sendReplyBtn').addEventListener('click', sendReply);
+        document.getElementById('deleteMessageBtn').addEventListener('click', deleteMessage);
+        document.getElementById('archiveMessageBtn').addEventListener('click', toggleArchive);
+        document.getElementById('bulkReadBtn').addEventListener('click', () => bulkAction('read'));
+        document.getElementById('bulkArchiveBtn').addEventListener('click', () => bulkAction('archive'));
+        document.getElementById('bulkUnarchiveBtn').addEventListener('click', () => bulkAction('unarchive'));
+        document.getElementById('bulkDeleteBtn').addEventListener('click', () => bulkAction('delete'));
+    });
+
+    window.addEventListener('beforeunload', stopMessagesAutoRefresh);
 
     async function loadMessages() {
         try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch('/comm/messages', {
+            // Use centralized auth system instead of direct localStorage access
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.</div>`;
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.</div>`;
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.set('page', currentPage);
+            params.set('page_size', pageSize);
+            if (currentFilter !== 'all') {
+                params.set('thread_type', currentFilter);
+            }
+            if (currentSearch) {
+                params.set('search', currentSearch);
+            }
+            if (unreadOnly) {
+                params.set('unread_only', 'true');
+            }
+            if (archivedOnly) {
+                params.set('archived_only', 'true');
+            }
+
+            const response = await fetch(`/comm/messages?${params.toString()}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
+            if (handleUnauthorizedResponse(response)) {
+                return;
+            }
+
             if (response.ok) {
-                allMessages = await response.json();
+                const data = await response.json();
+                const items = data.items || data;
+                allMessages = items;
+                selectedMessageIds = new Set();
                 renderMessages(allMessages);
+                updatePagination(data.pagination);
+                updateUnreadCount();
+                updateBulkSelection();
             } else {
-                document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">فشل تحميل الرسائل (Session expired or invalid)</div>`;
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">تعذر تحميل الرسائل</div>`;
             }
         } catch (error) {
             console.error(error);
-            document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">خطأ في الاتصال</div>`;
+            document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">خطأ في الشبكة</div>`;
         }
+    }
+
+
+    function formatThreadLabel(threadType) {
+        if (!threadType) {
+            return 'رسالة';
+        }
+        if (threadType === 'ANNOUNCEMENT') {
+            return 'إعلان';
+        }
+        if (threadType === 'DIRECT') {
+            return 'مباشر';
+        }
+        return 'رسالة';
+    }
+
+    function toggleSelectAll(event) {
+        const shouldSelect = event.target.checked;
+        selectedMessageIds = new Set();
+        if (shouldSelect) {
+            allMessages.forEach(msg => selectedMessageIds.add(msg.id));
+        }
+        renderMessages(allMessages);
+        updateBulkSelection();
+    }
+
+    function updateSelectAllControl() {
+        const selectAll = document.getElementById('selectAllMessages');
+        if (!selectAll) {
+            return;
+        }
+        if (!allMessages.length) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+            return;
+        }
+        const selectedCount = selectedMessageIds.size;
+        selectAll.checked = selectedCount > 0 && selectedCount === allMessages.length;
+        selectAll.indeterminate = selectedCount > 0 && selectedCount < allMessages.length;
     }
 
     function renderMessages(messages) {
@@ -95,65 +314,496 @@
             return;
         }
 
-        const sorted = [...messages].reverse();
+        const sorted = [...messages];
 
         sorted.forEach(msg => {
             let icon = 'bi-envelope';
             let badgeClass = 'bg-secondary';
             let badgeText = 'رسالة';
 
-            if (msg.thread_type === 'BROADCAST') {
+            const unreadBadge = msg.is_read ? '' : '<span class="badge bg-primary ms-2">غير مقروءة</span>';
+            const archivedBadge = msg.archived_at ? '<span class="badge bg-light text-dark border ms-2">مؤرشفة</span>' : '';
+
+            if (msg.thread_type === 'ANNOUNCEMENT') {
                 icon = 'bi-megaphone';
                 badgeClass = 'bg-warning text-dark';
-                badgeText = 'تعميم';
-            } else if (msg.thread_type === 'CLASS') {
-                icon = 'bi-people';
-                badgeClass = 'bg-info text-dark';
-                badgeText = 'فصل';
+                badgeText = 'إعلان';
+            } else if (msg.thread_type === 'DIRECT') {
+                badgeText = 'مباشر';
             }
 
+            const isSelected = selectedMessageIds.has(msg.id);
+            const isOutgoing = msg.sender_id === currentUserId;
+            const directionLabel = isOutgoing ? 'إلى' : 'من';
+            const counterpart = isOutgoing ? (msg.recipient_id ? `#${msg.recipient_id}` : formatThreadLabel(msg.thread_type)) : `#${msg.sender_id}`;
+            const metaLine = `${directionLabel}: ${counterpart} | ${formatThreadLabel(msg.thread_type)} | #${msg.id}`;
+            const timestamp = msg.created_at ? new Date(msg.created_at).toLocaleString() : '';
+
             const item = document.createElement('a');
-            item.className = 'list-group-item list-group-item-action py-3';
+            item.className = `list-group-item list-group-item-action py-3 ${msg.is_read ? '' : 'fw-semibold'} ${isSelected ? 'list-group-item-secondary' : ''}`;
             item.href = '#';
             item.innerHTML = `
-                <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">
-                        <i class="bi ${icon} me-2 text-muted"></i>
-                        ${msg.subject || 'بدون عنوان'}
-                    </h5>
-                    <small class="text-muted">#${msg.id}</small>
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div class="d-flex align-items-start">
+                        <div class="form-check me-2">
+                            <input class="form-check-input message-select" type="checkbox" data-id="${msg.id}">
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center flex-wrap">
+                                <h5 class="mb-1 me-2">
+                                    <i class="bi ${icon} me-2 text-muted"></i>
+                                    ${msg.subject || 'بدون عنوان'}
+                                </h5>
+                                ${unreadBadge}
+                                ${archivedBadge}
+                            </div>
+                            <div class="text-muted small">${metaLine}</div>
+                        </div>
+                    </div>
+                    <small class="text-muted">${timestamp}</small>
                 </div>
-                <div class="mb-1 text-break" style="max-height: 100px; overflow: hidden; text-overflow: ellipsis;">
+                <div class="mb-1 text-break text-muted" style="max-height: 80px; overflow: hidden; text-overflow: ellipsis;">
                     ${msg.message_body}
                 </div>
                 <div class="mt-2">
                     <span class="badge ${badgeClass}">${badgeText}</span>
                 </div>
             `;
+            const checkbox = item.querySelector('.message-select');
+            checkbox.checked = selectedMessageIds.has(msg.id);
+            checkbox.addEventListener('click', (event) => event.stopPropagation());
+            checkbox.addEventListener('change', (event) => {
+                if (event.target.checked) {
+                    selectedMessageIds.add(msg.id);
+                    item.classList.add('list-group-item-secondary');
+                } else {
+                    selectedMessageIds.delete(msg.id);
+                    item.classList.remove('list-group-item-secondary');
+                }
+                updateBulkSelection();
+            });
+            item.addEventListener('click', (event) => {
+                event.preventDefault();
+                openMessage(msg.id);
+            });
             container.appendChild(item);
         });
     }
 
-    function filterMsgs(type) {
+    function filterMsgs(type, button) {
         document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
+        if (button) {
+            button.classList.add('active');
+        }
+        currentFilter = type;
+        currentPage = 1;
+        loadMessages();
+    }
+    // Expose to global scope for inline onclick handlers
+    window.filterMsgs = filterMsgs;
 
-        if (type === 'all') {
-            renderMessages(allMessages);
-        } else {
-            const filtered = allMessages.filter(m => m.thread_type === type.toUpperCase());
-            renderMessages(filtered);
+    function clearSearch() {
+        const input = document.getElementById('msgSearch');
+        if (input) {
+            input.value = '';
+        }
+        currentSearch = '';
+        currentPage = 1;
+        loadMessages();
+    }
+
+    let searchTimer = null;
+    document.getElementById('msgSearch').addEventListener('input', (e) => {
+        currentSearch = e.target.value.trim();
+        currentPage = 1;
+        if (searchTimer) {
+            clearTimeout(searchTimer);
+        }
+        searchTimer = setTimeout(() => loadMessages(), 300);
+    });
+
+    let currentOpenMessageId = null;
+    let currentOpenThreadType = null;
+    let currentOpenAllowReplies = false;
+    let currentOpenArchived = false;
+
+    async function openMessage(messageId) {
+        try {
+            currentOpenMessageId = messageId;
+
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const response = await fetch(`/comm/messages/${messageId}/replies`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                alert(err.error?.message || err.detail || 'تعذر تحميل الرسالة');
+                return;
+            }
+
+            const thread = await response.json();
+            const msg = thread.root;
+            currentOpenThreadType = msg.thread_type;
+            currentOpenAllowReplies = !!msg.allow_replies;
+            currentOpenArchived = !!msg.archived_at;
+            document.getElementById('archiveMessageBtn').textContent = currentOpenArchived ? 'إلغاء الأرشفة' : 'أرشفة';
+
+            document.getElementById('messageDetailSubject').textContent = msg.subject || 'بدون عنوان';
+            document.getElementById('messageDetailBody').textContent = msg.message_body || '';
+            document.getElementById('messageDetailTimestamp').textContent = msg.created_at ? new Date(msg.created_at).toLocaleString() : '';
+            const isOutgoing = msg.sender_id === currentUserId;
+            const directionLabel = isOutgoing ? 'إلى' : 'من';
+            const counterpart = isOutgoing
+                ? (msg.recipient ? msg.recipient.username : (msg.recipient_id ? `المستخدم #${msg.recipient_id}` : formatThreadLabel(msg.thread_type)))
+                : (msg.sender ? msg.sender.username : `المستخدم #${msg.sender_id}`);
+            const metaParts = [`${directionLabel}: ${counterpart}`, formatThreadLabel(msg.thread_type)];
+            if (msg.archived_at) {
+                metaParts.push('مؤرشف');
+            }
+            document.getElementById('messageDetailMeta').textContent = metaParts.join(' | ');
+            document.getElementById('messageReplyBody').value = '';
+            renderAttachments(msg.attachments || []);
+            renderReplies(thread.replies || []);
+
+            const replySection = document.getElementById('replySection');
+            const canReply = currentOpenThreadType === 'DIRECT'
+                || (currentOpenThreadType === 'ANNOUNCEMENT' && currentOpenAllowReplies);
+            replySection.classList.toggle('d-none', !canReply);
+
+            const modal = new bootstrap.Modal(document.getElementById('messageDetailModal'));
+            modal.show();
+
+            if (!msg.is_read) {
+                await markMessageRead(messageId);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('فشل في فتح الرسالة');
         }
     }
-    
-    document.getElementById('msgSearch').addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        const filtered = allMessages.filter(m => 
-            (m.subject && m.subject.toLowerCase().includes(term)) || 
-            (m.message_body && m.message_body.toLowerCase().includes(term))
-        );
-        renderMessages(filtered);
-    });
+
+    function renderAttachments(attachments) {
+        const container = document.getElementById('messageAttachments');
+        if (!attachments || attachments.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        const items = attachments.map(att => {
+            const sizeKb = att.file_size ? (att.file_size / 1024).toFixed(1) : '';
+            return `
+                <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                    <a href="${att.url}" target="_blank" rel="noopener">${att.file_name}</a>
+                    <small class="text-muted">${sizeKb} KB</small>
+                </div>
+            `;
+        }).join('');
+        container.innerHTML = `<h6 class="mt-3">المرفقات</h6>${items}`;
+    }
+
+    function renderReplies(replies) {
+        const container = document.getElementById('messageReplies');
+        if (!replies || replies.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        const items = replies.map(reply => {
+            const sender = reply.sender ? reply.sender.username : `المستخدم #${reply.sender_id}`;
+            const timestamp = reply.created_at ? new Date(reply.created_at).toLocaleString() : '';
+            return `
+                <div class="border-top pt-2 mt-2">
+                    <div class="small text-muted">${sender} في ${timestamp}</div>
+                    <div class="text-break">${reply.message_body || ''}</div>
+                </div>
+            `;
+        }).join('');
+        container.innerHTML = `<h6 class="mt-3">الردود</h6>${items}`;
+    }
+
+    function updatePagination(pagination) {
+        const info = document.getElementById('paginationInfo');
+        const prevBtn = document.getElementById('prevPageBtn');
+        const nextBtn = document.getElementById('nextPageBtn');
+        if (!pagination) {
+            info.textContent = '';
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            totalPages = 1;
+            return;
+        }
+        totalPages = pagination.total_pages || 1;
+        info.textContent = `الصفحة ${pagination.page} من ${pagination.total_pages}`;
+        prevBtn.disabled = !pagination.has_prev;
+        nextBtn.disabled = !pagination.has_next;
+    }
+
+    function updateBulkSelection() {
+        const count = selectedMessageIds.size;
+        document.getElementById('bulkSelectedCount').textContent = `${count} محدد`;
+        const disabled = count === 0;
+        ['bulkReadBtn', 'bulkArchiveBtn', 'bulkUnarchiveBtn', 'bulkDeleteBtn'].forEach((id) => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.disabled = disabled;
+            }
+        });
+        updateSelectAllControl();
+    }
+
+    async function updateUnreadCount() {
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                return;
+            }
+
+            const response = await fetch('/comm/messages/unread/count', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (handleUnauthorizedResponse(response)) {
+                return;
+            }
+            if (!response.ok) {
+                return;
+            }
+            const data = await response.json();
+            const badge = document.getElementById('unreadCountBadge');
+            badge.textContent = data.unread_count;
+            badge.classList.toggle('d-none', data.unread_count === 0);
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function sendReply() {
+        if (!currentOpenMessageId) {
+            return;
+        }
+        if (currentOpenThreadType !== 'DIRECT' && !(currentOpenThreadType === 'ANNOUNCEMENT' && currentOpenAllowReplies)) {
+            return;
+        }
+        const body = document.getElementById('messageReplyBody').value.trim();
+        if (!body) {
+            alert('لا يمكن أن يكون الرد فارغًا');
+            return;
+        }
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const response = await fetch(`/comm/messages/${currentOpenMessageId}/replies`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ message_body: body })
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                alert(err.error?.message || err.detail || 'فشل في إرسال الرد');
+                return;
+            }
+            const created = await response.json();
+            document.getElementById('messageReplyBody').value = '';
+            if (currentOpenThreadType === 'ANNOUNCEMENT') {
+                await openMessage(created.id);
+            } else {
+                await openMessage(currentOpenMessageId);
+            }
+            loadMessages();
+        } catch (error) {
+            console.error(error);
+            alert('فشل في إرسال الرد');
+        }
+    }
+
+    async function toggleArchive() {
+        if (!currentOpenMessageId) {
+            return;
+        }
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const action = currentOpenArchived ? 'unarchive' : 'archive';
+            const response = await fetch(`/comm/messages/${currentOpenMessageId}/${action}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                alert(err.error?.message || err.detail || 'فشل في تحديث حالة الأرشفة');
+                return;
+            }
+
+            currentOpenArchived = !currentOpenArchived;
+            document.getElementById('archiveMessageBtn').textContent = currentOpenArchived ? 'إلغاء الأرشفة' : 'أرشفة';
+            loadMessages();
+        } catch (error) {
+            console.error(error);
+            alert('فشل في تحديث حالة الأرشفة');
+        }
+    }
+
+    async function bulkAction(action) {
+        if (selectedMessageIds.size === 0) {
+            alert('يرجى تحديد رسالة واحدة على الأقل');
+            return;
+        }
+        if (action === 'delete' && !confirm('هل أنت متأكد من حذف الرسائل المحددة؟')) {
+            return;
+        }
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const response = await fetch('/comm/messages/bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    message_ids: Array.from(selectedMessageIds),
+                    action: action
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                alert(err.error?.message || err.detail || 'فشل تنفيذ العملية الجماعية');
+                return;
+            }
+
+            selectedMessageIds = new Set();
+            updateBulkSelection();
+            loadMessages();
+        } catch (error) {
+            console.error(error);
+            alert('فشل تنفيذ العملية الجماعية');
+        }
+    }
+
+    async function deleteMessage() {
+        if (!currentOpenMessageId) {
+            return;
+        }
+        if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) {
+            return;
+        }
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const response = await fetch(`/comm/messages/${currentOpenMessageId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                alert(err.error?.message || err.detail || 'فشل في حذف الرسالة');
+                return;
+            }
+
+            const modalEl = document.getElementById('messageDetailModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+            loadMessages();
+        } catch (error) {
+            console.error(error);
+            alert('فشل في حذف الرسالة');
+        }
+    }
+
+    async function markMessageRead(messageId) {
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                return;
+            }
+
+            const response = await fetch(`/comm/messages/${messageId}/read`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const index = allMessages.findIndex(m => m.id === messageId);
+            if (index >= 0) {
+                allMessages[index].is_read = true;
+            }
+            renderMessages(allMessages);
+            updateUnreadCount();
+            updateBulkSelection();
+        } catch (error) {
+            console.error(error);
+        }
+    }
 </script>
 {% endblock %}
-

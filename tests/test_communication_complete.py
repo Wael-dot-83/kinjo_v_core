@@ -2,7 +2,16 @@ import pytest
 import models
 from datetime import date, timedelta
 
-def test_communication_suite(client, test_db, manager_token, parent_token, manager_user, parent_user, sample_kindergarten):
+def test_communication_suite(
+    client,
+    test_db,
+    manager_token,
+    parent_token,
+    manager_user,
+    parent_user,
+    sample_kindergarten,
+    parent_enrollment
+):
     # Setup: Assign parent to kindergarten to enable communication scoping
     parent_user = test_db.query(models.User).filter(models.User.id == parent_user.id).first()
     parent_user.kindergarten_id = sample_kindergarten.id
@@ -15,7 +24,7 @@ def test_communication_suite(client, test_db, manager_token, parent_token, manag
         "recipient_id": parent_user.id,
         "subject": "Welcome",
         "message_body": "This is a direct message test",
-        "thread_type": "DIRECT"
+        "message_type": "direct"
     }
     headers_manager = {"Authorization": f"Bearer {manager_token}"}
     response = client.post("/comm/messages", json=msg_data, headers=headers_manager)
@@ -28,7 +37,8 @@ def test_communication_suite(client, test_db, manager_token, parent_token, manag
     headers_parent = {"Authorization": f"Bearer {parent_token}"}
     response = client.get("/comm/messages", headers=headers_parent)
     assert response.status_code == 200
-    messages = response.json()
+    payload = response.json()
+    messages = payload["items"] if "items" in payload else payload
     assert len(messages) >= 1
     # Verify the specific message is found
     found = False

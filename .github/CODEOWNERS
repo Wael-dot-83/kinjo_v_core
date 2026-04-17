@@ -1,0 +1,13 @@
+# Compliance infrastructure — all four files require owner approval.
+#
+# Verify the handle below matches your GitHub username:
+#   Browser: https://github.com/Wael-dot-83 (must load your profile)
+#   Or run:  gh api user --jq .login
+#
+# To use a team instead:  @Wael-dot-83/compliance-owners
+
+/ADMIN_PANEL_REVIEW_REPORT.md                  @Wael-dot-83
+/tools/scan_time_neutral.py                    @Wael-dot-83
+/.github/workflows/time-neutral-gate.yml       @Wael-dot-83
+/.github/pull_request_template.md              @Wael-dot-83
+/.github/CODEOWNERS                            @Wael-dot-83

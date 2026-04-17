@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{% block title %}حوكمة التقارير اليومية{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        border-radius: 12px;
+        transition: transform 0.2s;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .kpi-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+
+    .low-performer-badge {
+        background-color: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+    }
+
+    .rank-badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+
+    .rank-1 {
+        background-color: #ffd700;
+        color: #333;
+    }
+
+    .rank-2 {
+        background-color: #c0c0c0;
+        color: #333;
+    }
+
+    .rank-3 {
+        background-color: #cd7f32;
+        color: #fff;
+    }
+
+    .rank-default {
+        background-color: #e9ecef;
+        color: #333;
+    }
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1"><i class="bi bi-clipboard2-data me-2"></i>حوكمة التقارير اليومية</h4>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">حوكمة التقارير</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <input type="date" id="startDate" class="form-control form-control-sm" style="width:150px">
+        <span class="text-muted">-</span>
+        <input type="date" id="endDate" class="form-control form-control-sm" style="width:150px">
+        <button id="refreshBtn" class="btn btn-primary btn-sm" onclick="loadGovernanceData()">
+            <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- KPI Cards Row -->
+<div class="row g-3 mb-4" id="kpiCards">
+    <div class="col-md-3">
+        <div class="card kpi-card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="kpi-value text-primary" id="kpiSubmissionRate">--</div>
+                <div class="kpi-label">نسبة التقديم</div>
+                <small class="text-muted"><span id="kpiSubmitted">0</span> / <span id="kpiRequired">0</span></small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="kpi-value text-success" id="kpiDeliveryRate">--</div>
+                <div class="kpi-label">نسبة التسليم</div>
+                <small class="text-muted"><span id="kpiDelivered">0</span> تم تسليمه</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="kpi-value text-info" id="kpiViewRate">--</div>
+                <div class="kpi-label">نسبة المشاهدة</div>
+                <small class="text-muted"><span id="kpiViewed">0</span> شوهد</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card kpi-card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="kpi-value text-warning" id="kpiQualityRate">--</div>
+                <div class="kpi-label">معدل القبول من أول مرة</div>
+                <small class="text-muted" id="kpiRejectionInfo">--</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Funnel Chart + Consistency -->
+<div class="row g-3 mb-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>قمع التقارير اليومية</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="funnelChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0">
+                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>مقاييس الوقت</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="text-muted small">متوسط وقت التقديم</span>
+                    <div class="fs-4 fw-bold" id="medianTimeliness">--</div>
+                </div>
+                <div class="mb-3">
+                    <span class="text-muted small">P90 وقت التقديم</span>
+                    <div class="fs-4 fw-bold" id="p90Timeliness">--</div>
+                </div>
+                <hr>
+                <div>
+                    <span class="text-muted small">متوسط مؤشر الاتساق</span>
+                    <div class="fs-4 fw-bold" id="avgConsistency">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Low Performers Alert -->
+<div id="lowPerformersSection" class="mb-4 d-none">
+    <div class="card border-warning border-0 shadow-sm">
+        <div class="card-header bg-warning bg-opacity-10 border-0">
+            <h6 class="mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>رياض تحتاج تحسين</h6>
+        </div>
+        <div class="card-body">
+            <div id="lowPerformersList" class="row g-2"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaderboard Table -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>ترتيب الرياض (ترجيحي)</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:60px">#</th>
+                        <th>الروضة</th>
+                        <th>المطلوب</th>
+                        <th>المقدم</th>
+                        <th>المسلم</th>
+                        <th>المشاهد</th>
+                        <th>النسبة الخام</th>
+                        <th>النتيجة الترجيحية</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody">
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">جاري التحميل...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Reminder History -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0"><i class="bi bi-bell me-2"></i>سجل التذكيرات</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>النوع</th>
+                        <th>الهدف</th>
+                        <th>نوع التذكير</th>
+                        <th>تاريخ الإرسال</th>
+                        <th>انتهاء التبريد</th>
+                    </tr>
+                </thead>
+                <tbody id="remindersBody">
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">لا توجد تذكيرات</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Reminder Confirmation Modal -->
+<div class="modal fade" id="reminderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إرسال تذكير</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل تريد إرسال تذكير حوكمة إلى <strong id="reminderTargetName"></strong>؟</p>
+                <p class="text-muted small">سيتم تطبيق فترة تبريد 48 ساعة بعد الإرسال.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-warning" id="confirmReminderBtn">
+                    <i class="bi bi-bell me-1"></i>إرسال
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="/static/js/admin_governance.js" charset="utf-8"></script>
+{% endblock %}

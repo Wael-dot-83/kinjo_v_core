@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+{% from 'components/date-range-filter.html' import date_range_filter %}
+
+{% block title %}تحليل تفصيلي: {{ dimension_id }} {% endblock %}
+
+{% block page_header %}
+{% set filter_actions %}
+{{ date_range_filter(
+start_id="periodStart",
+end_id="periodEnd",
+show_governorate=False,
+refresh_btn_id="refreshBtn",
+on_refresh="loadDrilldownData",
+show_export=False
+) }}
+{% endset %}
+{# Note: drilldownTitle and breadcrumbDimension IDs are set via JS, so we keep a custom header here #}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2" id="drilldownTitle">
+            <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
+            تحليل تفصيلي
+        </h1>
+        <nav aria-label="مسار التنقل">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="/admin/analytics">التحليلات</a></li>
+                <li class="breadcrumb-item active" id="breadcrumbDimension">...</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {{ filter_actions }}
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">جاري التحميل...</span>
+    </div>
+    <p class="mt-2">جاري تحميل البيانات التفصيلية...</p>
+</div>
+
+<div id="content" class="d-none">
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4" id="summaryCardRow">
+        <!-- Summary cards will be injected here by JS -->
+    </div>
+
+    <!-- Main Data Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0" id="tableTitle">...</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="drilldownTable">
+                <thead class="table-light" id="drilldownThead">
+                    <!-- Header will be injected here by JS -->
+                </thead>
+                <tbody id="drilldownTbody">
+                    <!-- Body will be injected here by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.2/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tablesort@5.3.0/dist/tablesort.min.js"></script>
+<script src="/static/js/admin_analytics_drilldown.js" charset="utf-8"></script>
+{% endblock %}

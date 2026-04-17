@@ -1,0 +1,32 @@
+{% macro page_header(title, icon=None, icon_color="text-primary", breadcrumbs=None, actions=None) %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-1">
+            {% if icon %}
+            <i class="bi {{ icon }} me-2 {{ icon_color }}"></i>
+            {% endif %}
+            {{ title }}
+        </h1>
+        {% if breadcrumbs %}
+        <nav aria-label="{{ 'Breadcrumb' if ui_lang == 'en' else 'مسار التنقل' }}">
+            <ol class="breadcrumb mb-0">
+                {% for crumb in breadcrumbs %}
+                <li class="breadcrumb-item{% if crumb.url is none %} active{% endif %}">
+                    {% if crumb.url %}
+                    <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+                    {% else %}
+                    {{ crumb.label }}
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+        </nav>
+        {% endif %}
+    </div>
+    {% if actions %}
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {{ actions }}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}

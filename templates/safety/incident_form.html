@@ -1,23 +1,19 @@
 {% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
 
 {% block title %}تسجيل حادث جديد{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
-    <div>
-        <h1 class="h2 mb-1">
-            <i class="bi bi-file-medical me-2 text-danger"></i>
-            تسجيل حادث جديد
-        </h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
-                <li class="breadcrumb-item"><a href="/safety">الصحة والسلامة</a></li>
-                <li class="breadcrumb-item active">تسجيل حادث</li>
-            </ol>
-        </nav>
-    </div>
-</div>
+{{ page_header(
+title="تسجيل حادث جديد",
+icon="bi-file-medical",
+icon_color="text-danger",
+breadcrumbs=[
+{"label": "الرئيسية", "url": "/dashboard"},
+{"label": "الصحة والسلامة", "url": "/safety"},
+{"label": "تسجيل حادث", "url": None}
+]
+) }}
 {% endblock %}
 
 {% block content %}
@@ -27,8 +23,9 @@
             <div class="card-body p-4">
                 <form id="incidentForm" onsubmit="submitIncident(event)">
                     <div class="mb-3">
-                        <label for="childId" class="form-label">رقم الطفل (ID)</label>
-                        <input type="number" class="form-control" id="childId" required placeholder="أدخل رقم هوية النظام للطفل">
+                        <label for="childId" class="form-label">رقم الطفل (المعرّف)</label>
+                        <input type="number" class="form-control" id="childId" required
+                            placeholder="أدخل رقم هوية النظام للطفل">
                         <div class="form-text">سيتم استبدال هذا بقائمة منسدلة في النسخة القادمة.</div>
                     </div>
 
@@ -47,10 +44,10 @@
                             <label for="severity" class="form-label">درجة الخطورة</label>
                             <select class="form-select" id="severity" required>
                                 <option value="" selected disabled>اختر الدرجة...</option>
-                                <option value="LOW">منخفضة (Low)</option>
-                                <option value="MEDIUM">متوسطة (Medium)</option>
-                                <option value="HIGH">عالية (High)</option>
-                                <option value="CRITICAL">حرجة (Critical)</option>
+                                <option value="LOW">منخفضة</option>
+                                <option value="MEDIUM">متوسطة</option>
+                                <option value="HIGH">عالية</option>
+                                <option value="CRITICAL">حرجة</option>
                             </select>
                         </div>
                     </div>
@@ -62,7 +59,8 @@
 
                     <div class="mb-3">
                         <label for="description" class="form-label">وصف تفصيلي للحادث</label>
-                        <textarea class="form-control" id="description" rows="5" required placeholder="صف ما حدث بالضبط، المكان، ومن كان موجوداً..."></textarea>
+                        <textarea class="form-control" id="description" rows="5" required
+                            placeholder="صف ما حدث بالضبط، المكان، ومن كان موجوداً..."></textarea>
                     </div>
 
                     <div class="form-check mb-4">
@@ -83,13 +81,13 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
     document.getElementById('occurredAt').value = new Date().toISOString().slice(0, 16);
 
     async function submitIncident(e) {
         e.preventDefault();
-        
+
         const data = {
             child_id: parseInt(document.getElementById('childId').value),
             type: document.getElementById('type').value,
@@ -100,26 +98,15 @@
         };
 
         try {
-            const token = localStorage.getItem('token'); // Assuming standard token storage
-            const response = await fetch('/api/incidents', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
+            const response = await window.api.post('/api/incidents', data);
 
-            if (response.ok) {
+            if (response) {
                 alert('تم تسجيل الحادث بنجاح');
                 window.location.href = '/safety';
-            } else {
-                const err = await response.json();
-                alert('خطأ: ' + (err.detail || 'فشل التسجيل'));
             }
         } catch (error) {
             console.error(error);
-            alert('حدث خطأ في الاتصال');
+            alert('حدث خطأ في الاتصال: ' + error.message);
         }
     }
 </script>

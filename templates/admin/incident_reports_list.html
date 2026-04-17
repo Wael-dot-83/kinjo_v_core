@@ -1,0 +1,570 @@
+{% extends 'base.html' %}
+
+{% block title %}تقارير الحوادث{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-exclamation-triangle me-2 text-warning"></i>
+            تقارير الحوادث
+        </h1>
+        <nav aria-label="مسار التنقل">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">تقارير الحوادث</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
+            <i class="bi bi-plus-circle me-2"></i>إنشاء تقرير جديد
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Filters -->
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">تصفية التقارير</h5>
+            </div>
+            <div class="card-body">
+                <form id="filterForm" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="scopeFilter" class="form-label">النطاق</label>
+                        <select class="form-select" id="scopeFilter">
+                            <option value="">جميع النطاقات</option>
+                            <option value="KINDERGARTEN">روضة محددة</option>
+                            <option value="GOVERNORATE">محافظة</option>
+                            <option value="ALL">جميع الروضات</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="kindergartenFilter" class="form-label">الروضة</label>
+                        <select class="form-select" id="kindergartenFilter" disabled>
+                            <option value="">اختر الروضة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="governorateFilter" class="form-label">المحافظة</label>
+                        <select class="form-select" id="governorateFilter" disabled>
+                            <option value="">اختر المحافظة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-primary me-2" onclick="loadReports()">
+                            <i class="bi bi-search me-1"></i>بحث
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetFilters()">
+                            <i class="bi bi-x-circle me-1"></i>إعادة تعيين
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports List -->
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">قائمة التقارير</h5>
+                <div id="loadingSpinner" class="spinner-border spinner-border-sm text-primary" role="status"
+                    style="display: none;">
+                    <span class="visually-hidden">جاري التحميل...</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="reportsTableContainer">
+                    <!-- Reports will be loaded here -->
+                </div>
+                <div id="emptyState" class="text-center py-5" style="display: none;">
+                    <i class="bi bi-file-earmark-x display-4 text-muted mb-3"></i>
+                    <h5 class="text-muted">لا توجد تقارير</h5>
+                    <p class="text-muted">لم يتم العثور على أي تقارير تطابق معايير البحث.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Report Modal -->
+<div class="modal fade" id="generateReportModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إنشاء تقرير حوادث جديد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="generateReportForm">
+                    <div class="mb-3">
+                        <label for="reportScope" class="form-label">نطاق التقرير</label>
+                        <select class="form-select" id="reportScope" required>
+                            <option value="">اختر النطاق</option>
+                            <option value="KINDERGARTEN">روضة محددة</option>
+                            <option value="GOVERNORATE">محافظة</option>
+                            <option value="ALL">جميع الروضات</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="kindergartenSelectDiv" style="display: none;">
+                        <label for="reportKindergarten" class="form-label">الروضة</label>
+                        <select class="form-select" id="reportKindergarten">
+                            <option value="">اختر الروضة</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="governorateSelectDiv" style="display: none;">
+                        <label for="reportGovernorate" class="form-label">المحافظة</label>
+                        <select class="form-select" id="reportGovernorate">
+                            <option value="">اختر المحافظة</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reportPeriod" class="form-label">الفترة الزمنية</label>
+                        <select class="form-select" id="reportPeriod" required>
+                            <option value="">اختر الفترة</option>
+                            <option value="week">الأسبوع الحالي</option>
+                            <option value="month">الشهر الحالي</option>
+                            <option value="3years">آخر 3 سنوات</option>
+                            <option value="annual">السنة الحالية</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="yearSelectDiv" style="display: none;">
+                        <label for="reportYear" class="form-label">السنة</label>
+                        <select class="form-select" id="reportYear">
+                            <option value="">اختر السنة</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="generateReport()">
+                    <i class="bi bi-check-circle me-1"></i>إنشاء التقرير
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Detail Modal -->
+<div class="modal fade" id="reportDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportDetailTitle">تفاصيل التقرير</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="reportDetailContent">
+                    <!-- Report details will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-success" onclick="exportReport()">
+                    <i class="bi bi-download me-1"></i>تصدير CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Global variables
+    let currentReportId = null;
+
+    // Load reports on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        loadReports();
+        setupFormHandlers();
+        loadGovernorates();
+        loadKindergartens();
+    });
+
+    // Setup form handlers
+    function setupFormHandlers() {
+        document.getElementById('reportScope').addEventListener('change', function () {
+            const scope = this.value;
+            document.getElementById('kindergartenSelectDiv').style.display = scope === 'KINDERGARTEN' ? 'block' : 'none';
+            document.getElementById('governorateSelectDiv').style.display = scope === 'GOVERNORATE' ? 'block' : 'none';
+        });
+
+        document.getElementById('reportPeriod').addEventListener('change', function () {
+            const period = this.value;
+            document.getElementById('yearSelectDiv').style.display = period === 'annual' ? 'block' : 'none';
+            if (period === 'annual') {
+                populateYearSelect();
+            }
+        });
+
+        document.getElementById('scopeFilter').addEventListener('change', function () {
+            const scope = this.value;
+            document.getElementById('kindergartenFilter').disabled = scope !== 'KINDERGARTEN';
+            document.getElementById('governorateFilter').disabled = scope !== 'GOVERNORATE';
+        });
+    }
+
+    // Load governorates
+    async function loadGovernorates() {
+        try {
+            const response = await fetch('/api/kindergartens?limit=1'); // Just to get governorates
+            if (!response.ok) return;
+            const data = await response.json();
+            // This is a simplified version - in real implementation, get unique governorates
+            const governorates = ['عمان', 'إربد', 'الزرقاء', 'المفرق', 'جرش', 'عجلون', 'الكرك', 'الطفيلة', 'معان', 'العقبة', 'مادبا', 'البلقاء'];
+            const selects = ['reportGovernorate', 'governorateFilter'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    governorates.forEach(gov => {
+                        const option = document.createElement('option');
+                        option.value = gov;
+                        option.textContent = gov;
+                        select.appendChild(option);
+                    });
+                }
+            });
+        } catch (error) {
+            console.error('Error loading governorates:', error);
+        }
+    }
+
+    // Load kindergartens
+    async function loadKindergartens() {
+        try {
+            const response = await fetch('/api/kindergartens?limit=200');
+            if (!response.ok) return;
+            const data = await response.json();
+            const kindergartens = Array.isArray(data) ? data : (data.kindergartens || []);
+            const selects = ['reportKindergarten', 'kindergartenFilter'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    kindergartens.forEach(kg => {
+                        const option = document.createElement('option');
+                        option.value = kg.id;
+                        option.textContent = kg.name_ar || kg.name_en || `روضة ${kg.id}`;
+                        select.appendChild(option);
+                    });
+                }
+            });
+        } catch (error) {
+            console.error('Error loading kindergartens:', error);
+        }
+    }
+
+    // Populate year select
+    function populateYearSelect() {
+        const select = document.getElementById('reportYear');
+        select.innerHTML = '<option value="">اختر السنة</option>';
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear; year >= currentYear - 5; year--) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            select.appendChild(option);
+        }
+    }
+
+    // Load reports
+    async function loadReports() {
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const reportsContainer = document.getElementById('reportsTableContainer');
+        const emptyState = document.getElementById('emptyState');
+
+        loadingSpinner.style.display = 'inline-block';
+        reportsContainer.innerHTML = '';
+
+        try {
+            const params = new URLSearchParams();
+            const scopeFilter = document.getElementById('scopeFilter').value;
+            const kindergartenFilter = document.getElementById('kindergartenFilter').value;
+            const governorateFilter = document.getElementById('governorateFilter').value;
+
+            if (scopeFilter) params.append('scope_filter', scopeFilter);
+            if (kindergartenFilter) params.append('kindergarten_id', kindergartenFilter);
+            if (governorateFilter) params.append('governorate', governorateFilter);
+
+            const response = await fetch(`/api/admin/reports/incidents?${params.toString()}`);
+            if (!response.ok) throw new Error('Failed to load reports');
+
+            const data = await response.json();
+            const reports = data.reports || [];
+
+            if (reports.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            renderReportsTable(reports);
+
+        } catch (error) {
+            console.error('Error loading reports:', error);
+            reportsContainer.innerHTML = '<div class="alert alert-danger">حدث خطأ في تحميل التقارير</div>';
+        } finally {
+            loadingSpinner.style.display = 'none';
+        }
+    }
+
+    // Render reports table
+    function renderReportsTable(reports) {
+        const container = document.getElementById('reportsTableContainer');
+        let html = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>العنوان</th>
+                        <th>النطاق</th>
+                        <th>الفترة الزمنية</th>
+                        <th>تاريخ الإنشاء</th>
+                        <th>المولد</th>
+                        <th>عدد الحوادث</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+        reports.forEach(report => {
+            html += `
+            <tr>
+                <td>${report.title}</td>
+                <td>${getScopeDisplayName(report.scope_type, report.scope_name)}</td>
+                <td>${report.start_date} - ${report.end_date}</td>
+                <td>${new Date(report.created_at).toLocaleDateString('ar-JO')}</td>
+                <td>${report.created_by}</td>
+                <td><span class="badge bg-warning">${report.total_incidents}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="viewReport(${report.id})">
+                        <i class="bi bi-eye"></i> عرض
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="exportReport(${report.id})">
+                        <i class="bi bi-download"></i> تصدير
+                    </button>
+                </td>
+            </tr>
+        `;
+        });
+
+        html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+        container.innerHTML = html;
+    }
+
+    // Get scope display name
+    function getScopeDisplayName(scopeType, scopeName) {
+        switch (scopeType) {
+            case 'KINDERGARTEN':
+                return `روضة: ${scopeName}`;
+            case 'GOVERNORATE':
+                return `محافظة: ${scopeName}`;
+            case 'ALL':
+                return 'جميع الروضات';
+            default:
+                return scopeName || scopeType;
+        }
+    }
+
+    // Reset filters
+    function resetFilters() {
+        document.getElementById('scopeFilter').value = '';
+        document.getElementById('kindergartenFilter').value = '';
+        document.getElementById('governorateFilter').value = '';
+        document.getElementById('kindergartenFilter').disabled = true;
+        document.getElementById('governorateFilter').disabled = true;
+        loadReports();
+    }
+
+    // Generate report
+    async function generateReport() {
+        const form = document.getElementById('generateReportForm');
+        const scopeType = document.getElementById('reportScope').value;
+        const kindergartenId = document.getElementById('reportKindergarten').value;
+        const governorate = document.getElementById('reportGovernorate').value;
+        const periodType = document.getElementById('reportPeriod').value;
+        const year = document.getElementById('reportYear').value;
+
+        if (!scopeType || !periodType) {
+            alert('يرجى ملء جميع الحقول المطلوبة');
+            return;
+        }
+
+        // Validate scope-specific fields
+        if (scopeType === 'KINDERGARTEN' && !kindergartenId) {
+            alert('يرجى اختيار الروضة');
+            return;
+        }
+        if (scopeType === 'GOVERNORATE' && !governorate) {
+            alert('يرجى اختيار المحافظة');
+            return;
+        }
+        if (periodType === 'annual' && !year) {
+            alert('يرجى اختيار السنة');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/admin/reports/incidents/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    scope_type: scopeType,
+                    kindergarten_id: kindergartenId || '',
+                    governorate: governorate || '',
+                    period_type: periodType,
+                    year: year || ''
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to generate report');
+
+            const data = await response.json();
+            alert('تم إنشاء التقرير بنجاح');
+            bootstrap.Modal.getInstance(document.getElementById('generateReportModal')).hide();
+            loadReports();
+
+        } catch (error) {
+            console.error('Error generating report:', error);
+            alert('حدث خطأ في إنشاء التقرير');
+        }
+    }
+
+    // View report
+    async function viewReport(reportId) {
+        currentReportId = reportId;
+        try {
+            const response = await fetch(`/api/admin/reports/incidents/${reportId}`);
+            if (!response.ok) throw new Error('Failed to load report');
+
+            const report = await response.json();
+            renderReportDetail(report);
+            new bootstrap.Modal(document.getElementById('reportDetailModal')).show();
+
+        } catch (error) {
+            console.error('Error loading report:', error);
+            alert('حدث خطأ في تحميل التقرير');
+        }
+    }
+
+    // Render report detail
+    function renderReportDetail(report) {
+        const container = document.getElementById('reportDetailContent');
+        const metrics = report.metrics_json || {};
+
+        let html = `
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h6>معلومات التقرير</h6>
+                <table class="table table-sm">
+                    <tr><td>النطاق:</td><td>${getScopeDisplayName(report.scope_type, report.governorate || report.kindergarten?.name_ar)}</td></tr>
+                    <tr><td>الفترة:</td><td>${report.start_date} - ${report.end_date}</td></tr>
+                    <tr><td>تاريخ الإنشاء:</td><td>${new Date(report.created_at).toLocaleString('ar-JO')}</td></tr>
+                    <tr><td>المولد:</td><td>${report.creator?.username || 'غير معروف'}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>الملخص</h6>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border rounded p-2">
+                            <div class="h4 text-warning mb-0">${metrics.total_incidents || 0}</div>
+                            <small class="text-muted">إجمالي الحوادث</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-2">
+                            <div class="h4 text-success mb-0">${metrics.open_incidents || 0}</div>
+                            <small class="text-muted">حوادث مفتوحة</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <h6>الحوادث حسب النوع</h6>
+                <div id="typeChart"></div>
+            </div>
+            <div class="col-md-6">
+                <h6>الحوادث حسب الخطورة</h6>
+                <div id="severityChart"></div>
+            </div>
+        </div>
+
+        ${metrics.per_kindergarten ? `
+        <div class="mt-4">
+            <h6>الحوادث حسب الروضة</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>الروضة</th>
+                            <th>عدد الحوادث</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${Object.entries(metrics.per_kindergarten).map(([name, count]) =>
+            `<tr><td>${name}</td><td>${count}</td></tr>`
+        ).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        ` : ''}
+    `;
+
+        container.innerHTML = html;
+    }
+
+    // Export report
+    async function exportReport(reportId = null) {
+        const id = reportId || currentReportId;
+        if (!id) return;
+
+        try {
+            const response = await fetch(`/api/admin/reports/incidents/${id}/export`);
+            if (!response.ok) throw new Error('Export failed');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `incident_report_${id}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+        } catch (error) {
+            console.error('Error exporting report:', error);
+            alert('حدث خطأ في التصدير');
+        }
+    }
+</script>
+
+<style>
+    .table-responsive {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .badge {
+        font-size: 0.75em;
+    }
+</style>
+{% endblock %}
+<parameter name="filePath">e:\KInjov2\templates\admin\incident_reports_list.html

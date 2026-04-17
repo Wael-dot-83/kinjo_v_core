@@ -1,0 +1,31 @@
+{% macro loading_state() %}
+<div class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">{{ 'Loading...' if ui_lang == 'en' else 'جاري التحميل...' }}</span>
+    </div>
+    <div class="mt-2 text-muted">{{ 'Loading...' if ui_lang == 'en' else 'جاري التحميل...' }}</div>
+</div>
+{% endmacro %}
+
+{% macro pagination(current_page=1, total_pages=1, base_url="#", pagination_id="", aria_label="Page navigation") %}
+{% if total_pages > 1 %}
+<nav aria-label="{{ aria_label }}" {% if pagination_id %} id="{{ pagination_id }}" {% endif %}>
+    <ul class="pagination justify-content-center"><li class="page-item{% if current_page <= 1 %} disabled{% endif %}">
+            <a class="page-link" href="{{ base_url }}?page={{ current_page - 1 }}" {% if current_page <=1 %}
+                tabindex="-1" aria-disabled="true" {% endif %}>
+                {{ 'Previous' if ui_lang == 'en' else 'السابق' }}
+            </a>
+        </li>
+        {% for page in range(max(1, current_page - 2), min(total_pages + 1, current_page + 3)) %}<li
+            class="page-item{% if page == current_page %} active{% endif %}">
+            <a class="page-link" href="{{ base_url }}?page={{ page }}">{{ page }}</a>
+        </li>
+        {% endfor %}<li class="page-item{% if current_page >= total_pages %} disabled{% endif %}">
+            <a class="page-link" href="{{ base_url }}?page={{ current_page + 1 }}" {% if current_page>= total_pages %}
+                tabindex="-1" aria-disabled="true"{% endif %}>
+                {{ 'Next' if ui_lang == 'en' else 'التالي' }}
+            </a>
+        </li></ul>
+</nav>
+{% endif %}
+{% endmacro %}

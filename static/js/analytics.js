@@ -1,8 +1,39 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 /**
  * KinJo Analytics Module
  * Handles admin analytics dashboard functionality
  */
+function analyticsLangCode() {
+  return (
+    window.AppI18n?.currentLang ||
+    window.AdminI18n?.getCurrentLanguage?.().code ||
+    localStorage.getItem("kinjo_lang") ||
+    localStorage.getItem("admin_language") ||
+    document.documentElement.lang ||
+    "ar"
+  );
+}
+
+function analyticsText(arText, enText) {
+  return String(analyticsLangCode()).toLowerCase().startsWith("en") ? enText : arText;
+}
+
+function analyticsLocale() {
+  return analyticsText("ar-JO", "en-US");
+}
+
+function analyticsLiteral(value) {
+  const raw = String(value ?? "");
+  if (!raw) return "";
+  let result = raw;
+  if (typeof window.AppI18n?.replaceLiteralSegments === "function") {
+    result = window.AppI18n.replaceLiteralSegments(raw);
+  } else if (typeof window.AdminI18n?.replaceLiteralSegments === "function") {
+    result = window.AdminI18n.replaceLiteralSegments(raw);
+  }
+  return typeof window.escapeHtml === "function" ? window.escapeHtml(result) : result;
+}
+
 const Analytics = {
   // State
   startDate: null,
@@ -66,21 +97,17 @@ const Analytics = {
    * Setup tab change event handlers
    */
   setupTabHandlers: function () {
-    const tabElements = document.querySelectorAll(
-      '#analyticsTabs button[data-bs-toggle="pill"]',
-    );
+    const tabElements = document.querySelectorAll('#analyticsTabs button[data-bs-toggle="pill"]');
     tabElements.forEach(
       function (tab) {
         tab.addEventListener(
           "shown.bs.tab",
           function (event) {
-            const targetId = event.target
-              .getAttribute("data-bs-target")
-              .replace("#", "");
+            const targetId = event.target.getAttribute("data-bs-target").replace("#", "");
             this.onTabChange(targetId);
-          }.bind(this),
+          }.bind(this)
         );
-      }.bind(this),
+      }.bind(this)
     );
   },
 
@@ -91,7 +118,7 @@ const Analytics = {
     // Check authentication before loading tab data
     if (!api.isAuthenticated()) {
       console.warn("User not authenticated, cannot load tab data");
-      showToast("يجب تسجيل الدخول أولاً", "warning");
+      showToast(analyticsText("يجب تسجيل الدخول أولاً", "Please sign in first"), "warning");
       return;
     }
 
@@ -120,7 +147,7 @@ const Analytics = {
   applyFilters: function () {
     // Check authentication before applying filters
     if (!api.isAuthenticated()) {
-      showToast("يجب تسجيل الدخول أولاً", "warning");
+      showToast(analyticsText("يجب تسجيل الدخول أولاً", "Please sign in first"), "warning");
       return;
     }
 
@@ -131,9 +158,7 @@ const Analytics = {
     // Reload current tab data
     const activeTab = document.querySelector("#analyticsTabs .nav-link.active");
     if (activeTab) {
-      const targetId = activeTab
-        .getAttribute("data-bs-target")
-        .replace("#", "");
+      const targetId = activeTab.getAttribute("data-bs-target").replace("#", "");
       if (targetId === "overview") {
         this.loadOverview();
       } else {
@@ -149,8 +174,7 @@ const Analytics = {
     const params = new URLSearchParams();
     if (this.startDate) params.append("start_date", this.startDate);
     if (this.endDate) params.append("end_date", this.endDate);
-    if (this.governorateFilter)
-      params.append("governorate", this.governorateFilter);
+    if (this.governorateFilter) params.append("governorate", this.governorateFilter);
     return params.toString();
   },
 
@@ -163,8 +187,8 @@ const Analytics = {
       container.innerHTML =
         '<div class="alert alert-danger text-center py-3" role="alert">' +
         '<i class="bi bi-exclamation-triangle me-2"></i>' +
-        (message || "حدث خطأ في تحميل البيانات") +
-        '<br><small class="text-muted">يرجى المحاولة مرة أخرى</small>' +
+        (message || analyticsText("حدث خطأ في تحميل البيانات", "Failed to load data")) +
+        `<br><small class="text-muted">${analyticsText("يرجى المحاولة مرة أخرى", "Please try again")}</small>` +
         "</div>";
     }
   },
@@ -178,9 +202,9 @@ const Analytics = {
       container.innerHTML =
         '<div class="text-center py-4">' +
         '<div class="spinner-border text-primary" role="status">' +
-        '<span class="visually-hidden">جاري التحميل...</span>' +
+        `<span class="visually-hidden">${analyticsText("جاري التحميل...", "Loading...")}</span>` +
         "</div>" +
-        '<p class="text-muted mt-2">جاري التحميل...</p>' +
+        `<p class="text-muted mt-2">${analyticsText("جاري التحميل...", "Loading...")}</p>` +
         "</div>";
     }
   },
@@ -191,7 +215,7 @@ const Analytics = {
   loadOverview: async function () {
     // Check authentication before loading data
     if (!api.isAuthenticated()) {
-      showToast("يجب تسجيل الدخول أولاً", "warning");
+      showToast(analyticsText("يجب تسجيل الدخول أولاً", "Please sign in first"), "warning");
       return;
     }
 
@@ -201,9 +225,7 @@ const Analytics = {
     this.showLoading("bottomRankings");
 
     try {
-      const response = await api.get(
-        "/api/analytics/overview?" + this.getQueryParams(),
-      );
+      const response = await api.get("/api/analytics/overview?" + this.getQueryParams());
 
       if (response.summary) {
         this.updateSummaryCards(response.summary);
@@ -215,7 +237,10 @@ const Analytics = {
         this.renderGovernorateBreakdown(response.governorates);
         this.populateGovernorateFilter(response.governorates);
       } else {
-        this.showError("governorateBreakdown", "لا توجد بيانات للمحافظات");
+        this.showError(
+          "governorateBreakdown",
+          analyticsText("لا توجد بيانات للمحافظات", "No governorate data")
+        );
       }
 
       // Load rankings
@@ -225,12 +250,21 @@ const Analytics = {
       this.loadTrendChart();
     } catch (error) {
       console.error("Error loading overview:", error);
-      showToast("خطأ في تحميل البيانات", "error");
+      showToast(analyticsText("خطأ في تحميل البيانات", "Failed to load data"), "error");
       // Show error states in all sections
       this.updateSummaryCards({});
-      this.showError("governorateBreakdown", "فشل تحميل بيانات المحافظات");
-      this.showError("topRankings", "فشل تحميل التصنيفات");
-      this.showError("bottomRankings", "فشل تحميل التصنيفات");
+      this.showError(
+        "governorateBreakdown",
+        analyticsText("فشل تحميل بيانات المحافظات", "Failed to load governorate data")
+      );
+      this.showError(
+        "topRankings",
+        analyticsText("فشل تحميل التصنيفات", "Failed to load rankings")
+      );
+      this.showError(
+        "bottomRankings",
+        analyticsText("فشل تحميل التصنيفات", "Failed to load rankings")
+      );
     }
   },
 
@@ -238,14 +272,11 @@ const Analytics = {
    * Update summary metric cards
    */
   updateSummaryCards: function (summary) {
-    document.getElementById("totalKindergartens").textContent =
-      summary.total_kindergartens || 0;
-    document.getElementById("totalChildren").textContent =
-      summary.total_children || 0;
+    document.getElementById("totalKindergartens").textContent = summary.total_kindergartens || 0;
+    document.getElementById("totalChildren").textContent = summary.total_children || 0;
     document.getElementById("attendanceRate").innerHTML =
       (summary.attendance_rate || 0) + "<small>%</small>";
-    document.getElementById("governanceScore").textContent =
-      summary.governance_avg_score || 0;
+    document.getElementById("governanceScore").textContent = summary.governance_avg_score || 0;
   },
 
   /**
@@ -255,8 +286,7 @@ const Analytics = {
     const container = document.getElementById("governorateBreakdown");
 
     if (!governorates || governorates.length === 0) {
-      container.innerHTML =
-        '<p class="text-muted text-center py-4">لا توجد بيانات</p>';
+      container.innerHTML = `<p class="text-muted text-center py-4">${analyticsText("لا توجد بيانات", "No data")}</p>`;
       return;
     }
 
@@ -264,7 +294,7 @@ const Analytics = {
       ...governorates.map(function (g) {
         return g.governance_score || 0;
       }),
-      1,
+      1
     );
 
     var html = '<div class="list-group list-group-flush">';
@@ -288,7 +318,7 @@ const Analytics = {
         '<span class="badge ' +
         bandClass +
         '">' +
-        gov.governance_score.toFixed(1) +
+        (gov.governance_score ?? 0).toFixed(1) +
         "</span>" +
         "</div>" +
         '<div class="progress" style="height: 6px;">' +
@@ -300,9 +330,9 @@ const Analytics = {
         "</div>" +
         '<small class="text-muted">' +
         gov.kindergarten_count +
-        " روضة | " +
+        ` ${analyticsText("روضة", "kindergartens")} | ` +
         gov.children_count +
-        " طفل</small>" +
+        ` ${analyticsText("طفل", "children")}</small>` +
         "</div>";
     });
     html += "</div>";
@@ -315,7 +345,7 @@ const Analytics = {
    */
   populateGovernorateFilter: function (governorates) {
     const select = document.getElementById("governorateFilter");
-    select.innerHTML = '<option value="">جميع المحافظات</option>';
+    select.innerHTML = `<option value="">${analyticsText("جميع المحافظات", "All governorates")}</option>`;
 
     governorates.forEach(function (gov) {
       const option = document.createElement("option");
@@ -343,7 +373,7 @@ const Analytics = {
         "/api/analytics/time-series?metric=" +
           metric +
           "&dimension_type=NETWORK&granularity=daily&" +
-          this.getQueryParams(),
+          this.getQueryParams()
       );
 
       if (response.data && response.data.length > 0) {
@@ -357,7 +387,7 @@ const Analytics = {
         chartContainer.innerHTML =
           '<canvas id="trendChart"></canvas>' +
           '<div class="text-center text-muted py-4">' +
-          '<i class="bi bi-graph-up me-2"></i>لا توجد بيانات للفترة المحددة' +
+          `<i class="bi bi-graph-up me-2"></i>${analyticsText("لا توجد بيانات للفترة المحددة", "No data for the selected period")}` +
           "</div>";
       }
     } catch (error) {
@@ -369,7 +399,7 @@ const Analytics = {
       chartContainer.innerHTML =
         '<canvas id="trendChart"></canvas>' +
         '<div class="alert alert-danger text-center py-3">' +
-        '<i class="bi bi-exclamation-triangle me-2"></i>فشل تحميل بيانات الاتجاه' +
+        `<i class="bi bi-exclamation-triangle me-2"></i>${analyticsText("فشل تحميل بيانات الاتجاه", "Failed to load trend data")}` +
         "</div>";
     }
   },
@@ -387,7 +417,7 @@ const Analytics = {
 
     const labels = data.map(function (d) {
       const date = new Date(d.date);
-      return date.toLocaleDateString("ar-JO", {
+      return date.toLocaleDateString(analyticsLocale(), {
         month: "short",
         day: "numeric",
       });
@@ -398,9 +428,9 @@ const Analytics = {
     });
 
     const metricLabels = {
-      attendance_rate: "نسبة الحضور (%)",
-      incident_count: "عدد الحوادث",
-      enrollment_count: "التسجيلات الجديدة",
+      attendance_rate: analyticsText("نسبة الحضور (%)", "Attendance rate (%)"),
+      incident_count: analyticsText("عدد الحوادث", "Incident count"),
+      enrollment_count: analyticsText("التسجيلات الجديدة", "New enrollments"),
     };
 
     this.charts.trend = new Chart(ctx, {
@@ -448,37 +478,43 @@ const Analytics = {
     try {
       // Load top rankings
       const topResponse = await api.get(
-        "/api/analytics/rankings/governance_score?top_n=5&" +
-          this.getQueryParams(),
+        "/api/analytics/rankings/governance_score?top_n=5&" + this.getQueryParams()
       );
       this.renderRankings("topRankings", topResponse.rankings, false);
     } catch (error) {
       console.error("Error loading top rankings:", error);
-      this.showError("topRankings", "فشل تحميل أفضل الروضات");
+      this.showError(
+        "topRankings",
+        analyticsText("فشل تحميل أفضل الروضات", "Failed to load top kindergartens")
+      );
     }
 
     try {
       // Load bottom rankings
       const bottomResponse = await api.get(
-        "/api/analytics/rankings/governance_score?top_n=5&bottom=true&" +
-          this.getQueryParams(),
+        "/api/analytics/rankings/governance_score?top_n=5&bottom=true&" + this.getQueryParams()
       );
       this.renderRankings("bottomRankings", bottomResponse.rankings, true);
     } catch (error) {
       console.error("Error loading bottom rankings:", error);
-      this.showError("bottomRankings", "فشل تحميل الروضات التي تحتاج تحسين");
+      this.showError(
+        "bottomRankings",
+        analyticsText(
+          "فشل تحميل الروضات التي تحتاج تحسين",
+          "Failed to load underperforming kindergartens"
+        )
+      );
     }
   },
 
   /**
    * Render rankings list
    */
-  renderRankings: function (containerId, rankings, isBottom) {
+  renderRankings: function (containerId, rankings, _isBottom) {
     const container = document.getElementById(containerId);
 
     if (!rankings || rankings.length === 0) {
-      container.innerHTML =
-        '<p class="text-muted text-center py-3">لا توجد بيانات</p>';
+      container.innerHTML = `<p class="text-muted text-center py-3">${analyticsText("لا توجد بيانات", "No data")}</p>`;
       return;
     }
 
@@ -486,11 +522,7 @@ const Analytics = {
     rankings.forEach(function (item, index) {
       const badgeClass = index < 3 ? "ranking-" + (index + 1) : "bg-secondary";
       const bandClass =
-        item.band === "GREEN"
-          ? "band-green"
-          : item.band === "AMBER"
-            ? "band-amber"
-            : "band-red";
+        item.band === "GREEN" ? "band-green" : item.band === "AMBER" ? "band-amber" : "band-red";
 
       html +=
         '<div class="list-group-item d-flex align-items-center drilldown-btn" ' +
@@ -504,16 +536,16 @@ const Analytics = {
         "</span>" +
         '<div class="flex-grow-1">' +
         '<div class="fw-medium">' +
-        item.kindergarten_name +
+        analyticsLiteral(item.kindergarten_name) +
         "</div>" +
         '<small class="text-muted">' +
-        item.governorate +
+        analyticsLiteral(item.governorate) +
         "</small>" +
         "</div>" +
         '<span class="badge ' +
         bandClass +
         '">' +
-        item.value.toFixed(1) +
+        (item.value ?? 0).toFixed(1) +
         "</span>" +
         "</div>";
     });
@@ -528,14 +560,12 @@ const Analytics = {
   drilldown: async function (dimensionType, dimensionId) {
     // Check authentication before loading drilldown data
     if (!api.isAuthenticated()) {
-      showToast("يجب تسجيل الدخول أولاً", "warning");
+      showToast(analyticsText("يجب تسجيل الدخول أولاً", "Please sign in first"), "warning");
       return;
     }
 
     try {
-      const modal = new bootstrap.Modal(
-        document.getElementById("drilldownModal"),
-      );
+      const modal = new bootstrap.Modal(document.getElementById("drilldownModal"));
       const modalTitle = document.getElementById("drilldownModalTitle");
       const modalBody = document.getElementById("drilldownModalBody");
 
@@ -551,7 +581,7 @@ const Analytics = {
           "/" +
           dimensionId +
           "?" +
-          this.getQueryParams(),
+          this.getQueryParams()
       );
 
       modalTitle.textContent = response.dimension_name || dimensionId;
@@ -566,7 +596,7 @@ const Analytics = {
       }
     } catch (error) {
       console.error("Error loading drilldown:", error);
-      showToast("خطأ في تحميل التفاصيل", "error");
+      showToast(analyticsText("خطأ في تحميل التفاصيل", "Failed to load details"), "error");
     }
   },
 
@@ -575,18 +605,18 @@ const Analytics = {
    */
   renderGovernorateDrilldown: function (container, data) {
     var html =
-      '<p class="text-muted mb-3">الفترة: ' +
+      `<p class="text-muted mb-3">${analyticsText("الفترة", "Period")}: ` +
       data.period_start +
-      " إلى " +
+      ` ${analyticsText("إلى", "to")} ` +
       data.period_end +
       "</p>" +
       '<table class="table table-hover">' +
       "<thead>" +
       "<tr>" +
-      "<th>الروضة</th>" +
-      "<th>الأطفال</th>" +
-      "<th>الحضور %</th>" +
-      "<th>الحوكمة</th>" +
+      `<th>${analyticsText("الروضة", "Kindergarten")}</th>` +
+      `<th>${analyticsText("الأطفال", "Children")}</th>` +
+      `<th>${analyticsText("الحضور %", "Attendance %")}</th>` +
+      `<th>${analyticsText("الحوكمة", "Governance")}</th>` +
       "</tr>" +
       "</thead>" +
       "<tbody>";
@@ -604,7 +634,7 @@ const Analytics = {
           kg.id +
           "')\">" +
           "<td>" +
-          kg.name +
+          analyticsLiteral(kg.name) +
           "</td>" +
           "<td>" +
           kg.children_count +
@@ -647,19 +677,19 @@ const Analytics = {
       "/" +
       (metrics.capacity || 0) +
       "</div>" +
-      '<small class="text-muted">الأطفال/السعة</small>' +
+      `<small class="text-muted">${analyticsText("الأطفال/السعة", "Children/Capacity")}</small>` +
       "</div>" +
       '<div class="col-md-3 text-center">' +
       '<div class="h4 mb-0">' +
       (metrics.attendance_rate || 0) +
       "%</div>" +
-      '<small class="text-muted">نسبة الحضور</small>' +
+      `<small class="text-muted">${analyticsText("نسبة الحضور", "Attendance rate")}</small>` +
       "</div>" +
       '<div class="col-md-3 text-center">' +
       '<div class="h4 mb-0">' +
       (metrics.ratio_compliance || 0) +
       "%</div>" +
-      '<small class="text-muted">نسبة الموظفين</small>' +
+      `<small class="text-muted">${analyticsText("نسبة الموظفين", "Staff ratio")}</small>` +
       "</div>" +
       '<div class="col-md-3 text-center">' +
       '<div class="h4 mb-0"><span class="badge ' +
@@ -667,16 +697,15 @@ const Analytics = {
       '">' +
       (metrics.governance_score || 0) +
       "</span></div>" +
-      '<small class="text-muted">الحوكمة</small>' +
-      "</div>" +
-      "</div>" +
-      '<h6 class="mb-3">الفصول</h6>' +
+      `<small class="text-muted">${analyticsText("الحوكمة", "Governance")}</small>` +
+      "</div></div>" +
+      `<h6 class="mb-3">${analyticsText("الفصول", "Classes")}</h6>` +
       '<table class="table table-hover">' +
       "<thead>" +
       "<tr>" +
-      "<th>الفصل</th>" +
-      "<th>الفئة العمرية</th>" +
-      "<th>الأطفال</th>" +
+      `<th>${analyticsText("الفصل", "Class")}</th>` +
+      `<th>${analyticsText("الفئة العمرية", "Age group")}</th>` +
+      `<th>${analyticsText("الأطفال", "Children")}</th>` +
       "</tr>" +
       "</thead>" +
       "<tbody>";
@@ -688,7 +717,7 @@ const Analytics = {
           cls.id +
           "')\">" +
           "<td>" +
-          cls.name +
+          analyticsLiteral(cls.name) +
           "</td>" +
           "<td>" +
           (cls.age_group || "-") +
@@ -720,22 +749,21 @@ const Analytics = {
       "/" +
       (metrics.capacity || 0) +
       "</div>" +
-      '<small class="text-muted">الأطفال/السعة</small>' +
+      `<small class="text-muted">${analyticsText("الأطفال/السعة", "Children/Capacity")}</small>` +
       "</div>" +
       '<div class="col-md-4 text-center">' +
       '<div class="h4 mb-0">' +
       (metrics.age_group || "-") +
       "</div>" +
-      '<small class="text-muted">الفئة العمرية</small>' +
-      "</div>" +
-      "</div>" +
-      '<h6 class="mb-3">الأطفال</h6>' +
+      `<small class="text-muted">${analyticsText("الفئة العمرية", "Age group")}</small>` +
+      "</div></div>" +
+      `<h6 class="mb-3">${analyticsText("الأطفال", "Children")}</h6>` +
       '<table class="table">' +
       "<thead>" +
       "<tr>" +
-      "<th>الاسم</th>" +
-      "<th>أيام الحضور</th>" +
-      "<th>نسبة الحضور</th>" +
+      `<th>${analyticsText("الاسم", "Name")}</th>` +
+      `<th>${analyticsText("أيام الحضور", "Attendance days")}</th>` +
+      `<th>${analyticsText("نسبة الحضور", "Attendance rate")}</th>` +
       "</tr>" +
       "</thead>" +
       "<tbody>";
@@ -745,7 +773,7 @@ const Analytics = {
         html +=
           "<tr>" +
           "<td>" +
-          child.name +
+          analyticsLiteral(child.name) +
           "</td>" +
           "<td>" +
           child.attendance_days +
@@ -772,9 +800,7 @@ const Analytics = {
     }
 
     try {
-      const response = await api.get(
-        "/api/analytics/enrollments/summary?" + this.getQueryParams(),
-      );
+      const response = await api.get("/api/analytics/enrollments/summary?" + this.getQueryParams());
 
       this.renderEnrollmentFunnel(response.status_breakdown);
       this.renderEnrollmentSummary(response);
@@ -796,15 +822,15 @@ const Analytics = {
     const labels = [];
     const values = [];
     const statusLabels = {
-      PENDING: "قيد الانتظار",
-      SUBMITTED: "مقدم",
-      UNDER_REVIEW: "قيد المراجعة",
-      WAITLISTED: "قائمة الانتظار",
-      APPROVED: "موافق",
-      ENROLLED: "مسجل",
-      ACTIVE: "نشط",
-      REJECTED: "مرفوض",
-      WITHDRAWN: "منسحب",
+      PENDING: analyticsText("قيد الانتظار", "Pending"),
+      SUBMITTED: analyticsText("مقدم", "Submitted"),
+      UNDER_REVIEW: analyticsText("قيد المراجعة", "Under review"),
+      WAITLISTED: analyticsText("قائمة الانتظار", "Waitlisted"),
+      APPROVED: analyticsText("موافق", "Approved"),
+      ENROLLED: analyticsText("مسجل", "Enrolled"),
+      ACTIVE: analyticsText("نشط", "Active"),
+      REJECTED: analyticsText("مرفوض", "Rejected"),
+      WITHDRAWN: analyticsText("منسحب", "Withdrawn"),
     };
 
     if (statusBreakdown) {
@@ -820,7 +846,7 @@ const Analytics = {
         labels: labels,
         datasets: [
           {
-            label: "عدد الطلبات",
+            label: analyticsText("عدد الطلبات", "Applications"),
             data: values,
             backgroundColor: [
               "#6c757d",
@@ -859,25 +885,25 @@ const Analytics = {
       '<div class="h4 text-primary">' +
       (data.total_applications || 0) +
       "</div>" +
-      '<small class="text-muted">إجمالي الطلبات</small>' +
+      `<small class="text-muted">${analyticsText("إجمالي الطلبات", "Total applications")}</small>` +
       "</div>" +
       '<div class="mb-3">' +
       '<div class="h4 text-success">' +
       (data.active_enrollments || 0) +
       "</div>" +
-      '<small class="text-muted">المسجلون النشطون</small>' +
+      `<small class="text-muted">${analyticsText("المسجلون النشطون", "Active enrollments")}</small>` +
       "</div>" +
       '<div class="mb-3">' +
       '<div class="h4 text-info">' +
       (data.new_applications || 0) +
       "</div>" +
-      '<small class="text-muted">طلبات جديدة في الفترة</small>' +
+      `<small class="text-muted">${analyticsText("طلبات جديدة في الفترة", "New applications in period")}</small>` +
       "</div>" +
       "<div>" +
       '<div class="h4">' +
       (data.conversion_rate || 0) +
       "%</div>" +
-      '<small class="text-muted">نسبة التحويل</small>' +
+      `<small class="text-muted">${analyticsText("نسبة التحويل", "Conversion rate")}</small>` +
       "</div>";
   },
 
@@ -892,9 +918,7 @@ const Analytics = {
     }
 
     try {
-      const response = await api.get(
-        "/api/analytics/attendance/summary?" + this.getQueryParams(),
-      );
+      const response = await api.get("/api/analytics/attendance/summary?" + this.getQueryParams());
 
       this.renderAttendanceDayChart(response.day_of_week_distribution);
       this.renderAttendanceSummary(response);
@@ -922,7 +946,7 @@ const Analytics = {
         labels: labels,
         datasets: [
           {
-            label: "الحضور",
+            label: analyticsText("الحضور", "Attendance"),
             data: values,
             backgroundColor: "#0d6efd",
           },
@@ -950,19 +974,19 @@ const Analytics = {
       '<div class="h4 text-primary">' +
       (data.total_attendance_logs || 0) +
       "</div>" +
-      '<small class="text-muted">إجمالي سجلات الحضور</small>' +
+      `<small class="text-muted">${analyticsText("إجمالي سجلات الحضور", "Total attendance logs")}</small>` +
       "</div>" +
       '<div class="mb-3">' +
       '<div class="h4 text-success">' +
       (data.average_daily_attendance || 0) +
       "</div>" +
-      '<small class="text-muted">متوسط الحضور اليومي</small>' +
+      `<small class="text-muted">${analyticsText("متوسط الحضور اليومي", "Average daily attendance")}</small>` +
       "</div>" +
       "<div>" +
       '<div class="h4">' +
       (data.period_days || 0) +
       "</div>" +
-      '<small class="text-muted">أيام الفترة</small>' +
+      `<small class="text-muted">${analyticsText("أيام الفترة", "Period days")}</small>` +
       "</div>";
   },
 
@@ -978,7 +1002,7 @@ const Analytics = {
 
     try {
       const response = await api.get(
-        "/api/analytics/daily-reports/summary?" + this.getQueryParams(),
+        "/api/analytics/daily-reports/summary?" + this.getQueryParams()
       );
 
       this.renderReportsStatusChart(response.status_breakdown);
@@ -999,10 +1023,10 @@ const Analytics = {
     }
 
     const statusLabels = {
-      DRAFT: "مسودة",
-      PENDING: "قيد الانتظار",
-      SENT: "مرسل",
-      VIEWED: "تم الاطلاع",
+      DRAFT: analyticsText("مسودة", "Draft"),
+      PENDING: analyticsText("قيد الانتظار", "Pending"),
+      SENT: analyticsText("مرسل", "Sent"),
+      VIEWED: analyticsText("تم الاطلاع", "Viewed"),
     };
 
     const labels = [];
@@ -1043,19 +1067,19 @@ const Analytics = {
       '<div class="h4 text-primary">' +
       (data.total_reports || 0) +
       "</div>" +
-      '<small class="text-muted">إجمالي التقارير</small>' +
+      `<small class="text-muted">${analyticsText("إجمالي التقارير", "Total reports")}</small>` +
       "</div>" +
       '<div class="mb-3">' +
       '<div class="h4 text-success">' +
       (data.sent_count || 0) +
       "</div>" +
-      '<small class="text-muted">تقارير مرسلة</small>' +
+      `<small class="text-muted">${analyticsText("تقارير مرسلة", "Sent reports")}</small>` +
       "</div>" +
       "<div>" +
       '<div class="h4">' +
       (data.completion_rate || 0) +
       "%</div>" +
-      '<small class="text-muted">نسبة الإكمال</small>' +
+      `<small class="text-muted">${analyticsText("نسبة الإكمال", "Completion rate")}</small>` +
       "</div>";
   },
 
@@ -1070,9 +1094,7 @@ const Analytics = {
     }
 
     try {
-      const response = await api.get(
-        "/api/analytics/safety/summary?" + this.getQueryParams(),
-      );
+      const response = await api.get("/api/analytics/safety/summary?" + this.getQueryParams());
 
       this.renderIncidentSeverityChart(response.severity_breakdown);
       this.renderIncidentTypeChart(response.type_breakdown);
@@ -1093,10 +1115,10 @@ const Analytics = {
     }
 
     const severityLabels = {
-      LOW: "منخفض",
-      MEDIUM: "متوسط",
-      HIGH: "مرتفع",
-      CRITICAL: "حرج",
+      LOW: analyticsText("منخفض", "Low"),
+      MEDIUM: analyticsText("متوسط", "Medium"),
+      HIGH: analyticsText("مرتفع", "High"),
+      CRITICAL: analyticsText("حرج", "Critical"),
     };
 
     const colors = {
@@ -1147,11 +1169,11 @@ const Analytics = {
     }
 
     const typeLabels = {
-      INJURY: "إصابة",
-      ILLNESS: "مرض",
-      BEHAVIORAL: "سلوكي",
-      SAFETY: "سلامة",
-      OTHER: "أخرى",
+      INJURY: analyticsText("إصابة", "Injury"),
+      ILLNESS: analyticsText("مرض", "Illness"),
+      BEHAVIORAL: analyticsText("سلوكي", "Behavioral"),
+      SAFETY: analyticsText("سلامة", "Safety"),
+      OTHER: analyticsText("أخرى", "Other"),
     };
 
     const labels = [];
@@ -1170,7 +1192,7 @@ const Analytics = {
         labels: labels,
         datasets: [
           {
-            label: "عدد الحوادث",
+            label: analyticsText("عدد الحوادث", "Incident count"),
             data: values,
             backgroundColor: "#0d6efd",
           },
@@ -1199,25 +1221,25 @@ const Analytics = {
       '<div class="h4 text-primary">' +
       (data.total_incidents || 0) +
       "</div>" +
-      '<small class="text-muted">إجمالي الحوادث</small>' +
+      `<small class="text-muted">${analyticsText("إجمالي الحوادث", "Total incidents")}</small>` +
       "</div>" +
       '<div class="col-md-3 text-center">' +
       '<div class="h4 text-success">' +
       (data.resolved_count || 0) +
       "</div>" +
-      '<small class="text-muted">تم حلها</small>' +
+      `<small class="text-muted">${analyticsText("تم حلها", "Resolved")}</small>` +
       "</div>" +
       '<div class="col-md-3 text-center">' +
       '<div class="h4">' +
       (data.resolution_rate || 0) +
       "%</div>" +
-      '<small class="text-muted">نسبة الحل</small>' +
+      `<small class="text-muted">${analyticsText("نسبة الحل", "Resolution rate")}</small>` +
       "</div>" +
       '<div class="col-md-3 text-center">' +
       '<div class="h4 text-warning">' +
       ((data.severity_breakdown || {}).HIGH || 0) +
       "</div>" +
-      '<small class="text-muted">حوادث مرتفعة الخطورة</small>' +
+      `<small class="text-muted">${analyticsText("حوادث مرتفعة الخطورة", "High-severity incidents")}</small>` +
       "</div>" +
       "</div>";
   },
@@ -1233,9 +1255,7 @@ const Analytics = {
     }
 
     try {
-      const response = await api.get(
-        "/api/analytics/staffing/summary?" + this.getQueryParams(),
-      );
+      const response = await api.get("/api/analytics/staffing/summary?" + this.getQueryParams());
 
       this.renderRatioComplianceChart(response);
       this.renderStaffingSummary(response);
@@ -1260,7 +1280,7 @@ const Analytics = {
     this.charts.ratioCompliance = new Chart(ctx, {
       type: "doughnut",
       data: {
-        labels: ["ملتزم", "غير ملتزم"],
+        labels: [analyticsText("ملتزم", "Compliant"), analyticsText("غير ملتزم", "Non-compliant")],
         datasets: [
           {
             data: [compliance, nonCompliance],
@@ -1274,7 +1294,10 @@ const Analytics = {
         plugins: {
           title: {
             display: true,
-            text: "نسبة الالتزام: " + compliance.toFixed(1) + "%",
+            text: analyticsText(
+              "نسبة الالتزام: " + compliance.toFixed(1) + "%",
+              "Compliance rate: " + compliance.toFixed(1) + "%"
+            ),
           },
         },
       },
@@ -1293,25 +1316,25 @@ const Analytics = {
       '<div class="h4 text-primary">' +
       (data.compliance_rate || 0) +
       "%</div>" +
-      '<small class="text-muted">نسبة الالتزام</small>' +
+      `<small class="text-muted">${analyticsText("نسبة الالتزام", "Compliance rate")}</small>` +
       "</div>" +
       '<div class="mb-3">' +
       '<div class="h4">' +
       (data.average_ratio || 0) +
       "</div>" +
-      '<small class="text-muted">متوسط نسبة الأطفال للموظفين</small>' +
+      `<small class="text-muted">${analyticsText("متوسط نسبة الأطفال للموظفين", "Average children-to-staff ratio")}</small>` +
       "</div>" +
       '<div class="mb-3">' +
       '<div class="h4">' +
       (staffByRole.MANAGER || 0) +
       "</div>" +
-      '<small class="text-muted">مديرون</small>' +
+      `<small class="text-muted">${analyticsText("مديرون", "Managers")}</small>` +
       "</div>" +
       "<div>" +
       '<div class="h4">' +
       (staffByRole.SUPERVISOR || 0) +
       "</div>" +
-      '<small class="text-muted">مشرفون</small>' +
+      `<small class="text-muted">${analyticsText("مشرفون", "Supervisors")}</small>` +
       "</div>";
   },
 
@@ -1320,22 +1343,30 @@ const Analytics = {
    */
   exportData: async function (format) {
     try {
-      const activeTab = document.querySelector(
-        "#analyticsTabs .nav-link.active",
-      );
-      const reportType = activeTab
-        ? activeTab.id.replace("-tab", "")
-        : "overview";
+      const activeTab = document.querySelector("#analyticsTabs .nav-link.active");
+      const reportType = activeTab ? activeTab.id.replace("-tab", "") : "overview";
 
       const response = await api.post("/api/analytics/export", {
         report_type: reportType,
         export_format: format,
       });
 
-      showToast("تم إنشاء طلب التصدير رقم " + response.job_id, "success");
+      showToast(
+        analyticsText(
+          "تم إنشاء طلب التصدير رقم " + response.job_id,
+          "Export request created: " + response.job_id
+        ),
+        "success"
+      );
     } catch (error) {
       console.error("Error requesting export:", error);
-      showToast("خطأ في طلب التصدير", "error");
+      showToast(analyticsText("خطأ في طلب التصدير", "Export request failed"), "error");
     }
   },
 };
+
+window.addEventListener("languageChanged", () => {
+  if (typeof Analytics?.applyFilters === "function") {
+    Analytics.applyFilters();
+  }
+});

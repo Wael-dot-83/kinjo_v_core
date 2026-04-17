@@ -2,12 +2,16 @@
 Pytest configuration and fixtures for integration tests
 """
 import os
+import shutil
+import uuid
 import pytest
+import secrets
+from pathlib import Path
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 # Set testing environment BEFORE importing app
 os.environ["TESTING"] = "true"
@@ -27,6 +31,22 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@pytest.fixture
+def tmp_path():
+    """
+    Provide a workspace-backed temp directory.
+    This avoids host temp-directory permission issues on Windows.
+    """
+    base_dir = Path(__file__).resolve().parent / ".tmp" / "pytest-fixtures"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    temp_dir = base_dir / f"tmp_path_{uuid.uuid4().hex}"
+    temp_dir.mkdir()
+    try:
+        yield temp_dir
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @pytest.fixture(scope="function")
@@ -98,6 +118,8 @@ def sample_class(test_db, sample_kindergarten):
         kindergarten_id=sample_kindergarten.id,
         name_ar="الصف الأول",
         name_en="Class A",
+        class_code="A001",
+        age_group="AGE_1_2",
         capacity_total=20,
         min_age_months=24,
         max_age_months=48,
@@ -200,7 +222,9 @@ def parent_user(test_db):
     test_db.commit()
     test_db.refresh(profile)
 
-    user.parent = profile
+    user.parent_profile = profile
+    test_db.commit()
+    test_db.refresh(user)
     return user
 
 
@@ -210,11 +234,11 @@ def sample_child(test_db, parent_user):
     Create a sample child for testing
     """
     child = models.Child(
-        parent_id=parent_user.id,
+        parent_id=parent_user.parent_profile.id,
         first_name="Layla",
         last_name="Al-Rashid",
         gender=models.Gender.FEMALE,
-        date_of_birth=date(2022, 1, 15),  # ~4 years old
+        date_of_birth=date.today() - timedelta(days=365 * 3),
         father_name="Ahmad Al-Rashid",
         mother_first_name="Fatima",
         mother_last_name="Hassan",
@@ -226,6 +250,39 @@ def sample_child(test_db, parent_user):
     test_db.commit()
     test_db.refresh(child)
     return child
+
+
+@pytest.fixture
+def parent_enrollment(test_db, sample_child, sample_kindergarten):
+    """
+    Create an active enrollment for the sample child
+    """
+    enrollment = models.EnrollmentApplication(
+        child_id=sample_child.id,
+        kindergarten_id=sample_kindergarten.id,
+        status=models.EnrollmentStatus.ACCEPTED
+    )
+    test_db.add(enrollment)
+    test_db.commit()
+    test_db.refresh(enrollment)
+    return enrollment
+
+
+@pytest.fixture
+def active_enrollment(test_db, sample_child, sample_kindergarten, sample_class):
+    """
+    Create an ACTIVE enrollment for absence-request tests.
+    """
+    enrollment = models.EnrollmentApplication(
+        child_id=sample_child.id,
+        kindergarten_id=sample_kindergarten.id,
+        class_id=sample_class.id,
+        status=models.EnrollmentStatus.ACTIVE,
+    )
+    test_db.add(enrollment)
+    test_db.commit()
+    test_db.refresh(enrollment)
+    return enrollment
 
 
 @pytest.fixture
@@ -297,7 +354,12 @@ def auth_headers_admin(admin_token):
     """
     Get authentication headers for admin
     """
-    return {"Authorization": f"Bearer {admin_token}"}
+    csrf_token = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {admin_token}",
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"kinjo_csrf_token={csrf_token}"
+    }
 
 
 @pytest.fixture
@@ -305,7 +367,12 @@ def auth_headers_manager(manager_token):
     """
     Get authentication headers for manager
     """
-    return {"Authorization": f"Bearer {manager_token}"}
+    csrf_token = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {manager_token}",
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"kinjo_csrf_token={csrf_token}"
+    }
 
 
 @pytest.fixture
@@ -313,7 +380,12 @@ def auth_headers_supervisor(supervisor_token):
     """
     Get authentication headers for supervisor
     """
-    return {"Authorization": f"Bearer {supervisor_token}"}
+    csrf_token = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {supervisor_token}",
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"kinjo_csrf_token={csrf_token}"
+    }
 
 
 @pytest.fixture
@@ -321,4 +393,9 @@ def auth_headers_parent(parent_token):
     """
     Get authentication headers for parent
     """
-    return {"Authorization": f"Bearer {parent_token}"}
+    csrf_token = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {parent_token}",
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"kinjo_csrf_token={csrf_token}"
+    }

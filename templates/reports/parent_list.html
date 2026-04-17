@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}تقارير أطفالي{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-journal-text me-2 text-primary"></i>
+            تقارير أطفالي
+        </h1>
+        <nav aria-label="مسار التنقل">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">تقارير أطفالي</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-12">
+        <!-- Date Filter -->
+        <div class="d-flex align-items-center mb-4 bg-white p-3 rounded shadow-sm border">
+            <span class="fw-bold me-3">عرض تقارير يوم:</span>
+            <input type="date" class="form-control w-auto me-3" id="dateFilter" value="{{ today }}">
+            <button class="btn btn-outline-primary" onclick="loadReports()">
+                تحديث
+            </button>
+        </div>
+
+        <div id="reportsContainer">
+            {% if reports %}
+            {% for report in reports %}
+            <div class="card mb-3 report-card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <div class="d-flex align-items-center">
+                        <div
+                            class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div>
+                            <strong>{{ report.child_name if report.child_name else 'طفل' }}</strong>
+                            <small class="text-muted d-block">{{ report.date }}</small>
+                        </div>
+                    </div>
+                    <span
+                        class="badge {% if report.status.value == 'APPROVED' %}bg-success{% elif report.status.value == 'DRAFT' %}bg-warning{% else %}bg-secondary{% endif %}">
+                        {{ report.status.value }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">الحالة المزاجية</h6>
+                            <p>{{ report.mood if report.mood else 'غير محدد' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">ملاحظات</h6>
+                            <p>{{ report.notes if report.notes else 'لا توجد ملاحظات' }}</p>
+                        </div>
+                    </div>
+                    <a href="/reports/{{ report.id }}" class="btn btn-outline-primary btn-sm mt-3">
+                        <i class="bi bi-eye me-1"></i>عرض التفاصيل
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                لا توجد تقارير لهذا التاريخ
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function loadReports() {
+        const date = document.getElementById('dateFilter').value;
+        window.location.href = `/my-reports?date=${date}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Set today's date if not set
+        const dateFilter = document.getElementById('dateFilter');
+        if (!dateFilter.value) {
+            dateFilter.value = new Date().toISOString().split('T')[0];
+        }
+    });
+</script>
+{% endblock %}

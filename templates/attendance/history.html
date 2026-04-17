@@ -1,6 +1,6 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}سجل الحضور التاريخي{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Attendance History{% else %}سجل الحضور التاريخي{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -9,11 +9,10 @@
             <i class="bi bi-clock-history me-2 text-primary"></i>
             أرشيف الحضور والغياب
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/attendance/daily">الحضور اليومي</a></li>
-                <li class="breadcrumb-item active">الأرشيف</li>
+                <li class="breadcrumb-item active">سجل الحضور التاريخي</li>
             </ol>
         </nav>
     </div>
@@ -21,153 +20,146 @@
 {% endblock %}
 
 {% block content %}
-<div class="row g-4">
-    <!-- Filter Sidebar -->
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">خيارات العرض</h5>
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">خيارات التصفية</h5>
+    </div>
+    <div class="card-body">
+        <form id="historyFilters" class="row g-3">
+            {% if is_admin %}
+            <div class="col-md-4 col-lg-3">
+                <label class="form-label" for="kindergartenFilter">الروضة</label>
+                <select class="form-select" id="kindergartenFilter">
+                    <option id="allKindergartensOption" value="" data-all-kindergartens="true">جميع الروضات</option>
+                    {% for kg in kindergartens %}
+                    <option value="{{ kg.id }}">{{ kg.name_en if ui_lang == 'en' and kg.name_en else kg.name_ar }}{% if kg.governorate %} - {{ kg.governorate }}{% endif %}</option>
+                    {% endfor %}
+                </select>
             </div>
-            <div class="card-body">
-                <form id="historyFilter">
-                    <div class="mb-3">
-                        <label class="form-label">التقرير لـ</label>
-                        <select class="form-select" id="reportType">
-                            <option value="class">شعبة كاملة</option>
-                            <option value="child">طفل محدد</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3" id="classSelectDiv">
-                        <label class="form-label">الشعبة الصفية</label>
-                        <select class="form-select" id="classSelect">
-                            <option value="">اختر الشعبة...</option>
-                            <option value="1">الفراشات (KG1)</option>
-                            <option value="2">الزهور (KG2)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3 d-none" id="childSelectDiv">
-                        <label class="form-label">اسم الطفل</label>
-                        <input type="text" class="form-control" id="childSearch" placeholder="ابحث بالاسم...">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">الفترة</label>
-                        <select class="form-select" id="periodSelect">
-                            <option value="week">هذا الأسبوع</option>
-                            <option value="month" selected>هذا الشهر</option>
-                            <option value="custom">مخصص</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3 d-none" id="dateRangeDiv">
-                        <label class="form-label">من تاريخ</label>
-                        <input type="date" class="form-control mb-2" id="fromDate">
-                        <label class="form-label">إلى تاريخ</label>
-                        <input type="date" class="form-control" id="toDate">
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-funnel me-2"></i>عرض التقرير
-                    </button>
-                    
-                    <hr>
-                    
-                    <button type="button" class="btn btn-outline-secondary w-100">
-                        <i class="bi bi-download me-2"></i>تصدير Excel
-                    </button>
-                </form>
+            <div class="col-md-4 col-lg-3">
+                <label class="form-label" for="governorateFilter">المحافظة</label>
+                <select class="form-select" id="governorateFilter">
+                    <option value="">جميع المحافظات</option>
+                    {% for governorate in governorates %}
+                    <option value="{{ governorate }}">{{ governorate }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <label class="form-label" for="kindergartenNameFilter">بحث باسم الروضة</label>
+                <input
+                    type="text"
+                    id="kindergartenNameFilter"
+                    class="form-control"
+                    placeholder="أدخل الاسم الكامل أو جزء منه"
+                    autocomplete="off"
+                >
+            </div>
+            {% else %}
+            <div class="col-md-4">
+                <label class="form-label" for="kindergartenReadonly">الروضة</label>
+                <input
+                    type="text"
+                    id="kindergartenReadonly"
+                    class="form-control"
+                    value="{{ (user_kindergarten.name_en if ui_lang == 'en' and user_kindergarten and user_kindergarten.name_en else user_kindergarten.name_ar) if user_kindergarten else '' }}"
+                    readonly
+                >
+            </div>
+            {% endif %}
+
+            <div class="{% if is_admin %}col-md-4 col-lg-3{% else %}col-md-4{% endif %}">
+                <label class="form-label" for="childNameFilter">بحث باسم الطفل</label>
+                <input
+                    type="text"
+                    id="childNameFilter"
+                    class="form-control"
+                    placeholder="الاسم الكامل أو جزء منه"
+                    autocomplete="off"
+                >
+            </div>
+
+            <div class="{% if is_admin %}col-md-4 col-lg-2{% else %}col-md-3{% endif %}">
+                <label class="form-label" for="startDate">من تاريخ</label>
+                <input type="date" class="form-control" id="startDate" value="{{ default_start_date }}">
+            </div>
+
+            <div class="{% if is_admin %}col-md-4 col-lg-2{% else %}col-md-3{% endif %}">
+                <label class="form-label" for="endDate">إلى تاريخ</label>
+                <input type="date" class="form-control" id="endDate" value="{{ default_end_date }}">
+            </div>
+
+            <div class="{% if is_admin %}col-md-4 col-lg-2{% else %}col-md-2{% endif %} d-grid">
+                <label class="form-label d-none d-md-block">&nbsp;</label>
+                <button type="submit" id="applyHistoryFilters" class="btn btn-primary">
+                    <i class="bi bi-funnel me-1"></i>
+                    عرض السجل
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100 border-success bg-success bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="text-success small">نسبة الحضور</div>
+                <h3 class="mb-0 fw-bold text-success" id="summaryAttendanceRate">0%</h3>
             </div>
         </div>
     </div>
-    
-    <!-- Results Area -->
-    <div class="col-md-9">
-        <!-- Stats Summary -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="card bg-success bg-opacity-10 border-success h-100">
-                    <div class="card-body text-center p-3">
-                        <h6 class="text-success mb-1">نسبة الحضور</h6>
-                        <h3 class="fw-bold mb-0">94%</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-warning bg-opacity-10 border-warning h-100">
-                    <div class="card-body text-center p-3">
-                        <h6 class="text-warning text-dark mb-1">متوسط التأخير</h6>
-                        <h3 class="fw-bold mb-0 text-dark">5%</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-danger bg-opacity-10 border-danger h-100">
-                    <div class="card-body text-center p-3">
-                        <h6 class="text-danger mb-1">الغياب</h6>
-                        <h3 class="fw-bold mb-0">1%</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border h-100">
-                    <div class="card-body text-center p-3">
-                        <h6 class="text-muted mb-1">أيام العمل</h6>
-                        <h3 class="fw-bold mb-0">22</h3>
-                    </div>
-                </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-primary bg-primary bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="text-primary small">إجمالي الحضور</div>
+                <h3 class="mb-0 fw-bold text-primary" id="summaryPresent">0</h3>
             </div>
         </div>
-        
-        <!-- Results Table -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">سجل الدوام التفصيلي</h5>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-danger bg-danger bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="text-danger small">إجمالي الغياب</div>
+                <h3 class="mb-0 fw-bold text-danger" id="summaryAbsent">0</h3>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>التاريخ</th>
-                                <th>اليوم</th>
-                                <th>الحضور</th>
-                                <th>الغياب</th>
-                                <th>التأخير</th>
-                                <th>نسبة الحضور</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyTable">
-                            <!-- Populated JS -->
-                            <tr>
-                                <td>2023-10-25</td>
-                                <td>الاربعاء</td>
-                                <td class="text-success">18</td>
-                                <td class="text-danger">1</td>
-                                <td class="text-warning">1</td>
-                                <td>90%</td>
-                            </tr>
-                            <tr>
-                                <td>2023-10-24</td>
-                                <td>الثلاثاء</td>
-                                <td class="text-success">20</td>
-                                <td class="text-danger">0</td>
-                                <td class="text-warning">0</td>
-                                <td>100%</td>
-                            </tr>
-                             <tr>
-                                <td>2023-10-23</td>
-                                <td>الأثنين</td>
-                                <td class="text-success">19</td>
-                                <td class="text-danger">1</td>
-                                <td class="text-warning">0</td>
-                                <td>95%</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-secondary bg-secondary bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="text-secondary small">إجمالي السجلات</div>
+                <h3 class="mb-0 fw-bold text-secondary" id="summaryTotal">0</h3>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">تفاصيل الحضور اليومية</h5>
+        <span id="scopeBadge" class="badge bg-secondary-subtle text-secondary-emphasis">-</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>اليوم</th>
+                        <th class="text-success">حاضر</th>
+                        <th class="text-danger">غائب</th>
+                        <th class="text-warning">متأخر</th>
+                        <th class="text-info">معذور</th>
+                        <th>نسبة الحضور</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">جارٍ تحميل البيانات...</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -175,43 +167,171 @@
 
 {% block extra_js %}
 <script>
-    // Toggle input visibility
-    document.getElementById('reportType').addEventListener('change', function() {
-        const isClass = this.value === 'class';
-        document.getElementById('classSelectDiv').classList.toggle('d-none', !isClass);
-        document.getElementById('childSelectDiv').classList.toggle('d-none', isClass);
-        
-        // Update table headers based on type
-        const thead = document.querySelector('thead tr');
-        if (isClass) {
-            thead.innerHTML = `
-                <th>التاريخ</th>
-                <th>اليوم</th>
-                <th>الحضور</th>
-                <th>الغياب</th>
-                <th>التأخير</th>
-                <th>نسبة الحضور</th>
-            `;
-        } else {
-            thead.innerHTML = `
-                <th>التاريخ</th>
-                <th>اليوم</th>
-                <th>الحالة</th>
-                <th>وقت الوصول</th>
-                <th>وقت المغادرة</th>
-                <th>الملاحظات</th>
-            `;
+(() => {
+    const isAdmin = {{ "true" if is_admin else "false" }};
+    const fixedKindergartenId = {{ user_kindergarten.id if user_kindergarten else "null" }};
+
+    const filterForm = document.getElementById("historyFilters");
+    const submitButton = document.getElementById("applyHistoryFilters");
+    const kindergartenFilter = document.getElementById("kindergartenFilter");
+    const governorateFilter = document.getElementById("governorateFilter");
+    const kindergartenNameFilter = document.getElementById("kindergartenNameFilter");
+    const childNameFilter = document.getElementById("childNameFilter");
+    const startDateInput = document.getElementById("startDate");
+    const endDateInput = document.getElementById("endDate");
+    const tableBody = document.getElementById("historyTableBody");
+
+    const summaryAttendanceRate = document.getElementById("summaryAttendanceRate");
+    const summaryPresent = document.getElementById("summaryPresent");
+    const summaryAbsent = document.getElementById("summaryAbsent");
+    const summaryTotal = document.getElementById("summaryTotal");
+    const scopeBadge = document.getElementById("scopeBadge");
+
+    const notify = (message, level = "info") => {
+        if (typeof showToast === "function") {
+            showToast(message, level);
+            return;
         }
-    });
+        console.log(`[${level}] ${message}`);
+    };
 
-    document.getElementById('periodSelect').addEventListener('change', function() {
-        document.getElementById('dateRangeDiv').classList.toggle('d-none', this.value !== 'custom');
-    });
+    const toPercent = (value) => `${Number(value || 0).toFixed(2)}%`;
 
-    document.getElementById('historyFilter').addEventListener('submit', function(e) {
-        e.preventDefault();
-        // Load data...
-        showToast('جاري تحديث التقرير...', 'info');
-    });
+    const setLoadingState = (isLoading) => {
+        submitButton.disabled = isLoading;
+        if (isLoading) {
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>جاري التحميل...';
+        } else {
+            submitButton.innerHTML = '<i class="bi bi-funnel me-1"></i>عرض السجل';
+        }
+    };
+
+    const renderTotals = (totals) => {
+        summaryAttendanceRate.textContent = toPercent(totals.attendance_rate);
+        summaryPresent.textContent = totals.present ?? 0;
+        summaryAbsent.textContent = totals.absent ?? 0;
+        summaryTotal.textContent = totals.total ?? 0;
+    };
+
+    const renderScope = (scope) => {
+        if (!scope) {
+            scopeBadge.textContent = "-";
+            return;
+        }
+        const filters = scope.filters || {};
+        const filterParts = [];
+        if (filters.governorate) {
+            filterParts.push(`المحافظة: ${filters.governorate}`);
+        }
+        if (filters.kindergarten_name) {
+            filterParts.push(`الاسم: ${filters.kindergarten_name}`);
+        }
+        if (filters.child_name) {
+            filterParts.push(`الطفل: ${filters.child_name}`);
+        }
+        const filterSuffix = filterParts.length ? ` - ${filterParts.join(" | ")}` : "";
+
+        if (scope.mode === "all_kindergartens") {
+            scopeBadge.textContent = `النطاق: جميع الروضات (${scope.kindergarten_count || 0})${filterSuffix}`;
+            return;
+        }
+        if (scope.mode === "filtered_kindergartens") {
+            scopeBadge.textContent = `النطاق: ${scope.kindergarten_count || 0} روضة${filterSuffix}`;
+            return;
+        }
+        scopeBadge.textContent = `النطاق: ${scope.kindergarten_name || "روضة محددة"}${filterSuffix}`;
+    };
+
+    const renderRows = (rows) => {
+        if (!rows || rows.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">لا توجد بيانات للفترة المحددة.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = rows.map((row) => `
+            <tr>
+                <td>${row.date}</td>
+                <td>${row.day_name}</td>
+                <td class="text-success fw-semibold">${row.present}</td>
+                <td class="text-danger fw-semibold">${row.absent}</td>
+                <td class="text-warning fw-semibold">${row.late}</td>
+                <td class="text-info fw-semibold">${row.excused}</td>
+                <td>${toPercent(row.attendance_rate)}</td>
+            </tr>
+        `).join("");
+    };
+
+    const loadHistory = async (event) => {
+        if (event) {
+            event.preventDefault();
+        }
+
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+
+        if (!startDate || !endDate) {
+            notify("يرجى تحديد تاريخ البداية وتاريخ النهاية.", "warning");
+            return;
+        }
+        if (startDate > endDate) {
+            notify("تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية.", "warning");
+            return;
+        }
+
+        const params = new URLSearchParams({
+            start_date: startDate,
+            end_date: endDate
+        });
+
+        if (isAdmin) {
+            const selectedKindergartenId = kindergartenFilter ? kindergartenFilter.value : "";
+            const selectedGovernorate = governorateFilter ? governorateFilter.value.trim() : "";
+            const searchedKindergartenName = kindergartenNameFilter ? kindergartenNameFilter.value.trim() : "";
+            const searchedChildName = childNameFilter ? childNameFilter.value.trim() : "";
+            if (selectedKindergartenId) {
+                params.set("kindergarten_id", selectedKindergartenId);
+                if (searchedChildName) {
+                    params.set("child_name", searchedChildName);
+                }
+            } else {
+                if (selectedGovernorate) {
+                    params.set("governorate", selectedGovernorate);
+                }
+                if (searchedKindergartenName) {
+                    params.set("kindergarten_name", searchedKindergartenName);
+                }
+                if (searchedChildName) {
+                    params.set("child_name", searchedChildName);
+                }
+            }
+        } else if (fixedKindergartenId) {
+            params.set("kindergarten_id", String(fixedKindergartenId));
+            const searchedChildName = childNameFilter ? childNameFilter.value.trim() : "";
+            if (searchedChildName) {
+                params.set("child_name", searchedChildName);
+            }
+        }
+
+        setLoadingState(true);
+        try {
+            const response = await fetchWithAuth(`/api/attendance/history-summary?${params.toString()}`);
+            if (!response) {
+                return;
+            }
+            const payload = await response.json();
+            renderTotals(payload.totals || {});
+            renderScope(payload.meta ? payload.meta.scope : null);
+            renderRows(payload.rows || []);
+        } catch (error) {
+            console.error("Attendance history load failed:", error);
+            notify("تعذر تحميل سجل الحضور. يرجى المحاولة مرة أخرى.", "error");
+        } finally {
+            setLoadingState(false);
+        }
+    };
+
+    filterForm.addEventListener("submit", loadHistory);
+    loadHistory();
+})();
 </script>
 {% endblock %}

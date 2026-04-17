@@ -9,7 +9,7 @@
             <i class="bi bi-chat-square-text me-2 text-info"></i>
             الاستبيانات
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
                 <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
@@ -40,13 +40,19 @@
 {% include 'communication/modals/new_survey.html' %}
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', loadSurveys);
 
     async function loadSurveys() {
         try {
-            const token = localStorage.getItem('access_token');
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">يرجى تسجيل الدخول لعرض الاستبيانات</div>`;
+                return;
+            }
+
+            const token = AuthService.getToken();
             const response = await fetch('/comm/surveys?active_only=true', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -80,7 +86,7 @@
         surveys.forEach(survey => {
             const card = document.createElement('div');
             card.className = 'card shadow-sm mb-3';
-            
+
             // Basic view
             let html = `
                 <div class="card-body">
@@ -94,12 +100,12 @@
                     <form onsubmit="submitSurvey(event, ${survey.id})">
                         ${survey.nps_question_enabled ? `
                         <div class="mb-3">
-                            <label class="form-label fw-bold">ما مدى رضاك (0 - 10)؟</label>
-                            <div class="d-flex justify-content-between px-2">
-                                ${[0,1,2,3,4,5,6,7,8,9,10].map(n => `
+                            <label class="form-label fw-bold" id="nps_label_${survey.id}">ما مدى رضاك (0 - 10)؟</label>
+                            <div class="d-flex justify-content-between px-2" role="radiogroup" aria-labelledby="nps_label_${survey.id}">
+                                ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `
                                     <div class="form-check form-check-inline me-0 text-center">
-                                        <input class="form-check-input mx-auto d-block" type="radio" name="nps_${survey.id}" value="${n}" required>
-                                        <label class="form-check-label small text-muted">${n}</label>
+                                        <input class="form-check-input mx-auto d-block" type="radio" name="nps_${survey.id}" id="nps_${survey.id}_${n}" value="${n}" required>
+                                        <label class="form-check-label small text-muted" for="nps_${survey.id}_${n}">${n}</label>
                                     </div>
                                 `).join('')}
                             </div>
@@ -107,15 +113,15 @@
                         ` : ''}
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">ملاحظاتك</label>
-                            <textarea class="form-control" name="feedback" rows="2" placeholder="اكتب رأيك هنا..."></textarea>
+                            <label class="form-label fw-bold" for="feedback_${survey.id}">ملاحظاتك</label>
+                            <textarea class="form-control" id="feedback_${survey.id}" name="feedback" rows="2" placeholder="اكتب رأيك هنا..."></textarea>
                         </div>
 
                         <button type="submit" class="btn btn-primary btn-sm">إرسال المشاركة</button>
                     </form>
                 </div>
             `;
-            
+
             card.innerHTML = html;
             container.appendChild(card);
         });
@@ -133,7 +139,13 @@
         };
 
         try {
-            const token = localStorage.getItem('access_token');
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert('يرجى تسجيل الدخول لإرسال الاستبيان');
+                return;
+            }
+
+            const token = AuthService.getToken();
             const response = await fetch(`/comm/surveys/${surveyId}/submit`, {
                 method: 'POST',
                 headers: {
@@ -158,4 +170,3 @@
     }
 </script>
 {% endblock %}
-

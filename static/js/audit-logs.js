@@ -1,7 +1,38 @@
-/**
+﻿/**
  * Audit Logs Management
  * Handles loading, filtering, and displaying audit logs
  */
+
+function auditLangCode() {
+  return (
+    window.AppI18n?.currentLang ||
+    window.AdminI18n?.getCurrentLanguage?.().code ||
+    localStorage.getItem("kinjo_lang") ||
+    localStorage.getItem("admin_language") ||
+    document.documentElement.lang ||
+    "ar"
+  );
+}
+
+function auditText(arText, enText) {
+  return String(auditLangCode()).toLowerCase().startsWith("en") ? enText : arText;
+}
+
+function auditLocale() {
+  return auditText("ar-JO", "en-US");
+}
+
+function auditLiteral(value) {
+  const raw = String(value ?? "");
+  if (!raw) return "";
+  if (typeof window.AppI18n?.replaceLiteralSegments === "function") {
+    return window.AppI18n.replaceLiteralSegments(raw);
+  }
+  if (typeof window.AdminI18n?.replaceLiteralSegments === "function") {
+    return window.AdminI18n.replaceLiteralSegments(raw);
+  }
+  return raw;
+}
 
 class AuditLogsManager {
   constructor() {
@@ -24,18 +55,10 @@ class AuditLogsManager {
     this.loadAuditLogs();
 
     // Setup filter listeners
-    document
-      .getElementById("actionFilter")
-      .addEventListener("change", () => this.onFilterChange());
-    document
-      .getElementById("entityFilter")
-      .addEventListener("change", () => this.onFilterChange());
-    document
-      .getElementById("userFilter")
-      .addEventListener("input", () => this.onFilterChange());
-    document
-      .getElementById("dateFilter")
-      .addEventListener("change", () => this.onFilterChange());
+    document.getElementById("actionFilter").addEventListener("change", () => this.onFilterChange());
+    document.getElementById("entityFilter").addEventListener("change", () => this.onFilterChange());
+    document.getElementById("userFilter").addEventListener("input", () => this.onFilterChange());
+    document.getElementById("dateFilter").addEventListener("change", () => this.onFilterChange());
   }
 
   onFilterChange() {
@@ -73,7 +96,10 @@ class AuditLogsManager {
       const params = new URLSearchParams({
         page: this.currentPage,
         limit: this.pageSize,
-        ...this.filters,
+      });
+      // Only include non-empty filter values to avoid 422 from FastAPI
+      Object.entries(this.filters).forEach(([key, value]) => {
+        if (value) params.set(key, value);
       });
 
       const response = await api.get(`/api/audit-logs?${params}`);
@@ -84,7 +110,7 @@ class AuditLogsManager {
       this.updateResultsCount();
     } catch (error) {
       console.error("Error loading audit logs:", error);
-      this.showError("حدث خطأ في تحميل سجلات التدقيق");
+      this.showError(auditText("حدث خطأ في تحميل سجلات التدقيق", "Failed to load audit logs"));
     } finally {
       this.isLoading = false;
     }
@@ -98,7 +124,7 @@ class AuditLogsManager {
                 <tr>
                     <td colspan="7" class="text-center py-4 text-muted">
                         <i class="bi bi-info-circle me-2"></i>
-                        لا توجد سجلات تدقيق
+                        ${auditText("لا توجد سجلات تدقيق", "No audit logs found")}
                     </td>
                 </tr>
             `;
@@ -110,7 +136,7 @@ class AuditLogsManager {
         (log) => `
             <tr>
                 <td>${this.formatDateTime(log.created_at)}</td>
-                <td>${this.escapeHtml(log.user_name || "غير محدد")}</td>
+                <td>${this.escapeHtml(auditLiteral(log.user_name || auditText("غير محدد", "Not specified")))}</td>
                 <td>
                     <span class="badge ${this.getActionBadgeClass(log.action)}">
                         ${this.getActionLabel(log.action)}
@@ -125,13 +151,14 @@ class AuditLogsManager {
                 </td>
                 <td>${log.ip_address || "-"}</td>
             </tr>
-        `,
+        `
       )
       .join("");
   }
 
   renderPagination(totalPages) {
     const pagination = document.getElementById("pagination");
+    if (!pagination) return;
     const maxVisiblePages = 5;
 
     if (totalPages <= 1) {
@@ -139,10 +166,7 @@ class AuditLogsManager {
       return;
     }
 
-    let startPage = Math.max(
-      1,
-      this.currentPage - Math.floor(maxVisiblePages / 2),
-    );
+    let startPage = Math.max(1, this.currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
     if (endPage - startPage + 1 < maxVisiblePages) {
@@ -153,9 +177,9 @@ class AuditLogsManager {
 
     // Previous button
     if (this.currentPage > 1) {
-      html += `<li class="page-item"><a class="page-link" href="#" onclick="auditLogs.changePage(${this.currentPage - 1})">السابق</a></li>`;
+      html += `<li class="page-item"><a class="page-link" href="#" onclick="auditLogs.changePage(${this.currentPage - 1})">${auditText("السابق", "Previous")}</a></li>`;
     } else {
-      html += `<li class="page-item disabled"><span class="page-link">السابق</span></li>`;
+      html += `<li class="page-item disabled"><span class="page-link">${auditText("السابق", "Previous")}</span></li>`;
     }
 
     // Page numbers
@@ -169,9 +193,9 @@ class AuditLogsManager {
 
     // Next button
     if (this.currentPage < totalPages) {
-      html += `<li class="page-item"><a class="page-link" href="#" onclick="auditLogs.changePage(${this.currentPage + 1})">التالي</a></li>`;
+      html += `<li class="page-item"><a class="page-link" href="#" onclick="auditLogs.changePage(${this.currentPage + 1})">${auditText("التالي", "Next")}</a></li>`;
     } else {
-      html += `<li class="page-item disabled"><span class="page-link">التالي</span></li>`;
+      html += `<li class="page-item disabled"><span class="page-link">${auditText("التالي", "Next")}</span></li>`;
     }
 
     pagination.innerHTML = html;
@@ -188,9 +212,12 @@ class AuditLogsManager {
     const end = Math.min(this.currentPage * this.pageSize, this.totalRecords);
 
     if (this.totalRecords === 0) {
-      countElement.textContent = "لا توجد نتائج";
+      countElement.textContent = auditText("لا توجد نتائج", "No results");
     } else {
-      countElement.textContent = `عرض ${start} - ${end} من ${this.totalRecords} سجل`;
+      countElement.textContent = auditText(
+        `عرض ${start} - ${end} من ${this.totalRecords} سجل`,
+        `Showing ${start} - ${end} of ${this.totalRecords} records`
+      );
     }
   }
 
@@ -200,7 +227,7 @@ class AuditLogsManager {
             <tr>
                 <td colspan="7" class="text-center py-4">
                     <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">جاري التحميل...</span>
+                        <span class="visually-hidden">${auditText("جاري التحميل...", "Loading...")}</span>
                     </div>
                 </td>
             </tr>
@@ -222,7 +249,7 @@ class AuditLogsManager {
   formatDateTime(dateString) {
     if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleString("ar-JO", {
+    return date.toLocaleString(auditLocale(), {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -246,26 +273,26 @@ class AuditLogsManager {
 
   getActionLabel(action) {
     const labels = {
-      CREATE: "إنشاء",
-      UPDATE: "تحديث",
-      DELETE: "حذف",
-      LOGIN: "تسجيل دخول",
-      LOGOUT: "تسجيل خروج",
-      VIEW: "عرض",
+      CREATE: auditText("إنشاء", "Create"),
+      UPDATE: auditText("تحديث", "Update"),
+      DELETE: auditText("حذف", "Delete"),
+      LOGIN: auditText("تسجيل دخول", "Sign in"),
+      LOGOUT: auditText("تسجيل خروج", "Sign out"),
+      VIEW: auditText("عرض", "View"),
     };
     return labels[action] || action;
   }
 
   getEntityTypeLabel(entityType) {
     const labels = {
-      USER: "مستخدم",
-      CHILD: "طفل",
-      KINDERGARTEN: "روضة",
-      ENROLLMENT: "تسجيل",
-      ATTENDANCE: "حضور",
-      REPORT: "تقرير",
-      INCIDENT: "حادثة",
-      TASK: "مهمة",
+      USER: auditText("مستخدم", "User"),
+      CHILD: auditText("طفل", "Child"),
+      KINDERGARTEN: auditText("روضة", "Kindergarten"),
+      ENROLLMENT: auditText("تسجيل", "Enrollment"),
+      ATTENDANCE: auditText("حضور", "Attendance"),
+      REPORT: auditText("تقرير", "Report"),
+      INCIDENT: auditText("حادثة", "Incident"),
+      TASK: auditText("مهمة", "Task"),
     };
     return labels[entityType] || entityType;
   }
@@ -299,8 +326,7 @@ function doExport() {
   // Show loading
   const exportBtn = document.querySelector("#exportModal .btn-primary");
   const originalText = exportBtn.textContent;
-  exportBtn.innerHTML =
-    '<span class="spinner-border spinner-border-sm me-2"></span>جاري التصدير...';
+  exportBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${auditText("جاري التصدير...", "Exporting...")}`;
   exportBtn.disabled = true;
 
   // Build export URL
@@ -310,29 +336,59 @@ function doExport() {
     ...auditLogs.filters,
   });
 
-  // Create download link
-  const link = document.createElement("a");
-  link.href = `/api/audit-logs/export?${params}`;
-  link.download = `audit-logs.${format}`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  // Download with auth header
+  const token = AuthStorage.getToken();
+  if (!token) {
+    window.location.href = "/login";
+    return;
+  }
 
-  // Reset button
-  exportBtn.textContent = originalText;
-  exportBtn.disabled = false;
+  fetch(`/api/audit-logs/export?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error(auditText("فشل التصدير", "Export failed"));
+      return res.blob();
+    })
+    .then((blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `audit-logs.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      showToast(auditText("تم تصدير السجلات بنجاح", "Audit logs exported successfully"), "success");
+    })
+    .catch((err) => {
+      console.error("Export error:", err);
+      showToast(auditText("فشل تصدير السجلات", "Failed to export audit logs"), "error");
+    })
+    .finally(() => {
+      // Reset button
+      exportBtn.textContent = originalText;
+      exportBtn.disabled = false;
 
-  // Close modal
-  const modal = bootstrap.Modal.getInstance(
-    document.getElementById("exportModal"),
-  );
-  modal.hide();
-
-  showToast("تم بدء عملية التصدير", "success");
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById("exportModal"));
+      if (modal) modal.hide();
+    });
 }
+
+window.applyFilters = applyFilters;
+window.refreshAuditLogs = refreshAuditLogs;
+window.exportAuditLogs = exportAuditLogs;
+window.doExport = doExport;
 
 // Initialize when DOM is loaded
 let auditLogs;
 document.addEventListener("DOMContentLoaded", function () {
   auditLogs = new AuditLogsManager();
+});
+
+window.addEventListener("languageChanged", () => {
+  if (auditLogs) {
+    auditLogs.loadAuditLogs();
+  }
 });

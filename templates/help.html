@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}Help - KinJo{% else %}مساعدة - KinJo{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="h3 mb-0">{% if ui_lang == 'en' %}Help Centre{% else %}مركز المساعدة{% endif %}</h1>
+                </div>
+                <div class="card-body">
+                    <p>{% if ui_lang == 'en' %}Welcome to the KinJo Help Centre. Here you can find answers to common questions and guidance on using the platform.{% else %}مرحباً بك في مركز مساعدة KinJo. هنا يمكنك العثور على إجابات للأسئلة الشائعة ودليل استخدام المنصة.{% endif %}</p>
+
+                    <h4>{% if ui_lang == 'en' %}Frequently Asked Questions{% else %}الأسئلة الشائعة{% endif %}</h4>
+                    <ul>
+                        <li>{% if ui_lang == 'en' %}How do I register a new child?{% else %}كيف أقوم بتسجيل طفل جديد؟{% endif %}</li>
+                        <li>{% if ui_lang == 'en' %}How can I track child attendance?{% else %}كيف أتابع حضور الطفل؟{% endif %}</li>
+                        <li>{% if ui_lang == 'en' %}How do I communicate with teachers?{% else %}كيف أتواصل مع المعلمين؟{% endif %}</li>
+                    </ul>
+
+                    <p>{% if ui_lang == 'en' %}For further support, please contact us at: support@kinjo.jo{% else %}للمزيد من المساعدة، يرجى الاتصال بنا عبر البريد الإلكتروني: support@kinjo.jo{% endif %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

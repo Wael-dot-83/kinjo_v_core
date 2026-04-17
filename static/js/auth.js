@@ -15,10 +15,14 @@ const AUTH_CONFIG = {
   loginEndpoint: "/token",
   logoutEndpoint: "/api/auth/logout",
   refreshEndpoint: "/api/auth/refresh",
-  meEndpoint: "/users/me",
+  meEndpoint: "/api/users/me",
   sessionTimeout: 30 * 60 * 1000, // 30 minutes in milliseconds
   rememberMeMaxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
   tokenRefreshBuffer: 5 * 60 * 1000, // Refresh 5 minutes before expiry
+};
+const CSRF_CONFIG = {
+  cookieName: "kinjo_csrf_token",
+  tokenLengthBytes: 32,
 };
 
 // ============================================================================
@@ -42,14 +46,50 @@ class AuthStorage {
   setToken(token, tokenType = "bearer") {
     this.storage.setItem(AUTH_CONFIG.tokenKey, token);
     this.storage.setItem(AUTH_CONFIG.tokenTypeKey, tokenType);
-    // Also set as cookie for server-side access
     const maxAge = this.rememberMe
       ? AUTH_CONFIG.rememberMeMaxAgeSeconds
       : Math.floor(AUTH_CONFIG.sessionTimeout / 1000);
-    // Add Secure flag in production (HTTPS)
     const isSecure = window.location.protocol === "https:";
     const secureFlag = isSecure ? "; Secure" : "";
-    document.cookie = `kinjo_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax${secureFlag}`;
+    const csrfToken = AuthStorage.generateCsrfToken();
+    AuthStorage.setCookie(CSRF_CONFIG.cookieName, csrfToken, maxAge, secureFlag);
+  }
+
+  static generateCsrfToken() {
+    const array = new Uint8Array(CSRF_CONFIG.tokenLengthBytes);
+    window.crypto.getRandomValues(array);
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  static setCookie(name, value, maxAge, secureFlag) {
+    document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Strict${secureFlag}`;
+  }
+
+  static getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop().split(";").shift();
+    }
+    return null;
+  }
+
+  static async ensureServerSession() {
+    const token = AuthStorage.getToken();
+    if (!token) {
+      return false;
+    }
+    try {
+      const response = await fetch(AUTH_CONFIG.refreshEndpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `${AuthStorage.getTokenType()} ${token}`,
+        },
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 
   setUser(user) {
@@ -58,8 +98,7 @@ class AuthStorage {
 
   static getToken() {
     return (
-      localStorage.getItem(AUTH_CONFIG.tokenKey) ||
-      sessionStorage.getItem(AUTH_CONFIG.tokenKey)
+      localStorage.getItem(AUTH_CONFIG.tokenKey) || sessionStorage.getItem(AUTH_CONFIG.tokenKey)
     );
   }
 
@@ -73,8 +112,7 @@ class AuthStorage {
 
   static getUser() {
     const userStr =
-      localStorage.getItem(AUTH_CONFIG.userKey) ||
-      sessionStorage.getItem(AUTH_CONFIG.userKey);
+      localStorage.getItem(AUTH_CONFIG.userKey) || sessionStorage.getItem(AUTH_CONFIG.userKey);
     try {
       return userStr ? JSON.parse(userStr) : null;
     } catch {
@@ -90,8 +128,9 @@ class AuthStorage {
       storage.removeItem(AUTH_CONFIG.userKey);
     });
     // Clear cookie
-    document.cookie =
-      "kinjo_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "kinjo_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "kinjo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = `${CSRF_CONFIG.cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
   }
 
   static isAuthenticated() {
@@ -118,15 +157,24 @@ class HttpInterceptor {
         "/api/auth/register",
         "/register/parent",
       ];
-      const isAuthEndpoint = noAuthEndpoints.some((endpoint) =>
-        url.includes(endpoint)
-      );
+      const isAuthEndpoint = noAuthEndpoints.some((endpoint) => url.includes(endpoint));
 
       if (token && !isAuthEndpoint) {
         options.headers = {
           ...options.headers,
           Authorization: `${tokenType} ${token}`,
         };
+      }
+
+      const method = (options.method || "GET").toUpperCase();
+      if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+        const csrfToken = AuthStorage.getCookie(CSRF_CONFIG.cookieName);
+        if (csrfToken) {
+          options.headers = {
+            ...options.headers,
+            "X-CSRF-Token": csrfToken,
+          };
+        }
       }
 
       try {
@@ -162,6 +210,7 @@ class AuthGuard {
   static publicRoutes = [
     "/login",
     "/register",
+    "/change-password",
     "/forgot-password",
     "/reset-password",
     "/help",
@@ -171,14 +220,7 @@ class AuthGuard {
   ];
 
   static roleRoutes = {
-    ADMIN: [
-      "/admin",
-      "/dashboard",
-      "/kindergartens",
-      "/users",
-      "/kpi",
-      "/reports",
-    ],
+    ADMIN: ["/admin", "/dashboard", "/kindergartens", "/users", "/kpi", "/reports"],
     MANAGER: [
       "/manager",
       "/dashboard",
@@ -189,17 +231,11 @@ class AuthGuard {
       "/reports",
       "/kpi",
     ],
-    SUPERVISOR: [
-      "/supervisor",
-      "/dashboard",
-      "/children",
-      "/attendance",
-      "/reports",
-    ],
+    SUPERVISOR: ["/supervisor", "/dashboard", "/children", "/attendance", "/reports"],
     PARENT: ["/parent", "/dashboard", "/children", "/reports"],
   };
 
-  static check() {
+  static async check() {
     const currentPath = window.location.pathname;
     const isAuthenticated = AuthStorage.isAuthenticated();
     const user = AuthStorage.getUser();
@@ -208,8 +244,25 @@ class AuthGuard {
     if (this.publicRoutes.includes(currentPath)) {
       // If authenticated and on login page, redirect to dashboard
       if (isAuthenticated && currentPath === "/login") {
-        this.redirectToDashboard(user);
-        return false;
+        const hasCookie = await AuthStorage.ensureServerSession();
+        const verifiedUser = await this.verifySession();
+
+        if (verifiedUser && hasCookie) {
+          const redirectUrl = this.getSafeRedirectFromQuery();
+          if (redirectUrl) {
+            window.location.href = redirectUrl;
+          } else {
+            this.redirectToDashboard(verifiedUser || user);
+          }
+          return false;
+        }
+
+        if (verifiedUser && !hasCookie) {
+          console.warn("Token present but auth cookie missing; clearing session.");
+          AuthStorage.clearAll();
+        } else if (!verifiedUser) {
+          AuthStorage.clearAll();
+        }
       }
       return true;
     }
@@ -239,6 +292,36 @@ class AuthGuard {
     return true;
   }
 
+  static getSafeRedirectFromQuery() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectUrl = urlParams.get("redirect");
+    if (!redirectUrl) {
+      return null;
+    }
+
+    const decodedUrl = decodeURIComponent(redirectUrl);
+    if (!AuthGuard.isValidRedirectUrl(decodedUrl)) {
+      console.warn("Invalid redirect URL blocked:", decodedUrl);
+      return null;
+    }
+
+    return decodedUrl;
+  }
+
+  static async verifySession() {
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      if (currentUser) {
+        const storage = AuthStorage.getActiveStorage();
+        storage.setItem(AUTH_CONFIG.userKey, JSON.stringify(currentUser));
+      }
+      return currentUser;
+    } catch (error) {
+      console.warn("Session validation failed:", error);
+      return null;
+    }
+  }
+
   static redirectToDashboard(user) {
     const roleRedirects = {
       ADMIN: "/dashboard",
@@ -247,10 +330,7 @@ class AuthGuard {
       PARENT: "/parent/dashboard",
     };
 
-    const redirectUrl =
-      user && user.role
-        ? roleRedirects[user.role] || "/dashboard"
-        : "/dashboard";
+    const redirectUrl = user && user.role ? roleRedirects[user.role] || "/dashboard" : "/dashboard";
 
     window.location.href = redirectUrl;
   }
@@ -320,9 +400,7 @@ class AuthService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(
-        error.detail || "فشل تسجيل الدخول. يرجى التحقق من البيانات."
-      );
+      throw new Error(error.detail || "فشل تسجيل الدخول. يرجى التحقق من البيانات.");
     }
 
     const data = await response.json();
@@ -331,6 +409,19 @@ class AuthService {
     const storage = new AuthStorage(rememberMe);
     storage.setToken(data.access_token, data.token_type || "bearer");
     storage.setUser(data.user);
+
+    // Persist UI language globally from server preference (fallback to existing value).
+    const serverLang = typeof data.user_lang === "string" ? data.user_lang.toLowerCase() : "";
+    const currentLang =
+      localStorage.getItem("kinjo_lang") || localStorage.getItem("admin_language") || "";
+    const safeLang = ["ar", "en"].includes(serverLang)
+      ? serverLang
+      : ["ar", "en"].includes(currentLang)
+        ? currentLang
+        : "ar";
+    localStorage.setItem("kinjo_lang", safeLang);
+    localStorage.setItem("admin_language", safeLang);
+    document.cookie = `kinjo_lang=${safeLang}; path=/; max-age=31536000; SameSite=Lax`;
 
     // Update the global api object if exists
     if (window.api && typeof window.api.setToken === "function") {
@@ -376,7 +467,7 @@ class AuthService {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to get user info");
+      throw new Error("تعذر جلب بيانات المستخدم");
     }
 
     return await response.json();
@@ -407,6 +498,13 @@ class AuthService {
   }
 
   /**
+   * Check if user is currently authenticated
+   */
+  static isAuthenticated() {
+    return AuthStorage.isAuthenticated();
+  }
+
+  /**
    * Check if user has specific role
    */
   static hasRole(requiredRole) {
@@ -420,6 +518,13 @@ class AuthService {
   static hasAnyRole(roles) {
     const user = AuthStorage.getUser();
     return user && roles.includes(user.role);
+  }
+
+  /**
+   * Get the current authentication token
+   */
+  static getToken() {
+    return AuthStorage.getToken();
   }
 }
 
@@ -461,6 +566,20 @@ async function handleLogin(event) {
     const data = await AuthService.login(username, password, rememberMe);
 
     console.log("Login successful:", data.user);
+
+    // Check if password change is required
+    if (data.user.must_change_password) {
+      console.log("Password change required, redirecting...");
+
+      // Store auth data temporarily
+      const storage = new AuthStorage(rememberMe);
+      storage.setToken(data.access_token, data.token_type || "bearer");
+      storage.setUser(data.user);
+
+      // Redirect to password change page
+      window.location.href = "/change-password";
+      return;
+    }
 
     // Show success briefly
     if (typeof showToast === "function") {
@@ -523,12 +642,12 @@ function handleLogout(event) {
 // Initialization
 // ============================================================================
 
-function initAuth() {
+async function initAuth() {
   // Install HTTP interceptor
   HttpInterceptor.install();
 
   // Check authentication on protected pages
-  if (!AuthGuard.check()) {
+  if (!(await AuthGuard.check())) {
     return; // Redirect happened, don't continue
   }
 
@@ -548,11 +667,9 @@ function initAuth() {
   }
 
   // Attach logout handlers
-  document
-    .querySelectorAll('[data-action="logout"], .logout-btn, #logoutBtn')
-    .forEach((btn) => {
-      btn.addEventListener("click", handleLogout);
-    });
+  document.querySelectorAll('[data-action="logout"], .logout-btn, #logoutBtn').forEach((btn) => {
+    btn.addEventListener("click", handleLogout);
+  });
 
   // Update UI with user info if authenticated
   if (AuthStorage.isAuthenticated()) {
@@ -564,9 +681,12 @@ function initAuth() {
 
   // Setup token refresh interval (every 25 minutes)
   if (AuthStorage.isAuthenticated()) {
-    setInterval(() => {
-      AuthService.refreshToken();
-    }, 25 * 60 * 1000);
+    setInterval(
+      () => {
+        AuthService.refreshToken();
+      },
+      25 * 60 * 1000
+    );
   }
 
   console.log("Auth module initialized");
@@ -614,10 +734,58 @@ window.AuthGuard = AuthGuard;
 window.handleLogin = handleLogin;
 window.handleLogout = handleLogout;
 
+// ============================================================================
+// Authenticated Fetch Helper
+// ============================================================================
+
+/**
+ * Fetch with automatic authentication headers and 401 handling
+ * @param {string} url - The URL to fetch
+ * @param {object} options - Fetch options
+ * @returns {Promise<Response|null>} - The response or null if redirected
+ */
+async function fetchWithAuth(url, options = {}) {
+  const token = AuthStorage.getToken();
+  if (!token) {
+    window.location.href = "/login";
+    return null;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (response.status === 401) {
+    // Token expired, redirect to login
+    window.location.href = "/login";
+    return null;
+  }
+
+  if (!response.ok) {
+    console.error("API Error:", response.statusText);
+    throw new Error(response.statusText);
+  }
+
+  return response;
+}
+
+// Make fetchWithAuth globally available
+window.fetchWithAuth = fetchWithAuth;
+
 // Initialize on DOM ready
-document.addEventListener("DOMContentLoaded", initAuth);
+document.addEventListener("DOMContentLoaded", () => {
+  initAuth().catch((error) => {
+    console.error("Auth initialization failed:", error);
+  });
+});
 
 // Also run immediately if DOM is already loaded
 if (document.readyState !== "loading") {
-  initAuth();
+  initAuth().catch((error) => {
+    console.error("Auth initialization failed:", error);
+  });
 }

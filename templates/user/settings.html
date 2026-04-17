@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if ui_lang == 'en' %}Account Settings{% else %}إعدادات الحساب{% endif %}{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-gear me-2 text-primary"></i>
+            إعدادات الحساب
+        </h1>
+        <nav aria-label="مسار التنقل">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">الإعدادات</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Settings Sidebar -->
+        <div class="card shadow-sm mb-4">
+            <div class="list-group list-group-flush" id="settingsTabs" role="tablist">
+                <a class="list-group-item list-group-item-action active d-flex align-items-center" id="profile-tab"
+                    data-bs-toggle="list" href="#profile" role="tab">
+                    <i class="bi bi-person me-3 text-secondary"></i>
+                    الملف الشخصي
+                </a>
+                <a class="list-group-item list-group-item-action d-flex align-items-center" id="security-tab"
+                    data-bs-toggle="list" href="#security" role="tab">
+                    <i class="bi bi-shield-lock me-3 text-secondary"></i>
+                    الأمان وكلمة المرور
+                </a>
+                <a class="list-group-item list-group-item-action d-flex align-items-center" id="notifications-tab"
+                    data-bs-toggle="list" href="#notifications" role="tab">
+                    <i class="bi bi-bell me-3 text-secondary"></i>
+                    الإشعارات
+                </a>
+                {% if current_user.role == 'admin' %}
+                <a class="list-group-item list-group-item-action d-flex align-items-center" id="system-tab"
+                    data-bs-toggle="list" href="#system" role="tab">
+                    <i class="bi bi-sliders me-3 text-secondary"></i>
+                    إعدادات النظام (Admin)
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <div class="tab-content" id="nav-tabContent">
+                    <!-- Profile Settings -->
+                    <div class="tab-pane fade show active" id="profile" role="tabpanel">
+                        <h5 class="mb-4 text-primary fw-bold">المعلومات الشخصية</h5>
+                        <form>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="firstName" class="form-label">الاسم الأول</label>
+                                    <input type="text" id="firstName" class="form-control"
+                                        value="{{ current_user.first_name }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="lastName" class="form-label">اسم العائلة</label>
+                                    <input type="text" id="lastName" class="form-control"
+                                        value="{{ current_user.last_name }}">
+                                </div>
+                                <div class="col-md-12">
+                                    <label for="email" class="form-label">البريد الإلكتروني</label>
+                                    <input type="email" id="email" class="form-control" value="{{ current_user.email }}"
+                                        readonly disabled>
+                                    <div class="form-text">لا يمكن تغيير البريد الإلكتروني. يرجى التواصل مع الدعم.</div>
+                                </div>
+                                <div class="col-md-12">
+                                    <label for="phoneNumber" class="form-label">رقم الهاتف</label>
+                                    <input type="tel" id="phoneNumber" class="form-control"
+                                        value="{{ current_user.phone_number or '' }}">
+                                </div>
+                                <div class="col-12 mt-4">
+                                    <button type="button" class="btn btn-primary px-4"
+                                        onclick="showToast('تم حفظ التغييرات بنجاح')">
+                                        <i class="bi bi-save me-1"></i> حفظ التغييرات
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Security Settings -->
+                    <div class="tab-pane fade" id="security" role="tabpanel">
+                        <h5 class="mb-4 text-primary fw-bold">تغيير كلمة المرور</h5>
+                        <form>
+                            <div class="mb-3">
+                                <label for="currentPassword" class="form-label">كلمة المرور الحالية</label>
+                                <input type="password" id="currentPassword" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label for="newPassword" class="form-label">كلمة المرور الجديدة</label>
+                                <input type="password" id="newPassword" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">تأكيد كلمة المرور الجديدة</label>
+                                <input type="password" id="confirmPassword" class="form-control">
+                            </div>
+                            <div class="mt-4">
+                                <button type="button" class="btn btn-warning px-4"
+                                    onclick="showToast('تم تحديث كلمة المرور')">
+                                    <i class="bi bi-key me-1"></i> تحديث كلمة المرور
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Notification Settings -->
+                    <div class="tab-pane fade" id="notifications" role="tabpanel">
+                        <h5 class="mb-4 text-primary fw-bold">تفضيلات الإشعارات</h5>
+                        <div class="list-group">
+                            <label class="list-group-item d-flex gap-3">
+                                <input class="form-check-input flex-shrink-0" type="checkbox" checked
+                                    style="font-size: 1.375em;">
+                                <span class="pt-1 form-checked-content">
+                                    <strong>إشعارات البريد الإلكتروني</strong>
+                                    <small class="d-block text-body-secondary">استلام ملخصات أسبوعية وتنبيهات
+                                        هامة.</small>
+                                </span>
+                            </label>
+                            <label class="list-group-item d-flex gap-3">
+                                <input class="form-check-input flex-shrink-0" type="checkbox" checked
+                                    style="font-size: 1.375em;">
+                                <span class="pt-1 form-checked-content">
+                                    <strong>إشعارات النظام (داخل التطبيق)</strong>
+                                    <small class="d-block text-body-secondary">تنبيهات فورية عند حدوث إجراءات
+                                        هامة.</small>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="mt-4">
+                            <button type="button" class="btn btn-primary px-4" onclick="showToast('تم حفظ التفضيلات')">
+                                <i class="bi bi-save me-1"></i> حفظ التفضيلات
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- System Settings (Admin Only) -->
+                    {% if current_user.role == 'admin' %}
+                    <div class="tab-pane fade" id="system" role="tabpanel">
+                        <h5 class="mb-4 text-danger fw-bold">إعدادات النظام العامة</h5>
+                        <form>
+                            <div class="mb-3">
+                                <label for="schoolYearStart" class="form-label">بداية العام الدراسي</label>
+                                <input type="date" id="schoolYearStart" class="form-control" value="2023-09-01">
+                            </div>
+                            <div class="mb-3">
+                                <label for="maxStudentsPerClass" class="form-label">الحد الأقصى للطلاب لكل فصل</label>
+                                <input type="number" id="maxStudentsPerClass" class="form-control" value="25">
+                            </div>
+                            <div class="mt-4">
+                                <button type="button" class="btn btn-danger px-4"
+                                    onclick="showToast('تم تحديث إعدادات النظام')">
+                                    <i class="bi bi-gear-fill me-1"></i> تحديث النظام
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showToast(message) {
+        // Simple toast or alert for functionality demo
+        // In real implementation, utilize a toast library or existing toast component
+        const toastContainer = document.createElement('div');
+        toastContainer.style.position = 'fixed';
+        toastContainer.style.bottom = '20px';
+        toastContainer.style.left = '20px';
+        toastContainer.style.zIndex = '1055';
+        toastContainer.innerHTML = `
+            <div class="toast show align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-check-circle-fill me-2"></i> ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="إغلاق" onclick="this.closest('.toast').remove()"></button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toastContainer);
+        setTimeout(() => toastContainer.remove(), 3000);
+    }
+</script>
+{% endblock %}

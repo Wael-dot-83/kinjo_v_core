@@ -1,103 +1,155 @@
 <!-- Top Navigation Bar -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+<nav class="navbar navbar-expand-lg fixed-top kinjo-navbar">
     <div class="container-fluid">
         <!-- Brand -->
-        <a class="navbar-brand d-flex align-items-center" href="/">
-            <i class="bi bi-building me-2"></i>
+        <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+            <span class="kinjo-brand-icon" aria-hidden="true"><i class="bi bi-building"></i></span>
             <span class="fw-bold">KinJo</span>
         </a>
-        
+
+        {% if current_user %}
+        <!-- Mobile Sidebar Toggle -->
+        <button class="btn btn-link d-md-none navbar-icon-btn" type="button" data-sidebar-toggle="true"
+            aria-controls="sidebarMenu" aria-expanded="false"
+            aria-label="{% if ui_lang == 'en' %}Toggle sidebar{% else %}تبديل القائمة الجانبية{% endif %}"
+            data-i18n-aria="nav.toggle_sidebar">
+            <i class="bi bi-list fs-4"></i>
+        </button>
+        {% endif %}
+
         <!-- Mobile Toggle -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" 
-                aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
+            aria-controls="navbarMain" aria-expanded="false" aria-label="{% if ui_lang == 'en' %}Toggle navigation{% else %}تبديل التنقل{% endif %}" data-i18n-aria="nav.toggle_menu">
             <span class="navbar-toggler-icon"></span>
         </button>
-        
+
         <!-- Navbar Content -->
         <div class="collapse navbar-collapse" id="navbarMain">
             <!-- Search Bar (for staff) -->
             {% if current_user and current_user.role.value != 'PARENT' %}
-            <form class="d-flex mx-auto" role="search" id="globalSearchForm" style="max-width: 400px;">
+            <form class="d-flex mx-auto navbar-search-form" role="search" id="globalSearchForm" style="max-width: 400px;">
                 <div class="input-group">
-                    <input type="search" class="form-control" placeholder="البحث عن طفل، ولي أمر..." 
-                           aria-label="Search" id="globalSearchInput">
-                    <button class="btn btn-light" type="submit" aria-label="بحث">
+                    <input type="search" class="form-control" placeholder="{% if ui_lang == 'en' %}Search for child, parent...{% else %}البحث عن طفل، ولي أمر...{% endif %}"
+                        data-i18n-placeholder="nav.search_placeholder" aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}" data-i18n-aria="common.search"
+                        id="globalSearchInput">
+                    <button class="btn btn-light" type="submit" aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}" data-i18n-aria="common.search">
                         <i class="bi bi-search"></i>
                     </button>
                 </div>
             </form>
             {% endif %}
-            
+
             <!-- Right Side Navigation -->
             {% if current_user %}
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
                 <!-- Notifications -->
                 <li class="nav-item dropdown">
-                    <a class="nav-link position-relative" href="#" role="button" 
-                       data-bs-toggle="dropdown" aria-expanded="false" id="notificationsDropdown">
+                    <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown"
+                        aria-expanded="false" id="notificationsDropdown">
                         <i class="bi bi-bell fs-5"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge" 
-                              id="notificationCount" style="display: none;">
+                        <span
+                            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge"
+                            id="notificationCount" style="display: none;">
                             0
                         </span>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end notification-dropdown" aria-labelledby="notificationsDropdown">
-                        <li><h6 class="dropdown-header">الإشعارات</h6></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li id="notificationList">
-                            <span class="dropdown-item-text text-muted small">لا توجد إشعارات جديدة</span>
+                    <ul class="dropdown-menu dropdown-menu-end notification-dropdown"
+                        aria-labelledby="notificationsDropdown">
+                        <li>
+                            <h6 class="dropdown-header" data-i18n="nav.notifications">{% if ui_lang == 'en' %}Notifications{% else %}الإشعارات{% endif %}</h6>
                         </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-center small" href="/notifications">عرض الكل</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li id="notificationList">
+                            <span class="dropdown-item-text text-muted small" data-i18n="nav.no_notifications">{% if ui_lang == 'en' %}No new notifications{% else %}لا توجد إشعارات جديدة{% endif %}</span>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item text-center small" href="/notifications" data-i18n="nav.view_all">{% if ui_lang == 'en' %}View all{% else %}عرض الكل{% endif %}</a></li>
                     </ul>
                 </li>
-                
-                <!-- Language Toggle -->
+
+                <!-- Help Express -->
                 <li class="nav-item">
-                    <a class="nav-link" href="#" onclick="toggleLanguage()" title="Switch Language">
-                        <i class="bi bi-translate fs-5"></i>
+                    <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#helpExpressModal"
+                        title="{% if ui_lang == 'en' %}Help and guide{% else %}المساعدة والدليل{% endif %}" data-i18n-title="nav.help" aria-label="{% if ui_lang == 'en' %}Help{% else %}المساعدة{% endif %}" data-i18n-aria="nav.help">
+                        <i class="bi bi-question-circle fs-5"></i>
                     </a>
                 </li>
-                
+
+                <!-- Language Toggle -->
+                <li class="nav-item">
+                    <button class="nav-link navbar-action-btn" type="button" onclick="toggleLanguage()"
+                        title="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}"
+                        data-i18n-title="nav.language_toggle" aria-label="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}" data-i18n-aria="nav.language_toggle">
+                        <i class="bi bi-translate fs-5"></i>
+                    </button>
+                </li>
+
                 <!-- User Dropdown -->
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" 
-                       data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="avatar-sm bg-light rounded-circle d-flex align-items-center justify-content-center me-2">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        <div
+                            class="avatar-sm bg-light rounded-circle d-flex align-items-center justify-content-center me-2">
                             <i class="bi bi-person text-primary"></i>
                         </div>
                         <span class="d-none d-lg-inline">{{ current_user.username }}</span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><h6 class="dropdown-header">{{ current_user.email }}</h6></li>
+                        <li>
+                            <h6 class="dropdown-header">{{ current_user.email }}</h6>
+                        </li>
+                        {% if current_user.role.value == 'ADMIN' %}
+                        {% set role_i18n_key = 'roles.admin' %}
+                        {% set role_label_ar = 'مدير النظام' %}
+                        {% set role_label_en = 'System admin' %}
+                        {% elif current_user.role.value == 'MANAGER' %}
+                        {% set role_i18n_key = 'roles.manager' %}
+                        {% set role_label_ar = 'مدير الروضة' %}
+                        {% set role_label_en = 'Kindergarten manager' %}
+                        {% elif current_user.role.value == 'SUPERVISOR' %}
+                        {% set role_i18n_key = 'roles.supervisor' %}
+                        {% set role_label_ar = 'مشرف' %}
+                        {% set role_label_en = 'Supervisor' %}
+                        {% else %}
+                        {% set role_i18n_key = 'roles.parent' %}
+                        {% set role_label_ar = 'ولي أمر' %}
+                        {% set role_label_en = 'Parent' %}
+                        {% endif %}
                         <li><span class="dropdown-item-text small text-muted">
-                            <i class="bi bi-shield-check me-1"></i>
-                            {% if current_user.role.value == 'ADMIN' %}مدير النظام
-                            {% elif current_user.role.value == 'MANAGER' %}مدير الروضة
-                            {% elif current_user.role.value == 'SUPERVISOR' %}مشرف
-                            {% else %}ولي أمر{% endif %}
-                        </span></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="/profile"><i class="bi bi-person-circle me-2"></i>الملف الشخصي</a></li>
-                        <li><a class="dropdown-item" href="/settings"><i class="bi bi-gear me-2"></i>الإعدادات</a></li>
-                        <li><hr class="dropdown-divider"></li>
+                                <i class="bi bi-shield-check me-1"></i>
+                                <span data-i18n="{{ role_i18n_key }}">{% if ui_lang == 'en' %}{{ role_label_en }}{% else %}{{ role_label_ar }}{% endif %}</span>
+                            </span></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="/profile"><i class="bi bi-person-circle me-2"></i><span
+                                    data-i18n="nav.profile">{% if ui_lang == 'en' %}Profile{% else %}الملف الشخصي{% endif %}</span></a></li>
+                        <li><a class="dropdown-item" href="/settings"><i class="bi bi-gear me-2"></i><span
+                                    data-i18n="nav.settings">{% if ui_lang == 'en' %}Settings{% else %}الإعدادات{% endif %}</span></a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
                         <li><a class="dropdown-item text-danger" href="#" onclick="handleLogout(event)">
-                            <i class="bi bi-box-arrow-right me-2"></i>تسجيل الخروج
-                        </a></li>
+                                <i class="bi bi-box-arrow-right me-2"></i><span data-i18n="nav.logout">{% if ui_lang == 'en' %}Log out{% else %}تسجيل الخروج{% endif %}</span>
+                            </a></li>
                     </ul>
                 </li>
             </ul>
             {% else %}
             <!-- Login/Register for guests -->
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
                 <li class="nav-item">
                     <a class="nav-link" href="/login">
-                        <i class="bi bi-box-arrow-in-left me-1"></i>تسجيل الدخول
+                        <i class="bi bi-box-arrow-in-left me-1"></i><span data-i18n="nav.login">{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="btn btn-outline-light btn-sm ms-2" href="/register">
-                        إنشاء حساب
+                        <span data-i18n="nav.register">{% if ui_lang == 'en' %}Create account{% else %}إنشاء حساب{% endif %}</span>
                     </a>
                 </li>
             </ul>
@@ -107,4 +159,4 @@
 </nav>
 
 <!-- Spacer for fixed navbar -->
-<div style="height: 56px;"></div>
+<div class="navbar-spacer" aria-hidden="true"></div>

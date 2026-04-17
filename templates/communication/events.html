@@ -9,7 +9,7 @@
             <i class="bi bi-calendar-event me-2 text-success"></i>
             الفعاليات والتقويم
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
                 <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
@@ -34,7 +34,7 @@
                 <div id="eventsContainer" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
                     <!-- Loaded via JS -->
                     <div class="col-12 text-center py-5">
-                       <div class="spinner-border text-success" role="status"></div>
+                        <div class="spinner-border text-success" role="status"></div>
                     </div>
                 </div>
             </div>
@@ -45,13 +45,19 @@
 {% include 'communication/modals/new_event.html' %}
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', loadEvents);
 
     async function loadEvents() {
         try {
-            const token = localStorage.getItem('access_token');
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">يرجى تسجيل الدخول لعرض الفعاليات</div>`;
+                return;
+            }
+
+            const token = AuthService.getToken();
             const response = await fetch('/comm/events', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -87,8 +93,8 @@
 
         events.forEach(evt => {
             const range = formatEventDate(evt.start_at, evt.end_at);
-            const consentBadge = evt.requires_consent_flag 
-                ? '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> يتطلب موافقة</span>' 
+            const consentBadge = evt.requires_consent_flag
+                ? '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> يتطلب موافقة</span>'
                 : '';
 
             const card = document.createElement('div');
@@ -115,7 +121,7 @@
     function formatEventDate(start, end) {
         const s = new Date(start);
         const e = new Date(end);
-        
+
         const dateOpt = { year: 'numeric', month: 'short', day: 'numeric' };
         const timeOpt = { hour: '2-digit', minute: '2-digit' };
 
@@ -127,4 +133,3 @@
     }
 </script>
 {% endblock %}
-

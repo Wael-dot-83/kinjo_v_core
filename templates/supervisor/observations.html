@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+
+{% block title %}تسجيل الملاحظات{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h3 mb-1">
+            <i class="bi bi-eye me-2 text-primary"></i>
+            تسجيل ملاحظة تربوية
+        </h1>
+        <nav aria-label="مسار التنقل">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">الملاحظات</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form id="observationForm">
+                    <div class="mb-3">
+                        <label class="form-label" for="childSearchInput">بحث عن طفل</label>
+                        <input class="form-control" id="childSearchInput" type="search" placeholder="اكتب اسم الطفل للتصفية">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="childSelect">الطفل</label>
+                        <select class="form-select" id="childSelect" required>
+                            <option value="">جاري تحميل الأطفال...</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="domainSelect">مجال الملاحظة</label>
+                        <select class="form-select" id="domainSelect" required>
+                            <option value="SOCIAL_EMOTIONAL">اجتماعي عاطفي</option>
+                            <option value="COGNITIVE">معرفي</option>
+                            <option value="PHYSICAL">بدني</option>
+                            <option value="LANGUAGE">لغوي</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="masterySelect">مستوى الإتقان</label>
+                        <select class="form-select" id="masterySelect">
+                            <option value="">بدون تحديد</option>
+                            <option value="NEEDS_SUPPORT">يحتاج دعم</option>
+                            <option value="ON_TRACK">ضمن المستوى</option>
+                            <option value="EXCEEDS">يفوق المتوقع</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="observationText">نص الملاحظة</label>
+                        <textarea class="form-control" id="observationText" rows="5" required
+                            placeholder="اكتب الملاحظة التربوية بشكل واضح..."></textarea>
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted">حد أقصى 2000 حرف</small>
+                            <small id="observationCharCount" class="text-muted">0 / 2000</small>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary w-100" id="saveObservationBtn" disabled>
+                            <i class="bi bi-check2-circle me-1"></i>
+                            حفظ الملاحظة
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary w-100" id="resetObservationBtn">
+                            <i class="bi bi-eraser me-1"></i>
+                            مسح الحقول
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    آخر الملاحظات
+                </h6>
+                <button class="btn btn-sm btn-outline-secondary" type="button" onclick="loadSelectedChildObservations()">
+                    تحديث
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="observationsList" class="list-group list-group-flush">
+                    <div class="text-center py-4 text-muted">
+                        اختر الطفل لعرض الملاحظات المسجلة.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let supervisorChildren = [];
+    const MAX_OBSERVATION_CHARS = 2000;
+
+    function authHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        const token = (window.AuthService && typeof window.AuthService.getToken === 'function')
+            ? window.AuthService.getToken()
+            : (localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token'));
+        if (token) headers.Authorization = `Bearer ${token}`;
+        return headers;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function notify(message, type = 'info') {
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, type);
+        } else {
+            alert(message);
+        }
+    }
+
+    async function apiRequest(url, options = {}) {
+        const requestOptions = {
+            ...options,
+            headers: {
+                ...authHeaders(),
+                ...(options.headers || {}),
+            },
+        };
+
+        if (typeof window.fetchWithAuth === 'function') {
+            const response = await window.fetchWithAuth(url, requestOptions);
+            if (!response) throw new Error('يتطلب تسجيل الدخول');
+            if (!response.ok) {
+                const payload = await response.json().catch(() => ({}));
+                throw new Error(payload.detail || 'تعذر إتمام الطلب');
+            }
+            return response.json();
+        }
+
+        const response = await fetch(url, requestOptions);
+        if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.detail || 'تعذر إتمام الطلب');
+        }
+        return response.json();
+    }
+
+    function domainLabel(value) {
+        const map = {
+            SOCIAL_EMOTIONAL: 'اجتماعي عاطفي',
+            COGNITIVE: 'معرفي',
+            PHYSICAL: 'بدني',
+            LANGUAGE: 'لغوي',
+        };
+        return map[String(value || '').toUpperCase()] || value || '-';
+    }
+
+    function masteryLabel(value) {
+        const map = {
+            NEEDS_SUPPORT: 'يحتاج دعم',
+            ON_TRACK: 'ضمن المستوى',
+            EXCEEDS: 'يفوق المتوقع',
+        };
+        return map[String(value || '').toUpperCase()] || 'غير محدد';
+    }
+
+    function childDisplayName(child) {
+        return `${child.first_name || ''} ${child.last_name || ''}`.trim() || `#${child.id}`;
+    }
+
+    function setFormEnabled(enabled) {
+        document.getElementById('childSelect')?.toggleAttribute('disabled', !enabled);
+        document.getElementById('domainSelect')?.toggleAttribute('disabled', !enabled);
+        document.getElementById('masterySelect')?.toggleAttribute('disabled', !enabled);
+        document.getElementById('observationText')?.toggleAttribute('disabled', !enabled);
+        document.getElementById('saveObservationBtn')?.toggleAttribute('disabled', !enabled);
+        document.getElementById('resetObservationBtn')?.toggleAttribute('disabled', !enabled);
+    }
+
+    function renderChildOptions(searchTerm = '') {
+        const childSelect = document.getElementById('childSelect');
+        if (!childSelect) return [];
+
+        const term = String(searchTerm || '').trim().toLowerCase();
+        const filtered = !term
+            ? supervisorChildren
+            : supervisorChildren.filter((child) => childDisplayName(child).toLowerCase().includes(term));
+
+        if (filtered.length === 0) {
+            childSelect.innerHTML = `<option value="">${supervisorChildren.length ? 'لا توجد نتائج مطابقة للبحث' : 'لا يوجد أطفال ضمن فصولك حالياً'}</option>`;
+            return [];
+        }
+
+        childSelect.innerHTML = `
+            <option value="">اختر الطفل</option>
+            ${filtered.map((child) => `<option value="${child.id}">${escapeHtml(childDisplayName(child))}</option>`).join('')}
+        `;
+        return filtered;
+    }
+
+    function updateObservationCounter() {
+        const textEl = document.getElementById('observationText');
+        const counter = document.getElementById('observationCharCount');
+        if (!textEl || !counter) return;
+
+        const value = textEl.value || '';
+        if (value.length > MAX_OBSERVATION_CHARS) {
+            textEl.value = value.slice(0, MAX_OBSERVATION_CHARS);
+        }
+
+        const currentLen = textEl.value.length;
+        counter.textContent = `${currentLen} / ${MAX_OBSERVATION_CHARS}`;
+        counter.classList.toggle('text-danger', currentLen >= MAX_OBSERVATION_CHARS);
+    }
+
+    function resetObservationForm() {
+        const textEl = document.getElementById('observationText');
+        const masteryEl = document.getElementById('masterySelect');
+        if (textEl) textEl.value = '';
+        if (masteryEl) masteryEl.value = '';
+        updateObservationCounter();
+    }
+
+    async function loadChildren() {
+        const childSelect = document.getElementById('childSelect');
+        setFormEnabled(false);
+        try {
+            const payload = await apiRequest('/api/supervisor/children');
+            supervisorChildren = Array.isArray(payload?.children) ? payload.children : [];
+
+            if (!childSelect) return;
+            const filtered = renderChildOptions('');
+            if (filtered.length > 0) {
+                setFormEnabled(true);
+            } else {
+                document.getElementById('observationsList').innerHTML =
+                    '<div class="text-center py-4 text-muted">لا يوجد أطفال ضمن فصولك حالياً.</div>';
+            }
+        } catch (error) {
+            if (childSelect) {
+                childSelect.innerHTML = '<option value="">تعذر تحميل قائمة الأطفال</option>';
+            }
+            notify(error.message || 'تعذر تحميل الأطفال', 'error');
+        }
+    }
+
+    async function loadSelectedChildObservations() {
+        const childSelect = document.getElementById('childSelect');
+        const listEl = document.getElementById('observationsList');
+        if (!childSelect || !listEl) return;
+
+        const childId = childSelect.value;
+        if (!childId) {
+            listEl.innerHTML = '<div class="text-center py-4 text-muted">اختر الطفل لعرض الملاحظات المسجلة.</div>';
+            return;
+        }
+
+        listEl.innerHTML = '<div class="text-center py-3 text-muted">جاري التحميل...</div>';
+        try {
+            const records = await apiRequest(`/api/children/${encodeURIComponent(childId)}/observations`);
+            const list = Array.isArray(records) ? records : [];
+            if (list.length === 0) {
+                listEl.innerHTML = '<div class="text-center py-4 text-muted">لا توجد ملاحظات مسجلة لهذا الطفل.</div>';
+                return;
+            }
+
+            const dateFormatter = new Intl.DateTimeFormat('ar-JO', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+
+            listEl.innerHTML = list.map((item) => `
+                <div class="list-group-item px-0">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <span class="badge bg-light text-dark">${escapeHtml(domainLabel(item.domain))}</span>
+                        <small class="text-muted">${escapeHtml(item.observed_at ? dateFormatter.format(new Date(item.observed_at)) : '-')}</small>
+                    </div>
+                    <div class="small mb-1 text-muted">الإتقان: ${escapeHtml(masteryLabel(item.mastery_level))}</div>
+                    <div>${escapeHtml(item.observation_text || '')}</div>
+                </div>
+            `).join('');
+        } catch (error) {
+            listEl.innerHTML = '<div class="text-center py-4 text-danger">تعذر تحميل الملاحظات.</div>';
+            notify(error.message || 'تعذر تحميل الملاحظات', 'error');
+        }
+    }
+
+    async function submitObservation(event) {
+        event.preventDefault();
+        const saveBtn = document.getElementById('saveObservationBtn');
+        const childId = document.getElementById('childSelect')?.value;
+        const domain = document.getElementById('domainSelect')?.value;
+        const mastery = document.getElementById('masterySelect')?.value;
+        const text = document.getElementById('observationText')?.value?.trim();
+
+        if (!childId || !domain || !text) {
+            notify('يرجى إكمال الحقول المطلوبة', 'warning');
+            return;
+        }
+        if (text.length > MAX_OBSERVATION_CHARS) {
+            notify(`الحد الأقصى لنص الملاحظة هو ${MAX_OBSERVATION_CHARS} حرف`, 'warning');
+            return;
+        }
+
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>جاري الحفظ...';
+        }
+        try {
+            await apiRequest('/api/supervisor/observations/record', {
+                method: 'POST',
+                body: JSON.stringify({
+                    child_id: Number(childId),
+                    domain,
+                    observation_text: text,
+                    mastery_level: mastery || null,
+                }),
+            });
+
+            notify('تم حفظ الملاحظة بنجاح', 'success');
+            resetObservationForm();
+            await loadSelectedChildObservations();
+        } catch (error) {
+            notify(error.message || 'تعذر حفظ الملاحظة', 'error');
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>حفظ الملاحظة';
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadChildren();
+        updateObservationCounter();
+        document.getElementById('childSelect')?.addEventListener('change', loadSelectedChildObservations);
+        document.getElementById('childSearchInput')?.addEventListener('input', (event) => {
+            renderChildOptions(event.target.value || '');
+            document.getElementById('observationsList').innerHTML =
+                '<div class="text-center py-4 text-muted">اختر الطفل لعرض الملاحظات المسجلة.</div>';
+        });
+        document.getElementById('observationText')?.addEventListener('input', updateObservationCounter);
+        document.getElementById('resetObservationBtn')?.addEventListener('click', resetObservationForm);
+        document.getElementById('observationForm')?.addEventListener('submit', submitObservation);
+    });
+</script>
+{% endblock %}

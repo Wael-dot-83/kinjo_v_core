@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}الصحة والسلامة{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Health and Safety{% else %}الصحة والسلامة{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
@@ -9,7 +9,7 @@
             <i class="bi bi-shield-check me-2 text-danger"></i>
             الصحة والسلامة
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
                 <li class="breadcrumb-item active">الصحة والسلامة</li>
@@ -83,28 +83,11 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         loadIncidents();
     });
-
-    async def loadIncidents() {
-        // Pseudo-code implementation of Fetch
-        // This relies on authorized session cookie
-        const unresolved = document.getElementById('unresolvedOnly').checked;
-        const url = `/api/incidents?unresolved_only=${unresolved}`;
-        
-        try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Failed to load');
-            const data = await response.json();
-            renderIncidents(data);
-        } catch (error) {
-            console.error('Error:', error);
-            document.getElementById('incidentsTableBody').innerHTML = `<tr><td colspan="7" class="text-center text-danger">فشل تحميل البيانات</td></tr>`;
-        }
-    }
 
     function renderIncidents(incidents) {
         const tbody = document.getElementById('incidentsTableBody');
@@ -135,7 +118,7 @@
     }
 
     function getSeverityClass(level) {
-        switch(level) {
+        switch (level) {
             case 'LOW': return 'bg-info';
             case 'MEDIUM': return 'bg-warning text-dark';
             case 'HIGH': return 'bg-danger';
@@ -143,27 +126,16 @@
             default: return 'bg-secondary';
         }
     }
-    
-    // Fix function definition syntax which was pythonic in JS block above
-    window.loadIncidents = async function() {
+
+    window.loadIncidents = async function () {
         const unresolved = document.getElementById('unresolvedOnly').checked;
         const url = `/api/incidents?unresolved_only=${unresolved}`;
-        
+
         try {
-            const response = await fetch(url, {
-                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } // Assuming token is in localStorage or cookie
-            });
-            // Note: If using cookies, token header might not be needed depending on auth setup.
-            // Kinjo uses Bearer token, so typically needs injection if not using cookie-based auth middleware for API.
-            // Assuming simplified cookie auth or token injection logic in base.js
-            
-            if (response.status === 401) {
-                 // handle auth error
-                 return;
-            }
-            
-            const data = await response.json();
-            renderIncidents(data);
+            const data = await window.api.get(url);
+            if (!data) return;
+
+            renderIncidents(Array.isArray(data) ? data : (data.incidents || []));
         } catch (error) {
             console.error(error);
         }

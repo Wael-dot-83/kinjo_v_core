@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if ui_lang == 'en' %}Message Management{% else %}إدارة الرسائل{% endif %}{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-envelope me-2 text-primary"></i>
+            إدارة الرسائل
+        </h1>
+        <nav aria-label="مسار التنقل">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active" aria-current="page">الرسائل</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/admin/messages/compose" class="btn btn-primary">
+            <i class="bi bi-plus me-1"></i>إنشاء رسالة جديدة
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="messages-list">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">الرسائل المرسلة</h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>الموضوع</th>
+                                    <th>التاريخ</th>
+                                    <th>المستلمون</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for message in messages %}
+                                <tr>
+                                    <td>{{ message.subject }}</td>
+                                    <td>{{ message.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ message.recipient_count }}</td>
+                                    <td><span class="badge bg-success">مرسلة</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">عرض</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-envelope-x fs-1 text-muted mb-3"></i>
+                        <h5 class="text-muted">لا توجد رسائل مرسلة</h5>
+                        <p class="text-muted">ابدأ بإنشاء رسالة جديدة للمستخدمين.</p>
+                        <a href="/admin/messages/compose" class="btn btn-primary">
+                            <i class="bi bi-plus me-1"></i>إنشاء أول رسالة
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

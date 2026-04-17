@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}تقارير النظام{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+title="تقارير النظام",
+icon="bi-file-earmark-text",
+breadcrumbs=[
+{"label": "لوحة التحكم", "url": "/dashboard"},
+{"label": "التقارير", "url": None}
+]
+) }}
+
+<!-- Page Help Content -->
+<div id="pageHelpContent" class="d-none" data-help-title="دليل التقارير المركزية">
+    <div class="mb-4">
+        <h6 class="fw-bold text-primary"><i class="bi bi-file-earmark-text me-2"></i>أنواع التقارير</h6>
+        <p>قم باختيار نوع التقرير المناسب للحصول على البيانات التي تحتاجها:</p>
+        <ul class="list-unstyled">
+            <li class="mb-2"><strong><i class="bi bi-calendar-check text-success me-2"></i>تقرير الحضور:</strong> نسب
+                الحضور والغياب لكل روضة خلال الفترة المحددة.</li>
+            <li class="mb-2"><strong><i class="bi bi-exclamation-triangle text-warning me-2"></i>تقرير الحوادث:</strong>
+                تفاصيل الحوادث المسجلة، أنواعها، ودرجة خطورتها.</li>
+            <li class="mb-2"><strong><i class="bi bi-shield-check text-info me-2"></i>الامتثال والحوكمة:</strong> مدى
+                التزام الروضات بالمعايير واللوائح.</li>
+            <li class="mb-2"><strong><i class="bi bi-list-check text-primary me-2"></i>سجل التدقيق:</strong> نسخة كاملة
+                من سجلات النشاط للتدقيق والأرشفة.</li>
+        </ul>
+    </div>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle me-1"></i>
+        يمكنك تحميل التقارير بصيغة CSV لفتحها وتحليلها باستخدام برنامج Excel أو Google Sheets.
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="card-title mb-0">تصدير التقارير المركزية</h5>
+            </div>
+            <div class="card-body p-4">
+                <form id="exportForm">
+                    <!-- Report Type -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">نوع التقرير</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check custom-card-check">
+                                    <input class="form-check-input" type="radio" name="reportType" id="typeAttendance"
+                                        value="attendance" checked>
+                                    <label class="form-check-label w-100" for="typeAttendance">
+                                        <div class="p-3 border rounded">
+                                            <i class="bi bi-calendar-check text-success fs-4 mb-2 d-block"></i>
+                                            <strong>تقرير الحضور والغياب</strong>
+                                            <div class="small text-muted">ملخص الحضور لكل الروضات</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check custom-card-check">
+                                    <input class="form-check-input" type="radio" name="reportType" id="typeIncidents"
+                                        value="incidents">
+                                    <label class="form-check-label w-100" for="typeIncidents">
+                                        <div class="p-3 border rounded">
+                                            <i class="bi bi-exclamation-triangle text-warning fs-4 mb-2 d-block"></i>
+                                            <strong>تقرير الحوادث</strong>
+                                            <div class="small text-muted">تحليل الحوادث ومعدلاتها</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check custom-card-check">
+                                    <input class="form-check-input" type="radio" name="reportType" id="typeCompliance"
+                                        value="compliance">
+                                    <label class="form-check-label w-100" for="typeCompliance">
+                                        <div class="p-3 border rounded">
+                                            <i class="bi bi-shield-check text-info fs-4 mb-2 d-block"></i>
+                                            <strong>تقرير الامتثال والحوكمة</strong>
+                                            <div class="small text-muted">مؤشرات الأداء والتقييم</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check custom-card-check">
+                                    <input class="form-check-input" type="radio" name="reportType" id="typeFull"
+                                        value="full_audit">
+                                    <label class="form-check-label w-100" for="typeFull">
+                                        <div class="p-3 border rounded">
+                                            <i class="bi bi-list-check text-primary fs-4 mb-2 d-block"></i>
+                                            <strong>سجل التدقيق الشامل</strong>
+                                            <div class="small text-muted">كافة العمليات والنشاطات</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Date Range -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="startDate" class="form-label fw-bold">من تاريخ</label>
+                            <input type="date" class="form-control" id="startDate" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="endDate" class="form-label fw-bold">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="endDate" required>
+                        </div>
+                    </div>
+
+                    <!-- Format -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">صيغة الملف</label>
+                        <select class="form-select w-auto" id="exportFormat">
+                            <option value="csv">CSV (متوافق مع إكسل)</option>
+                            <option value="pdf" disabled>PDF (قريباً)</option>
+                        </select>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary"
+                            onclick="window.history.back()">إلغاء</button>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-download me-2"></i>تحميل التقرير
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/admin_analytics.js" charset="utf-8"></script>
+<style>
+    .custom-card-check .form-check-input {
+        position: absolute;
+        opacity: 0;
+    }
+
+    .custom-card-check .form-check-input:checked+.form-check-label .p-3 {
+        border-color: var(--bs-primary) !important;
+        background-color: var(--bs-primary-bg-subtle);
+        border-width: 2px !important;
+    }
+
+    .custom-card-check label {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
