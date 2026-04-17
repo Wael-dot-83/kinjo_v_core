@@ -434,6 +434,12 @@ def get_supervisor_children(
 def list_children(
     kindergarten_id: Optional[int] = None,
     class_id: Optional[int] = None,
+    enrollment_status: Optional[str] = None,
+    search: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = "asc",
+    page: int = 1,
+    page_size: int = 50,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -441,12 +447,24 @@ def list_children(
     query = db.query(models.Child).join(
         models.EnrollmentApplication,
         models.Child.id == models.EnrollmentApplication.child_id
-    ).filter(
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
     )
+
+    # Status filter
+    if enrollment_status:
+        try:
+            status_enum = models.EnrollmentStatus(enrollment_status)
+        except ValueError:
+            status_enum = models.EnrollmentStatus.ACTIVE
+        query = query.filter(models.EnrollmentApplication.status == status_enum)
+    else:
+        query = query.filter(
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        )
 
     # Filter by kindergarten for non-admins
     if current_user.role != models.UserRole.ADMIN:
+        if current_user.role == models.UserRole.PARENT:
+            raise HTTPException(status_code=403, detail="Parents cannot access this endpoint")
         query = query.filter(models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id)
     elif kindergarten_id:
         query = query.filter(models.EnrollmentApplication.kindergarten_id == kindergarten_id)
@@ -454,7 +472,32 @@ def list_children(
     if class_id:
         query = query.filter(models.EnrollmentApplication.class_id == class_id)
 
-    children = query.all()
+    # Search
+    if search:
+        query = query.filter(
+            or_(
+                models.Child.first_name.ilike(f"%{search}%"),
+                models.Child.last_name.ilike(f"%{search}%"),
+            )
+        )
+
+    # Sorting
+    if sort_by == "name":
+        order_col = models.Child.first_name
+    elif sort_by == "date_of_birth":
+        order_col = models.Child.date_of_birth
+    else:
+        order_col = models.Child.id
+
+    if sort_order == "desc":
+        query = query.order_by(order_col.desc())
+    else:
+        query = query.order_by(order_col.asc())
+
+    # Pagination
+    total_count = query.count()
+    total_pages = max(1, (total_count + page_size - 1) // page_size)
+    children = query.offset((page - 1) * page_size).limit(page_size).all()
 
     result = []
     for child in children:
@@ -468,8 +511,8 @@ def list_children(
             "id": child.id,
             "first_name": child.first_name,
             "last_name": child.last_name,
-            "first_name_ar": child.first_name_ar,
-            "last_name_ar": child.last_name_ar,
+            "first_name_ar": getattr(child, "first_name_ar", None),
+            "last_name_ar": getattr(child, "last_name_ar", None),
             "gender": child.gender.value if child.gender else None,
             "date_of_birth": child.date_of_birth.isoformat() if child.date_of_birth else None,
             "photo_url": child.photo_url,
@@ -481,7 +524,15 @@ def list_children(
             
         result.append(child_info)
 
-    return {"children": result}
+    return {
+        "children": result,
+        "pagination": {
+            "total_count": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+        },
+    }
 
 
 @router.get("/supervisor/my-classes")

@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if ui_lang == 'en' %}Review Absence Requests{% else %}مراجعة طلبات الغياب{% endif %}{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-clipboard-check me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}Review Absence Requests{% else %}مراجعة طلبات الغياب{% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الغياب{% endif %}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Status Filter Tabs -->
+<ul class="nav nav-pills mb-3" id="statusTabs">
+    <li class="nav-item">
+        <a class="nav-link active" href="#" data-status="SUBMITTED">{% if ui_lang == 'en' %}Under Review{% else %}قيد المراجعة{% endif %}</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#" data-status="APPROVED">{% if ui_lang == 'en' %}Approved{% else %}مقبول{% endif %}</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#" data-status="REJECTED">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#" data-status="all">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</a>
+    </li>
+</ul>
+
+<!-- Requests Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="requestsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Parent{% else %}ولي الأمر{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}From{% else %}من{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Reason{% else %}السبب{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody id="requestsBody">
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Decision Modal -->
+<div class="modal fade" id="decisionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="decisionTitle">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="decisionRequestId">
+                <input type="hidden" id="decisionAction">
+                <div id="decisionInfo" class="mb-3 p-3 bg-light rounded"></div>
+                <div class="mb-3">
+                    <label for="decisionNote" class="form-label">{% if ui_lang == 'en' %}Notes{% else %}ملاحظات{% endif %}</label>
+                    <textarea class="form-control" id="decisionNote" rows="3"
+                        placeholder="{% if ui_lang == 'en' %}Optional notes...{% else %}ملاحظات اختيارية...{% endif %}"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}تراجع{% endif %}</button>
+                <button type="button" class="btn" id="decisionBtn">{% if ui_lang == 'en' %}Confirm{% else %}تأكيد{% endif %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        let currentFilter = 'SUBMITTED';
+        const isEnglishUi = (document.documentElement.lang || '').toLowerCase() === 'en';
+
+        function tr(arText, enText) {
+            return isEnglishUi ? enText : arText;
+        }
+
+        function authHeaders() {
+            const headers = { 'Content-Type': 'application/json' };
+            const token = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
+            return headers;
+        }
+
+        async function apiRequest(url, options = {}) {
+            if (typeof window.fetchWithAuth === 'function') {
+                const response = await window.fetchWithAuth(url, {
+                    ...options,
+                    headers: {
+                        ...authHeaders(),
+                        ...(options.headers || {}),
+                    },
+                });
+                if (!response) {
+                    throw new Error(tr('يتطلب تسجيل الدخول', 'Sign-in is required'));
+                }
+                if (!response.ok) {
+                    const payload = await response.json().catch(() => ({}));
+                    throw new Error(payload.detail || tr('تعذر إتمام الطلب', 'Unable to complete request'));
+                }
+                return response.json();
+            }
+
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    ...authHeaders(),
+                    ...(options.headers || {}),
+                },
+            });
+            if (!response.ok) {
+                const payload = await response.json().catch(() => ({}));
+                throw new Error(payload.detail || tr('تعذر إتمام الطلب', 'Unable to complete request'));
+            }
+            return response.json();
+        }
+
+        function notifySuccess(message) {
+            if (window.Swal) {
+                window.Swal.fire(tr('تم', 'Done'), message, 'success');
+                return;
+            }
+            alert(message);
+        }
+
+        function notifyError(message) {
+            if (window.Swal) {
+                window.Swal.fire(tr('خطأ', 'Error'), message, 'error');
+                return;
+            }
+            alert(message);
+        }
+
+        function statusBadge(s) {
+            const map = {
+                'SUBMITTED': `<span class="badge bg-warning text-dark">${tr('قيد المراجعة', 'Under review')}</span>`,
+                'APPROVED': `<span class="badge bg-success">${tr('مقبول', 'Approved')}</span>`,
+                'REJECTED': `<span class="badge bg-danger">${tr('مرفوض', 'Rejected')}</span>`,
+                'CANCELLED': `<span class="badge bg-secondary">${tr('ملغى', 'Cancelled')}</span>`,
+            };
+            return map[s] || `<span class="badge bg-secondary">${s}</span>`;
+        }
+
+        function loadRequests() {
+            let url = '/api/absence-requests';
+            if (currentFilter !== 'all') url += '?status=' + currentFilter;
+
+            apiRequest(url)
+                .then(data => renderTable(data))
+                .catch(() => {
+                    document.getElementById('requestsBody').innerHTML =
+                        `<tr><td colspan="8" class="text-center text-danger py-4">${tr('حدث خطأ أثناء تحميل البيانات', 'An error occurred while loading data')}</td></tr>`;
+                });
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('requestsBody');
+            if (!data.length) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">${tr('لا توجد طلبات', 'No requests found')}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map((r, i) => {
+                    const cname = (r.child_name && String(r.child_name).trim()) ? r.child_name : `#${r.child_id}`;
+                    const actions = r.status === 'SUBMITTED'
+                        ? `<button class="btn btn-sm btn-success approve-btn me-1" data-id="${r.id}" data-child="${cname}" data-start="${r.start_date}" data-end="${r.end_date}" data-reason="${r.reason}"><i class="bi bi-check-circle"></i> ${tr('قبول', 'Approve')}</button>
+                       <button class="btn btn-sm btn-danger reject-btn" data-id="${r.id}" data-child="${cname}" data-start="${r.start_date}" data-end="${r.end_date}" data-reason="${r.reason}"><i class="bi bi-x-circle"></i> ${tr('رفض', 'Reject')}</button>`
+                        : (r.decision_note || '-');
+
+                    return `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${cname}</td>
+                        <td>-</td>
+                        <td>${r.start_date}</td>
+                        <td>${r.end_date}</td>
+                        <td class="text-truncate" style="max-width:200px">${r.reason}</td>
+                        <td>${statusBadge(r.status)}</td>
+                        <td>${actions}</td>
+                    </tr>`;
+                }).join('');
+
+            attachButtons();
+        }
+
+        function attachButtons() {
+            document.querySelectorAll('.approve-btn').forEach(btn => {
+                btn.addEventListener('click', () => showDecisionModal(btn, 'approve'));
+            });
+            document.querySelectorAll('.reject-btn').forEach(btn => {
+                btn.addEventListener('click', () => showDecisionModal(btn, 'reject'));
+            });
+        }
+
+        function showDecisionModal(btn, action) {
+            const id = btn.dataset.id;
+            const child = btn.dataset.child;
+            const start = btn.dataset.start;
+            const end = btn.dataset.end;
+            const reason = btn.dataset.reason;
+
+            document.getElementById('decisionRequestId').value = id;
+            document.getElementById('decisionAction').value = action;
+            document.getElementById('decisionNote').value = '';
+
+            const info = `<strong>${tr('الطفل', 'Child')}:</strong> ${child}<br>
+                      <strong>${tr('الفترة', 'Period')}:</strong> ${start} - ${end}<br>
+                      <strong>${tr('السبب', 'Reason')}:</strong> ${reason}`;
+            document.getElementById('decisionInfo').innerHTML = info;
+
+            const dbtn = document.getElementById('decisionBtn');
+            if (action === 'approve') {
+                document.getElementById('decisionTitle').textContent = tr('الموافقة على طلب الغياب', 'Approve absence request');
+                dbtn.className = 'btn btn-success';
+                dbtn.innerHTML = `<i class="bi bi-check-circle me-1"></i> ${tr('موافقة', 'Approve')}`;
+            } else {
+                document.getElementById('decisionTitle').textContent = tr('رفض طلب الغياب', 'Reject absence request');
+                dbtn.className = 'btn btn-danger';
+                dbtn.innerHTML = `<i class="bi bi-x-circle me-1"></i> ${tr('رفض', 'Reject')}`;
+            }
+
+            new bootstrap.Modal(document.getElementById('decisionModal')).show();
+        }
+
+        document.getElementById('decisionBtn').addEventListener('click', function () {
+            const id = document.getElementById('decisionRequestId').value;
+            const action = document.getElementById('decisionAction').value;
+            const note = document.getElementById('decisionNote').value;
+            this.disabled = true;
+
+            apiRequest(`/api/absence-requests/${id}/${action}`, {
+                method: 'POST',
+                body: JSON.stringify({ decision_note: note || null }),
+            })
+                .then(data => {
+                    bootstrap.Modal.getInstance(document.getElementById('decisionModal')).hide();
+                    const msg = action === 'approve'
+                        ? tr(
+                            `تمت الموافقة بنجاح. تم تسجيل ${data.attendance_records_created || 0} سجل حضور.`,
+                            `Approved successfully. ${data.attendance_records_created || 0} attendance records were created.`,
+                        )
+                        : tr('تم رفض الطلب بنجاح.', 'Request rejected successfully.');
+                    notifySuccess(msg);
+                    loadRequests();
+                })
+                .catch(err => {
+                    notifyError(err.message || tr('حدث خطأ', 'An error occurred'));
+                })
+                .finally(() => { this.disabled = false; });
+        });
+
+        // ---- filter tabs ----
+        document.querySelectorAll('#statusTabs a').forEach(tab => {
+            tab.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelectorAll('#statusTabs a').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.status;
+                loadRequests();
+            });
+        });
+
+        loadRequests();
+    });
+</script>
+{% endblock %}

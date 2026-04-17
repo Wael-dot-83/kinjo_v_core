@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{% block title %}طلبات الغياب{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-calendar-x me-2 text-primary"></i>
+            طلبات الغياب
+        </h1>
+        <nav aria-label="مسار التنقل">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">طلبات الغياب</li>
+            </ol>
+        </nav>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAbsenceModal">
+        <i class="bi bi-plus-circle me-1"></i> طلب غياب جديد
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Status Filter Tabs -->
+<ul class="nav nav-pills mb-3" id="statusTabs">
+    <li class="nav-item">
+        <a class="nav-link active" href="#" data-status="all">الكل</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#" data-status="SUBMITTED">قيد المراجعة</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#" data-status="APPROVED">مقبول</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#" data-status="REJECTED">مرفوض</a>
+    </li>
+</ul>
+
+<!-- Requests Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="requestsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>اسم الطفل</th>
+                        <th>من</th>
+                        <th>إلى</th>
+                        <th>السبب</th>
+                        <th>الحالة</th>
+                        <th>ملاحظات</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="requestsBody">
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            جاري التحميل...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- New Absence Request Modal -->
+<div class="modal fade" id="newAbsenceModal" tabindex="-1" aria-labelledby="newAbsenceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newAbsenceModalLabel">
+                    <i class="bi bi-calendar-x me-2"></i>طلب غياب جديد
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <form id="absenceForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="childSelect" class="form-label">اسم الطفل <span class="text-danger">*</span></label>
+                        <select class="form-select" id="childSelect" required>
+                            <option value="">اختر الطفل...</option>
+                            {% for child in children %}
+                            <option value="{{ child.id }}">{{ child.first_name }} {{ child.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label for="startDate" class="form-label">من تاريخ <span
+                                    class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="startDate" required min="{{ today }}">
+                        </div>
+                        <div class="col-6">
+                            <label for="endDate" class="form-label">إلى تاريخ <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="endDate" required min="{{ today }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">سبب الغياب <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="reason" rows="3" required minlength="3" maxlength="500"
+                            placeholder="يرجى ذكر سبب الغياب..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="bi bi-send me-1"></i> إرسال الطلب
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const TOKEN = localStorage.getItem('access_token') || '';
+        const HEADERS = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN };
+        let currentFilter = 'all';
+
+        // ---- helpers ----
+        function statusBadge(s) {
+            const map = {
+                'SUBMITTED': '<span class="badge bg-warning text-dark">قيد المراجعة</span>',
+                'APPROVED': '<span class="badge bg-success">مقبول</span>',
+                'REJECTED': '<span class="badge bg-danger">مرفوض</span>',
+                'CANCELLED': '<span class="badge bg-secondary">ملغى</span>',
+            };
+            return map[s] || `<span class="badge bg-secondary">${s}</span>`;
+        }
+
+        // ---- load requests ----
+        function loadRequests() {
+            let url = '/api/absence-requests';
+            if (currentFilter !== 'all') url += '?status=' + currentFilter;
+
+            fetch(url, { headers: HEADERS })
+                .then(r => { if (!r.ok) throw r; return r.json(); })
+                .then(data => renderTable(data))
+                .catch(() => {
+                    document.getElementById('requestsBody').innerHTML =
+                        '<tr><td colspan="8" class="text-center text-danger py-4">حدث خطأ أثناء تحميل البيانات</td></tr>';
+                });
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('requestsBody');
+            if (!data.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">لا توجد طلبات</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map((r, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td>${childName(r.child_id)}</td>
+                <td>${r.start_date}</td>
+                <td>${r.end_date}</td>
+                <td class="text-truncate" style="max-width:200px">${r.reason}</td>
+                <td>${statusBadge(r.status)}</td>
+                <td>${r.decision_note || '-'}</td>
+                <td>
+                    ${r.status === 'SUBMITTED' ? `<button class="btn btn-sm btn-outline-danger cancel-btn" data-id="${r.id}"><i class="bi bi-x-circle"></i> إلغاء</button>` : '-'}
+                </td>
+            </tr>
+        `).join('');
+
+            tbody.querySelectorAll('.cancel-btn').forEach(btn => {
+                btn.addEventListener('click', () => cancelRequest(btn.dataset.id));
+            });
+        }
+
+        // map child_id to name from the select options
+        function childName(cid) {
+            const opt = document.querySelector(`#childSelect option[value="${cid}"]`);
+            return opt ? opt.textContent : `#${cid}`;
+        }
+
+        // ---- cancel ----
+        function cancelRequest(id) {
+            Swal.fire({
+                title: 'تأكيد الإلغاء',
+                text: 'هل أنت متأكد من إلغاء هذا الطلب؟',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'نعم، إلغاء الطلب',
+                cancelButtonText: 'تراجع',
+            }).then(result => {
+                if (!result.isConfirmed) return;
+                fetch(`/api/absence-requests/${id}/cancel`, { method: 'POST', headers: HEADERS })
+                    .then(r => { if (!r.ok) throw r; return r.json(); })
+                    .then(() => { Swal.fire('تم', 'تم إلغاء الطلب', 'success'); loadRequests(); })
+                    .catch(() => Swal.fire('خطأ', 'فشل في إلغاء الطلب', 'error'));
+            });
+        }
+
+        // ---- submit form ----
+        document.getElementById('absenceForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+
+            const body = {
+                child_id: parseInt(document.getElementById('childSelect').value),
+                start_date: document.getElementById('startDate').value,
+                end_date: document.getElementById('endDate').value,
+                reason: document.getElementById('reason').value,
+            };
+
+            fetch('/api/absence-requests', { method: 'POST', headers: HEADERS, body: JSON.stringify(body) })
+                .then(r => {
+                    if (!r.ok) return r.json().then(d => { throw d; });
+                    return r.json();
+                })
+                .then(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('newAbsenceModal')).hide();
+                    document.getElementById('absenceForm').reset();
+                    Swal.fire('تم الإرسال', 'تم إرسال طلب الغياب بنجاح وسيتم مراجعته من قبل الإدارة', 'success');
+                    loadRequests();
+                })
+                .catch(err => {
+                    const msg = err.detail || 'فشل في إرسال الطلب';
+                    Swal.fire('خطأ', msg, 'error');
+                })
+                .finally(() => { btn.disabled = false; });
+        });
+
+        // ---- filter tabs ----
+        document.querySelectorAll('#statusTabs a').forEach(tab => {
+            tab.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelectorAll('#statusTabs a').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.status;
+                loadRequests();
+            });
+        });
+
+        // ---- date sync ----
+        document.getElementById('startDate').addEventListener('change', function () {
+            document.getElementById('endDate').min = this.value;
+            if (document.getElementById('endDate').value < this.value) {
+                document.getElementById('endDate').value = this.value;
+            }
+        });
+
+        // initial load
+        loadRequests();
+    });
+</script>
+{% endblock %}

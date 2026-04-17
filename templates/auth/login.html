@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}تسجيل الدخول{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Sign In{% else %}تسجيل الدخول{% endif %}{% endblock %}
 {% block body_class %}auth-page bg-light{% endblock %}
 
 {% block body %}
@@ -14,91 +14,91 @@
                         <i class="bi bi-building text-white fs-1"></i>
                     </div>
                     <h2 class="text-primary fw-bold mb-1">KinJo</h2>
-                    <p class="text-muted small">منصة إدارة الروضات</p>
+                    <p class="text-muted small" data-i18n="auth.platform_tagline">{% if ui_lang == 'en' %}Kindergarten management platform{% else %}منصة إدارة الروضات{% endif %}</p>
                 </a>
             </div>
-            
+
             <!-- Login Card -->
             <div class="card shadow-lg border-0">
                 <div class="card-body p-4 p-lg-5">
-                    <h4 class="card-title text-center mb-4">تسجيل الدخول</h4>
-                    
+                    <h4 class="card-title text-center mb-4" data-i18n="auth.login.title">{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}</h4>
+
                     <!-- Alert for expired session -->
                     <div id="sessionExpiredAlert" class="alert alert-warning d-none" role="alert">
                         <i class="bi bi-exclamation-triangle me-2"></i>
-                        انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى
+                        <span data-i18n="auth.login.session_expired">{% if ui_lang == 'en' %}Your session has expired. Please sign in again.{% else %}انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى{% endif %}</span>
                     </div>
-                    
+
                     <!-- Error Alert -->
                     <div id="loginError" class="alert alert-danger d-none" role="alert">
                         <i class="bi bi-x-circle me-2"></i>
                         <span id="loginErrorMessage"></span>
                     </div>
-                    
+
                     <!-- Login Form -->
                     <form id="loginForm" method="POST" action="/token">
                         <div class="mb-3">
-                            <label for="username" class="form-label required">اسم المستخدم أو البريد الإلكتروني</label>
-                            <input type="text" class="form-control" id="username" name="username" 
-                                   placeholder="أدخل اسم المستخدم" autocomplete="username" required>
-                            <div class="invalid-feedback">
-                                يرجى إدخال اسم المستخدم
+                            <label for="username" class="form-label required" data-i18n="auth.login.username_label">{% if ui_lang == 'en' %}Username or email{% else %}اسم المستخدم أو البريد الإلكتروني{% endif %}</label>
+                            <input type="text" class="form-control" id="username" name="username"
+                                placeholder="{% if ui_lang == 'en' %}Enter username or email{% else %}أدخل اسم المستخدم{% endif %}" data-i18n-placeholder="auth.login.username_placeholder" autocomplete="username" required>
+                            <div class="invalid-feedback" data-i18n="auth.login.username_required">
+                                {% if ui_lang == 'en' %}Please enter your username{% else %}يرجى إدخال اسم المستخدم{% endif %}
                             </div>
                         </div>
-                        
+
                         <div class="mb-3">
-                            <label for="password" class="form-label required">كلمة المرور</label>
-                            <input type="password" class="form-control" id="password" name="password" 
-                                   placeholder="أدخل كلمة المرور" autocomplete="current-password" required>
-                            <div class="invalid-feedback">
-                                يرجى إدخال كلمة المرور
+                            <label for="password" class="form-label required" data-i18n="auth.login.password_label">{% if ui_lang == 'en' %}Password{% else %}كلمة المرور{% endif %}</label>
+                            <input type="password" class="form-control" id="password" name="password"
+                                placeholder="{% if ui_lang == 'en' %}Enter password{% else %}أدخل كلمة المرور{% endif %}" data-i18n-placeholder="auth.login.password_placeholder" autocomplete="current-password" required>
+                            <div class="invalid-feedback" data-i18n="auth.login.password_required">
+                                {% if ui_lang == 'en' %}Please enter your password{% else %}يرجى إدخال كلمة المرور{% endif %}
                             </div>
                         </div>
-                        
+
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="rememberMe" name="remember_me">
-                                <label class="form-check-label small" for="rememberMe">
-                                    تذكرني
+                                <label class="form-check-label small" for="rememberMe" data-i18n="auth.login.remember_me">
+                                    {% if ui_lang == 'en' %}Remember me{% else %}تذكرني{% endif %}
                                 </label>
                             </div>
-                            <a href="/forgot-password" class="small text-decoration-none">نسيت كلمة المرور؟</a>
+                            <a href="/forgot-password" class="small text-decoration-none" data-i18n="auth.login.forgot_password">{% if ui_lang == 'en' %}Forgot password?{% else %}نسيت كلمة المرور؟{% endif %}</a>
                         </div>
-                        
+
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-lg" id="loginBtn">
                                 <span class="btn-text">
                                     <i class="bi bi-box-arrow-in-left me-2"></i>
-                                    تسجيل الدخول
+                                    <span data-i18n="auth.login.submit">{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}</span>
                                 </span>
                                 <span class="btn-loading d-none">
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    جاري تسجيل الدخول...
+                                    <span data-i18n="auth.login.submitting">{% if ui_lang == 'en' %}Signing in...{% else %}جاري تسجيل الدخول...{% endif %}</span>
                                 </span>
                             </button>
                         </div>
                     </form>
-                    
+
                     <hr class="my-4">
-                    
+
                     <div class="text-center">
                         <p class="mb-0 small text-muted">
-                            ليس لديك حساب؟ 
-                            <a href="/register" class="text-decoration-none fw-semibold">إنشاء حساب جديد</a>
+                            <span data-i18n="auth.login.no_account">{% if ui_lang == 'en' %}Don&apos;t have an account?{% else %}ليس لديك حساب؟{% endif %}</span>
+                            <a href="/register" class="text-decoration-none fw-semibold" data-i18n="auth.login.create_account">{% if ui_lang == 'en' %}Create account{% else %}إنشاء حساب جديد{% endif %}</a>
                         </p>
                     </div>
                 </div>
             </div>
-            
+
             <!-- Footer Links -->
             <div class="text-center mt-4">
-                <a href="/help" class="text-muted small text-decoration-none me-3">المساعدة</a>
-                <a href="/privacy" class="text-muted small text-decoration-none me-3">الخصوصية</a>
-                <a href="/terms" class="text-muted small text-decoration-none">الشروط</a>
+                <a href="/help" class="text-muted small text-decoration-none me-3" data-i18n="footer.help">{% if ui_lang == 'en' %}Help{% else %}المساعدة{% endif %}</a>
+                <a href="/privacy" class="text-muted small text-decoration-none me-3" data-i18n="footer.privacy">{% if ui_lang == 'en' %}Privacy{% else %}الخصوصية{% endif %}</a>
+                <a href="/terms" class="text-muted small text-decoration-none" data-i18n="footer.terms">{% if ui_lang == 'en' %}Terms{% else %}الشروط{% endif %}</a>
             </div>
-            
+
             <p class="text-center text-muted small mt-3">
-                &copy; 2024 KinJo - جميع الحقوق محفوظة
+                <span data-i18n="footer.copyright">{% if ui_lang == 'en' %}&copy; 2024 KinJo - All rights reserved{% else %}&copy; 2024 KinJo - جميع الحقوق محفوظة{% endif %}</span>
             </p>
         </div>
     </div>
@@ -112,7 +112,7 @@
     function togglePassword() {
         const passwordInput = document.getElementById('password');
         const icon = document.getElementById('togglePasswordIcon');
-        
+
         if (passwordInput.type === 'password') {
             passwordInput.type = 'text';
             icon.classList.remove('bi-eye');

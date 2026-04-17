@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+
+{% block title %}أطفالي{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-people-fill me-2 text-primary"></i>
+            أطفالي
+        </h1>
+        <nav aria-label="مسار التنقل">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">أطفالي</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar">
+        <a href="/enroll" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>تسجيل طفل جديد
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Children Cards -->
+<div class="row g-4" id="childrenContainer">
+    <!-- Loading skeleton -->
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">جاري تحميل بيانات أطفالك...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const STATUS_AR = {
+        'DRAFT': 'مسودة',
+        'SUBMITTED': 'مقدّم',
+        'PENDING_REVIEW': 'قيد المراجعة',
+        'ACCEPTED': 'مقبول',
+        'REJECTED': 'مرفوض',
+        'WITHDRAWN': 'منسحب',
+        'WAITLISTED': 'قائمة الانتظار',
+        'ACTIVE': 'نشط'
+    };
+
+    const STATUS_CLASS = {
+        'DRAFT': 'bg-secondary',
+        'SUBMITTED': 'bg-info',
+        'PENDING_REVIEW': 'bg-warning text-dark',
+        'ACCEPTED': 'bg-success',
+        'REJECTED': 'bg-danger',
+        'WITHDRAWN': 'bg-dark',
+        'WAITLISTED': 'bg-info',
+        'ACTIVE': 'bg-success'
+    };
+
+    function getHeaders() {
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return { 'Content-Type': 'application/json' };
+        }
+        const token = AuthService.getToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    }
+
+    function calculateAge(dobStr) {
+        if (!dobStr) return '—';
+        const dob = new Date(dobStr);
+        const now = new Date();
+        let years = now.getFullYear() - dob.getFullYear();
+        let months = now.getMonth() - dob.getMonth();
+        if (months < 0) { years--; months += 12; }
+        if (years > 0) return `${years} سنة و ${months} شهر`;
+        return `${months} شهر`;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadChildren();
+    });
+
+    async function loadChildren() {
+        const container = document.getElementById('childrenContainer');
+        try {
+            const resp = await fetch('/api/parent/children', { headers: getHeaders() });
+            if (!resp.ok) throw new Error('تعذر تحميل بيانات الأطفال');
+
+            const data = await resp.json();
+            const children = data.children || [];
+
+            if (children.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="card border-dashed">
+                            <div class="card-body text-center py-5">
+                                <i class="bi bi-person-plus fs-1 text-primary mb-3 d-block"></i>
+                                <h5>لم تقم بتسجيل أي طفل بعد</h5>
+                                <p class="text-muted">ابدأ بتسجيل طفلك في إحدى الروضات</p>
+                                <a href="/enroll" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-plus-circle me-2"></i>تسجيل طفل جديد
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = children.map(child => {
+                const age = calculateAge(child.date_of_birth);
+                const genderText = child.gender === 'MALE' ? 'ذكر' : child.gender === 'FEMALE' ? 'أنثى' : '—';
+                const genderIcon = child.gender === 'MALE' ? 'bi-gender-male text-primary' : 'bi-gender-female text-danger';
+
+                // Enrollment badges
+                let enrollmentHtml = '';
+                if (child.enrollments && child.enrollments.length > 0) {
+                    enrollmentHtml = child.enrollments.map(e => `
+                        <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                            <small class="text-muted text-truncate" style="max-width: 60%;" title="${e.kindergarten_name}">
+                                <i class="bi bi-building me-1"></i>${e.kindergarten_name}
+                            </small>
+                            <span class="badge ${STATUS_CLASS[e.status] || 'bg-secondary'}">
+                                ${STATUS_AR[e.status] || e.status}
+                            </span>
+                        </div>
+                    `).join('');
+                } else {
+                    enrollmentHtml = `
+                        <div class="border-top pt-2 mt-2 text-center">
+                            <small class="text-muted">لا توجد طلبات تسجيل</small>
+                        </div>
+                    `;
+                }
+
+                return `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-md bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; min-width: 50px;">
+                                    <i class="bi bi-emoji-smile text-primary fs-4"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title mb-0">${child.first_name} ${child.last_name}</h5>
+                                    <small class="text-muted">
+                                        <i class="bi ${genderIcon} me-1"></i>${genderText} · ${age}
+                                    </small>
+                                </div>
+                                <div class="ms-auto">
+                                    ${child.profile_complete
+                        ? '<span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle"></i></span>'
+                        : '<span class="badge bg-warning-subtle text-warning" title="الملف غير مكتمل"><i class="bi bi-exclamation-circle"></i></span>'
+                    }
+                                </div>
+                            </div>
+
+                            <dl class="row mb-2 small">
+                                <dt class="col-5 text-muted">تاريخ الميلاد</dt>
+                                <dd class="col-7">${child.date_of_birth || '—'}</dd>
+                                <dt class="col-5 text-muted">اسم الأب</dt>
+                                <dd class="col-7">${child.father_name || '—'}</dd>
+                            </dl>
+
+                            ${enrollmentHtml}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-flex gap-2">
+                                <a href="/children/${child.id}" class="btn btn-sm btn-outline-primary flex-fill">
+                                    <i class="bi bi-eye me-1"></i>عرض
+                                </a>
+                                <a href="/enroll" class="btn btn-sm btn-outline-success flex-fill">
+                                    <i class="bi bi-plus me-1"></i>تسجيل
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+        } catch (error) {
+            console.error('Error loading children:', error);
+            container.innerHTML = `
+                <div class="col-12 text-center text-danger py-5">
+                    <i class="bi bi-exclamation-triangle fs-1 d-block mb-3"></i>
+                    <p>خطأ في تحميل بيانات الأطفال</p>
+                    <button class="btn btn-outline-primary" onclick="loadChildren()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>إعادة المحاولة
+                    </button>
+                </div>
+            `;
+        }
+    }
+</script>
+{% endblock %}

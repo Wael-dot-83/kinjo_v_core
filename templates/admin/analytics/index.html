@@ -1,40 +1,51 @@
 {% extends "base.html" %}
+{% from 'components/page-header.html' import page_header %}
+{% from 'components/card-wrapper.html' import metric_card, chart_card, summary_card, loading_spinner_inline,
+analytics_tab_pane %}
 
-{% block title %}التحليلات والتقارير{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Analytics and Reports{% else %}التحليلات والتقارير{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
     .analytics-card {
         border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         transition: transform 0.2s;
     }
+
     .analytics-card:hover {
         transform: translateY(-2px);
     }
+
     .metric-value {
         font-size: 2.5rem;
         font-weight: 700;
         color: var(--primary-color, #0d6efd);
     }
+
     .metric-label {
         font-size: 0.875rem;
         color: #6c757d;
     }
+
     .metric-change {
         font-size: 0.75rem;
     }
+
     .metric-change.positive {
         color: #198754;
     }
+
     .metric-change.negative {
         color: #dc3545;
     }
+
     .governorate-bar {
         height: 24px;
         border-radius: 4px;
         transition: width 0.5s ease-out;
     }
+
     .ranking-badge {
         width: 32px;
         height: 32px;
@@ -44,43 +55,74 @@
         border-radius: 50%;
         font-weight: 600;
     }
-    .ranking-1 { background: #FFD700; color: #000; }
-    .ranking-2 { background: #C0C0C0; color: #000; }
-    .ranking-3 { background: #CD7F32; color: #fff; }
-    .band-green { background: #198754; color: #fff; }
-    .band-amber { background: #ffc107; color: #000; }
-    .band-red { background: #dc3545; color: #fff; }
+
+    .ranking-1 {
+        background: #FFD700;
+        color: #000;
+    }
+
+    .ranking-2 {
+        background: #C0C0C0;
+        color: #000;
+    }
+
+    .ranking-3 {
+        background: #CD7F32;
+        color: #fff;
+    }
+
+    .band-green {
+        background: #198754;
+        color: #fff;
+    }
+
+    .band-amber {
+        background: #ffc107;
+        color: #000;
+    }
+
+    .band-red {
+        background: #dc3545;
+        color: #fff;
+    }
+
     .drilldown-btn {
         cursor: pointer;
         transition: background-color 0.2s;
     }
+
     .drilldown-btn:hover {
         background-color: rgba(13, 110, 253, 0.1);
     }
+
     .chart-container {
         position: relative;
         height: 300px;
     }
+
     .nav-pills .nav-link {
         border-radius: 8px;
         padding: 0.75rem 1.5rem;
     }
+
     .nav-pills .nav-link.active {
         background-color: var(--primary-color, #0d6efd);
     }
+
     .filter-section {
         background: #f8f9fa;
         border-radius: 8px;
         padding: 1rem;
         margin-bottom: 1.5rem;
     }
+
     .loading-overlay {
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(255,255,255,0.8);
+        background: rgba(255, 255, 255, 0.8);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -90,19 +132,21 @@
 {% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between align-items-center py-3 mb-3 border-bottom">
-    <h1 class="h2">
-        <i class="bi bi-graph-up me-2"></i>التحليلات والتقارير
-    </h1>
-    <div class="btn-group">
-        <button type="button" class="btn btn-outline-primary" onclick="Analytics.exportData('CSV')">
-            <i class="bi bi-download me-1"></i>تصدير CSV
-        </button>
-        <button type="button" class="btn btn-outline-primary" onclick="Analytics.exportData('PDF')">
-            <i class="bi bi-file-pdf me-1"></i>تصدير PDF
-        </button>
-    </div>
+{% set export_buttons %}
+<div class="btn-group">
+    <button type="button" class="btn btn-outline-primary" onclick="Analytics.exportData('CSV')">
+        <i class="bi bi-download me-1"></i>تصدير CSV
+    </button>
+    <button type="button" class="btn btn-outline-primary" onclick="Analytics.exportData('PDF')">
+        <i class="bi bi-file-pdf me-1"></i>تصدير PDF
+    </button>
 </div>
+{% endset %}
+{{ page_header(
+title="التحليلات والتقارير",
+icon="bi-graph-up",
+actions=export_buttons
+) }}
 {% endblock %}
 
 {% block content %}
@@ -134,32 +178,38 @@
 <!-- Navigation Tabs -->
 <ul class="nav nav-pills mb-4" id="analyticsTabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="overview-tab" data-bs-toggle="pill" data-bs-target="#overview" type="button" role="tab">
+        <button class="nav-link active" id="overview-tab" data-bs-toggle="pill" data-bs-target="#overview" type="button"
+            role="tab">
             <i class="bi bi-speedometer2 me-1"></i>نظرة عامة
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="enrollments-tab" data-bs-toggle="pill" data-bs-target="#enrollments" type="button" role="tab">
+        <button class="nav-link" id="enrollments-tab" data-bs-toggle="pill" data-bs-target="#enrollments" type="button"
+            role="tab">
             <i class="bi bi-person-plus me-1"></i>التسجيل
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="attendance-tab" data-bs-toggle="pill" data-bs-target="#attendance" type="button" role="tab">
+        <button class="nav-link" id="attendance-tab" data-bs-toggle="pill" data-bs-target="#attendance" type="button"
+            role="tab">
             <i class="bi bi-calendar-check me-1"></i>الحضور
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="reports-tab" data-bs-toggle="pill" data-bs-target="#reports" type="button" role="tab">
+        <button class="nav-link" id="reports-tab" data-bs-toggle="pill" data-bs-target="#reports" type="button"
+            role="tab">
             <i class="bi bi-file-text me-1"></i>التقارير اليومية
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="safety-tab" data-bs-toggle="pill" data-bs-target="#safety" type="button" role="tab">
+        <button class="nav-link" id="safety-tab" data-bs-toggle="pill" data-bs-target="#safety" type="button"
+            role="tab">
             <i class="bi bi-shield-check me-1"></i>السلامة
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="staffing-tab" data-bs-toggle="pill" data-bs-target="#staffing" type="button" role="tab">
+        <button class="nav-link" id="staffing-tab" data-bs-toggle="pill" data-bs-target="#staffing" type="button"
+            role="tab">
             <i class="bi bi-people me-1"></i>الموظفين
         </button>
     </li>
@@ -171,285 +221,68 @@
     <div class="tab-pane fade show active" id="overview" role="tabpanel">
         <!-- Summary Cards -->
         <div class="row g-4 mb-4">
-            <div class="col-md-3">
-                <div class="card analytics-card h-100">
-                    <div class="card-body text-center">
-                        <div class="metric-value" id="totalKindergartens">-</div>
-                        <div class="metric-label">روضة</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card analytics-card h-100">
-                    <div class="card-body text-center">
-                        <div class="metric-value" id="totalChildren">-</div>
-                        <div class="metric-label">طفل مسجل</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card analytics-card h-100">
-                    <div class="card-body text-center">
-                        <div class="metric-value" id="attendanceRate">-<small>%</small></div>
-                        <div class="metric-label">نسبة الحضور</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card analytics-card h-100">
-                    <div class="card-body text-center">
-                        <div class="metric-value" id="governanceScore">-</div>
-                        <div class="metric-label">متوسط الحوكمة</div>
-                    </div>
-                </div>
-            </div>
+            <div class="col-md-3">{{ metric_card("totalKindergartens", "روضة") }}</div>
+            <div class="col-md-3">{{ metric_card("totalChildren", "طفل مسجل") }}</div>
+            <div class="col-md-3">{{ metric_card("attendanceRate", "نسبة الحضور", suffix="%") }}</div>
+            <div class="col-md-3">{{ metric_card("governanceScore", "متوسط الحوكمة") }}</div>
         </div>
 
         <div class="row g-4">
             <!-- Governorate Breakdown -->
             <div class="col-lg-6">
-                <div class="card analytics-card h-100">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-geo-alt me-2"></i>أداء المحافظات
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="governorateBreakdown">
-                            <div class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">جاري التحميل...</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {{ summary_card("أداء المحافظات", "governorateBreakdown", icon="bi-geo-alt") }}
             </div>
 
             <!-- Trend Chart -->
             <div class="col-lg-6">
-                <div class="card analytics-card h-100">
-                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-graph-up me-2"></i>اتجاه الحضور
-                        </h5>
-                        <select class="form-select form-select-sm w-auto" id="trendMetric" onchange="Analytics.loadTrendChart()">
-                            <option value="attendance_rate">نسبة الحضور</option>
-                            <option value="incident_count">عدد الحوادث</option>
-                            <option value="enrollment_count">التسجيلات الجديدة</option>
-                        </select>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="trendChart"></canvas>
-                        </div>
-                    </div>
-                </div>
+                {% set trend_select %}
+                <select class="form-select form-select-sm w-auto" id="trendMetric"
+                    onchange="Analytics.loadTrendChart()">
+                    <option value="attendance_rate">نسبة الحضور</option>
+                    <option value="incident_count">عدد الحوادث</option>
+                    <option value="enrollment_count">التسجيلات الجديدة</option>
+                </select>
+                {% endset %}
+                {{ chart_card("اتجاه الحضور", "trendChart", icon="bi-graph-up", header_extra=trend_select) }}
             </div>
         </div>
 
         <!-- Rankings -->
         <div class="row g-4 mt-2">
             <div class="col-lg-6">
-                <div class="card analytics-card">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-trophy me-2 text-warning"></i>أفضل الروضات
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="topRankings">
-                            <div class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">جاري التحميل...</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {{ summary_card("أفضل الروضات", "topRankings", icon="bi-trophy", icon_color="text-warning", h100=False)
+                }}
             </div>
             <div class="col-lg-6">
-                <div class="card analytics-card">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-exclamation-triangle me-2 text-danger"></i>تحتاج إلى تحسين
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="bottomRankings">
-                            <div class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">جاري التحميل...</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {{ summary_card("تحتاج إلى تحسين", "bottomRankings", icon="bi-exclamation-triangle",
+                icon_color="text-danger", h100=False) }}
             </div>
         </div>
     </div>
 
     <!-- Enrollments Tab -->
-    <div class="tab-pane fade" id="enrollments" role="tabpanel">
-        <div class="row g-4">
-            <div class="col-md-8">
-                <div class="card analytics-card">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">قمع التسجيل</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="enrollmentFunnelChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card analytics-card h-100">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">ملخص التسجيل</h5>
-                    </div>
-                    <div class="card-body" id="enrollmentSummary">
-                        <div class="text-center py-4">
-                            <div class="spinner-border text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{ analytics_tab_pane("enrollments", "قمع التسجيل", "enrollmentFunnelChart", "ملخص التسجيل", "enrollmentSummary") }}
 
     <!-- Attendance Tab -->
-    <div class="tab-pane fade" id="attendance" role="tabpanel">
-        <div class="row g-4">
-            <div class="col-md-8">
-                <div class="card analytics-card">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">الحضور حسب أيام الأسبوع</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="attendanceDayChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card analytics-card h-100">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">إحصائيات الحضور</h5>
-                    </div>
-                    <div class="card-body" id="attendanceSummary">
-                        <div class="text-center py-4">
-                            <div class="spinner-border text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{ analytics_tab_pane("attendance", "الحضور حسب أيام الأسبوع", "attendanceDayChart", "إحصائيات الحضور",
+    "attendanceSummary") }}
 
     <!-- Daily Reports Tab -->
-    <div class="tab-pane fade" id="reports" role="tabpanel">
-        <div class="row g-4">
-            <div class="col-md-8">
-                <div class="card analytics-card">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">حالة التقارير اليومية</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="reportsStatusChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card analytics-card h-100">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">ملخص التقارير</h5>
-                    </div>
-                    <div class="card-body" id="reportsSummary">
-                        <div class="text-center py-4">
-                            <div class="spinner-border text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{ analytics_tab_pane("reports", "حالة التقارير اليومية", "reportsStatusChart", "ملخص التقارير", "reportsSummary")
+    }}
 
     <!-- Safety Tab -->
     <div class="tab-pane fade" id="safety" role="tabpanel">
         <div class="row g-4">
-            <div class="col-md-6">
-                <div class="card analytics-card">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">الحوادث حسب الخطورة</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="incidentSeverityChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card analytics-card">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">الحوادث حسب النوع</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="incidentTypeChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12">
-                <div class="card analytics-card">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">ملخص السلامة</h5>
-                    </div>
-                    <div class="card-body" id="safetySummary">
-                        <div class="text-center py-4">
-                            <div class="spinner-border text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div class="col-md-6">{{ chart_card("الحوادث حسب الخطورة", "incidentSeverityChart") }}</div>
+            <div class="col-md-6">{{ chart_card("الحوادث حسب النوع", "incidentTypeChart") }}</div>
+            <div class="col-12">{{ summary_card("ملخص السلامة", "safetySummary", h100=False) }}</div>
         </div>
     </div>
 
     <!-- Staffing Tab -->
-    <div class="tab-pane fade" id="staffing" role="tabpanel">
-        <div class="row g-4">
-            <div class="col-md-6">
-                <div class="card analytics-card">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">الالتزام بنسب الموظفين</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="ratioComplianceChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card analytics-card h-100">
-                    <div class="card-header bg-transparent">
-                        <h5 class="card-title mb-0">ملخص الموظفين</h5>
-                    </div>
-                    <div class="card-body" id="staffingSummary">
-                        <div class="text-center py-4">
-                            <div class="spinner-border text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{ analytics_tab_pane("staffing", "الالتزام بنسب الموظفين", "ratioComplianceChart", "ملخص الموظفين",
+    "staffingSummary", chart_col="col-md-6", summary_col="col-md-6") }}
 </div>
 
 <!-- Drilldown Modal -->
@@ -458,7 +291,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="drilldownModalTitle">تفاصيل</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body" id="drilldownModalBody">
                 <div class="text-center py-4">
@@ -471,9 +304,9 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="/static/js/analytics.js"></script>
+<script src="/static/js/analytics.js" charset="utf-8"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         Analytics.init();
     });
 </script>

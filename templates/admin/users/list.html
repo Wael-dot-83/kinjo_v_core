@@ -1,45 +1,43 @@
 {% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+{% from 'components/filter-row.html' import filter_row %}
+{% from 'components/data-table.html' import pagination %}
 
-{% block title %}إدارة المستخدمين{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <div>
-        <h1 class="h2">
-            <i class="bi bi-people me-2 text-primary"></i>
-            إدارة المستخدمين
-        </h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">المستخدمين</li>
-            </ol>
-        </nav>
-    </div>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <div class="btn-group me-2" id="bulkActions" style="display: none;">
-            <button class="btn btn-outline-danger" onclick="bulkDelete()">
-                <i class="bi bi-trash"></i> حذف المحدد ({% raw %}{{ selectedCount }}{% endraw %})
-            </button>
-            <button class="btn btn-outline-warning" onclick="bulkStatusUpdate('SUSPENDED')">
-                <i class="bi bi-pause-circle"></i> تعليق
-            </button>
-            <button class="btn btn-outline-success" onclick="bulkStatusUpdate('ACTIVE')">
-                <i class="bi bi-play-circle"></i> تفعيل
-            </button>
-            <button class="btn btn-outline-secondary" onclick="clearSelection()">
-                <i class="bi bi-x-circle"></i> إلغاء
-            </button>
-        </div>
-        <a href="/admin/users/create" class="btn btn-primary">
-            <i class="bi bi-person-plus me-2"></i>
-            إضافة مستخدم جديد
-        </a>
-        <button class="btn btn-outline-secondary ms-2" onclick="showImportModal()">
-            <i class="bi bi-upload"></i> استيراد من CSV
-        </button>
-    </div>
+{% set toolbar_actions %}
+<div class="btn-group me-2" id="bulkActions" style="display: none;">
+    <button class="btn btn-outline-danger" onclick="bulkDelete()">
+        <i class="bi bi-trash"></i> حذف المحدد ({% raw %}{{ selectedCount }}{% endraw %})
+    </button>
+    <button class="btn btn-outline-warning" onclick="bulkStatusUpdate('SUSPENDED')">
+        <i class="bi bi-pause-circle"></i> تعليق
+    </button>
+    <button class="btn btn-outline-success" onclick="bulkStatusUpdate('ACTIVE')">
+        <i class="bi bi-play-circle"></i> تفعيل
+    </button>
+    <button class="btn btn-outline-secondary" onclick="clearSelection()">
+        <i class="bi bi-x-circle"></i> إلغاء
+    </button>
 </div>
+<a href="/admin/users/create" class="btn btn-primary">
+    <i class="bi bi-person-plus me-2"></i>
+    إضافة مستخدم جديد
+</a>
+<button class="btn btn-outline-secondary ms-2" onclick="showImportModal()">
+    <i class="bi bi-upload"></i> استيراد من CSV
+</button>
+{% endset %}
+{{ page_header(
+title="إدارة المستخدمين",
+icon="bi-people",
+breadcrumbs=[
+{"label": "لوحة التحكم", "url": "/dashboard"},
+{"label": "المستخدمين", "url": None}
+],
+actions=toolbar_actions
+) }}
 
 <!-- Page Help Content -->
 <div id="pageHelpContent" class="d-none" data-help-title="دليل إدارة المستخدمين">
@@ -85,9 +83,9 @@
             <div class="col-md-3">
                 <select class="form-select" id="roleFilter">
                     <option value="">كل الأدوار</option>
-                    <option value="MANAGER">مدير روضة (Manager)</option>
-                    <option value="SUPERVISOR">مشرف (Supervisor)</option>
-                    <option value="PARENT">ولي أمر (Parent)</option>
+                    <option value="MANAGER">مدير روضة</option>
+                    <option value="SUPERVISOR">مشرف</option>
+                    <option value="PARENT">ولي أمر</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -138,11 +136,7 @@
         </div>
 
         <!-- Pagination -->
-        <nav aria-label="Page navigation" class="mt-4">
-            <ul class="pagination justify-content-center" id="pagination">
-                <!-- Dynamically populated -->
-            </ul>
-        </nav>
+        {{ pagination(pagination_id="pagination", aria_label="Page navigation") }}
     </div>
 </div>
 
@@ -162,9 +156,10 @@
                     <i class="bi bi-info-circle-fill me-2 mt-1"></i>
                     <div>
                         <strong>تنسيق الملف المطلوب:</strong>
-                        <p class="mb-1 mt-1">الملف يجب أن يحتوي على الأعمدة التالية:</p>
+                        <p class="mb-1 mt-1">يجب أن يحتوي الملف على الأعمدة التالية (بالإنجليزية كما هي داخل الملف):</p>
                         <code class="d-block bg-light p-2 rounded">username, email, password, role</code>
-                        <small class="text-muted d-block mt-1">الأعمدة الاختيارية: <code>kindergarten_id</code></small>
+                        <small class="text-muted d-block mt-1">الأعمدة الاختيارية: <code>kindergarten_id</code> (معرّف
+                            الروضة)</small>
                     </div>
                 </div>
 
@@ -341,10 +336,10 @@
             if (role) params.role = role;
             if (status) params.status = status;
 
-            const users = await api.get('/api/users', params);
+            const users = await api.get('/api/admin/users', params);
 
-            // Store users for sorting
-            allUsers = users || [];
+            // Store users for sorting (extract data array from API response)
+            allUsers = users.data || [];
 
             // Apply current sort
             if (currentSort.field) {
@@ -480,7 +475,7 @@
     async function handleDeleteUser(id, name) {
         if (confirm(`هل أنت متأكد من رغبتك في حذف المستخدم "${name}"؟\nهذا الإجراء لا رجعة فيه.`)) {
             try {
-                await api.delete(`/api/users/${id}`);
+                await api.delete(`/api/admin/users/${id}`);
                 showToast('تم حذف المستخدم بنجاح', 'success');
                 loadUsers();
             } catch (error) {
@@ -557,7 +552,7 @@
         }
 
         try {
-            await api.post('/api/users/bulk-delete', { user_ids: userIds });
+            await api.post('/api/admin/users/bulk-delete', { user_ids: userIds });
             showToast(`تم حذف ${userIds.length} مستخدم بنجاح`, 'success');
             clearSelection();
             loadUsers();
@@ -578,7 +573,7 @@
         }
 
         try {
-            await api.post('/api/users/bulk-status-update', {
+            await api.post('/api/admin/users/bulk-status-update', {
                 user_ids: userIds,
                 new_status: newStatus
             });
@@ -694,7 +689,7 @@
                 kindergarten_id: row.kindergarten_id ? parseInt(row.kindergarten_id) : null
             }));
 
-            const response = await api.post('/api/users/bulk-create', { users: users });
+            const response = await api.post('/api/admin/users/bulk-create', { users: users });
 
             // Show results
             document.getElementById('importResults').classList.remove('d-none');
@@ -759,14 +754,12 @@
             if (role) params.append('role', role);
             if (status) params.append('status', status);
 
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/users/export?${params.toString()}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            const token = AuthStorage.getToken();
+            if (!token) { window.location.href = '/login'; return; }
+            const response = await fetch(`/api/admin/users/export?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
-
-            if (!response.ok) throw new Error('Export failed');
+            if (!response || !response.ok) throw new Error('فشل التصدير');
 
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);

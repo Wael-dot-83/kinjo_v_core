@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}Unauthorized - KinJo{% else %}غير مصرح - كينجو{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-center vh-100 bg-light">
+    <div class="text-center">
+        <h1 class="display-1 fw-bold text-warning">403</h1>
+        <p class="fs-3"> <span class="text-danger">{% if ui_lang == 'en' %}Unauthorized!{% else %}غير مصرح!{% endif %}</span> {% if ui_lang == 'en' %}You do not have access permission.{% else %}ليس لديك صلاحية الوصول.{% endif %}</p>
+        <p class="lead">
+            {% if ui_lang == 'en' %}You do not have the required permissions to access this page.{% else %}عذراً، ليس لديك الصلاحيات اللازمة للوصول إلى هذه الصفحة.{% endif %}
+        </p>
+        <a href="/dashboard" class="btn btn-primary">{% if ui_lang == 'en' %}Back to Dashboard{% else %}العودة للرئيسية{% endif %}</a>
+    </div>
+</div>
+{% endblock %}

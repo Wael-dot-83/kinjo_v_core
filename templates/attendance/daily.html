@@ -9,7 +9,7 @@
             <i class="bi bi-bar-chart-line me-2 text-primary"></i>
             الحضور والغياب
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
                 <li class="breadcrumb-item active">تقارير الحضور</li>
@@ -24,35 +24,41 @@
 <div class="card mb-4">
     <div class="card-header">
         <ul class="nav nav-tabs card-header-tabs" id="filterTabs" role="tablist">
+            {% if not is_manager_supervisor %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1"
                     type="button" role="tab">
                     <i class="bi bi-building me-1"></i>1. اختيار الروضة
                 </button>
             </li>
+            {% endif %}
             <li class="nav-item" role="presentation">
-                <button class="nav-link disabled" id="step2-tab" data-bs-toggle="tab" data-bs-target="#step2"
-                    type="button" role="tab">
-                    <i class="bi bi-diagram-3 me-1"></i>2. اختيار الشعب
+                <button class="nav-link {% if is_manager_supervisor %}active{% else %}disabled{% endif %}"
+                    id="step2-tab" data-bs-toggle="tab" data-bs-target="#step2" type="button" role="tab">
+                    <i class="bi bi-diagram-3 me-1"></i>{% if is_manager_supervisor %}1{% else %}2{% endif %}. اختيار
+                    الشعب
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link disabled" id="step3-tab" data-bs-toggle="tab" data-bs-target="#step3"
                     type="button" role="tab">
-                    <i class="bi bi-people me-1"></i>3. اختيار الأطفال
+                    <i class="bi bi-people me-1"></i>{% if is_manager_supervisor %}2{% else %}3{% endif %}. اختيار
+                    الأطفال
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link disabled" id="step4-tab" data-bs-toggle="tab" data-bs-target="#step4"
                     type="button" role="tab">
-                    <i class="bi bi-calendar me-1"></i>4. تحديد الفترة
+                    <i class="bi bi-calendar me-1"></i>{% if is_manager_supervisor %}3{% else %}4{% endif %}. تحديد
+                    الفترة
                 </button>
             </li>
         </ul>
     </div>
     <div class="card-body">
         <div class="tab-content" id="filterTabsContent">
-            <!-- Step 1: Kindergarten Selection -->
+            {% if not is_manager_supervisor %}
+            <!-- Step 1: Kindergarten Selection (Admin Only) -->
             <div class="tab-pane fade show active" id="step1" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-md-4">
@@ -63,18 +69,7 @@
                         <label class="form-label" for="kgGovernorate">المحافظة</label>
                         <select class="form-select" id="kgGovernorate">
                             <option value="">جميع المحافظات</option>
-                            <option value="عمان">عمان</option>
-                            <option value="إربد">إربد</option>
-                            <option value="الزرقاء">الزرقاء</option>
-                            <option value="العقبة">العقبة</option>
-                            <option value="المفرق">المفرق</option>
-                            <option value="جرش">جرش</option>
-                            <option value="عجلون">عجلون</option>
-                            <option value="الطفيلة">الطفيلة</option>
-                            <option value="الكرك">الكرك</option>
-                            <option value="معان">معان</option>
-                            <option value="السلط">السلط</option>
-                            <option value="مادبا">مادبا</option>
+                            <!-- Populated dynamically from /api/reference/governorates -->
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -98,9 +93,19 @@
                     </button>
                 </div>
             </div>
+            {% else %}
+            <!-- Manager/Supervisor Kindergarten Info -->
+            <div class="alert alert-info mb-3" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>{% if ui_lang == 'en' %}Your assigned kindergarten:{% else %}روضتك المسؤول عنها:{% endif %}</strong>
+                {{ (user_kindergarten.name_en if ui_lang == 'en' and user_kindergarten.name_en else user_kindergarten.name_ar) }} - {{ user_kindergarten.governorate }}
+                <br>
+                <small class="text-muted">{% if ui_lang == 'en' %}All actions will run only for this kindergarten{% else %}ستعمل جميع العمليات على هذه الروضة فقط{% endif %}</small>
+            </div>
+            {% endif %}
 
             <!-- Step 2: Class Selection -->
-            <div class="tab-pane fade" id="step2" role="tabpanel">
+            <div class="tab-pane fade {% if is_manager_supervisor %}show active{% endif %}" id="step2" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-12">
                         <div class="form-check mb-3">
@@ -128,9 +133,11 @@
                     </div>
                 </div>
                 <div class="mt-3 d-flex justify-content-between">
+                    {% if not is_manager_supervisor %}
                     <button class="btn btn-outline-secondary" onclick="prevStep(2)">
                         <i class="bi bi-arrow-right me-1"></i> السابق
                     </button>
+                    {% endif %}
                     <button class="btn btn-success" onclick="nextStep(2)">
                         التالي: اختيار الأطفال <i class="bi bi-arrow-left me-1"></i>
                     </button>
@@ -289,16 +296,54 @@
 
 {% block extra_js %}
 <script>
-    let currentStep = 1;
-    let selectedKindergarten = null;
+    let currentStep = {{ '2' if is_manager_supervisor else '1' }};
+    let selectedKindergarten = {% if is_manager_supervisor %}{{ user_kindergarten.id }}{% else %}null{% endif %};
     let selectedClasses = [];
     let selectedChildren = [];
     let reportData = null;
+    const attendanceText = (key, arText, enText) =>
+        (typeof appText === 'function'
+            ? appText(key, arText, enText)
+            : (document.documentElement.lang === 'en' ? enText : arText));
+    const attendanceLocale = () =>
+        (typeof appCurrentLocale === 'function'
+            ? appCurrentLocale()
+            : (document.documentElement.lang === 'en' ? 'en-US' : 'ar-JO'));
+    const preferredText = (arText, enText) => {
+        const englishUi = document.documentElement.lang === 'en';
+        if (englishUi) {
+            return enText || arText || '';
+        }
+        return arText || enText || '';
+    };
+
+    // Load governorates dynamically
+    async function loadKgGovernorates() {
+        try {
+            const res = await fetch('/api/reference/governorates');
+            const data = await res.json();
+            const sel = document.getElementById('kgGovernorate');
+            if (sel) {
+                (data.governorates || []).forEach(g => {
+                    const opt = document.createElement('option');
+                    opt.value = g.name_ar;
+                    opt.textContent = preferredText(g.name_ar, g.name_en);
+                    sel.appendChild(opt);
+                });
+            }
+        } catch (e) { console.error(attendanceText('attendance.load_governorates_failed', 'تعذر تحميل المحافظات', 'Unable to load governorates'), e); }
+    }
 
     document.addEventListener('DOMContentLoaded', function () {
+        loadKgGovernorates();
         // Initialize date inputs
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('singleDate').value = today;
+
+        // For managers/supervisors, automatically load classes for their kindergarten
+        {% if is_manager_supervisor %}
+        loadClasses();
+        {% endif %}
 
         // Event listeners
         document.querySelectorAll('input[name="classSelection"]').forEach(radio => {
@@ -338,30 +383,46 @@
             console.log('API response:', response);
 
             const select = document.getElementById('kindergartenSelect');
-            select.innerHTML = '<option value="">اختر روضة...</option>';
+            select.innerHTML = `<option value="">${attendanceText('attendance.select_kindergarten', 'اختر روضة...', 'Select a kindergarten...')}</option>`;
 
             if (response.kindergartens && response.kindergartens.length > 0) {
                 response.kindergartens.forEach(kg => {
                     const option = document.createElement('option');
                     option.value = kg.id;
-                    option.textContent = `${kg.name_ar} - ${kg.governorate}`;
+                    option.textContent = `${preferredText(kg.name_ar, kg.name_en)} - ${preferredText(kg.governorate, kg.governorate_en)}`;
                     select.appendChild(option);
                 });
-                showToast(`تم العثور على ${response.kindergartens.length} روضة`, 'success');
+                showToast(
+                    `${attendanceText('attendance.found', 'تم العثور على', 'Found')} ${response.kindergartens.length} ${attendanceText('attendance.kindergartens', 'روضة', 'kindergartens')}`,
+                    'success',
+                );
             } else {
-                showToast('لم يتم العثور على روضات مطابقة', 'info');
+                showToast(attendanceText('attendance.no_kindergartens_match', 'لم يتم العثور على روضات مطابقة', 'No matching kindergartens found'), 'info');
             }
         } catch (error) {
             console.error('Search error:', error);
-            showToast(`خطأ في البحث عن الروضات: ${error.message}`, 'error');
+            showToast(`${attendanceText('attendance.search_error', 'خطأ في البحث عن الروضات', 'Kindergarten search error')}: ${error.message}`, 'error');
         }
     }
 
     function nextStep(currentStep) {
+        {% if is_manager_supervisor %}
+        // For managers/supervisors: step 2 -> step 3 -> step 4
+        if (currentStep === 2) {
+            // Classes already selected via radio/checkboxes
+            loadChildren();
+        } else if (currentStep === 3) {
+            // Children already selected
+        }
+
+        // Enable next tab and switch
+        const nextTabNum = currentStep + 1;
+        {% else %}
+        // For admins: step 1 -> step 2 -> step 3 -> step 4
         if (currentStep === 1) {
             const kgId = document.getElementById('kindergartenSelect').value;
             if (!kgId) {
-                showToast('يرجى اختيار روضة', 'warning');
+                showToast(attendanceText('attendance.select_kindergarten_required', 'يرجى اختيار روضة', 'Please select a kindergarten'), 'warning');
                 return;
             }
             selectedKindergarten = kgId;
@@ -374,15 +435,30 @@
         }
 
         // Enable next tab and switch
-        const nextTab = document.getElementById(`step${currentStep + 1}-tab`);
+        const nextTabNum = currentStep + 1;
+        {% endif %}
+
+        const nextTab = document.getElementById(`step${nextTabNum}-tab`);
         nextTab.classList.remove('disabled');
         nextTab.click();
     }
 
     function prevStep(currentStep) {
-        const prevTab = document.getElementById(`step${currentStep - 1}-tab`);
+        {% if is_manager_supervisor %}
+        // For managers/supervisors: step 4 -> step 3 -> step 2 (no step 1)
+        const prevTabNum = currentStep - 1;
+        {% else %}
+        // For admins: step 4 -> step 3 -> step 2 -> step 1
+        const prevTabNum = currentStep - 1;
+        {% endif %}
+
+        const prevTab = document.getElementById(`step${prevTabNum}-tab`);
         prevTab.click();
     }
+
+    // Supervisor's assigned class IDs (passed from server)
+    const supervisorClassIds = {{ supervisor_class_ids | tojson | default ('[]') }};
+    const isSupervisor = {{ 'true' if is_supervisor else 'false' }};
 
     async function loadClasses() {
         try {
@@ -390,21 +466,48 @@
             const container = document.getElementById('classCheckboxes');
             container.innerHTML = '';
 
-            response.classes.forEach(cls => {
+            // Filter classes for supervisors - only show their assigned classes
+            let classesToShow = response.classes;
+            if (isSupervisor && supervisorClassIds.length > 0) {
+                classesToShow = response.classes.filter(cls => supervisorClassIds.includes(cls.id));
+            }
+
+            if (classesToShow.length === 0 && isSupervisor) {
+                container.innerHTML = `<div class="alert alert-warning">${attendanceText('attendance.no_assigned_classes', 'لا يوجد لديك شعب مخصصة. تواصل مع المدير.', 'You do not have assigned classes. Contact your manager.')}</div>`;
+                return;
+            }
+
+            classesToShow.forEach(cls => {
                 const div = document.createElement('div');
                 div.className = 'col-md-4';
+                // For supervisors, auto-check their assigned classes
+                const isChecked = isSupervisor && supervisorClassIds.includes(cls.id) ? 'checked' : '';
                 div.innerHTML = `
                 <div class="form-check">
-                    <input class="form-check-input class-checkbox" type="checkbox" id="class-${cls.id}" value="${cls.id}">
+                    <input class="form-check-input class-checkbox" type="checkbox" id="class-${cls.id}" value="${cls.id}" ${isChecked}>
                     <label class="form-check-label" for="class-${cls.id}">
-                        ${cls.name_ar || cls.name_en}
+                        ${preferredText(cls.name_ar, cls.name_en)}
                     </label>
                 </div>
             `;
                 container.appendChild(div);
             });
+
+            // For supervisors, force specific class selection mode and show the selection area
+            if (isSupervisor && supervisorClassIds.length > 0) {
+                const specificRadio = document.getElementById('specificClasses');
+                if (specificRadio) {
+                    specificRadio.checked = true;
+                    document.getElementById('classSelectionArea').style.display = 'block';
+                }
+                // Disable "all classes" option for supervisors
+                const allClassesRadio = document.getElementById('allClasses');
+                if (allClassesRadio) {
+                    allClassesRadio.disabled = true;
+                }
+            }
         } catch (error) {
-            showToast('خطأ في تحميل الشعب', 'error');
+            showToast(attendanceText('attendance.load_classes_error', 'خطأ في تحميل الشعب', 'Error loading classes'), 'error');
         }
     }
 
@@ -414,7 +517,7 @@
         if (classSelection === 'specific') {
             classIds = Array.from(document.querySelectorAll('.class-checkbox:checked')).map(cb => cb.value);
             if (classIds.length === 0) {
-                showToast('يرجى اختيار شعبة واحدة على الأقل', 'warning');
+                showToast(attendanceText('attendance.select_class_required', 'يرجى اختيار شعبة واحدة على الأقل', 'Please select at least one class'), 'warning');
                 return;
             }
         }
@@ -431,14 +534,14 @@
                 <div class="form-check">
                     <input class="form-check-input child-checkbox" type="checkbox" id="child-${child.id}" value="${child.id}">
                     <label class="form-check-label" for="child-${child.id}">
-                        ${child.first_name_ar || child.first_name} ${child.last_name_ar || child.last_name}
+                        ${preferredText(child.first_name_ar, child.first_name)} ${preferredText(child.last_name_ar, child.last_name)}
                     </label>
                 </div>
             `;
                 container.appendChild(div);
             });
         } catch (error) {
-            showToast('خطأ في تحميل الأطفال', 'error');
+            showToast(attendanceText('attendance.load_children_error', 'خطأ في تحميل الأطفال', 'Error loading children'), 'error');
         }
     }
 
@@ -492,7 +595,7 @@
             renderReport();
             document.getElementById('reportArea').style.display = 'block';
         } catch (error) {
-            showToast('خطأ في إنشاء التقرير', 'error');
+            showToast(attendanceText('attendance.report_generation_error', 'خطأ في إنشاء التقرير', 'Error generating report'), 'error');
         } finally {
             document.getElementById('loadingOverlay').classList.add('d-none');
         }
@@ -504,16 +607,16 @@
         const kg = reportData.meta.kindergarten;
         header.innerHTML = `
         <div class="col-md-6">
-            <h6>${kg.name_ar}</h6>
-            <p class="mb-1"><strong>المحافظة:</strong> ${kg.governorate}</p>
-            <p class="mb-1"><strong>المدينة:</strong> ${kg.city}</p>
-            <p class="mb-0"><strong>الهاتف:</strong> ${kg.phone || 'غير محدد'}</p>
+            <h6>${preferredText(kg.name_ar, kg.name_en)}</h6>
+            <p class="mb-1"><strong>${attendanceText('common.governorate', 'المحافظة', 'Governorate')}:</strong> ${preferredText(kg.governorate, kg.governorate_en)}</p>
+            <p class="mb-1"><strong>${attendanceText('common.city', 'المدينة', 'City')}:</strong> ${preferredText(kg.city, kg.city_en)}</p>
+            <p class="mb-0"><strong>${attendanceText('common.phone', 'الهاتف', 'Phone')}:</strong> ${kg.phone || attendanceText('common.unspecified', 'غير محدد', 'Not specified')}</p>
         </div>
         <div class="col-md-6">
-            <h6>فترة التقرير</h6>
-            <p class="mb-1"><strong>من:</strong> ${formatDate(reportData.meta.start_date)}</p>
-            <p class="mb-1"><strong>إلى:</strong> ${formatDate(reportData.meta.end_date)}</p>
-            <p class="mb-0"><strong>نوع الفترة:</strong> ${getPeriodTypeLabel(reportData.meta.period_type)}</p>
+            <h6>${attendanceText('attendance.report_period', 'فترة التقرير', 'Report period')}</h6>
+            <p class="mb-1"><strong>${attendanceText('common.from', 'من', 'From')}:</strong> ${formatDate(reportData.meta.start_date)}</p>
+            <p class="mb-1"><strong>${attendanceText('common.to', 'إلى', 'To')}:</strong> ${formatDate(reportData.meta.end_date)}</p>
+            <p class="mb-0"><strong>${attendanceText('attendance.period_type', 'نوع الفترة', 'Period type')}:</strong> ${getPeriodTypeLabel(reportData.meta.period_type)}</p>
         </div>
     `;
 
@@ -527,7 +630,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <h3 class="text-primary">${summary.total_children}</h3>
-                    <p class="mb-0">إجمالي الأطفال</p>
+                    <p class="mb-0">${attendanceText('attendance.total_children', 'إجمالي الأطفال', 'Total children')}</p>
                 </div>
             </div>
         </div>
@@ -535,7 +638,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <h3 class="text-info">${summary.total_school_days}</h3>
-                    <p class="mb-0">أيام الدراسة</p>
+                    <p class="mb-0">${attendanceText('attendance.school_days', 'أيام الدراسة', 'School days')}</p>
                 </div>
             </div>
         </div>
@@ -543,7 +646,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <h3 class="text-success">${summary.attendance_rate}%</h3>
-                    <p class="mb-0">معدل الحضور</p>
+                    <p class="mb-0">${attendanceText('attendance.rate', 'معدل الحضور', 'Attendance rate')}</p>
                 </div>
             </div>
         </div>
@@ -551,7 +654,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <h3 class="text-warning">${reportData.totals.overall.present}</h3>
-                    <p class="mb-0">إجمالي الحضور</p>
+                    <p class="mb-0">${attendanceText('attendance.total_attendance', 'إجمالي الحضور', 'Total attendance')}</p>
                 </div>
             </div>
         </div>
@@ -570,7 +673,10 @@
         new Chart(statusCtx, {
             type: 'doughnut',
             data: {
-                labels: ['حاضر', 'غائب'],
+                labels: [
+                    attendanceText('attendance.present', 'حاضر', 'Present'),
+                    attendanceText('attendance.absent', 'غائب', 'Absent'),
+                ],
                 datasets: [{
                     data: [reportData.totals.overall.present, reportData.totals.overall.absent],
                     backgroundColor: ['#28a745', '#dc3545']
@@ -593,7 +699,7 @@
             data: {
                 labels: reportData.dates.map(d => formatDate(d)),
                 datasets: [{
-                    label: 'عدد الحاضرين',
+                    label: attendanceText('attendance.present_count', 'عدد الحاضرين', 'Present count'),
                     data: reportData.dates.map(d => reportData.totals.per_day[d]),
                     borderColor: '#007bff',
                     backgroundColor: 'rgba(0, 123, 255, 0.1)',
@@ -613,13 +719,13 @@
 
     function renderMatrix() {
         const table = document.getElementById('attendanceMatrix');
-        let html = '<thead class="table-light"><tr><th rowspan="2" class="sticky-col">الطفل</th><th rowspan="2">الشعبة</th>';
+        let html = `<thead class="table-light"><tr><th rowspan="2" class="sticky-col">${attendanceText('common.child', 'الطفل', 'Child')}</th><th rowspan="2">${attendanceText('common.class', 'الشعبة', 'Class')}</th>`;
 
         // Date headers
         reportData.dates.forEach(date => {
             html += `<th class="text-center">${formatDateShort(date)}</th>`;
         });
-        html += '<th rowspan="2" class="text-center">الحضور</th><th rowspan="2" class="text-center">الغياب</th></tr>';
+        html += `<th rowspan="2" class="text-center">${attendanceText('attendance.attendance', 'الحضور', 'Attendance')}</th><th rowspan="2" class="text-center">${attendanceText('attendance.absence', 'الغياب', 'Absence')}</th></tr>`;
 
         // Day totals row
         html += '<tr>';
@@ -632,8 +738,8 @@
         // Child rows
         reportData.children.forEach(child => {
             html += `<tr>
-            <td class="sticky-col fw-bold">${child.name_ar}</td>
-            <td>${child.class_name || 'غير محدد'}</td>`;
+            <td class="sticky-col fw-bold">${preferredText(child.name_ar, child.name_en || child.name)}</td>
+            <td>${preferredText(child.class_name, child.class_name_en) || attendanceText('common.unspecified', 'غير محدد', 'Not specified')}</td>`;
 
             let presentCount = 0;
             let absentCount = 0;
@@ -659,7 +765,7 @@
 
     function formatDate(dateStr) {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('ar-JO', {
+        return date.toLocaleDateString(attendanceLocale(), {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
@@ -668,7 +774,7 @@
 
     function formatDateShort(dateStr) {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('ar-JO', {
+        return date.toLocaleDateString(attendanceLocale(), {
             month: 'short',
             day: 'numeric'
         });
@@ -676,10 +782,10 @@
 
     function getPeriodTypeLabel(type) {
         const labels = {
-            'day': 'يوم واحد',
-            'week': 'أسبوع',
-            'month': 'شهر',
-            'range': 'فترة مخصصة'
+            day: attendanceText('attendance.period.day', 'يوم واحد', 'Single day'),
+            week: attendanceText('attendance.period.week', 'أسبوع', 'Week'),
+            month: attendanceText('attendance.period.month', 'شهر', 'Month'),
+            range: attendanceText('attendance.period.custom', 'فترة مخصصة', 'Custom range'),
         };
         return labels[type] || type;
     }

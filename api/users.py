@@ -94,6 +94,33 @@ def get_current_user_info(
     )
 
 
+@router.get("/users/me/language")
+def get_user_language(
+    current_user: models.User = Depends(get_current_user),
+):
+    """Get user language preference."""
+    return {"user_lang": getattr(current_user, "preferred_language", "ar") or "ar"}
+
+
+class LanguageUpdateRequest(BaseModel):
+    user_lang: str
+
+
+@router.put("/users/me/language")
+def update_user_language(
+    payload: LanguageUpdateRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update user language preference."""
+    if payload.user_lang not in ("ar", "en"):
+        raise HTTPException(status_code=400, detail="Supported languages: ar, en")
+    current_user.preferred_language = payload.user_lang
+    db.commit()
+    db.refresh(current_user)
+    return {"user_lang": current_user.preferred_language}
+
+
 # ============================================================================
 # Change Password Endpoint
 # ============================================================================

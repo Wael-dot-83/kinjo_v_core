@@ -1,0 +1,64 @@
+{% macro metric_card(title, value, icon, color="primary", change=None, change_label=None) %}
+<div class="col-md-3 mb-4">
+    <div class="card h-100">
+        <div class="card-body text-center">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+                <i class="bi {{ icon }} fs-1 text-{{ color }}"></i>
+            </div>
+            <h3 class="card-title mb-1">{{ value }}</h3>
+            <p class="card-text text-muted mb-0">{{ title }}</p>
+            {% if change %}
+            <small class="text-{{ 'success' if change > 0 else 'danger' }}">
+                {% if change > 0 %}+{% endif %}{{ change }}% {{ change_label or ('Since last month' if ui_lang == 'en' else 'من الشهر الماضي') }}
+            </small>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro chart_card(title, chart_id, height="300px") %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">{{ title }}</h5>
+    </div>
+    <div class="card-body">
+        <canvas id="{{ chart_id }}" style="height: {{ height }};"></canvas>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro summary_card(title, content, icon=None, color="primary") %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            {% if icon %}
+            <i class="bi {{ icon }} me-2 text-{{ color }}"></i>
+            {% endif %}
+            {{ title }}
+        </h5>
+    </div>
+    <div class="card-body">
+        {{ content }}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro loading_spinner_inline() %}
+<div class="d-inline-block">
+    <div class="spinner-border spinner-border-sm text-primary" role="status">
+        <span class="visually-hidden">{{ 'Loading...' if ui_lang == 'en' else 'جاري التحميل...' }}</span>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro analytics_tab_pane(tab_id, title, content, active=false) %}
+<div class="tab-pane fade{% if active %} show active{% endif %}" id="{{ tab_id }}" role="tabpanel">
+    <div class="row">
+        <div class="col-12">
+            <h4 class="mb-3">{{ title }}</h4>
+            {{ content }}
+        </div>
+    </div>
+</div>
+{% endmacro %}

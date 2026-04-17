@@ -1,0 +1,398 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}التقارير اليومية{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+title="التقارير اليومية",
+icon="bi-file-earmark-text",
+breadcrumbs=[
+{"label": "لوحة التحكم", "url": "/dashboard"},
+{"label": "التقارير اليومية", "url": None}
+]
+) }}
+
+<!-- Page Help Content -->
+<div id="pageHelpContent" class="d-none" data-help-title="دليل التقارير اليومية">
+    <div class="mb-4">
+        <h6 class="fw-bold text-primary"><i class="bi bi-file-earmark-text me-2"></i>التقارير اليومية</h6>
+        <p>عرض وإدارة التقارير المولدة للحوادث والإحصائيات:</p>
+        <ul class="list-unstyled">
+            <li class="mb-2"><strong><i class="bi bi-filter text-success me-2"></i>تصفية التقارير:</strong> يمكنك تصفية
+                التقارير حسب النطاق (روضة معينة، محافظة، أو جميع الروضات).</li>
+            <li class="mb-2"><strong><i class="bi bi-eye text-primary me-2"></i>عرض التفاصيل:</strong> انقر على "عرض"
+                لرؤية تفاصيل التقرير والإحصائيات.</li>
+            <li class="mb-2"><strong><i class="bi bi-download text-info me-2"></i>تصدير التقارير:</strong> يمكنك تصدير
+                التقارير بتنسيق CSV للتحليل الإضافي.</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">تصفية التقارير</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">نطاق التقرير</label>
+                        <select class="form-select" id="scopeFilter">
+                            <option value="">جميع النطاقات</option>
+                            <option value="KINDERGARTEN">روضة معينة</option>
+                            <option value="GOVERNORATE">محافظة</option>
+                            <option value="ALL">جميع الروضات</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">الروضة</label>
+                        <select class="form-select" id="kindergartenFilter" disabled>
+                            <option value="">اختر الروضة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">المحافظة</label>
+                        <select class="form-select" id="governorateFilter" disabled>
+                            <option value="">اختر المحافظة</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="applyFilters()">
+                        <i class="bi bi-funnel me-2"></i>تطبيق التصفية
+                    </button>
+                    <button class="btn btn-outline-secondary ms-2" onclick="clearFilters()">
+                        <i class="bi bi-x-circle me-2"></i>مسح التصفية
+                    </button>
+                    <a href="/admin/reports/incidents/generate" class="btn btn-success ms-2">
+                        <i class="bi bi-plus-circle me-2"></i>إنشاء تقرير جديد
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports List -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">قائمة التقارير</h6>
+                <div id="loadingSpinner" class="spinner-border spinner-border-sm d-none" role="status">
+                    <span class="visually-hidden">جاري التحميل...</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="reportsContainer">
+                    <!-- Reports will be loaded here -->
+                </div>
+
+                <!-- Pagination -->
+                <div id="paginationContainer" class="d-none">
+                    <nav aria-label="تقارير Pagination">
+                        <ul class="pagination justify-content-center" id="pagination">
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Detail Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" size="xl">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportModalTitle">تفاصيل التقرير</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="reportModalBody">
+                <!-- Report details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-primary" id="exportBtn" onclick="exportReport()">
+                    <i class="bi bi-download me-2"></i>تصدير CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentPage = 1;
+    let currentFilters = {};
+
+    async function loadReports(page = 1) {
+        const container = document.getElementById('reportsContainer');
+        const spinner = document.getElementById('loadingSpinner');
+        const paginationContainer = document.getElementById('paginationContainer');
+
+        spinner.classList.remove('d-none');
+        container.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">جاري التحميل...</span></div></div>';
+
+        try {
+            const params = new URLSearchParams({ page: page, per_page: 20, ...currentFilters });
+            const response = await fetch(`/api/admin/reports/incidents?${params}`);
+            const data = await response.json();
+
+            if (data.reports.length === 0) {
+                container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="bi bi-file-earmark-x text-muted" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3 text-muted">لا توجد تقارير</h5>
+                    <p class="text-muted">لم يتم إنشاء أي تقارير بعد. يمكنك إنشاء تقرير جديد.</p>
+                    <a href="/admin/reports/incidents/generate" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>إنشاء تقرير جديد
+                    </a>
+                </div>
+            `;
+                paginationContainer.classList.add('d-none');
+            } else {
+                renderReports(data.reports);
+                renderPagination(data.pagination);
+                paginationContainer.classList.remove('d-none');
+            }
+        } catch (error) {
+            console.error('Failed to load reports:', error);
+            container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                فشل في تحميل التقارير. يرجى المحاولة مرة أخرى.
+            </div>
+        `;
+        } finally {
+            spinner.classList.add('d-none');
+        }
+    }
+
+    function renderReports(reports) {
+        const container = document.getElementById('reportsContainer');
+        container.innerHTML = '';
+
+        reports.forEach(report => {
+            const reportCard = document.createElement('div');
+            reportCard.className = 'card mb-3';
+            reportCard.innerHTML = `
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h6 class="card-title mb-1">${report.title}</h6>
+                        <p class="card-text small text-muted mb-0">
+                            النطاق: ${report.scope_name} |
+                            الفترة: ${formatDate(report.start_date)} - ${formatDate(report.end_date)}
+                        </p>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">أنشئ بواسطة: ${report.created_by}</small>
+                        <small class="text-muted d-block">تاريخ الإنشاء: ${formatDateTime(report.created_at)}</small>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <span class="badge bg-info me-2">${report.total_incidents} حادثة</span>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewReport(${report.id})">
+                            <i class="bi bi-eye me-1"></i>عرض
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+            container.appendChild(reportCard);
+        });
+    }
+
+    function renderPagination(pagination) {
+        const paginationEl = document.getElementById('pagination');
+        paginationEl.innerHTML = '';
+
+        if (pagination.pages <= 1) return;
+
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${pagination.page === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pagination.page - 1})">السابق</a>`;
+        paginationEl.appendChild(prevLi);
+
+        // Page numbers
+        for (let i = 1; i <= pagination.pages; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === pagination.page ? 'active' : ''}`;
+            pageLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i})">${i}</a>`;
+            paginationEl.appendChild(pageLi);
+        }
+
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${pagination.page === pagination.pages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pagination.page + 1})">التالي</a>`;
+        paginationEl.appendChild(nextLi);
+    }
+
+    function changePage(page) {
+        currentPage = page;
+        loadReports(page);
+    }
+
+    function applyFilters() {
+        const scopeFilter = document.getElementById('scopeFilter').value;
+        const kindergartenFilter = document.getElementById('kindergartenFilter').value;
+        const governorateFilter = document.getElementById('governorateFilter').value;
+
+        currentFilters = {};
+        if (scopeFilter) currentFilters.scope_filter = scopeFilter;
+        if (kindergartenFilter) currentFilters.kindergarten_id = kindergartenFilter;
+        if (governorateFilter) currentFilters.governorate = governorateFilter;
+
+        currentPage = 1;
+        loadReports(1);
+    }
+
+    function clearFilters() {
+        document.getElementById('scopeFilter').value = '';
+        document.getElementById('kindergartenFilter').value = '';
+        document.getElementById('governorateFilter').value = '';
+        currentFilters = {};
+        currentPage = 1;
+        loadReports(1);
+    }
+
+    async function viewReport(reportId) {
+        try {
+            const response = await fetch(`/api/admin/reports/incidents/${reportId}`);
+            const report = await response.json();
+
+            document.getElementById('reportModalTitle').textContent = report.title;
+
+            const modalBody = document.getElementById('reportModalBody');
+            modalBody.innerHTML = renderReportDetails(report);
+
+            const modal = new bootstrap.Modal(document.getElementById('reportModal'));
+            modal.show();
+
+            // Store report ID for export
+            document.getElementById('exportBtn').setAttribute('data-report-id', reportId);
+        } catch (error) {
+            console.error('Failed to load report details:', error);
+            showAlert('فشل في تحميل تفاصيل التقرير', 'danger');
+        }
+    }
+
+    function renderReportDetails(report) {
+        const metrics = report.metrics;
+        return `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>معلومات التقرير</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>النطاق:</strong></td><td>${report.scope_name}</td></tr>
+                    <tr><td><strong>تاريخ البداية:</strong></td><td>${formatDate(report.start_date)}</td></tr>
+                    <tr><td><strong>تاريخ النهاية:</strong></td><td>${formatDate(report.end_date)}</td></tr>
+                    <tr><td><strong>أنشئ بواسطة:</strong></td><td>${report.created_by}</td></tr>
+                    <tr><td><strong>تاريخ الإنشاء:</strong></td><td>${formatDateTime(report.created_at)}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>الإحصائيات العامة</h6>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="card text-center">
+                            <div class="card-body py-2">
+                                <h4 class="text-primary">${metrics.total_incidents}</h4>
+                                <small class="text-muted">إجمالي الحوادث</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card text-center">
+                            <div class="card-body py-2">
+                                <h4 class="text-success">${metrics.open_incidents}</h4>
+                                <small class="text-muted">حوادث مفتوحة</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card text-center">
+                            <div class="card-body py-2">
+                                <h4 class="text-danger">${metrics.closed_incidents}</h4>
+                                <small class="text-muted">حوادث مغلقة</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <h6>الحوادث حسب النوع</h6>
+                <canvas id="typeChart" width="300" height="200"></canvas>
+            </div>
+            <div class="col-md-6">
+                <h6>الحوادث حسب الخطورة</h6>
+                <canvas id="severityChart" width="300" height="200"></canvas>
+            </div>
+        </div>
+
+        ${metrics.per_kindergarten && Object.keys(metrics.per_kindergarten).length > 0 ? `
+        <div class="mt-4">
+            <h6>الحوادث لكل روضة</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>الروضة</th>
+                            <th>عدد الحوادث</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${Object.entries(metrics.per_kindergarten).map(([kg, count]) =>
+            `<tr><td>${kg}</td><td>${count}</td></tr>`
+        ).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        ` : ''}
+    `;
+    }
+
+    function exportReport() {
+        const reportId = document.getElementById('exportBtn').getAttribute('data-report-id');
+        if (reportId) {
+            window.location.href = `/api/admin/reports/incidents/${reportId}/export`;
+        }
+    }
+
+    function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString('ar-EG');
+    }
+
+    function formatDateTime(dateStr) {
+        return new Date(dateStr).toLocaleString('ar-EG');
+    }
+
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+        document.body.appendChild(alertDiv);
+
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+
+    // Load initial data
+    document.addEventListener('DOMContentLoaded', () => {
+        loadReports();
+    });
+</script>
+{% endblock %}

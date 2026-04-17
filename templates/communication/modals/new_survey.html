@@ -4,7 +4,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="newSurveyModalLabel">إنشاء استبيان جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body">
                 <form id="newSurveyForm">
@@ -42,8 +42,14 @@
 
 <script>
     async function createNewSurvey() {
-        const token = localStorage.getItem('access_token');
-        
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            alert('يرجى تسجيل الدخول لإنشاء استبيان');
+            return;
+        }
+
+        const token = AuthService.getToken();
+
         const payload = {
             title: document.getElementById('surveyTitle').value,
             description: document.getElementById('surveyDescription').value,
@@ -51,7 +57,7 @@
             start_date: document.getElementById('surveyStart').value,
             end_date: document.getElementById('surveyEnd').value
         };
-        
+
         if (!payload.title || !payload.start_date || !payload.end_date) {
             alert('يرجى تعبئة الحقول المطلوبة');
             return;

@@ -37,6 +37,8 @@ env/
 *.swp
 *.swo
 *~
+node_modules/
+npm-debug.log*
 
 # AI tooling
 .blackboxcli/
@@ -75,3 +77,42 @@ static/collected/
 
 # Alembic
 alembic/versions/*.pyc
+
+# Cleanup artifacts before upload
+archive/
+data/*.db
+data/kinjo_seed.db
+data/kinjo_seed.db-journal
+data/attachments/
+Run/
+*.bak
+*.diff
+*.tmp
+_tmp*
+foo.txt
+_tmp_out.txt
+openapi_output.json
+ENHANCED_*
+MANAGER_MESSAGING_*
+SUPERVISOR_*
+!static/js/supervisor_performance.js
+upload/
+perplexity-ext/
+*_snippet.py
+debug_*.py
+debug_*.txt
+check_*.py
+verify_*.py
+git-error-*.txt
+cookies.txt
+*_tail.txt
+db_cols.txt
+_worktrees/
+_archived_dead_code/
+p0p1_bundle/
+p0p1_patches/
+p0_attendance_bundle/
+p0_attendance_patches/
+project_backup_*/
+data/backups/
+static/imports/

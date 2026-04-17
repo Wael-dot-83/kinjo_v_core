@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}المهام{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Tasks{% else %}المهام{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -9,7 +9,7 @@
             <i class="bi bi-check2-square me-2 text-primary"></i>
             قائمة المهام
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
                 <li class="breadcrumb-item active">المهام</li>
@@ -104,7 +104,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="taskModalTitle">مهمة جديدة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body">
                 <form id="taskForm">
@@ -173,15 +173,10 @@
             if (document.getElementById('assignedToMeFilter').checked) params.assigned_to_me = true;
             if (document.getElementById('createdByMeFilter').checked) params.created_by_me = true;
 
-            const response = await fetch('/tasks?' + new URLSearchParams(params), {
-                headers: {
-                    'Authorization': 'Bearer ' + localStorage.getItem('token')
-                }
-            });
+            const response = await window.api.get('/api/tasks?' + new URLSearchParams(params));
+            if (!response) return; // redirected to login
 
-            if (!response.ok) throw new Error('فشل تحميل المهام');
-
-            tasks = await response.json();
+            tasks = response;
             updateCounts(tasks);
             renderTasks(tasks);
 
@@ -312,19 +307,16 @@
         };
 
         try {
-            const url = taskId ? `/tasks/${taskId}` : '/tasks';
-            const method = taskId ? 'PUT' : 'POST';
+            const url = taskId ? `/api/tasks/${taskId}` : '/api/tasks';
 
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + localStorage.getItem('token')
-                },
-                body: JSON.stringify(data)
-            });
+            let response;
+            if (taskId) {
+                response = await window.api.put(url, data);
+            } else {
+                response = await window.api.post(url, data);
+            }
 
-            if (!response.ok) throw new Error('فشل حفظ المهمة');
+            if (!response) return;
 
             const modal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
             modal.hide();
@@ -340,14 +332,9 @@
 
     async function toggleTaskStatus(id) {
         try {
-            const response = await fetch(`/tasks/${id}/toggle`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + localStorage.getItem('token')
-                }
-            });
+            const response = await window.api.post(`/api/tasks/${id}/toggle`, {});
 
-            if (!response.ok) throw new Error('فشل تحديث حالة المهمة');
+            if (!response) return;
 
             showToast('تم تحديث حالة المهمة', 'success');
             await loadTasks();
@@ -377,14 +364,9 @@
         if (!confirm('هل أنت متأكد من حذف هذه المهمة؟')) return;
 
         try {
-            const response = await fetch(`/tasks/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': 'Bearer ' + localStorage.getItem('token')
-                }
-            });
+            const response = await window.api.delete(`/api/tasks/${id}`);
 
-            if (!response.ok) throw new Error('فشل حذف المهمة');
+            if (!response) return;
 
             showToast('تم حذف المهمة', 'success');
             await loadTasks();

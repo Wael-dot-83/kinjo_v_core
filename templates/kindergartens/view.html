@@ -9,10 +9,10 @@
             <i class="bi bi-building me-2 text-primary"></i>
             {{ kindergarten.name_ar }}
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/kindergartens">الروضات</a></li>
+                <li class="breadcrumb-item"><a href="/kindergartens">معلومات الروضة</a></li>
                 <li class="breadcrumb-item active">{{ kindergarten.name_ar }}</li>
             </ol>
         </nav>
@@ -44,7 +44,7 @@
                     <label class="text-muted small">الاسم بالإنجليزية</label>
                     <div class="fw-bold">{{ kindergarten.name_en or '-' }}</div>
                 </div>
-                
+
                 <div class="mb-3">
                     <label class="text-muted small">الحالة</label>
                     <div>
@@ -61,39 +61,42 @@
                         {% endif %}
                     </div>
                 </div>
-                
+
                 <hr>
-                
+
                 <div class="mb-3">
                     <label class="text-muted small">الموقع</label>
-                    <div><i class="bi bi-geo-alt text-primary me-2"></i>{{ kindergarten.governorate }}، {{ kindergarten.city }}</div>
+                    <div><i class="bi bi-geo-alt text-primary me-2"></i>{{ kindergarten.governorate }}، {{
+                        kindergarten.city }}</div>
                     <div class="ms-4 small text-muted">{{ kindergarten.area }}</div>
                     <div class="ms-4 small text-muted">{{ kindergarten.address_line }}</div>
                 </div>
-                
+
                 <div class="mb-3">
                     <label class="text-muted small">التواصل</label>
                     <div><i class="bi bi-telephone text-primary me-2"></i>{{ kindergarten.contact_phone }}</div>
                     <div><i class="bi bi-envelope text-primary me-2"></i>{{ kindergarten.contact_email }}</div>
                 </div>
-                
+
                 <hr>
-                
+
                 <div class="mb-3">
                     <label class="text-muted small">ساعات العمل</label>
-                    <div><i class="bi bi-clock text-primary me-2"></i>{{ kindergarten.operating_hours_start }} - {{ kindergarten.operating_hours_end }}</div>
+                    <div><i class="bi bi-clock text-primary me-2"></i>{{ kindergarten.operating_hours_start }} - {{
+                        kindergarten.operating_hours_end }}</div>
                 </div>
-                
+
                 <div class="mb-3">
                     <label class="text-muted small">الترخيص</label>
-                    <div><i class="bi bi-card-checklist text-primary me-2"></i>{{ kindergarten.license_number or 'غير متوفر' }}</div>
+                    <div><i class="bi bi-card-checklist text-primary me-2"></i>{{ kindergarten.license_number or 'غير
+                        متوفر' }}</div>
                     {% if kindergarten.license_valid_until %}
                     <div class="ms-4 small text-muted">ينتهي في: {{ kindergarten.license_valid_until }}</div>
                     {% endif %}
                 </div>
             </div>
         </div>
-        
+
         <!-- KPI Summary -->
         <div class="card">
             <div class="card-header">
@@ -105,28 +108,31 @@
                     <span class="fw-bold text-success">85%</span>
                 </div>
                 <div class="progress mb-3" style="height: 6px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: 85%" aria-label="نسبة الإشغال" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 85%" aria-label="نسبة الإشغال"
+                        aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                
+
                 <div class="d-flex justify-content-between mb-2">
                     <span>تقييم الحوكمة</span>
                     <span class="fw-bold text-primary">92/100</span>
                 </div>
                 <div class="progress mb-3" style="height: 6px;">
-                    <div class="progress-bar bg-primary" role="progressbar" style="width: 92%" aria-label="تقييم الحوكمة" aria-valuenow="92" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: 92%"
+                        aria-label="تقييم الحوكمة" aria-valuenow="92" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                
+
                 <div class="d-flex justify-content-between mb-2">
                     <span>رضا أولياء الأمور</span>
                     <span class="fw-bold text-info">4.8/5</span>
                 </div>
                 <div class="progress" style="height: 6px;">
-                    <div class="progress-bar bg-info" role="progressbar" style="width: 96%" aria-label="رضا أولياء الأمور" aria-valuenow="96" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-info" role="progressbar" style="width: 96%"
+                        aria-label="رضا أولياء الأمور" aria-valuenow="96" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Content Column -->
     <div class="col-md-8">
         <!-- Tabs -->
@@ -144,7 +150,7 @@
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#audit">سجل التدقيق</button>
             </li>
         </ul>
-        
+
         <div class="tab-content" id="kgTabContent">
             <!-- Classes Tab -->
             <div class="tab-pane fade show active" id="classes">
@@ -154,7 +160,7 @@
                         <i class="bi bi-plus-lg me-1"></i>إضافة شعبة
                     </button>
                 </div>
-                
+
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
@@ -169,12 +175,14 @@
                         </thead>
                         <tbody id="classesTable">
                             <!-- Populated via JS -->
-                            <tr><td colspan="6" class="text-center text-muted">جاري التحميل...</td></tr>
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">جاري التحميل...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            
+
             <!-- Staff Tab -->
             <div class="tab-pane fade" id="staff">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -186,7 +194,7 @@
                 <!-- Staff list would go here -->
                 <div class="alert alert-light text-center border">لا يوجد موظفين مسجلين حالياً</div>
             </div>
-            
+
             <!-- Services Tab -->
             <div class="tab-pane fade" id="services">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -206,80 +214,85 @@
                             </tr>
                         </thead>
                         <tbody id="servicesTable">
-                            <tr><td colspan="4" class="text-center text-muted">جاري التحميل...</td></tr>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">جاري التحميل...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-<!-- Add Service Modal -->
-<div class="modal fade" id="addServiceModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">إضافة خدمة/مرفق</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addServiceForm">
-                    <div class="mb-3">
-                        <label class="form-label required">اسم الخدمة/المرفق</label>
-                        <input type="text" class="form-control" name="service_name" required placeholder="مثال: ساحة ألعاب خارجية">
+            <!-- Add Service Modal -->
+            <div class="modal fade" id="addServiceModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">إضافة خدمة/مرفق</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="addServiceForm">
+                                <div class="mb-3">
+                                    <label class="form-label required" for="add_service_name">اسم الخدمة/المرفق</label>
+                                    <input type="text" class="form-control" id="add_service_name" name="service_name" required
+                                        placeholder="مثال: ساحة ألعاب خارجية">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label required" for="add_service_description">الوصف</label>
+                                    <textarea class="form-control" id="add_service_description" name="description" required
+                                        placeholder="وصف مختصر"></textarea>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="add_service_enabled" name="enabled_flag" checked>
+                                    <label class="form-check-label" for="add_service_enabled">مفعل</label>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="button" class="btn btn-primary" onclick="submitService()">حفظ</button>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label required">الوصف</label>
-                        <textarea class="form-control" name="description" required placeholder="وصف مختصر"></textarea>
-                    </div>
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" name="enabled_flag" checked>
-                        <label class="form-check-label">مفعل</label>
-                    </div>
-                </form>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="submitService()">حفظ</button>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Edit Service Modal -->
-<div class="modal fade" id="editServiceModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">تعديل الخدمة/المرفق</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editServiceForm">
-                    <input type="hidden" name="service_id">
-                    <div class="mb-3">
-                        <label class="form-label required">اسم الخدمة/المرفق</label>
-                        <input type="text" class="form-control" name="service_name" required>
+            <!-- Edit Service Modal -->
+            <div class="modal fade" id="editServiceModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">تعديل الخدمة/المرفق</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editServiceForm">
+                                <input type="hidden" name="service_id">
+                                <div class="mb-3">
+                                    <label class="form-label required" for="edit_service_name">اسم الخدمة/المرفق</label>
+                                    <input type="text" class="form-control" id="edit_service_name" name="service_name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label required" for="edit_service_description">الوصف</label>
+                                    <textarea class="form-control" id="edit_service_description" name="description" required></textarea>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="edit_service_enabled" name="enabled_flag">
+                                    <label class="form-check-label" for="edit_service_enabled">مفعل</label>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="button" class="btn btn-primary" onclick="submitEditService()">حفظ
+                                التغييرات</button>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label required">الوصف</label>
-                        <textarea class="form-control" name="description" required></textarea>
-                    </div>
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" name="enabled_flag">
-                        <label class="form-check-label">مفعل</label>
-                    </div>
-                </form>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="submitEditService()">حفظ التغييرات</button>
-            </div>
-        </div>
-    </div>
-</div>
 
             <!-- Audit Tab -->
             <div class="tab-pane fade" id="audit">
-                 <h5 class="mb-3">سجل العمليات</h5>
-                 <div class="alert alert-light text-center border">سجل العمليات فارغ</div>
+                <h5 class="mb-3">سجل العمليات</h5>
+                <div class="alert alert-light text-center border">سجل العمليات فارغ</div>
             </div>
         </div>
     </div>
@@ -296,20 +309,20 @@
             <div class="modal-body">
                 <form id="addClassForm">
                     <div class="mb-3">
-                        <label class="form-label required">اسم الشعبة</label>
-                        <input type="text" class="form-control" name="name" required placeholder="مثال: الفراشات">
+                        <label class="form-label required" for="add_class_name">اسم الشعبة</label>
+                        <input type="text" class="form-control" id="add_class_name" name="name" required placeholder="مثال: الفراشات">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label required">المرحلة</label>
-                        <select class="form-select" name="level">
-                            <option value="kg1">روضة أولى (KG1)</option>
-                            <option value="kg2">روضة ثانية (KG2)</option>
+                        <label class="form-label required" for="add_class_level">المرحلة</label>
+                        <select class="form-select" id="add_class_level" name="level">
+                            <option value="kg1">روضة أولى (المجموعة 1)</option>
+                            <option value="kg2">روضة ثانية (المجموعة 2)</option>
                             <option value="nursery">حضانة</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label required">السعة القصوى</label>
-                        <input type="number" class="form-control" name="capacity" value="20" min="1" required>
+                        <label class="form-label required" for="add_class_capacity">السعة القصوى</label>
+                        <input type="number" class="form-control" id="add_class_capacity" name="capacity" value="20" min="1" required>
                     </div>
                 </form>
             </div>
@@ -333,29 +346,33 @@
                 <form id="assignSupervisorForm">
                     <input type="hidden" name="class_id">
                     <div class="mb-3">
-                        <label class="form-label">الشعبة الصفية</label>
-                        <input type="text" class="form-control" name="class_name" readonly>
+                        <label class="form-label" for="assign_class_name">الشعبة الصفية</label>
+                        <input type="text" class="form-control" id="assign_class_name" name="class_name" readonly>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label required">المشرف</label>
-                        <select class="form-select" name="supervisor_id" required>
+                        <label class="form-label required" for="assign_supervisor_id">المشرف</label>
+                        <select class="form-select" id="assign_supervisor_id" name="supervisor_id" required>
                             <option value="">اختر مشرف...</option>
                             <!-- Populated via JS -->
                         </select>
+                        <div id="assignedSupervisorHint" class="form-text text-muted small">
+                            تظهر بجانب كل مشرف الشعبة المعينة إن كان معيناً بالفعل، والمشرفون غير المتاحين يتم تعطيلهم.
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label required">تاريخ البدء</label>
-                        <input type="date" class="form-control" name="start_date" required>
+                        <label class="form-label required" for="assign_start_date">تاريخ البدء</label>
+                        <input type="date" class="form-control" id="assign_start_date" name="start_date" required>
                     </div>
                     <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="is_primary" checked>
-                        <label class="form-check-label">مشرف رئيسي</label>
+                        <input class="form-check-input" type="checkbox" id="assign_is_primary" name="is_primary" checked>
+                        <label class="form-check-label" for="assign_is_primary">مشرف رئيسي</label>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="submitSupervisorAssignment()">حفظ التعيين</button>
+                <button type="button" class="btn btn-primary" onclick="submitSupervisorAssignment()">حفظ
+                    التعيين</button>
             </div>
         </div>
     </div>
@@ -373,25 +390,25 @@
                 <form id="editClassForm">
                     <input type="hidden" name="class_id">
                     <div class="mb-3">
-                        <label class="form-label required">اسم الشعبة بالعربية</label>
-                        <input type="text" class="form-control" name="name_ar" required placeholder="مثال: الفراشات">
+                        <label class="form-label required" for="edit_class_name_ar">اسم الشعبة بالعربية</label>
+                        <input type="text" class="form-control" id="edit_class_name_ar" name="name_ar" required placeholder="مثال: الفراشات">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">اسم الشعبة بالإنجليزية</label>
-                        <input type="text" class="form-control" name="name_en" placeholder="مثال: Butterflies">
+                        <label class="form-label" for="edit_class_name_en">اسم الشعبة بالإنجليزية</label>
+                        <input type="text" class="form-control" id="edit_class_name_en" name="name_en" placeholder="مثال: الفراشات">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label required">السعة القصوى</label>
-                        <input type="number" class="form-control" name="capacity_total" min="1" required>
+                        <label class="form-label required" for="edit_class_capacity">السعة القصوى</label>
+                        <input type="number" class="form-control" id="edit_class_capacity" name="capacity_total" min="1" required>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
-                            <label class="form-label required">العمر الأدنى (بالأشهر)</label>
-                            <input type="number" class="form-control" name="min_age_months" min="0" required>
+                            <label class="form-label required" for="edit_class_min_age">العمر الأدنى (بالأشهر)</label>
+                            <input type="number" class="form-control" id="edit_class_min_age" name="min_age_months" min="0" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label required">العمر الأقصى (بالأشهر)</label>
-                            <input type="number" class="form-control" name="max_age_months" min="0" required>
+                            <label class="form-label required" for="edit_class_max_age">العمر الأقصى (بالأشهر)</label>
+                            <input type="number" class="form-control" id="edit_class_max_age" name="max_age_months" min="0" required>
                         </div>
                     </div>
                 </form>
@@ -416,16 +433,16 @@
                 <form id="editStaffForm">
                     <input type="hidden" name="staff_id">
                     <div class="mb-3">
-                        <label class="form-label required">اسم المستخدم</label>
-                        <input type="text" class="form-control" name="username" required placeholder="اسم المستخدم">
+                        <label class="form-label required" for="edit_staff_username">اسم المستخدم</label>
+                        <input type="text" class="form-control" id="edit_staff_username" name="username" required placeholder="اسم المستخدم">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label required">البريد الإلكتروني</label>
-                        <input type="email" class="form-control" name="email" required placeholder="البريد الإلكتروني">
+                        <label class="form-label required" for="edit_staff_email">البريد الإلكتروني</label>
+                        <input type="email" class="form-control" id="edit_staff_email" name="email" required placeholder="البريد الإلكتروني">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label required">الدور</label>
-                        <select class="form-select" name="role" required>
+                        <label class="form-label required" for="edit_staff_role">الدور</label>
+                        <select class="form-select" id="edit_staff_role" name="role" required>
                             <option value="TEACHER">معلم</option>
                             <option value="SUPERVISOR">مشرف</option>
                             <option value="MANAGER">مدير</option>
@@ -433,8 +450,8 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label required">الحالة</label>
-                        <select class="form-select" name="status" required>
+                        <label class="form-label required" for="edit_staff_status">الحالة</label>
+                        <select class="form-select" id="edit_staff_status" name="status" required>
                             <option value="ACTIVE">نشط</option>
                             <option value="INACTIVE">غير نشط</option>
                         </select>
@@ -454,10 +471,15 @@
 {% block extra_js %}
 <script>
     const kindergartenId = JSON.parse('{{ kindergarten.id | tojson }}');
-    
+
     // Auth helper
     function getHeaders() {
-        const token = localStorage.getItem('access_token');
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return { 'Content-Type': 'application/json' };
+        }
+
+        const token = AuthService.getToken();
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
         return headers;
@@ -606,18 +628,18 @@
             }
         }
     });
-    
+
     async function checkDeletePermissions() {
         try {
             // Check if kindergarten has dependencies
             const classesRes = await fetch(`/api/classes?kindergarten_id=${kindergartenId}`, { headers: getHeaders() });
             const classes = classesRes.ok ? (await classesRes.json()).classes || [] : [];
             const activeClasses = classes.filter(c => c.is_active).length;
-            
+
             const staffRes = await fetch('/api/users', { headers: getHeaders() });
             const users = staffRes.ok ? (await staffRes.json()).users || [] : [];
             const activeStaff = users.filter(u => u.kindergarten_id === kindergartenId && u.status === 'ACTIVE').length;
-            
+
             // Show appropriate button based on dependencies and user role
             const hasDependencies = activeClasses > 0 || activeStaff > 0;
             const isAdmin = "{{ 'true' if current_user.role.name == 'ADMIN' else 'false' }}";
@@ -632,33 +654,42 @@
             console.error('Error checking permissions:', error);
         }
     }
-    
+
     async function loadClasses() {
         try {
             const response = await fetch(`/api/classes?kindergarten_id=${kindergartenId}`, {
                 headers: getHeaders()
             });
-            
-            if (!response.ok) throw new Error('Failed to load classes');
-            
+
+            if (!response.ok) throw new Error('تعذر تحميل الفصول');
+
             const data = await response.json();
             const classes = data.classes || [];
-            
+            assignedSupervisorMap = {};
+            classes.forEach(c => {
+                if (c.current_supervisor) {
+                    assignedSupervisorMap[c.current_supervisor.id] = {
+                        id: c.id,
+                        name: c.name_ar || c.name_en || c.current_supervisor.name
+                    };
+                }
+            });
+
             const tbody = document.getElementById('classesTable');
-            
+
             if (classes.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد شعب صفية مسجلة</td></tr>';
                 return;
             }
-            
+
             tbody.innerHTML = classes.map(c => `
                 <tr>
                     <td><strong>${c.name_ar || c.name_en}</strong></td>
                     <td><span class="badge bg-info text-dark">${formatAgeRange(c.min_age_months, c.max_age_months)}</span></td>
                     <td>${c.capacity_total}</td>
-                    <td>${c.current_supervisor ? 
-                        `<span class="badge bg-success">${c.current_supervisor.name}</span>` : 
-                        `<span class="text-muted small">غير معين</span>`}
+                    <td>${c.current_supervisor ?
+                    `<span class="badge bg-success">${c.current_supervisor.name}</span>` :
+                    `<span class="text-muted small">غير معين</span>`}
                     </td>
                     <td>-</td>
                     <td>
@@ -670,16 +701,16 @@
                                 onclick="editClass(${c.id}, '${c.name_ar || c.name_en}', '${c.name_en || ''}', ${c.capacity_total}, ${c.min_age_months}, ${c.max_age_months})">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        ${c.is_active ? 
-                            `<button class="btn btn-sm btn-outline-warning me-1" 
+                        ${c.is_active ?
+                    `<button class="btn btn-sm btn-outline-warning me-1" 
                                     onclick="confirmDeactivateClass(${c.id}, '${c.name_ar || c.name_en}')">
                                 <i class="bi bi-pause-circle"></i>
-                            </button>` : 
-                            `<button class="btn btn-sm btn-outline-success me-1" 
+                            </button>` :
+                    `<button class="btn btn-sm btn-outline-success me-1" 
                                     onclick="reactivateClass(${c.id}, '${c.name_ar || c.name_en}')">
                                 <i class="bi bi-play-circle"></i>
                             </button>`
-                        }
+                }
                         <button class="btn btn-sm btn-outline-danger" 
                                 onclick="confirmDeleteClass(${c.id}, '${c.name_ar || c.name_en}')">
                             <i class="bi bi-trash"></i>
@@ -687,28 +718,29 @@
                     </td>
                 </tr>
             `).join('');
-            
+
         } catch (error) {
             console.error('Error:', error);
-            document.getElementById('classesTable').innerHTML = 
+            document.getElementById('classesTable').innerHTML =
                 '<tr><td colspan="6" class="text-center text-danger">خطأ في تحميل البيانات</td></tr>';
         }
     }
-    
+
     // Store loaded staff to populate supervisor dropdown
     let loadedStaff = [];
+    let assignedSupervisorMap = {};
 
     async function loadStaff() {
         try {
             const response = await fetch(`/api/users?kindergarten_id=${kindergartenId}`, {
                 headers: getHeaders()
             });
-            
+
             if (!response.ok) return; // Silent fail if no perms or error
-            
+
             loadedStaff = await response.json();
             const container = document.getElementById('staff');
-            
+
             if (loadedStaff.length === 0) {
                 // Keep default message but ensure button exists if needed
                 container.innerHTML = `
@@ -722,7 +754,7 @@
                 `;
                 return;
             }
-            
+
             let html = `
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="mb-0">الكادر الإداري والتعليمي</h5>
@@ -743,7 +775,7 @@
                         </thead>
                         <tbody>
             `;
-            
+
             html += loadedStaff.map(u => `
                 <tr>
                     <td>
@@ -764,18 +796,18 @@
                                     title="تعديل">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                            ${u.status === 'ACTIVE' ? 
-                                `<button class="btn btn-outline-warning" 
+                            ${u.status === 'ACTIVE' ?
+                    `<button class="btn btn-outline-warning" 
                                         onclick="confirmDeactivateStaff(${u.id}, '${u.username}')"
                                         title="إلغاء تفعيل">
                                     <i class="bi bi-pause-circle"></i>
-                                </button>` : 
-                                `<button class="btn btn-outline-success" 
+                                </button>` :
+                    `<button class="btn btn-outline-success" 
                                         onclick="reactivateStaff(${u.id}, '${u.username}')"
                                         title="إعادة تفعيل">
                                     <i class="bi bi-play-circle"></i>
                                 </button>`
-                            }
+                }
                             <button class="btn btn-outline-danger" 
                                     onclick="confirmRemoveStaff(${u.id}, '${u.username}')"
                                     title="حذف">
@@ -790,22 +822,22 @@
                     </td>
                 </tr>
             `).join('');
-            
+
             html += `</tbody></table></div>`;
             container.innerHTML = html;
-            
+
         } catch (error) {
             console.error('Error loading staff:', error);
         }
     }
-    
+
     function formatAgeRange(min, max) {
         if (min === 0 && max <= 36) return 'حضانة';
-        if (min >= 36 && max <= 48) return 'روضة أولى (KG1)';
-        if (min >= 48) return 'روضة ثانية (KG2)';
+        if (min >= 36 && max <= 48) return 'روضة أولى (المجموعة 1)';
+        if (min >= 48) return 'روضة ثانية (المجموعة 2)';
         return `${min}-${max} شهر`;
     }
-    
+
     function translateRole(role) {
         const roles = {
             'ADMIN': 'مدير النظام',
@@ -816,7 +848,7 @@
         };
         return roles[role] || role;
     }
-    
+
     function getStatusBadge(status) {
         const badges = {
             'active': '<span class="badge bg-success">نشط</span>',
@@ -825,33 +857,33 @@
         };
         return badges[status] || status;
     }
-    
+
     function getProgressBarColor(current, max) {
         const percentage = (current / max) * 100;
         if (percentage > 90) return 'bg-danger';
         if (percentage > 75) return 'bg-warning';
         return 'bg-success';
     }
-    
+
     function addClass() {
         const modal = new bootstrap.Modal(document.getElementById('addClassModal'));
         modal.show();
     }
-    
+
     function addStaff() {
         window.location.href = `/admin/users/create?kindergarten_id=${kindergartenId}`;
     }
-    
+
     async function submitClass() {
         const form = document.querySelector('#addClassModal form');
         const formData = new FormData(form);
         const level = formData.get('level');
-        
+
         // Map level to months
         let minAge = 36, maxAge = 48;
         if (level === 'nursery') { minAge = 0; maxAge = 36; }
         else if (level === 'kg2') { minAge = 48; maxAge = 60; }
-        
+
         const payload = {
             kindergarten_id: kindergartenId,
             name_ar: formData.get('name'),
@@ -861,14 +893,14 @@
             max_age_months: maxAge,
             is_active: true
         };
-        
+
         try {
             const response = await fetch('/api/classes', {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify(payload)
             });
-            
+
             if (response.ok) {
                 showToast('تم إضافة الشعبة بنجاح', 'success');
                 bootstrap.Modal.getInstance(document.getElementById('addClassModal')).hide();
@@ -883,66 +915,77 @@
             alert('حدث خطأ في الاتصال');
         }
     }
-    
-    
+
+
     // Supervisor Assignment Logic
     let assignModal;
-    
+
     function openAssignSupervisorModal(classId, className, currentSupervisorId) {
         if (!assignModal) {
             assignModal = new bootstrap.Modal(document.getElementById('assignSupervisorModal'));
         }
-        
+
         const form = document.getElementById('assignSupervisorForm');
         form.elements['class_id'].value = classId;
         form.elements['class_name'].value = className;
         form.elements['start_date'].valueAsDate = new Date();
-        
+
         // Populate supervisor dropdown
         const select = form.elements['supervisor_id'];
         select.innerHTML = '<option value="">اختر مشرف...</option>';
-        
+
         // Filter for supervisors
         const supervisors = loadedStaff.filter(s => s.role === 'SUPERVISOR');
-        
+
         if (supervisors.length === 0) {
             select.innerHTML = '<option value="">لا يوجد مشرفين متاحين</option>';
         } else {
             supervisors.forEach(s => {
                 const opt = document.createElement('option');
                 opt.value = s.id;
-                opt.textContent = s.username; // User model uses username
+                const assigned = assignedSupervisorMap[s.id];
+                const assignedLabel = assigned ? ` • ${assigned.name}` : '';
+                opt.textContent = `${s.username}${assignedLabel}`; // User model uses username
                 if (currentSupervisorId && s.id === currentSupervisorId) {
                     opt.selected = true;
+                }
+                const isAssignedElsewhere = assigned && assigned.id !== classId;
+                if (isAssignedElsewhere && s.id !== currentSupervisorId) {
+                    opt.disabled = true;
                 }
                 select.appendChild(opt);
             });
         }
-        
+
+        const hint = document.getElementById('assignedSupervisorHint');
+        if (hint) {
+            hint.textContent = "العناصر المعطلة تمثل المشرفين المعينين مسبقاً, والنص التالي يوضح الشعبة المعينة.";
+        }
+
         assignModal.show();
     }
-    
+
     async function submitSupervisorAssignment() {
         const form = document.getElementById('assignSupervisorForm');
         if (!form.checkValidity()) {
             form.reportValidity();
             return;
         }
-        
+
         const payload = {
             class_id: parseInt(form.elements['class_id'].value),
             supervisor_id: parseInt(form.elements['supervisor_id'].value),
             start_date: form.elements['start_date'].value,
             is_primary: form.elements['is_primary'].checked
         };
-        
+
         try {
             const response = await fetch('/api/supervisor/assign', {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify(payload)
             });
-            
+
             if (response.ok) {
                 showToast('تم تعيين المشرف بنجاح', 'success');
                 assignModal.hide();
@@ -966,7 +1009,7 @@
         form.elements['capacity_total'].value = capacity;
         form.elements['min_age_months'].value = minAge;
         form.elements['max_age_months'].value = maxAge;
-        
+
         const modal = new bootstrap.Modal(document.getElementById('editClassModal'));
         modal.show();
     }
@@ -977,7 +1020,7 @@
             form.reportValidity();
             return;
         }
-        
+
         const classId = form.elements['class_id'].value;
         const payload = {
             name_ar: form.elements['name_ar'].value,
@@ -986,14 +1029,14 @@
             min_age_months: parseInt(form.elements['min_age_months'].value),
             max_age_months: parseInt(form.elements['max_age_months'].value)
         };
-        
+
         try {
             const response = await fetch(`/api/classes/${classId}`, {
                 method: 'PUT',
                 headers: getHeaders(),
                 body: JSON.stringify(payload)
             });
-            
+
             if (response.ok) {
                 showToast('تم تحديث الشعبة بنجاح', 'success');
                 bootstrap.Modal.getInstance(document.getElementById('editClassModal')).hide();
@@ -1020,9 +1063,9 @@
                 method: 'PUT',
                 headers: getHeaders()
             });
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 showToast(result.message, 'success');
                 loadClasses();
@@ -1038,14 +1081,14 @@
     async function reactivateClass(classId, className) {
         // Reactivation is done via update endpoint
         const payload = { is_active: true };
-        
+
         try {
             const response = await fetch(`/api/classes/${classId}`, {
                 method: 'PUT',
                 headers: getHeaders(),
                 body: JSON.stringify(payload)
             });
-            
+
             if (response.ok) {
                 showToast('تم إعادة تفعيل الشعبة بنجاح', 'success');
                 loadClasses();
@@ -1071,9 +1114,9 @@
                 method: 'DELETE',
                 headers: getHeaders()
             });
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 showToast(result.message, 'success');
                 loadClasses();
@@ -1104,9 +1147,9 @@
                 method: 'POST',
                 headers: getHeaders()
             });
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 showToast(result.message, 'success');
                 setTimeout(() => window.location.href = '/kindergartens', 1000);
@@ -1125,9 +1168,9 @@
                 method: 'DELETE',
                 headers: getHeaders()
             });
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 showToast(result.message, 'success');
                 setTimeout(() => window.location.href = '/kindergartens', 1000);
@@ -1147,7 +1190,7 @@
         document.querySelector('#editStaffForm [name="email"]').value = email;
         document.querySelector('#editStaffForm [name="role"]').value = role;
         document.querySelector('#editStaffForm [name="status"]').value = status;
-        
+
         const modal = new bootstrap.Modal(document.getElementById('editStaffModal'));
         modal.show();
     }
@@ -1156,23 +1199,23 @@
         const form = document.getElementById('editStaffForm');
         const formData = new FormData(form);
         const staffId = formData.get('staff_id');
-        
+
         const data = {
             username: formData.get('username'),
             email: formData.get('email'),
             role: formData.get('role'),
             status: formData.get('status')
         };
-        
+
         try {
             const response = await fetch(`/api/users/${staffId}`, {
                 method: 'PUT',
                 headers: getHeaders(),
                 body: JSON.stringify(data)
             });
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 showToast(result.message || 'تم تحديث الموظف بنجاح', 'success');
                 bootstrap.Modal.getInstance(document.getElementById('editStaffModal')).hide();
@@ -1205,9 +1248,9 @@
                 headers: getHeaders(),
                 body: JSON.stringify({ status: status })
             });
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 showToast(result.message || 'تم تحديث حالة الموظف بنجاح', 'success');
                 loadStaff(); // Reload staff list
@@ -1232,9 +1275,9 @@
                 method: 'DELETE',
                 headers: getHeaders()
             });
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 showToast(result.message || 'تم حذف الموظف بنجاح', 'success');
                 loadStaff(); // Reload staff list
@@ -1259,9 +1302,9 @@
                 method: 'POST',
                 headers: getHeaders()
             });
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 showToast(result.message || 'تم إعادة تعيين كلمة المرور بنجاح', 'success');
             } else {

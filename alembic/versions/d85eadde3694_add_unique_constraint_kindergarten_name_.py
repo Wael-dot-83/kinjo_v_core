@@ -31,14 +31,28 @@ def upgrade() -> None:
         )
     """)
     
-    # Add unique constraint on (name_en, governorate) where name_en is not null
-    op.create_unique_constraint(
-        'uq_kindergarten_name_en_governorate',
-        'kindergartens',
-        ['name_en', 'governorate'],
-        schema=None
-    )
+    # For SQLite, create the constraint using raw SQL since batch mode might not work
+    bind = op.get_bind()
+    if bind.dialect.name == "sqlite":
+        # Create a unique index instead of constraint for SQLite
+        op.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_kindergarten_name_en_governorate 
+            ON kindergartens (name_en, governorate) 
+            WHERE name_en IS NOT NULL
+        """)
+    else:
+        # Add unique constraint on (name_en, governorate) where name_en is not null
+        op.create_unique_constraint(
+            'uq_kindergarten_name_en_governorate',
+            'kindergartens',
+            ['name_en', 'governorate'],
+            schema=None
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint('uq_kindergarten_name_en_governorate', 'kindergartens', type_='unique')
+    bind = op.get_bind()
+    if bind.dialect.name == "sqlite":
+        op.execute("DROP INDEX IF EXISTS uq_kindergarten_name_en_governorate")
+    else:
+        op.drop_constraint('uq_kindergarten_name_en_governorate', 'kindergartens', type_='unique')

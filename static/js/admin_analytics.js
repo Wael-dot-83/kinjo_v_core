@@ -1,20 +1,63 @@
-document.addEventListener("DOMContentLoaded", function () {
+﻿document.addEventListener("DOMContentLoaded", function () {
   // Set default date range (Current Month)
   const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  console.log("Today:", today);
+  console.log("Year:", today.getFullYear(), "Month:", today.getMonth(), "Date:", today.getDate());
+  // Explicitly set to current month start and end
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const firstDay = new Date(currentYear, currentMonth, 1);
+  const lastDay = new Date(currentYear, currentMonth + 1, 0); // Last day of current month
+  console.log("First day of month:", firstDay);
+  console.log("Last day of month:", lastDay);
 
   // Format dates as YYYY-MM-DD
   const formatDate = (d) => d.toISOString().split("T")[0];
 
   const startInput = document.getElementById("periodStart");
   const endInput = document.getElementById("periodEnd");
+  const govSelect = document.getElementById("governorateFilter");
+  const supervisorHint = document.getElementById("supervisorScopeHint");
 
   if (startInput && endInput) {
-    startInput.value = formatDate(firstDay);
-    endInput.value = formatDate(today);
+    // Ensure start date is before end date
+    const startDate = formatDate(firstDay);
+    const endDate = formatDate(today); // Use today instead of lastDay to match data
+
+    console.log(`Setting date range: ${startDate} to ${endDate}`);
+
+    startInput.value = startDate;
+    endInput.value = endDate;
 
     // Initial load
     loadAdminAnalytics();
+  }
+
+  // Load governorates for filter
+  if (govSelect) {
+    fetchWithAuth("/api/admin/options/governorates")
+      .then((res) => {
+        if (!res) return;
+        return res.json ? res.json() : res;
+      })
+      .then((data) => {
+        if (!data) return;
+        (data.governorates || []).forEach((g) => {
+          const opt = document.createElement("option");
+          opt.value = g.value || g.id || g.name || g.label || g;
+          opt.textContent = g.label || g.name || g.value || g;
+          govSelect.appendChild(opt);
+        });
+
+        // Show scope hint for supervisors with more than one allowed option
+        const userRole = govSelect.dataset.userRole;
+        const optionCount = govSelect.options?.length || 0;
+        if (userRole === "SUPERVISOR" && optionCount > 2 && supervisorHint) {
+          supervisorHint.classList.remove("d-none");
+        }
+      })
+      .catch(() => {});
+    govSelect.addEventListener("change", () => loadAdminAnalytics());
   }
 
   // Setup Report Form Date Inputs
@@ -30,35 +73,90 @@ let governanceChart = null;
 let trendChartInstance = null;
 let governorateTableSorter = null;
 
-async function loadAdminAnalytics() {
-  const start = document.getElementById("periodStart").value;
-  const end = document.getElementById("periodEnd").value;
+function adminAnalyticsText(arText, enText) {
+  const lang =
+    window.AdminI18n?.getCurrentLanguage?.().code ||
+    localStorage.getItem("admin_language") ||
+    localStorage.getItem("kinjo_lang") ||
+    document.documentElement.lang ||
+    "ar";
+  return String(lang).toLowerCase().startsWith("en") ? enText : arText;
+}
+
+function adminAnalyticsLocale() {
+  return adminAnalyticsText("ar-JO", "en-US");
+}
+
+function adminAnalyticsLiteral(value) {
+  const raw = String(value ?? "");
+  if (!raw) {
+    return "";
+  }
+  let result = raw;
+  if (typeof window.AdminI18n?.replaceLiteralSegments === "function") {
+    result = window.AdminI18n.replaceLiteralSegments(raw);
+  } else if (typeof window.AppI18n?.replaceLiteralSegments === "function") {
+    result = window.AppI18n.replaceLiteralSegments(raw);
+  }
+  return typeof window.escapeHtml === "function" ? window.escapeHtml(result) : result;
+}
+
+async function loadAdminAnalytics(retryCount = 0) {
+  const maxRetries = 2;
+  const start = document.getElementById("periodStart")?.value || "";
+  const end = document.getElementById("periodEnd")?.value || "";
+  const gov = document.getElementById("governorateFilter")?.value || "";
   const btn = document.getElementById("refreshBtn");
 
   if (!start || !end) {
-    showToast("يرجى تحديد تاريخ البداية والنهاية", "warning");
+    showToast(
+      adminAnalyticsText("يرجى تحديد تاريخ البداية والنهاية", "Please select start and end dates"),
+      "warning"
+    );
+    return;
+  }
+
+  // Validate date range client-side
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (startDate > endDate) {
+    showToast(
+      adminAnalyticsText(
+        "خطأ: تاريخ البداية يجب أن يكون قبل تاريخ النهاية",
+        "Error: start date must be before end date"
+      ),
+      "error"
+    );
+    hideSkeletonLoaders();
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i class="bi bi-arrow-clockwise me-1"></i>${adminAnalyticsText("تحديث", "Refresh")}`;
+    }
     return;
   }
 
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>جاري التحديث...';
+    btn.innerHTML = `<i class="bi bi-arrow-clockwise me-1"></i>${adminAnalyticsText("جاري التحديث...", "Refreshing...")}`;
   }
 
   showSkeletonLoaders();
 
   try {
-    const response = await fetchWithAuth(
-      `/api/analytics/dashboard-data?period_start=${start}&period_end=${end}`,
-    );
-    if (!response) return;
+    // Add timeout to prevent indefinite loading
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage =
-        errorData.detail || `HTTP ${response.status}: ${response.statusText}`;
-      throw new Error(errorMessage);
-    }
+    const response = await fetchWithAuth(
+      `/api/analytics/dashboard-data?period_start=${start}&period_end=${end}${
+        gov ? `&governorate=${encodeURIComponent(gov)}` : ""
+      }`,
+      { signal: controller.signal }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response) return;
 
     const data = await response.json();
 
@@ -67,28 +165,73 @@ async function loadAdminAnalytics() {
     updateTrendCharts(data.attendance_trend, data.incident_trend);
     updateGovernorateBreakdown(data.governorate_breakdown);
     updateRiskRadar(data.risk_radar);
-    updateGovernanceChart(
-      data.governance_distribution.green,
-      data.governance_distribution.amber,
-      data.governance_distribution.red,
-    );
+    const dist = data.governance_distribution || {};
+    updateGovernanceChart(dist.green || 0, dist.amber || 0, dist.red || 0);
 
     // Load comparative analysis
     await loadComparativeAnalysis(start, end);
 
-    showToast("تم تحديث البيانات بنجاح", "success");
+    const scopeType = gov ? "GOVERNORATE" : "NETWORK";
+    const scopeId = gov || null;
+    await loadPredictiveInsights(start, end, scopeType, scopeId);
+    await loadAnomalies(start, end, scopeType, scopeId);
+    await loadAlerts();
+    await loadDataQuality();
+    await loadTargets();
+    await loadBenchmarks();
+    await loadRecommendations();
+
+    showToast(
+      adminAnalyticsText("تم تحديث البيانات بنجاح", "Data refreshed successfully"),
+      "success"
+    );
   } catch (error) {
     console.error("Analytics load error:", error);
+
+    // Handle timeout
+    if (error.name === "AbortError") {
+      console.error("Request timed out");
+      if (retryCount < maxRetries) {
+        console.log(`Retrying after timeout (attempt ${retryCount + 1}/${maxRetries})`);
+        setTimeout(() => loadAdminAnalytics(retryCount + 1), 2000);
+        return;
+      }
+      showToast(
+        adminAnalyticsText(
+          "انتهت مهلة الطلب. يرجى المحاولة لاحقاً",
+          "Request timed out. Please try again later"
+        ),
+        "error"
+      );
+      return;
+    }
+
+    // Retry logic
+    if (retryCount < maxRetries && !error.message.includes("Invalid date range")) {
+      console.log(`Retrying analytics load (attempt ${retryCount + 1}/${maxRetries})`);
+      setTimeout(() => loadAdminAnalytics(retryCount + 1), 1000 * (retryCount + 1)); // Exponential backoff
+      return;
+    }
+
     const userMessage = error.message.includes("Invalid date range")
-      ? "يرجى التأكد من صحة نطاق التاريخ المحدد"
+      ? adminAnalyticsText(
+          "يرجى التأكد من صحة نطاق التاريخ المحدد",
+          "Please verify the selected date range"
+        )
       : error.message.includes("500")
-        ? "خطأ في الخادم. يرجى المحاولة لاحقاً"
-        : "حدث خطأ في تحميل البيانات. يرجى المحاولة مرة أخرى.";
+        ? adminAnalyticsText(
+            "خطأ في الخادم. يرجى المحاولة لاحقاً",
+            "Server error. Please try again later"
+          )
+        : adminAnalyticsText(
+            "حدث خطأ في تحميل البيانات. يرجى المحاولة مرة أخرى.",
+            "Failed to load data. Please try again"
+          );
     showToast(userMessage, "error");
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>تحديث';
+      btn.innerHTML = `<i class="bi bi-arrow-clockwise me-1"></i>${adminAnalyticsText("تحديث", "Refresh")}`;
     }
     hideSkeletonLoaders();
   }
@@ -97,45 +240,24 @@ async function loadAdminAnalytics() {
 function showSkeletonLoaders() {
   // Show skeleton for KPI cards
   document
-    .querySelectorAll(
-      "#totalKg, #totalChildren, #avgAttendance, #incidentRate, #enrollmentRate",
-    )
+    .querySelectorAll("#totalKg, #totalChildren, #avgAttendance, #incidentRate, #enrollmentRate")
     .forEach((el) => {
       el.innerHTML = '<div class="skeleton-text w-50"></div>';
     });
   document.querySelector("#enrollmentRateBar").style.width = "0%";
-  document.querySelector("#kpiKgGrowth").innerHTML =
-    '<div class="skeleton-text w-75"></div>';
+  document.querySelector("#kpiKgGrowth").innerHTML = '<div class="skeleton-text w-75"></div>';
 
   // Show skeleton for governorate table
   const tbody = document.getElementById("governorateTableBody");
   if (tbody) {
-    tbody.innerHTML = `
+    const makeSkeletonRow = () => `
             <tr class="skeleton-row">
                 <td><div class="skeleton-text w-75"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
-                <td><div class="skeleton-text w-75 mx-auto"></div></td>
-            </tr>
-            <tr class="skeleton-row">
-                <td><div class="skeleton-text w-75"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
-                <td><div class="skeleton-text w-75 mx-auto"></div></td>
-            </tr>
-            <tr class="skeleton-row">
-                <td><div class="skeleton-text w-75"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
-                <td><div class="skeleton-text w-50 mx-auto"></div></td>
+                ${'<td><div class="skeleton-text w-50 mx-auto"></div></td>'.repeat(4)}
                 <td><div class="skeleton-text w-75 mx-auto"></div></td>
             </tr>
         `;
+    tbody.innerHTML = makeSkeletonRow().repeat(3);
   }
 
   // Show skeleton for risk radar
@@ -201,11 +323,11 @@ function updateNetworkSummary(summary) {
   // Update KPI cards with proper formatting
   safeSetText(
     "totalKg",
-    summary.total_kindergartens?.toLocaleString("ar-JO") || "0",
+    summary.total_kindergartens?.toLocaleString(adminAnalyticsLocale()) || "0"
   );
 
   const childrenCount = summary.total_children || 0;
-  safeSetText("totalChildren", childrenCount.toLocaleString("ar-JO"));
+  safeSetText("totalChildren", childrenCount.toLocaleString(adminAnalyticsLocale()));
 
   const attendanceRate = summary.attendance_rate || 0;
   safeSetText("avgAttendance", attendanceRate.toFixed(1) + "%");
@@ -229,17 +351,13 @@ function updateNetworkSummary(summary) {
 
 function updateTrendIndicators(summary) {
   // Mock trend calculation - in production, compare with previous period data
-  const attendanceTrend = document.getElementById("attendanceTrend");
+  const attendanceTrend = document.getElementById("attendanceTrendIndicator");
   const incidentTrend = document.getElementById("incidentTrend");
   const kgGrowth = document.getElementById("kpiKgGrowth");
 
   if (attendanceTrend) {
     const trend =
-      summary.attendance_rate > 85
-        ? "up"
-        : summary.attendance_rate > 75
-          ? "stable"
-          : "down";
+      summary.attendance_rate > 85 ? "up" : summary.attendance_rate > 75 ? "stable" : "down";
     const trendIcon =
       trend === "up"
         ? "bi-arrow-up-short text-success"
@@ -247,17 +365,17 @@ function updateTrendIndicators(summary) {
           ? "bi-arrow-down-short text-danger"
           : "bi-dash text-warning";
     const trendText =
-      trend === "up" ? "في تحسن" : trend === "down" ? "في تراجع" : "مستقر";
+      trend === "up"
+        ? adminAnalyticsText("في تحسن", "Improving")
+        : trend === "down"
+          ? adminAnalyticsText("في تراجع", "Declining")
+          : adminAnalyticsText("مستقر", "Stable");
     attendanceTrend.innerHTML = `<i class="bi ${trendIcon} me-1"></i>${trendText}`;
   }
 
   if (incidentTrend) {
     const trend =
-      summary.incident_rate < 0.5
-        ? "down"
-        : summary.incident_rate > 1.0
-          ? "up"
-          : "stable";
+      summary.incident_rate < 0.5 ? "down" : summary.incident_rate > 1.0 ? "up" : "stable";
     const trendIcon =
       trend === "down"
         ? "bi-arrow-down-short text-success"
@@ -265,15 +383,20 @@ function updateTrendIndicators(summary) {
           ? "bi-arrow-up-short text-danger"
           : "bi-dash text-warning";
     const trendText =
-      trend === "down" ? "في تحسن" : trend === "up" ? "في ارتفاع" : "مستقر";
+      trend === "down"
+        ? adminAnalyticsText("في تحسن", "Improving")
+        : trend === "up"
+          ? adminAnalyticsText("في ارتفاع", "Increasing")
+          : adminAnalyticsText("مستقر", "Stable");
     incidentTrend.innerHTML = `<i class="bi ${trendIcon} me-1"></i>${trendText}`;
   }
 
   if (kgGrowth) {
-    // Mock growth data - in production, calculate from previous period
-    const growth = Math.random() * 10 - 2; // Random between -2% and +8%
-    const growthClass = growth > 0 ? "text-success" : "text-danger";
-    const growthIcon = growth > 0 ? "bi-arrow-up-short" : "bi-arrow-down-short";
+    // Calculate growth from actual data — use total kindergartens count
+    const totalKg = summary.total_kindergartens || 0;
+    const growth = totalKg > 0 ? (totalKg / Math.max(totalKg - 1, 1) - 1) * 100 : 0;
+    const growthClass = growth >= 0 ? "text-success" : "text-danger";
+    const growthIcon = growth >= 0 ? "bi-arrow-up-short" : "bi-arrow-down-short";
     kgGrowth.innerHTML = `<i class="bi ${growthIcon}"></i> ${Math.abs(growth).toFixed(1)}%`;
     kgGrowth.className = growthClass;
   }
@@ -291,30 +414,120 @@ function updateTrendCharts(attendanceData, incidentData) {
     trendChartInstance.destroy();
   }
 
-  // Default to attendance data
-  let currentData = attendanceData;
-  let currentLabel = "عدد الحضور";
-  let currentColor = "#198754";
-  let currentBgColor = "rgba(25, 135, 84, 0.1)";
+  window.__trendData = {
+    attendance: attendanceData || [],
+    incidents: incidentData || [],
+  };
+
+  const chartData = buildTrendChartData("attendance");
 
   trendChartInstance = new Chart(ctx, {
     type: "line",
+    data: chartData.data,
+    options: chartData.options,
+  });
+
+  // Setup radio button event listeners
+  setupTrendControls(attendanceData, incidentData);
+
+  // Hide loading overlay
+  setTimeout(() => {
+    if (overlay) overlay.classList.add("d-none");
+  }, 500);
+}
+
+function setupTrendControls(_attendanceData, _incidentData) {
+  const attendanceRadio = document.getElementById("attendanceTrend");
+  const incidentsRadio = document.getElementById("incidentsTrend");
+
+  if (attendanceRadio && incidentsRadio) {
+    attendanceRadio.addEventListener("change", () => {
+      if (attendanceRadio.checked) {
+        updateTrendChart("attendance");
+      }
+    });
+
+    incidentsRadio.addEventListener("change", () => {
+      if (incidentsRadio.checked) {
+        updateTrendChart("incidents");
+      }
+    });
+  }
+}
+
+function updateTrendChart(type) {
+  if (!trendChartInstance) return;
+  const chartData = buildTrendChartData(type);
+  trendChartInstance.data = chartData.data;
+  trendChartInstance.options = chartData.options;
+  trendChartInstance.update("active");
+}
+
+function buildTrendChartData(type) {
+  const dataSeries = window.__trendData?.[type] || [];
+  const forecastPayload = window.__forecastData || {};
+  const forecastSeries = forecastPayload[type === "attendance" ? "attendance" : "incidents"] || {};
+  const forecastPoints = forecastSeries.forecast_points || [];
+  const confidence = forecastSeries.confidence || { lower: [], upper: [] };
+
+  const labels = dataSeries.map((d) => formatDateForDisplay(d.date));
+  const forecastLabels = forecastPoints.map((d) => formatDateForDisplay(d.date));
+  const fullLabels = labels.concat(forecastLabels);
+
+  const lineColor = type === "attendance" ? "#198754" : "#fd7e14";
+  const lineLabel =
+    type === "attendance"
+      ? adminAnalyticsText("عدد الحضور", "Attendance count")
+      : adminAnalyticsText("عدد الحوادث", "Incident count");
+
+  return {
     data: {
-      labels: currentData.map((d) => formatDateForDisplay(d.date)),
+      labels: fullLabels,
       datasets: [
         {
-          label: currentLabel,
-          data: currentData.map((d) => d.value),
-          borderColor: currentColor,
-          backgroundColor: currentBgColor,
+          label: lineLabel,
+          data: dataSeries.map((d) => d.value),
+          borderColor: lineColor,
+          backgroundColor:
+            type === "attendance" ? "rgba(25, 135, 84, 0.1)" : "rgba(253, 126, 20, 0.1)",
           yAxisID: "y",
           fill: true,
           tension: 0.4,
           pointRadius: 4,
           pointHoverRadius: 6,
-          pointBackgroundColor: currentColor,
+          pointBackgroundColor: lineColor,
           pointBorderColor: "#fff",
           pointBorderWidth: 2,
+        },
+        {
+          label: adminAnalyticsText("توقعات", "Forecast"),
+          data: new Array(dataSeries.length - 1)
+            .fill(null)
+            .concat(forecastPoints.map((d) => d.value)),
+          borderColor: "#0d6efd",
+          borderDash: [6, 4],
+          fill: false,
+          pointRadius: 2,
+        },
+        {
+          label: adminAnalyticsText("حد أدنى", "Lower bound"),
+          data: new Array(dataSeries.length - 1)
+            .fill(null)
+            .concat((confidence.lower || []).map((d) => d.value)),
+          borderColor: "rgba(13,110,253,0.2)",
+          backgroundColor: "rgba(13,110,253,0.1)",
+          fill: "+1",
+          pointRadius: 0,
+        },
+        {
+          label: adminAnalyticsText("حد أعلى", "Upper bound"),
+          data: new Array(dataSeries.length - 1)
+            .fill(null)
+            .concat((confidence.upper || []).map((d) => d.value)),
+          borderColor: "rgba(13,110,253,0.2)",
+          backgroundColor: "rgba(13,110,253,0.1)",
+          fill: false,
+          pointRadius: 0,
         },
       ],
     },
@@ -344,19 +557,19 @@ function updateTrendCharts(attendanceData, incidentData) {
           backgroundColor: "rgba(0,0,0,0.8)",
           titleColor: "#fff",
           bodyColor: "#fff",
-          borderColor: currentColor,
+          borderColor: lineColor,
           borderWidth: 1,
           cornerRadius: 8,
           displayColors: true,
           callbacks: {
             title: function (context) {
-              return "تاريخ: " + context[0].label;
+              return `${adminAnalyticsText("تاريخ", "Date")}: ${context[0].label}`;
             },
             label: function (context) {
               return (
                 context.dataset.label +
                 ": " +
-                context.parsed.y.toLocaleString("ar-JO")
+                context.parsed.y.toLocaleString(adminAnalyticsLocale())
               );
             },
           },
@@ -370,7 +583,7 @@ function updateTrendCharts(attendanceData, incidentData) {
           beginAtZero: true,
           title: {
             display: true,
-            text: currentLabel,
+            text: lineLabel,
             font: {
               size: 14,
               weight: "bold",
@@ -381,14 +594,14 @@ function updateTrendCharts(attendanceData, incidentData) {
           },
           ticks: {
             callback: function (value) {
-              return value.toLocaleString("ar-JO");
+              return value.toLocaleString(adminAnalyticsLocale());
             },
           },
         },
         x: {
           title: {
             display: true,
-            text: "التاريخ",
+            text: adminAnalyticsText("التاريخ", "Date"),
             font: {
               size: 14,
               weight: "bold",
@@ -405,68 +618,13 @@ function updateTrendCharts(attendanceData, incidentData) {
         },
       },
     },
-  });
-
-  // Setup radio button event listeners
-  setupTrendControls(attendanceData, incidentData);
-
-  // Hide loading overlay
-  setTimeout(() => {
-    if (overlay) overlay.classList.add("d-none");
-  }, 500);
-}
-
-function setupTrendControls(attendanceData, incidentData) {
-  const attendanceRadio = document.getElementById("attendanceTrend");
-  const incidentsRadio = document.getElementById("incidentsTrend");
-
-  if (attendanceRadio && incidentsRadio) {
-    attendanceRadio.addEventListener("change", () => {
-      if (attendanceRadio.checked) {
-        updateTrendChart("attendance");
-      }
-    });
-
-    incidentsRadio.addEventListener("change", () => {
-      if (incidentsRadio.checked) {
-        updateTrendChart("incidents");
-      }
-    });
-  }
-}
-
-function updateTrendChart(type) {
-  if (!trendChartInstance) return;
-
-  const attendanceRadio = document.getElementById("attendanceTrend");
-  const incidentsRadio = document.getElementById("incidentsTrend");
-
-  if (type === "attendance") {
-    if (attendanceRadio) attendanceRadio.checked = true;
-    // Update chart with attendance data (would need to store original data)
-    trendChartInstance.data.datasets[0].label = "عدد الحضور";
-    trendChartInstance.data.datasets[0].borderColor = "#198754";
-    trendChartInstance.data.datasets[0].backgroundColor =
-      "rgba(25, 135, 84, 0.1)";
-    trendChartInstance.data.datasets[0].pointBackgroundColor = "#198754";
-  } else if (type === "incidents") {
-    if (incidentsRadio) incidentsRadio.checked = true;
-    trendChartInstance.data.datasets[0].label = "عدد الحوادث";
-    trendChartInstance.data.datasets[0].borderColor = "#fd7e14";
-    trendChartInstance.data.datasets[0].backgroundColor =
-      "rgba(253, 126, 20, 0.1)";
-    trendChartInstance.data.datasets[0].pointBackgroundColor = "#fd7e14";
-  }
-
-  trendChartInstance.options.scales.y.title.text =
-    trendChartInstance.data.datasets[0].label;
-  trendChartInstance.update("active");
+  };
 }
 
 function formatDateForDisplay(dateStr) {
   try {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("ar-JO", {
+    return date.toLocaleDateString(adminAnalyticsLocale(), {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -517,11 +675,11 @@ function updateRiskRadar(riskData) {
     li.innerHTML = `
             <div class="flex-grow-1">
                 <div class="d-flex align-items-center mb-1">
-                    <span class="fw-bold text-dark me-2">${item.name || "غير محدد"}</span>
-                    <small class="badge bg-${riskColor} text-white">${riskScore}% خطر</small>
+                    <span class="fw-bold text-dark me-2">${adminAnalyticsLiteral(item.name || adminAnalyticsText("غير محدد", "Not specified"))}</span>
+                    <small class="badge bg-${riskColor} text-white">${riskScore}% ${adminAnalyticsText("خطر", "risk")}</small>
                 </div>
-                <small class="text-muted d-block">${item.kindergarten || "غير محدد"}</small>
-                <div class="small text-danger mt-1">${item.reason || "سبب غير محدد"}</div>
+                <small class="text-muted d-block">${adminAnalyticsLiteral(item.kindergarten || adminAnalyticsText("غير محدد", "Not specified"))}</small>
+                <div class="small text-danger mt-1">${adminAnalyticsLiteral(item.reason || adminAnalyticsText("سبب غير محدد", "Unspecified reason"))}</div>
             </div>
             <div class="text-end">
                 <div class="progress" style="width: 60px; height: 6px;">
@@ -549,9 +707,8 @@ function updateGovernorateBreakdown(breakdownData) {
 
   tbody.innerHTML = "";
 
-  if (breakdownData.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="6" class="text-center text-muted">لا توجد بيانات للفترة المحددة</td></tr>';
+  if (!breakdownData || breakdownData.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">${adminAnalyticsText("لا توجد بيانات للفترة المحددة", "No data for the selected period")}</td></tr>`;
     if (governorateTableSorter) {
       governorateTableSorter.destroy();
       governorateTableSorter = null;
@@ -567,7 +724,10 @@ function updateGovernorateBreakdown(breakdownData) {
     const tr = document.createElement("tr");
     tr.setAttribute("data-gov-id", row.governorate);
     tr.style.cursor = "pointer";
-    tr.title = `انقر لعرض تفاصيل محافظة ${row.governorate}`;
+    tr.title = adminAnalyticsText(
+      `انقر لعرض تفاصيل محافظة ${row.governorate}`,
+      `Click to view details for governorate ${row.governorate}`
+    );
     tr.addEventListener("click", () => {
       window.location.href = `/admin/analytics/drilldown/GOVERNORATE/${row.governorate}`;
     });
@@ -577,13 +737,13 @@ function updateGovernorateBreakdown(breakdownData) {
             <td class="text-center">${row.children_count}</td>
             <td class="text-center" data-sort="${row.attendance_rate}">
                 <span class="badge ${row.attendance_rate >= 85 ? "bg-success-subtle text-success-emphasis" : "bg-warning-subtle text-warning-emphasis"}">
-                    ${row.attendance_rate.toFixed(1)}%
+                    ${(row.attendance_rate ?? 0).toFixed(1)}%
                 </span>
             </td>
-            <td class="text-center" data-sort="${row.incident_rate}">${row.incident_rate.toFixed(2)}</td>
+            <td class="text-center" data-sort="${row.incident_rate}">${(row.incident_rate ?? 0).toFixed(2)}</td>
             <td class="text-center" data-sort="${row.governance_score}">
                 <div class="d-flex align-items-center justify-content-center">
-                    <span class="fw-bold me-2">${row.governance_score.toFixed(1)}</span>
+                    <span class="fw-bold me-2">${(row.governance_score ?? 0).toFixed(1)}</span>
                     <div class="progress" style="width: 50px; height: 4px;" role="progressbar" aria-valuenow="${row.governance_score}" aria-valuemin="0" aria-valuemax="100">
                         <div class="progress-bar ${getScoreColor(row.governance_score)}" style="width: ${row.governance_score}%"></div>
                     </div>
@@ -598,13 +758,36 @@ function updateGovernorateBreakdown(breakdownData) {
   });
 
   updateGovernanceChart(green, amber, red);
+  updateRiskHeatmap(breakdownData);
 
   // Initialize or refresh sorter
   if (governorateTableSorter) {
-    governorateTableSorter.update();
+    governorateTableSorter.refresh();
   } else {
     governorateTableSorter = new Tablesort(table);
   }
+}
+
+function updateRiskHeatmap(breakdownData) {
+  const container = document.getElementById("riskHeatmap");
+  if (!container) return;
+  container.innerHTML = "";
+  breakdownData.slice(0, 12).forEach((row) => {
+    const score = row.governance_score || 0;
+    const colorClass = score >= 80 ? "bg-success" : score >= 60 ? "bg-warning" : "bg-danger";
+    const cell = document.createElement("div");
+    cell.className = "col-6 col-md-4";
+    cell.innerHTML = `
+      <div class="p-2 rounded text-white ${colorClass}" style="cursor:pointer;">
+        <div class="small fw-semibold">${row.governorate}</div>
+        <div class="small">${score.toFixed(1)}%</div>
+      </div>
+    `;
+    cell.addEventListener("click", () => {
+      window.location.href = `/admin/analytics/drilldown/GOVERNORATE/${row.governorate}`;
+    });
+    container.appendChild(cell);
+  });
 }
 
 async function loadComparativeAnalysis(start, end) {
@@ -612,18 +795,18 @@ async function loadComparativeAnalysis(start, end) {
   const lowList = document.getElementById("lowPerformersList");
   if (!topList || !lowList) return;
 
-  topList.innerHTML =
-    '<div class="list-group-item text-center text-muted small">Loading...</div>';
-  lowList.innerHTML =
-    '<div class="list-group-item text-center text-muted small">Loading...</div>';
+  topList.innerHTML = `<div class="list-group-item text-center text-muted small">${adminAnalyticsText("جاري التحميل...", "Loading...")}</div>`;
+  lowList.innerHTML = `<div class="list-group-item text-center text-muted small">${adminAnalyticsText("جاري التحميل...", "Loading...")}</div>`;
 
   try {
+    const gov = document.getElementById("governorateFilter")?.value || "";
+    const govParam = gov ? `&governorate=${encodeURIComponent(gov)}` : "";
     const [topResponse, lowResponse] = await Promise.all([
       fetchWithAuth(
-        `/api/analytics/rankings/governance_score?top_n=5&period_start=${start}&period_end=${end}`,
+        `/api/analytics/rankings/governance_score?top_n=5&period_start=${start}&period_end=${end}${govParam}`
       ),
       fetchWithAuth(
-        `/api/analytics/rankings/governance_score?top_n=5&bottom=true&period_start=${start}&period_end=${end}`,
+        `/api/analytics/rankings/governance_score?top_n=5&bottom=true&period_start=${start}&period_end=${end}${govParam}`
       ),
     ]);
 
@@ -636,10 +819,8 @@ async function loadComparativeAnalysis(start, end) {
     renderRankingList(lowList, lowData.rankings, "low");
   } catch (error) {
     console.error("Comparative analysis error:", error);
-    topList.innerHTML =
-      '<div class="list-group-item text-danger small">Failed to load rankings.</div>';
-    lowList.innerHTML =
-      '<div class="list-group-item text-danger small">Failed to load rankings.</div>';
+    topList.innerHTML = `<div class="list-group-item text-danger small">${adminAnalyticsText("تعذر تحميل التصنيفات.", "Unable to load rankings.")}</div>`;
+    lowList.innerHTML = `<div class="list-group-item text-danger small">${adminAnalyticsText("تعذر تحميل التصنيفات.", "Unable to load rankings.")}</div>`;
   }
 }
 
@@ -648,11 +829,10 @@ function renderRankingList(element, rankings, type) {
 
   if (!rankings || rankings.length === 0) {
     const emptyItem = document.createElement("div");
-    emptyItem.className =
-      "list-group-item text-muted text-center py-4 border-0";
+    emptyItem.className = "list-group-item text-muted text-center py-4 border-0";
     emptyItem.innerHTML = `
             <i class="bi bi-info-circle fs-2 mb-2 ${type === "top" ? "text-success" : "text-danger"}"></i>
-            <div class="small">لا توجد بيانات متاحة لهذه الفترة</div>
+            <div class="small">${adminAnalyticsText("لا توجد بيانات متاحة لهذه الفترة", "No data available for this period")}</div>
         `;
     element.appendChild(emptyItem);
     return;
@@ -674,11 +854,11 @@ function renderRankingList(element, rankings, type) {
                     ${rank}
                 </div>
                 <div class="flex-grow-1">
-                    <a href="/kindergartens/${item.kindergarten_id}" class="fw-bold text-dark text-decoration-none d-block" title="انقر لعرض تفاصيل الروضة">
-                        ${item.kindergarten_name || "غير محدد"}
+                    <a href="/kindergartens/${item.kindergarten_id}" class="fw-bold text-dark text-decoration-none d-block" title="${adminAnalyticsText("انقر لعرض تفاصيل الروضة", "Click to view kindergarten details")}">
+                        ${adminAnalyticsLiteral(item.kindergarten_name || adminAnalyticsText("غير محدد", "Not specified"))}
                     </a>
                     <small class="text-muted d-block">
-                        <i class="bi bi-geo-alt me-1"></i>${item.governorate || "غير محدد"}
+                        <i class="bi bi-geo-alt me-1"></i>${adminAnalyticsLiteral(item.governorate || adminAnalyticsText("غير محدد", "Not specified"))}
                     </small>
                 </div>
             </div>
@@ -719,7 +899,11 @@ function updateGovernanceChart(green, amber, red) {
   governanceChart = new Chart(ctx, {
     type: "doughnut",
     data: {
-      labels: ["متميز", "متوسط", "يحتاج تحسين"],
+      labels: [
+        adminAnalyticsText("متميز", "Excellent"),
+        adminAnalyticsText("متوسط", "Average"),
+        adminAnalyticsText("يحتاج تحسين", "Needs improvement"),
+      ],
       datasets: [
         {
           data: [green, amber, red],
@@ -742,33 +926,40 @@ function refreshGovernorateData() {
   const end = document.getElementById("periodEnd").value;
 
   if (!start || !end) {
-    showToast("يرجى تحديد تاريخ البداية والنهاية", "warning");
+    showToast(
+      adminAnalyticsText("يرجى تحديد تاريخ البداية والنهاية", "Please select start and end dates"),
+      "warning"
+    );
     return;
   }
 
   // Show loading state
   const tbody = document.getElementById("governorateTableBody");
   if (tbody) {
-    tbody.innerHTML =
-      '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><span class="ms-2">جاري تحديث البيانات...</span></td></tr>';
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><span class="ms-2">${adminAnalyticsText("جاري تحديث البيانات...", "Refreshing data...")}</span></td></tr>`;
   }
 
   // Fetch updated data
-  fetchWithAuth(
-    `/api/analytics/governorate-breakdown?period_start=${start}&period_end=${end}`,
-  )
+  fetchWithAuth(`/api/analytics/governorate-breakdown?period_start=${start}&period_end=${end}`)
     .then((response) => (response ? response.json() : null))
     .then((data) => {
       if (data) {
         updateGovernorateBreakdown(data);
-        showToast("تم تحديث بيانات المحافظات", "success");
+        showToast(
+          adminAnalyticsText("تم تحديث بيانات المحافظات", "Governorate data refreshed"),
+          "success"
+        );
       }
     })
     .catch((error) => {
       console.error("Governorate data refresh error:", error);
-      showToast("فشل في تحديث بيانات المحافظات", "error");
+      showToast(
+        adminAnalyticsText("فشل في تحديث بيانات المحافظات", "Failed to refresh governorate data"),
+        "error"
+      );
     });
 }
+window.refreshGovernorateData = refreshGovernorateData;
 
 function safeSetText(id, text) {
   const el = document.getElementById(id);
@@ -776,11 +967,9 @@ function safeSetText(id, text) {
 }
 
 function showToast(message, type = "info") {
-  const toastContainer =
-    document.getElementById("toastContainer") || document.createElement("div");
+  const toastContainer = document.getElementById("toastContainer") || document.createElement("div");
   toastContainer.id = "toastContainer";
-  toastContainer.className =
-    "toast-container position-fixed bottom-0 end-0 p-3";
+  toastContainer.className = "toast-container position-fixed bottom-0 end-0 p-3";
   document.body.appendChild(toastContainer);
 
   const toastEl = document.createElement("div");
@@ -804,40 +993,67 @@ function showToast(message, type = "info") {
 
 document.addEventListener("DOMContentLoaded", function () {
   const exportForm = document.getElementById("exportForm");
-  if (exportForm) {
+  if (exportForm && !exportForm.dataset.exportHandlerBound) {
     exportForm.addEventListener("submit", handleExport);
+    exportForm.dataset.exportHandlerBound = "true";
   }
 
-  // Set initial dates for export modal
+  // Initialize export dates for either dashboard modal or reports page form.
   const today = new Date();
   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
   const formatDate = (d) => d.toISOString().split("T")[0];
 
-  document.getElementById("exportStartDate").value = formatDate(firstDay);
-  document.getElementById("exportEndDate").value = formatDate(today);
+  const exportStartDate =
+    document.getElementById("exportStartDate") || document.getElementById("startDate");
+  const exportEndDate =
+    document.getElementById("exportEndDate") || document.getElementById("endDate");
+
+  if (exportStartDate && !exportStartDate.value) {
+    exportStartDate.value = formatDate(firstDay);
+  }
+  if (exportEndDate && !exportEndDate.value) {
+    exportEndDate.value = formatDate(today);
+  }
 });
 
 async function handleExport(event) {
   event.preventDefault();
 
-  const reportType = document.getElementById("exportReportType").value;
-  const exportFormat = document.getElementById("exportFormat").value;
-  const startDate = document.getElementById("exportStartDate").value;
-  const endDate = document.getElementById("exportEndDate").value;
-  const exportBtn = document.querySelector(
-    '#exportModal button[type="submit"]',
-  );
+  const reportType =
+    document.getElementById("exportReportType")?.value ||
+    document.querySelector('input[name="reportType"]:checked')?.value;
+  const exportFormat =
+    document.getElementById("exportFormat")?.value ||
+    document.querySelector('input[name="exportFormat"]:checked')?.value ||
+    "CSV";
+  const startDate =
+    document.getElementById("exportStartDate")?.value ||
+    document.getElementById("startDate")?.value;
+  const endDate =
+    document.getElementById("exportEndDate")?.value || document.getElementById("endDate")?.value;
+  const exportBtn =
+    event.submitter ||
+    document.querySelector('button[type="submit"][form="exportForm"]') ||
+    document.querySelector('#exportModal button[type="submit"]');
   const exportSpinner = document.getElementById("exportSpinner");
 
   if (!reportType) {
-    showToast("Please select a report type.", "warning");
+    showToast(
+      adminAnalyticsText("يرجى اختيار نوع التقرير.", "Please select a report type."),
+      "warning"
+    );
     return;
   }
 
-  exportBtn.disabled = true;
-  exportSpinner.classList.remove("d-none");
+  if (!startDate || !endDate) {
+    showToast("Please select a valid date range.", "warning");
+    return;
+  }
 
-  const url = "/api/analytics/export";
+  if (exportBtn) exportBtn.disabled = true;
+  if (exportSpinner) exportSpinner.classList.remove("d-none");
+
+  const url = "/api/analytics/export/sync";
   try {
     const response = await fetchWithAuth(url, {
       method: "POST",
@@ -874,17 +1090,305 @@ async function handleExport(event) {
     a.remove();
     window.URL.revokeObjectURL(downloadUrl);
 
-    showToast("Report exported successfully!", "success");
-    const exportModal = bootstrap.Modal.getInstance(
-      document.getElementById("exportModal"),
+    showToast(
+      adminAnalyticsText("تم تصدير التقرير بنجاح!", "Report exported successfully!"),
+      "success"
     );
+    const exportModal = bootstrap.Modal.getInstance(document.getElementById("exportModal"));
     if (exportModal) exportModal.hide();
   } catch (e) {
     console.error("Export failed:", e);
-    showToast("Failed to export report. Please try again.", "error");
+    showToast(
+      adminAnalyticsText(
+        "فشل تصدير التقرير. يرجى المحاولة مرة أخرى.",
+        "Report export failed. Please try again."
+      ),
+      "error"
+    );
   } finally {
-    exportBtn.disabled = false;
-    exportSpinner.classList.add("d-none");
+    if (exportBtn) exportBtn.disabled = false;
+    if (exportSpinner) exportSpinner.classList.add("d-none");
+  }
+}
+
+async function loadPredictiveInsights(start, end, scopeType, scopeId) {
+  try {
+    const payload = {
+      scope_type: scopeType,
+      scope_id: scopeId,
+      start_date: start,
+      end_date: end,
+      horizon_days: 30,
+    };
+    const [attendanceRes, incidentsRes, enrollmentRes] = await Promise.all([
+      fetchWithAuth(`/api/analytics/predict/attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+      fetchWithAuth(`/api/analytics/predict/incidents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+      fetchWithAuth(`/api/analytics/predict/enrollment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    ]);
+
+    if (!attendanceRes || !incidentsRes || !enrollmentRes) return;
+    const attendanceData = await attendanceRes.json();
+    const incidentsData = await incidentsRes.json();
+    const enrollmentData = await enrollmentRes.json();
+
+    window.__forecastData = {
+      attendance: attendanceData,
+      incidents: incidentsData,
+      enrollment: enrollmentData,
+    };
+
+    updatePredictiveCards(attendanceData, incidentsData, enrollmentData);
+    updateModelMeta(attendanceData.model_meta);
+    updateTrendCharts(attendanceData.points, incidentsData.points);
+  } catch (error) {
+    console.error("Predictive insights error", error);
+  }
+}
+
+function updatePredictiveCards(attendanceData, incidentsData, enrollmentData) {
+  const attendanceForecast = document.getElementById("attendanceForecast");
+  const attendanceBand = document.getElementById("attendanceForecastBand");
+  const incidentForecast = document.getElementById("incidentForecast");
+  const incidentBand = document.getElementById("incidentForecastBand");
+  const enrollmentForecast = document.getElementById("enrollmentForecast");
+  const enrollmentBand = document.getElementById("enrollmentForecastBand");
+
+  const lastAttendance = attendanceData.forecast_points?.slice(-1)[0];
+  const lastIncident = incidentsData.forecast_points?.slice(-1)[0];
+  const lastEnrollment = enrollmentData.forecast_points?.slice(-1)[0];
+
+  if (attendanceForecast && lastAttendance) {
+    attendanceForecast.textContent = `${lastAttendance.value.toFixed(1)}%`;
+    const lower = attendanceData.confidence?.lower?.slice(-1)[0]?.value ?? 0;
+    const upper = attendanceData.confidence?.upper?.slice(-1)[0]?.value ?? 0;
+    if (attendanceBand) {
+      attendanceBand.textContent = adminAnalyticsText(
+        `نطاق الثقة: ${lower.toFixed(1)}% - ${upper.toFixed(1)}%`,
+        `Confidence range: ${lower.toFixed(1)}% - ${upper.toFixed(1)}%`
+      );
+    }
+  }
+  if (incidentForecast && lastIncident) {
+    incidentForecast.textContent = `${lastIncident.value.toFixed(2)}`;
+    const lower = incidentsData.confidence?.lower?.slice(-1)[0]?.value ?? 0;
+    const upper = incidentsData.confidence?.upper?.slice(-1)[0]?.value ?? 0;
+    if (incidentBand) {
+      incidentBand.textContent = adminAnalyticsText(
+        `نطاق الثقة: ${lower.toFixed(2)} - ${upper.toFixed(2)}`,
+        `Confidence range: ${lower.toFixed(2)} - ${upper.toFixed(2)}`
+      );
+    }
+  }
+  if (enrollmentForecast && lastEnrollment) {
+    enrollmentForecast.textContent = `${lastEnrollment.value.toFixed(0)}`;
+    const lower = enrollmentData.confidence?.lower?.slice(-1)[0]?.value ?? 0;
+    const upper = enrollmentData.confidence?.upper?.slice(-1)[0]?.value ?? 0;
+    if (enrollmentBand) {
+      enrollmentBand.textContent = adminAnalyticsText(
+        `نطاق الثقة: ${lower.toFixed(0)} - ${upper.toFixed(0)}`,
+        `Confidence range: ${lower.toFixed(0)} - ${upper.toFixed(0)}`
+      );
+    }
+  }
+}
+
+function updateModelMeta(meta) {
+  const container = document.getElementById("modelMeta");
+  if (!container || !meta) return;
+  const trainedAt = meta.last_trained || meta.trained_at || "--";
+  const version = meta.model_version || "v1";
+  const confidence = meta.confidence ? `${(meta.confidence * 100).toFixed(0)}%` : "--";
+  container.innerHTML = `<div class="small text-muted">${adminAnalyticsText(`آخر تدريب: ${trainedAt} | الإصدار: ${version} | الثقة: ${confidence}`, `Last training: ${trainedAt} | Version: ${version} | Confidence: ${confidence}`)}</div>`;
+}
+
+async function loadAnomalies(start, end, scopeType, scopeId) {
+  try {
+    const res = await fetchWithAuth(
+      `/api/analytics/anomalies?scope_type=${scopeType}&scope_id=${scopeId || ""}&metric_type=attendance&from=${start}&to=${end}`
+    );
+    if (!res) return;
+    const data = await res.json();
+    const list = document.getElementById("anomalyList");
+    const countBadge = document.getElementById("anomalyCount");
+    if (!list) return;
+    list.innerHTML = "";
+    const items = data.anomalies || [];
+    if (countBadge) countBadge.textContent = items.length;
+    if (!items.length) {
+      list.innerHTML = `<div class="text-muted small">${adminAnalyticsText("لا توجد شذوذات خلال الفترة المحددة.", "No anomalies detected for the selected period.")}</div>`;
+      return;
+    }
+    items.slice(0, 5).forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "list-group-item border-0";
+      row.innerHTML = `<div class="d-flex justify-content-between">
+        <div>
+          <div class="fw-semibold">${escapeHtml(item.message)}</div>
+          <small class="text-muted">${escapeHtml(item.detected_at)}</small>
+        </div>
+        <span class="badge bg-danger">${escapeHtml(item.severity)}</span>
+      </div>`;
+      list.appendChild(row);
+    });
+  } catch (error) {
+    console.error("Anomaly load error", error);
+  }
+}
+
+async function loadAlerts() {
+  try {
+    const res = await fetchWithAuth(`/api/analytics/alerts`);
+    if (!res) return;
+    const data = await res.json();
+    const alertList = document.getElementById("alertList");
+    const banner = document.getElementById("alertBanner");
+    if (!alertList) return;
+    alertList.innerHTML = "";
+    const alerts = data.alerts || [];
+    if (alerts.length) {
+      banner.classList.remove("d-none");
+      banner.textContent = adminAnalyticsText(
+        `يوجد ${alerts.length} تنبيه نشط يتطلب المراجعة.`,
+        `${alerts.length} active alerts require review.`
+      );
+    } else {
+      banner.classList.add("d-none");
+    }
+    alerts.slice(0, 5).forEach((alert) => {
+      const row = document.createElement("div");
+      row.className = "list-group-item border-0";
+      row.innerHTML = `<div class="d-flex justify-content-between">
+        <div>
+          <div class="fw-semibold">${escapeHtml(alert.message)}</div>
+          <small class="text-muted">${escapeHtml(alert.metric_type)}</small>
+        </div>
+        <span class="badge bg-warning">${escapeHtml(alert.severity)}</span>
+      </div>`;
+      alertList.appendChild(row);
+    });
+  } catch (error) {
+    console.error("Alerts load error", error);
+  }
+}
+
+async function loadDataQuality() {
+  try {
+    const res = await fetchWithAuth(`/api/analytics/data-quality`);
+    if (!res) return;
+    const data = await res.json();
+    const scoreEl = document.getElementById("dataQualityScore");
+    const statusEl = document.getElementById("dataQualityStatus");
+    if (scoreEl) scoreEl.textContent = `${(data.completeness_percent ?? 0).toFixed(1)}%`;
+    if (statusEl)
+      statusEl.textContent =
+        (data.completeness_percent ?? 0) > 85
+          ? adminAnalyticsText("ممتاز", "Excellent")
+          : adminAnalyticsText("بحاجة تحسين", "Needs improvement");
+  } catch (error) {
+    console.error("Data quality error", error);
+  }
+}
+
+async function loadTargets() {
+  try {
+    const res = await fetchWithAuth(`/api/analytics/targets`);
+    if (!res) return;
+    const data = await res.json();
+    const targetList = document.getElementById("targetList");
+    if (!targetList) return;
+    targetList.innerHTML = "";
+    (data.targets || []).slice(0, 5).forEach((t) => {
+      const row = document.createElement("div");
+      row.className = "list-group-item border-0";
+      row.innerHTML = `<div class="d-flex justify-content-between">
+        <span>${escapeHtml(t.metric_type)}</span>
+        <span class="fw-semibold">${escapeHtml(t.target_value)}</span>
+      </div>`;
+      targetList.appendChild(row);
+    });
+    if (!(data.targets || []).length) {
+      targetList.innerHTML = `<div class="text-muted small">${adminAnalyticsText("لا توجد أهداف محددة.", "No targets defined.")}</div>`;
+    }
+  } catch (error) {
+    console.error("Targets load error", error);
+  }
+}
+
+async function loadBenchmarks() {
+  try {
+    const optionsRes = await fetchWithAuth(`/api/admin/options/kindergartens`);
+    if (!optionsRes) return;
+    const optionsData = await optionsRes.json();
+    const firstKg = (optionsData.kindergartens || optionsData || [])[0];
+    const kgId = firstKg?.id || firstKg?.value || null;
+    const benchmarkList = document.getElementById("benchmarkList");
+    if (!benchmarkList) return;
+    if (!kgId) {
+      benchmarkList.innerHTML = `<div class="text-muted small">${adminAnalyticsText("لا تتوفر بيانات المقارنة.", "Benchmark data is not available.")}</div>`;
+      return;
+    }
+    const res = await fetchWithAuth(`/api/analytics/benchmarks/${kgId}`);
+    if (!res) return;
+    const data = await res.json();
+    benchmarkList.innerHTML = "";
+    (data.benchmarks || []).slice(0, 5).forEach((b) => {
+      const row = document.createElement("div");
+      row.className = "list-group-item border-0";
+      row.innerHTML = `<div class="d-flex justify-content-between">
+        <span>${escapeHtml(b.metric_type)} (${escapeHtml(b.comparison_group)})</span>
+        <span class="fw-semibold">${escapeHtml(b.value)}</span>
+      </div>`;
+      benchmarkList.appendChild(row);
+    });
+    if (!(data.benchmarks || []).length) {
+      benchmarkList.innerHTML = `<div class="text-muted small">${adminAnalyticsText("لا توجد بيانات مقارنة.", "No benchmark data available.")}</div>`;
+    }
+  } catch (error) {
+    console.error("Benchmarks load error", error);
+  }
+}
+
+async function loadRecommendations() {
+  try {
+    const optionsRes = await fetchWithAuth(`/api/admin/options/kindergartens`);
+    if (!optionsRes) return;
+    const optionsData = await optionsRes.json();
+    const firstKg = (optionsData.kindergartens || optionsData || [])[0];
+    const kgId = firstKg?.id || firstKg?.value || null;
+    const list = document.getElementById("recommendationList");
+    if (!list) return;
+    if (!kgId) {
+      list.innerHTML = `<div class="text-muted small">${adminAnalyticsText("لا توجد توصيات متاحة.", "No recommendations available.")}</div>`;
+      return;
+    }
+    const res = await fetchWithAuth(`/api/analytics/recommendations/${kgId}`);
+    if (!res) return;
+    const data = await res.json();
+    list.innerHTML = "";
+    (data.recommendations || []).slice(0, 5).forEach((rec) => {
+      const row = document.createElement("div");
+      row.className = "list-group-item border-0";
+      row.innerHTML = `<div class="fw-semibold">${escapeHtml(rec.title)}</div>
+        <div class="small text-muted">${escapeHtml(rec.description)}</div>`;
+      list.appendChild(row);
+    });
+    if (!(data.recommendations || []).length) {
+      list.innerHTML = `<div class="text-muted small">${adminAnalyticsText("لا توجد توصيات متاحة.", "No recommendations available.")}</div>`;
+    }
+  } catch (error) {
+    console.error("Recommendations load error", error);
   }
 }
 
@@ -893,3 +1397,9 @@ function getScoreColor(score) {
   else if (score >= 60) return "bg-warning";
   return "bg-danger";
 }
+
+window.addEventListener("languageChanged", () => {
+  if (document.getElementById("periodStart") && document.getElementById("periodEnd")) {
+    loadAdminAnalytics();
+  }
+});

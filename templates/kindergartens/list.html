@@ -1,18 +1,34 @@
 {% extends 'base.html' %}
 
-{% block title %}إدارة الروضات{% endblock %}
+{% block title %}
+{% if current_user.role.value == 'ADMIN' %}
+{% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الروضات{% endif %}
+{% else %}
+{% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}
+{% endif %}
+{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
             <i class="bi bi-building me-2 text-primary"></i>
+            {% if current_user.role.value == 'ADMIN' %}
             إدارة الروضات
+            {% else %}
+            معلومات الروضة
+            {% endif %}
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">الروضات</li>
+                <li class="breadcrumb-item active">
+                    {% if current_user.role.value == 'ADMIN' %}
+                    إدارة الروضات
+                    {% else %}
+                    معلومات الروضة
+                    {% endif %}
+                </li>
             </ol>
         </nav>
     </div>
@@ -22,279 +38,344 @@
             <i class="bi bi-plus-circle me-2"></i>إضافة روضة جديدة
         </a>
     </div>
+    {% elif current_user.role.value == 'MANAGER' and kindergartens %}
+    <div class="btn-toolbar">
+        <a href="/kindergartens/{{ kindergartens[0].id }}/edit" class="btn btn-primary">
+            <i class="bi bi-pencil-square me-2"></i>تعديل المعلومات
+        </a>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- Filters -->
-<div class="card mb-4">
-    <div class="card-body">
-        <form id="filterForm" class="row g-3">
-            <div class="col-md-2">
-                <label for="filterGovernorate" class="form-label">المحافظة</label>
-                <select class="form-select" id="filterGovernorate" name="governorate">
-                    <option value="">الكل</option>
-                    <option value="عمان">عمان</option>
-                    <option value="إربد">إربد</option>
-                    <option value="الزرقاء">الزرقاء</option>
-                    <option value="العقبة">العقبة</option>
-                    <option value="المفرق">المفرق</option>
-                    <option value="جرش">جرش</option>
-                    <option value="عجلون">عجلون</option>
-                    <option value="الطفيلة">الطفيلة</option>
-                    <option value="الكرك">الكرك</option>
-                    <option value="معان">معان</option>
-                    <option value="السلط">السلط</option>
-                    <option value="مادبا">مادبا</option>
-                </select>
+{% if current_user.role.value == 'ADMIN' %}
+<!-- Admin View: List all kindergartens with search and filters -->
+<div class="row">
+    <div class="col-12">
+        <!-- Search and Filter Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-search me-2"></i>البحث والتصفية
+                </h5>
             </div>
-            <div class="col-md-2">
-                <label for="filterStatus" class="form-label">الحالة</label>
-                <select class="form-select" id="filterStatus" name="status">
-                    <option value="">الكل</option>
-                    <option value="active">نشط</option>
-                    <option value="draft">مسودة</option>
-                    <option value="inactive">غير نشط</option>
-                </select>
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="name" class="form-label">اسم الروضة</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ filters.name or '' }}"
+                            placeholder="البحث بالاسم...">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="governorate" class="form-label">المحافظة</label>
+                        <select class="form-select" id="governorate" name="governorate">
+                            <option value="">الكل</option>
+                            {% for gov in governorates %}
+                            <option value="{{ gov }}" {% if filters.governorate==gov %}selected{% endif %}>{{ gov }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="city" class="form-label">المدينة</label>
+                        <input type="text" class="form-control" id="city" name="city" value="{{ filters.city or '' }}"
+                            placeholder="البحث بالمدينة...">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="status" class="form-label">الحالة</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">الكل</option>
+                            <option value="ACTIVE" {% if filters.status=='ACTIVE' %}selected{% endif %}>نشط</option>
+                            <option value="DRAFT" {% if filters.status=='DRAFT' %}selected{% endif %}>مسودة</option>
+                            <option value="INACTIVE" {% if filters.status=='INACTIVE' %}selected{% endif %}>غير نشط
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>بحث
+                            </button>
+                            <a href="/kindergartens" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-1"></i>مسح
+                            </a>
+                        </div>
+                    </div>
+                </form>
             </div>
-            <div class="col-md-2">
-                <label for="filterPhone" class="form-label">رقم الهاتف</label>
-                <input type="text" class="form-control" id="filterPhone" name="phone" placeholder="رقم الهاتف...">
+        </div>
+
+        <!-- Results Summary -->
+        <div class="mb-3">
+            <p class="text-muted">
+                عرض {{ skip + 1 }} - {{ [skip + limit, total]|min }} من أصل {{ total }} روضة
+            </p>
+        </div>
+
+        <!-- Kindergartens Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-ul me-2"></i>قائمة الروضات
+                </h5>
             </div>
-            <div class="col-md-3">
-                <label for="filterName" class="form-label">اسم الروضة</label>
-                <input type="text" class="form-control" id="filterName" name="name" placeholder="اسم الروضة...">
+            <div class="card-body p-0">
+                {% if kindergartens %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">#</th>
+                                <th class="border-0">الاسم</th>
+                                <th class="border-0">الموقع</th>
+                                <th class="border-0">الهاتف</th>
+                                <th class="border-0">الحالة</th>
+                                <th class="border-0">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for kg in kindergartens %}
+                            <tr>
+                                <td>{{ kg.id }}</td>
+                                <td>
+                                    <div>
+                                        <strong>{{ kg.name_en if ui_lang == 'en' and kg.name_en else kg.name_ar }}</strong>
+                                        {% if kg.name_en %}
+                                        <br><small class="text-muted">{{ kg.name_ar if ui_lang == 'en' else kg.name_en }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        {{ kg.governorate }}, {{ kg.city }}
+                                        {% if kg.area %}
+                                        <br><small class="text-muted">{{ kg.area }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>{{ kg.contact_phone or 'غير محدد' }}</td>
+                                <td>
+                                    {% if kg.status.value == 'ACTIVE' %}
+                                    <span class="badge bg-success">نشط</span>
+                                    {% elif kg.status.value == 'DRAFT' %}
+                                    <span class="badge bg-warning">مسودة</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">غير نشط</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/kindergartens/{{ kg.id }}" class="btn btn-outline-info btn-sm"
+                                            title="عرض">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="/kindergartens/{{ kg.id }}/edit" class="btn btn-outline-primary btn-sm"
+                                            title="تعديل">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if total > limit %}
+                <div class="card-footer">
+                    <nav aria-label="صفحات الروضات">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% set total_pages = (total / limit)|round(0, 'ceil')|int %}
+                            {% set current_page = (skip / limit)|int + 1 %}
+                            {% set start_page = current_page - 2 %}
+                            {% if start_page < 1 %}
+                            {% set start_page = 1 %}
+                            {% endif %}
+                            {% set end_page = current_page + 2 %}
+                            {% if end_page > total_pages %}
+                            {% set end_page = total_pages %}
+                            {% endif %}
+
+                            {% if current_page > 1 %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                    href="?{% for k,v in request.query_params.items() if k != 'skip' %}{{ k }}={{ v }}&{% endfor %}skip={{ (current_page - 2) * limit }}">
+                                    السابق
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for page in range(start_page, end_page + 1) %}
+                            <li class="page-item {% if page == current_page %}active{% endif %}">
+                                <a class="page-link"
+                                    href="?{% for k,v in request.query_params.items() if k != 'skip' %}{{ k }}={{ v }}&{% endfor %}skip={{ (page - 1) * limit }}">
+                                    {{ page }}
+                                </a>
+                            </li>
+                            {% endfor %}
+
+                            {% if current_page < total_pages %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                    href="?{% for k,v in request.query_params.items() if k != 'skip' %}{{ k }}={{ v }}&{% endfor %}skip={{ current_page * limit }}">
+                                    التالي
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-search fs-1 text-muted mb-3"></i>
+                    <h5 class="text-muted">لا توجد روضات</h5>
+                    <p class="text-muted">لم يتم العثور على أي روضات تطابق معايير البحث</p>
+                    <a href="/kindergartens" class="btn btn-primary">عرض الكل</a>
+                </div>
+                {% endif %}
             </div>
-            <div class="col-md-3">
-                <label for="searchQuery" class="form-label">البحث العام</label>
-                <input type="text" class="form-control" id="searchQuery" placeholder="ابحث بالاسم أو المنطقة...">
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-outline-primary w-100">
-                    <i class="bi bi-search me-1"></i>بحث
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
-<!-- Kindergartens Grid/Table -->
-<div class="row g-4" id="kindergartensGrid">
-    <!-- Populated by JavaScript -->
+{% else %}
+<!-- Manager/Other Roles View: Single kindergarten details -->
+{% if not kindergartens or kindergartens|length == 0 or not kindergartens[0] %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-exclamation-triangle fs-1 text-warning mb-3"></i>
+                <h5 class="text-muted">غير مصرح لك بالوصول</h5>
+                <p class="text-muted">لا يمكنك الوصول إلى صفحة معلومات الروضة</p>
+            </div>
+        </div>
+    </div>
 </div>
-
-<!-- Pagination -->
-<nav class="mt-4" id="paginationNav" style="display: none;">
-    <ul class="pagination justify-content-center">
-        <li class="page-item disabled">
-            <a class="page-link" href="#" tabindex="-1">السابق</a>
-        </li>
-        <li class="page-item active"><a class="page-link" href="#">1</a></li>
-        <li class="page-item"><a class="page-link" href="#">2</a></li>
-        <li class="page-item"><a class="page-link" href="#">3</a></li>
-        <li class="page-item">
-            <a class="page-link" href="#">التالي</a>
-        </li>
-    </ul>
-</nav>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    let kindergartens = [];
-    
-    document.addEventListener('DOMContentLoaded', async () => {
-        await loadKindergartens();
-    });
-    
-    async function loadKindergartens() {
-        try {
-            showLoading();
-            
-            const params = new FormData(document.getElementById('filterForm'));
-            const queryParams = Object.fromEntries(params.entries());
-            
-            const response = await api.getKindergartens(queryParams);
-            kindergartens = response.kindergartens || [];
-            
-            renderKindergartens(kindergartens);
-            hideLoading();
-            
-        } catch (error) {
-            hideLoading();
-            showToast('حدث خطأ في تحميل البيانات', 'error');
-        }
-    }
-    
-    function renderKindergartens(data) {
-        const grid = document.getElementById('kindergartensGrid');
-        
-        if (!data || data.length === 0) {
-            grid.innerHTML = `
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-body text-center py-5">
-                            <i class="bi bi-building fs-1 text-muted mb-3 d-block opacity-25"></i>
-                            <h5 class="text-muted">لا توجد روضات مسجلة</h5>
-                            <p class="text-muted">ابدأ بإضافة روضة جديدة</p>
-                            <a href="/kindergartens/create" class="btn btn-primary">
-                                <i class="bi bi-plus-circle me-2"></i>إضافة روضة
-                            </a>
+{% else %}
+{% set kg = kindergartens[0] %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Kindergarten Information Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    {{ kg.name_en if ui_lang == 'en' and kg.name_en else kg.name_ar }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-translate me-1"></i>الاسم بالإنجليزية
+                            </h6>
+                            <p class="mb-0">{{ kg.name_en or 'غير محدد' }}</p>
                         </div>
                     </div>
-                </div>
-            `;
-            return;
-        }
-        
-        grid.innerHTML = data.map(kg => `
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                    <div class="card-header bg-primary bg-opacity-10">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0 text-primary">
-                                <i class="bi bi-building me-2"></i>
-                                ${kg.name_ar}
-                            </h5>
-                            ${getStatusBadge(kg.status)}
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-geo-alt me-1"></i>الموقع
+                            </h6>
+                            <p class="mb-0">{{ kg.governorate }}, {{ kg.city }}, {{ kg.area }}</p>
                         </div>
                     </div>
-                    <div class="card-body">
-                        ${kg.name_en ? `<p class="text-muted small mb-2">${kg.name_en}</p>` : ''}
-                        
-                        <div class="mb-3">
-                            <i class="bi bi-geo-alt text-primary me-2"></i>
-                            <span>${kg.governorate}، ${kg.city}، ${kg.area}</span>
+                    <div class="col-md-12">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-house me-1"></i>العنوان
+                            </h6>
+                            <p class="mb-0">{{ kg.address_line }}</p>
                         </div>
-                        
-                        <div class="mb-3">
-                            <i class="bi bi-telephone text-primary me-2"></i>
-                            <a href="tel:${kg.contact_phone}" class="text-decoration-none">${kg.contact_phone}</a>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <i class="bi bi-envelope text-primary me-2"></i>
-                            ${kg.contact_email ? `<a href="mailto:${kg.contact_email}" class="text-decoration-none">${kg.contact_email}</a>` : `<span class="text-muted">—</span>`}
-                        </div>
-                        
-                        ${kg.operating_hours_start && kg.operating_hours_end ? `
-                            <div class="mb-3">
-                                <i class="bi bi-clock text-primary me-2"></i>
-                                <span>${kg.operating_hours_start} - ${kg.operating_hours_end}</span>
-                            </div>
-                        ` : ''}
-                        
-                        ${kg.license_number ? `
-                            <div class="mb-0">
-                                <i class="bi bi-card-checklist text-primary me-2"></i>
-                                <span>ترخيص: ${kg.license_number}</span>
-                            </div>
-                        ` : ''}
                     </div>
-                    <div class="card-footer bg-transparent">
-                        <div class="d-flex gap-2">
-                            <a href="/kindergartens/${kg.id}" class="btn btn-outline-primary flex-fill">
-                                <i class="bi bi-eye me-1"></i>عرض
-                            </a>
-                            <a href="/kindergartens/${kg.id}/edit" class="btn btn-outline-secondary flex-fill">
-                                <i class="bi bi-pencil me-1"></i>تعديل
-                            </a>
-                            ${kg.status === 'ACTIVE' ? 
-                                `<button onclick="confirmArchive(${kg.id}, '${kg.name_ar}')" class="btn btn-outline-warning flex-fill">
-                                    <i class="bi bi-archive me-1"></i>أرشفة
-                                </button>` :
-                                `<button onclick="confirmRestore(${kg.id}, '${kg.name_ar}')" class="btn btn-outline-success flex-fill">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i>استعادة
-                                </button>`
-                            }
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-telephone me-1"></i>رقم الهاتف
+                            </h6>
+                            <p class="mb-0">{{ kg.contact_phone or 'غير محدد' }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-envelope me-1"></i>البريد الإلكتروني
+                            </h6>
+                            <p class="mb-0">{{ kg.contact_email or 'غير محدد' }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-clock me-1"></i>ساعات العمل
+                            </h6>
+                            <p class="mb-0">
+                                <span data-i18n="common.from">من</span> {{ kg.operating_hours_start or 'غير محدد' }}
+                                <span data-i18n="common.to">إلى</span> {{ kg.operating_hours_end or 'غير
+                                محدد' }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-card-text me-1"></i>رقم الترخيص
+                            </h6>
+                            <p class="mb-0">{{ kg.license_number or 'غير محدد' }}</p>
                         </div>
                     </div>
                 </div>
             </div>
-        `).join('');
-    }
+        </div>
+    </div>
 
-    // Archive/Restore functionality
-    window.confirmArchive = (id, name) => {
-        if(confirm(`هل أنت متأكد من رغبتك في أرشفة روضة "${name}"؟ سيتم إخفاؤها من القوائم النشطة.`)) {
-            archiveKindergarten(id);
-        }
-    };
+    <div class="col-lg-4">
+        <!-- Status Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-flag me-2"></i>حالة الروضة
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    {% if kg.status.value == 'ACTIVE' %}
+                    <span class="badge bg-success fs-6">نشط</span>
+                    {% elif kg.status.value == 'DRAFT' %}
+                    <span class="badge bg-warning fs-6">مسودة</span>
+                    {% else %}
+                    <span class="badge bg-secondary fs-6">غير نشط</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
 
-    window.confirmRestore = (id, name) => {
-        if(confirm(`هل أنت متأكد من رغبتك في استعادة روضة "${name}"؟`)) {
-            restoreKindergarten(id);
-        }
-    };
-
-    async function archiveKindergarten(id) {
-        try {
-            const response = await fetch(`/api/kindergartens/${id}/archive`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token')}`
-                }
-            });
-            
-            if (response.ok) {
-                const result = await response.json();
-                showToast(result.message, 'success');
-                loadKindergartens(); // Reload list
-            } else {
-                const error = await response.json();
-                showToast(error.detail || 'فشل في الأرشفة', 'error');
-            }
-        } catch (error) {
-            console.error('Archive error:', error);
-            showToast('حدث خطأ في الأرشفة', 'error');
-        }
-    }
-
-    async function restoreKindergarten(id) {
-        try {
-            const response = await fetch(`/api/kindergartens/${id}/restore`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token')}`
-                }
-            });
-            
-            if (response.ok) {
-                const result = await response.json();
-                showToast(result.message, 'success');
-                loadKindergartens(); // Reload list
-            } else {
-                const error = await response.json();
-                showToast(error.detail || 'فشل في الاستعادة', 'error');
-            }
-        } catch (error) {
-            console.error('Restore error:', error);
-            showToast('حدث خطأ في الاستعادة', 'error');
-        }
-    }
-    
-    // Filter form submission
-    document.getElementById('filterForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await loadKindergartens();
-    });
-    
-    // Search debounce
-    let searchTimeout;
-    document.getElementById('searchQuery').addEventListener('input', (e) => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const query = e.target.value.toLowerCase();
-            const filtered = kindergartens.filter(kg => 
-                kg.name_ar.toLowerCase().includes(query) ||
-                (kg.name_en && kg.name_en.toLowerCase().includes(query)) ||
-                kg.area.toLowerCase().includes(query)
-            );
-            renderKindergartens(filtered);
-        }, 300);
-    });
-</script>
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-gear me-2"></i>إجراءات سريعة
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/kindergartens/{{ kg.id }}/edit" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil-square me-2"></i>تعديل المعلومات
+                    </a>
+                    <a href="/kindergartens/{{ kg.id }}" class="btn btn-outline-info">
+                        <i class="bi bi-eye me-2"></i>عرض التفاصيل الكاملة
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %} {# manager/supervisor content block #}
+{% endif %} {# admin/non-admin page branch #}
 {% endblock %}

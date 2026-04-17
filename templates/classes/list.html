@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{% if ui_lang == 'en' %}Classroom Management{% else %}إدارة الشعب الصفية{% endif %}{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+title="إدارة الشعب الصفية",
+icon="bi-people-fill",
+breadcrumbs=[
+{"label": "لوحة التحكم", "url": "/dashboard"},
+{"label": "الشعب الصفية"}
+]
+) }}
+{% endblock %}
+
+{% block content %}
+<style>
+    .class-card {
+        transition: box-shadow .2s;
+    }
+
+    .class-card:hover {
+        box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .1);
+    }
+
+    .age-badge {
+        font-size: 0.8rem;
+    }
+
+    .capacity-bar {
+        height: 6px;
+        border-radius: 3px;
+    }
+</style>
+
+<!-- Toolbar -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            {% if current_user.role.value == 'ADMIN' %}
+            <div class="col-md-3">
+                <label class="form-label small text-muted">الروضة</label>
+                <select id="filterKindergarten" class="form-select form-select-sm" onchange="loadClasses()">
+                    <option value="">جميع الروضات</option>
+                </select>
+            </div>
+            {% endif %}
+            <div class="col-md-3">
+                <label class="form-label small text-muted">الحالة</label>
+                <select id="filterStatus" class="form-select form-select-sm" onchange="loadClasses()">
+                    <option value="">الكل</option>
+                    <option value="true" selected>نشط</option>
+                    <option value="false">غير نشط</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted">بحث</label>
+                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="اسم الشعبة..."
+                    oninput="filterTable()">
+            </div>
+            <div class="col-md-3 text-end">
+                <a href="/classes/create" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-lg me-1"></i>إضافة شعبة
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Classes Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="classesTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>اسم الشعبة</th>
+                        {% if current_user.role.value == 'ADMIN' %}
+                        <th>الروضة</th>
+                        {% endif %}
+                        <th>الفئة العمرية</th>
+                        <th>السعة</th>
+                        <th>المشرف</th>
+                        <th>الحالة</th>
+                        <th class="text-center">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="classesBody">
+                    <tr id="loadingRow">
+                        <td colspan="8" class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">جاري التحميل...</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Empty State -->
+<div id="emptyState" class="text-center py-5 d-none">
+    <i class="bi bi-inbox fs-1 text-muted"></i>
+    <h5 class="text-muted mt-3">لا توجد شعب صفية</h5>
+    <p class="text-muted">ابدأ بإضافة شعبة صفية جديدة</p>
+    <a href="/classes/create" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>إضافة شعبة
+    </a>
+</div>
+
+<script>
+    const api = new KinJoAPI();
+    let allClasses = [];
+    const isAdmin = '{{ current_user.role.value }}' === 'ADMIN';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (isAdmin) {
+            await loadKindergartenFilter();
+        }
+        await loadClasses();
+    });
+
+    async function loadKindergartenFilter() {
+        try {
+            console.log('Loading kindergarten filter...');
+            const data = await api.getKindergartens({ status: 'active' });
+            console.log('Received data:', data);
+            const kgs = data.kindergartens || data || [];
+            console.log('Kindergartens found:', kgs.length);
+            const select = document.getElementById('filterKindergarten');
+            kgs.forEach(kg => {
+                const opt = document.createElement('option');
+                opt.value = kg.id;
+                opt.textContent = kg.name_ar;
+                select.appendChild(opt);
+                console.log('Added option:', kg.id, kg.name_ar || kg.name);
+            });
+        } catch (e) {
+            console.error('تعذر تحميل الروضات:', e);
+        }
+    }
+
+    async function loadClasses() {
+        const tbody = document.getElementById('classesBody');
+        const emptyState = document.getElementById('emptyState');
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">
+        <div class="spinner-border spinner-border-sm text-primary"></div>
+        <span class="ms-2">جاري التحميل...</span></td></tr>`;
+        emptyState.classList.add('d-none');
+
+        try {
+            const params = {};
+            if (isAdmin) {
+                const kgFilter = document.getElementById('filterKindergarten');
+                if (kgFilter && kgFilter.value) params.kindergarten_id = kgFilter.value;
+            }
+            const statusFilter = document.getElementById('filterStatus');
+            if (statusFilter && statusFilter.value !== '') {
+                params.is_active = statusFilter.value;
+            }
+
+            const data = await api.getClasses(params);
+            allClasses = data.classes || data || [];
+            renderTable(allClasses);
+        } catch (e) {
+            console.error('تعذر تحميل الفصول:', e);
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">
+            <i class="bi bi-exclamation-triangle me-2"></i>حدث خطأ في تحميل البيانات</td></tr>`;
+        }
+    }
+
+    function renderTable(classes) {
+        const tbody = document.getElementById('classesBody');
+        const emptyState = document.getElementById('emptyState');
+
+        if (!classes || classes.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.classList.remove('d-none');
+            return;
+        }
+        emptyState.classList.add('d-none');
+
+        tbody.innerHTML = classes.map((c, idx) => `
+        <tr>
+            <td>${idx + 1}</td>
+            <td>
+                <a href="/classes/${c.id}" class="text-decoration-none fw-semibold">
+                    ${c.name_ar || ''}
+                </a>
+                ${c.name_en ? `<br><small class="text-muted">${c.name_en}</small>` : ''}
+            </td>
+            ${isAdmin ? `<td>${c.kindergarten_name || '-'}</td>` : ''}
+            <td>
+                <span class="badge bg-info bg-opacity-10 text-info age-badge">
+                    ${c.min_age_months} - ${c.max_age_months} شهر
+                </span>
+            </td>
+            <td>${c.capacity_total || '-'}</td>
+            <td>${c.current_supervisor ? c.current_supervisor.name : '<span class="text-muted">-</span>'}</td>
+            <td>
+                ${c.is_active
+                ? '<span class="badge bg-success">نشط</span>'
+                : '<span class="badge bg-secondary">غير نشط</span>'}
+            </td>
+            <td class="text-center">
+                <div class="btn-group btn-group-sm">
+                    <a href="/classes/${c.id}" class="btn btn-outline-primary" title="عرض">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="/classes/${c.id}/edit" class="btn btn-outline-warning" title="تعديل">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <button class="btn btn-outline-danger" title="حذف" onclick="deleteClass(${c.id}, '${(c.name_ar || '').replace(/'/g, "\\'")}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    }
+
+    function filterTable() {
+        const q = (document.getElementById('searchInput').value || '').toLowerCase();
+        if (!q) {
+            renderTable(allClasses);
+            return;
+        }
+        const filtered = allClasses.filter(c =>
+            (c.name_ar || '').toLowerCase().includes(q) ||
+            (c.name_en || '').toLowerCase().includes(q)
+        );
+        renderTable(filtered);
+    }
+
+    async function deleteClass(id, name) {
+        const result = await Swal.fire({
+            title: 'حذف الشعبة',
+            text: `هل أنت متأكد من حذف "${name}"؟`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'نعم، احذف',
+            cancelButtonText: 'إلغاء'
+        });
+        if (!result.isConfirmed) return;
+
+        try {
+            await api.delete(`/api/classes/${id}`);
+            Swal.fire({
+                icon: 'success',
+                title: 'تم الحذف',
+                text: 'تم حذف الشعبة بنجاح',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            await loadClasses();
+        } catch (e) {
+            Swal.fire({
+                icon: 'error',
+                title: 'خطأ',
+                text: e.message || 'حدث خطأ أثناء الحذف'
+            });
+        }
+    }
+</script>
+{% endblock %}

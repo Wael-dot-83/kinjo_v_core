@@ -23,6 +23,7 @@ from api.kpi_routes import router as kpi_router
 from api.supervisor import router as supervisor_router
 from api.portfolio import router as portfolio_router
 from api.audit_routes import router as audit_router
+from api.absence_requests import router as absence_router
 
 # Mount all domain routers
 router.include_router(users_router)
@@ -40,6 +41,7 @@ router.include_router(kpi_router)
 router.include_router(supervisor_router)
 router.include_router(portfolio_router)
 router.include_router(audit_router)
+router.include_router(absence_router)
 
 # Re-export for backward compatibility
 from api.supervisor import get_supervisor_classes  # noqa: F401  (notification_service.py)

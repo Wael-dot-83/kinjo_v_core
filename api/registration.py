@@ -35,6 +35,11 @@ class ParentRegistrationRequest(BaseModel):
     correspondence_preference: Optional[bool] = True
     email: str
     password: str
+    work_address: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    emergency_contact_relationship: Optional[str] = None
+    relationship_to_child: Optional[str] = None
 
     @field_validator("home_governorate")
     def validate_home_governorate(cls, value):
@@ -100,7 +105,12 @@ def register_parent(
         home_city=registration_data.home_city,
         home_area=registration_data.home_area,
         home_address_line=registration_data.home_address_line,
-        correspondence_preference=registration_data.correspondence_preference or True
+        correspondence_preference=registration_data.correspondence_preference or True,
+        work_address=registration_data.work_address,
+        emergency_contact_name=registration_data.emergency_contact_name,
+        emergency_contact_phone=registration_data.emergency_contact_phone,
+        emergency_contact_relationship=registration_data.emergency_contact_relationship,
+        relationship_to_child=registration_data.relationship_to_child,
     )
     db.add(parent_profile)
     db.commit()

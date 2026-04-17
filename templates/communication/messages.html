@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}صندوق الرسائل{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Messages Inbox{% else %}صندوق الرسائل{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
@@ -10,7 +10,7 @@
             صندوق الرسائل
             <span id="unreadCountBadge" class="badge bg-primary ms-2 d-none">0</span>
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
                 <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
@@ -99,7 +99,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="messageDetailModalLabel">الرسالة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -130,15 +130,41 @@
 <script>
     let allMessages = [];
     let refreshTimer = null;
+    let authExpiredHandled = false;
     let currentPage = 1;
     const pageSize = 25;
-    const currentUserId = {{ current_user.id }};
+    var currentUserId = {{ current_user.id }};
     let currentFilter = 'all';
     let currentSearch = '';
     let unreadOnly = false;
     let totalPages = 1;
     let archivedOnly = false;
     let selectedMessageIds = new Set();
+
+    function stopMessagesAutoRefresh() {
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+            refreshTimer = null;
+        }
+    }
+
+    function handleUnauthorizedResponse(response) {
+        if (!response || ![401, 403].includes(response.status)) {
+            return false;
+        }
+        stopMessagesAutoRefresh();
+        if (authExpiredHandled) {
+            return true;
+        }
+        authExpiredHandled = true;
+        if (window.AuthStorage && typeof AuthStorage.clearAll === 'function') {
+            AuthStorage.clearAll();
+        }
+        if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login?expired=true';
+        }
+        return true;
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
         loadMessages();
@@ -177,9 +203,22 @@
         document.getElementById('bulkDeleteBtn').addEventListener('click', () => bulkAction('delete'));
     });
 
+    window.addEventListener('beforeunload', stopMessagesAutoRefresh);
+
     async function loadMessages() {
         try {
-            const token = localStorage.getItem('access_token');
+            // Use centralized auth system instead of direct localStorage access
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.</div>`;
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.</div>`;
+                return;
+            }
+
             const params = new URLSearchParams();
             params.set('page', currentPage);
             params.set('page_size', pageSize);
@@ -199,6 +238,10 @@
             const response = await fetch(`/comm/messages?${params.toString()}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+
+            if (handleUnauthorizedResponse(response)) {
+                return;
+            }
 
             if (response.ok) {
                 const data = await response.json();
@@ -387,7 +430,19 @@
     async function openMessage(messageId) {
         try {
             currentOpenMessageId = messageId;
-            const token = localStorage.getItem('access_token');
+
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
             const response = await fetch(`/comm/messages/${messageId}/replies`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -508,10 +563,22 @@
 
     async function updateUnreadCount() {
         try {
-            const token = localStorage.getItem('access_token');
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                return;
+            }
+
             const response = await fetch('/comm/messages/unread/count', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            if (handleUnauthorizedResponse(response)) {
+                return;
+            }
             if (!response.ok) {
                 return;
             }
@@ -537,7 +604,18 @@
             return;
         }
         try {
-            const token = localStorage.getItem('access_token');
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
             const response = await fetch(`/comm/messages/${currentOpenMessageId}/replies`, {
                 method: 'POST',
                 headers: {
@@ -571,7 +649,18 @@
             return;
         }
         try {
-            const token = localStorage.getItem('access_token');
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
             const action = currentOpenArchived ? 'unarchive' : 'archive';
             const response = await fetch(`/comm/messages/${currentOpenMessageId}/${action}`, {
                 method: 'POST',
@@ -602,7 +691,18 @@
             return;
         }
         try {
-            const token = localStorage.getItem('access_token');
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
             const response = await fetch('/comm/messages/bulk', {
                 method: 'POST',
                 headers: {
@@ -638,7 +738,18 @@
             return;
         }
         try {
-            const token = localStorage.getItem('access_token');
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                return;
+            }
+
             const response = await fetch(`/comm/messages/${currentOpenMessageId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -664,7 +775,16 @@
 
     async function markMessageRead(messageId) {
         try {
-            const token = localStorage.getItem('access_token');
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                return;
+            }
+
             const response = await fetch(`/comm/messages/${messageId}/read`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }

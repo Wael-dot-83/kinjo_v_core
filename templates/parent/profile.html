@@ -1,0 +1,541 @@
+{% extends 'base.html' %}
+
+{% block title %}ملفي الشخصي{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-person-circle me-2 text-primary"></i>
+            ملفي الشخصي
+        </h1>
+        <nav aria-label="مسار التنقل">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">ملفي الشخصي</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Profile Completion Alert -->
+<div id="profileAlert" class="alert alert-warning d-none" role="alert">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <strong>ملفك الشخصي غير مكتمل.</strong> يجب إكمال جميع الحقول المطلوبة لتتمكن من تقديم طلبات تسجيل.
+</div>
+
+<div class="row g-4">
+    <!-- Profile Info Card -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person me-2 text-primary"></i>المعلومات الشخصية
+                </h5>
+                <button class="btn btn-sm btn-outline-primary" id="btnEditProfile" onclick="toggleEditMode()">
+                    <i class="bi bi-pencil me-1"></i>تعديل
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- View Mode -->
+                <div id="viewMode">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="text-muted small">الاسم الأول</label>
+                            <div class="fw-semibold" id="viewFirstName">—</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">الاسم الثاني</label>
+                            <div class="fw-semibold" id="viewSecondName">—</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">اسم العائلة</label>
+                            <div class="fw-semibold" id="viewLastName">—</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted small">رقم الهاتف</label>
+                            <div class="fw-semibold" id="viewPhone">—</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted small">البريد الإلكتروني</label>
+                            <div class="fw-semibold" id="viewEmail">—</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted small">الجنس</label>
+                            <div class="fw-semibold" id="viewGender">—</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted small">الجنسية</label>
+                            <div class="fw-semibold" id="viewNationality">—</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted small">الرقم الوطني</label>
+                            <div class="fw-semibold" id="viewNationalId">—</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted small">رقم جواز السفر</label>
+                            <div class="fw-semibold" id="viewPassport">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Mode -->
+                <form id="editMode" class="d-none">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="editFirstName" class="form-label">الاسم الأول <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editFirstName" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editSecondName" class="form-label">الاسم الثاني</label>
+                            <input type="text" class="form-control" id="editSecondName">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editLastName" class="form-label">اسم العائلة <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editLastName" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editPhone" class="form-label">رقم الهاتف <span
+                                    class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" id="editPhone" dir="ltr" placeholder="+962..."
+                                required>
+                        </div>
+                        <div class="col-12 mt-3">
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-save me-1"></i>حفظ التغييرات
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary me-2" onclick="cancelEdit()">
+                                إلغاء
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Address Card -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-geo-alt me-2 text-success"></i>العنوان
+                </h5>
+                <button class="btn btn-sm btn-outline-success" id="btnEditAddress" onclick="toggleAddressEdit()">
+                    <i class="bi bi-pencil me-1"></i>تعديل
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- View Mode -->
+                <div id="addressViewMode">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="text-muted small">المحافظة</label>
+                            <div class="fw-semibold" id="viewGovernorate">—</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">المدينة</label>
+                            <div class="fw-semibold" id="viewCity">—</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted small">المنطقة</label>
+                            <div class="fw-semibold" id="viewArea">—</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted small">عنوان السكن</label>
+                            <div class="fw-semibold" id="viewAddressLine">—</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted small">عنوان العمل</label>
+                            <div class="fw-semibold" id="viewWorkAddress">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Mode -->
+                <form id="addressEditMode" class="d-none">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="editGovernorate" class="form-label">المحافظة <span
+                                    class="text-danger">*</span></label>
+                            <select class="form-select" id="editGovernorate" required>
+                                <option value="">اختر المحافظة</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editCity" class="form-label">المدينة <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editCity" required>
+                                <option value="">اختر المحافظة أولاً</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editArea" class="form-label">المنطقة <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editArea" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editAddressLine" class="form-label">عنوان السكن <span
+                                    class="text-danger">*</span></label>
+                            <textarea class="form-control" id="editAddressLine" rows="2" required></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editWorkAddress" class="form-label">عنوان العمل</label>
+                            <textarea class="form-control" id="editWorkAddress" rows="2"></textarea>
+                        </div>
+                        <div class="col-12 mt-3">
+                            <button type="submit" class="btn btn-success px-4">
+                                <i class="bi bi-save me-1"></i>حفظ العنوان
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary me-2" onclick="cancelAddressEdit()">
+                                إلغاء
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Panel -->
+    <div class="col-lg-4">
+        <!-- Profile Status Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body text-center">
+                <div class="avatar-lg bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+                    style="width: 80px; height: 80px;">
+                    <i class="bi bi-person-fill text-primary fs-1"></i>
+                </div>
+                <h5 class="mb-1" id="profileFullName">—</h5>
+                <p class="text-muted mb-3" id="profileRole">ولي أمر</p>
+                <div id="profileStatusBadge">
+                    <span class="badge bg-secondary">جاري التحميل...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0"><i class="bi bi-link-45deg me-2"></i>روابط سريعة</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/parent/children" class="btn btn-outline-primary">
+                        <i class="bi bi-people me-2"></i>أطفالي
+                    </a>
+                    <a href="/enroll" class="btn btn-outline-success">
+                        <i class="bi bi-person-plus me-2"></i>تسجيل طفل جديد
+                    </a>
+                    <a href="/parent/enrollments" class="btn btn-outline-info">
+                        <i class="bi bi-clipboard-check me-2"></i>طلبات التسجيل
+                    </a>
+                    <a href="/settings" class="btn btn-outline-secondary">
+                        <i class="bi bi-gear me-2"></i>إعدادات الحساب
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preferences -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0"><i class="bi bi-sliders me-2"></i>التفضيلات</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="correspondenceSwitch" checked>
+                    <label class="form-check-label" for="correspondenceSwitch">
+                        استلام المراسلات
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Governorate data loaded from API (canonical source)
+    let _govData = [];
+    const GOVERNORATE_AR = {};  // Populated dynamically
+
+    let profileData = null;
+
+    function getHeaders() {
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return { 'Content-Type': 'application/json' };
+        }
+        const token = AuthService.getToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadGovernorates();
+        await loadProfile();
+    });
+
+    async function loadGovernorates() {
+        try {
+            const res = await fetch('/api/reference/governorates');
+            const data = await res.json();
+            _govData = data.governorates || [];
+            _govData.forEach(g => {
+                GOVERNORATE_AR[g.name_ar] = g.name_ar;
+                GOVERNORATE_AR[g.name_en] = g.name_ar;  // English→Arabic alias
+            });
+            populateGovernorates();
+        } catch (e) {
+            console.error('تعذر تحميل المحافظات', e);
+        }
+    }
+
+    function populateGovernorates() {
+        const sel = document.getElementById('editGovernorate');
+        sel.innerHTML = '<option value="">اختر...</option>';
+        _govData.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.name_ar;
+            opt.textContent = g.name_ar;
+            sel.appendChild(opt);
+        });
+    }
+
+    function populateCities(govName, selectedCity) {
+        const sel = document.getElementById('editCity');
+        const gov = _govData.find(g => g.name_ar === govName || g.name_en === govName);
+        if (!gov || !gov.cities || !gov.cities.length) {
+            sel.innerHTML = '<option value="">لا توجد مدن</option>';
+            return;
+        }
+        sel.innerHTML = '<option value="">اختر المدينة...</option>';
+        gov.cities.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            if (c === selectedCity) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    }
+
+    document.getElementById('editGovernorate').addEventListener('change', function () {
+        populateCities(this.value, '');
+    });
+
+    async function loadProfile() {
+        try {
+            const resp = await fetch('/api/parent/profile', { headers: getHeaders() });
+            if (!resp.ok) {
+                if (resp.status === 404) {
+                    document.getElementById('profileAlert').classList.remove('d-none');
+                    document.getElementById('profileAlert').innerHTML =
+                        '<i class="bi bi-exclamation-triangle me-2"></i><strong>لم يتم العثور على ملفك الشخصي.</strong> يرجى التواصل مع الإدارة.';
+                    return;
+                }
+                throw new Error("تعذر تحميل الملف الشخصي");
+            }
+
+            profileData = await resp.json();
+            renderProfile(profileData);
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            Swal.fire({ icon: 'error', title: 'خطأ', text: 'تعذر تحميل الملف الشخصي' });
+        }
+    }
+
+    function renderProfile(p) {
+        // Top card
+        document.getElementById('profileFullName').textContent = `${p.first_name} ${p.second_name || ''} ${p.last_name}`.trim();
+        document.getElementById('profileStatusBadge').innerHTML = p.profile_complete
+            ? '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>مكتمل</span>'
+            : '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>غير مكتمل</span>';
+
+        if (!p.profile_complete) {
+            document.getElementById('profileAlert').classList.remove('d-none');
+        }
+
+        // Personal Info
+        document.getElementById('viewFirstName').textContent = p.first_name || '—';
+        document.getElementById('viewSecondName').textContent = p.second_name || '—';
+        document.getElementById('viewLastName').textContent = p.last_name || '—';
+        document.getElementById('viewPhone').textContent = p.phone_number || '—';
+        document.getElementById('viewEmail').textContent = p.email || '—';
+        document.getElementById('viewGender').textContent = p.gender === 'MALE' ? 'ذكر' : p.gender === 'FEMALE' ? 'أنثى' : '—';
+        document.getElementById('viewNationality').textContent = p.nationality || '—';
+        document.getElementById('viewNationalId').textContent = p.national_id || '—';
+        document.getElementById('viewPassport').textContent = p.passport_number || '—';
+
+        // Address
+        document.getElementById('viewGovernorate').textContent = GOVERNORATE_AR[p.home_governorate] || p.home_governorate || '—';
+        document.getElementById('viewCity').textContent = p.home_city || '—';
+        document.getElementById('viewArea').textContent = p.home_area || '—';
+        document.getElementById('viewAddressLine').textContent = p.home_address_line || '—';
+        document.getElementById('viewWorkAddress').textContent = p.work_address || '—';
+
+        // Preferences
+        document.getElementById('correspondenceSwitch').checked = p.correspondence_preference !== false;
+
+        // Fill edit forms
+        document.getElementById('editFirstName').value = p.first_name || '';
+        document.getElementById('editSecondName').value = p.second_name || '';
+        document.getElementById('editLastName').value = p.last_name || '';
+        document.getElementById('editPhone').value = p.phone_number || '';
+        // Set governorate (match by Arabic or English name)
+        const govSelect = document.getElementById('editGovernorate');
+        const govValue = p.home_governorate || '';
+        // Try to match Arabic name
+        const matchedGov = _govData.find(g => g.name_ar === govValue || g.name_en === govValue);
+        govSelect.value = matchedGov ? matchedGov.name_ar : govValue;
+        // Populate cities for current governorate
+        if (matchedGov) {
+            populateCities(matchedGov.name_ar, p.home_city || '');
+        }
+        document.getElementById('editArea').value = p.home_area || '';
+        document.getElementById('editAddressLine').value = p.home_address_line || '';
+        document.getElementById('editWorkAddress').value = p.work_address || '';
+    }
+
+    // Toggle personal info edit
+    function toggleEditMode() {
+        document.getElementById('viewMode').classList.toggle('d-none');
+        document.getElementById('editMode').classList.toggle('d-none');
+        const btn = document.getElementById('btnEditProfile');
+        if (document.getElementById('editMode').classList.contains('d-none')) {
+            btn.innerHTML = '<i class="bi bi-pencil me-1"></i>تعديل';
+        } else {
+            btn.innerHTML = '<i class="bi bi-x me-1"></i>إلغاء';
+        }
+    }
+
+    function cancelEdit() {
+        if (profileData) renderProfile(profileData);
+        document.getElementById('viewMode').classList.remove('d-none');
+        document.getElementById('editMode').classList.add('d-none');
+        document.getElementById('btnEditProfile').innerHTML = '<i class="bi bi-pencil me-1"></i>تعديل';
+    }
+
+    // Toggle address edit
+    function toggleAddressEdit() {
+        document.getElementById('addressViewMode').classList.toggle('d-none');
+        document.getElementById('addressEditMode').classList.toggle('d-none');
+        const btn = document.getElementById('btnEditAddress');
+        if (document.getElementById('addressEditMode').classList.contains('d-none')) {
+            btn.innerHTML = '<i class="bi bi-pencil me-1"></i>تعديل';
+        } else {
+            btn.innerHTML = '<i class="bi bi-x me-1"></i>إلغاء';
+        }
+    }
+
+    function cancelAddressEdit() {
+        if (profileData) renderProfile(profileData);
+        document.getElementById('addressViewMode').classList.remove('d-none');
+        document.getElementById('addressEditMode').classList.add('d-none');
+        document.getElementById('btnEditAddress').innerHTML = '<i class="bi bi-pencil me-1"></i>تعديل';
+    }
+
+    // Save personal info
+    document.getElementById('editMode').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!profileData) return;
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        const origHtml = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>جاري الحفظ...';
+
+        const payload = {
+            first_name: document.getElementById('editFirstName').value.trim(),
+            second_name: document.getElementById('editSecondName').value.trim() || null,
+            last_name: document.getElementById('editLastName').value.trim(),
+            phone_number: document.getElementById('editPhone').value.trim(),
+        };
+
+        if (!payload.first_name || !payload.last_name || !payload.phone_number) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origHtml;
+            Swal.fire({ icon: 'warning', title: 'تنبيه', text: 'يرجى تعبئة جميع الحقول المطلوبة' });
+            return;
+        }
+
+        try {
+            const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) throw new Error('Update failed');
+
+            Swal.fire({ icon: 'success', title: 'تم', text: 'تم تحديث البيانات الشخصية بنجاح', timer: 1500, showConfirmButton: false });
+            await loadProfile();
+            cancelEdit();
+        } catch (err) {
+            console.error(err);
+            Swal.fire({ icon: 'error', title: 'خطأ', text: 'تعذر حفظ التغييرات' });
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origHtml;
+        }
+    });
+
+    // Save address
+    document.getElementById('addressEditMode').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!profileData) return;
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        const origHtml = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>جاري الحفظ...';
+
+        const payload = {
+            home_governorate: document.getElementById('editGovernorate').value,
+            home_city: document.getElementById('editCity').value.trim(),
+            home_area: document.getElementById('editArea').value.trim(),
+            home_address_line: document.getElementById('editAddressLine').value.trim(),
+        };
+
+        if (!payload.home_governorate || !payload.home_city || !payload.home_area || !payload.home_address_line) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origHtml;
+            Swal.fire({ icon: 'warning', title: 'تنبيه', text: 'يرجى تعبئة جميع حقول العنوان المطلوبة' });
+            return;
+        }
+
+        try {
+            const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) throw new Error('Update failed');
+
+            Swal.fire({ icon: 'success', title: 'تم', text: 'تم تحديث العنوان بنجاح', timer: 1500, showConfirmButton: false });
+            await loadProfile();
+            cancelAddressEdit();
+        } catch (err) {
+            console.error(err);
+            Swal.fire({ icon: 'error', title: 'خطأ', text: 'تعذر حفظ العنوان' });
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origHtml;
+        }
+    });
+
+    // Correspondence preference toggle
+    document.getElementById('correspondenceSwitch').addEventListener('change', async function () {
+        if (!profileData) return;
+        try {
+            await fetch(`/api/parent-profiles/${profileData.id}`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify({ correspondence_preference: this.checked })
+            });
+        } catch (e) { console.error(e); }
+    });
+</script>
+{% endblock %}

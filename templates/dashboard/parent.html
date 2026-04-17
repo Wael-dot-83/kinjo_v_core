@@ -51,9 +51,9 @@
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="/profile" class="btn btn-secondary btn-lg w-100 py-3">
-                            <i class="bi bi-gear fs-3 d-block mb-2"></i>
-                            الإعدادات
+                        <a href="/parent/profile" class="btn btn-secondary btn-lg w-100 py-3">
+                            <i class="bi bi-person-circle fs-3 d-block mb-2"></i>
+                            ملفي الشخصي
                         </a>
                     </div>
                 </div>
@@ -80,7 +80,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-12 col-lg-4">
         <!-- Upcoming Events -->
         <div class="card mb-3">
@@ -99,7 +99,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Contact Support -->
         <div class="card">
             <div class="card-body text-center">
@@ -117,74 +117,96 @@
 
 {% block extra_js %}
 <script>
+    const SERVER_TODAY = "{{ today.isoformat() if today else '' }}";
+    const parentText = (key, arText, enText) =>
+        (typeof appText === 'function'
+            ? appText(key, arText, enText)
+            : (document.documentElement.lang === 'en' ? enText : arText));
+    const parentLocale = () =>
+        (typeof appCurrentLocale === 'function'
+            ? appCurrentLocale()
+            : (document.documentElement.lang === 'en' ? 'en-US' : 'ar-JO'));
+
     // Auth helper
     function getHeaders() {
-        const token = localStorage.getItem('access_token');
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return { 'Content-Type': 'application/json' };
+        }
+
+        const token = AuthService.getToken();
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
         return headers;
     }
-    
+
     function formatDate(dateStr) {
         if (!dateStr) return '';
-        return new Date(dateStr).toLocaleDateString('ar-SA'); // or suitable locale
+        return new Date(dateStr).toLocaleDateString(parentLocale());
     }
-    
+
     function getStatusBadge(status) {
+        const normalized = (status || '').toString().toUpperCase();
         const badges = {
-            'approved': '<span class="badge bg-success">معتمد</span>',
-            'submitted': '<span class="badge bg-warning text-dark">قيد المراجعة</span>',
-            'draft': '<span class="badge bg-secondary">مسودة</span>'
+            APPROVED: `<span class="badge bg-success">${parentText('status.approved', 'معتمد', 'Approved')}</span>`,
+            SENT_TO_PARENT: `<span class="badge bg-primary">${parentText('status.sent_to_parent', 'مرسل لولي الأمر', 'Sent to parent')}</span>`,
+            SUBMITTED: `<span class="badge bg-warning text-dark">${parentText('status.pending_review', 'قيد المراجعة', 'Under review')}</span>`,
+            DRAFT: `<span class="badge bg-secondary">${parentText('status.draft', 'مسودة', 'Draft')}</span>`,
+            REJECTED: `<span class="badge bg-danger">${parentText('status.rejected', 'مرفوض', 'Rejected')}</span>`,
+            RETURNED: `<span class="badge bg-danger">${parentText('status.returned', 'مرفوض', 'Rejected')}</span>`,
         };
-        return badges[status] || '<span class="badge bg-light text-dark">غير معروف</span>';
+        return badges[normalized] || `<span class="badge bg-light text-dark">${parentText('common.unknown', 'غير معروف', 'Unknown')}</span>`;
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
         await loadParentDashboard();
     });
-    
+
     async function loadParentDashboard() {
         try {
             const resp = await fetch('/api/parent/dashboard', { headers: getHeaders() });
-            if (!resp.ok) throw new Error("Failed to load dashboard");
-            
+            if (!resp.ok) throw new Error(parentText('dashboard.parent.load_failed', 'تعذر تحميل لوحة المعلومات', 'Unable to load dashboard'));
+
             const data = await resp.json();
             const children = data.children || [];
-            
+
             renderChildrenCards(children);
-            
+
             // Fetch latest reports for all children
-            const reportsPromises = children.map(child => 
+            const reportsPromises = children.map(child =>
                 fetch(`/api/daily-reports/child/${child.id}`, { headers: getHeaders() })
                     .then(r => r.ok ? r.json() : { reports: [] })
                     .then(d => d.reports.map(r => ({ ...r, child_name: child.first_name, child_id: child.id })))
             );
-            
-            const results = await Promise.all(reportsPromises);
-            const allReports = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
-            
+
+            const results = await Promise.allSettled(reportsPromises);
+            const allReports = results
+                .filter(result => result.status === 'fulfilled')
+                .flatMap(result => result.value)
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+
             renderLatestReports(allReports.slice(0, 5)); // Show top 5
-            
+
         } catch (error) {
             console.error('Error loading parent dashboard:', error);
-            document.getElementById('childrenCards').innerHTML = 
-                '<div class="col-12 text-center text-danger">خطأ في تحميل البيانات</div>';
+            document.getElementById('childrenCards').innerHTML =
+                `<div class="col-12 text-center text-danger">${parentText('common.load_error', 'خطأ في تحميل البيانات', 'Error loading data')}</div>`;
         }
     }
-    
+
     function renderChildrenCards(children) {
         const container = document.getElementById('childrenCards');
-        
+
         if (!children || children.length === 0) {
             container.innerHTML = `
                 <div class="col-12">
                     <div class="card border-dashed">
                         <div class="card-body text-center py-5">
                             <i class="bi bi-person-plus fs-1 text-primary mb-3"></i>
-                            <h5>لم تقم بتسجيل أي طفل بعد</h5>
-                            <p class="text-muted">ابدأ بتسجيل طفلك في إحدى الروضات</p>
+                            <h5>${parentText('dashboard.parent.no_children', 'لم تقم بتسجيل أي طفل بعد', 'You have not enrolled any child yet')}</h5>
+                            <p class="text-muted">${parentText('dashboard.parent.start_enrollment', 'ابدأ بتسجيل طفلك في إحدى الروضات', 'Start by enrolling your child in a kindergarten')}</p>
                             <a href="/enroll" class="btn btn-primary btn-lg">
-                                <i class="bi bi-plus-circle me-2"></i>تسجيل طفل
+                                <i class="bi bi-plus-circle me-2"></i>${parentText('dashboard.parent.enroll_child', 'تسجيل طفل', 'Enroll child')}
                             </a>
                         </div>
                     </div>
@@ -192,11 +214,11 @@
             `;
             return;
         }
-        
+
         container.innerHTML = children.map(child => {
             const isPresent = child.attendance_today && child.attendance_today.checked_in && !child.attendance_today.checked_out;
-            const hasReport = child.latest_report_date === new Date().toISOString().split('T')[0];
-            
+            const hasReport = child.latest_report_date === SERVER_TODAY;
+
             return `
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 ${isPresent ? 'border-success' : ''}">
@@ -208,26 +230,26 @@
                             </div>
                             ${isPresent ? `
                                 <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-success">
-                                    <i class="bi bi-check-lg"></i> حاضر
+                                    <i class="bi bi-check-lg"></i> ${parentText('attendance.present', 'حاضر', 'Present')}
                                 </span>
                             ` : ''}
                         </div>
                         <h4 class="card-title mb-1">${child.first_name} ${child.last_name}</h4>
-                        <p class="text-muted mb-2">${child.enrollment ? 'مسجل' : 'بانتظار التسجيل'}</p>
+                        <p class="text-muted mb-2">${child.enrollment ? parentText('status.enrolled', 'مسجل', 'Enrolled') : parentText('status.pending_enrollment', 'بانتظار التسجيل', 'Pending enrollment')}</p>
                         
                         <div class="d-grid gap-2">
                             <a href="/children/${child.id}" class="btn btn-outline-primary">
-                                <i class="bi bi-person me-2"></i>الملف الشخصي
+                                <i class="bi bi-person me-2"></i>${parentText('nav.profile', 'الملف الشخصي', 'Profile')}
                             </a>
                             <a href="/my-reports?child_id=${child.id}" class="btn btn-outline-success">
-                                <i class="bi bi-journal-text me-2"></i>التقارير
+                                <i class="bi bi-journal-text me-2"></i>${parentText('common.reports', 'التقارير', 'Reports')}
                             </a>
                         </div>
                     </div>
                     ${hasReport ? `
                         <div class="card-footer bg-success bg-opacity-10 text-success text-center">
                             <i class="bi bi-check-circle me-1"></i>
-                            تقرير اليوم متاح
+                            ${parentText('dashboard.parent.today_report_available', 'تقرير اليوم متاح', 'Today report is available')}
                         </div>
                     ` : ''}
                 </div>
@@ -235,26 +257,26 @@
             `;
         }).join('');
     }
-    
+
     function renderLatestReports(reports) {
         const container = document.getElementById('latestReports');
-        
+
         if (!reports || reports.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-4 text-muted">
                     <i class="bi bi-journal d-block fs-2 mb-2 opacity-25"></i>
-                    <small>لا توجد تقارير حالياً</small>
+                    <small>${parentText('dashboard.parent.no_reports', 'لا توجد تقارير حالياً', 'No reports available')}</small>
                 </div>
             `;
             return;
         }
-        
+
         container.innerHTML = reports.map(report => `
             <div class="list-group-item list-group-item-action">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="mb-1">${report.child_name}</h6>
-                        <p class="mb-1 text-muted small">${report.notes || 'لا توجد ملاحظات'}</p>
+                        <p class="mb-1 text-muted small">${report.notes || parentText('common.no_notes', 'لا توجد ملاحظات', 'No notes')}</p>
                         <small class="text-muted">
                             <i class="bi bi-calendar me-1"></i>${formatDate(report.date)}
                         </small>

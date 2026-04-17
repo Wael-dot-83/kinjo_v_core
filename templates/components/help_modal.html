@@ -5,22 +5,22 @@
             <div class="modal-header bg-light">
                 <h5 class="modal-title" id="helpExpressModalLabel">
                     <i class="bi bi-life-preserver me-2 text-primary"></i>
-                    <span id="helpModalTitle">دليل المساعدة</span>
+                    <span id="helpModalTitle">{% if ui_lang == 'en' %}Help Guide{% else %}دليل المساعدة{% endif %}</span>
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <!-- Dynamic Content Container -->
                 <div id="helpModalContent">
                     <div class="text-center py-5">
                         <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">جاري التحميل...</span>
+                            <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">فهمت</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Understood{% else %}فهمت{% endif %}</button>
             </div>
         </div>
     </div>
@@ -50,20 +50,16 @@
                     }
                 } else {
                     // Fallback content
+                    const isEnglishUi = (document.documentElement.lang || '').toLowerCase() === 'en';
                     modalBody.innerHTML = `
                         <div class="text-center py-4 text-muted">
                             <i class="bi bi-info-circle display-4 mb-3"></i>
-                            <p class="lead">لا توجد معلومات مساعدة محددة لهذه الصفحة حالياً.</p>
+                            <p class="lead">${isEnglishUi ? 'No specific help information is currently available for this page.' : 'لا توجد معلومات مساعدة محددة لهذه الصفحة حالياً.'}</p>
                         </div>
                     `;
                 }
             });
         }
 
-        // Initialize Bootstrap Tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        })
     });
 </script>

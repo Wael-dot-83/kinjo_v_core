@@ -206,9 +206,12 @@ def get_child_daily_reports(
 
     query = db.query(models.DailyReport).filter(models.DailyReport.child_id == child_id)
     
-    # Parents only see approved reports
+    # Parents see approved and sent-to-parent reports
     if current_user.role == models.UserRole.PARENT:
-        query = query.filter(models.DailyReport.status == models.DailyReportStatus.APPROVED)
+        query = query.filter(models.DailyReport.status.in_([
+            models.DailyReportStatus.APPROVED,
+            models.DailyReportStatus.SENT_TO_PARENT,
+        ]))
     
     reports = query.order_by(models.DailyReport.date.desc()).all()
     
@@ -297,3 +300,30 @@ def list_supervisor_daily_reports(
         }
         for r in reports
     ]
+
+
+@router.post("/daily-reports/{report_id}/view")
+def record_daily_report_view(
+    report_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Record that a parent has viewed a daily report."""
+    report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    existing = db.query(models.DailyReportView).filter(
+        models.DailyReportView.daily_report_id == report_id,
+        models.DailyReportView.parent_user_id == current_user.id,
+    ).first()
+    if existing:
+        return {"status": "already_recorded"}
+
+    view = models.DailyReportView(
+        daily_report_id=report_id,
+        parent_user_id=current_user.id,
+    )
+    db.add(view)
+    db.commit()
+    return {"status": "recorded"}

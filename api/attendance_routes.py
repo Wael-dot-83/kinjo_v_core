@@ -354,3 +354,198 @@ def get_attendance_report(
         },
         chart_data=chart_data
     )
+
+
+# ── PATCH /attendance/{id}/status ────────────────────────────────────
+
+class AttendanceCorrectionRequest(BaseModel):
+    new_status: str
+    notes: Optional[str] = None
+
+
+@router.patch("/attendance/{att_id}/status")
+def correct_attendance_status(
+    att_id: int,
+    payload: AttendanceCorrectionRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    att = db.query(models.AttendanceLog).filter(
+        models.AttendanceLog.id == att_id
+    ).first()
+    if not att:
+        raise HTTPException(status_code=404, detail="Attendance record not found")
+
+    try:
+        new_status = models.AttendanceStatus(payload.new_status)
+    except (ValueError, KeyError):
+        raise HTTPException(status_code=422, detail="Invalid attendance status")
+
+    if att.status == new_status:
+        return {"message": "No change needed"}
+
+    old_status = att.status.value
+    att.status = new_status
+    if payload.notes:
+        att.notes = payload.notes
+    db.commit()
+    db.refresh(att)
+
+    return {"old_status": old_status, "new_status": att.status.value}
+
+
+# ── Attendance summary endpoints ─────────────────────────────────────
+
+def _attendance_summary(db: Session, target_date: date, current_user: models.User):
+    """Return summary dict for a single date."""
+    # Total children with ACTIVE enrollment in this user's scope
+    enrolled_q = db.query(models.EnrollmentApplication.child_id).filter(
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+    )
+    if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id:
+        enrolled_q = enrolled_q.filter(
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+        )
+    enrolled_child_ids = enrolled_q.subquery()
+
+    total_children = db.query(func.count()).select_from(enrolled_child_ids).scalar()
+
+    present_children = db.query(func.count(models.AttendanceLog.id)).filter(
+        models.AttendanceLog.date == target_date,
+        models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
+        models.AttendanceLog.child_id.in_(db.query(enrolled_child_ids)),
+    ).scalar()
+
+    rate = round((present_children / total_children * 100) if total_children else 0, 2)
+    return {
+        "date": target_date.isoformat(),
+        "total_children": total_children,
+        "present_children": present_children,
+        "attendance_rate": rate,
+    }
+
+
+@router.get("/attendance")
+def get_attendance_summary(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return _attendance_summary(db, date.today(), current_user)
+
+
+@router.get("/attendance/today")
+def get_attendance_today(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return _attendance_summary(db, date.today(), current_user)
+
+
+@router.get("/attendance/history-summary")
+def get_attendance_history_summary(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    kindergarten_id: Optional[int] = Query(None),
+    governorate: Optional[str] = Query(None),
+    kindergarten_name: Optional[str] = Query(None),
+    child_name: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """History summary with filtering — Admin only."""
+    # Determine kindergarten scope
+    kg_query = db.query(models.Kindergarten)
+    filters_applied: dict = {}
+
+    if kindergarten_id:
+        mode = "specific_kindergarten"
+        kg_query = kg_query.filter(models.Kindergarten.id == kindergarten_id)
+    else:
+        if governorate or kindergarten_name:
+            mode = "filtered_kindergartens"
+            if governorate:
+                kg_query = kg_query.filter(models.Kindergarten.governorate == governorate)
+                filters_applied["governorate"] = governorate
+            if kindergarten_name:
+                kg_query = kg_query.filter(
+                    or_(
+                        models.Kindergarten.name_en.ilike(f"%{kindergarten_name}%"),
+                        models.Kindergarten.name_ar.ilike(f"%{kindergarten_name}%"),
+                    )
+                )
+                filters_applied["kindergarten_name"] = kindergarten_name
+        else:
+            mode = "all_kindergartens"
+
+    if child_name:
+        filters_applied["child_name"] = child_name
+
+    kgs = kg_query.all()
+    kg_ids = [k.id for k in kgs]
+
+    # Build enrolled child ids within those KGs
+    enrolled_q = db.query(models.EnrollmentApplication.child_id).filter(
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
+    )
+    enrolled_child_ids = [r[0] for r in enrolled_q.all()]
+
+    # Filter by child_name if given
+    if child_name:
+        parts = child_name.strip().split()
+        name_filter = db.query(models.Child.id).filter(models.Child.id.in_(enrolled_child_ids))
+        for part in parts:
+            name_filter = name_filter.filter(
+                or_(
+                    models.Child.first_name.ilike(f"%{part}%"),
+                    models.Child.last_name.ilike(f"%{part}%"),
+                )
+            )
+        enrolled_child_ids = [r[0] for r in name_filter.all()]
+
+    # Build rows per date
+    rows = []
+    current = start_date
+    total_present = 0
+    total_total = 0
+    while current <= end_date:
+        day_total = len(enrolled_child_ids)
+        day_present = db.query(func.count(models.AttendanceLog.id)).filter(
+            models.AttendanceLog.date == current,
+            models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
+            models.AttendanceLog.child_id.in_(enrolled_child_ids),
+        ).scalar()
+        rows.append({
+            "date": current.isoformat(),
+            "total": day_total,
+            "present": day_present,
+        })
+        total_present += day_present
+        total_total += day_total
+        current += timedelta(days=1)
+
+    scope: dict = {"mode": mode}
+    if mode == "specific_kindergarten":
+        scope["kindergarten_id"] = kindergarten_id
+        # still report kg count for convenience
+        scope["kindergarten_count"] = len(kg_ids)
+    else:
+        scope["kindergarten_count"] = len(kg_ids)
+    if filters_applied:
+        scope["filters"] = filters_applied
+
+    return {
+        "meta": {"scope": scope},
+        "totals": {"present": total_present, "total": total_total},
+        "rows": rows,
+    }
+
+
+@router.get("/attendance/{target_date}")
+def get_attendance_by_date(
+    target_date: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    d = date.fromisoformat(target_date)
+    return _attendance_summary(db, d, current_user)

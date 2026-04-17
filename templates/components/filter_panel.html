@@ -1,0 +1,67 @@
+{% macro filter_panel() %}
+<div class="filter-panel card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-lg-3">
+                <label class="form-label fw-bold text-dark">الفترة الزمنية</label>
+                <div class="input-group">
+                    <input type="date" id="periodStart" class="form-control border-end-0" />
+                    <span class="input-group-text bg-white border-start-0 border-end-0">إلى</span>
+                    <input type="date" id="periodEnd" class="form-control border-start-0" />
+                </div>
+            </div>
+            <div class="col-lg-2" id="kgFilterCol">
+                <label class="form-label fw-bold text-dark">الروضة</label>
+                <select id="kindergartenSelect" class="form-select">
+                    <option value="">جميع الروضات</option>
+                </select>
+                <div id="kindergartenHint" class="form-text text-muted"></div>
+            </div>
+            <div class="col-lg-2" id="govFilterCol">
+                <label class="form-label fw-bold text-dark">المحافظة</label>
+                <select id="governorateSelect" class="form-select">
+                    <option value="">جميع المحافظات</option>
+                </select>
+            </div>
+            <div class="col-lg-2" id="cityFilterCol">
+                <label class="form-label fw-bold text-dark">المدينة</label>
+                <select id="citySelect" class="form-select">
+                    <option value="">جميع المدن</option>
+                </select>
+            </div>
+            <div class="col-lg-2" id="areaFilterCol">
+                <label class="form-label fw-bold text-dark">المنطقة</label>
+                <select id="areaSelect" class="form-select">
+                    <option value="">جميع المناطق</option>
+                </select>
+            </div>
+            <div class="col-lg-1">
+                <label class="form-label fw-bold text-dark">الدورية</label>
+                <select id="granularitySelect" class="form-select">
+                    <option value="daily">يومي</option>
+                    <option value="weekly" selected>أسبوعي</option>
+                    <option value="monthly">شهري</option>
+                </select>
+            </div>
+            <div class="col-lg-1">
+                <button class="btn btn-primary w-100" id="applyFiltersBtn">
+                    <i class="bi bi-funnel me-1"></i>تطبيق المرشحات
+                </button>
+            </div>
+            <div class="col-lg-1">
+                <button class="btn btn-outline-secondary w-100" id="resetFiltersBtn">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>إعادة ضبط
+                </button>
+            </div>
+        </div>
+        <div class="mt-3 pt-3 border-top">
+            <div class="d-flex flex-wrap gap-2" id="activeFiltersContainer">
+                <span class="text-muted small">المرشحات النشطة:</span>
+                <div id="filterBadges"></div>
+            </div>
+        </div>
+        <div id="filterError" class="alert alert-danger py-2 px-3 mt-3 d-none small mb-0" role="alert"></div>
+        <div id="filterStatus" class="text-muted small mt-2"></div>
+    </div>
+</div>
+{% endmacro %}

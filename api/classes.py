@@ -160,6 +160,25 @@ def list_classes(
     return {"classes": result}
 
 
+@router.get("/classes/{class_id}/required-supervisors")
+def get_class_required_supervisors(
+    class_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Calculate required supervisors for a specific class."""
+    cls = db.query(models.Class).filter(models.Class.id == class_id).first()
+    if not cls:
+        raise HTTPException(status_code=404, detail="Class not found")
+    age_group = cls.age_group or "AGE_2_4"
+    children_count = cls.enrolled_children_count if hasattr(cls, 'enrolled_children_count') and cls.enrolled_children_count else 0
+    try:
+        count = validators.calculate_required_supervisors(age_group, children_count)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"required_supervisors": count, "age_group": age_group, "children_count": children_count, "class_id": class_id}
+
+
 @router.get("/classes/required-supervisors")
 def get_required_supervisors(
     age_group: str = Query(...),

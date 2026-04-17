@@ -18,6 +18,27 @@ from api.users import DUPLICATE_ERROR_MAP
 
 router = APIRouter(tags=["Kindergartens"])
 
+
+@router.get("/governorates/{gov}/cities")
+def get_cities_by_governorate(
+    gov: str,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Return distinct cities for a governorate, from DB records."""
+    # Normalise alias
+    alias_map = settings.JORDAN_GOVERNORATE_ALIASES
+    normalised = alias_map.get(gov, alias_map.get(gov.lower(), gov))
+
+    cities = (
+        db.query(models.Kindergarten.city)
+        .filter(models.Kindergarten.governorate == normalised)
+        .distinct()
+        .all()
+    )
+    return {"cities": sorted([c[0] for c in cities])}
+
+
 class KindergartenCreate(BaseModel):
     name_ar: str
     name_en: Optional[str] = None
@@ -208,6 +229,13 @@ def get_kindergarten(
 
     if not kindergarten:
         raise HTTPException(status_code=404, detail="Kindergarten not found")
+
+    # Role-based access control
+    if current_user.role == models.UserRole.SUPERVISOR:
+        raise HTTPException(status_code=403, detail="Supervisors cannot view kindergarten details")
+    if current_user.role == models.UserRole.PARENT:
+        if kindergarten.status != models.KindergartenStatus.ACTIVE:
+            raise HTTPException(status_code=404, detail="Kindergarten not found")
 
     return kindergarten
 

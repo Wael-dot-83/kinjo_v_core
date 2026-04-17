@@ -1,8 +1,12 @@
 """
 Children domain endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
-from fastapi.responses import Response
+import csv
+import io
+import os
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body, UploadFile, File
+from fastapi.responses import Response, StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta
@@ -309,3 +313,266 @@ def create_incident(
         "severity_level": incident.severity_level.value,
         "followup_required": incident.followup_required_flag
     }
+
+
+# ──────────────────────────────────────────────────────────────────
+# Photo Upload
+# ──────────────────────────────────────────────────────────────────
+
+ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"}
+
+
+@router.post("/children/{child_id}/photo")
+def upload_child_photo(
+    child_id: int,
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    # Parent can only upload for their own child
+    if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        if not parent_profile or child.parent_id != parent_profile.id:
+            raise HTTPException(status_code=403, detail="Not your child")
+
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid image type. Allowed: png, jpeg, gif, webp")
+
+    # Save file
+    upload_dir = os.path.join(settings.UPLOADS_DIR, "photos")
+    os.makedirs(upload_dir, exist_ok=True)
+    ext = os.path.splitext(file.filename or "photo.png")[1] or ".png"
+    filename = f"{child_id}_{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(upload_dir, filename)
+    content = file.file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    photo_url = f"/uploads/photos/{filename}"
+    child.photo_url = photo_url
+    db.commit()
+
+    return {"photo_url": photo_url}
+
+
+# ──────────────────────────────────────────────────────────────────
+# Document Management
+# ──────────────────────────────────────────────────────────────────
+
+VALID_DOCUMENT_TYPES = {
+    "birth_certificate", "health_certificate", "permission_form",
+    "id_copy", "photo", "other",
+}
+
+
+@router.post("/children/{child_id}/documents")
+def upload_child_document(
+    child_id: int,
+    document_type: str = Query(...),
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        if not parent_profile or child.parent_id != parent_profile.id:
+            raise HTTPException(status_code=403, detail="Not your child")
+
+    if document_type not in VALID_DOCUMENT_TYPES:
+        raise HTTPException(status_code=400, detail=f"Invalid document type. Allowed: {', '.join(sorted(VALID_DOCUMENT_TYPES))}")
+
+    # Save file
+    upload_dir = os.path.join(settings.UPLOADS_DIR, "documents")
+    os.makedirs(upload_dir, exist_ok=True)
+    ext = os.path.splitext(file.filename or "doc")[1] or ""
+    filename = f"{child_id}_{document_type}_{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(upload_dir, filename)
+    content = file.file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    doc = models.ChildDocument(
+        child_id=child_id,
+        document_type=document_type,
+        file_name=file.filename or filename,
+        file_path=filepath,
+        content_type=file.content_type,
+        file_size=len(content),
+        uploaded_by=current_user.id,
+        verified=False,
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+
+    return {
+        "id": doc.id,
+        "document_type": doc.document_type,
+        "file_name": doc.file_name,
+        "verified": doc.verified,
+    }
+
+
+@router.get("/children/{child_id}/documents")
+def list_child_documents(
+    child_id: int,
+    document_type: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    query = db.query(models.ChildDocument).filter(models.ChildDocument.child_id == child_id)
+    if document_type:
+        query = query.filter(models.ChildDocument.document_type == document_type)
+
+    docs = query.all()
+    return {
+        "documents": [
+            {
+                "id": d.id,
+                "document_type": d.document_type,
+                "file_name": d.file_name,
+                "verified": d.verified,
+                "created_at": d.created_at.isoformat() if d.created_at else None,
+            }
+            for d in docs
+        ]
+    }
+
+
+@router.put("/children/documents/{doc_id}/verify")
+def verify_child_document(
+    doc_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role == models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Parents cannot verify documents")
+
+    doc = db.query(models.ChildDocument).filter(models.ChildDocument.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    doc.verified = True
+    doc.verified_by = current_user.id
+    doc.verified_at = datetime.now()
+    db.commit()
+    db.refresh(doc)
+
+    return {
+        "id": doc.id,
+        "document_type": doc.document_type,
+        "verified": doc.verified,
+    }
+
+
+@router.delete("/children/documents/{doc_id}")
+def delete_child_document(
+    doc_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = db.query(models.ChildDocument).filter(models.ChildDocument.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Only parent of the child or admin/manager can delete
+    if current_user.role == models.UserRole.PARENT:
+        child = db.query(models.Child).filter(models.Child.id == doc.child_id).first()
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        if not parent_profile or not child or child.parent_id != parent_profile.id:
+            raise HTTPException(status_code=403, detail="Not your document")
+
+    # Remove file if it exists
+    if doc.file_path and os.path.exists(doc.file_path):
+        os.remove(doc.file_path)
+
+    db.delete(doc)
+    db.commit()
+
+    return {"detail": "Document deleted"}
+
+
+# ──────────────────────────────────────────────────────────────────
+# Bulk Export
+# ──────────────────────────────────────────────────────────────────
+
+EXPORTABLE_FIELDS = [
+    "first_name", "last_name", "gender", "date_of_birth",
+    "nationality", "national_id", "passport_number",
+    "health_notes", "educational_notes", "media_consent",
+    "father_name", "mother_first_name", "mother_last_name",
+]
+
+
+@router.get("/children/export")
+def export_children(
+    format: str = Query("csv"),
+    fields: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role == models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Parents cannot export children data")
+
+    # Get active children
+    children = (
+        db.query(models.Child)
+        .join(models.EnrollmentApplication, models.Child.id == models.EnrollmentApplication.child_id)
+        .filter(models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
+        .all()
+    )
+
+    # Determine which fields to export
+    if fields:
+        selected = [f.strip() for f in fields.split(",") if f.strip() in EXPORTABLE_FIELDS]
+    else:
+        selected = EXPORTABLE_FIELDS
+
+    rows = []
+    for child in children:
+        row = {}
+        for f in selected:
+            val = getattr(child, f, None)
+            if isinstance(val, date):
+                val = val.isoformat()
+            elif isinstance(val, models.Gender):
+                val = val.value
+            elif val is None:
+                val = ""
+            else:
+                val = str(val)
+            row[f] = val
+        rows.append(row)
+
+    if format == "json":
+        return JSONResponse(content=rows)
+
+    # CSV
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=selected)
+    writer.writeheader()
+    writer.writerows(rows)
+
+    return Response(
+        content=output.getvalue().encode("utf-8-sig"),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=children_export.csv"},
+    )

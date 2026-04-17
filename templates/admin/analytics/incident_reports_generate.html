@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}إنشاء تقرير الحوادث{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+title="إنشاء تقرير الحوادث",
+icon="bi-file-earmark-plus",
+breadcrumbs=[
+{"label": "لوحة التحكم", "url": "/dashboard"},
+{"label": "التقارير", "url": "/daily-reports"},
+{"label": "إنشاء تقرير", "url": None}
+]
+) }}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="card-title mb-0">إنشاء تقرير جديد للحوادث</h5>
+            </div>
+            <div class="card-body p-4">
+                <form id="generateReportForm" onsubmit="generateReport(event)">
+                    <!-- Scope Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">نطاق التقرير</label>
+                        <div class="row g-3" id="scopeOptions">
+                            <!-- Options will be loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Time Period Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">الفترة الزمنية</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check custom-card-check">
+                                    <input class="form-check-input" type="radio" name="periodType" id="periodWeek"
+                                        value="week" checked>
+                                    <label class="form-check-label w-100" for="periodWeek">
+                                        <div class="p-3 border rounded">
+                                            <i class="bi bi-calendar-week text-primary fs-4 mb-2 d-block"></i>
+                                            <strong>الأسبوع الحالي</strong>
+                                            <div class="small text-muted">آخر 7 أيام</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check custom-card-check">
+                                    <input class="form-check-input" type="radio" name="periodType" id="periodMonth"
+                                        value="month">
+                                    <label class="form-check-label w-100" for="periodMonth">
+                                        <div class="p-3 border rounded">
+                                            <i class="bi bi-calendar-month text-success fs-4 mb-2 d-block"></i>
+                                            <strong>الشهر الحالي</strong>
+                                            <div class="small text-muted">آخر 30 يوم</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check custom-card-check">
+                                    <input class="form-check-input" type="radio" name="periodType" id="period3Years"
+                                        value="3years">
+                                    <label class="form-check-label w-100" for="period3Years">
+                                        <div class="p-3 border rounded">
+                                            <i class="bi bi-calendar-range text-warning fs-4 mb-2 d-block"></i>
+                                            <strong>آخر 3 سنوات</strong>
+                                            <div class="small text-muted">متحرك للخلف</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check custom-card-check">
+                                    <input class="form-check-input" type="radio" name="periodType" id="periodAnnual"
+                                        value="annual">
+                                    <label class="form-check-label w-100" for="periodAnnual">
+                                        <div class="p-3 border rounded">
+                                            <i class="bi bi-calendar-year text-info fs-4 mb-2 d-block"></i>
+                                            <strong>السنة الحالية</strong>
+                                            <div class="small text-muted">ملخص سنوي</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" id="generateBtn">
+                            <i class="bi bi-file-earmark-plus me-2"></i>
+                            إنشاء التقرير
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تم إنشاء التقرير بنجاح</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>تم إنشاء تقرير الحوادث بنجاح. يمكنك الآن عرض التقرير أو إنشاء تقرير آخر.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إنشاء تقرير آخر</button>
+                <a href="/daily-reports" class="btn btn-primary">عرض التقارير</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadScopes() {
+        try {
+            const response = await fetch('/api/admin/reports/scopes');
+            const data = await response.json();
+
+            const scopeOptions = document.getElementById('scopeOptions');
+            scopeOptions.innerHTML = '';
+
+            data.scopes.forEach(scope => {
+                const col = document.createElement('div');
+                col.className = 'col-md-6';
+
+                const formCheck = document.createElement('div');
+                formCheck.className = 'form-check custom-card-check';
+
+                const input = document.createElement('input');
+                input.className = 'form-check-input';
+                input.type = 'radio';
+                input.name = 'scopeType';
+                input.id = `scope${scope.type}${scope.id || scope.name}`;
+                input.value = JSON.stringify(scope);
+                if (scope.type === 'ALL') input.checked = true;
+
+                const label = document.createElement('label');
+                label.className = 'form-check-label w-100';
+                label.htmlFor = input.id;
+
+                const card = document.createElement('div');
+                card.className = 'p-3 border rounded';
+
+                const icon = document.createElement('i');
+                icon.className = getScopeIcon(scope.type) + ' fs-4 mb-2 d-block';
+                icon.style.color = getScopeColor(scope.type);
+
+                const title = document.createElement('strong');
+                title.textContent = scope.name;
+
+                const subtitle = document.createElement('div');
+                subtitle.className = 'small text-muted';
+                subtitle.textContent = getScopeDescription(scope);
+
+                card.appendChild(icon);
+                card.appendChild(title);
+                card.appendChild(subtitle);
+                label.appendChild(card);
+                formCheck.appendChild(input);
+                formCheck.appendChild(label);
+                col.appendChild(formCheck);
+                scopeOptions.appendChild(col);
+            });
+        } catch (error) {
+            console.error('Failed to load scopes:', error);
+            showAlert('فشل في تحميل خيارات النطاق', 'danger');
+        }
+    }
+
+    function getScopeIcon(type) {
+        switch (type) {
+            case 'KINDERGARTEN': return 'bi bi-house-door';
+            case 'GOVERNORATE': return 'bi bi-geo-alt';
+            case 'ALL': return 'bi bi-globe';
+            default: return 'bi bi-question-circle';
+        }
+    }
+
+    function getScopeColor(type) {
+        switch (type) {
+            case 'KINDERGARTEN': return '#6f42c1';
+            case 'GOVERNORATE': return '#fd7e14';
+            case 'ALL': return '#20c997';
+            default: return '#6c757d';
+        }
+    }
+
+    function getScopeDescription(scope) {
+        switch (scope.type) {
+            case 'KINDERGARTEN': return `روضة ${scope.name}`;
+            case 'GOVERNORATE': return `جميع الروضات في ${scope.governorate}`;
+            case 'ALL': return 'جميع الروضات في النظام';
+            default: return '';
+        }
+    }
+
+    async function generateReport(event) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target);
+        const scopeData = JSON.parse(formData.get('scopeType'));
+        const periodType = formData.get('periodType');
+
+        const generateBtn = document.getElementById('generateBtn');
+        const originalText = generateBtn.innerHTML;
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>جاري الإنشاء...';
+
+        try {
+            const requestData = new FormData();
+            requestData.append('scope_type', scopeData.type);
+            if (scopeData.id) requestData.append('kindergarten_id', scopeData.id);
+            if (scopeData.governorate) requestData.append('governorate', scopeData.governorate);
+            requestData.append('period_type', periodType);
+
+            const response = await fetch('/api/admin/reports/incidents/generate', {
+                method: 'POST',
+                body: requestData
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                successModal.show();
+            } else {
+                const error = await response.json();
+                showAlert(error.detail || 'فشل في إنشاء التقرير', 'danger');
+            }
+        } catch (error) {
+            console.error('Failed to generate report:', error);
+            showAlert('حدث خطأ أثناء إنشاء التقرير', 'danger');
+        } finally {
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = originalText;
+        }
+    }
+
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+        document.body.appendChild(alertDiv);
+
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+
+    // Load scopes on page load
+    document.addEventListener('DOMContentLoaded', loadScopes);
+</script>
+{% endblock %}

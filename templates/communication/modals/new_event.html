@@ -1,10 +1,11 @@
+{% from 'components/confirm-modal.html' import modal_footer %}
 <!-- New Event Modal -->
 <div class="modal fade" id="newEventModal" tabindex="-1" aria-labelledby="newEventModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="newEventModalLabel">إضافة فعالية جديدة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body">
                 <form id="newEventForm">
@@ -51,8 +52,14 @@
 
 <script>
     async function submitEvent() {
-        const token = localStorage.getItem('access_token');
-        
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            alert('يرجى تسجيل الدخول لإنشاء حدث');
+            return;
+        }
+
+        const token = AuthService.getToken();
+
         const payload = {
             title: document.getElementById('eventTitle').value,
             type: document.getElementById('eventType').value,
@@ -61,7 +68,7 @@
             description: document.getElementById('eventDescription').value,
             requires_consent_flag: document.getElementById('eventConsent') ? document.getElementById('eventConsent').checked : false
         };
-        
+
         // Basic validation
         if (!payload.title || !payload.start_at || !payload.end_at) {
             alert('يرجى تعبئة جميع الحقول المطلوبة');

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}إدارة الرسائل{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Message Management{% else %}إدارة الرسائل{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -9,7 +9,7 @@
             <i class="bi bi-envelope me-2 text-primary"></i>
             إدارة الرسائل
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
                 <li class="breadcrumb-item active" aria-current="page">الرسائل</li>

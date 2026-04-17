@@ -9,7 +9,7 @@
             <i class="bi bi-journal-check me-2 text-primary"></i>
             تقرير يومي: {{ report.child_name }}
         </h1>
-        <nav aria-label="breadcrumb">
+        <nav aria-label="مسار التنقل">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
                 <li class="breadcrumb-item"><a href="/reports">التقارير</a></li>
@@ -18,7 +18,7 @@
         </nav>
     </div>
     <div class="btn-toolbar">
-         <button class="btn btn-outline-primary" onclick="window.print()">
+        <button class="btn btn-outline-primary" onclick="window.print()">
             <i class="bi bi-printer me-2"></i>طباعة
         </button>
     </div>
@@ -33,9 +33,9 @@
             <div class="card-body p-4">
                 <div class="d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">
-                         <div class="avatar-lg bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm me-3" 
-                              style="width: 64px; height: 64px;">
-                             <i class="bi bi-person fs-3 text-primary"></i>
+                        <div class="avatar-lg bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm me-3"
+                            style="width: 64px; height: 64px;">
+                            <i class="bi bi-person fs-3 text-primary"></i>
                         </div>
                         <div>
                             <h4 class="mb-1 text-primary fw-bold">{{ report.child_name }}</h4>
@@ -65,15 +65,27 @@
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                 <span>الفطور</span>
-                                <span class="badge bg-success rounded-pill px-3">{{ report.meals.breakfast }}</span>
+                                <span
+                                    class="badge {{ 'bg-success' if report.breakfast else 'bg-secondary' }} rounded-pill px-3">{{
+                                    'نعم' if report.breakfast else 'لا' }}</span>
                             </li>
-                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                 <span>الغداء</span>
-                                <span class="badge bg-primary rounded-pill px-3">{{ report.meals.lunch }}</span>
+                                <span
+                                    class="badge {{ 'bg-success' if report.lunch else 'bg-secondary' }} rounded-pill px-3">{{
+                                    'نعم' if report.lunch else 'لا' }}</span>
                             </li>
-                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                 <span>سناك</span>
-                                <span class="badge bg-info rounded-pill px-3">{{ report.meals.snack }}</span>
+                                <span
+                                    class="badge {{ 'bg-success' if report.snack else 'bg-secondary' }} rounded-pill px-3">{{
+                                    'نعم' if report.snack else 'لا' }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>حليب</span>
+                                <span
+                                    class="badge {{ 'bg-success' if report.milk else 'bg-secondary' }} rounded-pill px-3">{{
+                                    'نعم' if report.milk else 'لا' }}</span>
                             </li>
                         </ul>
                     </div>
@@ -93,23 +105,23 @@
                                 <h3 class="fw-bold text-info">{{ report.sleep_minutes }}</h3>
                                 <small class="text-muted">دقيقة</small>
                             </div>
-                             <div class="col-6">
+                            <div class="col-6">
                                 <h6 class="text-muted">الحمام</h6>
-                                <h3 class="fw-bold text-info">{{ report.bathroom_count }}</h3>
+                                <h3 class="fw-bold text-info">{{ report.bathroom_count or 0 }}</h3>
                                 <small class="text-muted">مرات</small>
                             </div>
                         </div>
-                        
+
                         <div class="bg-light p-3 rounded">
                             <h6 class="mb-2 fw-bold small">تغيير الحفاظ:</h6>
                             <div class="d-flex gap-2">
-                                {% if report.diaper.wet %}
+                                {% if report.diaper_wet %}
                                 <span class="badge bg-secondary text-dark">مبلل</span>
                                 {% endif %}
-                                {% if report.diaper.soiled %}
+                                {% if report.diaper_soiled %}
                                 <span class="badge bg-secondary text-dark">متسخ</span>
                                 {% endif %}
-                                {% if not report.diaper.wet and not report.diaper.soiled %}
+                                {% if not report.diaper_wet and not report.diaper_soiled %}
                                 <span class="text-muted small">لا يوجد</span>
                                 {% endif %}
                             </div>
@@ -118,11 +130,11 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Activities & Notes -->
         <div class="card mb-4">
             <div class="card-header bg-warning">
-                 <h5 class="mb-0 card-title text-dark"><i class="bi bi-stars me-2"></i>الأنشطة والملاحظات</h5>
+                <h5 class="mb-0 card-title text-dark"><i class="bi bi-stars me-2"></i>الأنشطة والملاحظات</h5>
             </div>
             <div class="card-body">
                 <div class="mb-4">
@@ -135,7 +147,7 @@
                         {% endfor %}
                     </div>
                 </div>
-                
+
                 <div class="p-3 bg-light rounded border-start border-4 border-warning">
                     <h6 class="fw-bold mb-2">ملاحظات المعلمة:</h6>
                     <p class="mb-0 text-muted">{{ report.notes or 'لا توجد ملاحظات إضافية' }}</p>
@@ -146,14 +158,14 @@
         <!-- Photos -->
         {% if report.photos %}
         <div class="card mb-4">
-             <div class="card-header">
-                 <h5 class="mb-0 card-title">صور من اليوم</h5>
+            <div class="card-header">
+                <h5 class="mb-0 card-title">صور من اليوم</h5>
             </div>
             <div class="card-body">
                 <div class="row g-2">
                     {% for photo in report.photos %}
                     <div class="col-6 col-md-3">
-                         <img src="{{ photo.url }}" class="img-fluid rounded shadow-sm" alt="نشاط يومي">
+                        <img src="{{ photo.url }}" class="img-fluid rounded shadow-sm" alt="نشاط يومي">
                     </div>
                     {% endfor %}
                 </div>

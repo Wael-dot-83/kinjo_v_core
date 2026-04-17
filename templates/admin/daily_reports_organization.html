@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{% if ui_lang == 'en' %}Daily Reports Organisation{% else %}تنظيم التقارير اليومية{% endif %}{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+title="Daily Reports Organisation" if ui_lang == 'en' else "تنظيم التقارير اليومية",
+icon="bi-journal-check",
+breadcrumbs=[
+{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Daily Reports Organisation" if ui_lang == 'en' else "تنظيم التقارير اليومية", "url": None}
+]
+) }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .daily-reports-org-page .filter-card {
+    border: 1px solid #e8ebf0;
+    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.05);
+  }
+
+  .daily-reports-org-page .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 600;
+    padding: 0.3rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    color: #fff;
+  }
+
+  .daily-reports-org-page .accordion-button:not(.collapsed) {
+    color: #0c4a6e;
+    background: linear-gradient(135deg, #e0f2fe 0%, #f8fafc 100%);
+  }
+
+  .daily-reports-org-page .kg-meta {
+    color: #475569;
+    font-size: 0.93rem;
+  }
+
+  .daily-reports-org-page .report-table td,
+  .daily-reports-org-page .report-table th {
+    vertical-align: middle;
+  }
+
+  .daily-reports-org-page .no-report-note {
+    border: 1px dashed #f59e0b;
+    background-color: #fffaf0;
+    color: #92400e;
+    border-radius: 0.75rem;
+    padding: 0.9rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .daily-reports-org-page .summary-chip {
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.85rem;
+    background-color: #f8fafc;
+  }
+
+  @media (max-width: 768px) {
+    .daily-reports-org-page .report-table {
+      font-size: 0.88rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="daily-reports-org-page" dir="{{ ui_dir }}" lang="{{ ui_lang }}">
+  <div class="card filter-card mb-4">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-lg-3">
+          <label for="dailyReportDate" class="form-label fw-semibold">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</label>
+          <input
+            id="dailyReportDate"
+            type="date"
+            class="form-control"
+            aria-label="{% if ui_lang == 'en' %}Select daily reports date{% else %}اختيار تاريخ التقارير اليومية{% endif %}"
+            value="{{ today }}"
+          />
+        </div>
+        <div class="col-12 col-lg-3">
+          <label for="governorateSelect" class="form-label fw-semibold">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+          <select id="governorateSelect" class="form-select" aria-label="{% if ui_lang == 'en' %}Select governorate{% else %}اختيار المحافظة{% endif %}">
+            <option value="">{% if ui_lang == 'en' %}Select governorate{% else %}اختر المحافظة{% endif %}</option>
+          </select>
+        </div>
+        <div class="col-12 col-lg-4">
+          <label for="kindergartenSelect" class="form-label fw-semibold">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</label>
+          <select
+            id="kindergartenSelect"
+            class="form-select"
+            multiple
+            size="6"
+            aria-label="{% if ui_lang == 'en' %}Select one or more kindergartens{% else %}اختيار روضة واحدة أو أكثر{% endif %}"
+          ></select>
+          <div id="kindergartenHint" class="form-text">{% if ui_lang == 'en' %}You can select multiple kindergartens using Ctrl/Cmd key selection.{% else %}يمكنك اختيار أكثر من روضة باستخدام الضغط المستمر.{% endif %}</div>
+        </div>
+        <div class="col-12 col-lg-2">
+          <label class="form-label fw-semibold d-block">{% if ui_lang == 'en' %}Scope{% else %}نطاق العرض{% endif %}</label>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="allKindergartens" checked />
+            <label class="form-check-label" for="allKindergartens">{% if ui_lang == 'en' %}All kindergartens{% else %}جميع الروضات{% endif %}</label>
+          </div>
+          <button id="searchDailyReportsBtn" class="btn btn-primary w-100" aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}">
+            <i class="bi bi-search ms-1"></i>
+            {% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
+          </button>
+        </div>
+      </div>
+
+      <hr class="my-3" />
+
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-3">
+          <label for="statusFilter" class="form-label">{% if ui_lang == 'en' %}Filter by status{% else %}تصفية بالحالة{% endif %}</label>
+          <select id="statusFilter" class="form-select" aria-label="{% if ui_lang == 'en' %}Filter by report status{% else %}تصفية حسب حالة التقرير{% endif %}">
+            <option value="">{% if ui_lang == 'en' %}All statuses{% else %}كل الحالات{% endif %}</option>
+            <option value="received">{% if ui_lang == 'en' %}Received by parents{% else %}تم استلامه من قبل الوالدين{% endif %}</option>
+            <option value="pending">{% if ui_lang == 'en' %}Pending manager review{% else %}بانتظار مراجعة المدير{% endif %}</option>
+            <option value="incomplete">{% if ui_lang == 'en' %}Incomplete{% else %}غير مكتمل{% endif %}</option>
+            <option value="absent">{% if ui_lang == 'en' %}Not filled - child absent{% else %}غير مملوء - غياب الطفل{% endif %}</option>
+            <option value="not_submitted">{% if ui_lang == 'en' %}Not filled - supervisor/teacher did not submit{% else %}غير مملوء - لم يقدم المشرف/المعلم{% endif %}</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-3">
+          <label for="childSearch" class="form-label">{% if ui_lang == 'en' %}Search by child name{% else %}بحث باسم الطفل{% endif %}</label>
+          <input id="childSearch" type="text" class="form-control" placeholder="{% if ui_lang == 'en' %}Type child name{% else %}اكتب اسم الطفل{% endif %}" />
+        </div>
+        <div class="col-12 col-md-3">
+          <label for="teacherSearch" class="form-label">{% if ui_lang == 'en' %}Search by teacher/supervisor name{% else %}بحث باسم المعلم/المشرف{% endif %}</label>
+          <input id="teacherSearch" type="text" class="form-control" placeholder="{% if ui_lang == 'en' %}Type name{% else %}اكتب الاسم{% endif %}" />
+        </div>
+        <div class="col-6 col-md-2">
+          <label for="sortField" class="form-label">{% if ui_lang == 'en' %}Sort by{% else %}الترتيب حسب{% endif %}</label>
+          <select id="sortField" class="form-select">
+            <option value="child">{% if ui_lang == 'en' %}Child name{% else %}اسم الطفل{% endif %}</option>
+            <option value="teacher">{% if ui_lang == 'en' %}Teacher/supervisor name{% else %}اسم المعلم/المشرف{% endif %}</option>
+            <option value="status">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-1">
+          <label for="sortDir" class="form-label">{% if ui_lang == 'en' %}Direction{% else %}الاتجاه{% endif %}</label>
+          <select id="sortDir" class="form-select">
+            <option value="asc">{% if ui_lang == 'en' %}Ascending{% else %}تصاعدي{% endif %}</option>
+            <option value="desc">{% if ui_lang == 'en' %}Descending{% else %}تنازلي{% endif %}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="dailyReportsLoading" class="text-center py-5 d-none">
+    <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+    <div class="fw-semibold">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
+  </div>
+
+  <div id="dailyReportsError" class="alert alert-danger d-none" role="alert"></div>
+  <div id="dailyReportsEmpty" class="alert alert-secondary d-none" role="status"></div>
+
+  <div id="dailyReportsMeta" class="mb-3 d-none">
+    <span class="summary-chip" id="selectedDateChip"></span>
+    <span class="summary-chip me-2" id="selectedCountChip"></span>
+  </div>
+
+  <div class="accordion" id="dailyReportsAccordion" aria-label="{% if ui_lang == 'en' %}Kindergarten sections{% else %}أقسام الروضات{% endif %}"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/admin_daily_reports_organization.js"></script>
+{% endblock %}

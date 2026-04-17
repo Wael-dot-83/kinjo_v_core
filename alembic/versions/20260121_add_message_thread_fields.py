@@ -18,6 +18,27 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _index_exists(table_name: str, index_name: str) -> bool:
+    inspector = sa.inspect(op.get_bind())
+    if not inspector.has_table(table_name):
+        return False
+    return any(idx.get("name") == index_name for idx in inspector.get_indexes(table_name))
+
+
+def _fk_exists(table_name: str, fk_name: str) -> bool:
+    inspector = sa.inspect(op.get_bind())
+    if not inspector.has_table(table_name):
+        return False
+    return any(fk.get("name") == fk_name for fk in inspector.get_foreign_keys(table_name))
+
+
+def _column_exists(table_name: str, column_name: str) -> bool:
+    inspector = sa.inspect(op.get_bind())
+    if not inspector.has_table(table_name):
+        return False
+    return any(col.get("name") == column_name for col in inspector.get_columns(table_name))
+
+
 def upgrade() -> None:
     with op.batch_alter_table("messages") as batch_op:
         batch_op.add_column(sa.Column("thread_id", sa.Integer(), nullable=True))
@@ -32,11 +53,17 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_messages_reply_to_id", table_name="messages")
-    op.drop_index("ix_messages_thread_id", table_name="messages")
+    if _index_exists("messages", "ix_messages_reply_to_id"):
+        op.drop_index("ix_messages_reply_to_id", table_name="messages")
+    if _index_exists("messages", "ix_messages_thread_id"):
+        op.drop_index("ix_messages_thread_id", table_name="messages")
 
     with op.batch_alter_table("messages") as batch_op:
-        batch_op.drop_constraint("fk_messages_reply_to_id", type_="foreignkey")
-        batch_op.drop_constraint("fk_messages_thread_id", type_="foreignkey")
-        batch_op.drop_column("reply_to_id")
-        batch_op.drop_column("thread_id")
+        if _fk_exists("messages", "fk_messages_reply_to_id"):
+            batch_op.drop_constraint("fk_messages_reply_to_id", type_="foreignkey")
+        if _fk_exists("messages", "fk_messages_thread_id"):
+            batch_op.drop_constraint("fk_messages_thread_id", type_="foreignkey")
+        if _column_exists("messages", "reply_to_id"):
+            batch_op.drop_column("reply_to_id")
+        if _column_exists("messages", "thread_id"):
+            batch_op.drop_column("thread_id")

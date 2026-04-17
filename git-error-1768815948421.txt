@@ -1,7 +1,0 @@
-> git pull --tags
-You are not currently on a branch.
-Please specify which branch you want to merge with.
-See git-pull(1) for details.
-
-    git pull <remote> <branch>
-

@@ -1,388 +1,579 @@
 <!-- New Message Modal -->
 <div class="modal fade" id="newMessageModal" tabindex="-1" aria-labelledby="newMessageModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header">
-        <h5 class="modal-title" id="newMessageModalLabel">رسالة جديدة
-            {% if current_user and current_user.role.value == 'MANAGER' %}
-            <span class="badge bg-info-subtle text-info ms-2 align-middle" title="إرسال داخل روضتك فقط">روضتي</span>
-            {% endif %}
-        </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <!-- Modal Header -->
+            <div class="modal-header bg-primary text-white">
+                <div class="d-flex flex-column">
+                    <h5 class="modal-title mb-1" id="newMessageModalLabel">
+                        <i class="bi bi-envelope-plus me-2"></i>رسالة جديدة
+                    </h5>
+                    <small class="text-primary-emphasis">
+                        {% if current_user and current_user.role.value == 'ADMIN' %}
+                        أرسل رسالة لمستخدمي الروضات أو للمحافظة
+                        {% else %}
+                        أرسل رسالة لمستخدمي روضتك
+                        {% endif %}
+                    </small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="إغلاق"></button>
             </div>
+
+            <!-- Modal Body -->
             <div class="modal-body">
-                <form id="newMessageForm">
-                    <!-- Subject -->
-                    <div class="mb-3">
-                        <label for="msgSubject" class="form-label">الموضوع <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="msgSubject" required>
-                    </div>
-
-                    <!-- Message Type -->
-                    <div class="mb-3">
-                        <label for="msgType" class="form-label">نوع الرسالة</label>
-                        <select class="form-select" id="msgType">
-                            <option value="direct">رسالة مباشرة (Direct)</option>
-                            <option value="group">رسالة جماعية (Group/Broadcast)</option>
-                        </select>
-                    </div>
-
-                    <!-- Admin Targeting Section (Admin Only) -->
-                    <div class="card bg-light mb-3 admin-targeting-section" id="adminTargetingSection"
-                        style="display:none;" dir="rtl">
-                        <div class="card-header fw-bold">
-                            <i class="bi bi-bullseye"></i> تحديد المستلمين (للمسؤولين فقط)
+                <form id="newMessageForm" novalidate>
+                    <!-- تفاصيل عامة Section -->
+                    <div class="card mb-4 border-0 bg-light">
+                        <div class="card-header bg-white border-bottom-0">
+                            <h6 class="mb-0 text-primary">
+                                <i class="bi bi-info-circle me-2"></i>تفاصيل الرسالة
+                            </h6>
                         </div>
                         <div class="card-body">
-                            <!-- Target Mode Selection -->
+                            <!-- Subject -->
                             <div class="mb-3">
-                                <label class="form-label fw-bold">نطاق الاستلام:</label>
-                                <select class="form-select" id="adminTargetMode" onchange="updateAdminTargetingUI()">
-                                    <option value="ALL_USERS">👥 جميع المستخدمين</option>
-                                    <option value="ALL_MANAGERS">👔 جميع المديرين فقط</option>
-                                    <option value="ALL_PARENTS">👨‍👩‍👧‍👦 جميع أولياء الأمور فقط</option>
-                                    <option value="GOVERNORATE">🏛️ حسب المحافظة</option>
-                                    <option value="KINDERGARTENS">🏫 روضات محددة</option>
+                                <label for="msgSubject" class="form-label fw-semibold">
+                                    الموضوع <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="msgSubject" required
+                                    placeholder="أدخل موضوع الرسالة">
+                                <div class="invalid-feedback">
+                                    هذا الحقل مطلوب
+                                </div>
+                            </div>
+
+                            <!-- Message Type (hidden for Supervisors) -->
+                            <div class="mb-0" id="msgTypeContainer">
+                                <label for="msgType" class="form-label fw-semibold">نوع الرسالة</label>
+                                <select class="form-select" id="msgType">
+                                    <option value="direct">رسالة مباشرة (لشخص واحد)</option>
+                                    <option value="group">رسالة جماعية (لعدة أشخاص)</option>
+                                    {% if current_user and current_user.role.value == 'ADMIN' %}
+                                    <option value="announcement">إعلان (للجميع)</option>
+                                    {% endif %}
                                 </select>
                             </div>
-
-                            <!-- Governorate Selection (for GOVERNORATE mode) -->
-                            <div class="mb-3" id="adminGovernorateSection" style="display:none;">
-                                <label class="form-label fw-bold">المحافظة:</label>
-                                <select class="form-select" id="adminGovernorate" multiple size="6">
-                                    <!-- Populated from API -->
-                                </select>
-                                <div class="form-text text-primary">يمكنك اختيار محافظة واحدة أو أكثر (استخدم Ctrl/Cmd
-                                    للاختيار المتعدد)</div>
-                            </div>
-
-                            <!-- Kindergarten Multi-Select (for KINDERGARTENS mode) -->
-                            <div class="mb-3" id="adminKindergartenSection" style="display:none;">
-                                <label class="form-label fw-bold">الروضات:</label>
-
-                                <!-- Governorate Filter -->
-                                <div class="row g-2 mb-2">
-                                    <div class="col-md-6">
-                                        <select class="form-select form-select-sm" id="kgGovernorateFilter"
-                                            onchange="filterKindergartensByGovernorate()">
-                                            <option value="">-- جميع المحافظات --</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <input type="text" class="form-control form-control-sm" id="kgSearchInput"
-                                            placeholder="بحث بالاسم..." onkeyup="searchKindergartens()">
-                                    </div>
+                            <!-- Supervisor Fixed Message Type -->
+                            <div class="mb-0" id="supervisorMsgTypeInfo" style="display:none;">
+                                <label class="form-label fw-semibold">نوع الرسالة</label>
+                                <div class="alert alert-info mb-0 py-2">
+                                    <i class="bi bi-send me-2"></i>
+                                    رسالة مباشرة لمدير الروضة
                                 </div>
-
-                                <!-- Kindergarten Checkboxes -->
-                                <div class="border rounded p-2" id="adminKindergartenList"
-                                    style="max-height: 250px; overflow-y: auto; background:white;">
-                                    <!-- Checkboxes populated here -->
-                                </div>
-
-                                <div class="d-flex justify-content-between align-items-center mt-2">
-                                    <div class="form-text">
-                                        <span id="selectedKgCount" class="fw-bold text-primary">0</span> روضة/روضات
-                                        محددة
-                                    </div>
-                                    <div class="btn-group btn-group-sm">
-                                        <button type="button" class="btn btn-outline-secondary"
-                                            onclick="selectAllKindergartens()">اختيار الكل</button>
-                                        <button type="button" class="btn btn-outline-secondary"
-                                            onclick="deselectAllKindergartens()">إلغاء الكل</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Role Selection (for GOVERNORATE/KINDERGARTENS modes) -->
-                            <div class="mb-3" id="adminRolesSection" style="display:none;">
-                                <label class="form-label fw-bold">الأدوار المستلمة:</label>
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="form-check">
-                                            <input class="form-check-input admin-role-checkbox" type="checkbox" value="MANAGER"
-                                                id="adminRoleManager" checked>
-                                            <label class="form-check-label" for="adminRoleManager">👔 المديرون</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-check">
-                                            <input class="form-check-input admin-role-checkbox" type="checkbox" value="SUPERVISOR"
-                                                id="adminRoleSupervisor" checked>
-                                            <label class="form-check-label" for="adminRoleSupervisor">👩‍🏫
-                                                المشرفون</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-check">
-                                            <input class="form-check-input admin-role-checkbox" type="checkbox" value="PARENT"
-                                                id="adminRoleParent" checked>
-                                            <label class="form-check-label" for="adminRoleParent">👨‍👩‍👧‍👦 أولياء
-                                                الأمور</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Search Filter -->
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">بحث متقدم (اسم، بريد، هاتف):</label>
-                                <input type="text" class="form-control" id="adminSearchInput"
-                                    placeholder="ابحث بالاسم أو البريد الإلكتروني أو الهاتف">
-                            </div>
-
-                            <!-- Recipient Preview -->
-                            <div class="alert alert-info mb-0" id="adminRecipientPreview">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                    <div>
-                                        <i class="bi bi-people-fill"></i>
-                                        <span>عدد المستلمين: <strong id="recipientCount" class="fs-5">-</strong></span>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-info text-white"
-                                        onclick="previewRecipients()">
-                                        <i class="bi bi-eye"></i> حساب المستلمين
-                                    </button>
-                                </div>
-                                <!-- Sample Recipients -->
-                                <div id="sampleRecipientsContainer" class="mt-2" style="display:none;">
-                                    <hr>
-                                    <small class="text-muted">عينة من المستلمين:</small>
-                                    <div id="sampleRecipientsList" class="mt-1 small"></div>
-                                </div>
-                                <div id="recipientBreakdown" class="small text-muted mt-2" style="display:none;"></div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Direct Message Section -->
-                    <div class="mb-3" id="directMessageSection" style="display:none;">
-                        <label class="form-label">المستلم</label>
-                        <div id="directRecipientLookup">
-                            <div class="row g-2">
-                                <div class="col-12 col-md-4" id="directRoleFilterWrap">
-                                    <label for="directRoleFilter" class="form-label">الدور</label>
-                                    <select class="form-select" id="directRoleFilter">
-                                        <option value="">جميع الأدوار</option>
-                                        <option value="ADMIN">مدير النظام</option>
-                                        <option value="MANAGER">مدير روضة</option>
-                                        <option value="SUPERVISOR">مشرف</option>
-                                        <option value="PARENT">ولي أمر</option>
+                    <!-- المستلمون Section (hidden for Supervisors) -->
+                    <div class="card mb-4 border-0 bg-light" id="recipientsSection">
+                        <div class="card-header bg-white border-bottom-0" id="recipientsSectionHeader">
+                            <h6 class="mb-0 text-primary">
+                                <i class="bi bi-people me-2"></i>المستلمون
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- Admin Targeting Section (Admin Only) -->
+                            <div class="admin-targeting-section" id="adminTargetingSection" style="display:none;">
+                                <!-- Target Mode Selection -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">نطاق الاستلام:</label>
+                                    <select class="form-select" id="adminTargetMode"
+                                        onchange="updateAdminTargetingUI()">
+                                        <option value="ALL_USERS">📢 جميع المستخدمين (مدراء + مشرفين + أولياء أمور)
+                                        </option>
+                                        <option value="ALL_MANAGERS">👔 جميع المدراء فقط</option>
+                                        <option value="ALL_SUPERVISORS">👩‍🏫 جميع المشرفين فقط</option>
+                                        <option value="ALL_PARENTS">👨‍👩‍👧‍👦 جميع أولياء الأمور فقط</option>
+                                        <option value="GOVERNORATE">🏛️ حسب المحافظة (محافظة واحدة أو أكثر)</option>
+                                        <option value="KINDERGARTENS">🏫 روضات محددة</option>
                                     </select>
                                 </div>
-                                <div class="col-12 col-md-4" id="directGovernorateFilterWrap">
-                                    <label for="directGovernorateFilter" class="form-label">المحافظة</label>
-                                    <select class="form-select" id="directGovernorateFilter">
-                                        <option value="">جميع المحافظات</option>
-                                        <option value="عمان">عمان</option>
-                                        <option value="إربد">إربد</option>
-                                        <option value="الزرقاء">الزرقاء</option>
-                                        <option value="العقبة">العقبة</option>
-                                        <option value="المفرق">المفرق</option>
-                                        <option value="جرش">جرش</option>
-                                        <option value="عجلون">عجلون</option>
-                                        <option value="الطفيلة">الطفيلة</option>
-                                        <option value="الكرك">الكرك</option>
-                                        <option value="معان">معان</option>
-                                        <option value="السلط">السلط</option>
-                                        <option value="مادبا">مادبا</option>
+
+                                <!-- Governorate Multi-Select Section (shown for GOVERNORATE mode) -->
+                                <div class="mb-3" id="adminGovernorateSection" style="display:none;">
+                                    <label class="form-label fw-semibold">اختر المحافظات:</label>
+                                    <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;"
+                                        id="adminGovernorateList">
+                                        {% set governorate_list = (governorates if governorates is defined and
+                                        governorates else ['عمان', 'إربد', 'الزرقاء', 'العقبة', 'المفرق', 'جرش',
+                                        'عجلون', 'الطفيلة', 'الكرك', 'معان', 'البلقاء', 'مادبا']) %}
+                                        {% set governorate_list_en = (governorates_en if governorates_en is defined and
+                                        governorates_en else ['Amman', 'Irbid', 'Zarqa', 'Aqaba', 'Mafraq', 'Jerash',
+                                        'Ajloun', 'Tafilah', 'Karak', 'Ma\'an', 'Balqa', 'Madaba']) %}
+                                        {% for gov in governorate_list %}
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-gov-checkbox" type="checkbox"
+                                                value="{{ gov }}" data-en="{{ governorate_list_en[loop.index0] }}"
+                                                id="adminGov_{{ loop.index }}">
+                                            <label class="form-check-label" for="adminGov_{{ loop.index }}">{{ gov
+                                                }}</label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="mt-1">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="document.querySelectorAll('.admin-gov-checkbox').forEach(c=>c.checked=true);previewRecipients();">تحديد
+                                            الكل</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="document.querySelectorAll('.admin-gov-checkbox').forEach(c=>c.checked=false);previewRecipients();">إلغاء
+                                            الكل</button>
+                                    </div>
+                                </div>
+
+                                <!-- Role Filter for GOVERNORATE mode -->
+                                <div class="mb-3" id="adminGovRolesSection" style="display:none;">
+                                    <label class="form-label fw-semibold">الأدوار المستهدفة:</label>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-gov-role-checkbox" type="checkbox"
+                                                value="MANAGER" id="adminGovRoleManager" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminGovRoleManager">👔 مدراء</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-gov-role-checkbox" type="checkbox"
+                                                value="SUPERVISOR" id="adminGovRoleSupervisor" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminGovRoleSupervisor">👩‍🏫
+                                                مشرفين</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-gov-role-checkbox" type="checkbox"
+                                                value="PARENT" id="adminGovRoleParent" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminGovRoleParent">👨‍👩‍👧‍👦 أولياء
+                                                أمور</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Kindergarten Multi-Select Section (shown for KINDERGARTENS mode) -->
+                                <div class="mb-3" id="adminKindergartenSection" style="display:none;">
+                                    <label class="form-label fw-semibold">اختر الروضات:</label>
+                                    <div class="border rounded p-2" style="max-height: 300px; overflow-y: auto;"
+                                        id="adminKindergartenList">
+                                        <div class="text-muted">جاري التحميل...</div>
+                                    </div>
+                                    <div class="mt-1">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="document.querySelectorAll('.admin-kg-checkbox').forEach(c=>c.checked=true);previewRecipients();">تحديد
+                                            الكل</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="document.querySelectorAll('.admin-kg-checkbox').forEach(c=>c.checked=false);previewRecipients();">إلغاء
+                                            الكل</button>
+                                    </div>
+                                </div>
+
+                                <!-- Role Filter for KINDERGARTENS mode -->
+                                <div class="mb-3" id="adminKgRolesSection" style="display:none;">
+                                    <label class="form-label fw-semibold">الأدوار المستهدفة:</label>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-kg-role-checkbox" type="checkbox"
+                                                value="MANAGER" id="adminKgRoleManager" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminKgRoleManager">👔 مدراء</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-kg-role-checkbox" type="checkbox"
+                                                value="SUPERVISOR" id="adminKgRoleSupervisor" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminKgRoleSupervisor">👩‍🏫
+                                                مشرفين</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-kg-role-checkbox" type="checkbox"
+                                                value="PARENT" id="adminKgRoleParent" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminKgRoleParent">👨‍👩‍👧‍👦 أولياء
+                                                أمور</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Search Filter -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">البحث عن المستلمين (اختياري):</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="adminSearchInput"
+                                            placeholder="ابحث بالاسم أو البريد الإلكتروني…">
+                                        <button class="btn btn-outline-secondary" type="button" id="adminSearchBtn">
+                                            <i class="bi bi-search"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" type="button" id="adminClearBtn"
+                                            onclick="document.getElementById('adminSearchInput').value='';previewRecipients();">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Recipient Preview -->
+                                <div class="alert alert-light border mb-0" id="adminRecipientPreview">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div>
+                                            <i class="bi bi-people-fill"></i>
+                                            <span>عدد المستلمين: <strong id="recipientCount"
+                                                    class="fs-5">-</strong></span>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-info text-white"
+                                            onclick="previewRecipients()">
+                                            <i class="bi bi-eye"></i> حساب المستلمين
+                                        </button>
+                                    </div>
+                                    <!-- Sample Recipients -->
+                                    <div id="sampleRecipientsContainer" class="mt-2" style="display:none;">
+                                        <hr>
+                                        <small class="text-muted">عينة من المستلمين:</small>
+                                        <div id="sampleRecipientsList" class="mt-1 small"></div>
+                                    </div>
+                                    <div id="recipientBreakdown" class="small text-muted mt-2" style="display:none;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Supervisor Message Section (Only for Supervisors) -->
+                            <div id="supervisorMessageSection" style="display:none;">
+                                <div class="alert alert-info mb-3">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>المشرفون يمكنهم إرسال رسائل لمدير الروضة فقط.</strong>
+                                    <br>
+                                    <small class="text-muted">سيتم إرسال رسالتك تلقائياً إلى مدير روضتك.</small>
+                                </div>
+                            </div>
+
+                            <!-- Direct Message Section -->
+                            <div id="directMessageSection" style="display:none;">
+                                <!-- Role Filter -->
+                                <div class="mb-3">
+                                    <label for="directRoleFilter" class="form-label fw-semibold">الدور</label>
+                                    <select class="form-select" id="directRoleFilter">
+                                        <option value="">جميع الأدوار</option>
+                                        <option value="SUPERVISOR">👩‍🏫 مشرف</option>
+                                        <option value="PARENT">👨‍👩‍👧‍👦 ولي أمر</option>
                                     </select>
+                                </div>
+
+                                <!-- Search Input -->
+                                <div class="mb-3">
+                                    <label for="directUserSearch" class="form-label fw-semibold">البحث عن
+                                        المستلم</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="directUserSearch"
+                                            placeholder="ابحث بالاسم أو البريد الإلكتروني…">
+                                        <button class="btn btn-outline-secondary" type="button"
+                                            id="directUserSearchBtn">
+                                            <i class="bi bi-search"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" type="button" id="directUserResetBtn">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text">
+                                        يمكنك البحث بالاسم أو البريد الإلكتروني. يتم الإرسال داخل روضتك فقط.
+                                    </div>
+                                </div>
+
+                                <!-- Recipient Selection -->
+                                <div class="mb-3">
+                                    <label for="directRecipientSelect" class="form-label fw-semibold">
+                                        اختر المستلم <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="directRecipientSelect" size="4" required>
+                                        <option value="">-- اختر مستلمًا --</option>
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        يرجى اختيار مستلم للرسالة
+                                    </div>
+                                    <input type="hidden" id="msgRecipient">
+                                </div>
+                            </div>
+
+                            <!-- Group Message Section (Non-Admin) -->
+                            <div id="groupMessageSection" style="display:none;">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">الأدوار المستلمة</label>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="SUPERVISOR"
+                                                    id="roleSupervisors" name="recipientRole">
+                                                <label class="form-check-label" for="roleSupervisors">
+                                                    👩‍🏫 المشرفون
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="PARENT"
+                                                    id="roleParents" name="recipientRole">
+                                                <label class="form-check-label" for="roleParents">
+                                                    👨‍👩‍👧‍👦 أولياء الأمور
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="selectAllRoles">
+                                        <label class="form-check-label" for="selectAllRoles">
+                                            ✅ جميع الأدوار
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Reply Settings -->
+                            <div class="form-check mt-3">
+                                <input class="form-check-input" type="checkbox" id="allowRepliesToggle">
+                                <label class="form-check-label fw-semibold" for="allowRepliesToggle">
+                                    السماح بالرد إلى المرسل فقط
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="recipientField" style="display:none;">
+                        <label class="form-label">المستلم</label>
+                        <div id="directRecipientLookup" style="display:none;">
+                            <div class="row g-2">
+                                <div class="col-12 col-md-4">
+                                    <label for="directRoleFilter" class="form-label">الدور</label>
+                                    <select class="form-select" id="directRoleFilter"></select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label for="directUserGovernorate" class="form-label">المحافظة</label>
+                                    <input type="text" class="form-control" id="directUserGovernorate"
+                                        placeholder="مثال: دمشق">
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label for="directUserPhone" class="form-label">الهاتف</label>
+                                    <input type="text" class="form-control" id="directUserPhone"
+                                        placeholder="رقم الهاتف">
                                 </div>
                                 <div class="col-12 col-md-4" id="directKindergartenFilterWrap" style="display:none;">
                                     <label for="directKindergartenFilter" class="form-label">الروضة</label>
-                                    <select class="form-select" id="directKindergartenFilter">
-                                        <option value="">جميع الروضات</option>
-                                    </select>
+                                    <select class="form-select" id="directKindergartenFilter"></select>
                                 </div>
-                                <div class="col-12">
-                                    <label for="directUserSearch" class="form-label">البحث</label>
+                                <div class="col-12 col-md-8">
+                                    <label for="directUserSearch" class="form-label">بحث</label>
                                     <input type="text" class="form-control" id="directUserSearch"
-                                        placeholder="اسم المستخدم أو البريد الإلكتروني">
+                                        placeholder="اسم المستخدم أو البريد">
                                 </div>
                             </div>
-                            <div class="d-flex gap-2 mt-2">
+                            <div class="d-flex flex-wrap gap-2 mt-2">
                                 <button type="button" class="btn btn-outline-secondary btn-sm"
                                     id="directUserSearchBtn">بحث</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm"
                                     id="directUserResetBtn">مسح</button>
                             </div>
-                            <select class="form-select mt-2" id="directRecipientSelect" size="5">
+                            <select class="form-select mt-2" id="directRecipientSelect">
                                 <option value="">-- اختر مستلمًا --</option>
                             </select>
                             <input type="hidden" id="msgRecipient">
                             <div class="form-text">يمكن البحث بالاسم أو البريد الإلكتروني.</div>
-                            {% if current_user and current_user.role.value == 'MANAGER' %}
-                            <div class="form-text text-info">يتم الإرسال داخل روضتك فقط.</div>
-                            {% endif %}
+                        </div>
+                        <div id="directManagerWrap" style="display:none;">
+                            <div class="text-muted small" id="directManagerNote">سيتم إرسال الرسالة إلى مدير الروضة.
+                            </div>
+                            <div class="mt-2" id="parentKindergartenWrap" style="display:none;">
+                                <label for="directParentKindergarten" class="form-label">اختر الروضة</label>
+                                <select class="form-select" id="directParentKindergarten"></select>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Group Message Section (Non-Admin) -->
-                    <div class="mb-3" id="groupMessageSection" style="display:none;">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label for="groupScope" class="form-label">نطاق الإرسال</label>
-                                <select class="form-select" id="groupScope">
-                                    <option value="global">عام (جميع الروضات)</option>
-                                    <option value="governorate">حسب المحافظة</option>
-                                    <option value="kindergarten">روضات محددة</option>
-                                </select>
-                            </div>
+                    <!-- محتوى الرسالة Section -->
+                    <div class="card mb-4 border-0 bg-light">
+                        <div class="card-header bg-white border-bottom-0">
+                            <h6 class="mb-0 text-primary">
+                                <i class="bi bi-pencil-square me-2"></i>محتوى الرسالة
+                            </h6>
                         </div>
-
-                        <!-- Governorate Selection -->
-                        <div class="mt-3" id="governorateSection" style="display:none;">
-                            <label for="scopeGovernorate" class="form-label">المحافظة</label>
-                            <select class="form-select" id="scopeGovernorate">
-                                <option value="">-- اختر المحافظة --</option>
-                                <option value="عمان">عمان</option>
-                                <option value="إربد">إربد</option>
-                                <option value="الزرقاء">الزرقاء</option>
-                                <option value="العقبة">العقبة</option>
-                                <option value="المفرق">المفرق</option>
-                                <option value="جرش">جرش</option>
-                                <option value="عجلون">عجلون</option>
-                                <option value="الطفيلة">الطفيلة</option>
-                                <option value="الكرك">الكرك</option>
-                                <option value="معان">معان</option>
-                                <option value="السلط">السلط</option>
-                                <option value="مادبا">مادبا</option>
-                            </select>
-                        </div>
-
-                        <!-- Kindergarten Selection -->
-                        <div class="mt-3" id="kindergartenSection" style="display:none;">
-                            <label class="form-label">الروضات</label>
-                            <div id="kindergartenCheckboxes" class="border rounded p-3"
-                                style="max-height: 300px; overflow-y: auto;">
-                                <div class="text-muted">جاري تحميل الروضات...</div>
-                            </div>
-                        </div>
-
-                        <!-- Roles Selection -->
-                        <div class="mt-3">
-                            <label class="form-label">الأدوار المستلمة</label>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" value="MANAGER"
-                                            id="roleManagers" name="recipientRole">
-                                        <label class="form-check-label" for="roleManagers">المديرون</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" value="SUPERVISOR"
-                                            id="roleSupervisors" name="recipientRole">
-                                        <label class="form-check-label" for="roleSupervisors">المشرفون</label>
-                                    </div>
+                        <div class="card-body">
+                            <!-- Message Body -->
+                            <div class="mb-3">
+                                <label for="msgBody" class="form-label fw-semibold">
+                                    نص الرسالة <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control" id="msgBody" rows="6"
+                                    style="resize: vertical; min-height: 120px;" required
+                                    placeholder="اكتب نص الرسالة هنا..."></textarea>
+                                <div class="invalid-feedback">
+                                    هذا الحقل مطلوب
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" value="PARENT" id="roleParents"
-                                            name="recipientRole">
-                                        <label class="form-check-label" for="roleParents">أولياء الأمور</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="selectAllRoles">
-                                        <label class="form-check-label" for="selectAllRoles">جميع الأدوار</label>
-                                    </div>
+                                <div class="d-flex justify-between align-items-center mt-1">
+                                    <small class="form-text text-muted">
+                                        رسالة طويلة مدعومة - سيتم عرض النص بشكل صحيح للمستلمين
+                                    </small>
+                                    <small class="form-text text-muted" id="charCounter">0 أحرف</small>
+                                </div>
+                            </div>
+
+                            <!-- Attachments -->
+                            <div class="mb-0">
+                                <label for="msgAttachments" class="form-label fw-semibold">المرفقات</label>
+                                <input type="file" class="form-control" id="msgAttachments" multiple>
+                                <div class="form-text" id="attachmentHint" style="display:none;">
+                                    المرفقات متاحة للمسؤولين والمديرين فقط.
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <small class="text-muted">سيتم إرسال الرسالة لجميع الروضات في المحافظة المختارة.</small>
+                </form>
             </div>
-            <div class="form-check mt-3" id="allowRepliesWrap">
-                <input class="form-check-input" type="checkbox" id="allowRepliesToggle">
-                <label class="form-check-label" for="allowRepliesToggle">السماح بالرد إلى المرسل فقط</label>
-            </div>
-        </div>
-        <div class="mb-3" id="recipientField" style="display:none;">
-            <label class="form-label">المستلم</label>
-            <div id="directRecipientLookup" style="display:none;">
-                <div class="row g-2">
-                    <div class="col-12 col-md-4">
-                        <label for="directRoleFilter" class="form-label">الدور</label>
-                        <select class="form-select" id="directRoleFilter"></select>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <label for="directUserGovernorate" class="form-label">المحافظة</label>
-                        <input type="text" class="form-control" id="directUserGovernorate" placeholder="مثال: دمشق">
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <label for="directUserPhone" class="form-label">الهاتف</label>
-                        <input type="text" class="form-control" id="directUserPhone" placeholder="رقم الهاتف">
-                    </div>
-                    <div class="col-12 col-md-4" id="directKindergartenFilterWrap" style="display:none;">
-                        <label for="directKindergartenFilter" class="form-label">الروضة</label>
-                        <select class="form-select" id="directKindergartenFilter"></select>
-                    </div>
-                    <div class="col-12 col-md-8">
-                        <label for="directUserSearch" class="form-label">بحث</label>
-                        <input type="text" class="form-control" id="directUserSearch"
-                            placeholder="اسم المستخدم أو البريد">
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap gap-2 mt-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="directUserSearchBtn">بحث</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="directUserResetBtn">مسح</button>
-                </div>
-                <select class="form-select mt-2" id="directRecipientSelect">
-                    <option value="">-- اختر مستلمًا --</option>
-                </select>
-                <input type="hidden" id="msgRecipient">
-                <div class="form-text">يمكن البحث بالاسم أو البريد الإلكتروني.</div>
-            </div>
-            <div id="directManagerWrap" style="display:none;">
-                <div class="text-muted small" id="directManagerNote">سيتم إرسال الرسالة إلى مدير الروضة.
-                </div>
-                <div class="mt-2" id="parentKindergartenWrap" style="display:none;">
-                    <label for="directParentKindergarten" class="form-label">اختر الروضة</label>
-                    <select class="form-select" id="directParentKindergarten"></select>
-                </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer bg-light border-top-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>إلغاء
+                </button>
+                <button type="button" class="btn btn-primary" id="sendMessageBtn" onclick="submitMessage()" disabled>
+                    <i class="bi bi-send me-2"></i>إرسال
+                </button>
             </div>
         </div>
-        <div class="mb-3">
-            <label for="msgBody" class="form-label">نص الرسالة <span class="text-danger">*</span></label>
-            <textarea class="form-control" id="msgBody" rows="4" required></textarea>
-        </div>
-        <div class="mb-3">
-            <label for="msgAttachments" class="form-label">المرفقات</label>
-            <input type="file" class="form-control" id="msgAttachments" multiple>
-            <div class="form-text" id="attachmentHint" style="display:none;">المرفقات متاحة للمسؤولين
-                والمديرين فقط.</div>
-        </div>
-        </form>
     </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-        <button type="button" class="btn btn-primary" id="sendMessageBtn" onclick="submitMessage()">إرسال</button>
-    </div>
-</div>
-</div>
 </div>
 
 <script>
-let currentUserRole = null;
-let currentUserKindergartenId = null;
-if (typeof currentUserId === 'undefined') var currentUserId = null;
-let parentActiveKindergartens = [];
-let directKindergartenCache = null;
-let parentKindergartensLoaded = false;
-const parentKindergartenNameCache = {};
-const PARENT_KG_NAME_BULK_THRESHOLD = 10;
-let adminKindergartens = [];
-let adminKindergartenFilters = { governorate: '', search: '' };
+    let currentUserRole = null;
+    let currentUserKindergartenId = null;
+    if (typeof currentUserId === 'undefined') var currentUserId = null;
+    let parentActiveKindergartens = [];
+    let directKindergartenCache = null;
+    let parentKindergartensLoaded = false;
+    const parentKindergartenNameCache = {};
+    const PARENT_KG_NAME_BULK_THRESHOLD = 10;
 
-function notify(message, type = 'info') {
-    if (typeof showToast === 'function') {
-        showToast(message, type);
-    } else {
-        notify(message);
+    // Form validation and button state management
+    function validateForm() {
+        const form = document.getElementById('newMessageForm');
+        const subject = document.getElementById('msgSubject');
+        const body = document.getElementById('msgBody');
+        const sendBtn = document.getElementById('sendMessageBtn');
+        const msgType = document.getElementById('msgType').value;
+
+        let isValid = true;
+
+        // Validate required fields
+        if (!subject.value.trim()) {
+            subject.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            subject.classList.remove('is-invalid');
+        }
+
+        if (!body.value.trim()) {
+            body.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            body.classList.remove('is-invalid');
+        }
+
+        // Validate recipient selection for direct messages (except for supervisors - they auto-send to manager)
+        if (msgType === 'direct' && currentUserRole !== 'SUPERVISOR') {
+            const recipient = document.getElementById('directRecipientSelect');
+            if (!recipient.value) {
+                recipient.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                recipient.classList.remove('is-invalid');
+            }
+        }
+
+        // Enable/disable send button
+        sendBtn.disabled = !isValid;
+
+        return isValid;
     }
-}
+
+    // Character counter for message body
+    function updateCharCounter() {
+        const textarea = document.getElementById('msgBody');
+        const counter = document.getElementById('charCounter');
+        if (textarea && counter) {
+            const count = textarea.value.length;
+            counter.textContent = `${count} أحرف`;
+            // Change color if approaching limit (optional)
+            if (count > 1000) {
+                counter.className = 'form-text text-warning';
+            } else {
+                counter.className = 'form-text text-muted';
+            }
+        }
+    }
+
+    // Add event listeners for real-time validation
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('newMessageForm');
+        const subject = document.getElementById('msgSubject');
+        const body = document.getElementById('msgBody');
+        const msgType = document.getElementById('msgType');
+
+        // Validate on input/blur
+        subject.addEventListener('input', validateForm);
+        subject.addEventListener('blur', validateForm);
+        body.addEventListener('input', function () {
+            validateForm();
+            updateCharCounter();
+        });
+        body.addEventListener('blur', validateForm);
+        msgType.addEventListener('change', validateForm);
+
+        // Initialize character counter
+        updateCharCounter();
+
+        // Validate recipient selection changes
+        document.getElementById('directRecipientSelect').addEventListener('change', validateForm);
+    });
+
+    function notify(message, type = 'info') {
+        if (typeof showToast === 'function') {
+            showToast(message, type);
+        } else {
+            // Enhanced fallback notification with better positioning
+            const toastContainer = document.createElement('div');
+            toastContainer.className = `toast align-items-center text-white bg-${type} border-0 position-fixed`;
+            toastContainer.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toastContainer.setAttribute('role', 'alert');
+            toastContainer.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi ${type === 'success' ? 'bi-check-circle' : type === 'error' ? 'bi-exclamation-triangle' : 'bi-info-circle'} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            document.body.appendChild(toastContainer);
+            const toast = new bootstrap.Toast(toastContainer, { delay: 5000 });
+            toast.show();
+            setTimeout(() => toastContainer.remove(), 5500);
+        }
+    }
 
     async function initMessageForm() {
-        const token = localStorage.getItem('access_token');
-        if (!token) return;
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            // No authentication - mark initialized and let ensureScopeReady show error
+            if (typeof window.markScopeInitialized === 'function') {
+                window.markScopeInitialized();
+            }
+            if (typeof window.ensureScopeReady === 'function') {
+                window.ensureScopeReady();
+            }
+            return;
+        }
+
+        const token = AuthService.getToken();
+        if (!token) {
+            // No token - mark initialized and let ensureScopeReady show error
+            if (typeof window.markScopeInitialized === 'function') {
+                window.markScopeInitialized();
+            }
+            if (typeof window.ensureScopeReady === 'function') {
+                window.ensureScopeReady();
+            }
+            return;
+        }
 
         try {
             const userResp = await fetch('/api/users/me', {
@@ -395,19 +586,28 @@ function notify(message, type = 'info') {
                 currentUserId = user.id;
 
                 const msgTypeSelect = document.getElementById('msgType');
+                const msgTypeContainer = document.getElementById('msgTypeContainer');
+                const supervisorMsgTypeInfo = document.getElementById('supervisorMsgTypeInfo');
+
                 if (msgTypeSelect) {
-                    if (['PARENT', 'SUPERVISOR'].includes(currentUserRole)) {
+                    if (currentUserRole === 'SUPERVISOR') {
+                        // Hide message type selector for supervisors, show fixed info
+                        if (msgTypeContainer) msgTypeContainer.style.display = 'none';
+                        if (supervisorMsgTypeInfo) supervisorMsgTypeInfo.style.display = 'block';
+                        msgTypeSelect.value = 'direct';
+                    } else if (currentUserRole === 'PARENT') {
                         const announcementOption = msgTypeSelect.querySelector('option[value="announcement"]');
                         if (announcementOption) {
                             announcementOption.disabled = true;
                         }
                         msgTypeSelect.value = 'direct';
-                    }
-                    if (currentUserRole === 'MANAGER') {
+                    } else if (currentUserRole === 'MANAGER') {
                         msgTypeSelect.value = 'direct';
-                        msgTypeSelect.disabled = true;
-                        const groupOption = msgTypeSelect.querySelector('option[value="group"]');
-                        if (groupOption) groupOption.remove();
+                        // Managers can send direct AND group messages within their kindergarten
+                        msgTypeSelect.disabled = false;
+                        // Remove announcement option (admin only)
+                        const announcementOpt = msgTypeSelect.querySelector('option[value="announcement"]');
+                        if (announcementOpt) announcementOpt.remove();
                     }
                 }
 
@@ -426,19 +626,37 @@ function notify(message, type = 'info') {
                 }
 
                 if (currentUserRole === 'ADMIN') {
-                    await loadKindergartens();
+                    await loadKindergartensForCheckboxes();
                     await loadDirectKindergartens();
                     await initAdminTargeting();
                 }
 
+                if (typeof window.markScopeInitialized === 'function') {
+                    window.markScopeInitialized();
+                }
                 if (typeof window.ensureScopeReady === 'function') {
                     window.ensureScopeReady();
                 }
 
                 updateMessageFormVisibility();
+            } else {
+                // API returned error (e.g., 401 unauthorized)
+                if (typeof window.markScopeInitialized === 'function') {
+                    window.markScopeInitialized();
+                }
+                if (typeof window.ensureScopeReady === 'function') {
+                    window.ensureScopeReady();
+                }
             }
         } catch (e) {
             console.error('Error loading user info:', e);
+            // Mark as initialized so ensureScopeReady can show the error
+            if (typeof window.markScopeInitialized === 'function') {
+                window.markScopeInitialized();
+            }
+            if (typeof window.ensureScopeReady === 'function') {
+                window.ensureScopeReady();
+            }
         }
     }
 
@@ -538,13 +756,18 @@ function notify(message, type = 'info') {
 
     async function loadKindergartensForCheckboxes() {
         if (currentUserRole !== 'ADMIN') return;
-        const token = localStorage.getItem('access_token');
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return;
+        }
+
+        const token = AuthService.getToken();
         try {
             const response = await fetch('/api/kindergartens?limit=500&status=active', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) {
-                console.error('Failed to load kindergartens');
+                console.error('تعذر تحميل الروضات');
                 return;
             }
             const data = await response.json();
@@ -741,7 +964,12 @@ function notify(message, type = 'info') {
             populateDirectKindergartenFilter(directKindergartenCache);
             return;
         }
-        const token = localStorage.getItem('access_token');
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return;
+        }
+
+        const token = AuthService.getToken();
         const params = new URLSearchParams();
         params.append('limit', '200');
         try {
@@ -790,7 +1018,12 @@ function notify(message, type = 'info') {
 
     async function loadDirectRecipients() {
         if (!(currentUserRole === 'ADMIN' || currentUserRole === 'MANAGER')) return;
-        const token = localStorage.getItem('access_token');
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return;
+        }
+
+        const token = AuthService.getToken();
         const params = new URLSearchParams();
         const role = document.getElementById('directRoleFilter')?.value;
         const search = document.getElementById('directUserSearch')?.value.trim();
@@ -843,7 +1076,12 @@ function notify(message, type = 'info') {
         if (parentKindergartensLoaded && !forceRefresh) {
             return;
         }
-        const token = localStorage.getItem('access_token');
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return;
+        }
+
+        const token = AuthService.getToken();
         const note = document.getElementById('directManagerNote');
         const wrap = document.getElementById('parentKindergartenWrap');
         const select = document.getElementById('directParentKindergarten');
@@ -911,7 +1149,12 @@ function notify(message, type = 'info') {
     }
 
     async function fetchKindergartenNames(kindergartenIds) {
-        const token = localStorage.getItem('access_token');
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return {};
+        }
+
+        const token = AuthService.getToken();
         const result = {};
         const ids = Array.from(new Set(kindergartenIds || [])).filter(Boolean);
         if (!ids.length) {
@@ -982,27 +1225,54 @@ function notify(message, type = 'info') {
     function updateMessageFormVisibility() {
         const msgTypeEl = document.getElementById('msgType');
         let type = msgTypeEl ? msgTypeEl.value : 'direct';
-        if (currentUserRole === 'MANAGER') {
+
+        // Supervisors: force direct messages only (to their manager)
+        if (currentUserRole === 'SUPERVISOR') {
             type = 'direct';
-            if (msgTypeEl) msgTypeEl.value = 'direct';
+            if (msgTypeEl) {
+                msgTypeEl.value = 'direct';
+                msgTypeEl.disabled = true;
+            }
         }
+        // Parents: force direct messages only (to kindergarten manager)
+        if (currentUserRole === 'PARENT') {
+            type = 'direct';
+            if (msgTypeEl) {
+                msgTypeEl.value = 'direct';
+                msgTypeEl.disabled = true;
+            }
+        }
+        // Managers: can use direct or group (within their kindergarten)
+
         const directSection = document.getElementById('directMessageSection');
         const groupSection = document.getElementById('groupMessageSection');
         const adminSection = document.getElementById('adminTargetingSection');
+        const supervisorSection = document.getElementById('supervisorMessageSection');
+        const recipientsSectionHeader = document.getElementById('recipientsSectionHeader');
 
-        console.log('updateMessageFormVisibility called, type:', type);
+        console.log('updateMessageFormVisibility called, type:', type, 'role:', currentUserRole);
 
         if (type === 'direct') {
-            directSection.style.display = 'block';
+            // For supervisors: show supervisor section, hide direct section and recipients header
+            if (currentUserRole === 'SUPERVISOR') {
+                if (supervisorSection) supervisorSection.style.display = 'block';
+                if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'none';
+                directSection.style.display = 'none';
+            } else {
+                if (supervisorSection) supervisorSection.style.display = 'none';
+                if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'block';
+                directSection.style.display = 'block';
+                updateDirectRecipientControls();
+            }
             groupSection.style.display = 'none';
             if (adminSection) {
                 adminSection.style.display = 'none';
             }
-            updateDirectRecipientControls();
             return;
         }
 
         if (type === 'group') {
+            if (supervisorSection) supervisorSection.style.display = 'none';
             directSection.style.display = 'none';
             const isAdmin = currentUserRole === 'ADMIN';
             if (adminSection) {
@@ -1020,9 +1290,17 @@ function notify(message, type = 'info') {
         }
 
         // Default to direct
-        directSection.style.display = 'block';
+        if (currentUserRole === 'SUPERVISOR') {
+            if (supervisorSection) supervisorSection.style.display = 'block';
+            if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'none';
+            directSection.style.display = 'none';
+        } else {
+            if (supervisorSection) supervisorSection.style.display = 'none';
+            if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'block';
+            directSection.style.display = 'block';
+            updateDirectRecipientControls();
+        }
         groupSection.style.display = 'none';
-        updateDirectRecipientControls();
     }
 
     function updateDirectRecipientControls() {
@@ -1032,13 +1310,13 @@ function notify(message, type = 'info') {
         const kindergartenFilter = document.getElementById('directKindergartenFilter');
 
         if (currentUserRole === 'ADMIN') {
-            roleFilter.style.display = 'block';
-            governorateFilter.style.display = 'block';
-            kindergartenFilter.style.display = 'block';
+            if (roleFilter) roleFilter.style.display = 'block';
+            if (governorateFilter) governorateFilter.style.display = 'block';
+            if (kindergartenFilter) kindergartenFilter.style.display = 'block';
         } else if (currentUserRole === 'MANAGER') {
-            roleFilter.style.display = 'block';
-            governorateFilter.style.display = 'none';
-            kindergartenFilter.style.display = 'none';
+            if (roleFilter) roleFilter.style.display = 'block';
+            if (governorateFilter) governorateFilter.style.display = 'none';
+            if (kindergartenFilter) kindergartenFilter.style.display = 'none';
             // Restrict manager recipients to non-admin roles
             const disallowed = ['ADMIN', 'MANAGER'];
             Array.from(roleFilter?.options || []).forEach(opt => {
@@ -1047,9 +1325,9 @@ function notify(message, type = 'info') {
                 }
             });
         } else {
-            roleFilter.style.display = 'none';
-            governorateFilter.style.display = 'none';
-            kindergartenFilter.style.display = 'none';
+            if (roleFilter) roleFilter.style.display = 'none';
+            if (governorateFilter) governorateFilter.style.display = 'none';
+            if (kindergartenFilter) kindergartenFilter.style.display = 'none';
         }
     }
 
@@ -1131,7 +1409,12 @@ function notify(message, type = 'info') {
         }
         // Guard: disable open buttons if scope not ready (e.g., manager without kindergarten)
         const openButtons = document.querySelectorAll('[data-bs-target="#newMessageModal"]');
+        let scopeInitialized = false;
         const ensureScopeReady = () => {
+            // Don't show error before initialization completes
+            if (!scopeInitialized) {
+                return;
+            }
             const ready = (typeof currentUserRole !== 'undefined') && currentUserRole && (currentUserRole !== 'MANAGER' || currentUserKindergartenId);
             if (!ready) {
                 openButtons.forEach(btn => btn.setAttribute('disabled', 'disabled'));
@@ -1141,7 +1424,8 @@ function notify(message, type = 'info') {
             }
         };
         window.ensureScopeReady = ensureScopeReady;
-        ensureScopeReady();
+        window.markScopeInitialized = () => { scopeInitialized = true; };
+        // Don't call ensureScopeReady() here - wait for initMessageForm() to complete
         const msgType = document.getElementById('msgType');
         if (msgType) msgType.addEventListener('change', updateMessageFormVisibility);
 
@@ -1184,13 +1468,13 @@ function notify(message, type = 'info') {
         // Kindergarten selection
         const kgFilterSearch = document.getElementById('kgFilterSearch');
         if (kgFilterSearch) {
-            kgFilterSearch.addEventListener('click', () => loadKindergartens(collectKindergartenFilters()));
+            kgFilterSearch.addEventListener('click', () => loadKindergartensForCheckboxes());
         }
         const kgFilterReset = document.getElementById('kgFilterReset');
         if (kgFilterReset) {
             kgFilterReset.addEventListener('click', async () => {
                 resetKindergartenFilters();
-                await loadKindergartens();
+                await loadKindergartensForCheckboxes();
             });
         }
         const selectAllKgEl = document.getElementById('selectAllKindergartens');
@@ -1284,17 +1568,11 @@ function notify(message, type = 'info') {
         if (adminSearchInput) {
             adminSearchInput.addEventListener('input', () => previewRecipients());
         }
-        document.querySelectorAll('.admin-role-checkbox').forEach(input => {
-            input.addEventListener('change', () => previewRecipients());
+        // Governorate checkbox listeners for live preview
+        document.querySelectorAll('.admin-gov-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => previewRecipients());
         });
-        const adminKgGovernorateFilter = document.getElementById('kgGovernorateFilter');
-        if (adminKgGovernorateFilter) {
-            adminKgGovernorateFilter.addEventListener('change', () => filterKindergartensByGovernorate());
-        }
-        const adminKgSearchInput = document.getElementById('kgSearchInput');
-        if (adminKgSearchInput) {
-            adminKgSearchInput.addEventListener('input', () => searchKindergartens());
-        }
+        // Removed kindergarten-related event listeners since section was removed
     });
 
     async function initAdminTargeting() {
@@ -1305,157 +1583,14 @@ function notify(message, type = 'info') {
         if (currentUserRole !== 'ADMIN') {
             return;
         }
-        await loadAdminGovernorateOptions();
-        await loadAdminKindergartens();
+        // Removed loading of governorates and kindergartens since sections were removed
         updateAdminTargetingUI();
         previewRecipients();
     }
 
-    async function loadAdminGovernorateOptions() {
-        const select = document.getElementById('adminGovernorate');
-        const filter = document.getElementById('kgGovernorateFilter');
-        const token = localStorage.getItem('access_token');
-        if (!select || !filter || !token) {
-            return;
-        }
-        try {
-            const response = await fetch('/api/admin/options/governorates', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) {
-                throw new Error('Failed to load governorates');
-            }
-            const payload = await response.json();
-            const options = payload.governorates || [];
-            select.innerHTML = options
-                .map(gov => `<option value="${gov.id}">${gov.name_ar}</option>`)
-                .join('');
-            const placeholder = '<option value="">-- جميع المحافظات --</option>';
-            filter.innerHTML = placeholder + options
-                .map(gov => `<option value="${gov.id}">${gov.name_ar}</option>`)
-                .join('');
-        } catch (err) {
-            console.error('Error loading governorates:', err);
-        }
-    }
 
-    async function loadAdminKindergartens() {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-            return;
-        }
-        try {
-            const response = await fetch('/api/admin/options/kindergartens?page=1&page_size=500', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) {
-                throw new Error('Failed to load kindergartens');
-            }
-            const payload = await response.json();
-            adminKindergartens = Array.isArray(payload.kindergartens)
-                ? payload.kindergartens
-                : (payload.kindergartens || []);
-            renderAdminKindergartens();
-        } catch (err) {
-            console.error('Error loading admin kindergartens:', err);
-        }
-    }
 
-    function renderAdminKindergartens() {
-        const container = document.getElementById('adminKindergartenList');
-        if (!container) {
-            return;
-        }
-        let items = [...adminKindergartens];
-        const governorateFilter = adminKindergartenFilters.governorate;
-        const searchTerm = adminKindergartenFilters.search;
-        if (governorateFilter) {
-            items = items.filter(kg => kg.governorate === governorateFilter);
-        }
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            items = items.filter(kg => {
-                const label = `${kg.name_ar || ''} ${kg.name_en || ''} ${kg.city || ''}`.toLowerCase();
-                return label.includes(term);
-            });
-        }
 
-        if (!items.length) {
-            container.innerHTML = '<div class="text-muted">لا توجد روضات مطابقة.</div>';
-            updateSelectedKgCount();
-            return;
-        }
-
-        const grouped = {};
-        items.forEach(kg => {
-            const key = kg.governorate || 'غير محددة';
-            grouped[key] = grouped[key] || [];
-            grouped[key].push(kg);
-        });
-
-        container.innerHTML = Object.entries(grouped)
-            .map(([gov, kgs]) => `
-                <div class="mb-3">
-                    <div class="fw-bold text-primary small">${gov}</div>
-                    ${kgs
-                        .map(kg => `
-                            <div class="form-check">
-                                <input class="form-check-input admin-kg-checkbox" type="checkbox"
-                                    id="adminKg_${kg.id}" value="${kg.id}">
-                                <label class="form-check-label" for="adminKg_${kg.id}">
-                                    ${kg.name_ar || kg.name_en || `روضة ${kg.id}`}
-                                    ${kg.city ? ` (${kg.city})` : ''}
-                                </label>
-                            </div>
-                        `).join('')}
-                </div>
-            `).join('');
-
-        container.querySelectorAll('.admin-kg-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
-                updateSelectedKgCount();
-                previewRecipients();
-            });
-        });
-
-        updateSelectedKgCount();
-    }
-
-    function filterKindergartensByGovernorate() {
-        const select = document.getElementById('kgGovernorateFilter');
-        adminKindergartenFilters.governorate = select?.value || '';
-        renderAdminKindergartens();
-    }
-
-    function searchKindergartens() {
-        const searchInput = document.getElementById('kgSearchInput');
-        adminKindergartenFilters.search = searchInput?.value.trim().toLowerCase() || '';
-        renderAdminKindergartens();
-    }
-
-    function selectAllKindergartens() {
-        document.querySelectorAll('.admin-kg-checkbox').forEach(checkbox => {
-            checkbox.checked = true;
-        });
-        updateSelectedKgCount();
-        previewRecipients();
-    }
-
-    function deselectAllKindergartens() {
-        document.querySelectorAll('.admin-kg-checkbox').forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        updateSelectedKgCount();
-        previewRecipients();
-    }
-
-    function updateSelectedKgCount() {
-        const count = document.querySelectorAll('.admin-kg-checkbox:checked').length;
-        const countEl = document.getElementById('selectedKgCount');
-        if (countEl) {
-            countEl.textContent = count;
-        }
-    }
 
     function collectAdminRoles() {
         return Array.from(document.querySelectorAll('.admin-role-checkbox:checked'))
@@ -1465,29 +1600,21 @@ function notify(message, type = 'info') {
     function collectAdminTargetPayload() {
         const mode = document.getElementById('adminTargetMode')?.value;
         const target = { mode };
-        if (mode === 'GOVERNORATE') {
-            const governorates = Array.from(document.getElementById('adminGovernorate')?.selectedOptions || [])
-                .map(opt => opt.value)
-                .filter(Boolean);
-            if (governorates.length) {
-                target.governorates = governorates;
-            }
-        }
-        if (mode === 'KINDERGARTENS') {
-            const kindergartenIds = Array.from(document.querySelectorAll('.admin-kg-checkbox:checked'))
-                .map(cb => Number(cb.value))
-                .filter(Number.isFinite);
-            if (kindergartenIds.length) {
-                target.kindergarten_ids = kindergartenIds;
-            }
-        }
-        const roles = collectAdminRoles();
-        if (roles.length) {
-            target.roles = roles;
-        }
         const searchTerm = document.getElementById('adminSearchInput')?.value.trim();
         if (searchTerm) {
             target.search = searchTerm;
+        }
+        if (mode === 'GOVERNORATE') {
+            const govs = Array.from(document.querySelectorAll('.admin-gov-checkbox:checked')).map(c => c.value);
+            if (govs.length) target.governorates = govs;
+            const roles = Array.from(document.querySelectorAll('.admin-gov-role-checkbox:checked')).map(c => c.value);
+            if (roles.length) target.roles = roles;
+        }
+        if (mode === 'KINDERGARTENS') {
+            const kgIds = Array.from(document.querySelectorAll('.admin-kg-checkbox:checked')).map(c => parseInt(c.value, 10));
+            if (kgIds.length) target.kindergarten_ids = kgIds;
+            const roles = Array.from(document.querySelectorAll('.admin-kg-role-checkbox:checked')).map(c => c.value);
+            if (roles.length) target.roles = roles;
         }
         return target;
     }
@@ -1495,18 +1622,69 @@ function notify(message, type = 'info') {
     function updateAdminTargetingUI() {
         const mode = document.getElementById('adminTargetMode')?.value;
         const govSection = document.getElementById('adminGovernorateSection');
+        const govRolesSection = document.getElementById('adminGovRolesSection');
         const kgSection = document.getElementById('adminKindergartenSection');
-        const rolesSection = document.getElementById('adminRolesSection');
-        if (govSection) {
-            govSection.style.display = mode === 'GOVERNORATE' ? 'block' : 'none';
-        }
-        if (kgSection) {
-            kgSection.style.display = mode === 'KINDERGARTENS' ? 'block' : 'none';
-        }
-        if (rolesSection) {
-            rolesSection.style.display = (mode === 'GOVERNORATE' || mode === 'KINDERGARTENS') ? 'block' : 'none';
+        const kgRolesSection = document.getElementById('adminKgRolesSection');
+        if (govSection) govSection.style.display = mode === 'GOVERNORATE' ? 'block' : 'none';
+        if (govRolesSection) govRolesSection.style.display = mode === 'GOVERNORATE' ? 'block' : 'none';
+        if (kgSection) kgSection.style.display = mode === 'KINDERGARTENS' ? 'block' : 'none';
+        if (kgRolesSection) kgRolesSection.style.display = mode === 'KINDERGARTENS' ? 'block' : 'none';
+        // Load kindergarten list for KINDERGARTENS mode if not already loaded
+        if (mode === 'KINDERGARTENS') {
+            loadAdminKindergartenCheckboxes();
         }
         previewRecipients();
+    }
+
+    async function loadAdminKindergartenCheckboxes() {
+        const container = document.getElementById('adminKindergartenList');
+        if (!container) return;
+        // Skip if already populated with checkboxes
+        if (container.querySelector('.admin-kg-checkbox')) return;
+        if (!window.AuthService || !AuthService.isAuthenticated()) return;
+        const token = AuthService.getToken();
+        try {
+            const response = await fetch('/api/kindergartens?limit=500&status=active', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                container.innerHTML = '<div class="text-danger">تعذر تحميل الروضات</div>';
+                return;
+            }
+            const data = await response.json();
+            const kindergartens = Array.isArray(data) ? data : (data.kindergartens || []);
+            if (!kindergartens.length) {
+                container.innerHTML = '<div class="text-muted">لا توجد روضات متاحة</div>';
+                return;
+            }
+            // Group by governorate
+            const grouped = {};
+            kindergartens.forEach(kg => {
+                const gov = kg.governorate || 'غير محدد';
+                if (!grouped[gov]) grouped[gov] = [];
+                grouped[gov].push(kg);
+            });
+            container.innerHTML = '';
+            Object.keys(grouped).sort().forEach(gov => {
+                const header = document.createElement('div');
+                header.className = 'fw-semibold text-primary mt-2 mb-1';
+                header.textContent = gov;
+                container.appendChild(header);
+                grouped[gov].forEach(kg => {
+                    const div = document.createElement('div');
+                    div.className = 'form-check';
+                    const id = `adminKg_${kg.id}`;
+                    div.innerHTML = `
+                        <input class="form-check-input admin-kg-checkbox" type="checkbox" value="${kg.id}" id="${id}" onchange="previewRecipients()">
+                        <label class="form-check-label" for="${id}">${kg.name_ar || kg.name_en || 'روضة ' + kg.id}${kg.city ? ' (' + kg.city + ')' : ''}</label>
+                    `;
+                    container.appendChild(div);
+                });
+            });
+        } catch (err) {
+            console.error('Error loading admin kindergartens:', err);
+            container.innerHTML = '<div class="text-danger">خطأ في تحميل الروضات</div>';
+        }
     }
 
     function isAdminTargetingActive() {
@@ -1524,13 +1702,28 @@ function notify(message, type = 'info') {
         }
         const params = new URLSearchParams();
         params.append('mode', mode);
-        Array.from(document.getElementById('adminGovernorate')?.selectedOptions || [])
-            .map(opt => opt.value)
-            .filter(Boolean)
-            .forEach(val => params.append('governorates', val));
-        document.querySelectorAll('.admin-kg-checkbox:checked')
-            .forEach(checkbox => params.append('kindergarten_ids', checkbox.value));
-        collectAdminRoles().forEach(role => params.append('roles', role));
+        if (mode === 'GOVERNORATE') {
+            const govs = Array.from(document.querySelectorAll('.admin-gov-checkbox:checked')).map(c => c.value);
+            if (!govs.length) {
+                const countEl = document.getElementById('recipientCount');
+                if (countEl) countEl.textContent = '0';
+                return;
+            }
+            govs.forEach(g => params.append('governorates', g));
+            const roles = Array.from(document.querySelectorAll('.admin-gov-role-checkbox:checked')).map(c => c.value);
+            roles.forEach(r => params.append('roles', r));
+        }
+        if (mode === 'KINDERGARTENS') {
+            const kgIds = Array.from(document.querySelectorAll('.admin-kg-checkbox:checked')).map(c => c.value);
+            if (!kgIds.length) {
+                const countEl = document.getElementById('recipientCount');
+                if (countEl) countEl.textContent = '0';
+                return;
+            }
+            kgIds.forEach(id => params.append('kindergarten_ids', id));
+            const roles = Array.from(document.querySelectorAll('.admin-kg-role-checkbox:checked')).map(c => c.value);
+            roles.forEach(r => params.append('roles', r));
+        }
         const searchTerm = document.getElementById('adminSearchInput')?.value.trim();
         if (searchTerm) {
             params.append('search', searchTerm);
@@ -1543,12 +1736,17 @@ function notify(message, type = 'info') {
             previewBtn.innerHTML = '<i class="bi bi-eye"></i> جاري الحساب...';
         }
         try {
-            const token = localStorage.getItem('access_token');
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                return;
+            }
+
+            const token = AuthService.getToken();
             const response = await fetch(`/api/admin/message-recipients/preview?${params.toString()}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) {
-                throw new Error('Failed to preview recipients');
+                throw new Error('تعذر معاينة المستلمين');
             }
             const data = await response.json();
             if (countEl) {
@@ -1628,16 +1826,14 @@ function notify(message, type = 'info') {
     async function submitAdminMessage() {
         const target = collectAdminTargetPayload();
         const mode = target.mode;
+        // Validate governorate selection
         if (mode === 'GOVERNORATE' && (!target.governorates || !target.governorates.length)) {
-            notify('اختر المحافظة أولاً.');
+            notify('الرجاء اختيار محافظة واحدة على الأقل.', 'error');
             return;
         }
+        // Validate kindergarten selection
         if (mode === 'KINDERGARTENS' && (!target.kindergarten_ids || !target.kindergarten_ids.length)) {
-            notify('اختر الروضات أولاً.');
-            return;
-        }
-        if ((mode === 'GOVERNORATE' || mode === 'KINDERGARTENS') && (!target.roles || !target.roles.length)) {
-            notify('اختر الأدوار المستهدفة.');
+            notify('الرجاء اختيار روضة واحدة على الأقل.', 'error');
             return;
         }
         const allowRepliesToggle = document.getElementById('allowRepliesToggle');
@@ -1647,7 +1843,13 @@ function notify(message, type = 'info') {
             target,
             allow_replies: !!(allowRepliesToggle && allowRepliesToggle.checked)
         };
-        const token = localStorage.getItem('access_token');
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            notify('يرجى تسجيل الدخول لإرسال الرسالة');
+            return;
+        }
+
+        const token = AuthService.getToken();
         try {
             const response = await fetch('/api/admin/messages', {
                 method: 'POST',
@@ -1682,25 +1884,36 @@ function notify(message, type = 'info') {
         if (typeof loadMessages === 'function') {
             loadMessages();
         }
-        notify('تم إرسال الرسالة بنجاح.', 'success');
+        // Success notification is now handled in submitMessage
         document.getElementById('newMessageForm').reset();
-        adminKindergartenFilters = { governorate: '', search: '' };
-        renderAdminKindergartens();
         updateMessageFormVisibility();
         syncAllRolesToggle();
         previewRecipients();
     }
 
     async function submitMessage() {
+        // First validate the form
+        if (!validateForm()) {
+            notify('يرجى إكمال جميع الحقول المطلوبة قبل الإرسال.', 'error');
+            return;
+        }
+
         const messageType = (document.getElementById('msgType')?.value) || (document.getElementById('messageType')?.value) || 'direct';
         const subject = document.getElementById('msgSubject').value;
         const body = document.getElementById('msgBody').value;
-        const token = localStorage.getItem('access_token');
 
-        if (!subject || !body) {
-            notify('الموضوع ونص الرسالة مطلوبان.', 'error');
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            notify('يرجى تسجيل الدخول لإرسال الرسالة', 'error');
             return;
         }
+
+        const token = AuthService.getToken();
+        const sendBtn = document.getElementById('sendMessageBtn');
+
+        // Disable button during sending
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>جاري الإرسال...';
 
         const payload = {
             subject: subject,
@@ -1708,94 +1921,116 @@ function notify(message, type = 'info') {
             message_type: messageType
         };
 
-        if (messageType === 'direct') {
-            // Direct messaging logic
-            if (currentUserRole === 'ADMIN' || currentUserRole === 'MANAGER') {
-                const recipientId = document.getElementById('msgRecipient').value;
-                if (!recipientId) {
-                    notify('اختر مستلمًا للرسالة المباشرة.');
-                    return;
-                }
-                payload.recipient_id = parseInt(recipientId, 10);
-                if (currentUserRole === 'MANAGER') {
-                    payload.kindergarten_id = currentUserKindergartenId;
-                }
-            } else if (currentUserRole === 'PARENT') {
-                if (!parentKindergartensLoaded) {
-                    await loadParentKindergartens();
-                }
-                if (!parentActiveKindergartens.length) {
-                    notify('لا توجد روضات نشطة للمراسلة.');
-                    return;
-                }
-                const selectedKg = getSelectedParentKindergartenId();
-                if (parentActiveKindergartens.length > 1 && !selectedKg) {
-                    notify('اختر الروضة أولاً.');
-                    return;
-                }
-                const targetKg = selectedKg || parentActiveKindergartens[0];
-                if (targetKg) {
-                    payload.kindergarten_id = targetKg;
-                }
-            } else if (currentUserRole === 'SUPERVISOR') {
-                if (!currentUserKindergartenId) {
-                    notify('تعذر تحديد الروضة لإرسال الرسالة.');
-                    return;
-                }
-                payload.kindergarten_id = currentUserKindergartenId;
-            } else {
-                notify('لا يمكن إرسال الرسالة لهذا النوع من المستخدمين.');
-                return;
-            }
-        } else {
-            if (currentUserRole === 'MANAGER') {
-                notify('المدير يمكنه إرسال رسائل مباشرة داخل روضته فقط.', 'error');
-                return;
-            }
-            if (currentUserRole === 'ADMIN' && isAdminTargetingActive()) {
-                await submitAdminMessage();
-                return;
-            }
-            // Group messaging logic with new UI structure
-            const scope = document.getElementById('groupScope').value;
-            const selectedRoles = Array.from(document.querySelectorAll('input[name="recipientRole"]:checked'))
-                .map(checkbox => checkbox.value);
-
-            if (!selectedRoles.length) {
-                notify('اختر دورًا واحدًا على الأقل للمستلمين.');
-                return;
-            }
-
-            payload.audience = {
-                roles: selectedRoles,
-                scope: scope
-            };
-
-            // Add scope-specific filters
-            if (scope === 'governorate') {
-                const governorateId = document.getElementById('scopeGovernorate').value;
-                if (!governorateId) {
-                    notify('اختر المحافظة أولاً.');
-                    return;
-                }
-                payload.audience.governorate_id = parseInt(governorateId, 10);
-            } else if (scope === 'kindergarten') {
-                const kindergartenIds = Array.from(document.querySelectorAll('input[name="recipientKindergarten"]:checked'))
-                    .map(checkbox => parseInt(checkbox.value, 10));
-                if (!kindergartenIds.length) {
-                    notify('اختر روضة واحدة على الأقل.');
-                    return;
-                }
-                payload.audience.kindergarten_ids = kindergartenIds;
-            }
-
-            // Add allow replies setting
-            const allowRepliesToggle = document.getElementById('allowRepliesToggle');
-            payload.allow_replies = !!(allowRepliesToggle && allowRepliesToggle.checked);
-        }
-
         try {
-            const response = await fetch('/api/comm/messages', {
+            if (messageType === 'direct') {
+                // Direct messaging logic
+                if (currentUserRole === 'ADMIN' || currentUserRole === 'MANAGER') {
+                    const recipientId = document.getElementById('msgRecipient').value;
+                    if (!recipientId) {
+                        notify('اختر مستلمًا للرسالة المباشرة.', 'error');
+                        return;
+                    }
+                    payload.recipient_id = parseInt(recipientId, 10);
+                    if (currentUserRole === 'MANAGER') {
+                        payload.kindergarten_id = currentUserKindergartenId;
+                    }
+                } else if (currentUserRole === 'PARENT') {
+                    if (!parentKindergartensLoaded) {
+                        await loadParentKindergartens();
+                    }
+                    if (!parentActiveKindergartens.length) {
+                        notify('لا توجد روضات نشطة للمراسلة.', 'error');
+                        return;
+                    }
+                    const selectedKg = getSelectedParentKindergartenId();
+                    if (parentActiveKindergartens.length > 1 && !selectedKg) {
+                        notify('اختر الروضة أولاً.', 'error');
+                        return;
+                    }
+                    const targetKg = selectedKg || parentActiveKindergartens[0];
+                    if (targetKg) {
+                        payload.kindergarten_id = targetKg;
+                    }
+                } else if (currentUserRole === 'SUPERVISOR') {
+                    if (!currentUserKindergartenId) {
+                        notify('تعذر تحديد الروضة لإرسال الرسالة.', 'error');
+                        return;
+                    }
+                    payload.kindergarten_id = currentUserKindergartenId;
+                } else {
+                    notify('لا يمكن إرسال الرسالة لهذا النوع من المستخدمين.', 'error');
+                    return;
+                }
+            } else {
+                if (currentUserRole === 'ADMIN' && isAdminTargetingActive()) {
+                    await submitAdminMessage();
+                    return;
+                }
+
+                // Manager group messaging - send to supervisors/parents in their kindergarten
+                if (currentUserRole === 'MANAGER') {
+                    const selectedRoles = Array.from(document.querySelectorAll('input[name="recipientRole"]:checked'))
+                        .map(checkbox => checkbox.value);
+                    if (!selectedRoles.length) {
+                        notify('اختر دورًا واحدًا على الأقل للمستلمين.', 'error');
+                        return;
+                    }
+                    // Validate manager can only target SUPERVISOR and PARENT
+                    const invalidRoles = selectedRoles.filter(r => r !== 'SUPERVISOR' && r !== 'PARENT');
+                    if (invalidRoles.length) {
+                        notify('المدراء يمكنهم مراسلة المشرفين وأولياء الأمور فقط.', 'error');
+                        return;
+                    }
+                    payload.mode = 'audience';
+                    payload.audience = {
+                        include_roles: selectedRoles,
+                        scope: 'KINDERGARTEN',
+                        kindergarten_ids: [currentUserKindergartenId]
+                    };
+                    payload.message_type = 'announcement';
+                    const allowRepliesToggle = document.getElementById('allowRepliesToggle');
+                    payload.allow_replies = !!(allowRepliesToggle && allowRepliesToggle.checked);
+                } else {
+                    // Group messaging logic with new UI structure (non-admin, non-manager)
+                    const scope = document.getElementById('groupScope')?.value || 'global';
+                    const selectedRoles = Array.from(document.querySelectorAll('input[name="recipientRole"]:checked'))
+                        .map(checkbox => checkbox.value);
+
+                    if (!selectedRoles.length) {
+                        notify('اختر دورًا واحدًا على الأقل للمستلمين.', 'error');
+                        return;
+                    }
+
+                    payload.audience = {
+                        roles: selectedRoles,
+                        scope: scope
+                    };
+
+                    // Add scope-specific filters
+                    if (scope === 'governorate') {
+                        const governorateId = document.getElementById('scopeGovernorate')?.value;
+                        if (!governorateId) {
+                            notify('اختر المحافظة أولاً.', 'error');
+                            return;
+                        }
+                        payload.audience.governorate_id = parseInt(governorateId, 10);
+                    } else if (scope === 'kindergarten') {
+                        const kindergartenIds = Array.from(document.querySelectorAll('input[name="recipientKindergarten"]:checked'))
+                            .map(checkbox => parseInt(checkbox.value, 10));
+                        if (!kindergartenIds.length) {
+                            notify('اختر روضة واحدة على الأقل.', 'error');
+                            return;
+                        }
+                        payload.audience.kindergarten_ids = kindergartenIds;
+                    }
+
+                    // Add allow replies setting
+                    const allowRepliesToggle = document.getElementById('allowRepliesToggle');
+                    payload.allow_replies = !!(allowRepliesToggle && allowRepliesToggle.checked);
+                }
+            }
+
+            const response = await fetch('/comm/messages', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1807,22 +2042,33 @@ function notify(message, type = 'info') {
             if (response.ok) {
                 const created = await response.json();
                 await onMessageSent(created);
+                notify('تم إرسال الرسالة بنجاح!', 'success');
             } else {
                 const err = await response.json();
-                notify('تعذر إرسال الرسالة: ' + (err.error?.message || err.detail || response.statusText));
+                notify('تعذر إرسال الرسالة: ' + (err.error?.message || err.detail || response.statusText), 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            notify('خطأ في الشبكة أثناء إرسال الرسالة.');
+            notify('خطأ في الشبكة أثناء إرسال الرسالة.', 'error');
+        } finally {
+            // Re-enable button and reset text
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="bi bi-send me-2"></i>إرسال';
         }
     }
 
     async function uploadAttachments(messageId, files) {
-        const token = localStorage.getItem('access_token');
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            notify('يرجى تسجيل الدخول لرفع المرفقات');
+            return;
+        }
+
+        const token = AuthService.getToken();
         for (const file of files) {
             const formData = new FormData();
             formData.append('file', file);
-            const response = await fetch(`/api/comm/messages/${messageId}/attachments`, {
+            const response = await fetch(`/comm/messages/${messageId}/attachments`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
@@ -1834,4 +2080,28 @@ function notify(message, type = 'info') {
             }
         }
     }
+
+    // Language switching for governorates
+    function updateGovernorateLabels() {
+        const isEnglish = document.documentElement.lang === 'en';
+        document.querySelectorAll('.admin-gov-checkbox').forEach(checkbox => {
+            const label = checkbox.nextElementSibling;
+            const arabicText = checkbox.value;
+            const englishText = checkbox.getAttribute('data-en');
+            label.textContent = isEnglish ? englishText : arabicText;
+        });
+    }
+
+    // Update governorate labels on language change
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'lang') {
+                updateGovernorateLabels();
+            }
+        });
+    });
+    observer.observe(document.documentElement, { attributes: true });
+
+    // Initial update
+    updateGovernorateLabels();
 </script>

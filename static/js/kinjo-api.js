@@ -4,16 +4,75 @@
  * Uses centralized AuthService for authentication
  */
 
+function kinjoApiCurrentLang() {
+  if (window.AppI18n?.currentLang) {
+    return window.AppI18n.currentLang;
+  }
+  const stored = localStorage.getItem("kinjo_lang");
+  if (stored === "en" || stored === "ar") {
+    return stored;
+  }
+  return document.documentElement.lang === "en" ? "en" : "ar";
+}
+
+function kinjoApiText(key, arText, enText) {
+  if (window.AppI18n && typeof window.AppI18n.t === "function") {
+    const resolved = window.AppI18n.t(key);
+    if (resolved && resolved !== key) {
+      return resolved;
+    }
+  }
+  return kinjoApiCurrentLang() === "en" ? enText : arText;
+}
+
 class KinJoAPI {
   constructor() {
     this.baseURL = "";
+    this.token = null;
+  }
+
+  /**
+   * Manually set token (kept for backwards compatibility)
+   */
+  setToken(token) {
+    this.token = token;
   }
 
   /**
    * Check if user is authenticated
    */
   isAuthenticated() {
-    return AuthService && AuthService.isAuthenticated();
+    if (window.AuthService && typeof AuthService.isAuthenticated === "function") {
+      return AuthService.isAuthenticated();
+    }
+    if (window.AuthStorage && typeof AuthStorage.isAuthenticated === "function") {
+      return AuthStorage.isAuthenticated();
+    }
+    return false;
+  }
+
+  /**
+   * Get current user's kindergarten ID (for manager role enforcement)
+   */
+  getCurrentUserKindergartenId() {
+    if (window.AuthService && typeof AuthService.getCurrentUser === "function") {
+      const user = AuthService.getCurrentUser();
+      return user && user.role === "MANAGER" ? user.kindergarten_id : null;
+    }
+    if (window.AuthStorage && typeof AuthStorage.getCurrentUser === "function") {
+      const user = AuthStorage.getCurrentUser();
+      return user && user.role === "MANAGER" ? user.kindergarten_id : null;
+    }
+    return null;
+  }
+
+  /**
+   * Force kindergarten ID for manager role (single-kindergarten isolation)
+   */
+  forceManagerKindergartenId(providedKindergartenId) {
+    const userKgId = this.getCurrentUserKindergartenId();
+    // If user is a manager, always use their assigned kindergarten ID
+    return userKgId || providedKindergartenId;
   }
 
   /**
@@ -25,21 +84,40 @@ class KinJoAPI {
     // fetchWithAuth already throws on non-OK responses and redirects on 401,
     // so at this point we should have a valid response object (or null when redirected).
     if (!response) {
-      throw new Error("Authentication required");
+      throw new Error(
+        kinjoApiText("auth.login.required", "يتطلب تسجيل الدخول", "Sign-in is required")
+      );
     }
 
-    // Some endpoints may return no content (204)
+    const text = await response.text();
+    const contentType = response.headers.get("content-type") || "";
+
+    // Some endpoints may return no content
     if (response.status === 204) {
       return null;
     }
 
-    const contentType = response.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
-      return await response.json();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        console.warn("Failed to parse JSON response:", text.substring(0, 100));
+        // If it looks like an error response, throw it with the text
+        if (response.status >= 400) {
+          const messagePrefix = kinjoApiText(
+            "common.server_error",
+            "خطأ في الخادم",
+            "Server error"
+          );
+          throw new Error(`${messagePrefix} (${response.status}): ${text.substring(0, 200)}...`);
+        }
+        // Otherwise rethrow syntax error
+        throw e;
+      }
     }
 
-    // Fallback: return text for non-JSON responses
-    return await response.text();
+    // For non-JSON responses
+    return text;
   }
 
   /**
@@ -110,7 +188,9 @@ class KinJoAPI {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail || "Login failed");
+      throw new Error(
+        error.detail || kinjoApiText("auth.login.failed", "فشل تسجيل الدخول", "Sign-in failed")
+      );
     }
 
     const data = await response.json();
@@ -180,6 +260,33 @@ class KinJoAPI {
     return this.post("/api/classes", data);
   }
 
+  async updateClass(id, data) {
+    return this.put(`/api/classes/${id}`, data);
+  }
+
+  async getClassRequiredSupervisors(ageGroup, childrenCount) {
+    return this.get("/api/classes/required-supervisors", {
+      age_group: ageGroup,
+      children_count: childrenCount,
+    });
+  }
+
+  async getEligibleSupervisors(kindergartenId, classId = null) {
+    const params = { kindergarten_id: kindergartenId };
+    if (classId !== null && classId !== undefined) {
+      params.class_id = classId;
+    }
+    return this.get("/api/classes/eligible-supervisors", params);
+  }
+
+  async deleteClass(id) {
+    return this.delete(`/api/classes/${id}`);
+  }
+
+  async deactivateClass(id) {
+    return this.put(`/api/classes/${id}/deactivate`);
+  }
+
   // =========================================================================
   // Child Endpoints
   // =========================================================================
@@ -201,17 +308,17 @@ class KinJoAPI {
   }
 
   async createEnrollment(data) {
-    return this.post("/enrollment/apply", data);
+    return this.post("/api/enrollment/apply", data);
   }
 
   async submitEnrollment(id) {
-    return this.post(`/enrollment/${id}/submit`);
+    return this.post(`/api/enrollment/${id}/submit`);
   }
 
   async reviewEnrollment(id, decision, reason = null) {
     const params = { decision };
     if (reason) params.reason = reason;
-    return this.post(`/enrollment/${id}/review`, params);
+    return this.post(`/api/enrollment/${id}/review`, params);
   }
 
   // =========================================================================
@@ -231,8 +338,9 @@ class KinJoAPI {
   }
 
   async getTodayAttendance(kindergartenId) {
+    const enforcedKgId = this.forceManagerKindergartenId(kindergartenId);
     return this.get("/api/attendance/today", {
-      kindergarten_id: kindergartenId,
+      kindergarten_id: enforcedKgId,
     });
   }
 
@@ -240,16 +348,24 @@ class KinJoAPI {
     const queryParams = {};
     if (params.search) queryParams.name = params.search;
     if (params.governorate) queryParams.governorate = params.governorate;
+    if (params.city) queryParams.city = params.city;
     if (params.phone) queryParams.phone = params.phone;
+    if (params.status) queryParams.status = params.status;
     return this.get("/api/kindergartens", queryParams);
   }
 
+  async getCitiesByGovernorate(governorate) {
+    return this.get(`/api/governorates/${encodeURIComponent(governorate)}/cities`);
+  }
+
   async getKindergartenClasses(kindergartenId) {
-    return this.get("/api/classes", { kindergarten_id: kindergartenId });
+    const enforcedKgId = this.forceManagerKindergartenId(kindergartenId);
+    return this.get("/api/classes", { kindergarten_id: enforcedKgId });
   }
 
   async getKindergartenChildren(kindergartenId, classIds = null) {
-    const params = { kindergarten_id: kindergartenId };
+    const enforcedKgId = this.forceManagerKindergartenId(kindergartenId);
+    const params = { kindergarten_id: enforcedKgId };
     if (classIds && classIds.length > 0) {
       params.class_id = classIds.join(",");
     }
@@ -280,37 +396,49 @@ class KinJoAPI {
     return this.get(`/api/daily-reports/child/${childId}`);
   }
 
+  async getOrganizationDailyReports(params = {}) {
+    return this.get("/api/daily-reports", params);
+  }
+
   // =========================================================================
   // KPI Endpoints
   // =========================================================================
 
   async getAttendanceRate(kindergartenId, periodStart, periodEnd) {
+    const enforcedKgId = this.forceManagerKindergartenId(kindergartenId);
     return this.get("/api/kpi/attendance-rate", {
-      kindergarten_id: kindergartenId,
+      kindergarten_id: enforcedKgId,
       period_start: periodStart,
       period_end: periodEnd,
     });
   }
 
   async getIncidentRate(kindergartenId, periodStart, periodEnd) {
-    return this.get("/api/kpi/incident-rate", {
-      kindergarten_id: kindergartenId,
+    const enforcedKgId = this.forceManagerKindergartenId(kindergartenId);
+    // incident-rate is part of KPI summary; use summary endpoint
+    const summary = await this.get("/api/kpi/summary", {
+      kindergarten_id: enforcedKgId,
       period_start: periodStart,
       period_end: periodEnd,
     });
+    return { incident_rate: summary?.incident_rate ?? 0, ...summary };
   }
 
   async getRatioCompliance(kindergartenId, periodStart, periodEnd) {
-    return this.get("/api/kpi/ratio-compliance", {
-      kindergarten_id: kindergartenId,
+    const enforcedKgId = this.forceManagerKindergartenId(kindergartenId);
+    // ratio-compliance data is part of KPI summary
+    const summary = await this.get("/api/kpi/summary", {
+      kindergarten_id: enforcedKgId,
       period_start: periodStart,
       period_end: periodEnd,
     });
+    return { ratio_compliance: summary?.ratio_compliance ?? 0, ...summary };
   }
 
   async getGovernanceScore(kindergartenId, periodStart, periodEnd) {
+    const enforcedKgId = this.forceManagerKindergartenId(kindergartenId);
     return this.get("/api/kpi/governance-score", {
-      kindergarten_id: kindergartenId,
+      kindergarten_id: enforcedKgId,
       period_start: periodStart,
       period_end: periodEnd,
     });
@@ -331,19 +459,19 @@ class KinJoAPI {
   }
 
   async getMyChildren() {
-    return this.get("/api/supervisor/my-children");
+    return this.get("/api/supervisor/children");
   }
 
   async getAttendanceStatus(targetDate = null) {
     const params = {};
     if (targetDate) params.target_date = targetDate;
-    return this.get("/api/supervisor/attendance-status", params);
+    return this.get("/api/supervisor/present-children", params);
   }
 
   async getPendingReports(reportDate = null) {
     const params = {};
     if (reportDate) params.report_date = reportDate;
-    return this.get("/api/supervisor/pending-reports", params);
+    return this.get("/api/supervisor/daily-reports", params);
   }
 
   // =========================================================================
@@ -352,6 +480,45 @@ class KinJoAPI {
 
   async getManagerDashboard() {
     return this.get("/api/manager/dashboard");
+  }
+
+  // Manager Dashboard Sections
+  async getSubmittedReports() {
+    return this.get("/api/manager/reports/submitted");
+  }
+
+  async getSupervisorStats() {
+    return this.get("/api/manager/supervisors/stats");
+  }
+
+  async getManagerClasses() {
+    return this.get("/api/manager/classes");
+  }
+
+  async getAccounts() {
+    return this.get("/api/manager/accounts");
+  }
+
+  // Manager KPI and Analytics
+  async getManagerKPIs() {
+    return this.get("/api/kpi/manager/dashboard");
+  }
+
+  async getAlerts() {
+    return this.get("/api/manager/alerts");
+  }
+
+  // Manager Actions
+  async approveReport(reportId) {
+    return this.post(`/api/manager/reports/${reportId}/approve`);
+  }
+
+  async rejectReport(reportId, reason) {
+    return this.post(`/api/manager/reports/${reportId}/reject`, { reason });
+  }
+
+  async deleteClass(classId) {
+    return this.delete(`/api/manager/classes/${classId}`);
   }
 
   // =========================================================================
@@ -403,12 +570,7 @@ class KinJoAPI {
    * @param {string} confirmationToken - Token for confirming large operations
    * @param {boolean} dryRun - If true, preview without applying
    */
-  async bulkUpdateUserStatus(
-    userIds,
-    newStatus,
-    confirmationToken = null,
-    dryRun = false,
-  ) {
+  async bulkUpdateUserStatus(userIds, newStatus, confirmationToken = null, dryRun = false) {
     const payload = {
       user_ids: userIds,
       new_status: newStatus,
@@ -460,11 +622,18 @@ class KinJoAPI {
     formData.append("file", file);
 
     const url = `/api/admin/users/import-csv?dry_run=${dryRun}`;
+    const token = AuthStorage.getToken();
+    if (!token) {
+      window.location.href = "/login";
+      throw new Error(
+        kinjoApiText("auth.login.required", "يتطلب تسجيل الدخول", "Sign-in is required")
+      );
+    }
 
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: formData,
     });
@@ -472,7 +641,9 @@ class KinJoAPI {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const message =
-        errorData.error?.message || errorData.detail || "Import failed";
+        errorData.error?.message ||
+        errorData.detail ||
+        kinjoApiText("common.import_failed", "فشل الاستيراد", "Import failed");
       const err = new Error(message);
       err.status = response.status;
       throw err;
@@ -491,15 +662,22 @@ class KinJoAPI {
     // This returns a file, handle differently
     const queryString = new URLSearchParams(params).toString();
     const url = `/api/admin/users/export?${queryString}`;
+    const token = AuthStorage.getToken();
+    if (!token) {
+      window.location.href = "/login";
+      throw new Error(
+        kinjoApiText("auth.login.required", "يتطلب تسجيل الدخول", "Sign-in is required")
+      );
+    }
 
     const response = await fetch(url, {
       headers: {
-        Authorization: `Bearer ${this.token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
-      throw new Error("Export failed");
+      throw new Error(kinjoApiText("common.export_failed", "فشل التصدير", "Export failed"));
     }
 
     return response.blob();
@@ -527,7 +705,11 @@ class KinJoAPI {
   }
 
   async getStaff(params = {}) {
-    return this.get("/api/staff", params);
+    // Staff listing available via admin users endpoint filtered by role
+    return this.get("/api/admin/users", {
+      ...params,
+      role: params.role || "SUPERVISOR",
+    });
   }
 }
 
@@ -536,6 +718,156 @@ const api = new KinJoAPI();
 
 // Make API instance globally available
 window.api = api;
+
+/**
+ * Child Age Validation Utility
+ * Age constraints: 70 days minimum to 56 months (4 years 8 months) maximum
+ */
+const ChildAgeValidator = {
+  MIN_AGE_DAYS: 70,
+  MAX_AGE_MONTHS: 56,
+
+  _toDateOnly(dateObj) {
+    return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+  },
+
+  _parseISODate(value) {
+    if (!value) return null;
+    const parts = String(value).split("-").map(Number);
+    if (parts.length !== 3 || parts.some((p) => Number.isNaN(p))) {
+      return null;
+    }
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  },
+
+  _diffInMonths(today, dob) {
+    let months =
+      (today.getFullYear() - dob.getFullYear()) * 12 + (today.getMonth() - dob.getMonth());
+    if (today.getDate() < dob.getDate()) {
+      months -= 1;
+    }
+    return months;
+  },
+
+  _subtractMonths(base, months) {
+    const year = base.getFullYear();
+    const monthIndex = base.getMonth() - months;
+    let targetYear = year + Math.floor(monthIndex / 12);
+    let targetMonth = monthIndex % 12;
+    if (targetMonth < 0) {
+      targetMonth += 12;
+      targetYear -= 1;
+    }
+    const day = base.getDate();
+    const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+    return new Date(targetYear, targetMonth, Math.min(day, lastDay));
+  },
+
+  _getBounds(today) {
+    const todayDate = this._toDateOnly(today);
+    const maxDate = new Date(todayDate);
+    maxDate.setDate(maxDate.getDate() - this.MIN_AGE_DAYS);
+    const minDate = this._subtractMonths(todayDate, this.MAX_AGE_MONTHS);
+    return { minDate, maxDate };
+  },
+
+  /**
+   * Calculate child age and check eligibility
+   * @param {string|Date} dateOfBirth - Date of birth (string or Date object)
+   * @returns {object} Age information including eligibility
+   */
+  calculate(dateOfBirth) {
+    if (!dateOfBirth) {
+      return {
+        isEligible: false,
+        ageDays: 0,
+        ageMonths: 0,
+        message: "",
+        messageAr: "",
+      };
+    }
+
+    const dob = typeof dateOfBirth === "string" ? this._parseISODate(dateOfBirth) : dateOfBirth;
+    if (!dob) {
+      return {
+        isEligible: false,
+        ageDays: 0,
+        ageMonths: 0,
+        message: "",
+        messageAr: "",
+      };
+    }
+
+    const today = this._toDateOnly(new Date());
+    const dobDate = this._toDateOnly(dob);
+    const bounds = this._getBounds(today);
+
+    const ageDays = Math.floor((today - dobDate) / (1000 * 60 * 60 * 24));
+    const ageMonths = this._diffInMonths(today, dobDate);
+    const ageYears = (ageMonths / 12).toFixed(1);
+    const maxYears = Math.floor(this.MAX_AGE_MONTHS / 12);
+    const maxRemainingMonths = this.MAX_AGE_MONTHS % 12;
+    const maxAgeLabel = maxRemainingMonths
+      ? `${maxYears} سنوات و${maxRemainingMonths} أشهر`
+      : `${maxYears} سنوات`;
+    const maxAgeLabelEn = maxRemainingMonths
+      ? `${maxYears} years ${maxRemainingMonths} months`
+      : `${maxYears} years`;
+
+    let isEligible = true;
+    let message = "";
+    let messageAr = "";
+
+    if (dobDate > bounds.maxDate) {
+      isEligible = false;
+      messageAr = `العمر: ${ageDays} يوم - غير مؤهل (الحد الأدنى ${this.MIN_AGE_DAYS} يوم)`;
+      message = `Age: ${ageDays} days - Not eligible (minimum ${this.MIN_AGE_DAYS} days)`;
+    } else if (dobDate < bounds.minDate) {
+      isEligible = false;
+      messageAr = `العمر: ${ageMonths} شهر - غير مؤهل (الحد الأقصى ${this.MAX_AGE_MONTHS} شهر / ${maxAgeLabel})`;
+      message = `Age: ${ageMonths} months - Not eligible (maximum ${this.MAX_AGE_MONTHS} months / ${maxAgeLabelEn})`;
+    } else {
+      messageAr = `العمر: ${ageMonths} شهر (${ageYears} سنة) - مؤهل للتسجيل`;
+      message = `Age: ${ageMonths} months (${ageYears} years) - Eligible for enrollment`;
+    }
+
+    return {
+      isEligible,
+      ageDays,
+      ageMonths,
+      ageYears: parseFloat(ageYears),
+      message,
+      messageAr,
+      minAgeDays: this.MIN_AGE_DAYS,
+      maxAgeMonths: this.MAX_AGE_MONTHS,
+    };
+  },
+
+  /**
+   * Check if a date of birth is valid for enrollment
+   * @param {string|Date} dateOfBirth
+   * @returns {boolean}
+   */
+  isEligible(dateOfBirth) {
+    return this.calculate(dateOfBirth).isEligible;
+  },
+
+  /**
+   * Get valid birth date range
+   * @returns {object} { minDate, maxDate } - Date strings in ISO format
+   */
+  getValidDateRange() {
+    const bounds = this._getBounds(new Date());
+    const toIso = (d) => d.toISOString().split("T")[0];
+    return {
+      minDate: toIso(bounds.minDate),
+      maxDate: toIso(bounds.maxDate),
+    };
+  },
+};
+
+// Make validator globally available
+window.ChildAgeValidator = ChildAgeValidator;
 
 // Export for module usage
 if (typeof module !== "undefined" && module.exports) {

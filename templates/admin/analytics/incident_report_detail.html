@@ -1,0 +1,301 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}تفاصيل تقرير الحوادث{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+title="تفاصيل تقرير الحوادث",
+icon="bi-file-earmark-text",
+breadcrumbs=[
+{"label": "لوحة التحكم", "url": "/dashboard"},
+{"label": "التقارير اليومية", "url": "/daily-reports"},
+{"label": "تفاصيل التقرير", "url": None}
+]
+) }}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0" id="reportTitle">جاري التحميل...</h5>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm me-2" onclick="exportReport()">
+                        <i class="bi bi-download me-1"></i>تصدير CSV
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="window.history.back()">
+                        <i class="bi bi-arrow-right me-1"></i>العودة
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Report Info -->
+                <div class="row mb-4" id="reportInfo">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 bg-light">
+                            <h6 class="text-muted mb-2">معلومات التقرير</h6>
+                            <div id="reportDetails"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 bg-light">
+                            <h6 class="text-muted mb-2">نطاق التقرير</h6>
+                            <div id="reportScope"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metrics Cards -->
+                <div class="row mb-4" id="metricsCards">
+                    <!-- Cards will be loaded dynamically -->
+                </div>
+
+                <!-- Charts Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">توزيع الحوادث حسب النوع</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="incidentTypeChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">توزيع الحوادث حسب الشدة</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="incidentSeverityChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="loadingSpinner" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                    <div class="mt-2">جاري تحميل تفاصيل التقرير...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تصدير التقرير</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>سيتم تصدير التقرير بتنسيق CSV. هل تريد المتابعة؟</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="confirmExport()">تصدير</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let reportData = null;
+    const reportId = {{ report_id | tojson }};
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadReportDetails();
+    });
+
+    async function loadReportDetails() {
+        try {
+            const response = await fetch(`/api/admin/reports/incidents/${reportId}`);
+            if (!response.ok) {
+                throw new Error('Failed to load report details');
+            }
+
+            reportData = await response.json();
+            displayReportDetails();
+            createCharts();
+
+        } catch (error) {
+            console.error('Error loading report:', error);
+            document.getElementById('loadingSpinner').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                فشل في تحميل تفاصيل التقرير. يرجى المحاولة مرة أخرى.
+            </div>
+        `;
+        }
+    }
+
+    function displayReportDetails() {
+        // Update title
+        document.getElementById('reportTitle').textContent = reportData.title || 'تقرير الحوادث';
+
+        // Report details
+        const detailsHtml = `
+        <p><strong>تاريخ الإنشاء:</strong> ${new Date(reportData.created_at).toLocaleDateString('ar-EG')}</p>
+        <p><strong>الفترة الزمنية:</strong> ${reportData.start_date} - ${reportData.end_date}</p>
+        <p><strong>أنشئ بواسطة:</strong> ${reportData.creator_name || 'غير محدد'}</p>
+    `;
+        document.getElementById('reportDetails').innerHTML = detailsHtml;
+
+        // Report scope
+        let scopeHtml = `<p><strong>النوع:</strong> ${getScopeTypeLabel(reportData.scope_type)}</p>`;
+        if (reportData.scope_type === 'KINDERGARTEN' && reportData.kindergarten_name) {
+            scopeHtml += `<p><strong>الروضة:</strong> ${reportData.kindergarten_name}</p>`;
+        } else if (reportData.scope_type === 'GOVERNORATE' && reportData.governorate) {
+            scopeHtml += `<p><strong>المحافظة:</strong> ${reportData.governorate}</p>`;
+        }
+        document.getElementById('reportScope').innerHTML = scopeHtml;
+
+        // Metrics cards
+        const metrics = reportData.metrics || {};
+        const cardsHtml = `
+        <div class="col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 text-primary">${metrics.total_incidents || 0}</div>
+                    <div class="card-title">إجمالي الحوادث</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 text-success">${metrics.open_incidents || 0}</div>
+                    <div class="card-title">حوادث مفتوحة</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 text-warning">${metrics.closed_incidents || 0}</div>
+                    <div class="card-title">حوادث مغلقة</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 text-danger">${metrics.incidents_by_severity?.HIGH || 0}</div>
+                    <div class="card-title">حوادث عالية الشدة</div>
+                </div>
+            </div>
+        </div>
+    `;
+        document.getElementById('metricsCards').innerHTML = cardsHtml;
+
+        // Hide loading spinner
+        document.getElementById('loadingSpinner').style.display = 'none';
+    }
+
+    function createCharts() {
+        const metrics = reportData.metrics || {};
+
+        // Incident Type Chart
+        const typeCtx = document.getElementById('incidentTypeChart').getContext('2d');
+        const typeData = metrics.incidents_by_type || {};
+        new Chart(typeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(typeData).map(key => getIncidentTypeLabel(key)),
+                datasets: [{
+                    data: Object.values(typeData),
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
+            }
+        });
+
+        // Incident Severity Chart
+        const severityCtx = document.getElementById('incidentSeverityChart').getContext('2d');
+        const severityData = metrics.incidents_by_severity || {};
+        new Chart(severityCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(severityData).map(key => getSeverityLabel(key)),
+                datasets: [{
+                    label: 'عدد الحوادث',
+                    data: Object.values(severityData),
+                    backgroundColor: '#36A2EB'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function getScopeTypeLabel(scopeType) {
+        const labels = {
+            'ALL': 'جميع الروضات',
+            'GOVERNORATE': 'محافظة',
+            'KINDERGARTEN': 'روضة معينة'
+        };
+        return labels[scopeType] || scopeType;
+    }
+
+    function getIncidentTypeLabel(type) {
+        const labels = {
+            'INJURY': 'إصابة',
+            'BEHAVIOR': 'سلوك',
+            'ILLNESS': 'مرض',
+            'ACCIDENT': 'حادث',
+            'OTHER': 'أخرى'
+        };
+        return labels[type] || type;
+    }
+
+    function getSeverityLabel(severity) {
+        const labels = {
+            'LOW': 'منخفضة',
+            'MEDIUM': 'متوسطة',
+            'HIGH': 'عالية',
+            'CRITICAL': 'حرجة'
+        };
+        return labels[severity] || severity;
+    }
+
+    function exportReport() {
+        const modal = new bootstrap.Modal(document.getElementById('exportModal'));
+        modal.show();
+    }
+
+    function confirmExport() {
+        window.location.href = `/api/admin/reports/incidents/${reportId}/export`;
+        const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
+        modal.hide();
+    }
+</script>
+{% endblock %}

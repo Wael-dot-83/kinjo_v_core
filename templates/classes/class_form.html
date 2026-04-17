@@ -1,0 +1,414 @@
+{% extends 'base.html' %}
+{% set is_edit = class_obj is not none %}
+{% block title %}{{ 'تعديل الفصل' if is_edit else 'إعداد فصل جديد' }}{% endblock %}
+{% block page_header %}
+<div class="dashboard-header">
+    <h1 class="h2 mb-1">
+        <i class="bi bi-door-open me-2 text-primary"></i>
+        {{ 'تعديل الفصل' if is_edit else 'إعداد فصل جديد' }}
+    </h1>
+    <p class="text-muted mb-0">
+        {{ 'حدّث بيانات الفصل وربط المشرف الحالي.' if is_edit else 'أنشئ فصلًا جديدًا واربطه بالمشرف المناسب.' }}
+    </p>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <div id="classFormAlert" class="alert d-none" role="alert"></div>
+        <form id="classForm" class="needs-validation" novalidate>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="kindergartenId" class="form-label">الروضة</label>
+                    <select
+                        class="form-select"
+                        id="kindergartenId"
+                        name="kindergarten_id"
+                        {% if current_user.role.value == 'MANAGER' %}disabled{% endif %}
+                        required
+                    >
+                        <option value="">اختر...</option>
+                        {% for kg in kindergartens %}
+                        <option
+                            value="{{ kg.id }}"
+                            {% if class_obj and class_obj.kindergarten_id == kg.id %}selected{% elif not class_obj and current_user.kindergarten_id == kg.id %}selected{% endif %}
+                        >
+                            {{ kg.name_ar }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if current_user.role.value == 'MANAGER' %}
+                    <input
+                        type="hidden"
+                        id="kindergartenIdHidden"
+                        value="{{ class_obj.kindergarten_id if class_obj else current_user.kindergarten_id }}"
+                    >
+                    {% endif %}
+                    <div class="invalid-feedback">يرجى اختيار الروضة.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="supervisorId" class="form-label">المشرف المسؤول</label>
+                    <select class="form-select" id="supervisorId" name="supervisor_id" required>
+                        <option value="">اختر المشرف...</option>
+                    </select>
+                    <div class="form-text">يتم تحميل المشرفين المؤهلين من الروضة المحددة.</div>
+                    <div class="invalid-feedback">يرجى اختيار مشرف مسؤول للفصل.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="classNameAr" class="form-label">اسم الفصل (عربي)</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="classNameAr"
+                        name="name_ar"
+                        value="{{ class_obj.name_ar if class_obj else '' }}"
+                        maxlength="100"
+                        required
+                    >
+                    <div class="invalid-feedback">يرجى إدخال اسم الفصل بالعربية.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="classNameEn" class="form-label">اسم الفصل (إنجليزي)</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="classNameEn"
+                        name="name_en"
+                        value="{{ class_obj.name_en if class_obj and class_obj.name_en else '' }}"
+                        maxlength="100"
+                    >
+                </div>
+
+                <div class="col-md-4">
+                    <label for="classCode" class="form-label">رمز الفصل</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="classCode"
+                        name="class_code"
+                        value="{{ class_obj.class_code if class_obj else '' }}"
+                        maxlength="32"
+                        required
+                    >
+                    <div class="invalid-feedback">يرجى إدخال رمز فريد للفصل.</div>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="ageGroup" class="form-label">الفئة العمرية</label>
+                    <select class="form-select" id="ageGroup" name="age_group" required>
+                        <option value="">اختر...</option>
+                        <option value="AGE_0_1" {% if class_obj and class_obj.age_group == 'AGE_0_1' %}selected{% endif %}>0-1 سنة</option>
+                        <option value="AGE_1_2" {% if class_obj and class_obj.age_group == 'AGE_1_2' %}selected{% endif %}>1-2 سنة</option>
+                        <option value="AGE_2_4" {% if class_obj and class_obj.age_group == 'AGE_2_4' %}selected{% endif %}>2-4 سنوات</option>
+                    </select>
+                    <div class="invalid-feedback">يرجى اختيار الفئة العمرية.</div>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="requiredSupervisors" class="form-label">الحد الأدنى الإرشادي للمشرفين</label>
+                    <input type="text" class="form-control" id="requiredSupervisors" value="-" readonly>
+                    <div class="form-text">هذه القيمة إرشادية، بينما الربط الحالي يعتمد مشرفًا أساسيًا واحدًا.</div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="minAgeMonths" class="form-label">العمر الأدنى بالشهور</label>
+                    <input
+                        type="number"
+                        class="form-control"
+                        id="minAgeMonths"
+                        name="min_age_months"
+                        min="0"
+                        max="120"
+                        value="{{ class_obj.min_age_months if class_obj else '' }}"
+                        required
+                    >
+                    <div class="invalid-feedback">أدخل العمر الأدنى بالشهور.</div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="maxAgeMonths" class="form-label">العمر الأعلى بالشهور</label>
+                    <input
+                        type="number"
+                        class="form-control"
+                        id="maxAgeMonths"
+                        name="max_age_months"
+                        min="0"
+                        max="120"
+                        value="{{ class_obj.max_age_months if class_obj else '' }}"
+                        required
+                    >
+                    <div class="invalid-feedback">أدخل العمر الأعلى بالشهور.</div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="childrenCount" class="form-label">عدد الأطفال المسجلين</label>
+                    <input
+                        type="number"
+                        class="form-control"
+                        id="childrenCount"
+                        name="enrolled_children_count"
+                        min="0"
+                        max="39"
+                        value="{{ class_obj.enrolled_children_count if class_obj else 0 }}"
+                        required
+                    >
+                    <div class="invalid-feedback">يجب أن يكون العدد بين 0 و39.</div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="capacityTotal" class="form-label">الطاقة الاستيعابية</label>
+                    <input
+                        type="number"
+                        class="form-control"
+                        id="capacityTotal"
+                        name="capacity_total"
+                        min="1"
+                        max="40"
+                        value="{{ class_obj.capacity_total if class_obj else '' }}"
+                        required
+                    >
+                    <div class="invalid-feedback">أدخل الطاقة الاستيعابية للفصل.</div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mt-4">
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <i class="bi bi-check2-circle me-1"></i>
+                    {{ 'حفظ التعديلات' if is_edit else 'حفظ الفصل' }}
+                </button>
+                <a href="{{ '/classes/' ~ class_obj.id if is_edit else '/classes' }}" class="btn btn-outline-secondary">
+                    إلغاء
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    const CLASS_FORM_CONFIG = {
+        classId: {{ class_obj.id if class_obj else 'null' }},
+        currentSupervisorId: {{ class_obj.supervisor_id if class_obj and class_obj.supervisor_id else 'null' }},
+        isEdit: {{ 'true' if is_edit else 'false' }},
+    };
+
+    function getAuthToken() {
+        return localStorage.getItem("kinjo_token") || sessionStorage.getItem("kinjo_token") || "";
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return parts.pop().split(";").shift();
+        }
+        return "";
+    }
+
+    function getKindergartenId() {
+        const select = document.getElementById("kindergartenId");
+        const hidden = document.getElementById("kindergartenIdHidden");
+        return select?.disabled ? hidden?.value || "" : select?.value || "";
+    }
+
+    function buildHeaders(includeJson = false) {
+        const headers = { Accept: "application/json" };
+        const token = getAuthToken();
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+        if (includeJson) {
+            headers["Content-Type"] = "application/json";
+        }
+        const csrfToken = getCookie("kinjo_csrf_token");
+        if (csrfToken) {
+            headers["X-CSRF-Token"] = csrfToken;
+        }
+        return headers;
+    }
+
+    function showAlert(message, type = "danger") {
+        const alertEl = document.getElementById("classFormAlert");
+        alertEl.className = `alert alert-${type}`;
+        alertEl.textContent = message;
+        alertEl.classList.remove("d-none");
+    }
+
+    function clearAlert() {
+        const alertEl = document.getElementById("classFormAlert");
+        alertEl.classList.add("d-none");
+        alertEl.textContent = "";
+    }
+
+    function applyAgeDefaults() {
+        const ageGroup = document.getElementById("ageGroup").value;
+        const minField = document.getElementById("minAgeMonths");
+        const maxField = document.getElementById("maxAgeMonths");
+        const defaults = {
+            AGE_0_1: { min: 0, max: 12 },
+            AGE_1_2: { min: 12, max: 24 },
+            AGE_2_4: { min: 24, max: 56 },
+        };
+        if (!defaults[ageGroup]) {
+            return;
+        }
+        if (!minField.value) {
+            minField.value = defaults[ageGroup].min;
+        }
+        if (!maxField.value) {
+            maxField.value = defaults[ageGroup].max;
+        }
+    }
+
+    async function updateRequiredSupervisors() {
+        const ageGroup = document.getElementById("ageGroup").value;
+        const childrenCount = document.getElementById("childrenCount").value;
+        const target = document.getElementById("requiredSupervisors");
+        if (!ageGroup || childrenCount === "") {
+            target.value = "-";
+            return;
+        }
+        try {
+            const params = new URLSearchParams({
+                age_group: ageGroup,
+                children_count: childrenCount,
+            });
+            const response = await fetch(`/api/classes/required-supervisors?${params.toString()}`, {
+                headers: buildHeaders(false),
+            });
+            if (!response.ok) {
+                target.value = "-";
+                return;
+            }
+            const data = await response.json();
+            target.value = data.required_supervisors ?? "-";
+        } catch {
+            target.value = "-";
+        }
+    }
+
+    async function loadEligibleSupervisors() {
+        const kindergartenId = getKindergartenId();
+        const select = document.getElementById("supervisorId");
+        select.innerHTML = '<option value="">جارٍ تحميل المشرفين...</option>';
+
+        if (!kindergartenId) {
+            select.innerHTML = '<option value="">اختر الروضة أولًا</option>';
+            return;
+        }
+
+        const params = new URLSearchParams({ kindergarten_id: kindergartenId });
+        if (CLASS_FORM_CONFIG.classId) {
+            params.append("class_id", CLASS_FORM_CONFIG.classId);
+        }
+
+        try {
+            const response = await fetch(`/api/classes/eligible-supervisors?${params.toString()}`, {
+                headers: buildHeaders(false),
+            });
+            if (!response.ok) {
+                throw new Error("تعذر تحميل المشرفين المؤهلين.");
+            }
+            const data = await response.json();
+            const supervisors = Array.isArray(data.supervisors) ? data.supervisors : [];
+            if (!supervisors.length) {
+                select.innerHTML = '<option value="">لا يوجد مشرفون مؤهلون</option>';
+                return;
+            }
+            select.innerHTML = '<option value="">اختر المشرف...</option>' + supervisors.map((item) => {
+                const label = item.full_name || item.username;
+                const suffix = item.role === "MANAGER" ? "مدير" : "مشرف";
+                const selected = String(CLASS_FORM_CONFIG.currentSupervisorId) === String(item.id) ? "selected" : "";
+                return `<option value="${item.id}" ${selected}>${label} (${suffix})</option>`;
+            }).join("");
+        } catch (error) {
+            select.innerHTML = '<option value="">تعذر تحميل المشرفين</option>';
+            showAlert(error.message || "تعذر تحميل المشرفين المؤهلين.");
+        }
+    }
+
+    function collectPayload() {
+        return {
+            kindergarten_id: Number(getKindergartenId()),
+            name_ar: document.getElementById("classNameAr").value.trim(),
+            name_en: document.getElementById("classNameEn").value.trim() || null,
+            class_code: document.getElementById("classCode").value.trim(),
+            age_group: document.getElementById("ageGroup").value,
+            enrolled_children_count: Number(document.getElementById("childrenCount").value),
+            capacity_total: Number(document.getElementById("capacityTotal").value),
+            min_age_months: Number(document.getElementById("minAgeMonths").value),
+            max_age_months: Number(document.getElementById("maxAgeMonths").value),
+            supervisor_id: Number(document.getElementById("supervisorId").value),
+        };
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        clearAlert();
+
+        if (!form.checkValidity()) {
+            form.classList.add("was-validated");
+            return;
+        }
+
+        const payload = collectPayload();
+        if (payload.enrolled_children_count >= payload.capacity_total) {
+            showAlert("يجب أن يكون عدد الأطفال المسجلين أقل من الطاقة الاستيعابية.");
+            return;
+        }
+        if (payload.max_age_months < payload.min_age_months) {
+            showAlert("يجب أن يكون العمر الأعلى أكبر من أو يساوي العمر الأدنى.");
+            return;
+        }
+
+        const submitBtn = document.getElementById("submitBtn");
+        const originalHtml = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>جارٍ الحفظ...';
+
+        try {
+            const url = CLASS_FORM_CONFIG.isEdit ? `/api/classes/${CLASS_FORM_CONFIG.classId}` : "/api/classes";
+            const method = CLASS_FORM_CONFIG.isEdit ? "PUT" : "POST";
+            const response = await fetch(url, {
+                method,
+                headers: buildHeaders(true),
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.detail || "تعذر حفظ بيانات الفصل.");
+            }
+            window.location.href = `/classes/${data.id}`;
+        } catch (error) {
+            showAlert(error.message || "تعذر حفظ بيانات الفصل.");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHtml;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        const form = document.getElementById("classForm");
+        const ageGroup = document.getElementById("ageGroup");
+        const childrenCount = document.getElementById("childrenCount");
+        const kindergartenSelect = document.getElementById("kindergartenId");
+
+        form.addEventListener("submit", handleSubmit);
+        ageGroup.addEventListener("change", () => {
+            applyAgeDefaults();
+            updateRequiredSupervisors();
+        });
+        childrenCount.addEventListener("input", updateRequiredSupervisors);
+        if (kindergartenSelect && !kindergartenSelect.disabled) {
+            kindergartenSelect.addEventListener("change", loadEligibleSupervisors);
+        }
+
+        applyAgeDefaults();
+        await Promise.all([loadEligibleSupervisors(), updateRequiredSupervisors()]);
+    });
+</script>
+{% endblock %}

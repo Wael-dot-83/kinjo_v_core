@@ -139,6 +139,7 @@ from monitoring_endpoints import router as monitoring_router
 from manager_analytics_endpoints import router as manager_analytics_router
 from classification_service import router as classification_router
 from daily_reports_organization_api import router as daily_reports_organization_router
+from api.parent import router as parent_router
 
 # =============================================================================
 # Lifespan Event Handler
@@ -748,6 +749,7 @@ app.include_router(dr_analytics_router, prefix="/api", tags=["Daily Report Analy
 app.include_router(dr_analytics_frontend)
 app.include_router(daily_reports_organization_router, prefix="/api", tags=["Daily Reports Organization"])
 app.include_router(frontend_router)
+app.include_router(parent_router, prefix="/api", tags=["Parent"])
 
 # WebSocket endpoint for real-time dashboard updates
 from dependencies import get_current_user_optional

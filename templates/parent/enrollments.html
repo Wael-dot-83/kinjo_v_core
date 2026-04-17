@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}طلبات التسجيل{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-clipboard-check me-2 text-primary"></i>
+            طلبات التسجيل
+        </h1>
+        <nav aria-label="مسار التنقل">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">طلبات التسجيل</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar">
+        <a href="/enroll" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>طلب جديد
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Status Summary Cards -->
+<div class="row g-3 mb-4" id="statusSummary">
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-primary" id="countTotal">0</h3>
+                <small class="text-muted">الإجمالي</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-success" id="countActive">0</h3>
+                <small class="text-muted">نشط / مقبول</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-warning" id="countPending">0</h3>
+                <small class="text-muted">قيد المراجعة</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-danger" id="countRejected">0</h3>
+                <small class="text-muted">مرفوض</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enrollments List -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>الطفل</th>
+                        <th>الروضة</th>
+                        <th>الحالة</th>
+                        <th>تاريخ التقديم</th>
+                    </tr>
+                </thead>
+                <tbody id="enrollmentsTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span class="ms-2">جاري التحميل...</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const STATUS_AR = {
+        'DRAFT': 'مسودة', 'SUBMITTED': 'مقدّم', 'PENDING_REVIEW': 'قيد المراجعة',
+        'ACCEPTED': 'مقبول', 'REJECTED': 'مرفوض', 'WITHDRAWN': 'منسحب',
+        'WAITLISTED': 'قائمة الانتظار', 'ACTIVE': 'نشط'
+    };
+
+    const STATUS_CLASS = {
+        'DRAFT': 'bg-secondary', 'SUBMITTED': 'bg-info', 'PENDING_REVIEW': 'bg-warning text-dark',
+        'ACCEPTED': 'bg-success', 'REJECTED': 'bg-danger', 'WITHDRAWN': 'bg-dark',
+        'WAITLISTED': 'bg-info', 'ACTIVE': 'bg-success'
+    };
+
+    function getHeaders() {
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return { 'Content-Type': 'application/json' };
+        }
+        const token = AuthService.getToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '—';
+        return new Date(dateStr).toLocaleDateString('ar-SA');
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadEnrollments();
+    });
+
+    async function loadEnrollments() {
+        const tbody = document.getElementById('enrollmentsTableBody');
+        try {
+            const resp = await fetch('/api/parent/enrollments', { headers: getHeaders() });
+            if (!resp.ok) throw new Error('تعذر تحميل الطلبات');
+
+            const data = await resp.json();
+            const enrollments = data.enrollments || [];
+
+            // Update counts
+            document.getElementById('countTotal').textContent = enrollments.length;
+            document.getElementById('countActive').textContent =
+                enrollments.filter(e => e.status === 'ACTIVE' || e.status === 'ACCEPTED').length;
+            document.getElementById('countPending').textContent =
+                enrollments.filter(e => e.status === 'PENDING_REVIEW' || e.status === 'SUBMITTED').length;
+            document.getElementById('countRejected').textContent =
+                enrollments.filter(e => e.status === 'REJECTED').length;
+
+            if (enrollments.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
+                            <p class="text-muted">لا توجد طلبات تسجيل</p>
+                            <a href="/enroll" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-2"></i>تقديم طلب جديد
+                            </a>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = enrollments.map((e, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>
+                        <div class="fw-semibold">${e.child_name}</div>
+                    </td>
+                    <td>${e.kindergarten_name}</td>
+                    <td>
+                        <span class="badge ${STATUS_CLASS[e.status] || 'bg-secondary'}">
+                            ${STATUS_AR[e.status] || e.status}
+                        </span>
+                    </td>
+                    <td>${formatDate(e.submitted_at || e.created_at)}</td>
+                </tr>
+            `).join('');
+
+        } catch (error) {
+            console.error('Error loading enrollments:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-danger py-4">
+                        <i class="bi bi-exclamation-triangle me-2"></i>خطأ في تحميل البيانات
+                    </td>
+                </tr>
+            `;
+        }
+    }
+</script>
+{% endblock %}

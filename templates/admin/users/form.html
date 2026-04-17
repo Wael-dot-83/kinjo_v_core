@@ -1,23 +1,18 @@
 {% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if user_obj %}تعديل المستخدم{% else %}إضافة مستخدم جديد{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <div>
-        <h1 class="h2">
-            <i class="bi bi-person me-2 text-primary"></i>
-            {% if user_obj %}تعديل المستخدم: {{ user_obj.username }}{% else %}إضافة مستخدم جديد{% endif %}
-        </h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/admin/users">المستخدمين</a></li>
-                <li class="breadcrumb-item active">{% if user_obj %}تعديل{% else %}إضافة{% endif %}</li>
-            </ol>
-        </nav>
-    </div>
-</div>
+{{ page_header(
+title="تعديل المستخدم: " ~ user_obj.username if user_obj else "إضافة مستخدم جديد",
+icon="bi-person",
+breadcrumbs=[
+{"label": "لوحة التحكم", "url": "/dashboard"},
+{"label": "المستخدمين", "url": "/admin/users"},
+{"label": "تعديل" if user_obj else "إضافة", "url": None}
+]
+) }}
 {% endblock %}
 
 {% block content %}
@@ -65,11 +60,11 @@
                                 onchange="toggleKindergartenField()">
                                 <option value="">اختر الدور...</option>
                                 <option value="MANAGER" {% if user_obj and user_obj.role.value=='MANAGER' %}selected{%
-                                    endif %}>مدير روضة (Manager)</option>
+                                    endif %}>مدير روضة</option>
                                 <option value="SUPERVISOR" {% if user_obj and user_obj.role.value=='SUPERVISOR'
-                                    %}selected{% endif %}>مشرف (Supervisor)</option>
+                                    %}selected{% endif %}>مشرف</option>
                                 <option value="PARENT" {% if user_obj and user_obj.role.value=='PARENT' %}selected{%
-                                    endif %}>ولي أمر (Parent)</option>
+                                    endif %}>ولي أمر</option>
                             </select>
                             <div class="form-text" id="roleHelp"></div>
                             <div class="invalid-feedback">يرجى اختيار الصلاحية</div>
@@ -77,8 +72,15 @@
                     </div>
 
                     <div id="kindergartenSection"
-                        class="mb-4 {% if user_obj and user_obj.role.value == 'ADMIN' %}d-none{% endif %}">
+                        class="mb-4 {% if user_obj and user_obj.role.value == 'ADMIN' %}d-none{% endif %} {% if is_manager_user %}d-none{% endif %}">
                         <label for="kindergarten_id" class="form-label">الروضة المرتبطة</label>
+                        {% if is_manager_user %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            {% if ui_lang == 'en' %}As a manager, you can only create users for your kindergarten:{% else %}كمدير، يمكنك فقط إنشاء المستخدمين لروضتك:{% endif %}
+                            <strong>{{ (kindergartens[0].name_en if ui_lang == 'en' and kindergartens and kindergartens[0].name_en else kindergartens[0].name_ar) if kindergartens else ('Unspecified' if ui_lang == 'en' else 'غير محدد') }}</strong>
+                        </div>
+                        {% endif %}
                         <div class="row g-2 mb-3" id="kgFilters">
                             <div class="col-md-6">
                                 <label for="kgGovernorateFilter" class="form-label">المحافظة</label>
@@ -113,7 +115,7 @@
                                 user_obj.kindergarten_id==kg.id %}selected {% elif not user_obj and
                                 request.query_params.get('kindergarten_id') and
                                 request.query_params.get('kindergarten_id')|int==kg.id %}selected {% endif %}>
-                                {{ kg.name_ar }} ({{ kg.city }})
+                                {{ kg.name_en if ui_lang == 'en' and kg.name_en else kg.name_ar }} ({{ kg.city }})
                             </option>
                             {% endfor %}
                         </select>
@@ -152,7 +154,6 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
 <!-- Password Reset Modal -->
 <div class="modal fade" id="passwordResetModal" tabindex="-1" aria-labelledby="passwordResetModalLabel"
@@ -220,6 +221,7 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
@@ -329,29 +331,41 @@
         const role = document.getElementById('role').value;
         const section = document.getElementById('kindergartenSection');
         const kgSelect = document.getElementById('kindergarten_id');
+        const isManagerUser = {{ 'true' if is_manager_user else 'false' }};
 
-        updateRoleHelp(role);
 
-        if (!section || !kgSelect) {
-            return;
+    updateRoleHelp(role);
+
+    if (!section || !kgSelect) {
+        return;
+    }
+
+    // If current user is manager, always hide kindergarten selection
+    if (isManagerUser) {
+        section.classList.add('d-none');
+        // Pre-select the manager's kindergarten
+        if (kgSelect.options.length > 1) {
+            kgSelect.value = kgSelect.options[1].value; // First option after placeholder
         }
+        return;
+    }
 
-        if (role === 'ADMIN') {
-            section.classList.add('d-none');
-            kgSelect.value = '';
-            kgSelect.removeAttribute('required');
-            return;
-        }
+    if (role === 'ADMIN') {
+        section.classList.add('d-none');
+        kgSelect.value = '';
+        kgSelect.removeAttribute('required');
+        return;
+    }
 
-        section.classList.remove('d-none');
+    section.classList.remove('d-none');
 
-        if (role === 'MANAGER' || role === 'SUPERVISOR') {
-            kgSelect.setAttribute('required', 'required');
-        } else {
-            kgSelect.removeAttribute('required');
-        }
+    if (role === 'MANAGER' || role === 'SUPERVISOR') {
+        kgSelect.setAttribute('required', 'required');
+    } else {
+        kgSelect.removeAttribute('required');
+    }
 
-        filterKindergartenOptions();
+    filterKindergartenOptions();
     }
 
     // Run on load
@@ -367,7 +381,7 @@
         const userId = getUserID();
         if (userId) {
             // Get user info and show modal
-            api.get(`/api/users/${userId}`)
+            api.get(`/api/admin/users/${userId}`)
                 .then(user => {
                     showPasswordResetModal(userId, user.username);
                 })
@@ -413,10 +427,10 @@
             }
 
             if (userId) {
-                await api.put(`/api/users/${userId}`, data);
+                await api.put(`/api/admin/users/${userId}`, data);
                 showToast('تم تحديث بيانات المستخدم بنجاح', 'success');
             } else {
-                await api.post('/api/users', data);
+                await api.post('/api/admin/users', data);
                 showToast('تم إنشاء المستخدم بنجاح', 'success');
             }
 
@@ -479,7 +493,7 @@
         btnLoading.classList.remove('d-none');
 
         try {
-            await api.post(`/api/users/${currentResetUserId}/admin-reset-password`, {
+            await api.post(`/api/admin/users/${currentResetUserId}/admin-reset-password`, {
                 new_password: password,
                 admin_password: adminPassword
             });

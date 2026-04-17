@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}اتصل بنا - كينجو{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-5">
+                <h1><i class="bi bi-envelope text-primary"></i> اتصل بنا</h1>
+                <p class="lead text-muted">نسعد بتواصلكم معنا</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-telephone display-4 text-primary mb-3"></i>
+                            <h5>الهاتف</h5>
+                            <p class="text-muted mb-0">+962 6 XXX XXXX</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-envelope display-4 text-primary mb-3"></i>
+                            <h5>البريد الإلكتروني</h5>
+                            <p class="text-muted mb-0">support@kinjo.jo</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-geo-alt display-4 text-primary mb-3"></i>
+                            <h5>العنوان</h5>
+                            <p class="text-muted mb-0">عمان، الأردن</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-clock display-4 text-primary mb-3"></i>
+                            <h5>ساعات العمل</h5>
+                            <p class="text-muted mb-0">الأحد - الخميس: 8:00 - 16:00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-5 shadow-sm">
+                <div class="card-body">
+                    <h4 class="mb-4">أرسل لنا رسالة</h4>
+                    <form id="contactForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="name" class="form-label">الاسم</label>
+                                <input type="text" class="form-control" id="name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">البريد الإلكتروني</label>
+                                <input type="email" class="form-control" id="email" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="subject" class="form-label">الموضوع</label>
+                                <input type="text" class="form-control" id="subject" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="message" class="form-label">الرسالة</label>
+                                <textarea class="form-control" id="message" rows="5" required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send"></i> إرسال
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('contactForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'success',
+            title: 'تم الإرسال',
+            text: 'شكراً لتواصلك معنا. سنرد عليك في أقرب وقت ممكن.',
+            confirmButtonText: 'حسناً'
+        }).then(() => {
+            this.reset();
+        });
+    });
+</script>
+{% endblock %}
