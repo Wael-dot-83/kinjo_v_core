@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
 from typing import List, Optional
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 import csv
 import io
 import json
@@ -11,6 +11,8 @@ import models
 from database import get_db
 from dependencies import get_current_user
 from models import UserRole
+from audit_actions import AuditAction
+from admin_security import log_audit_event
 
 router = APIRouter()
 
@@ -21,7 +23,7 @@ def list_audit_logs(
     action: Optional[str] = None,
     entity_type: Optional[str] = None,
     user: Optional[str] = None,
-    date: Optional[date] = None,
+    date: Optional[str] = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -32,6 +34,18 @@ def list_audit_logs(
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    # Normalize empty strings to None
+    action = action if action else None
+    entity_type = entity_type if entity_type else None
+    user = user if user else None
+    parsed_date = None
+    if date:
+        try:
+            from datetime import date as date_type
+            parsed_date = date_type.fromisoformat(date)
+        except (ValueError, TypeError):
+            parsed_date = None
+
     query = db.query(models.AuditLog)
 
     # Apply filters
@@ -41,10 +55,11 @@ def list_audit_logs(
     if entity_type:
         query = query.filter(models.AuditLog.entity_type == entity_type)
     
-    if date:
+    if parsed_date:
         # Filter by specific date (start of day to end of day)
+        from sqlalchemy import func as sqlfunc
         query = query.filter(
-            func.date(models.AuditLog.created_at) == date
+            sqlfunc.date(models.AuditLog.created_at) == parsed_date
         )
 
     if user:
@@ -91,9 +106,9 @@ def list_audit_logs(
         logs_with_users = logs_with_users.filter(models.AuditLog.action == action)
     if entity_type:
         logs_with_users = logs_with_users.filter(models.AuditLog.entity_type == entity_type)
-    if date:
+    if parsed_date:
         from sqlalchemy import func
-        logs_with_users = logs_with_users.filter(func.date(models.AuditLog.created_at) == date)
+        logs_with_users = logs_with_users.filter(func.date(models.AuditLog.created_at) == parsed_date)
     if user:
         logs_with_users = logs_with_users.filter(models.User.username.ilike(f"%{user}%"))
 
@@ -129,7 +144,7 @@ def list_audit_logs(
 
 @router.get("/audit-logs/export")
 def export_audit_logs(
-    format: str = Query("csv", regex="^(csv|json)$"), # PDF suppressed for now
+    format: str = Query("csv", pattern="^(csv|json)$"), # PDF suppressed for now
     period: str = Query("7"), # days
     action: Optional[str] = None,
     entity_type: Optional[str] = None,
@@ -150,7 +165,7 @@ def export_audit_logs(
     if period != "all":
         try:
             days = int(period)
-            cutoff = datetime.utcnow() - timedelta(days=days)
+            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
             query = query.filter(models.AuditLog.created_at >= cutoff)
         except ValueError:
             pass # Ignore invalid period, return all or default
@@ -167,6 +182,22 @@ def export_audit_logs(
     
     # Limit export to avoid memory issues (e.g., last 5000)
     data = query.limit(5000).all()
+
+    log_audit_event(
+        db=db,
+        action=AuditAction.AUDIT_LOG_EXPORT,
+        actor=current_user,
+        target_type="AuditLog",
+        metadata={
+            "format": format,
+            "period": period,
+            "action_filter": action,
+            "entity_type_filter": entity_type,
+            "user_filter": user,
+            "count": len(data),
+        },
+        sensitivity_level=2,
+    )
 
     if format == "json":
         export_data = []

@@ -5,7 +5,7 @@ Uses pytest fixtures to properly isolate test setup
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from dependencies import get_current_user
+from dependencies import get_current_user, get_current_user_or_redirect
 from models import User, UserRole, UserStatus
 from auth import get_password_hash
 
@@ -24,13 +24,14 @@ def mock_auth():
             id=1, 
             username="testuser",
             email="test@kinjo.sa", 
-            role=UserRole.MANAGER,
+            role=UserRole.ADMIN,
             status=UserStatus.ACTIVE,
             hashed_password=get_password_hash("TestPass123!")
         )
     
     # Set the override
     app.dependency_overrides[get_current_user] = mock_get_current_user
+    app.dependency_overrides[get_current_user_or_redirect] = mock_get_current_user
     
     yield
     
@@ -90,10 +91,9 @@ def test_reports_list(test_client):
 
 
 def test_attendance_page(test_client):
-    response = test_client.get("/attendance/daily")
-    assert response.status_code == 200
-    assert "الحضور والغياب" in response.text
-
+    response = test_client.get("/attendance/daily", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers.get("location") == "/dashboard"
 
 def test_kpi_dashboard(test_client):
     response = test_client.get("/kpi/dashboard")

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 import models
 
@@ -70,7 +70,7 @@ def create_parent(test_db, username, home_governorate, enrollment_kindergarten_i
             first_name=f"Child{index}",
             last_name="Test",
             gender=models.Gender.MALE,
-            date_of_birth=date(2021, 1, 1),
+            date_of_birth=date.today() - timedelta(days=365 * 3),
             father_name="Father",
             mother_first_name="Mother",
             mother_last_name="Last",
@@ -414,3 +414,40 @@ def test_inbox_visibility_no_leakage(
     assert response.status_code == 200
     items = response.json()["items"]
     assert all(item["id"] != msg_id for item in items)
+
+
+def test_route_resolution_available_recipients_static_path(
+    client,
+    auth_headers_manager
+):
+    """Static recipients path must resolve to recipients handler, not message-id handler."""
+    response = client.get("/comm/messages/available-recipients", headers=auth_headers_manager)
+    assert response.status_code == 200
+    payload = response.json()
+    assert "parents" in payload
+    assert "supervisors" in payload
+
+
+def test_route_resolution_message_id_dynamic_path(
+    client,
+    test_db,
+    admin_user,
+    manager_user,
+    auth_headers_manager
+):
+    """Numeric message-id path must resolve to message detail handler."""
+    message = models.Message(
+        thread_type=models.MessageThreadType.DIRECT,
+        sender_id=admin_user.id,
+        recipient_id=manager_user.id,
+        kindergarten_id=manager_user.kindergarten_id,
+        subject="Route Resolution",
+        message_body="Validate dynamic message path"
+    )
+    test_db.add(message)
+    test_db.commit()
+    test_db.refresh(message)
+
+    response = client.get(f"/comm/messages/{message.id}", headers=auth_headers_manager)
+    assert response.status_code == 200
+    assert response.json()["id"] == message.id

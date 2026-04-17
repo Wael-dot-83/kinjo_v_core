@@ -14,7 +14,7 @@ This module provides:
 import uuid
 import json
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from typing import Optional, List, Dict, Any, Callable, TypeVar, Union
 from functools import wraps
 from contextvars import ContextVar
@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 import models
 from database import get_db
 from config import settings
+import validators
 
 # =============================================================================
 # Context Variables for Request Tracking
@@ -461,8 +462,14 @@ def validate_bulk_targets(
     forbidden = []
     not_found = []
 
+    # Batch-load all targets to avoid N+1 queries
+    targets_by_id = {
+        t.id: t for t in
+        db.query(model_class).filter(model_class.id.in_(target_ids)).all()
+    } if target_ids else {}
+
     for target_id in target_ids:
-        target = db.query(model_class).filter(model_class.id == target_id).first()
+        target = targets_by_id.get(target_id)
         if target is None:
             not_found.append(target_id)
         elif access_check(actor, target):
@@ -698,6 +705,44 @@ async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
 # Input Validation Schemas for Admin Operations
 # =============================================================================
 
+class ChildCreateSchema(BaseModel):
+    """Schema for creating a child during parent registration"""
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
+    date_of_birth: date = Field(
+        ...,
+        description="YYYY-MM-DD. Must be between 70 days and 4 years 8 months (inclusive).",
+    )
+    gender: models.Gender
+    father_name: str = Field(..., min_length=1, max_length=255)
+    mother_first_name: str = Field(..., min_length=1, max_length=100)
+    mother_second_name: Optional[str] = None
+    mother_last_name: Optional[str] = None
+    mother_nationality: Optional[str] = None
+
+    @field_validator('first_name', 'last_name', 'father_name', 'mother_first_name')
+    @classmethod
+    def strip_whitespace(cls, v: str) -> str:
+        return v.strip()
+
+    @field_validator('mother_second_name', 'mother_last_name', 'mother_nationality')
+    @classmethod
+    def strip_optional_whitespace(cls, v: Optional[str]) -> Optional[str]:
+        return v.strip() if v else None
+
+    @field_validator('date_of_birth')
+    @classmethod
+    def validate_child_age(cls, v: date) -> date:
+        """Validate child age is within acceptable range (70 days to 56 months / 4y 8m)"""
+        try:
+            validators.validate_child_age_strict(v)
+        except validators.ValidationError as exc:
+            raise ValueError(exc.message) from exc
+
+        return v
+
+
+
 class UserCreateSchema(BaseModel):
     """Schema for creating a user with strict validation"""
     username: str = Field(..., min_length=3, max_length=50, pattern=r'^[a-zA-Z0-9_-]+$')
@@ -705,6 +750,14 @@ class UserCreateSchema(BaseModel):
     password: str = Field(..., min_length=8, max_length=72)
     role: models.UserRole
     kindergarten_id: Optional[int] = None
+    children: Optional[List[ChildCreateSchema]] = None
+    # Profile fields (manager/supervisor)
+    full_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    nationality: Optional[str] = None
+    national_id: Optional[str] = None
+    passport_number: Optional[str] = None
 
     @field_validator('email')
     @classmethod
@@ -726,6 +779,13 @@ class UserUpdateSchema(BaseModel):
     role: Optional[models.UserRole] = None
     status: Optional[models.UserStatus] = None
     kindergarten_id: Optional[int] = None
+    # Profile fields (manager/supervisor)
+    full_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    nationality: Optional[str] = None
+    national_id: Optional[str] = None
+    passport_number: Optional[str] = None
 
     @field_validator('email')
     @classmethod

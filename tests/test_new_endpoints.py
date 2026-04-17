@@ -4,7 +4,7 @@ Tests for newly implemented endpoints:
 - POST /api/safeguarding/create
 """
 import pytest
-from datetime import date
+from datetime import date, timedelta
 
 import models
 from auth import get_password_hash
@@ -160,7 +160,7 @@ class TestSafeguardingCreate:
             first_name="Sara",
             last_name="Test",
             gender=models.Gender.FEMALE,
-            date_of_birth=date(2022, 6, 15),
+            date_of_birth=date.today() - timedelta(days=365 * 3),
             father_name="Father Test",
             mother_first_name="Mother",
             mother_last_name="Test",

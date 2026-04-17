@@ -2,9 +2,9 @@
 Supervisor Service Module
 Handles all supervisor-specific operations and class management
 """
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import List, Optional, Tuple
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func
 import models
 import validators
@@ -62,19 +62,20 @@ class SupervisorService:
 
         class_ids = [c.id for c in classes]
 
-        # Get active enrollments for these classes
-        # Note: In full implementation, EnrollmentApplication would have class_id
-        # For now, get all children in the kindergarten
-        kindergarten_id = supervisor_user.kindergarten_id
-
-        children = db.query(models.Child).join(
-            models.EnrollmentApplication
+        # Restrict strictly to active enrollments in supervisor assigned classes.
+        enrollments = db.query(models.EnrollmentApplication).options(
+            joinedload(models.EnrollmentApplication.child)
         ).filter(
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+            models.EnrollmentApplication.class_id.in_(class_ids),
             models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
         ).all()
 
-        return children
+        children_by_id = {}
+        for enrollment in enrollments:
+            if enrollment.child and enrollment.child.id not in children_by_id:
+                children_by_id[enrollment.child.id] = enrollment.child
+
+        return list(children_by_id.values())
 
     @staticmethod
     def assign_supervisor_to_class(
@@ -247,38 +248,40 @@ class SupervisorService:
                 level=4
             )
 
-        # Get class details
-        class_obj = db.query(models.Class).filter(
-            models.Class.id == class_id
-        ).first()
-
-        # Get active enrollments
-        kindergarten_id = supervisor_user.kindergarten_id
-        enrollments = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+        # Get active enrollments for this specific class only.
+        enrollments = db.query(models.EnrollmentApplication).options(
+            joinedload(models.EnrollmentApplication.child).joinedload(models.Child.parent)
+        ).filter(
+            models.EnrollmentApplication.class_id == class_id,
             models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
         ).all()
 
         roster = []
         for enrollment in enrollments:
             child = enrollment.child
+            if not child:
+                continue
 
             # Calculate age
             age_months = validators.validate_age_months(child.date_of_birth)
 
-            # Check if child fits class age band
-            if age_months >= class_obj.min_age_months and age_months <= class_obj.max_age_months:
-                roster.append({
-                    "child_id": child.id,
-                    "first_name": child.first_name,
-                    "last_name": child.last_name,
-                    "gender": child.gender.value,
-                    "age_months": age_months,
-                    "parent_name": f"{child.parent.first_name} {child.parent.last_name}",
-                    "parent_phone": child.parent.phone_number,
-                    "media_consent": child.media_consent,
-                    "enrollment_start_date": enrollment.enrollment_start_date
-                })
+            parent_name = "-"
+            parent_phone = None
+            if child.parent:
+                parent_name = f"{child.parent.first_name} {child.parent.last_name}"
+                parent_phone = child.parent.phone_number
+
+            roster.append({
+                "child_id": child.id,
+                "first_name": child.first_name,
+                "last_name": child.last_name,
+                "gender": child.gender.value if child.gender else None,
+                "age_months": age_months,
+                "parent_name": parent_name,
+                "parent_phone": parent_phone,
+                "media_consent": child.media_consent,
+                "enrollment_start_date": enrollment.enrollment_start_date
+            })
 
         return roster
 
@@ -403,7 +406,7 @@ class SupervisorService:
             )
 
         if not observed_at:
-            observed_at = datetime.now()
+            observed_at = datetime.now(timezone.utc)
 
         observation = models.Observation(
             child_id=child_id,

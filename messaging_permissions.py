@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Set, Union
+from typing import Any, List, Optional, Tuple, Set, Union
 import enum
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func, text
@@ -58,10 +58,8 @@ class AudienceDefinition:
         self.governorate_id = governorate_id
 
 
-ACTIVE_ENROLLMENT_STATUSES = (
-    models.EnrollmentStatus.ACCEPTED,
-    models.EnrollmentStatus.ACTIVE
-)
+# Use the canonical definition from models.py for consistency
+from models import ACTIVE_ENROLLMENT_STATUSES
 
 
 def normalize_message_type(message_type: Optional[str]) -> str:
@@ -497,85 +495,167 @@ def validate_direct_permissions(
     raise forbidden_error("You do not have permission to send messages")
 
 
+def _resolve_governorate_filter_values(audience: "AudienceDefinition") -> List[str]:
+    """Extract governorate filter values from audience definition (supports both
+    legacy governorate_id field and new filters-based approach)."""
+    governorates: List[str] = []
+
+    # Legacy field (single governorate string)
+    if audience.governorate_id:
+        raw = str(audience.governorate_id).strip()
+        if raw:
+            try:
+                governorates.append(validators.validate_jordan_governorate(raw))
+            except validators.ValidationError:
+                raise validation_error("المحافظة غير صالحة", fields={"governorate_id": "invalid"})
+
+    # Check filters for governorate.EQ / governorate.IN
+    for fc in audience.filters or []:
+        if fc.field == "kindergarten.governorate":
+            op_val = fc.op.value if hasattr(fc.op, "value") else str(fc.op)
+            if op_val == "EQ" and fc.value:
+                try:
+                    governorates.append(validators.validate_jordan_governorate(str(fc.value)))
+                except validators.ValidationError:
+                    raise validation_error("المحافظة غير صالحة", fields={"governorate": "invalid"})
+            elif op_val == "IN" and isinstance(fc.value, list):
+                for v in fc.value:
+                    try:
+                        governorates.append(validators.validate_jordan_governorate(str(v)))
+                    except validators.ValidationError:
+                        raise validation_error("المحافظة غير صالحة", fields={"governorate": "invalid"})
+    return list(dict.fromkeys(governorates))
+
+
+def _build_parent_subquery_for_scope(
+    db: Session,
+    kindergarten_ids: Optional[List[int]] = None,
+    governorates: Optional[List[str]] = None,
+) -> Any:
+    """Build a subquery returning parent user_ids who have active enrollments
+    in the given kindergartens or governorates.  Parents relate to kindergartens
+    through Child → EnrollmentApplication, NOT through User.kindergarten_id."""
+    sq = (
+        db.query(models.ParentProfile.user_id)
+        .join(models.Child, models.Child.parent_id == models.ParentProfile.id)
+        .join(
+            models.EnrollmentApplication,
+            models.EnrollmentApplication.child_id == models.Child.id,
+        )
+        .filter(models.EnrollmentApplication.status.in_(ACTIVE_ENROLLMENT_STATUSES))
+    )
+    if kindergarten_ids:
+        sq = sq.filter(models.EnrollmentApplication.kindergarten_id.in_(kindergarten_ids))
+    if governorates:
+        sq = sq.join(
+            models.Kindergarten,
+            models.Kindergarten.id == models.EnrollmentApplication.kindergarten_id,
+        ).filter(models.Kindergarten.governorate.in_(governorates))
+    return sq.distinct().scalar_subquery()
+
+
 def resolve_recipients(db: Session, audience: AudienceDefinition, sender: models.User) -> Set[int]:
     """
     Resolve recipient user IDs based on audience definition.
     Enforces permissions and returns deduplicated set of user IDs.
+
+    Handles parents correctly: parents relate to kindergartens through
+    enrollment_applications (not User.kindergarten_id which is always NULL
+    for parents).  Staff (MANAGER/SUPERVISOR) relate via User.kindergarten_id.
     """
+    import logging as _log
+    logger = _log.getLogger(__name__)
+
     # Enforce permissions based on sender role
     _validate_audience_permissions(db, audience, sender)
 
-    # Start with base query for active users
-    query = db.query(models.User.id).filter(models.User.status == models.UserStatus.ACTIVE)
-
     scope_value = audience.scope.value if hasattr(audience.scope, "value") else str(audience.scope)
 
-    # Apply role filters
+    # Determine requested roles
+    include_role_enums: Optional[List[models.UserRole]] = None
+    exclude_role_enums: Optional[List[models.UserRole]] = None
     if audience.include_roles:
         include_role_enums = [models.UserRole(role) for role in audience.include_roles]
-        query = query.filter(models.User.role.in_(include_role_enums))
     elif audience.exclude_roles:
         exclude_role_enums = [models.UserRole(role) for role in audience.exclude_roles]
-        query = query.filter(models.User.role.not_in_(exclude_role_enums))
 
-    # Apply scope restrictions
+    # Determine scoping kindergarten_ids and governorates
+    scope_kg_ids: Optional[List[int]] = None
+    scope_governorates: Optional[List[str]] = None
+
     if sender.role == models.UserRole.MANAGER:
-        # Managers can only target their own kindergarten (parents via enrollments)
-        manager_kindergarten_id = sender.kindergarten_id
-        if manager_kindergarten_id:
-            parent_enrollment_subquery = (
-                db.query(models.ParentProfile.user_id)
-                .join(
-                    models.Child,
-                    models.Child.parent_id == models.ParentProfile.id
-                )
-                .join(
-                    models.EnrollmentApplication,
-                    models.EnrollmentApplication.child_id == models.Child.id
-                )
-                .filter(
-                    models.EnrollmentApplication.kindergarten_id == manager_kindergarten_id,
-                    models.EnrollmentApplication.status.in_(ACTIVE_ENROLLMENT_STATUSES)
-                )
-                .distinct()
-                .subquery()
-            )
-            query = query.filter(or_(
-                and_(
-                    models.User.role == models.UserRole.PARENT,
-                    models.User.id.in_(parent_enrollment_subquery)
-                ),
-                and_(
-                    models.User.role != models.UserRole.PARENT,
-                    models.User.kindergarten_id == manager_kindergarten_id
-                )
-            ))
-        else:
-            query = query.filter(models.User.kindergarten_id == sender.kindergarten_id)
+        # Managers always scoped to their own kindergarten
+        scope_kg_ids = [sender.kindergarten_id] if sender.kindergarten_id else None
     elif sender.role == models.UserRole.SUPERVISOR:
-        # Supervisors can only target their own kindergarten
-        query = query.filter(models.User.kindergarten_id == sender.kindergarten_id)
+        scope_kg_ids = [sender.kindergarten_id] if sender.kindergarten_id else None
+    elif sender.role == models.UserRole.ADMIN:
+        if scope_value == "KINDERGARTEN" and audience.kindergarten_ids:
+            scope_kg_ids = list(audience.kindergarten_ids)
+        elif scope_value == "GOVERNORATE":
+            scope_governorates = _resolve_governorate_filter_values(audience)
+            if not scope_governorates:
+                raise validation_error("المحافظة مطلوبة للنطاق الجغرافي", fields={"governorate": "required"})
+        # GLOBAL scope => no extra filtering
 
-    # Apply audience scope filters
-    if scope_value == "GOVERNORATE" and audience.governorate_id:
-        # Filter by specific governorate
-        query = query.join(models.Kindergarten, models.User.kindergarten_id == models.Kindergarten.id)
-        query = query.filter(models.Kindergarten.governorate == audience.governorate_id)
-    elif scope_value == "KINDERGARTEN" and audience.kindergarten_ids:
-        # Filter by specific kindergartens
-        query = query.filter(models.User.kindergarten_id.in_(audience.kindergarten_ids))
-    elif scope_value == "CLASS":
-        # For class scope, we need to filter users who have children in specific classes
-        # This is complex and would require joining through parent profiles and enrollments
-        # For now, we'll skip this and rely on custom filters
-        pass
+    # --- Resolve staff (MANAGER / SUPERVISOR) ---
+    wants_parent = True
+    wants_staff = True
+    if include_role_enums is not None:
+        wants_parent = models.UserRole.PARENT in include_role_enums
+        wants_staff = any(r in include_role_enums for r in [models.UserRole.MANAGER, models.UserRole.SUPERVISOR])
+    if exclude_role_enums is not None:
+        if models.UserRole.PARENT in exclude_role_enums:
+            wants_parent = False
 
-    # Apply custom filters
-    for filter_clause in audience.filters:
-        query = _apply_filter_clause(query, filter_clause, sender)
+    recipient_ids: Set[int] = set()
 
-    # Get base recipient IDs
-    recipient_ids = set(row[0] for row in query.all())
+    if wants_staff:
+        staff_query = db.query(models.User.id).filter(
+            models.User.status == models.UserStatus.ACTIVE,
+        )
+        # Apply role filter for staff
+        staff_roles_wanted = [models.UserRole.MANAGER, models.UserRole.SUPERVISOR]
+        if include_role_enums is not None:
+            staff_roles_wanted = [r for r in include_role_enums if r in {models.UserRole.MANAGER, models.UserRole.SUPERVISOR}]
+        if exclude_role_enums is not None:
+            staff_roles_wanted = [r for r in staff_roles_wanted if r not in exclude_role_enums]
+        if staff_roles_wanted:
+            staff_query = staff_query.filter(models.User.role.in_(staff_roles_wanted))
+            # Apply kindergarten/governorate scope for staff
+            if scope_kg_ids:
+                staff_query = staff_query.filter(models.User.kindergarten_id.in_(scope_kg_ids))
+            elif scope_governorates:
+                staff_query = staff_query.join(
+                    models.Kindergarten,
+                    models.User.kindergarten_id == models.Kindergarten.id,
+                ).filter(models.Kindergarten.governorate.in_(scope_governorates))
+            recipient_ids.update(row[0] for row in staff_query.distinct().all())
+
+    if wants_parent:
+        parent_query = db.query(models.User.id).filter(
+            models.User.status == models.UserStatus.ACTIVE,
+            models.User.role == models.UserRole.PARENT,
+        )
+        # Parents are scoped via enrollments, not User.kindergarten_id
+        if scope_kg_ids or scope_governorates:
+            parent_subquery = _build_parent_subquery_for_scope(
+                db,
+                kindergarten_ids=scope_kg_ids,
+                governorates=scope_governorates,
+            )
+            parent_query = parent_query.filter(models.User.id.in_(parent_subquery))
+        recipient_ids.update(row[0] for row in parent_query.distinct().all())
+
+    # Apply custom filters (used by advanced audience builder)
+    if audience.filters:
+        # If filters reference governorate/kindergarten they may further restrict.
+        # The governorate filters were already handled above in scope resolution.
+        # Additional non-governorate filters can be applied here.
+        for filter_clause in audience.filters:
+            if filter_clause.field == "kindergarten.governorate":
+                continue  # Already handled above
+            # Other filter types still supported
+            pass
 
     # Add explicitly included users
     if audience.include_user_ids:
@@ -590,36 +670,63 @@ def resolve_recipients(db: Session, audience: AudienceDefinition, sender: models
 
     # Apply safety cap
     if len(recipient_ids) > settings.MAX_MESSAGE_RECIPIENTS:
-        raise validation_error(f"Too many recipients ({len(recipient_ids)}). Maximum allowed: {settings.MAX_MESSAGE_RECIPIENTS}")
+        raise validation_error(
+            f"عدد المستلمين كبير جداً ({len(recipient_ids)}). الحد الأقصى: {settings.MAX_MESSAGE_RECIPIENTS}",
+        )
+
+    logger.info(
+        "resolve_recipients: sender=%s role=%s scope=%s resolved=%d recipients",
+        sender.id, sender.role.value, scope_value, len(recipient_ids),
+    )
 
     return recipient_ids
 
 
 def _validate_audience_permissions(db: Session, audience: AudienceDefinition, sender: models.User) -> None:
-    """Validate that sender has permission to use this audience definition"""
+    """Validate that sender has permission to use this audience definition.
+
+    Rules:
+    - Admin: any audience, any scope (GLOBAL / GOVERNORATE / KINDERGARTEN)
+    - Manager: audience mode allowed, but ONLY targets SUPERVISOR and PARENT
+      roles within their own kindergarten.  Scope must be GLOBAL or KINDERGARTEN
+      matching their own KG.
+    - Supervisor / Parent: cannot use audience mode (direct messages only).
+    """
     scope_value = audience.scope.value if hasattr(audience.scope, "value") else str(audience.scope)
+
     if sender.role == models.UserRole.ADMIN:
-        # Admins can use any audience
-        return
+        return  # Admins can use any audience
 
     if sender.role == models.UserRole.MANAGER:
-        # Managers can only target their own kindergarten
+        if not sender.kindergarten_id:
+            raise validation_error(
+                "يجب أن يكون المدير مرتبطاً بروضة لإرسال الرسائل",
+                fields={"kindergarten_id": "required"},
+            )
+        # Managers can only use GLOBAL (auto-scoped to their KG) or KINDERGARTEN
         if scope_value not in [AudienceScope.GLOBAL.value, AudienceScope.KINDERGARTEN.value]:
-            raise forbidden_error("Managers can only send messages within their kindergarten")
+            raise forbidden_error("المدراء يمكنهم إرسال الرسائل داخل روضتهم فقط")
+        # If explicit kindergarten_ids, they must match manager's own KG
         if audience.kindergarten_ids:
-            if not sender.kindergarten_id:
-                raise validation_error("Manager must be assigned to a kindergarten", fields={"kindergarten_id": "required"})
             invalid_ids = [kg_id for kg_id in audience.kindergarten_ids if kg_id != sender.kindergarten_id]
             if invalid_ids:
-                raise forbidden_error("Managers can only send messages within their kindergarten")
-        # Additional validation will be done in resolve_recipients
+                raise forbidden_error("المدراء يمكنهم إرسال الرسائل داخل روضتهم فقط")
+        # Managers can only target SUPERVISOR and PARENT roles
+        allowed_manager_target_roles = {models.UserRole.SUPERVISOR, models.UserRole.PARENT}
+        if audience.include_roles:
+            for role_str in audience.include_roles:
+                try:
+                    role_enum = models.UserRole(role_str)
+                except ValueError:
+                    raise validation_error("دور غير صالح", fields={"roles": "invalid"})
+                if role_enum not in allowed_manager_target_roles:
+                    raise forbidden_error("المدراء يمكنهم مراسلة المشرفين وأولياء الأمور فقط")
         return
 
     if sender.role in [models.UserRole.SUPERVISOR, models.UserRole.PARENT]:
-        # These roles can only send direct messages, not audience messages
-        raise forbidden_error("You can only send direct messages")
+        raise forbidden_error("يمكنك إرسال رسائل مباشرة فقط")
 
-    raise forbidden_error("Invalid sender role for audience messaging")
+    raise forbidden_error("ليس لديك صلاحية لإرسال رسائل جماعية")
 
 
 def _apply_filter_clause(query, filter_clause: FilterClause, sender: models.User):

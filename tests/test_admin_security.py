@@ -15,9 +15,10 @@ This test module verifies:
 
 import pytest
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 
 from auth import get_password_hash
+from audit_actions import AuditAction
 import models
 
 
@@ -125,6 +126,25 @@ class TestAdminAuthEnforcement:
             headers=auth_headers_manager
         )
         assert response.status_code == 403
+
+    def test_route_resolution_users_export_static_path(self, client, auth_headers_admin):
+        """Static export path must resolve to export endpoint, not user-id endpoint."""
+        response = client.get("/api/admin/users/export?format=json", headers=auth_headers_admin)
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+    def test_route_resolution_users_id_dynamic_path(self, client, test_db, auth_headers_admin, sample_kindergarten):
+        """Numeric user-id path must resolve to the user detail endpoint."""
+        user = _create_user(
+            test_db,
+            username="route_resolution_user",
+            email="route_resolution_user@test.jo",
+            role=models.UserRole.SUPERVISOR,
+            kindergarten_id=sample_kindergarten.id
+        )
+        response = client.get(f"/api/admin/users/{user.id}", headers=auth_headers_admin)
+        assert response.status_code == 200
+        assert response.json()["id"] == user.id
 
 
 class TestErrorResponseContract:
@@ -340,7 +360,7 @@ class TestServerSideValidation:
         )
         assert response.status_code == 409  # Conflict
         data = response.json()
-        assert "already has a manager" in data["error"]["message"]
+        assert "already has an active manager" in data["error"]["message"]
 
         # Try to create manager without kindergarten - should fail
         response = client.post(
@@ -401,7 +421,7 @@ class TestServerSideValidation:
         )
         assert response.status_code == 409
         data = response.json()
-        assert "already has a manager" in data["error"]["message"]
+        assert "already has an active manager" in data["error"]["message"]
 
         # Try to change manager1's role to SUPERVISOR without kindergarten (should succeed)
         response = client.put(
@@ -514,7 +534,7 @@ class TestServerSideValidation:
         assert response.status_code == 409
         data = response.json()
         assert "Manager activation would violate" in data["message"]
-        assert len(data["errors"]) == 1  # Only one should fail since they're processed sequentially
+        assert len(data["errors"]) == 2  # Two errors: individual conflict + batch duplicate
 
     def test_bulk_create_per_row_validation(self, client, test_db, admin_user, auth_headers_admin, sample_kindergarten):
         """Bulk create should validate each row and report errors."""
@@ -1003,3 +1023,318 @@ short_pass,short@test.jo,123,PARENT,{sample_kindergarten.id}"""
 
         # Should have some errors
         assert len(data.get("errors", [])) >= 1
+
+
+# =============================================================================
+# Admin Kindergarten Import Tests
+# =============================================================================
+
+def test_admin_import_kindergartens_rejects_non_excel(client, auth_headers_admin):
+    """Import endpoint should reject non-Excel uploads."""
+    response = client.post(
+        "/api/admin/kindergartens/import",
+        files={"file": ("kindergartens.txt", b"not excel", "text/plain")},
+        headers=auth_headers_admin,
+    )
+    assert response.status_code == 400
+
+
+def test_imported_kindergartens_list_access_control(client, auth_headers_admin, auth_headers_manager, auth_headers_parent):
+    """Admin/Manager can list imported kindergartens, parent cannot."""
+    admin_response = client.get("/api/admin/kindergartens/imported", headers=auth_headers_admin)
+    assert admin_response.status_code == 200
+
+    manager_response = client.get("/api/admin/kindergartens/imported", headers=auth_headers_manager)
+    assert manager_response.status_code == 200
+
+    parent_response = client.get("/api/admin/kindergartens/imported", headers=auth_headers_parent)
+    assert parent_response.status_code == 403
+
+
+def test_admin_import_kindergartens_success_is_audited(client, test_db, admin_user, auth_headers_admin, monkeypatch):
+    """Successful kindergarten import should write an audit entry."""
+    def _fake_import(self, file_path, original_filename):
+        return {
+            "imported_count": 1,
+            "updated_count": 0,
+            "skipped_count": 0,
+            "errors": [],
+        }
+
+    monkeypatch.setattr(
+        "admin_endpoints.KindergartenImportService.import_from_excel",
+        _fake_import,
+    )
+
+    response = client.post(
+        "/api/admin/kindergartens/import",
+        files={"file": ("kindergartens.xlsx", b"fake-xlsx-content", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        headers=auth_headers_admin,
+    )
+    assert response.status_code == 200
+    assert response.json()["result"]["imported_count"] == 1
+
+    audit_log = (
+        test_db.query(models.AuditLog)
+        .filter(models.AuditLog.action == "KINDERGARTEN_IMPORT")
+        .order_by(models.AuditLog.id.desc())
+        .first()
+    )
+    assert audit_log is not None
+    assert audit_log.user_id == admin_user.id
+
+
+# =============================================================================
+# Admin Incident Reporting Tests
+# =============================================================================
+
+def test_admin_generate_incident_report(client, test_db, admin_token, admin_user, sample_kindergarten):
+    """Test admin can generate incident reports"""
+    # Create test incidents
+    from datetime import date
+    child = models.Child(
+        parent_id=1,  # Assume parent exists
+        first_name="Test",
+        last_name="Child",
+        date_of_birth=date.today() - timedelta(days=365*4),
+        gender=models.Gender.MALE,
+        father_name="Test Father",
+        mother_first_name="Test Mother",
+        mother_last_name="Last Name",
+        mother_nationality="Jordanian"
+    )
+    test_db.add(child)
+    test_db.flush()
+
+    # Create incidents
+    incident1 = models.Incident(
+        child_id=child.id,
+        kindergarten_id=sample_kindergarten.id,
+        type=models.IncidentType.INJURY,
+        severity_level=models.SeverityLevel.HIGH,
+        description="Test injury",
+        occurred_at=datetime.now()
+    )
+    incident2 = models.Incident(
+        child_id=child.id,
+        kindergarten_id=sample_kindergarten.id,
+        type=models.IncidentType.BEHAVIOR,
+        severity_level=models.SeverityLevel.LOW,
+        description="Test behavior",
+        occurred_at=datetime.now(),
+        closed_at=datetime.now()
+    )
+    test_db.add_all([incident1, incident2])
+    test_db.commit()
+
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # Generate report
+    report_data = {
+        "scope_type": "KINDERGARTEN",
+        "kindergarten_id": sample_kindergarten.id,
+        "period_type": "month"
+    }
+
+    response = client.post("/api/admin/reports/incidents/generate", data=report_data, headers=headers)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert "report_id" in data
+    assert data["message"] == "تم إنشاء التقرير بنجاح"
+
+    # Verify report was created
+    report_id = data["report_id"]
+    report = test_db.query(models.Report).filter(models.Report.id == report_id).first()
+    assert report is not None
+    assert report.report_type == models.ReportType.INCIDENT_SUMMARY
+    assert report.scope_type == models.ReportScopeType.KINDERGARTEN
+    assert report.created_by == admin_user.id
+
+
+def test_admin_list_incident_reports(client, test_db, admin_token):
+    """Test admin can list incident reports"""
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    response = client.get("/api/admin/reports/incidents", headers=headers)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert "reports" in data
+    assert "pagination" in data
+
+
+def test_admin_list_incident_reports_invalid_scope_filter_returns_400(client, admin_token):
+    """Invalid scope filter should return validation error, not 500."""
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    response = client.get("/api/admin/reports/incidents?scope_filter=INVALID", headers=headers)
+    assert response.status_code == 400
+
+
+def test_admin_get_incident_report_detail(client, test_db, admin_token, admin_user, sample_kindergarten):
+    """Test admin can get incident report details"""
+    # Create a test report
+    report = models.Report(
+        report_type=models.ReportType.INCIDENT_SUMMARY,
+        scope_type=models.ReportScopeType.KINDERGARTEN,
+        kindergarten_id=sample_kindergarten.id,
+        start_date=date.today() - timedelta(days=30),
+        end_date=date.today(),
+        metrics_json={"total_incidents": 5, "open_incidents": 2},
+        created_by=admin_user.id
+    )
+    test_db.add(report)
+    test_db.commit()
+
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    response = client.get(f"/api/admin/reports/incidents/{report.id}", headers=headers)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["id"] == report.id
+    assert "metrics" in data
+    assert data["metrics"]["total_incidents"] == 5
+
+
+def test_admin_get_incident_report_detail_not_found_returns_404(client, admin_token):
+    """Missing report detail should return 404, not 500."""
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    response = client.get("/api/admin/reports/incidents/999999", headers=headers)
+    assert response.status_code == 404
+
+
+def test_admin_generate_incident_report_invalid_scope_returns_400(client, admin_token):
+    """Invalid scope should return validation error, not 500."""
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    report_data = {
+        "scope_type": "INVALID",
+        "period_type": "month"
+    }
+
+    response = client.post("/api/admin/reports/incidents/generate", data=report_data, headers=headers)
+    assert response.status_code == 400
+
+
+def test_admin_export_incident_report_csv(client, test_db, admin_token, admin_user, sample_kindergarten):
+    """Test admin can export incident report as CSV"""
+    # Create a test report
+    report = models.Report(
+        report_type=models.ReportType.INCIDENT_SUMMARY,
+        scope_type=models.ReportScopeType.KINDERGARTEN,
+        kindergarten_id=sample_kindergarten.id,
+        start_date=date.today() - timedelta(days=30),
+        end_date=date.today(),
+        metrics_json={
+            "total_incidents": 2,
+            "incidents_by_type": {"INJURY": 1, "BEHAVIOR": 1},
+            "incidents_by_severity": {"HIGH": 1, "LOW": 1}
+        },
+        created_by=admin_user.id
+    )
+    test_db.add(report)
+    test_db.commit()
+
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    response = client.get(f"/api/admin/reports/incidents/{report.id}/export", headers=headers)
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/csv; charset=utf-8"
+
+    # Check CSV content
+    csv_content = response.text
+    assert "Report Title" in csv_content
+    assert "Total Incidents" in csv_content
+
+    audit_log = (
+        test_db.query(models.AuditLog)
+        .filter(models.AuditLog.action == AuditAction.INCIDENT_REPORT_EXPORT)
+        .order_by(models.AuditLog.id.desc())
+        .first()
+    )
+    assert audit_log is not None
+    assert audit_log.user_id == admin_user.id
+    assert audit_log.entity_id == report.id
+
+
+def test_admin_export_incident_report_not_found_returns_404(client, admin_token):
+    """Export endpoint should preserve 404 for missing reports."""
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    response = client.get("/api/admin/reports/incidents/999999/export", headers=headers)
+    assert response.status_code == 404
+
+
+def test_admin_export_audit_logs_creates_audit_entry(client, test_db, admin_token, admin_user):
+    """Audit log export should itself be audited."""
+    # Seed one log row to make export non-empty
+    seed_log = models.AuditLog(
+        user_id=admin_user.id,
+        action="SEED_EVENT",
+        entity_type="System",
+        entity_id=None,
+        details="seed",
+        sensitivity_level=1,
+    )
+    test_db.add(seed_log)
+    test_db.commit()
+
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    response = client.get("/api/audit-logs/export?format=csv&period=all", headers=headers)
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/csv; charset=utf-8"
+
+    audit_log = (
+        test_db.query(models.AuditLog)
+        .filter(models.AuditLog.action == AuditAction.AUDIT_LOG_EXPORT)
+        .order_by(models.AuditLog.id.desc())
+        .first()
+    )
+    assert audit_log is not None
+    assert audit_log.user_id == admin_user.id
+
+
+def test_admin_get_available_scopes(client, admin_token):
+    """Test admin can get available report scopes"""
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    response = client.get("/api/admin/reports/scopes", headers=headers)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert "scopes" in data
+    # Should include ALL scope for admin
+    scope_types = [s["type"] for s in data["scopes"]]
+    assert "ALL" in scope_types
+
+
+def test_non_admin_cannot_generate_reports(client, manager_token):
+    """Test non-admin users cannot generate reports"""
+    headers = {"Authorization": f"Bearer {manager_token}"}
+
+    report_data = {
+        "scope_type": "ALL",
+        "period_type": "month"
+    }
+
+    response = client.post("/api/admin/reports/incidents/generate", data=report_data, headers=headers)
+    assert response.status_code == 403
+
+
+def test_admin_incident_report_permissions_enforced(client, test_db, admin_token, manager_token, sample_kindergarten):
+    """Test that report generation respects user permissions"""
+    headers_admin = {"Authorization": f"Bearer {admin_token}"}
+    headers_manager = {"Authorization": f"Bearer {manager_token}"}
+
+    # Admin can generate ALL scope reports
+    report_data_all = {
+        "scope_type": "ALL",
+        "period_type": "month"
+    }
+    response = client.post("/api/admin/reports/incidents/generate", data=report_data_all, headers=headers_admin)
+    assert response.status_code == 200
+
+    # Manager cannot generate ALL scope reports (assuming they don't have permission)
+    response = client.post("/api/admin/reports/incidents/generate", data=report_data_all, headers=headers_manager)
+    assert response.status_code == 403

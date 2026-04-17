@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
 from typing import List, Optional
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from pydantic import BaseModel
 
 import models
@@ -54,10 +54,8 @@ def report_incident(
     # Supervisors and Managers can report
     validators.validate_supervisor_role(current_user)
     
-    # Verify child exists and belongs to user's kindergarten scope
-    child = db.query(models.Child).filter(models.Child.id == incident_data.child_id).first()
-    if not child:
-        raise HTTPException(status_code=404, detail="Child not found")
+    # Verify child exists and is within global age bounds
+    child = validators.ensure_child_in_range(db, incident_data.child_id)
         
     # Check enrollment to map to kindergarten if not obvious (but User has kindergarten_id)
     # Ideally should check if child is enrolled in current_user.kindergarten_id
@@ -156,10 +154,13 @@ def create_health_alert(
     # Parent can add? OR Manager? Let's say Manager/Supervisor + Parent (if they own the child)
     # For now, implementing for Staff side.
     validators.validate_supervisor_role(current_user)
-    
-    # Check access to child similar to incident
-    # ... (Simplified check: assuming child exists and user has access)
-    
+
+    # Verify child exists and is within global age bounds
+    child = validators.ensure_child_in_range(db, child_id)
+
+    # Kindergarten scope check
+    validators.validate_child_kindergarten_scope(db, current_user, child_id)
+
     alert = models.HealthAlert(
         child_id=child_id,
         alert_type=alert_data.alert_type,
@@ -178,10 +179,26 @@ def get_health_alerts(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get health alerts for a child"""
-    # Should validate user has access to this child
-    
-    return db.query(models.HealthAlert).filter(models.HealthAlert.child_id == child_id).all()
+    """Get health alerts for a child."""
+    # Verify child exists and is within global age bounds
+    child = validators.ensure_child_in_range(db, child_id)
+
+    # Access control
+    if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        if not parent_profile or child.parent_id != parent_profile.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+    else:
+        validators.validate_child_kindergarten_scope(db, current_user, child_id)
+
+    return db.query(models.HealthAlert).filter(
+        models.HealthAlert.child_id == child_id
+    ).order_by(
+        models.HealthAlert.created_at.desc(),
+        models.HealthAlert.id.desc(),
+    ).all()
 
 # -----------------------------------------------------------------------------
 # Safeguarding Cases
@@ -232,7 +249,7 @@ def create_safeguarding_case(
             detail="Child is not currently enrolled in the specified kindergarten"
         )
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     safeguarding_case = models.SafeguardingCase(
         child_id=case_data.child_id,
         kindergarten_id=kindergarten_id,

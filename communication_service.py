@@ -3,9 +3,9 @@ import enum
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, UploadFile, File
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy import or_, and_, desc, select
+from sqlalchemy import or_, and_, desc, func, select, exists
 from typing import List, Optional, Dict, Literal, Union, Any
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timezone, timedelta
 from jose import JWTError, jwt
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -18,6 +18,7 @@ from dependencies import get_current_user
 from notification_service import create_message_notifications
 from rate_limiter import limiter
 from storage_service import save_attachment, resolve_attachment_path
+from cache_service import cache_service
 from messaging_permissions import (
     normalize_message_type,
     normalize_roles,
@@ -28,6 +29,7 @@ from messaging_permissions import (
     resolve_direct_kindergarten_id,
     validate_direct_permissions,
     resolve_recipients,
+    ACTIVE_ENROLLMENT_STATUSES,
 )
 
 router = APIRouter()
@@ -539,6 +541,52 @@ class DeviceTokenResponse(BaseModel):
     })
 
 
+class AvailableRecipientResponse(BaseModel):
+    id: int
+    name: str
+    role: str
+    kindergarten_name: Optional[str]
+    children_count: Optional[int]  # For parents - number of active children
+
+    model_config = ConfigDict(from_attributes=True, json_schema_extra={
+        "example": {
+            "id": 123,
+            "name": "أحمد محمد",
+            "role": "PARENT",
+            "kindergarten_name": "روضة الأمل",
+            "children_count": 2
+        }
+    })
+
+
+class AvailableRecipientsResponse(BaseModel):
+    parents: List[AvailableRecipientResponse]
+    supervisors: List[AvailableRecipientResponse]
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "parents": [
+                {
+                    "id": 123,
+                    "name": "أحمد محمد",
+                    "role": "PARENT",
+                    "kindergarten_name": "روضة الأمل",
+                    "children_count": 2
+                }
+            ],
+            "supervisors": [
+                {
+                    "id": 456,
+                    "name": "فاطمة علي",
+                    "role": "SUPERVISOR",
+                    "kindergarten_name": "روضة الأمل",
+                    "children_count": None
+                }
+            ]
+        }
+    })
+
+
 MessageDetail.model_rebuild()
 
 
@@ -751,7 +799,23 @@ def send_message(
     if not message_body:
         raise validation_error("Message body is required", fields={"message_body": "required"})
 
+    # Validate message length
+    max_message_length = getattr(settings, 'MAX_MESSAGE_LENGTH', 5000)
+    max_subject_length = getattr(settings, 'MAX_SUBJECT_LENGTH', 255)
+    
+    if len(message_body) > max_message_length:
+        raise validation_error(
+            f"Message body too long. Maximum {max_message_length} characters allowed.",
+            fields={"message_body": "too_long"}
+        )
+
     subject = msg_data.subject.strip() if msg_data.subject else None
+    if subject and len(subject) > max_subject_length:
+        raise validation_error(
+            f"Subject too long. Maximum {max_subject_length} characters allowed.",
+            fields={"subject": "too_long"}
+        )
+
     subject = validators.sanitize_input(subject) if subject else None
     message_body = validators.sanitize_input(message_body)
 
@@ -759,6 +823,30 @@ def send_message(
     mode = getattr(msg_data, 'mode', 'direct')
     if mode not in ['direct', 'audience']:
         raise validation_error("Invalid message mode", fields={"mode": "must be 'direct' or 'audience'"})
+
+    # Check for duplicate messages (prevent spam)
+    duplicate_check_window = timedelta(minutes=settings.DUPLICATE_MESSAGE_CHECK_MINUTES or 5)
+    recent_message = db.query(models.Message).filter(
+        models.Message.sender_id == current_user.id,
+        models.Message.message_body == message_body,
+        models.Message.subject == subject,
+        models.Message.created_at >= datetime.now(timezone.utc) - duplicate_check_window
+    ).first()
+
+    if recent_message:
+        raise validation_error(
+            f"تم إرسال رسالة مشابهة مؤخراً. يرجى الانتظار {settings.DUPLICATE_MESSAGE_CHECK_MINUTES or 5} دقائق قبل إعادة الإرسال.",
+            fields={"message_body": "duplicate_message"}
+        )
+
+    # Validate manager role constraints
+    if current_user.role == models.UserRole.MANAGER:
+        if not current_user.kindergarten_id:
+            raise validation_error(
+                "Manager must be assigned to a kindergarten to send messages",
+                fields={"kindergarten_id": "required"}
+            )
+        # Additional manager-specific validations can be added here
 
     if mode == 'direct':
         # Direct message - existing logic
@@ -792,7 +880,13 @@ def send_message(
             actor=current_user,
             target_type="Message",
             target_ids=msg.id,
-            metadata={"thread_type": msg.thread_type.value},
+            metadata={
+                "thread_type": msg.thread_type.value,
+                "recipient_role": recipient.role.value,
+                "recipient_id": recipient.id,
+                "kindergarten_id": target_kindergarten_id,
+                "sender_role": current_user.role.value
+            },
             sensitivity_level=2
         )
 
@@ -827,6 +921,20 @@ def send_message(
         if scope_value.upper() == "KINDERGARTEN" and msg_data.audience.kindergarten_ids:
             if len(msg_data.audience.kindergarten_ids) == 1:
                 target_kindergarten_id = msg_data.audience.kindergarten_ids[0]
+        # Auto-scope managers to their own kindergarten
+        if current_user.role == models.UserRole.MANAGER and current_user.kindergarten_id:
+            target_kindergarten_id = current_user.kindergarten_id
+
+        # Build targeting metadata for audit/display
+        target_mode = scope_value.upper()
+        target_roles_json = msg_data.audience.include_roles or None
+        target_governorates_json = None
+        target_kg_ids_json = None
+        if scope_value.upper() == "GOVERNORATE":
+            from messaging_permissions import _resolve_governorate_filter_values
+            target_governorates_json = _resolve_governorate_filter_values(msg_data.audience) or None
+        if msg_data.audience.kindergarten_ids:
+            target_kg_ids_json = list(msg_data.audience.kindergarten_ids)
 
         msg = models.Message(
             thread_type=models.MessageThreadType.ANNOUNCEMENT,
@@ -835,7 +943,12 @@ def send_message(
             subject=subject,
             message_body=message_body,
             recipient_id=None,
-            allow_replies=bool(getattr(msg_data, 'allow_replies', True))
+            allow_replies=bool(getattr(msg_data, 'allow_replies', True)),
+            target_mode=target_mode,
+            target_roles=target_roles_json,
+            target_governorates=target_governorates_json,
+            target_kindergarten_ids=target_kg_ids_json,
+            recipient_count=len(recipient_ids),
         )
 
         db.add(msg)
@@ -863,7 +976,13 @@ def send_message(
             metadata={
                 "thread_type": msg.thread_type.value,
                 "recipient_count": len(recipient_ids),
-                "audience": msg_data.audience.model_dump()
+                "audience_scope": msg_data.audience.scope.value if hasattr(msg_data.audience.scope, 'value') else str(msg_data.audience.scope),
+                "kindergarten_id": target_kindergarten_id,
+                "sender_role": current_user.role.value,
+                "audience_summary": {
+                    "include_roles": msg_data.audience.include_roles,
+                    "kindergarten_ids": msg_data.audience.kindergarten_ids
+                }
             },
             sensitivity_level=2
         )
@@ -918,15 +1037,20 @@ def preview_audience(
     recipients = []
     if recipient_ids:
         users = db.query(models.User).filter(models.User.id.in_(recipient_ids[:10])).all()  # Limit preview
-        recipients = [
-            {
+        recipients = []
+        for user in users:
+            # Get name based on role
+            if user.role == models.UserRole.PARENT and user.parent_profile:
+                name = f"{user.parent_profile.first_name} {user.parent_profile.last_name or ''}".strip()
+            else:
+                name = user.username
+            
+            recipients.append({
                 "id": user.id,
-                "name": f"{user.first_name} {user.last_name}",
+                "name": name,
                 "role": user.role.value,
-                "kindergarten_name": user.kindergarten.name if user.kindergarten else None
-            }
-            for user in users
-        ]
+                "kindergarten_name": user.kindergarten.name_ar if user.kindergarten else None
+            })
 
     return AudiencePreviewResponse(
         total_count=len(recipient_ids),
@@ -968,8 +1092,11 @@ def list_my_messages(
     )
 
     if current_user.role != models.UserRole.ADMIN:
-        announcement_recipient_subquery = select(models.MessageRecipient.message_id).where(
-            models.MessageRecipient.recipient_user_id == current_user.id
+        announcement_recipient_exists = exists(
+            select(models.MessageRecipient.id).where(
+                models.MessageRecipient.message_id == models.Message.id,
+                models.MessageRecipient.recipient_user_id == current_user.id,
+            )
         )
 
         query = query.filter(
@@ -978,7 +1105,7 @@ def list_my_messages(
                 models.Message.recipient_id == current_user.id,
                 and_(
                     models.Message.thread_type == models.MessageThreadType.ANNOUNCEMENT,
-                    models.Message.id.in_(announcement_recipient_subquery)
+                    announcement_recipient_exists
                 )
             )
         )
@@ -1040,6 +1167,16 @@ def get_unread_count(
     db: Session = Depends(get_db)
 ):
     """Return unread message count for the current user"""
+    cache_key = f"comm:unread_count:user_{current_user.id}"
+    if not settings.TESTING:
+        cached_count = cache_service.get(cache_key)
+        if cached_count is not None:
+            try:
+                return UnreadCountResponse(unread_count=int(cached_count))
+            except (TypeError, ValueError):
+                # Ignore malformed cache payloads and refresh from DB.
+                pass
+
     state_alias = aliased(models.MessageUserState)
     query = db.query(models.Message.id).outerjoin(
         state_alias,
@@ -1056,15 +1193,18 @@ def get_unread_count(
     )
 
     if current_user.role != models.UserRole.ADMIN:
-        announcement_recipient_subquery = select(models.MessageRecipient.message_id).where(
-            models.MessageRecipient.recipient_user_id == current_user.id
+        announcement_recipient_exists = exists(
+            select(models.MessageRecipient.id).where(
+                models.MessageRecipient.message_id == models.Message.id,
+                models.MessageRecipient.recipient_user_id == current_user.id,
+            )
         )
         query = query.filter(
             or_(
                 models.Message.recipient_id == current_user.id,
                 and_(
                     models.Message.thread_type == models.MessageThreadType.ANNOUNCEMENT,
-                    models.Message.id.in_(announcement_recipient_subquery)
+                    announcement_recipient_exists
                 )
             )
         )
@@ -1076,10 +1216,104 @@ def get_unread_count(
         models.Message.sender_id != current_user.id
     )
 
-    return UnreadCountResponse(unread_count=query.count())
+    unread_count = query.count()
+    if not settings.TESTING:
+        cache_service.set(cache_key, unread_count, ttl_seconds=15)
+    return UnreadCountResponse(unread_count=unread_count)
 
 
-@router.get("/messages/{message_id}", response_model=MessageDetail)
+@router.get("/messages/available-recipients", response_model=AvailableRecipientsResponse)
+@limiter.limit(settings.RATE_LIMIT_MESSAGES_READ)
+def get_available_recipients(
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get available recipients for messaging (managers only)"""
+    if current_user.role != models.UserRole.MANAGER:
+        raise forbidden_error("Only managers can access available recipients")
+
+    if not current_user.kindergarten_id:
+        raise validation_error("Manager must be assigned to a kindergarten")
+
+    # Get parents with active enrollments in manager's kindergarten
+    parents_query = db.query(
+        models.User.id,
+        func.concat(
+            models.ParentProfile.first_name,
+            ' ',
+            func.coalesce(models.ParentProfile.last_name, '')
+        ).label("name"),
+        models.Kindergarten.name_ar.label("kindergarten_name"),
+        func.count(models.Child.id).label("children_count")
+    ).join(
+        models.ParentProfile,
+        models.ParentProfile.user_id == models.User.id
+    ).join(
+        models.Child,
+        models.Child.parent_id == models.ParentProfile.id
+    ).join(
+        models.EnrollmentApplication,
+        models.EnrollmentApplication.child_id == models.Child.id
+    ).join(
+        models.Kindergarten,
+        models.Kindergarten.id == models.EnrollmentApplication.kindergarten_id
+    ).filter(
+        models.User.status == models.UserStatus.ACTIVE,
+        models.User.role == models.UserRole.PARENT,
+        models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+        models.EnrollmentApplication.status.in_(ACTIVE_ENROLLMENT_STATUSES)
+    ).group_by(
+        models.User.id,
+        models.ParentProfile.first_name,
+        models.ParentProfile.last_name,
+        models.Kindergarten.name_ar
+    ).order_by(models.ParentProfile.first_name)
+
+    parents = [
+        AvailableRecipientResponse(
+            id=row[0],
+            name=row[1].strip(),
+            role="PARENT",
+            kindergarten_name=row[2],
+            children_count=row[3]
+        )
+        for row in parents_query.all()
+    ]
+
+    # Get supervisors in manager's kindergarten
+    supervisors_query = db.query(
+        models.User.id,
+        models.User.username.label("name"),
+        models.Kindergarten.name_ar.label("kindergarten_name")
+    ).join(
+        models.Kindergarten,
+        models.Kindergarten.id == models.User.kindergarten_id
+    ).filter(
+        models.User.status == models.UserStatus.ACTIVE,
+        models.User.role == models.UserRole.SUPERVISOR,
+        models.User.kindergarten_id == current_user.kindergarten_id,
+        models.User.id != current_user.id  # Exclude self
+    ).order_by(models.User.username)
+
+    supervisors = [
+        AvailableRecipientResponse(
+            id=row[0],
+            name=row[1],
+            role="SUPERVISOR",
+            kindergarten_name=row[2],
+            children_count=None
+        )
+        for row in supervisors_query.all()
+    ]
+
+    return AvailableRecipientsResponse(
+        parents=parents,
+        supervisors=supervisors
+    )
+
+
+@router.get("/messages/{message_id:int}", response_model=MessageDetail)
 @limiter.limit(settings.RATE_LIMIT_MESSAGES_GET)
 def get_message(
     request: Request,
@@ -1127,7 +1361,7 @@ def get_message(
     return _serialize_message_detail(message, read_at, archived_at=archived_at, current_user=current_user)
 
 
-@router.post("/messages/{message_id}/read", response_model=MessageReadResponse)
+@router.post("/messages/{message_id:int}/read", response_model=MessageReadResponse)
 @limiter.limit(settings.RATE_LIMIT_MESSAGES_READ)
 def mark_message_read(
     request: Request,
@@ -1190,7 +1424,7 @@ def mark_message_read(
     return MessageReadResponse(message_id=message.id, read_at=state.read_at)
 
 
-@router.delete("/messages/{message_id}", response_model=MessageDeleteResponse)
+@router.delete("/messages/{message_id:int}", response_model=MessageDeleteResponse)
 @limiter.limit(settings.RATE_LIMIT_MESSAGES_DELETE)
 def delete_message(
     request: Request,
@@ -1237,7 +1471,7 @@ def delete_message(
     return MessageDeleteResponse(message_id=message.id, deleted_at=state.deleted_at)
 
 
-@router.post("/messages/{message_id}/archive", response_model=MessageArchiveResponse)
+@router.post("/messages/{message_id:int}/archive", response_model=MessageArchiveResponse)
 @limiter.limit(settings.RATE_LIMIT_MESSAGES_ARCHIVE)
 def archive_message(
     request: Request,
@@ -1281,7 +1515,7 @@ def archive_message(
     return MessageArchiveResponse(message_id=message.id, archived_at=state.archived_at)
 
 
-@router.post("/messages/{message_id}/unarchive", response_model=MessageArchiveResponse)
+@router.post("/messages/{message_id:int}/unarchive", response_model=MessageArchiveResponse)
 @limiter.limit(settings.RATE_LIMIT_MESSAGES_ARCHIVE)
 def unarchive_message(
     request: Request,
@@ -1346,8 +1580,14 @@ def bulk_message_action(
     failed_ids: List[int] = []
     errors: List[Dict[str, str]] = []
 
+    # Batch-load all messages to avoid N+1 queries
+    messages_by_id = {
+        m.id: m for m in
+        db.query(models.Message).filter(models.Message.id.in_(message_ids)).all()
+    } if message_ids else {}
+
     for message_id in message_ids:
-        message = db.query(models.Message).filter(models.Message.id == message_id).first()
+        message = messages_by_id.get(message_id)
         if not message:
             failed_ids.append(message_id)
             errors.append({"id": str(message_id), "error": "not_found"})
@@ -1418,7 +1658,7 @@ def bulk_message_action(
     )
 
 
-@router.post("/messages/{message_id}/replies", response_model=MessageDetail)
+@router.post("/messages/{message_id:int}/replies", response_model=MessageDetail)
 @limiter.limit(_messages_reply_rate_limit)
 def reply_to_message(
     request: Request,
@@ -1548,7 +1788,7 @@ def reply_to_message(
     return _serialize_message_detail(reply_msg, read_at=None, archived_at=None, current_user=current_user)
 
 
-@router.get("/messages/{message_id}/replies", response_model=MessageThreadResponse)
+@router.get("/messages/{message_id:int}/replies", response_model=MessageThreadResponse)
 @limiter.limit(settings.RATE_LIMIT_MESSAGES_GET)
 def list_message_replies(
     request: Request,
@@ -1598,7 +1838,7 @@ def list_message_replies(
     )
 
 
-@router.post("/messages/{message_id}/attachments", response_model=AttachmentResponse)
+@router.post("/messages/{message_id:int}/attachments", response_model=AttachmentResponse)
 @limiter.limit(settings.RATE_LIMIT_MESSAGES_UPLOAD)
 def upload_message_attachment(
     request: Request,
@@ -1656,7 +1896,7 @@ def upload_message_attachment(
     )
 
 
-@router.get("/messages/{message_id}/attachments", response_model=List[AttachmentResponse])
+@router.get("/messages/{message_id:int}/attachments", response_model=List[AttachmentResponse])
 @limiter.limit(settings.RATE_LIMIT_MESSAGES_GET)
 def list_message_attachments(
     request: Request,
@@ -1906,7 +2146,29 @@ def submit_survey_response(
     survey = db.query(models.Survey).filter(models.Survey.id == survey_id).first()
     if not survey:
         raise HTTPException(status_code=404, detail="Survey not found")
-        
+
+    # Kindergarten scope check
+    if current_user.role == models.UserRole.PARENT:
+        # Parent must have a child enrolled in the survey's kindergarten
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        if parent_profile:
+            active_statuses = [models.EnrollmentStatus.ACTIVE, models.EnrollmentStatus.ACCEPTED]
+            has_child_in_kg = db.query(models.EnrollmentApplication).join(
+                models.Child, models.Child.id == models.EnrollmentApplication.child_id
+            ).filter(
+                models.Child.parent_id == parent_profile.id,
+                models.EnrollmentApplication.kindergarten_id == survey.kindergarten_id,
+                models.EnrollmentApplication.status.in_(active_statuses)
+            ).first()
+            if not has_child_in_kg:
+                raise HTTPException(status_code=403, detail="No children enrolled in this survey's kindergarten")
+        else:
+            raise HTTPException(status_code=403, detail="Parent profile not found")
+    elif current_user.role != models.UserRole.ADMIN:
+        validators.validate_kindergarten_scope(current_user, survey.kindergarten_id)
+
     # Check if already responded
     existing = db.query(models.SurveyResponse).filter(
         models.SurveyResponse.survey_id == survey_id,

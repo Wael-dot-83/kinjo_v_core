@@ -1,0 +1,51 @@
+[project]
+name = "kinjo"
+version = "1.0.0"
+description = "KInJo - Kindergarten Management Platform"
+requires-python = ">=3.11"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+exclude = [
+    "_archived_dead_code",
+    "_worktrees",
+    "scripts",
+    "alembic",
+    ".git",
+    "__pycache__",
+    "venv",
+    "node_modules",
+    "*.md",
+    "nul",
+]
+
+[tool.ruff.lint]
+# Conservative ruleset — only error-class issues that catch real bugs
+select = [
+    "E722",  # bare except
+    "F821",  # undefined name
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E722"]   # allow bare except in tests
+"manager_scope.py" = ["F821"]  # db is in closure scope, ruff can't see it
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "main", "models", "config", "database", "auth", "dependencies",
+    "analytics_service", "kpi_service", "communication_service",
+    "admin_endpoints", "missing_endpoints", "frontend",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks integration tests",
+    "security: marks security tests",
+    "p0: priority 0 – must pass on every commit",
+    "p1: priority 1 – should pass before merge",
+]
+timeout = 30
