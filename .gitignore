@@ -46,12 +46,43 @@ npm-debug.log*
 tmpclaude-*-cwd
 nul
 
+# Dev-only / AI-generated docs
+ADMIN_DESIGN_GUIDELINES.md
+ADMIN_REDESIGN_*.md
+ADMIN_UX_PLAYBOOK.md
+ADMIN_WIREFRAMES_BLUEPRINTS.md
+API_CLASS_SETUP.md
+TODO.md
+TODO_ADMIN_MESSAGING.md
+KINDERGARTEN_IMPORT_README.md
+CODE_AUDIT_CHECKLIST.md
+MANUAL_TESTING_CHECKLIST.md
+*.docx
+
+# Dev-only scripts/tools
+Runmyself/
+tools/
+test_comprehensive_enhancements.py
+missing_endpoints.py
+decision_support_api.py
+migrate_user_preferences.py
+
+# Frontend tooling (not used)
+.eslintrc.cjs
+.prettierignore
+.prettierrc.json
+cspell.json
+package.json
+package-lock.json
+
 # Nested repositories
 cli/
 
 # Pytest
 .pytest_tmp/
 .pytest_cache/
+.ruff_cache/
+.tmp/
 
 # Database
 *.db
