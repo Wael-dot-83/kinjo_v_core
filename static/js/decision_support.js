@@ -123,28 +123,75 @@
     const el = document.getElementById("dsNetworkSummary");
     if (!el) return;
     const items = [
-      { label: dsText("ds.total_kindergartens"), value: fmtNum(data.total_kindergartens), icon: "bi-building", color: "primary" },
-      { label: dsText("ds.total_children"), value: fmtNum(data.total_children), icon: "bi-people", color: "success" },
-      { label: dsText("ds.total_capacity"), value: fmtNum(data.total_capacity), icon: "bi-box", color: "info" },
-      { label: dsText("ds.network_util"), value: data.network_utilization_pct + "%", icon: "bi-bar-chart-line", color: "warning" },
-      { label: dsText("ds.network_att"), value: data.network_attendance_pct + "%", icon: "bi-check2-circle", color: "success" },
+      {
+        label: dsText("ds.total_kindergartens"),
+        value: fmtNum(data.total_kindergartens),
+        icon: "bi-building",
+        color: "primary",
+      },
+      {
+        label: dsText("ds.total_children"),
+        value: fmtNum(data.total_children),
+        icon: "bi-people",
+        color: "success",
+      },
+      {
+        label: dsText("ds.total_capacity"),
+        value: fmtNum(data.total_capacity),
+        icon: "bi-box",
+        color: "info",
+      },
+      {
+        label: dsText("ds.network_util"),
+        value: data.network_utilization_pct + "%",
+        icon: "bi-bar-chart-line",
+        color: "warning",
+      },
+      {
+        label: dsText("ds.network_att"),
+        value: data.network_attendance_pct + "%",
+        icon: "bi-check2-circle",
+        color: "success",
+      },
     ];
-    el.innerHTML = items.map(function (it) {
-      return '<div class="col">' +
-        '<div class="ds-summary-card border-start border-4 border-' + it.color + ' bg-' + it.color + '-subtle rounded-3 p-3 h-100">' +
-        '<div class="d-flex align-items-center gap-2 mb-1">' +
-        '<i class="bi ' + it.icon + ' fs-5 text-' + it.color + '"></i>' +
-        '<span class="text-muted small">' + esc(it.label) + '</span></div>' +
-        '<div class="fs-4 fw-bold">' + esc(it.value) + '</div></div></div>';
-    }).join("");
+    el.innerHTML = items
+      .map(function (it) {
+        return (
+          '<div class="col">' +
+          '<div class="ds-summary-card border-start border-4 border-' +
+          it.color +
+          " bg-" +
+          it.color +
+          '-subtle rounded-3 p-3 h-100">' +
+          '<div class="d-flex align-items-center gap-2 mb-1">' +
+          '<i class="bi ' +
+          it.icon +
+          " fs-5 text-" +
+          it.color +
+          '"></i>' +
+          '<span class="text-muted small">' +
+          esc(it.label) +
+          "</span></div>" +
+          '<div class="fs-4 fw-bold">' +
+          esc(it.value) +
+          "</div></div></div>"
+        );
+      })
+      .join("");
   }
 
   function renderGeoDistribution(items) {
     const chartEl = document.getElementById("dsGeoChart");
     const tableEl = document.getElementById("dsGeoTable");
     if (!items || items.length === 0) {
-      if (chartEl) chartEl.closest(".card-body").innerHTML = '<p class="text-muted text-center py-4">' + esc(dsText("ds.no_data")) + "</p>";
-      if (tableEl) tableEl.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">' + esc(dsText("ds.no_data")) + "</td></tr>";
+      if (chartEl)
+        chartEl.closest(".card-body").innerHTML =
+          '<p class="text-muted text-center py-4">' + esc(dsText("ds.no_data")) + "</p>";
+      if (tableEl)
+        tableEl.innerHTML =
+          '<tr><td colspan="8" class="text-center text-muted py-3">' +
+          esc(dsText("ds.no_data")) +
+          "</td></tr>";
       return;
     }
 
@@ -162,12 +209,14 @@
         type: "bar",
         data: {
           labels: labels,
-          datasets: [{
-            label: dsText("ds.kg_count"),
-            data: values,
-            backgroundColor: "rgba(13, 110, 253, 0.7)",
-            borderRadius: 6,
-          }],
+          datasets: [
+            {
+              label: dsText("ds.kg_count"),
+              data: values,
+              backgroundColor: "rgba(13, 110, 253, 0.7)",
+              borderRadius: 6,
+            },
+          ],
         },
         options: {
           responsive: true,
@@ -182,19 +231,53 @@
 
     // Table
     if (tableEl) {
-      tableEl.innerHTML = items.map(function (g) {
-        var utilClass = g.utilization_pct >= 95 ? "text-danger" : (g.utilization_pct >= 75 ? "text-warning" : "text-success");
-        var attClass = g.attendance_rate >= 85 ? "text-success" : (g.attendance_rate >= 70 ? "text-warning" : "text-danger");
-        return '<tr>' +
-          '<td>' + esc(g.governorate) + '</td>' +
-          '<td>' + esc(g.city) + '</td>' +
-          '<td class="fw-semibold">' + fmtNum(g.kindergarten_count) + '</td>' +
-          '<td>' + fmtNum(g.total_capacity) + '</td>' +
-          '<td>' + fmtNum(g.total_enrolled) + '</td>' +
-          '<td class="' + utilClass + ' fw-semibold">' + g.utilization_pct + '%</td>' +
-          '<td class="' + attClass + ' fw-semibold">' + g.attendance_rate + '%</td>' +
-          '<td>' + fmtNum(g.incident_count) + '</td></tr>';
-      }).join("");
+      tableEl.innerHTML = items
+        .map(function (g) {
+          var utilClass =
+            g.utilization_pct >= 95
+              ? "text-danger"
+              : g.utilization_pct >= 75
+                ? "text-warning"
+                : "text-success";
+          var attClass =
+            g.attendance_rate >= 85
+              ? "text-success"
+              : g.attendance_rate >= 70
+                ? "text-warning"
+                : "text-danger";
+          return (
+            "<tr>" +
+            "<td>" +
+            esc(g.governorate) +
+            "</td>" +
+            "<td>" +
+            esc(g.city) +
+            "</td>" +
+            '<td class="fw-semibold">' +
+            fmtNum(g.kindergarten_count) +
+            "</td>" +
+            "<td>" +
+            fmtNum(g.total_capacity) +
+            "</td>" +
+            "<td>" +
+            fmtNum(g.total_enrolled) +
+            "</td>" +
+            '<td class="' +
+            utilClass +
+            ' fw-semibold">' +
+            g.utilization_pct +
+            "%</td>" +
+            '<td class="' +
+            attClass +
+            ' fw-semibold">' +
+            g.attendance_rate +
+            "%</td>" +
+            "<td>" +
+            fmtNum(g.incident_count) +
+            "</td></tr>"
+          );
+        })
+        .join("");
     }
   }
 
@@ -202,17 +285,23 @@
     const chartEl = document.getElementById("dsClassificationChart");
     const detailEl = document.getElementById("dsClassificationDetail");
     if (!bands || bands.length === 0) {
-      if (chartEl) chartEl.closest(".card-body").innerHTML = '<p class="text-muted text-center py-4">' + esc(dsText("ds.no_data")) + "</p>";
+      if (chartEl)
+        chartEl.closest(".card-body").innerHTML =
+          '<p class="text-muted text-center py-4">' + esc(dsText("ds.no_data")) + "</p>";
       if (detailEl) detailEl.innerHTML = "";
       return;
     }
 
     // Doughnut chart
     if (chartEl) {
-      const labels = bands.map(function (b) { return dsText("ds.band." + b.band); });
-      const values = bands.map(function (b) { return b.count; });
+      const labels = bands.map(function (b) {
+        return dsText("ds.band." + b.band);
+      });
+      const values = bands.map(function (b) {
+        return b.count;
+      });
       const colors = bands.map(function (b) {
-        return b.band === "green" ? "#198754" : (b.band === "amber" ? "#ffc107" : "#dc3545");
+        return b.band === "green" ? "#198754" : b.band === "amber" ? "#ffc107" : "#dc3545";
       });
       destroyChart("classification");
       chartInstances["classification"] = new Chart(chartEl, {
@@ -233,36 +322,67 @@
 
     // Detail cards
     if (detailEl) {
-      detailEl.innerHTML = bands.map(function (b) {
-        var colorClass = b.band === "green" ? "success" : (b.band === "amber" ? "warning" : "danger");
-        return '<div class="col-md-4">' +
-          '<div class="card border-' + colorClass + ' h-100">' +
-          '<div class="card-body text-center">' +
-          '<h5 class="card-title text-' + colorClass + '">' + esc(dsText("ds.band." + b.band)) + '</h5>' +
-          '<div class="fs-2 fw-bold text-' + colorClass + '">' + fmtNum(b.count) + '</div>' +
-          '<div class="small text-muted mt-2">' + esc(dsText("ds.avg_attendance")) + ': ' + b.avg_attendance + '%</div>' +
-          '<div class="small text-muted">' + esc(dsText("ds.avg_utilization")) + ': ' + b.avg_capacity_util + '%</div>' +
-          '</div></div></div>';
-      }).join("");
+      detailEl.innerHTML = bands
+        .map(function (b) {
+          var colorClass =
+            b.band === "green" ? "success" : b.band === "amber" ? "warning" : "danger";
+          return (
+            '<div class="col-md-4">' +
+            '<div class="card border-' +
+            colorClass +
+            ' h-100">' +
+            '<div class="card-body text-center">' +
+            '<h5 class="card-title text-' +
+            colorClass +
+            '">' +
+            esc(dsText("ds.band." + b.band)) +
+            "</h5>" +
+            '<div class="fs-2 fw-bold text-' +
+            colorClass +
+            '">' +
+            fmtNum(b.count) +
+            "</div>" +
+            '<div class="small text-muted mt-2">' +
+            esc(dsText("ds.avg_attendance")) +
+            ": " +
+            b.avg_attendance +
+            "%</div>" +
+            '<div class="small text-muted">' +
+            esc(dsText("ds.avg_utilization")) +
+            ": " +
+            b.avg_capacity_util +
+            "%</div>" +
+            "</div></div></div>"
+          );
+        })
+        .join("");
     }
   }
 
   function renderCapacityTiers(tiers) {
     const chartEl = document.getElementById("dsCapacityChart");
     if (!tiers || tiers.length === 0) {
-      if (chartEl) chartEl.closest(".card-body").innerHTML = '<p class="text-muted text-center py-4">' + esc(dsText("ds.no_data")) + "</p>";
+      if (chartEl)
+        chartEl.closest(".card-body").innerHTML =
+          '<p class="text-muted text-center py-4">' + esc(dsText("ds.no_data")) + "</p>";
       return;
     }
     if (!chartEl) return;
-    const labels = tiers.map(function (t) { return dsText("ds.tier." + t.tier); });
-    const values = tiers.map(function (t) { return t.count; });
+    const labels = tiers.map(function (t) {
+      return dsText("ds.tier." + t.tier);
+    });
+    const values = tiers.map(function (t) {
+      return t.count;
+    });
     const colors = ["#0dcaf0", "#198754", "#ffc107", "#dc3545"];
     destroyChart("capacity");
     chartInstances["capacity"] = new Chart(chartEl, {
       type: "pie",
       data: {
         labels: labels,
-        datasets: [{ data: values, backgroundColor: colors.slice(0, tiers.length), borderWidth: 2 }],
+        datasets: [
+          { data: values, backgroundColor: colors.slice(0, tiers.length), borderWidth: 2 },
+        ],
       },
       options: {
         responsive: true,
@@ -279,46 +399,118 @@
       el.innerHTML = '<p class="text-muted text-center py-4">' + esc(dsText("ds.no_data")) + "</p>";
       return;
     }
-    el.innerHTML = predictions.map(function (p) {
-      var dirClass = p.direction === "up" ? "success" : (p.direction === "down" ? "danger" : "secondary");
-      var dirIcon = p.direction === "up" ? "bi-arrow-up-right" : (p.direction === "down" ? "bi-arrow-down-right" : "bi-arrow-right");
-      var confPct = Math.round(p.confidence * 100);
-      return '<div class="col-md-4">' +
-        '<div class="card border-0 shadow-sm h-100">' +
-        '<div class="card-body">' +
-        '<div class="d-flex justify-content-between align-items-center mb-2">' +
-        '<h6 class="mb-0">' + esc(dsText("ds.metric." + p.metric)) + '</h6>' +
-        '<span class="badge bg-' + dirClass + '-subtle text-' + dirClass + '"><i class="bi ' + dirIcon + ' me-1"></i>' + esc(dsText("ds.direction." + p.direction)) + '</span></div>' +
-        '<div class="row text-center mt-3">' +
-        '<div class="col-6"><div class="text-muted small">' + esc(dsText("ds.current")) + '</div><div class="fs-5 fw-bold">' + fmtNum(p.current_value) + '</div></div>' +
-        '<div class="col-6"><div class="text-muted small">' + esc(dsText("ds.predicted")) + '</div><div class="fs-5 fw-bold text-' + dirClass + '">' + fmtNum(p.predicted_value) + '</div></div></div>' +
-        '<div class="mt-3">' +
-        '<div class="d-flex justify-content-between small text-muted"><span>' + esc(dsText("ds.confidence")) + '</span><span>' + confPct + '%</span></div>' +
-        '<div class="progress" style="height:6px"><div class="progress-bar bg-' + dirClass + '" style="width:' + confPct + '%"></div></div>' +
-        '<div class="text-muted small mt-1">' + esc(dsText("ds.forecast_period")) + ': ' + p.forecast_days + ' ' + esc(dsText("ds.days")) + '</div>' +
-        '</div></div></div></div>';
-    }).join("");
+    el.innerHTML = predictions
+      .map(function (p) {
+        var dirClass =
+          p.direction === "up" ? "success" : p.direction === "down" ? "danger" : "secondary";
+        var dirIcon =
+          p.direction === "up"
+            ? "bi-arrow-up-right"
+            : p.direction === "down"
+              ? "bi-arrow-down-right"
+              : "bi-arrow-right";
+        var confPct = Math.round(p.confidence * 100);
+        return (
+          '<div class="col-md-4">' +
+          '<div class="card border-0 shadow-sm h-100">' +
+          '<div class="card-body">' +
+          '<div class="d-flex justify-content-between align-items-center mb-2">' +
+          '<h6 class="mb-0">' +
+          esc(dsText("ds.metric." + p.metric)) +
+          "</h6>" +
+          '<span class="badge bg-' +
+          dirClass +
+          "-subtle text-" +
+          dirClass +
+          '"><i class="bi ' +
+          dirIcon +
+          ' me-1"></i>' +
+          esc(dsText("ds.direction." + p.direction)) +
+          "</span></div>" +
+          '<div class="row text-center mt-3">' +
+          '<div class="col-6"><div class="text-muted small">' +
+          esc(dsText("ds.current")) +
+          '</div><div class="fs-5 fw-bold">' +
+          fmtNum(p.current_value) +
+          "</div></div>" +
+          '<div class="col-6"><div class="text-muted small">' +
+          esc(dsText("ds.predicted")) +
+          '</div><div class="fs-5 fw-bold text-' +
+          dirClass +
+          '">' +
+          fmtNum(p.predicted_value) +
+          "</div></div></div>" +
+          '<div class="mt-3">' +
+          '<div class="d-flex justify-content-between small text-muted"><span>' +
+          esc(dsText("ds.confidence")) +
+          "</span><span>" +
+          confPct +
+          "%</span></div>" +
+          '<div class="progress" style="height:6px"><div class="progress-bar bg-' +
+          dirClass +
+          '" style="width:' +
+          confPct +
+          '%"></div></div>' +
+          '<div class="text-muted small mt-1">' +
+          esc(dsText("ds.forecast_period")) +
+          ": " +
+          p.forecast_days +
+          " " +
+          esc(dsText("ds.days")) +
+          "</div>" +
+          "</div></div></div></div>"
+        );
+      })
+      .join("");
   }
 
   function renderRiskAssessment(items) {
     const el = document.getElementById("dsRiskTable");
     if (!el) return;
     if (!items || items.length === 0) {
-      el.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">' + esc(dsText("ds.no_data")) + "</td></tr>";
+      el.innerHTML =
+        '<tr><td colspan="5" class="text-center text-muted py-3">' +
+        esc(dsText("ds.no_data")) +
+        "</td></tr>";
       return;
     }
-    el.innerHTML = items.slice(0, 10).map(function (r) {
-      var scoreClass = r.risk_score >= 60 ? "danger" : (r.risk_score >= 30 ? "warning" : "info");
-      var factors = r.risk_factors.map(function (f) {
-        return '<span class="badge bg-' + scoreClass + '-subtle text-' + scoreClass + ' me-1 mb-1">' + esc(dsText("ds.risk." + f) || f) + '</span>';
-      }).join("");
-      return '<tr>' +
-        '<td class="fw-semibold">' + esc(r.kindergarten_name) + '</td>' +
-        '<td>' + esc(r.city) + '</td>' +
-        '<td><span class="badge bg-' + scoreClass + ' fs-6">' + Math.round(r.risk_score) + '</span></td>' +
-        '<td>' + factors + '</td>' +
-        '</tr>';
-    }).join("");
+    el.innerHTML = items
+      .slice(0, 10)
+      .map(function (r) {
+        var scoreClass = r.risk_score >= 60 ? "danger" : r.risk_score >= 30 ? "warning" : "info";
+        var factors = r.risk_factors
+          .map(function (f) {
+            return (
+              '<span class="badge bg-' +
+              scoreClass +
+              "-subtle text-" +
+              scoreClass +
+              ' me-1 mb-1">' +
+              esc(dsText("ds.risk." + f) || f) +
+              "</span>"
+            );
+          })
+          .join("");
+        return (
+          "<tr>" +
+          '<td class="fw-semibold">' +
+          esc(r.kindergarten_name) +
+          "</td>" +
+          "<td>" +
+          esc(r.city) +
+          "</td>" +
+          '<td><span class="badge bg-' +
+          scoreClass +
+          ' fs-6">' +
+          Math.round(r.risk_score) +
+          "</span></td>" +
+          "<td>" +
+          factors +
+          "</td>" +
+          "</tr>"
+        );
+      })
+      .join("");
   }
 
   function renderEnrollmentFunnel(funnel) {
@@ -339,12 +531,20 @@
     chartInstances["funnel"] = new Chart(chartEl, {
       type: "bar",
       data: {
-        labels: stages.map(function (s) { return dsText("ds.funnel." + s.key); }),
-        datasets: [{
-          data: stages.map(function (s) { return s.value; }),
-          backgroundColor: stages.map(function (s) { return s.color; }),
-          borderRadius: 6,
-        }],
+        labels: stages.map(function (s) {
+          return dsText("ds.funnel." + s.key);
+        }),
+        datasets: [
+          {
+            data: stages.map(function (s) {
+              return s.value;
+            }),
+            backgroundColor: stages.map(function (s) {
+              return s.color;
+            }),
+            borderRadius: 6,
+          },
+        ],
       },
       options: {
         indexAxis: "y",
@@ -359,15 +559,21 @@
   function renderAgeDistribution(items) {
     const chartEl = document.getElementById("dsAgeChart");
     if (!items || items.length === 0 || !chartEl) return;
-    const labels = items.map(function (a) { return a.age_group; });
-    const values = items.map(function (a) { return a.count; });
+    const labels = items.map(function (a) {
+      return a.age_group;
+    });
+    const values = items.map(function (a) {
+      return a.count;
+    });
     const colors = ["#0d6efd", "#198754", "#ffc107", "#dc3545", "#6f42c1", "#0dcaf0"];
     destroyChart("age");
     chartInstances["age"] = new Chart(chartEl, {
       type: "doughnut",
       data: {
         labels: labels,
-        datasets: [{ data: values, backgroundColor: colors.slice(0, items.length), borderWidth: 2 }],
+        datasets: [
+          { data: values, backgroundColor: colors.slice(0, items.length), borderWidth: 2 },
+        ],
       },
       options: {
         responsive: true,
@@ -386,7 +592,9 @@
     if (!container) return;
 
     // Show loading skeleton
-    container.querySelectorAll(".ds-loading").forEach(function (el) { el.style.display = "block"; });
+    container.querySelectorAll(".ds-loading").forEach(function (el) {
+      el.style.display = "block";
+    });
 
     try {
       var data = await dashboardFetch(DS_ENDPOINT);
@@ -403,7 +611,9 @@
     } catch (err) {
       console.error("Decision support load error:", err);
     } finally {
-      container.querySelectorAll(".ds-loading").forEach(function (el) { el.style.display = "none"; });
+      container.querySelectorAll(".ds-loading").forEach(function (el) {
+        el.style.display = "none";
+      });
     }
   }
 

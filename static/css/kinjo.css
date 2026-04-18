@@ -82,7 +82,13 @@ body.kinjo-app {
 }
 
 html[lang="en"] body {
-  font-family: "Inter", -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    "Inter",
+    -apple-system,
+    "Segoe UI",
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
   line-height: 1.6;
 }
 
@@ -130,7 +136,8 @@ html {
    ============================================================================ */
 
 .analytics-dashboard .card {
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -194,9 +201,15 @@ html {
 }
 
 @keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* Enhanced buttons */
@@ -367,8 +380,7 @@ html {
 [lang="ar"] body,
 [dir="rtl"] body {
   font-family:
-    "Cairo", "Tajawal", "Segoe UI", "Arabic Typesetting", "Traditional Arabic",
-    Tahoma, sans-serif;
+    "Cairo", "Tajawal", "Segoe UI", "Arabic Typesetting", "Traditional Arabic", Tahoma, sans-serif;
   line-height: 1.7;
 }
 
@@ -606,7 +618,9 @@ html[dir="rtl"] .sidebar {
   background: rgba(15, 23, 42, 0.36);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
   z-index: 1015;
 }
 
@@ -1332,12 +1346,24 @@ body.sidebar-open .sidebar-backdrop {
   animation: staggerFadeIn 0.4s ease-out forwards;
 }
 
-.stagger-enter > *:nth-child(1) { animation-delay: 0.05s; }
-.stagger-enter > *:nth-child(2) { animation-delay: 0.1s; }
-.stagger-enter > *:nth-child(3) { animation-delay: 0.15s; }
-.stagger-enter > *:nth-child(4) { animation-delay: 0.2s; }
-.stagger-enter > *:nth-child(5) { animation-delay: 0.25s; }
-.stagger-enter > *:nth-child(6) { animation-delay: 0.3s; }
+.stagger-enter > *:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.stagger-enter > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.stagger-enter > *:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.stagger-enter > *:nth-child(4) {
+  animation-delay: 0.2s;
+}
+.stagger-enter > *:nth-child(5) {
+  animation-delay: 0.25s;
+}
+.stagger-enter > *:nth-child(6) {
+  animation-delay: 0.3s;
+}
 
 @keyframes staggerFadeIn {
   to {
@@ -1471,13 +1497,20 @@ body.sidebar-open .sidebar-backdrop {
   overflow: hidden;
 }
 
-.gap-1 { gap: 0.25rem; }
-.gap-2 { gap: 0.5rem; }
-.gap-3 { gap: 1rem; }
+.gap-1 {
+  gap: 0.25rem;
+}
+.gap-2 {
+  gap: 0.5rem;
+}
+.gap-3 {
+  gap: 1rem;
+}
 
 /* Hover lift effect for interactive cards */
 .hover-lift {
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
