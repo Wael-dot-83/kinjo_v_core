@@ -49,6 +49,10 @@ nul
 # Nested repositories
 cli/
 
+# Pytest
+.pytest_tmp/
+.pytest_cache/
+
 # Database
 *.db
 *.sqlite
