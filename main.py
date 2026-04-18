@@ -124,6 +124,7 @@ from kpi_service import router as kpi_router
 from analytics_service import router as analytics_router
 from analytics_ws import router as analytics_ws_router
 from dashboard_api import router as dashboard_router
+from decision_support_api import router as decision_support_router
 from filter_api import router as filter_router
 from export_api import router as export_router
 # from realtime_service import websocket_endpoint
@@ -736,6 +737,7 @@ app.include_router(analytics_router, prefix="/api", tags=["Analytics"])
 app.include_router(manager_analytics_router, prefix="/api", tags=["Manager Analytics"])
 app.include_router(classification_router, prefix="/api", tags=["Classification"])
 app.include_router(dashboard_router)
+app.include_router(decision_support_router)
 app.include_router(filter_router)
 app.include_router(export_router)
 app.include_router(audit_service.router, prefix="/api", tags=["Audit"])

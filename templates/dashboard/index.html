@@ -448,13 +448,13 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-graph-up me-2"></i>
-                    نسبة الحضور الأسبوعية
+                    {% if ui_lang == 'en' %}Weekly Attendance Rate{% else %}نسبة الحضور الأسبوعية{% endif %}
                 </h5>
                 <div class="btn-group btn-group-sm">
                     <button class="btn btn-outline-secondary active" data-chart-type="line"
-                        aria-label="عرض الرسم البياني كخط">خطي</button>
+                        aria-label="{% if ui_lang == 'en' %}Line chart{% else %}عرض الرسم البياني كخط{% endif %}">{% if ui_lang == 'en' %}Line{% else %}خطي{% endif %}</button>
                     <button class="btn btn-outline-secondary" data-chart-type="bar"
-                        aria-label="عرض الرسم البياني كأعمدة">أعمدة</button>
+                        aria-label="{% if ui_lang == 'en' %}Bar chart{% else %}عرض الرسم البياني كأعمدة{% endif %}">{% if ui_lang == 'en' %}Bar{% else %}أعمدة{% endif %}</button>
                 </div>
             </div>
             <div class="card-body">
@@ -471,7 +471,7 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-pie-chart me-2"></i>
-                    حالات التسجيل
+                    {% if ui_lang == 'en' %}Enrollment Status{% else %}حالات التسجيل{% endif %}
                 </h5>
             </div>
             <div class="card-body">
@@ -492,7 +492,7 @@
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-speedometer2 me-2 text-primary"></i>
-                    مؤشرات الأداء الرئيسية
+                    {% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}
                 </h5>
                 <div class="btn-group btn-group-sm mt-2" role="group">
                     <button type="button" class="btn btn-outline-primary active" onclick="toggleKPIView('cards')"
@@ -1233,6 +1233,200 @@
         </div>
     </div>
 </div>
+
+<!-- ====================================================================== -->
+<!-- Decision Support Section (Admin/Manager Only)                          -->
+<!-- ====================================================================== -->
+{% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
+<div id="decisionSupportSection">
+
+<!-- Network Summary Strip -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary bg-gradient text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-diagram-3 me-2"></i>
+                    {% if ui_lang == 'en' %}Network Summary{% else %}ملخص الشبكة{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="dsNetworkSummary" class="row row-cols-2 row-cols-md-5 g-3">
+                    <div class="col text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Predictions Row -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up-arrow me-2 text-info"></i>
+                    {% if ui_lang == 'en' %}Predictions &amp; Forecasts{% else %}التنبؤات والتوقعات{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="dsPredictions" class="row g-3">
+                    <div class="col text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Geographic Distribution + Classification Row -->
+<div class="row g-3 mb-4">
+    <!-- Geographic Distribution -->
+    <div class="col-12 col-xl-7">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-geo-alt me-2 text-primary"></i>
+                    {% if ui_lang == 'en' %}Geographic Distribution{% else %}التوزيع الجغرافي{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 280px; position: relative;">
+                    <canvas id="dsGeoChart"></canvas>
+                </div>
+                <div class="table-responsive mt-3" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}KGs{% else %}الروضات{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Enrolled{% else %}المسجلون{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Util%{% else %}الاستغلال%{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Att%{% else %}الحضور%{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dsGeoTable">
+                            <tr><td colspan="8" class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Classification -->
+    <div class="col-12 col-xl-5">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-award me-2 text-success"></i>
+                    {% if ui_lang == 'en' %}Performance Classification{% else %}تصنيف الأداء{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 240px; position: relative;">
+                    <canvas id="dsClassificationChart"></canvas>
+                </div>
+                <div id="dsClassificationDetail" class="row g-2 mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Capacity + Enrollment Funnel + Age Group Row -->
+<div class="row g-3 mb-4">
+    <!-- Capacity Tiers -->
+    <div class="col-12 col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart-steps me-2 text-warning"></i>
+                    {% if ui_lang == 'en' %}Capacity Overview{% else %}نظرة على السعة{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 260px; position: relative;">
+                    <canvas id="dsCapacityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrollment Funnel -->
+    <div class="col-12 col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-funnel me-2 text-primary"></i>
+                    {% if ui_lang == 'en' %}Enrollment Pipeline{% else %}مسار التسجيل{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 260px; position: relative;">
+                    <canvas id="dsFunnelChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Age Group Distribution -->
+    <div class="col-12 col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-people me-2 text-info"></i>
+                    {% if ui_lang == 'en' %}Age Group Distribution{% else %}توزيع الفئات العمرية{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 260px; position: relative;">
+                    <canvas id="dsAgeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Risk Assessment -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-danger bg-gradient text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shield-exclamation me-2"></i>
+                    {% if ui_lang == 'en' %}Risk Assessment{% else %}تقييم المخاطر{% endif %}
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Risk Score{% else %}درجة المخاطر{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Risk Factors{% else %}عوامل الخطر{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dsRiskTable">
+                            <tr><td colspan="4" class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div><!-- /decisionSupportSection -->
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
@@ -1462,6 +1656,9 @@
             } else {
                 location.reload();
             }
+            if (typeof loadDecisionSupport === 'function') {
+                await loadDecisionSupport();
+            }
         } finally {
             if (icon) icon.classList.remove('spin');
             if (trigger) trigger.disabled = false;
@@ -1525,4 +1722,12 @@
 </script>
 <!-- Dashboard Logic -->
 <script src="/static/js/dashboard.js"></script>
+<script src="/static/js/decision_support.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof loadDecisionSupport === 'function') {
+            loadDecisionSupport();
+        }
+    });
+</script>
 {% endblock %}
