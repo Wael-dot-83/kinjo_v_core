@@ -17,7 +17,7 @@
         <div class="mt-2">
             <span
                 class="badge status-badge bg-{{ 'success' if band == 'GREEN' else 'warning' if band == 'AMBER' else 'danger' }} text-white">
-                {{ 'ممتاز' if band == 'GREEN' else 'متوسط' if band == 'AMBER' else 'ضعيف' }}
+                {{ 'ممتاز' if band == 'GREEN' else 'متوسط' if band == 'AMBER' else 'ضعيف' if ui_lang != 'en' else 'Excellent' if band == 'GREEN' else 'Average' if band == 'AMBER' else 'Poor' }}
             </span>
         </div>
     </div>

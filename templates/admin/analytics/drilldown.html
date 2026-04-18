@@ -2,7 +2,7 @@
 {% from 'components/page-header.html' import page_header %}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 
-{% block title %}تحليل تفصيلي: {{ dimension_id }} {% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Detailed Analysis: {{ dimension_id }}{% else %}تحليل تفصيلي: {{ dimension_id }}{% endif %} {% endblock %}
 
 {% block page_header %}
 {% set filter_actions %}
@@ -20,12 +20,12 @@ show_export=False
     <div>
         <h1 class="h2" id="drilldownTitle">
             <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
-            تحليل تفصيلي
+            {% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/admin/analytics">التحليلات</a></li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item"><a href="/admin/analytics">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a></li>
                 <li class="breadcrumb-item active" id="breadcrumbDimension">...</li>
             </ol>
         </nav>
@@ -39,9 +39,9 @@ show_export=False
 {% block content %}
 <div id="loading" class="text-center py-5">
     <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">جاري التحميل...</span>
+        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
     </div>
-    <p class="mt-2">جاري تحميل البيانات التفصيلية...</p>
+    <p class="mt-2">{% if ui_lang == 'en' %}Loading detailed data...{% else %}جاري تحميل البيانات التفصيلية...{% endif %}</p>
 </div>
 
 <div id="content" class="d-none">

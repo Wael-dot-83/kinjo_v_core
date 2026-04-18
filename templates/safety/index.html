@@ -7,19 +7,19 @@
     <div>
         <h1 class="h2 mb-1">
             <i class="bi bi-shield-check me-2 text-danger"></i>
-            الصحة والسلامة
+            {% if ui_lang == 'en' %}Health & Safety{% else %}الصحة والسلامة{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
-                <li class="breadcrumb-item active">الصحة والسلامة</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Health & Safety{% else %}الصحة والسلامة{% endif %}</li>
             </ol>
         </nav>
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="/safety/incidents/new" class="btn btn-danger">
             <i class="bi bi-plus-lg me-1"></i>
-            تسجيل حادث
+            {% if ui_lang == 'en' %}Report Incident{% else %}تسجيل حادث{% endif %}
         </a>
     </div>
 </div>
@@ -30,10 +30,10 @@
     <div class="col-12">
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>سجل الحوادث</h5>
+                <h5 class="mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>{% if ui_lang == 'en' %}Incident Log{% else %}سجل الحوادث{% endif %}</h5>
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="unresolvedOnly" onchange="loadIncidents()">
-                    <label class="form-check-label" for="unresolvedOnly">غير المعالجة فقط</label>
+                    <label class="form-check-label" for="unresolvedOnly">{% if ui_lang == 'en' %}Unresolved Only{% else %}غير المعالجة فقط{% endif %}</label>
                 </div>
             </div>
             <div class="card-body">
@@ -41,20 +41,20 @@
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th>التاريخ</th>
-                                <th>الطفل</th>
-                                <th>النوع</th>
-                                <th>الخطورة</th>
-                                <th>الوصف</th>
-                                <th>الحالة</th>
-                                <th>الإجراءات</th>
+                                <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Description{% else %}الوصف{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                             </tr>
                         </thead>
                         <tbody id="incidentsTableBody">
                             <tr>
                                 <td colspan="7" class="text-center py-4 text-muted">
                                     <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
-                                    جاري التحميل...
+                                    {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
                                 </td>
                             </tr>
                         </tbody>
@@ -69,12 +69,12 @@
     <div class="col-md-6">
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-white py-3">
-                <h5 class="mb-0 text-info"><i class="bi bi-heart-pulse me-2"></i>تنبيهات صحية</h5>
+                <h5 class="mb-0 text-info"><i class="bi bi-heart-pulse me-2"></i>{% if ui_lang == 'en' %}Health Alerts{% else %}تنبيهات صحية{% endif %}</h5>
             </div>
             <div class="card-body">
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle me-2"></i>
-                    يمكن إضافة التنبيهات الصحية (مثل الحساسية) من ملف الطفل مباشرة.
+                    {% if ui_lang == 'en' %}Health alerts (such as allergies) can be added directly from the child's profile.{% else %}يمكن إضافة التنبيهات الصحية (مثل الحساسية) من ملف الطفل مباشرة.{% endif %}
                 </div>
                 <!-- Placeholder for health alerts list if needed -->
             </div>
@@ -85,6 +85,9 @@
 
 {% block extra_js %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     document.addEventListener('DOMContentLoaded', function () {
         loadIncidents();
     });
@@ -92,14 +95,14 @@
     function renderIncidents(incidents) {
         const tbody = document.getElementById('incidentsTableBody');
         if (incidents.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">لا توجد حوادث مسجلة</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">${T('لا توجد حوادث مسجلة', 'No incidents recorded')}</td></tr>`;
             return;
         }
 
         tbody.innerHTML = incidents.map(inc => `
             <tr>
-                <td>${new Date(inc.occurred_at).toLocaleDateString('ar-JO')}</td>
-                <td><a href="/children/${inc.child_id}" class="text-decoration-none fw-bold">الطفل #${inc.child_id}</a></td>
+                <td>${new Date(inc.occurred_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}</td>
+                <td><a href="/children/${inc.child_id}" class="text-decoration-none fw-bold">${T('الطفل', 'Child')} #${inc.child_id}</a></td>
                 <td><span class="badge bg-secondary">${inc.type}</span></td>
                 <td>
                     <span class="badge ${getSeverityClass(inc.severity_level)}">
@@ -108,10 +111,10 @@
                 </td>
                 <td>${inc.description.substring(0, 50)}...</td>
                 <td>
-                    ${inc.closed_at ? '<span class="badge bg-success">مغلق</span>' : '<span class="badge bg-warning text-dark">مفتوح</span>'}
+                    ${inc.closed_at ? `<span class="badge bg-success">${T('مغلق', 'Closed')}</span>` : `<span class="badge bg-warning text-dark">${T('مفتوح', 'Open')}</span>`}
                 </td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary">التفاصيل</button>
+                    <button class="btn btn-sm btn-outline-primary">${T('التفاصيل', 'Details')}</button>
                 </td>
             </tr>
         `).join('');

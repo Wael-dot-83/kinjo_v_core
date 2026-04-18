@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
-{% block title %}إنشاء تقرير الحوادث{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Generate Incident Report{% else %}إنشاء تقرير الحوادث{% endif %}{% endblock %}
 
 {% block page_header %}
 {{ page_header(
-title="إنشاء تقرير الحوادث",
+title="Generate Incident Report" if ui_lang == 'en' else "إنشاء تقرير الحوادث",
 icon="bi-file-earmark-plus",
 breadcrumbs=[
-{"label": "لوحة التحكم", "url": "/dashboard"},
-{"label": "التقارير", "url": "/daily-reports"},
-{"label": "إنشاء تقرير", "url": None}
+{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Reports" if ui_lang == 'en' else "التقارير", "url": "/daily-reports"},
+{"label": "Generate Report" if ui_lang == 'en' else "إنشاء تقرير", "url": None}
 ]
 ) }}
 {% endblock %}
@@ -20,13 +20,13 @@ breadcrumbs=[
     <div class="col-lg-8">
         <div class="card shadow-sm">
             <div class="card-header bg-white py-3">
-                <h5 class="card-title mb-0">إنشاء تقرير جديد للحوادث</h5>
+                <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Generate New Incident Report{% else %}إنشاء تقرير جديد للحوادث{% endif %}</h5>
             </div>
             <div class="card-body p-4">
                 <form id="generateReportForm" onsubmit="generateReport(event)">
                     <!-- Scope Selection -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">نطاق التقرير</label>
+                        <label class="form-label fw-bold">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
                         <div class="row g-3" id="scopeOptions">
                             <!-- Options will be loaded dynamically -->
                         </div>
@@ -34,7 +34,7 @@ breadcrumbs=[
 
                     <!-- Time Period Selection -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">الفترة الزمنية</label>
+                        <label class="form-label fw-bold">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="form-check custom-card-check">
@@ -43,8 +43,8 @@ breadcrumbs=[
                                     <label class="form-check-label w-100" for="periodWeek">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-week text-primary fs-4 mb-2 d-block"></i>
-                                            <strong>الأسبوع الحالي</strong>
-                                            <div class="small text-muted">آخر 7 أيام</div>
+                                            <strong>{% if ui_lang == 'en' %}Current Week{% else %}الأسبوع الحالي{% endif %}</strong>
+                                            <div class="small text-muted">{% if ui_lang == 'en' %}Last 7 days{% else %}آخر 7 أيام{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
@@ -56,8 +56,8 @@ breadcrumbs=[
                                     <label class="form-check-label w-100" for="periodMonth">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-month text-success fs-4 mb-2 d-block"></i>
-                                            <strong>الشهر الحالي</strong>
-                                            <div class="small text-muted">آخر 30 يوم</div>
+                                            <strong>{% if ui_lang == 'en' %}Current Month{% else %}الشهر الحالي{% endif %}</strong>
+                                            <div class="small text-muted">{% if ui_lang == 'en' %}Last 30 days{% else %}آخر 30 يوم{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
@@ -69,8 +69,8 @@ breadcrumbs=[
                                     <label class="form-check-label w-100" for="period3Years">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-range text-warning fs-4 mb-2 d-block"></i>
-                                            <strong>آخر 3 سنوات</strong>
-                                            <div class="small text-muted">متحرك للخلف</div>
+                                            <strong>{% if ui_lang == 'en' %}Last 3 Years{% else %}آخر 3 سنوات{% endif %}</strong>
+                                            <div class="small text-muted">{% if ui_lang == 'en' %}Rolling backward{% else %}متحرك للخلف{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
@@ -82,8 +82,8 @@ breadcrumbs=[
                                     <label class="form-check-label w-100" for="periodAnnual">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-year text-info fs-4 mb-2 d-block"></i>
-                                            <strong>السنة الحالية</strong>
-                                            <div class="small text-muted">ملخص سنوي</div>
+                                            <strong>{% if ui_lang == 'en' %}Current Year{% else %}السنة الحالية{% endif %}</strong>
+                                            <div class="small text-muted">{% if ui_lang == 'en' %}Annual summary{% else %}ملخص سنوي{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
@@ -95,7 +95,7 @@ breadcrumbs=[
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary btn-lg" id="generateBtn">
                             <i class="bi bi-file-earmark-plus me-2"></i>
-                            إنشاء التقرير
+                            {% if ui_lang == 'en' %}Generate Report{% else %}إنشاء التقرير{% endif %}
                         </button>
                     </div>
                 </form>
@@ -109,15 +109,15 @@ breadcrumbs=[
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">تم إنشاء التقرير بنجاح</h5>
+                <h5 class="modal-title">{% if ui_lang == 'en' %}Report Generated Successfully{% else %}تم إنشاء التقرير بنجاح{% endif %}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>تم إنشاء تقرير الحوادث بنجاح. يمكنك الآن عرض التقرير أو إنشاء تقرير آخر.</p>
+                <p>{% if ui_lang == 'en' %}The incident report has been generated successfully. You can now view the report or create another one.{% else %}تم إنشاء تقرير الحوادث بنجاح. يمكنك الآن عرض التقرير أو إنشاء تقرير آخر.{% endif %}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إنشاء تقرير آخر</button>
-                <a href="/daily-reports" class="btn btn-primary">عرض التقارير</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Generate Another Report{% else %}إنشاء تقرير آخر{% endif %}</button>
+                <a href="/daily-reports" class="btn btn-primary">{% if ui_lang == 'en' %}View Reports{% else %}عرض التقارير{% endif %}</a>
             </div>
         </div>
     </div>
@@ -126,6 +126,9 @@ breadcrumbs=[
 
 {% block scripts %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     async function loadScopes() {
         try {
             const response = await fetch('/api/admin/reports/scopes');
@@ -178,7 +181,7 @@ breadcrumbs=[
             });
         } catch (error) {
             console.error('Failed to load scopes:', error);
-            showAlert('فشل في تحميل خيارات النطاق', 'danger');
+            showAlert(T('فشل في تحميل خيارات النطاق', 'Failed to load scope options'), 'danger');
         }
     }
 
@@ -202,9 +205,9 @@ breadcrumbs=[
 
     function getScopeDescription(scope) {
         switch (scope.type) {
-            case 'KINDERGARTEN': return `روضة ${scope.name}`;
-            case 'GOVERNORATE': return `جميع الروضات في ${scope.governorate}`;
-            case 'ALL': return 'جميع الروضات في النظام';
+            case 'KINDERGARTEN': return IS_EN ? `Kindergarten ${scope.name}` : `روضة ${scope.name}`;
+            case 'GOVERNORATE': return IS_EN ? `All kindergartens in ${scope.governorate}` : `جميع الروضات في ${scope.governorate}`;
+            case 'ALL': return T('جميع الروضات في النظام', 'All kindergartens in the system');
             default: return '';
         }
     }
@@ -219,7 +222,7 @@ breadcrumbs=[
         const generateBtn = document.getElementById('generateBtn');
         const originalText = generateBtn.innerHTML;
         generateBtn.disabled = true;
-        generateBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>جاري الإنشاء...';
+        generateBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>' + T('جاري الإنشاء...', 'Generating...');
 
         try {
             const requestData = new FormData();
@@ -239,11 +242,11 @@ breadcrumbs=[
                 successModal.show();
             } else {
                 const error = await response.json();
-                showAlert(error.detail || 'فشل في إنشاء التقرير', 'danger');
+                showAlert(error.detail || T('فشل في إنشاء التقرير', 'Failed to generate report'), 'danger');
             }
         } catch (error) {
             console.error('Failed to generate report:', error);
-            showAlert('حدث خطأ أثناء إنشاء التقرير', 'danger');
+            showAlert(T('حدث خطأ أثناء إنشاء التقرير', 'An error occurred while generating the report'), 'danger');
         } finally {
             generateBtn.disabled = false;
             generateBtn.innerHTML = originalText;

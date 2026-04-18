@@ -1,25 +1,25 @@
 {% extends 'base.html' %}
 
-{% block title %}الفعاليات والتقويم{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Events & Calendar{% else %}الفعاليات والتقويم{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
     <div>
         <h1 class="h2 mb-1">
             <i class="bi bi-calendar-event me-2 text-success"></i>
-            الفعاليات والتقويم
+            {% if ui_lang == 'en' %}Events & Calendar{% else %}الفعاليات والتقويم{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
-                <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
-                <li class="breadcrumb-item active">الفعاليات</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}الرئيسية{% endif %}</a></li>
+                <li class="breadcrumb-item"><a href="/communication">{% if ui_lang == 'en' %}Communication{% else %}التواصل{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Events{% else %}الفعاليات{% endif %}</li>
             </ol>
         </nav>
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newEventModal">
-            <i class="bi bi-plus-lg me-1"></i> فعالية جديدة
+            <i class="bi bi-plus-lg me-1"></i> {% if ui_lang == 'en' %}New Event{% else %}فعالية جديدة{% endif %}
         </button>
     </div>
 </div>
@@ -30,7 +30,7 @@
     <div class="col-md-12">
         <div class="card shadow-sm mb-4">
             <div class="card-body">
-                <h5 class="card-title mb-4">الأحداث القادمة</h5>
+                <h5 class="card-title mb-4">{% if ui_lang == 'en' %}Upcoming Events{% else %}الأحداث القادمة{% endif %}</h5>
                 <div id="eventsContainer" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
                     <!-- Loaded via JS -->
                     <div class="col-12 text-center py-5">
@@ -47,13 +47,16 @@
 
 {% block extra_js %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     document.addEventListener('DOMContentLoaded', loadEvents);
 
     async function loadEvents() {
         try {
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">يرجى تسجيل الدخول لعرض الفعاليات</div>`;
+                document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">${T('يرجى تسجيل الدخول لعرض الفعاليات', 'Please log in to view events')}</div>`;
                 return;
             }
 
@@ -66,11 +69,11 @@
                 const events = await response.json();
                 renderEvents(events);
             } else {
-                document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">فشل تحميل الفعاليات</div>`;
+                document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">${T('فشل تحميل الفعاليات', 'Failed to load events')}</div>`;
             }
         } catch (error) {
             console.error(error);
-            document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">خطأ في الاتصال</div>`;
+            document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">${T('خطأ في الاتصال', 'Connection error')}</div>`;
         }
     }
 
@@ -82,7 +85,7 @@
             container.innerHTML = `
                 <div class="col-12 text-center py-5 text-muted">
                     <i class="bi bi-calendar-x fs-1 mb-2 d-block"></i>
-                    لا توجد فعاليات قادمة
+                    ${T('لا توجد فعاليات قادمة', 'No upcoming events')}
                 </div>
             `;
             return;
@@ -94,7 +97,7 @@
         events.forEach(evt => {
             const range = formatEventDate(evt.start_at, evt.end_at);
             const consentBadge = evt.requires_consent_flag
-                ? '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> يتطلب موافقة</span>'
+                ? `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> ${T('يتطلب موافقة', 'Requires consent')}</span>`
                 : '';
 
             const card = document.createElement('div');
@@ -109,7 +112,7 @@
                         <h6 class="card-subtitle mb-2 text-muted">
                             <i class="bi bi-clock me-1"></i> ${range}
                         </h6>
-                        <p class="card-text text-secondary mb-3">${evt.description || 'لا يوجد وصف'}</p>
+                        <p class="card-text text-secondary mb-3">${evt.description || T('لا يوجد وصف', 'No description')}</p>
                         ${consentBadge}
                     </div>
                 </div>
@@ -124,12 +127,13 @@
 
         const dateOpt = { year: 'numeric', month: 'short', day: 'numeric' };
         const timeOpt = { hour: '2-digit', minute: '2-digit' };
+        const locale = IS_EN ? 'en-US' : 'ar-JO';
 
         // Same day?
         if (s.toDateString() === e.toDateString()) {
-            return `${s.toLocaleDateString('ar-JO', dateOpt)} (${s.toLocaleTimeString('ar-JO', timeOpt)} - ${e.toLocaleTimeString('ar-JO', timeOpt)})`;
+            return `${s.toLocaleDateString(locale, dateOpt)} (${s.toLocaleTimeString(locale, timeOpt)} - ${e.toLocaleTimeString(locale, timeOpt)})`;
         }
-        return `${s.toLocaleDateString('ar-JO')} - ${e.toLocaleDateString('ar-JO')}`;
+        return `${s.toLocaleDateString(locale)} - ${e.toLocaleDateString(locale)}`;
     }
 </script>
 {% endblock %}

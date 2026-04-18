@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
 
-{% block title %}الأداء المهني{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Professional Performance{% else %}الأداء المهني{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="row pt-4 pb-2 mb-3 border-bottom align-items-center">
     <div class="col-md-8">
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb bg-transparent p-0 mb-2">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">الأداء المهني</li>
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Professional Performance{% else %}الأداء المهني{% endif %}</li>
             </ol>
         </nav>
-        <h1 class="h3 fw-bold mb-1">ملخص الأداء المهني للمشرف</h1>
-        <p class="text-muted small mb-0">يعرض مستوى الأداء الذاتي في الحضور والتقارير والالتزام بالوقت دون أي مقارنات خارجية.</p>
+        <h1 class="h3 fw-bold mb-1">{% if ui_lang == 'en' %}Supervisor Professional Performance Summary{% else %}ملخص الأداء المهني للمشرف{% endif %}</h1>
+        <p class="text-muted small mb-0">{% if ui_lang == 'en' %}Shows self-performance levels in attendance, reports, and punctuality without external comparisons.{% else %}يعرض مستوى الأداء الذاتي في الحضور والتقارير والالتزام بالوقت دون أي مقارنات خارجية.{% endif %}</p>
     </div>
 </div>
 {% endblock %}
@@ -23,15 +23,15 @@
         <div class="card-body">
             <div class="row g-3 align-items-end">
                 <div class="col-md-4">
-                    <label class="form-label">بداية الفترة</label>
+                    <label class="form-label">{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}</label>
                     <input id="supervisorPeriodStart" type="date" class="form-control">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">نهاية الفترة</label>
+                    <label class="form-label">{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}</label>
                     <input id="supervisorPeriodEnd" type="date" class="form-control">
                 </div>
                 <div class="col-md-4">
-                    <button id="supervisorPerformanceLoadBtn" class="btn btn-primary w-100">عرض الملخص</button>
+                    <button id="supervisorPerformanceLoadBtn" class="btn btn-primary w-100">{% if ui_lang == 'en' %}Show Summary{% else %}عرض الملخص{% endif %}</button>
                 </div>
             </div>
         </div>
@@ -43,7 +43,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small">الدرجة النهائية</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Final Score{% else %}الدرجة النهائية{% endif %}</div>
                     <div id="supervisorFinalScore" class="display-6 fw-bold">--</div>
                 </div>
             </div>
@@ -51,7 +51,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small">مجال الأداء</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Performance Band{% else %}مجال الأداء{% endif %}</div>
                     <div id="supervisorBandLabel" class="display-6 fw-bold">--</div>
                 </div>
             </div>
@@ -59,7 +59,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small">تغطية البيانات</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Data Coverage{% else %}تغطية البيانات{% endif %}</div>
                     <div id="supervisorCoverage" class="display-6 fw-bold">--</div>
                 </div>
             </div>
@@ -67,7 +67,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small">حجم العينة</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Sample Size{% else %}حجم العينة{% endif %}</div>
                     <div id="supervisorSampleSize" class="display-6 fw-bold">--</div>
                 </div>
             </div>
@@ -77,18 +77,18 @@
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="fw-bold mb-0">مخطط المؤشرات</h6>
-                <small class="text-muted">يعرض مستويات الأداء لكل مؤشر على مقياس من 0 إلى 100</small>
+                <h6 class="fw-bold mb-0">{% if ui_lang == 'en' %}Indicators Chart{% else %}مخطط المؤشرات{% endif %}</h6>
+                <small class="text-muted">{% if ui_lang == 'en' %}Shows performance levels per indicator on a 0–100 scale{% else %}يعرض مستويات الأداء لكل مؤشر على مقياس من 0 إلى 100{% endif %}</small>
             </div>
             <div class="position-relative" style="height: 320px;">
-                <canvas id="supervisorPerformanceChart" aria-label="مخطط مؤشرات الأداء"></canvas>
+                <canvas id="supervisorPerformanceChart" aria-label="{% if ui_lang == 'en' %}Performance Indicators Chart{% else %}مخطط مؤشرات الأداء{% endif %}"></canvas>
             </div>
         </div>
     </div>
 
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <h6 class="fw-bold">تفصيل المؤشرات</h6>
+            <h6 class="fw-bold">{% if ui_lang == 'en' %}Indicators Breakdown{% else %}تفصيل المؤشرات{% endif %}</h6>
             <ul id="supervisorAspectsList" class="list-group list-group-flush"></ul>
         </div>
     </div>

@@ -7,19 +7,19 @@
     <div>
         <h1 class="h2">
             <i class="bi bi-clipboard-check me-2 text-primary"></i>
-            طلبات التسجيل
+            {% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">طلبات التسجيل</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}</li>
             </ol>
         </nav>
     </div>
     {% if current_user.role.value != 'SUPERVISOR' %}
     <div class="btn-toolbar">
         <a href="/enrollments/create" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>طلب جديد
+            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}New Request{% else %}طلب جديد{% endif %}
         </a>
     </div>
     {% endif %}
@@ -31,27 +31,27 @@
 <ul class="nav nav-tabs mb-4" id="statusTabs" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-status="" type="button">
-            الكل <span class="badge bg-secondary ms-1" id="countAll">0</span>
+            {% if ui_lang == 'en' %}All{% else %}الكل{% endif %} <span class="badge bg-secondary ms-1" id="countAll">0</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-status="pending_review" type="button">
-            معلق <span class="badge bg-warning ms-1" id="countPending">0</span>
+            {% if ui_lang == 'en' %}Pending{% else %}معلق{% endif %} <span class="badge bg-warning ms-1" id="countPending">0</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="accepted-tab" data-bs-toggle="tab" data-status="accepted" type="button">
-            مقبول <span class="badge bg-success ms-1" id="countAccepted">0</span>
+            {% if ui_lang == 'en' %}Accepted{% else %}مقبول{% endif %} <span class="badge bg-success ms-1" id="countAccepted">0</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-status="rejected" type="button">
-            مرفوض <span class="badge bg-danger ms-1" id="countRejected">0</span>
+            {% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %} <span class="badge bg-danger ms-1" id="countRejected">0</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="waitlist-tab" data-bs-toggle="tab" data-status="waitlisted" type="button">
-            انتظار <span class="badge bg-info ms-1" id="countWaitlist">0</span>
+            {% if ui_lang == 'en' %}Waitlist{% else %}انتظار{% endif %} <span class="badge bg-info ms-1" id="countWaitlist">0</span>
         </button>
     </li>
 </ul>
@@ -60,14 +60,14 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <div class="input-group" style="max-width: 300px;">
-            <input type="text" class="form-control" id="searchInput" placeholder="بحث...">
-            <button class="btn btn-outline-secondary" type="button" aria-label="بحث">
+            <input type="text" class="form-control" id="searchInput" placeholder="{% if ui_lang == 'en' %}Search...{% else %}بحث...{% endif %}">
+            <button class="btn btn-outline-secondary" type="button" aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}">
                 <i class="bi bi-search"></i>
             </button>
         </div>
         <div>
             <button class="btn btn-sm btn-outline-secondary" onclick="exportEnrollments()">
-                <i class="bi bi-download me-1"></i>تصدير
+                <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
             </button>
         </div>
     </div>
@@ -77,19 +77,19 @@
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>اسم الطفل</th>
-                        <th>ولي الأمر</th>
-                        <th>الروضة</th>
-                        <th>تاريخ التقديم</th>
-                        <th>الحالة</th>
-                        <th>الإجراءات</th>
+                        <th>{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Parent{% else %}ولي الأمر{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Submission Date{% else %}تاريخ التقديم{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="enrollmentsTable">
                     <tr>
                         <td colspan="7" class="text-center py-4">
                             <div class="spinner-border spinner-border-sm" role="status"></div>
-                            <span class="ms-2">جاري التحميل...</span>
+                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                         </td>
                     </tr>
                 </tbody>
@@ -103,8 +103,8 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">مراجعة طلب التسجيل</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title">{% if ui_lang == 'en' %}Review Enrollment Request{% else %}مراجعة طلب التسجيل{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <div id="enrollmentDetails" class="mb-4">
@@ -112,24 +112,24 @@
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">القرار</label>
+                    <label class="form-label">{% if ui_lang == 'en' %}Decision{% else %}القرار{% endif %}</label>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-success flex-fill" onclick="submitDecision('accepted')">
-                            <i class="bi bi-check-circle me-1"></i>قبول
+                            <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Accept{% else %}قبول{% endif %}
                         </button>
                         <button type="button" class="btn btn-warning flex-fill" onclick="submitDecision('waitlisted')">
-                            <i class="bi bi-hourglass me-1"></i>انتظار
+                            <i class="bi bi-hourglass me-1"></i>{% if ui_lang == 'en' %}Waitlist{% else %}انتظار{% endif %}
                         </button>
                         <button type="button" class="btn btn-danger flex-fill" onclick="submitDecision('rejected')">
-                            <i class="bi bi-x-circle me-1"></i>رفض
+                            <i class="bi bi-x-circle me-1"></i>{% if ui_lang == 'en' %}Reject{% else %}رفض{% endif %}
                         </button>
                     </div>
                 </div>
                 
                 <div class="mb-3" id="reasonGroup" style="display: none;">
-                    <label for="decisionReason" class="form-label">السبب</label>
+                    <label for="decisionReason" class="form-label">{% if ui_lang == 'en' %}Reason{% else %}السبب{% endif %}</label>
                     <textarea class="form-control" id="decisionReason" rows="3" 
-                              placeholder="أدخل سبب القرار..."></textarea>
+                              placeholder="{% if ui_lang == 'en' %}Enter decision reason...{% else %}أدخل سبب القرار...{% endif %}"></textarea>
                 </div>
             </div>
         </div>
@@ -139,6 +139,9 @@
 
 {% block extra_js %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     let enrollments = [];
     let currentEnrollmentId = null;
     let currentFilter = '';
@@ -167,7 +170,7 @@
     async function loadEnrollments() {
         // Check authentication before loading data
         if (!api.isAuthenticated()) {
-            showToast('يجب تسجيل الدخول أولاً', 'warning');
+            showToast(T('يجب تسجيل الدخول أولاً', 'Please log in first'), 'warning');
             return;
         }
 
@@ -181,7 +184,7 @@
             
         } catch (error) {
             console.error('Error loading enrollments:', error);
-            showToast('حدث خطأ في تحميل البيانات', 'error');
+            showToast(T('حدث خطأ في تحميل البيانات', 'Error loading data'), 'error');
         }
     }
     
@@ -199,7 +202,7 @@
                 <tr>
                     <td colspan="7" class="text-center py-5">
                         <i class="bi bi-inbox fs-1 text-muted d-block mb-2 opacity-25"></i>
-                        <p class="text-muted mb-0">لا توجد طلبات تسجيل</p>
+                        <p class="text-muted mb-0">${T('لا توجد طلبات تسجيل', 'No enrollment requests')}</p>
                     </td>
                 </tr>
             `;
@@ -216,12 +219,12 @@
                             <i class="bi bi-person text-primary"></i>
                         </div>
                         <div>
-                            <span class="fw-semibold">${e.child_name || 'غير محدد'}</span>
+                            <span class="fw-semibold">${e.child_name || T('غير محدد', 'Not specified')}</span>
                         </div>
                     </div>
                 </td>
-                <td>${e.parent_name || 'غير محدد'}</td>
-                <td>${e.kindergarten_name || 'غير محدد'}</td>
+                <td>${e.parent_name || T('غير محدد', 'Not specified')}</td>
+                <td>${e.kindergarten_name || T('غير محدد', 'Not specified')}</td>
                 <td>${formatDate(e.created_at)}</td>
                 <td>${getStatusBadge(e.status)}</td>
                 <td>
@@ -245,7 +248,7 @@
             tab.addEventListener('click', async (e) => {
                 // Check authentication before changing tabs
                 if (!api.isAuthenticated()) {
-                    showToast('يجب تسجيل الدخول أولاً', 'warning');
+                    showToast(T('يجب تسجيل الدخول أولاً', 'Please log in first'), 'warning');
                     return;
                 }
 
@@ -270,9 +273,9 @@
         
         if (enrollment) {
             document.getElementById('enrollmentDetails').innerHTML = `
-                <div class="mb-2"><strong>الطفل:</strong> ${enrollment.child_name}</div>
-                <div class="mb-2"><strong>ولي الأمر:</strong> ${enrollment.parent_name}</div>
-                <div class="mb-2"><strong>الروضة:</strong> ${enrollment.kindergarten_name}</div>
+                <div class="mb-2"><strong>${T('الطفل', 'Child')}:</strong> ${enrollment.child_name}</div>
+                <div class="mb-2"><strong>${T('ولي الأمر', 'Parent')}:</strong> ${enrollment.parent_name}</div>
+                <div class="mb-2"><strong>${T('الروضة', 'Kindergarten')}:</strong> ${enrollment.kindergarten_name}</div>
             `;
         }
         
@@ -291,11 +294,11 @@
             const modal = bootstrap.Modal.getInstance(document.getElementById('reviewModal'));
             modal.hide();
             
-            showToast('تم حفظ القرار بنجاح', 'success');
+            showToast(T('تم حفظ القرار بنجاح', 'Decision saved successfully'), 'success');
             await loadEnrollments();
             
         } catch (error) {
-            showToast(error.message || 'حدث خطأ', 'error');
+            showToast(error.message || T('حدث خطأ', 'An error occurred'), 'error');
         }
     }
     
@@ -319,7 +322,7 @@
     });
     
     function exportEnrollments() {
-        showToast('جاري تحضير الملف للتصدير...', 'info');
+        showToast(T('جاري تحضير الملف للتصدير...', 'Preparing file for export...'), 'info');
         // Implement export logic
     }
 </script>

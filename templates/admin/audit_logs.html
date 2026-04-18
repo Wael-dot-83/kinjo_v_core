@@ -3,52 +3,52 @@
 {% from 'components/filter-row.html' import filter_row_labeled %}
 {% from 'components/data-table.html' import loading_state, pagination %}
 
-{% block title %}سجلات التدقيق{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}{% endblock %}
 
 {% block page_header %}
 {% set toolbar_actions %}
 <button class="btn btn-outline-primary" onclick="exportAuditLogs()">
     <i class="bi bi-download me-2"></i>
-    تصدير
+    {% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
 </button>
 <button class="btn btn-outline-secondary ms-2" onclick="refreshAuditLogs()">
     <i class="bi bi-arrow-clockwise me-2"></i>
-    تحديث
+    {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
 </button>
 {% endset %}
 {{ page_header(
-title="سجلات التدقيق",
+title="Audit Logs" if ui_lang == 'en' else "سجلات التدقيق",
 icon="bi-journal-text",
 breadcrumbs=[
-{"label": "لوحة التحكم", "url": "/dashboard"},
-{"label": "سجلات التدقيق", "url": None}
+{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Audit Logs" if ui_lang == 'en' else "سجلات التدقيق", "url": None}
 ],
 actions=toolbar_actions
 ) }}
 
 <!-- Page Help Content -->
-<div id="pageHelpContent" class="d-none" data-help-title="دليل سجلات التدقيق">
+<div id="pageHelpContent" class="d-none" data-help-title="{% if ui_lang == 'en' %}Audit Logs Guide{% else %}دليل سجلات التدقيق{% endif %}">
     <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-journal-text me-2"></i>مراقبة النشاط</h6>
-        <p>تسمح لك هذه الصفحة بمتابعة جميع الأنشطة والعمليات التي تتم في النظام لضمان الأمان والشفافية.</p>
+        <h6 class="fw-bold text-primary"><i class="bi bi-journal-text me-2"></i>{% if ui_lang == 'en' %}Activity Monitoring{% else %}مراقبة النشاط{% endif %}</h6>
+        <p>{% if ui_lang == 'en' %}This page allows you to track all activities and operations performed in the system to ensure security and transparency.{% else %}تسمح لك هذه الصفحة بمتابعة جميع الأنشطة والعمليات التي تتم في النظام لضمان الأمان والشفافية.{% endif %}</p>
     </div>
 
     <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-funnel me-2"></i>خيارات التصفية</h6>
+        <h6 class="fw-bold text-primary"><i class="bi bi-funnel me-2"></i>{% if ui_lang == 'en' %}Filter Options{% else %}خيارات التصفية{% endif %}</h6>
         <ul class="list-unstyled">
-            <li class="mb-2"><strong>نوع الإجراء:</strong> تصفية حسب نوع العملية (إنشاء، تحديث، حذف، دخول).</li>
-            <li class="mb-2"><strong>الكيان:</strong> التركيز على التغييرات التي طرأت على كيان معين مثل "الأطفال" أو
-                "المستخدمين".</li>
-            <li class="mb-2"><strong>المستخدم:</strong> البحث عن نشاط مستخدم محدد باسم المستخدم.</li>
+            <li class="mb-2"><strong>{% if ui_lang == 'en' %}Action Type:{% else %}نوع الإجراء:{% endif %}</strong> {% if ui_lang == 'en' %}Filter by operation type (create, update, delete, login).{% else %}تصفية حسب نوع العملية (إنشاء، تحديث، حذف، دخول).{% endif %}</li>
+            <li class="mb-2"><strong>{% if ui_lang == 'en' %}Entity:{% else %}الكيان:{% endif %}</strong> {% if ui_lang == 'en' %}Focus on changes made to a specific entity such as "Children" or "Users".{% else %}التركيز على التغييرات التي طرأت على كيان معين مثل "الأطفال" أو
+                "المستخدمين".{% endif %}</li>
+            <li class="mb-2"><strong>{% if ui_lang == 'en' %}User:{% else %}المستخدم:{% endif %}</strong> {% if ui_lang == 'en' %}Search for a specific user's activity by username.{% else %}البحث عن نشاط مستخدم محدد باسم المستخدم.{% endif %}</li>
         </ul>
     </div>
 
     <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-shield-lock me-2"></i>مستويات الأهمية</h6>
+        <h6 class="fw-bold text-primary"><i class="bi bi-shield-lock me-2"></i>{% if ui_lang == 'en' %}Severity Levels{% else %}مستويات الأهمية{% endif %}</h6>
         <ul class="list-unstyled">
-            <li class="mb-2"><span class="badge bg-danger">عالي</span>: عمليات حساسة مثل الحذف أو تغيير الصلاحيات.</li>
-            <li class="mb-2"><span class="badge bg-warning">متوسط</span>: تعديل البيانات المهمة.</li>
-            <li class="mb-2"><span class="badge bg-info text-dark">منخفض</span>: عمليات المتابعة والنشاط اليومي.</li>
+            <li class="mb-2"><span class="badge bg-danger">{% if ui_lang == 'en' %}High{% else %}عالي{% endif %}</span>: {% if ui_lang == 'en' %}Sensitive operations such as deletion or permission changes.{% else %}عمليات حساسة مثل الحذف أو تغيير الصلاحيات.{% endif %}</li>
+            <li class="mb-2"><span class="badge bg-warning">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</span>: {% if ui_lang == 'en' %}Modifying important data.{% else %}تعديل البيانات المهمة.{% endif %}</li>
+            <li class="mb-2"><span class="badge bg-info text-dark">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</span>: {% if ui_lang == 'en' %}Monitoring and daily activity operations.{% else %}عمليات المتابعة والنشاط اليومي.{% endif %}</li>
         </ul>
     </div>
 </div>
@@ -60,46 +60,46 @@ actions=toolbar_actions
         <!-- Filters -->
         <div class="row g-3 mb-4">
             <div class="col-md-3">
-                <label for="actionFilter" class="form-label">الإجراء</label>
+                <label for="actionFilter" class="form-label">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</label>
                 <select class="form-select" id="actionFilter">
-                    <option value="">جميع الإجراءات</option>
-                    <option value="CREATE">إنشاء</option>
-                    <option value="UPDATE">تحديث</option>
-                    <option value="DELETE">حذف</option>
-                    <option value="LOGIN">تسجيل دخول</option>
-                    <option value="LOGOUT">تسجيل خروج</option>
-                    <option value="VIEW">عرض</option>
+                    <option value="">{% if ui_lang == 'en' %}All Actions{% else %}جميع الإجراءات{% endif %}</option>
+                    <option value="CREATE">{% if ui_lang == 'en' %}Create{% else %}إنشاء{% endif %}</option>
+                    <option value="UPDATE">{% if ui_lang == 'en' %}Update{% else %}تحديث{% endif %}</option>
+                    <option value="DELETE">{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}</option>
+                    <option value="LOGIN">{% if ui_lang == 'en' %}Login{% else %}تسجيل دخول{% endif %}</option>
+                    <option value="LOGOUT">{% if ui_lang == 'en' %}Logout{% else %}تسجيل خروج{% endif %}</option>
+                    <option value="VIEW">{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label for="entityFilter" class="form-label">نوع الكيان</label>
+                <label for="entityFilter" class="form-label">{% if ui_lang == 'en' %}Entity Type{% else %}نوع الكيان{% endif %}</label>
                 <select class="form-select" id="entityFilter">
-                    <option value="">جميع الأنواع</option>
-                    <option value="USER">مستخدم</option>
-                    <option value="CHILD">طفل</option>
-                    <option value="KINDERGARTEN">روضة</option>
-                    <option value="ENROLLMENT">تسجيل</option>
-                    <option value="ATTENDANCE">حضور</option>
-                    <option value="REPORT">تقرير</option>
+                    <option value="">{% if ui_lang == 'en' %}All Types{% else %}جميع الأنواع{% endif %}</option>
+                    <option value="USER">{% if ui_lang == 'en' %}User{% else %}مستخدم{% endif %}</option>
+                    <option value="CHILD">{% if ui_lang == 'en' %}Child{% else %}طفل{% endif %}</option>
+                    <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Kindergarten{% else %}روضة{% endif %}</option>
+                    <option value="ENROLLMENT">{% if ui_lang == 'en' %}Enrollment{% else %}تسجيل{% endif %}</option>
+                    <option value="ATTENDANCE">{% if ui_lang == 'en' %}Attendance{% else %}حضور{% endif %}</option>
+                    <option value="REPORT">{% if ui_lang == 'en' %}Report{% else %}تقرير{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label for="userFilter" class="form-label">المستخدم</label>
-                <input type="text" class="form-control" id="userFilter" placeholder="اسم المستخدم">
+                <label for="userFilter" class="form-label">{% if ui_lang == 'en' %}User{% else %}المستخدم{% endif %}</label>
+                <input type="text" class="form-control" id="userFilter" placeholder="{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}">
             </div>
             <div class="col-md-3">
-                <label for="dateFilter" class="form-label">التاريخ</label>
+                <label for="dateFilter" class="form-label">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</label>
                 <input type="date" class="form-control" id="dateFilter">
             </div>
         </div>
 
         <!-- Apply Filters Button -->
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <button class="btn btn-primary" onclick="applyFilters()" aria-label="تطبيق الفلاتر المحددة">
+            <button class="btn btn-primary" onclick="applyFilters()" aria-label="{% if ui_lang == 'en' %}Apply selected filters{% else %}تطبيق الفلاتر المحددة{% endif %}">
                 <i class="bi bi-funnel me-2"></i>
-                تطبيق التصفية
+                {% if ui_lang == 'en' %}Apply Filter{% else %}تطبيق التصفية{% endif %}
             </button>
-            <div class="text-muted" id="resultsCount">جاري التحميل...</div>
+            <div class="text-muted" id="resultsCount">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
         </div>
     </div>
 </div>
@@ -111,20 +111,20 @@ actions=toolbar_actions
             <table class="table table-hover" id="auditLogsTable">
                 <thead class="table-light">
                     <tr>
-                        <th>التاريخ والوقت</th>
-                        <th>المستخدم</th>
-                        <th>الإجراء</th>
-                        <th>نوع الكيان</th>
-                        <th>معرف الكيان</th>
-                        <th>التفاصيل</th>
-                        <th>عنوان بروتوكول الإنترنت (IP)</th>
+                        <th>{% if ui_lang == 'en' %}Date & Time{% else %}التاريخ والوقت{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}User{% else %}المستخدم{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Entity Type{% else %}نوع الكيان{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Entity ID{% else %}معرف الكيان{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Details{% else %}التفاصيل{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}IP Address{% else %}عنوان بروتوكول الإنترنت (IP){% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="auditLogsBody">
                     <tr>
                         <td colspan="7" class="text-center py-4">
                             <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">جاري التحميل...</span>
+                                <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                             </div>
                         </td>
                     </tr>
@@ -133,7 +133,7 @@ actions=toolbar_actions
         </div>
 
         <!-- Pagination (JS-managed) -->
-        <nav aria-label="ترقيم صفحات سجل التدقيق" class="mt-4">
+        <nav aria-label="{% if ui_lang == 'en' %}Audit log pagination{% else %}ترقيم صفحات سجل التدقيق{% endif %}" class="mt-4">
             <ul class="pagination justify-content-center" id="pagination"></ul>
         </nav>
     </div>
@@ -144,32 +144,32 @@ actions=toolbar_actions
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">تصدير سجلات التدقيق</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title">{% if ui_lang == 'en' %}Export Audit Logs{% else %}تصدير سجلات التدقيق{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label" for="exportFormat">تنسيق الملف</label>
+                    <label class="form-label" for="exportFormat">{% if ui_lang == 'en' %}File Format{% else %}تنسيق الملف{% endif %}</label>
                     <select class="form-select" id="exportFormat">
-                        <option value="csv">CSV (ملف جدولي)</option>
-                        <option value="json">JSON (صيغة بيانات)</option>
-                        <option value="pdf">PDF (ملف)</option>
+                        <option value="csv">{% if ui_lang == 'en' %}CSV (Spreadsheet){% else %}CSV (ملف جدولي){% endif %}</option>
+                        <option value="json">{% if ui_lang == 'en' %}JSON (Data format){% else %}JSON (صيغة بيانات){% endif %}</option>
+                        <option value="pdf">{% if ui_lang == 'en' %}PDF (Document){% else %}PDF (ملف){% endif %}</option>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label" for="exportPeriod">الفترة الزمنية</label>
+                    <label class="form-label" for="exportPeriod">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
                     <select class="form-select" id="exportPeriod">
-                        <option value="7">آخر 7 أيام</option>
-                        <option value="30">آخر 30 يوم</option>
-                        <option value="90">آخر 3 أشهر</option>
-                        <option value="365">آخر سنة</option>
-                        <option value="all">جميع السجلات</option>
+                        <option value="7">{% if ui_lang == 'en' %}Last 7 days{% else %}آخر 7 أيام{% endif %}</option>
+                        <option value="30">{% if ui_lang == 'en' %}Last 30 days{% else %}آخر 30 يوم{% endif %}</option>
+                        <option value="90">{% if ui_lang == 'en' %}Last 3 months{% else %}آخر 3 أشهر{% endif %}</option>
+                        <option value="365">{% if ui_lang == 'en' %}Last year{% else %}آخر سنة{% endif %}</option>
+                        <option value="all">{% if ui_lang == 'en' %}All records{% else %}جميع السجلات{% endif %}</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="doExport()">تصدير</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="doExport()">{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}</button>
             </div>
         </div>
     </div>

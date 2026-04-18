@@ -7,20 +7,20 @@
     <div>
         <h1 class="h2 mb-1">
             <i class="bi bi-envelope me-2 text-primary"></i>
-            صندوق الرسائل
+            {% if ui_lang == 'en' %}Messages Inbox{% else %}صندوق الرسائل{% endif %}
             <span id="unreadCountBadge" class="badge bg-primary ms-2 d-none">0</span>
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
-                <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
-                <li class="breadcrumb-item active">الرسائل</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}الرئيسية{% endif %}</a></li>
+                <li class="breadcrumb-item"><a href="/communication">{% if ui_lang == 'en' %}Communication{% else %}التواصل{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</li>
             </ol>
         </nav>
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
-            <i class="bi bi-plus-lg me-1"></i> رسالة جديدة
+            <i class="bi bi-plus-lg me-1"></i> {% if ui_lang == 'en' %}New Message{% else %}رسالة جديدة{% endif %}
         </button>
     </div>
 </div>
@@ -33,29 +33,29 @@
             <div class="col-md-4">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control" id="msgSearch" placeholder="ابحث في الرسائل...">
-                    <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">مسح</button>
+                    <input type="text" class="form-control" id="msgSearch" placeholder="{% if ui_lang == 'en' %}Search messages...{% else %}ابحث في الرسائل...{% endif %}">
+                    <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</button>
                 </div>
             </div>
             <div class="col-md-8 text-md-end mt-2 mt-md-0">
                 <div class="btn-group" role="group">
                     <button type="button" class="btn btn-outline-secondary active"
-                        onclick="filterMsgs('all', this)">الكل</button>
+                        onclick="filterMsgs('all', this)">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</button>
                     <button type="button" class="btn btn-outline-secondary"
-                        onclick="filterMsgs('direct', this)">مباشرة</button>
+                        onclick="filterMsgs('direct', this)">{% if ui_lang == 'en' %}Direct{% else %}مباشرة{% endif %}</button>
                     <button type="button" class="btn btn-outline-secondary"
-                        onclick="filterMsgs('announcement', this)">الإعلانات</button>
+                        onclick="filterMsgs('announcement', this)">{% if ui_lang == 'en' %}Announcements{% else %}الإعلانات{% endif %}</button>
                 </div>
                 <div class="form-check form-switch d-inline-block ms-3 align-middle">
                     <input class="form-check-input" type="checkbox" id="unreadOnlyToggle">
-                    <label class="form-check-label" for="unreadOnlyToggle">غير المقروء فقط</label>
+                    <label class="form-check-label" for="unreadOnlyToggle">{% if ui_lang == 'en' %}Unread only{% else %}غير المقروء فقط{% endif %}</label>
                 </div>
                 <div class="form-check form-switch d-inline-block ms-3 align-middle">
                     <input class="form-check-input" type="checkbox" id="archivedOnlyToggle">
-                    <label class="form-check-label" for="archivedOnlyToggle">مؤرشف</label>
+                    <label class="form-check-label" for="archivedOnlyToggle">{% if ui_lang == 'en' %}Archived{% else %}مؤرشف{% endif %}</label>
                 </div>
                 <button type="button" class="btn btn-outline-secondary btn-sm ms-3" id="refreshMessagesBtn">
-                    <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+                    <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
                 </button>
             </div>
         </div>
@@ -63,13 +63,13 @@
             <div class="d-flex align-items-center flex-wrap gap-2">
                 <div class="form-check me-2">
                     <input class="form-check-input" type="checkbox" id="selectAllMessages">
-                    <label class="form-check-label" for="selectAllMessages">تحديد الكل</label>
+                    <label class="form-check-label" for="selectAllMessages">{% if ui_lang == 'en' %}Select all{% else %}تحديد الكل{% endif %}</label>
                 </div>
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkReadBtn">تحديد كمقروء</button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkArchiveBtn">أرشفة</button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkUnarchiveBtn">إلغاء
-                    الأرشفة</button>
-                <button type="button" class="btn btn-outline-danger btn-sm" id="bulkDeleteBtn">حذف</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkReadBtn">{% if ui_lang == 'en' %}Mark as read{% else %}تحديد كمقروء{% endif %}</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkArchiveBtn">{% if ui_lang == 'en' %}Archive{% else %}أرشفة{% endif %}</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkUnarchiveBtn">{% if ui_lang == 'en' %}Unarchive{% else %}إلغاء
+                    الأرشفة{% endif %}</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="bulkDeleteBtn">{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}</button>
             </div>
             <small class="text-muted" id="bulkSelectedCount">0 محدد</small>
         </div>
@@ -78,14 +78,14 @@
         <!-- Loading State -->
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">جاري التحميل...</span>
+                <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
             </div>
         </div>
     </div>
     <div class="card-footer bg-white d-flex justify-content-between align-items-center">
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="prevPageBtn">السابق</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="prevPageBtn">{% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}</button>
         <small id="paginationInfo" class="text-muted"></small>
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="nextPageBtn">التالي</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="nextPageBtn">{% if ui_lang == 'en' %}Next{% else %}التالي{% endif %}</button>
     </div>
 </div>
 
@@ -98,8 +98,8 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="messageDetailModalLabel">الرسالة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title" id="messageDetailModalLabel">{% if ui_lang == 'en' %}Message{% else %}الرسالة{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -111,14 +111,14 @@
                 <div id="messageAttachments" class="mt-3"></div>
                 <div id="messageReplies" class="mt-3"></div>
                 <div id="replySection" class="mt-4">
-                    <label for="messageReplyBody" class="form-label">الرد</label>
-                    <textarea class="form-control" id="messageReplyBody" rows="3" placeholder="اكتب الرد..."></textarea>
+                    <label for="messageReplyBody" class="form-label">{% if ui_lang == 'en' %}Reply{% else %}الرد{% endif %}</label>
+                    <textarea class="form-control" id="messageReplyBody" rows="3" placeholder="{% if ui_lang == 'en' %}Write your reply...{% else %}اكتب الرد...{% endif %}"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-danger" id="deleteMessageBtn">حذف</button>
-                <button type="button" class="btn btn-outline-secondary" id="archiveMessageBtn">أرشفة</button>
-                <button type="button" class="btn btn-primary" id="sendReplyBtn">إرسال الرد</button>
+                <button type="button" class="btn btn-outline-danger" id="deleteMessageBtn">{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}</button>
+                <button type="button" class="btn btn-outline-secondary" id="archiveMessageBtn">{% if ui_lang == 'en' %}Archive{% else %}أرشفة{% endif %}</button>
+                <button type="button" class="btn btn-primary" id="sendReplyBtn">{% if ui_lang == 'en' %}Send Reply{% else %}إرسال الرد{% endif %}</button>
             </div>
         </div>
     </div>
@@ -128,6 +128,9 @@
 
 {% block extra_js %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     let allMessages = [];
     let refreshTimer = null;
     let authExpiredHandled = false;
@@ -209,13 +212,13 @@
         try {
             // Use centralized auth system instead of direct localStorage access
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.</div>`;
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">${T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.')}</div>`;
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.</div>`;
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">${T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.')}</div>`;
                 return;
             }
 
@@ -253,26 +256,26 @@
                 updateUnreadCount();
                 updateBulkSelection();
             } else {
-                document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">تعذر تحميل الرسائل</div>`;
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">${T('تعذر تحميل الرسائل', 'Failed to load messages')}</div>`;
             }
         } catch (error) {
             console.error(error);
-            document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">خطأ في الشبكة</div>`;
+            document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">${T('خطأ في الشبكة', 'Network error')}</div>`;
         }
     }
 
 
     function formatThreadLabel(threadType) {
         if (!threadType) {
-            return 'رسالة';
+            return T('رسالة', 'Message');
         }
         if (threadType === 'ANNOUNCEMENT') {
-            return 'إعلان';
+            return T('إعلان', 'Announcement');
         }
         if (threadType === 'DIRECT') {
-            return 'مباشر';
+            return T('مباشر', 'Direct');
         }
-        return 'رسالة';
+        return T('رسالة', 'Message');
     }
 
     function toggleSelectAll(event) {
@@ -308,7 +311,7 @@
             container.innerHTML = `
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-inbox fs-1 mb-2 d-block"></i>
-                    لا توجد رسائل
+                    ${T('لا توجد رسائل', 'No messages')}
                 </div>
             `;
             return;
@@ -319,22 +322,22 @@
         sorted.forEach(msg => {
             let icon = 'bi-envelope';
             let badgeClass = 'bg-secondary';
-            let badgeText = 'رسالة';
+            let badgeText = T('رسالة', 'Message');
 
-            const unreadBadge = msg.is_read ? '' : '<span class="badge bg-primary ms-2">غير مقروءة</span>';
-            const archivedBadge = msg.archived_at ? '<span class="badge bg-light text-dark border ms-2">مؤرشفة</span>' : '';
+            const unreadBadge = msg.is_read ? '' : `<span class="badge bg-primary ms-2">${T('غير مقروءة', 'Unread')}</span>`;
+            const archivedBadge = msg.archived_at ? `<span class="badge bg-light text-dark border ms-2">${T('مؤرشفة', 'Archived')}</span>` : '';
 
             if (msg.thread_type === 'ANNOUNCEMENT') {
                 icon = 'bi-megaphone';
                 badgeClass = 'bg-warning text-dark';
-                badgeText = 'إعلان';
+                badgeText = T('إعلان', 'Announcement');
             } else if (msg.thread_type === 'DIRECT') {
-                badgeText = 'مباشر';
+                badgeText = T('مباشر', 'Direct');
             }
 
             const isSelected = selectedMessageIds.has(msg.id);
             const isOutgoing = msg.sender_id === currentUserId;
-            const directionLabel = isOutgoing ? 'إلى' : 'من';
+            const directionLabel = isOutgoing ? T('إلى', 'To') : T('من', 'From');
             const counterpart = isOutgoing ? (msg.recipient_id ? `#${msg.recipient_id}` : formatThreadLabel(msg.thread_type)) : `#${msg.sender_id}`;
             const metaLine = `${directionLabel}: ${counterpart} | ${formatThreadLabel(msg.thread_type)} | #${msg.id}`;
             const timestamp = msg.created_at ? new Date(msg.created_at).toLocaleString() : '';
@@ -352,7 +355,7 @@
                             <div class="d-flex align-items-center flex-wrap">
                                 <h5 class="mb-1 me-2">
                                     <i class="bi ${icon} me-2 text-muted"></i>
-                                    ${msg.subject || 'بدون عنوان'}
+                                    ${msg.subject || T('بدون عنوان', 'No subject')}
                                 </h5>
                                 ${unreadBadge}
                                 ${archivedBadge}
@@ -433,13 +436,13 @@
 
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
                 return;
             }
 
@@ -449,7 +452,7 @@
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                alert(err.error?.message || err.detail || 'تعذر تحميل الرسالة');
+                alert(err.error?.message || err.detail || T('تعذر تحميل الرسالة', 'Failed to load message'));
                 return;
             }
 
@@ -458,19 +461,19 @@
             currentOpenThreadType = msg.thread_type;
             currentOpenAllowReplies = !!msg.allow_replies;
             currentOpenArchived = !!msg.archived_at;
-            document.getElementById('archiveMessageBtn').textContent = currentOpenArchived ? 'إلغاء الأرشفة' : 'أرشفة';
+            document.getElementById('archiveMessageBtn').textContent = currentOpenArchived ? T('إلغاء الأرشفة', 'Unarchive') : T('أرشفة', 'Archive');
 
-            document.getElementById('messageDetailSubject').textContent = msg.subject || 'بدون عنوان';
+            document.getElementById('messageDetailSubject').textContent = msg.subject || T('بدون عنوان', 'No subject');
             document.getElementById('messageDetailBody').textContent = msg.message_body || '';
             document.getElementById('messageDetailTimestamp').textContent = msg.created_at ? new Date(msg.created_at).toLocaleString() : '';
             const isOutgoing = msg.sender_id === currentUserId;
-            const directionLabel = isOutgoing ? 'إلى' : 'من';
+            const directionLabel = isOutgoing ? T('إلى', 'To') : T('من', 'From');
             const counterpart = isOutgoing
-                ? (msg.recipient ? msg.recipient.username : (msg.recipient_id ? `المستخدم #${msg.recipient_id}` : formatThreadLabel(msg.thread_type)))
-                : (msg.sender ? msg.sender.username : `المستخدم #${msg.sender_id}`);
+                ? (msg.recipient ? msg.recipient.username : (msg.recipient_id ? `${T('المستخدم', 'User')} #${msg.recipient_id}` : formatThreadLabel(msg.thread_type)))
+                : (msg.sender ? msg.sender.username : `${T('المستخدم', 'User')} #${msg.sender_id}`);
             const metaParts = [`${directionLabel}: ${counterpart}`, formatThreadLabel(msg.thread_type)];
             if (msg.archived_at) {
-                metaParts.push('مؤرشف');
+                metaParts.push(T('مؤرشف', 'Archived'));
             }
             document.getElementById('messageDetailMeta').textContent = metaParts.join(' | ');
             document.getElementById('messageReplyBody').value = '';
@@ -490,7 +493,7 @@
             }
         } catch (error) {
             console.error(error);
-            alert('فشل في فتح الرسالة');
+            alert(T('فشل في فتح الرسالة', 'Failed to open message'));
         }
     }
 
@@ -509,7 +512,7 @@
                 </div>
             `;
         }).join('');
-        container.innerHTML = `<h6 class="mt-3">المرفقات</h6>${items}`;
+        container.innerHTML = `<h6 class="mt-3">${T('المرفقات', 'Attachments')}</h6>${items}`;
     }
 
     function renderReplies(replies) {
@@ -519,16 +522,16 @@
             return;
         }
         const items = replies.map(reply => {
-            const sender = reply.sender ? reply.sender.username : `المستخدم #${reply.sender_id}`;
+            const sender = reply.sender ? reply.sender.username : `${T('المستخدم', 'User')} #${reply.sender_id}`;
             const timestamp = reply.created_at ? new Date(reply.created_at).toLocaleString() : '';
             return `
                 <div class="border-top pt-2 mt-2">
-                    <div class="small text-muted">${sender} في ${timestamp}</div>
+                    <div class="small text-muted">${sender} ${T('في', 'at')} ${timestamp}</div>
                     <div class="text-break">${reply.message_body || ''}</div>
                 </div>
             `;
         }).join('');
-        container.innerHTML = `<h6 class="mt-3">الردود</h6>${items}`;
+        container.innerHTML = `<h6 class="mt-3">${T('الردود', 'Replies')}</h6>${items}`;
     }
 
     function updatePagination(pagination) {
@@ -543,14 +546,14 @@
             return;
         }
         totalPages = pagination.total_pages || 1;
-        info.textContent = `الصفحة ${pagination.page} من ${pagination.total_pages}`;
+        info.textContent = `${T('الصفحة', 'Page')} ${pagination.page} ${T('من', 'of')} ${pagination.total_pages}`;
         prevBtn.disabled = !pagination.has_prev;
         nextBtn.disabled = !pagination.has_next;
     }
 
     function updateBulkSelection() {
         const count = selectedMessageIds.size;
-        document.getElementById('bulkSelectedCount').textContent = `${count} محدد`;
+        document.getElementById('bulkSelectedCount').textContent = `${count} ${T('محدد', 'selected')}`;
         const disabled = count === 0;
         ['bulkReadBtn', 'bulkArchiveBtn', 'bulkUnarchiveBtn', 'bulkDeleteBtn'].forEach((id) => {
             const btn = document.getElementById(id);
@@ -600,19 +603,19 @@
         }
         const body = document.getElementById('messageReplyBody').value.trim();
         if (!body) {
-            alert('لا يمكن أن يكون الرد فارغًا');
+            alert(T('لا يمكن أن يكون الرد فارغًا', 'Reply cannot be empty'));
             return;
         }
         try {
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
                 return;
             }
 
@@ -627,7 +630,7 @@
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                alert(err.error?.message || err.detail || 'فشل في إرسال الرد');
+                alert(err.error?.message || err.detail || T('فشل في إرسال الرد', 'Failed to send reply'));
                 return;
             }
             const created = await response.json();
@@ -640,7 +643,7 @@
             loadMessages();
         } catch (error) {
             console.error(error);
-            alert('فشل في إرسال الرد');
+            alert(T('فشل في إرسال الرد', 'Failed to send reply'));
         }
     }
 
@@ -651,13 +654,13 @@
         try {
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
                 return;
             }
 
@@ -669,37 +672,37 @@
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                alert(err.error?.message || err.detail || 'فشل في تحديث حالة الأرشفة');
+                alert(err.error?.message || err.detail || T('فشل في تحديث حالة الأرشفة', 'Failed to update archive status'));
                 return;
             }
 
             currentOpenArchived = !currentOpenArchived;
-            document.getElementById('archiveMessageBtn').textContent = currentOpenArchived ? 'إلغاء الأرشفة' : 'أرشفة';
+            document.getElementById('archiveMessageBtn').textContent = currentOpenArchived ? T('إلغاء الأرشفة', 'Unarchive') : T('أرشفة', 'Archive');
             loadMessages();
         } catch (error) {
             console.error(error);
-            alert('فشل في تحديث حالة الأرشفة');
+            alert(T('فشل في تحديث حالة الأرشفة', 'Failed to update archive status'));
         }
     }
 
     async function bulkAction(action) {
         if (selectedMessageIds.size === 0) {
-            alert('يرجى تحديد رسالة واحدة على الأقل');
+            alert(T('يرجى تحديد رسالة واحدة على الأقل', 'Please select at least one message'));
             return;
         }
-        if (action === 'delete' && !confirm('هل أنت متأكد من حذف الرسائل المحددة؟')) {
+        if (action === 'delete' && !confirm(T('هل أنت متأكد من حذف الرسائل المحددة؟', 'Are you sure you want to delete the selected messages?'))) {
             return;
         }
         try {
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
                 return;
             }
 
@@ -717,7 +720,7 @@
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                alert(err.error?.message || err.detail || 'فشل تنفيذ العملية الجماعية');
+                alert(err.error?.message || err.detail || T('فشل تنفيذ العملية الجماعية', 'Bulk operation failed'));
                 return;
             }
 
@@ -726,7 +729,7 @@
             loadMessages();
         } catch (error) {
             console.error(error);
-            alert('فشل تنفيذ العملية الجماعية');
+            alert(T('فشل تنفيذ العملية الجماعية', 'Bulk operation failed'));
         }
     }
 
@@ -734,19 +737,19 @@
         if (!currentOpenMessageId) {
             return;
         }
-        if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) {
+        if (!confirm(T('هل أنت متأكد من حذف هذه الرسالة؟', 'Are you sure you want to delete this message?'))) {
             return;
         }
         try {
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
                 return;
             }
 
             const token = AuthService.getToken();
             if (!token) {
-                alert('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.');
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
                 return;
             }
 
@@ -757,7 +760,7 @@
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                alert(err.error?.message || err.detail || 'فشل في حذف الرسالة');
+                alert(err.error?.message || err.detail || T('فشل في حذف الرسالة', 'Failed to delete message'));
                 return;
             }
 
@@ -769,7 +772,7 @@
             loadMessages();
         } catch (error) {
             console.error(error);
-            alert('فشل في حذف الرسالة');
+            alert(T('فشل في حذف الرسالة', 'Failed to delete message'));
         }
     }
 

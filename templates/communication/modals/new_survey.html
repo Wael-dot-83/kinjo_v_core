@@ -3,48 +3,51 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="newSurveyModalLabel">إنشاء استبيان جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title" id="newSurveyModalLabel">{% if ui_lang == 'en' %}Create New Survey{% else %}إنشاء استبيان جديد{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <form id="newSurveyForm">
                     <div class="mb-3">
-                        <label for="surveyTitle" class="form-label">عنوان الاستبيان</label>
+                        <label for="surveyTitle" class="form-label">{% if ui_lang == 'en' %}Survey Title{% else %}عنوان الاستبيان{% endif %}</label>
                         <input type="text" class="form-control" id="surveyTitle" required>
                     </div>
                     <div class="mb-3">
-                        <label for="surveyDescription" class="form-label">الوصف</label>
+                        <label for="surveyDescription" class="form-label">{% if ui_lang == 'en' %}Description{% else %}الوصف{% endif %}</label>
                         <textarea class="form-control" id="surveyDescription" rows="3"></textarea>
                     </div>
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="surveyNPS" checked>
-                        <label class="form-check-label" for="surveyNPS">تفعيل سؤال صافي نقاط الترويج (NPS)</label>
+                        <label class="form-check-label" for="surveyNPS">{% if ui_lang == 'en' %}Enable NPS Question{% else %}تفعيل سؤال صافي نقاط الترويج (NPS){% endif %}</label>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="surveyStart" class="form-label">تاريخ البداية</label>
+                            <label for="surveyStart" class="form-label">{% if ui_lang == 'en' %}Start Date{% else %}تاريخ البداية{% endif %}</label>
                             <input type="date" class="form-control" id="surveyStart" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="surveyEnd" class="form-label">تاريخ النهاية</label>
+                            <label for="surveyEnd" class="form-label">{% if ui_lang == 'en' %}End Date{% else %}تاريخ النهاية{% endif %}</label>
                             <input type="date" class="form-control" id="surveyEnd" required>
                         </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="createNewSurvey()">إنشاء</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="createNewSurvey()">{% if ui_lang == 'en' %}Create{% else %}إنشاء{% endif %}</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     async function createNewSurvey() {
         // Use centralized auth system
         if (!window.AuthService || !AuthService.isAuthenticated()) {
-            alert('يرجى تسجيل الدخول لإنشاء استبيان');
+            alert(T('يرجى تسجيل الدخول لإنشاء استبيان', 'Please log in to create a survey'));
             return;
         }
 
@@ -59,7 +62,7 @@
         };
 
         if (!payload.title || !payload.start_date || !payload.end_date) {
-            alert('يرجى تعبئة الحقول المطلوبة');
+            alert(T('يرجى تعبئة الحقول المطلوبة', 'Please fill in the required fields'));
             return;
         }
 
@@ -79,15 +82,15 @@
                 if (typeof loadSurveys === 'function') {
                     loadSurveys();
                 }
-                alert('تم إنشاء الاستبيان بنجاح');
+                alert(T('تم إنشاء الاستبيان بنجاح', 'Survey created successfully'));
                 document.getElementById('newSurveyForm').reset();
             } else {
                 const err = await response.json();
-                alert('فشل الإنشاء: ' + (err.detail || response.statusText));
+                alert(T('فشل الإنشاء', 'Creation failed') + ': ' + (err.detail || response.statusText));
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('حدث خطأ في الاتصال');
+            alert(T('حدث خطأ في الاتصال', 'Connection error'));
         }
     }
 </script>

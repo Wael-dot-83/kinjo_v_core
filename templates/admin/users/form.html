@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
-{% block title %}{% if user_obj %}تعديل المستخدم{% else %}إضافة مستخدم جديد{% endif %}{% endblock %}
+{% block title %}{% if user_obj %}{% if ui_lang == 'en' %}Edit User{% else %}تعديل المستخدم{% endif %}{% else %}{% if ui_lang == 'en' %}Add New User{% else %}إضافة مستخدم جديد{% endif %}{% endif %}{% endblock %}
 
 {% block page_header %}
 {{ page_header(
-title="تعديل المستخدم: " ~ user_obj.username if user_obj else "إضافة مستخدم جديد",
+title=("Edit User: " if ui_lang == 'en' else "تعديل المستخدم: ") ~ user_obj.username if user_obj else ("Add New User" if ui_lang == 'en' else "إضافة مستخدم جديد"),
 icon="bi-person",
 breadcrumbs=[
-{"label": "لوحة التحكم", "url": "/dashboard"},
-{"label": "المستخدمين", "url": "/admin/users"},
-{"label": "تعديل" if user_obj else "إضافة", "url": None}
+{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Users" if ui_lang == 'en' else "المستخدمين", "url": "/admin/users"},
+{"label": ("Edit" if ui_lang == 'en' else "تعديل") if user_obj else ("Add" if ui_lang == 'en' else "إضافة"), "url": None}
 ]
 ) }}
 {% endblock %}
@@ -22,58 +22,58 @@ breadcrumbs=[
             <div class="card-body p-4">
                 <form id="userForm" class="needs-validation" novalidate
                     data-user-id="{{ user_obj.id if user_obj else '' }}">
-                    <h5 class="mb-4 text-muted">بيانات الحساب</h5>
+                    <h5 class="mb-4 text-muted">{% if ui_lang == 'en' %}Account Details{% else %}بيانات الحساب{% endif %}</h5>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label for="username" class="form-label required">اسم المستخدم</label>
+                            <label for="username" class="form-label required">{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</label>
                             <input type="text" class="form-control" id="username" name="username"
                                 value="{{ user_obj.username if user_obj else '' }}" {% if user_obj %}disabled{% else
                                 %}required{% endif %} pattern="[a-zA-Z0-9_]+" minlength="3">
-                            <div class="form-text">أحرف إنجليزية وأرقام وشرطة سفلية فقط، بدون مسافات.</div>
-                            <div class="invalid-feedback">مطلوب (أحرف إنجليزية وأرقام وشرطة سفلية فقط)</div>
+                            <div class="form-text">{% if ui_lang == 'en' %}English letters, numbers, and underscores only, no spaces.{% else %}أحرف إنجليزية وأرقام وشرطة سفلية فقط، بدون مسافات.{% endif %}</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Required (English letters, numbers, and underscores only){% else %}مطلوب (أحرف إنجليزية وأرقام وشرطة سفلية فقط){% endif %}</div>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="email" class="form-label required">البريد الإلكتروني</label>
+                            <label for="email" class="form-label required">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label>
                             <input type="email" class="form-control" id="email" name="email"
                                 value="{{ user_obj.email if user_obj else '' }}" required>
-                            <div class="invalid-feedback">يرجى إدخال بريد إلكتروني صحيح</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter a valid email{% else %}يرجى إدخال بريد إلكتروني صحيح{% endif %}</div>
                         </div>
                     </div>
 
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label for="password" class="form-label {% if not user_obj %}required{% endif %}">كلمة
-                                المرور</label>
+                            <label for="password" class="form-label {% if not user_obj %}required{% endif %}">{% if ui_lang == 'en' %}Password{% else %}كلمة
+                                المرور{% endif %}</label>
                             <input type="password" class="form-control" id="password" name="password" {% if not user_obj
                                 %}required{% endif %} minlength="8">
                             {% if user_obj %}
-                            <div class="form-text">اتركها فارغة للإبقاء على كلمة المرور الحالية.</div>
+                            <div class="form-text">{% if ui_lang == 'en' %}Leave blank to keep current password.{% else %}اتركها فارغة للإبقاء على كلمة المرور الحالية.{% endif %}</div>
                             {% endif %}
-                            <div class="invalid-feedback">كلمة المرور يجب أن تكون 8 أحرف على الأقل</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Password must be at least 8 characters{% else %}كلمة المرور يجب أن تكون 8 أحرف على الأقل{% endif %}</div>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="role" class="form-label required">الدور (الصلاحية)</label>
+                            <label for="role" class="form-label required">{% if ui_lang == 'en' %}Role (Permission){% else %}الدور (الصلاحية){% endif %}</label>
                             <select class="form-select" id="role" name="role" required
                                 onchange="toggleKindergartenField()">
-                                <option value="">اختر الدور...</option>
+                                <option value="">{% if ui_lang == 'en' %}Select role...{% else %}اختر الدور...{% endif %}</option>
                                 <option value="MANAGER" {% if user_obj and user_obj.role.value=='MANAGER' %}selected{%
-                                    endif %}>مدير روضة</option>
+                                    endif %}>{% if ui_lang == 'en' %}Kindergarten Manager{% else %}مدير روضة{% endif %}</option>
                                 <option value="SUPERVISOR" {% if user_obj and user_obj.role.value=='SUPERVISOR'
-                                    %}selected{% endif %}>مشرف</option>
+                                    %}selected{% endif %}>{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
                                 <option value="PARENT" {% if user_obj and user_obj.role.value=='PARENT' %}selected{%
-                                    endif %}>ولي أمر</option>
+                                    endif %}>{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</option>
                             </select>
                             <div class="form-text" id="roleHelp"></div>
-                            <div class="invalid-feedback">يرجى اختيار الصلاحية</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please select a role{% else %}يرجى اختيار الصلاحية{% endif %}</div>
                         </div>
                     </div>
 
                     <div id="kindergartenSection"
                         class="mb-4 {% if user_obj and user_obj.role.value == 'ADMIN' %}d-none{% endif %} {% if is_manager_user %}d-none{% endif %}">
-                        <label for="kindergarten_id" class="form-label">الروضة المرتبطة</label>
+                        <label for="kindergarten_id" class="form-label">{% if ui_lang == 'en' %}Linked Kindergarten{% else %}الروضة المرتبطة{% endif %}</label>
                         {% if is_manager_user %}
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
@@ -83,9 +83,9 @@ breadcrumbs=[
                         {% endif %}
                         <div class="row g-2 mb-3" id="kgFilters">
                             <div class="col-md-6">
-                                <label for="kgGovernorateFilter" class="form-label">المحافظة</label>
+                                <label for="kgGovernorateFilter" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
                                 <select class="form-select" id="kgGovernorateFilter">
-                                    <option value="">كل المحافظات</option>
+                                    <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}كل المحافظات{% endif %}</option>
                                     {% set govs = namespace(items=[]) %}
                                     {% for kg in kindergartens %}
                                     {% if kg.governorate and kg.governorate not in govs.items %}
@@ -98,16 +98,16 @@ breadcrumbs=[
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="kgSearch" class="form-label">بحث باسم الروضة أو الهاتف</label>
+                                <label for="kgSearch" class="form-label">{% if ui_lang == 'en' %}Search by kindergarten name or phone{% else %}بحث باسم الروضة أو الهاتف{% endif %}</label>
                                 <input type="text" class="form-control" id="kgSearch"
-                                    placeholder="ابحث باسم الروضة أو الهاتف">
+                                    placeholder="{% if ui_lang == 'en' %}Search by name or phone{% else %}ابحث باسم الروضة أو الهاتف{% endif %}">
                             </div>
                         </div>
                         <!-- Removed corrupted text, only correct Arabic message remains below -->
-                        <small class="text-muted d-block mb-2" id="kgNoResults" style="display: none;">لم يتم العثور على
-                            نتائج.</small>
+                        <small class="text-muted d-block mb-2" id="kgNoResults" style="display: none;">{% if ui_lang == 'en' %}No results found.{% else %}لم يتم العثور على
+                            نتائج.{% endif %}</small>
                         <select class="form-select" id="kindergarten_id" name="kindergarten_id">
-                            <option value="">-- اختر الروضة --</option>
+                            <option value="">-- {% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %} --</option>
                             {% for kg in kindergartens %}
                             <option value="{{ kg.id }}" data-governorate="{{ kg.governorate or '' }}"
                                 data-name="{{ (kg.name_ar or '') }} {{ (kg.name_en or '') }}"
@@ -119,33 +119,33 @@ breadcrumbs=[
                             </option>
                             {% endfor %}
                         </select>
-                        <div class="form-text">مطلوب للمدراء والمشرفين وأولياء الأمور لربطهم بروضة محددة.</div>
+                        <div class="form-text">{% if ui_lang == 'en' %}Required for managers, supervisors, and parents to link them to a specific kindergarten.{% else %}مطلوب للمدراء والمشرفين وأولياء الأمور لربطهم بروضة محددة.{% endif %}</div>
                     </div>
 
                     {% if user_obj %}
                     <div class="mb-4">
-                        <label for="status" class="form-label">حالة الحساب</label>
+                        <label for="status" class="form-label">{% if ui_lang == 'en' %}Account Status{% else %}حالة الحساب{% endif %}</label>
                         <select class="form-select" id="status" name="status">
-                            <option value="ACTIVE" {% if user_obj.status.value=='ACTIVE' %}selected{% endif %}>نشط
+                            <option value="ACTIVE" {% if user_obj.status.value=='ACTIVE' %}selected{% endif %}>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}
                             </option>
                             <option value="SUSPENDED" {% if user_obj.status.value=='SUSPENDED' %}selected{% endif %}>
-                                موقوف</option>
-                            <option value="INACTIVE" {% if user_obj.status.value=='INACTIVE' %}selected{% endif %}>غير
-                                نشط</option>
+                                {% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}</option>
+                            <option value="INACTIVE" {% if user_obj.status.value=='INACTIVE' %}selected{% endif %}>{% if ui_lang == 'en' %}Inactive{% else %}غير
+                                نشط{% endif %}</option>
                         </select>
                     </div>
                     {% endif %}
 
                     <div class="d-flex justify-content-between border-top pt-4">
-                        <a href="/admin/users" class="btn btn-outline-secondary">إلغاء</a>
+                        <a href="/admin/users" class="btn btn-outline-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
                         <button type="submit" class="btn btn-primary" id="submitBtn">
                             <span class="btn-text">
                                 <i class="bi bi-save me-2"></i>
-                                {% if user_obj %}حفظ التعديلات{% else %}إنشاء المستخدم{% endif %}
+                                {% if user_obj %}{% if ui_lang == 'en' %}Save Changes{% else %}حفظ التعديلات{% endif %}{% else %}{% if ui_lang == 'en' %}Create User{% else %}إنشاء المستخدم{% endif %}{% endif %}
                             </span>
                             <span class="btn-loading d-none">
                                 <span class="spinner-border spinner-border-sm me-2"></span>
-                                جاري المعالجة...
+                                {% if ui_lang == 'en' %}Processing...{% else %}جاري المعالجة...{% endif %}
                             </span>
                         </button>
                     </div>
@@ -163,58 +163,58 @@ breadcrumbs=[
             <div class="modal-header">
                 <h5 class="modal-title" id="passwordResetModalLabel">
                     <i class="bi bi-key me-2 text-warning"></i>
-                    إعادة تعيين كلمة المرور
+                    {% if ui_lang == 'en' %}Reset Password{% else %}إعادة تعيين كلمة المرور{% endif %}
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <form id="passwordResetForm" novalidate>
                     <div class="mb-3">
-                        <label for="resetPassword" class="form-label fw-semibold">كلمة المرور الجديدة</label>
+                        <label for="resetPassword" class="form-label fw-semibold">{% if ui_lang == 'en' %}New Password{% else %}كلمة المرور الجديدة{% endif %}</label>
                         <div class="input-group">
                             <input type="password" class="form-control" id="resetPassword" required minlength="8"
                                 autocomplete="new-password" aria-describedby="resetPasswordHelp">
                             <button class="btn btn-outline-secondary" type="button"
                                 onclick="togglePasswordVisibility('resetPassword', this)"
-                                aria-label="إظهار كلمة المرور">
+                                aria-label="{% if ui_lang == 'en' %}Show password{% else %}إظهار كلمة المرور{% endif %}">
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
-                        <div id="resetPasswordHelp" class="form-text">كلمة المرور يجب أن تكون 8 أحرف على الأقل</div>
+                        <div id="resetPasswordHelp" class="form-text">{% if ui_lang == 'en' %}Password must be at least 8 characters{% else %}كلمة المرور يجب أن تكون 8 أحرف على الأقل{% endif %}</div>
                     </div>
                     <div class="mb-3">
-                        <label for="confirmResetPassword" class="form-label fw-semibold">تأكيد كلمة المرور</label>
+                        <label for="confirmResetPassword" class="form-label fw-semibold">{% if ui_lang == 'en' %}Confirm Password{% else %}تأكيد كلمة المرور{% endif %}</label>
                         <div class="input-group">
                             <input type="password" class="form-control" id="confirmResetPassword" required minlength="8"
                                 autocomplete="new-password">
                             <button class="btn btn-outline-secondary" type="button"
                                 onclick="togglePasswordVisibility('confirmResetPassword', this)"
-                                aria-label="إظهار كلمة المرور">
+                                aria-label="{% if ui_lang == 'en' %}Show password{% else %}إظهار كلمة المرور{% endif %}">
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="adminPassword" class="form-label fw-semibold">كلمة مرور المدير</label>
+                        <label for="adminPassword" class="form-label fw-semibold">{% if ui_lang == 'en' %}Admin Password{% else %}كلمة مرور المدير{% endif %}</label>
                         <input type="password" class="form-control" id="adminPassword" required minlength="8"
                             autocomplete="current-password">
-                        <div class="form-text">أدخل كلمة مرورك الحالية للتأكيد.</div>
+                        <div class="form-text">{% if ui_lang == 'en' %}Enter your current password for confirmation.{% else %}أدخل كلمة مرورك الحالية للتأكيد.{% endif %}</div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>
-                    إلغاء
+                    {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
                 </button>
                 <button type="button" class="btn btn-warning" id="resetPasswordBtn">
                     <span class="btn-text">
                         <i class="bi bi-key me-2"></i>
-                        إعادة التعيين
+                        {% if ui_lang == 'en' %}Reset{% else %}إعادة التعيين{% endif %}
                     </span>
                     <span class="btn-loading d-none">
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        جاري المعالجة...
+                        {% if ui_lang == 'en' %}Processing...{% else %}جاري المعالجة...{% endif %}
                     </span>
                 </button>
             </div>
@@ -225,6 +225,9 @@ breadcrumbs=[
 
 {% block extra_js %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     // Get user ID from form attribute to avoid Jinja/JS syntax confusion
     function getUserID() {
         const form = document.getElementById('userForm');
@@ -243,12 +246,12 @@ breadcrumbs=[
             input.type = 'text';
             icon.classList.remove('bi-eye');
             icon.classList.add('bi-eye-slash');
-            button.setAttribute('aria-label', 'إخفاء كلمة المرور');
+            button.setAttribute('aria-label', T('إخفاء كلمة المرور', 'Hide password'));
         } else {
             input.type = 'password';
             icon.classList.remove('bi-eye-slash');
             icon.classList.add('bi-eye');
-            button.setAttribute('aria-label', 'إظهار كلمة المرور');
+            button.setAttribute('aria-label', T('إظهار كلمة المرور', 'Show password'));
         }
     }
 
@@ -258,10 +261,10 @@ breadcrumbs=[
 
 
         const messages = {
-            MANAGER: 'يجب ربط المدير بروضة محددة لإدارة بياناتها.',
-            SUPERVISOR: 'يجب ربط المشرف بروضة محددة لمتابعة تقاريرها.',
-            PARENT: 'يجب ربط ولي الأمر بطفل (روضة).',
-            ADMIN: 'مدير النظام له صلاحيات كاملة على جميع الروضات.'
+            MANAGER: T('يجب ربط المدير بروضة محددة لإدارة بياناتها.', 'Manager must be linked to a specific kindergarten to manage its data.'),
+            SUPERVISOR: T('يجب ربط المشرف بروضة محددة لمتابعة تقاريرها.', 'Supervisor must be linked to a specific kindergarten to follow its reports.'),
+            PARENT: T('يجب ربط ولي الأمر بطفل (روضة).', 'Parent must be linked to a child (kindergarten).'),
+            ADMIN: T('مدير النظام له صلاحيات كاملة على جميع الروضات.', 'System admin has full permissions on all kindergartens.')
         };
 
         roleHelp.textContent = messages[role] || '';
@@ -387,7 +390,7 @@ breadcrumbs=[
                 })
                 .catch(error => {
                     console.error('Error fetching user info:', error);
-                    showToast('حدث خطأ في تحميل بيانات المستخدم', 'error');
+                    showToast(T('حدث خطأ في تحميل بيانات المستخدم', 'Error loading user data'), 'error');
                 });
         }
     }
@@ -428,10 +431,10 @@ breadcrumbs=[
 
             if (userId) {
                 await api.put(`/api/admin/users/${userId}`, data);
-                showToast('تم تحديث بيانات المستخدم بنجاح', 'success');
+                showToast(T('تم تحديث بيانات المستخدم بنجاح', 'User data updated successfully'), 'success');
             } else {
                 await api.post('/api/admin/users', data);
-                showToast('تم إنشاء المستخدم بنجاح', 'success');
+                showToast(T('تم إنشاء المستخدم بنجاح', 'User created successfully'), 'success');
             }
 
             setTimeout(() => {
@@ -444,7 +447,7 @@ breadcrumbs=[
             btnLoading.classList.add('d-none');
 
             console.error(error);
-            showToast(error.message || 'حدث خطأ غير متوقع', 'error');
+            showToast(error.message || T('حدث خطأ غير متوقع', 'An unexpected error occurred'), 'error');
         }
     });
 
@@ -454,7 +457,7 @@ breadcrumbs=[
     window.showPasswordResetModal = (userId, username) => {
         currentResetUserId = userId;
         document.getElementById('passwordResetForm').reset();
-        document.querySelector('#passwordResetModal .modal-title').textContent = `إعادة تعيين كلمة المرور - ${username}`;
+        document.querySelector('#passwordResetModal .modal-title').textContent = T(`إعادة تعيين كلمة المرور - ${username}`, `Reset Password - ${username}`);
         const modal = new bootstrap.Modal(document.getElementById('passwordResetModal'));
         modal.show();
     }
@@ -465,22 +468,22 @@ breadcrumbs=[
         const adminPassword = document.getElementById('adminPassword').value;
 
         if (password !== confirmPassword) {
-            showToast('كلمات المرور غير متطابقة', 'error');
+            showToast(T('كلمات المرور غير متطابقة', 'Passwords do not match'), 'error');
             return;
         }
 
         if (password.length < 8) {
-            showToast('كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'error');
+            showToast(T('كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'Password must be at least 8 characters'), 'error');
             return;
         }
 
         if (!adminPassword) {
-            showToast('يرجى إدخال كلمة مرور المدير', 'error');
+            showToast(T('يرجى إدخال كلمة مرور المدير', 'Please enter admin password'), 'error');
             return;
         }
 
         if (adminPassword.length < 8) {
-            showToast('كلمة مرور المدير يجب أن تكون 8 أحرف على الأقل', 'error');
+            showToast(T('كلمة مرور المدير يجب أن تكون 8 أحرف على الأقل', 'Admin password must be at least 8 characters'), 'error');
             return;
         }
 
@@ -498,12 +501,12 @@ breadcrumbs=[
                 admin_password: adminPassword
             });
 
-            showToast('تم إعادة تعيين كلمة المرور بنجاح', 'success');
+            showToast(T('تم إعادة تعيين كلمة المرور بنجاح', 'Password reset successfully'), 'success');
             const modal = bootstrap.Modal.getInstance(document.getElementById('passwordResetModal'));
             modal.hide();
 
         } catch (error) {
-            showToast(error.message || 'فشل إعادة تعيين كلمة المرور', 'error');
+            showToast(error.message || T('فشل إعادة تعيين كلمة المرور', 'Password reset failed'), 'error');
         } finally {
             btn.disabled = false;
             btnText.classList.remove('d-none');

@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}مركز التواصل{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Communication Center{% else %}مركز التواصل{% endif %}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">مركز التواصل</h1>
+    <h1 class="h2">{% if ui_lang == 'en' %}Communication Center{% else %}مركز التواصل{% endif %}</h1>
 </div>
 
 <div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
@@ -15,12 +15,12 @@
                 <div class="display-4 text-primary mb-3">
                     <i class="bi bi-chat-dots-fill"></i>
                 </div>
-                <h5 class="card-title">الرسائل</h5>
-                <p class="card-text">المراسلات المباشرة مع أولياء الأمور والموظفين.</p>
+                <h5 class="card-title">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</h5>
+                <p class="card-text">{% if ui_lang == 'en' %}Direct correspondence with parents and staff.{% else %}المراسلات المباشرة مع أولياء الأمور والموظفين.{% endif %}</p>
                 <div class="d-grid gap-2">
-                    <a href="/communication/messages" class="btn btn-outline-primary">فتح البريد الوارد</a>
+                    <a href="/communication/messages" class="btn btn-outline-primary">{% if ui_lang == 'en' %}Open Inbox{% else %}فتح البريد الوارد{% endif %}</a>
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
-                        <i class="bi bi-plus-lg"></i> رسالة جديدة
+                        <i class="bi bi-plus-lg"></i> {% if ui_lang == 'en' %}New Message{% else %}رسالة جديدة{% endif %}
                     </button>
                 </div>
             </div>
@@ -34,12 +34,12 @@
                 <div class="display-4 text-success mb-3">
                     <i class="bi bi-calendar-event-fill"></i>
                 </div>
-                <h5 class="card-title">الفعاليات</h5>
-                <p class="card-text">إدارة التقويم المدرسي ودعوة أولياء الأمور.</p>
+                <h5 class="card-title">{% if ui_lang == 'en' %}Events{% else %}الفعاليات{% endif %}</h5>
+                <p class="card-text">{% if ui_lang == 'en' %}Manage school calendar and invite parents.{% else %}إدارة التقويم المدرسي ودعوة أولياء الأمور.{% endif %}</p>
                 <div class="d-grid gap-2">
-                    <a href="/communication/events" class="btn btn-outline-success">عرض الفعاليات</a>
+                    <a href="/communication/events" class="btn btn-outline-success">{% if ui_lang == 'en' %}View Events{% else %}عرض الفعاليات{% endif %}</a>
                     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newEventModal">
-                        <i class="bi bi-plus-lg"></i> فعالية جديدة
+                        <i class="bi bi-plus-lg"></i> {% if ui_lang == 'en' %}New Event{% else %}فعالية جديدة{% endif %}
                     </button>
                 </div>
             </div>
@@ -53,12 +53,12 @@
                 <div class="display-4 text-warning mb-3">
                     <i class="bi bi-clipboard-data-fill"></i>
                 </div>
-                <h5 class="card-title">الاستبيانات</h5>
-                <p class="card-text">قياس رضا أولياء الأمور وجمع الملاحظات.</p>
+                <h5 class="card-title">{% if ui_lang == 'en' %}Surveys{% else %}الاستبيانات{% endif %}</h5>
+                <p class="card-text">{% if ui_lang == 'en' %}Measure parent satisfaction and collect feedback.{% else %}قياس رضا أولياء الأمور وجمع الملاحظات.{% endif %}</p>
                 <div class="d-grid gap-2">
-                    <a href="/communication/surveys" class="btn btn-outline-warning">إدارة الاستبيانات</a>
+                    <a href="/communication/surveys" class="btn btn-outline-warning">{% if ui_lang == 'en' %}Manage Surveys{% else %}إدارة الاستبيانات{% endif %}</a>
                     <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#newSurveyModal">
-                        <i class="bi bi-plus-lg"></i> استبيان جديد
+                        <i class="bi bi-plus-lg"></i> {% if ui_lang == 'en' %}New Survey{% else %}استبيان جديد{% endif %}
                     </button>
                 </div>
             </div>
@@ -71,23 +71,23 @@
     <div class="col-md-12">
         <div class="card shadow-sm">
             <div class="card-header bg-light">
-                <h5 class="mb-0">آخر النشاطات</h5>
+                <h5 class="mb-0">{% if ui_lang == 'en' %}Recent Activity{% else %}آخر النشاطات{% endif %}</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>النوع</th>
-                                <th>العنوان</th>
-                                <th>التاريخ</th>
-                                <th>الحالة</th>
+                                <th>{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Title{% else %}العنوان{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
                             </tr>
                         </thead>
                         <tbody id="recentActivityTable">
                             <!-- Populated by JS -->
                             <tr>
-                                <td colspan="4" class="text-center text-muted">جاري تحميل البيانات...</td>
+                                <td colspan="4" class="text-center text-muted">{% if ui_lang == 'en' %}Loading data...{% else %}جاري تحميل البيانات...{% endif %}</td>
                             </tr>
                         </tbody>
                     </table>

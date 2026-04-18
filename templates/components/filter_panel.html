@@ -3,60 +3,60 @@
     <div class="card-body p-4">
         <div class="row g-3 align-items-end">
             <div class="col-lg-3">
-                <label class="form-label fw-bold text-dark">الفترة الزمنية</label>
+                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
                 <div class="input-group">
                     <input type="date" id="periodStart" class="form-control border-end-0" />
-                    <span class="input-group-text bg-white border-start-0 border-end-0">إلى</span>
+                    <span class="input-group-text bg-white border-start-0 border-end-0">{% if ui_lang == 'en' %}to{% else %}إلى{% endif %}</span>
                     <input type="date" id="periodEnd" class="form-control border-start-0" />
                 </div>
             </div>
             <div class="col-lg-2" id="kgFilterCol">
-                <label class="form-label fw-bold text-dark">الروضة</label>
+                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
                 <select id="kindergartenSelect" class="form-select">
-                    <option value="">جميع الروضات</option>
+                    <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
                 </select>
                 <div id="kindergartenHint" class="form-text text-muted"></div>
             </div>
             <div class="col-lg-2" id="govFilterCol">
-                <label class="form-label fw-bold text-dark">المحافظة</label>
+                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
                 <select id="governorateSelect" class="form-select">
-                    <option value="">جميع المحافظات</option>
+                    <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
                 </select>
             </div>
             <div class="col-lg-2" id="cityFilterCol">
-                <label class="form-label fw-bold text-dark">المدينة</label>
+                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
                 <select id="citySelect" class="form-select">
-                    <option value="">جميع المدن</option>
+                    <option value="">{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}</option>
                 </select>
             </div>
             <div class="col-lg-2" id="areaFilterCol">
-                <label class="form-label fw-bold text-dark">المنطقة</label>
+                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</label>
                 <select id="areaSelect" class="form-select">
-                    <option value="">جميع المناطق</option>
+                    <option value="">{% if ui_lang == 'en' %}All Areas{% else %}جميع المناطق{% endif %}</option>
                 </select>
             </div>
             <div class="col-lg-1">
-                <label class="form-label fw-bold text-dark">الدورية</label>
+                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Frequency{% else %}الدورية{% endif %}</label>
                 <select id="granularitySelect" class="form-select">
-                    <option value="daily">يومي</option>
-                    <option value="weekly" selected>أسبوعي</option>
-                    <option value="monthly">شهري</option>
+                    <option value="daily">{% if ui_lang == 'en' %}Daily{% else %}يومي{% endif %}</option>
+                    <option value="weekly" selected>{% if ui_lang == 'en' %}Weekly{% else %}أسبوعي{% endif %}</option>
+                    <option value="monthly">{% if ui_lang == 'en' %}Monthly{% else %}شهري{% endif %}</option>
                 </select>
             </div>
             <div class="col-lg-1">
                 <button class="btn btn-primary w-100" id="applyFiltersBtn">
-                    <i class="bi bi-funnel me-1"></i>تطبيق المرشحات
+                    <i class="bi bi-funnel me-1"></i>{% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق المرشحات{% endif %}
                 </button>
             </div>
             <div class="col-lg-1">
                 <button class="btn btn-outline-secondary w-100" id="resetFiltersBtn">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i>إعادة ضبط
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>{% if ui_lang == 'en' %}Reset{% else %}إعادة ضبط{% endif %}
                 </button>
             </div>
         </div>
         <div class="mt-3 pt-3 border-top">
             <div class="d-flex flex-wrap gap-2" id="activeFiltersContainer">
-                <span class="text-muted small">المرشحات النشطة:</span>
+                <span class="text-muted small">{% if ui_lang == 'en' %}Active Filters:{% else %}المرشحات النشطة:{% endif %}</span>
                 <div id="filterBadges"></div>
             </div>
         </div>

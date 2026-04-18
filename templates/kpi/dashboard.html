@@ -5,33 +5,33 @@
 {% from 'components/filter_panel.html' import filter_panel %}
 {% from 'components/alert_banner.html' import alert_banner %}
 
-{% block title %}لوحة مؤشرات الأداء{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}KPI Dashboard{% else %}لوحة مؤشرات الأداء{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="row pt-4 pb-2 mb-3 border-bottom align-items-center">
     <div class="col-md-8">
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb bg-transparent p-0 mb-2">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">مؤشرات الأداء</li>
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}KPI{% else %}مؤشرات الأداء{% endif %}</li>
             </ol>
         </nav>
         <h1 class="h2 fw-bold text-dark mb-1">
             <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
-            لوحة مؤشرات الأداء والحوكمة
+            {% if ui_lang == 'en' %}KPI & Governance Dashboard{% else %}لوحة مؤشرات الأداء والحوكمة{% endif %}
         </h1>
-        <p class="text-muted small">تحليل شامل لأداء الروضة، معايير الجودة، ومعدلات السلامة والالتزام.</p>
+        <p class="text-muted small">{% if ui_lang == 'en' %}Comprehensive analysis of kindergarten performance, quality standards, safety and compliance rates.{% else %}تحليل شامل لأداء الروضة، معايير الجودة، ومعدلات السلامة والالتزام.{% endif %}</p>
     </div>
     <div class="col-md-4 text-md-end">
         <button id="refreshBtn" type="button" class="btn btn-white shadow-sm border rounded-pill px-4 py-2"
             onclick="document.getElementById('applyFiltersBtn').click()">
             <i class="bi bi-arrow-clockwise me-1 text-primary"></i>
-            تحديث البيانات
+            {% if ui_lang == 'en' %}Refresh Data{% else %}تحديث البيانات{% endif %}
         </button>
         {% if current_user and current_user.role.value == 'ADMIN' %}
         <a href="/admin/classification" class="btn btn-outline-primary rounded-pill px-4 py-2 ms-2">
             <i class="bi bi-trophy me-1"></i>
-            التصنيف والمقارنات
+            {% if ui_lang == 'en' %}Classification & Comparisons{% else %}التصنيف والمقارنات{% endif %}
         </a>
         {% endif %}
     </div>
@@ -196,7 +196,7 @@
         aria-live="polite" aria-atomic="true">
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
-            <strong class="text-dark">تنبيهات الأداء:</strong>
+            <strong class="text-dark">{% if ui_lang == 'en' %}Performance Alerts:{% else %}تنبيهات الأداء:{% endif %}</strong>
             <ul class="mb-0 list-inline" id="dashboardAlertsList"></ul>
         </div>
     </div>
@@ -209,11 +209,11 @@
                     <div class="row align-items-center">
                         <div class="col-md-7">
                             <div class="d-flex align-items-center mb-2">
-                                <h5 class="text-dark fw-bold mb-0">مؤشر الحوكمة والتجربة</h5>
+                                <h5 class="text-dark fw-bold mb-0">{% if ui_lang == 'en' %}Governance & Experience Index{% else %}مؤشر الحوكمة والتجربة{% endif %}</h5>
                                 <i class="bi bi-info-circle tooltip-icon ms-2" data-bs-toggle="tooltip"
-                                    title="معيار شامل يقيس جودة العمليات، الالتزام بالتقارير، السلامة، وتجربة الأطفال والمدراء. المدى من 0 إلى 100."></i>
+                                    title="{% if ui_lang == 'en' %}Comprehensive standard measuring operations quality, report compliance, safety, and child/manager experience. Range 0–100.{% else %}معيار شامل يقيس جودة العمليات، الالتزام بالتقارير، السلامة، وتجربة الأطفال والمدراء. المدى من 0 إلى 100.{% endif %}"></i>
                             </div>
-                            <p class="text-muted small mb-4">نظرة عامة على مستوى التميز في إدارة الروضة.</p>
+                            <p class="text-muted small mb-4">{% if ui_lang == 'en' %}Overview of excellence level in kindergarten management.{% else %}نظرة عامة على مستوى التميز في إدارة الروضة.{% endif %}</p>
 
                             <div class="d-flex align-items-baseline gap-3 mb-2">
                                 <h2 class="display-3 fw-bold text-dark metric-value mb-0" id="gceiValue">--</h2>
@@ -222,12 +222,12 @@
                                 <span class="badge" id="gceiStatusBadge"
                                     style="font-size: 1.1rem; padding: 6px 16px; border-radius: 50px;">---</span>
                             </div>
-                            <p class="text-muted small" id="gceiDescription">جارٍ تحليل البيانات لتقديم التوصيات...</p>
+                            <p class="text-muted small" id="gceiDescription">{% if ui_lang == 'en' %}Analyzing data to provide recommendations...{% else %}جارٍ تحليل البيانات لتقديم التوصيات...{% endif %}</p>
 
                             <!-- Suggested Actions (Dynamic) -->
                             <div id="suggestedActions" class="action-suggest d-none mt-3">
-                                <div class="fw-bold mb-1"><i class="bi bi-lightning-charge me-1"></i> إجراءات مقترحة
-                                    للتحسين:</div>
+                                <div class="fw-bold mb-1"><i class="bi bi-lightning-charge me-1"></i> {% if ui_lang == 'en' %}Suggested Improvement Actions:{% else %}إجراءات مقترحة
+                                    للتحسين:{% endif %}</div>
                                 <ul class="mb-0 ps-3 small" id="suggestedActionsList"></ul>
                             </div>
                         </div>
@@ -235,7 +235,7 @@
                             <div class="position-relative mx-auto" style="width: 200px; height: 120px;">
                                 <canvas id="gceiGauge" width="200" height="120"></canvas>
                                 <div class="position-absolute w-100 text-center" style="bottom: 10px;">
-                                    <span class="text-muted fw-bold small">معيار الجودة</span>
+                                    <span class="text-muted fw-bold small">{% if ui_lang == 'en' %}Quality Standard{% else %}معيار الجودة{% endif %}</span>
                                 </div>
                             </div>
                             <div class="mt-2">
@@ -251,13 +251,13 @@
         <div class="col-lg-5">
             <div class="card kpi-card shadow-sm h-100">
                 <div class="card-body p-4">
-                    <h5 class="text-dark fw-bold mb-4">الاستيعاب والتحققات</h5>
+                    <h5 class="text-dark fw-bold mb-4">{% if ui_lang == 'en' %}Capacity & Verification{% else %}الاستيعاب والتحققات{% endif %}</h5>
                     <div class="row g-4">
                         <div class="col-6">
                             <div
                                 class="p-3 rounded-4 bg-light bg-opacity-50 text-center h-100 border border-white shadow-sm">
                                 <i class="bi bi-people text-primary fs-3 mb-2"></i>
-                                <p class="text-muted small mb-1">إجمالي الأطفال</p>
+                                <p class="text-muted small mb-1">{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}</p>
                                 <h3 class="fw-bold text-dark mb-0 metric-value d-none" data-value="active_enrollments">
                                     --</h3>
                                 <div class="skeleton-text mx-auto w-50" data-skeleton="active_enrollments"></div>
@@ -267,7 +267,7 @@
                             <div
                                 class="p-3 rounded-4 bg-light bg-opacity-50 text-center h-100 border border-white shadow-sm">
                                 <i class="bi bi-person-plus text-success fs-3 mb-2"></i>
-                                <p class="text-muted small mb-1">تسجيلات جديدة</p>
+                                <p class="text-muted small mb-1">{% if ui_lang == 'en' %}New Enrollments{% else %}تسجيلات جديدة{% endif %}</p>
                                 <h3 class="fw-bold text-dark mb-0 metric-value d-none" data-value="new_enrollments">--
                                 </h3>
                                 <div class="skeleton-text mx-auto w-50" data-skeleton="new_enrollments"></div>
@@ -279,9 +279,9 @@
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <div class="d-flex align-items-center">
                                         <i class="bi bi-building-check text-primary fs-4 me-2"></i>
-                                        <h6 class="fw-bold mb-0">كفاءة الطاقة الاستيعابية</h6>
+                                        <h6 class="fw-bold mb-0">{% if ui_lang == 'en' %}Capacity Utilization{% else %}كفاءة الطاقة الاستيعابية{% endif %}</h6>
                                         <i class="bi bi-info-circle tooltip-icon ms-2" data-bs-toggle="tooltip"
-                                            title="نسبة الأطفال المسجلين حالياً مقارنة بالسعة القصوى المرخصة للروضة."></i>
+                                            title="{% if ui_lang == 'en' %}Percentage of currently enrolled children compared to maximum licensed capacity.{% else %}نسبة الأطفال المسجلين حالياً مقارنة بالسعة القصوى المرخصة للروضة.{% endif %}"></i>
                                     </div>
                                     <div class="h4 mb-0 fw-bold text-primary metric-value d-none"
                                         data-value="capacity_utilization_rate">--</div>
@@ -292,8 +292,8 @@
                                         data-progress="capacity_utilization_rate" style="width: 0%"></div>
                                 </div>
                                 <div class="skeleton-text w-100" data-skeleton="capacity_utilization_rate"></div>
-                                <p class="text-muted x-small mb-0 mt-2">يوضح هذا المؤشر مدى استغلال المقاعد المتوفرة في
-                                    الروضة.</p>
+                                <p class="text-muted x-small mb-0 mt-2">{% if ui_lang == 'en' %}This indicator shows how well available seats in the kindergarten are utilized.{% else %}يوضح هذا المؤشر مدى استغلال المقاعد المتوفرة في
+                                    الروضة.{% endif %}</p>
                             </div>
                         </div>
                     </div>
@@ -301,17 +301,25 @@
             </div>
         </div>
     </div>
-    <h5 class="fw-bold mb-3 text-dark mt-2">مؤشرات العمليات والجودة</h5>
+    <h5 class="fw-bold mb-3 text-dark mt-2">{% if ui_lang == 'en' %}Operations & Quality Indicators{% else %}مؤشرات العمليات والجودة{% endif %}</h5>
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 mb-4">
         {% set ops = [
-        ('attendance_rate','نسبة الحضور','GREEN','bi-calendar2-check','النسبة المئوية للأطفال الحاضرين من إجمالي
-        المسجلين.'),
-        ('ratio_compliance','نسبة الالتزام','AMBER','bi-shield-check','مدى الالتزام بنسبة (معلم لكل عدد معين من الطلاب)
-        حسب المعايير.'),
-        ('training_completion_rate','اكتمال التدريب','GREEN','bi-mortarboard','نسبة إتمام الدورات التدريبية الإلزامية
-        للكادر التعليمي.'),
-        ('report_submission_rate','إرسال التقارير','AMBER','bi-file-earmark-arrow-up','مدى الانتظام في إرسال التقارير
-        اليومية والأسبوعية لرئاسة الروضة.')
+        ('attendance_rate',
+         ('نسبة الحضور' if ui_lang != 'en' else 'Attendance Rate'),
+         'GREEN','bi-calendar2-check',
+         ('النسبة المئوية للأطفال الحاضرين من إجمالي المسجلين.' if ui_lang != 'en' else 'Percentage of present children out of total enrolled.')),
+        ('ratio_compliance',
+         ('نسبة الالتزام' if ui_lang != 'en' else 'Ratio Compliance'),
+         'AMBER','bi-shield-check',
+         ('مدى الالتزام بنسبة (معلم لكل عدد معين من الطلاب) حسب المعايير.' if ui_lang != 'en' else 'Compliance with teacher-to-student ratio standards.')),
+        ('training_completion_rate',
+         ('اكتمال التدريب' if ui_lang != 'en' else 'Training Completion'),
+         'GREEN','bi-mortarboard',
+         ('نسبة إتمام الدورات التدريبية الإلزامية للكادر التعليمي.' if ui_lang != 'en' else 'Completion rate of mandatory training courses for teaching staff.')),
+        ('report_submission_rate',
+         ('إرسال التقارير' if ui_lang != 'en' else 'Report Submission'),
+         'AMBER','bi-file-earmark-arrow-up',
+         ('مدى الانتظام في إرسال التقارير اليومية والأسبوعية لرئاسة الروضة.' if ui_lang != 'en' else 'Regularity of submitting daily and weekly reports to kindergarten management.'))
         ] %}
         {% for metric,title,band,icon,desc in ops %}
         <div class="col">
@@ -320,16 +328,25 @@
         {% endfor %}
     </div>
 
-    <h5 class="fw-bold mb-3 text-dark">مؤشرات السلامة والمخاطر</h5>
+    <h5 class="fw-bold mb-3 text-dark">{% if ui_lang == 'en' %}Safety & Risk Indicators{% else %}مؤشرات السلامة والمخاطر{% endif %}</h5>
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 mb-5">
         {% set safety = [
-        ('incident_rate','معدل الحوادث','danger','bi-exclamation-triangle','عدد الحوادث البسيطة لكل 100 طفل في اليوم.'),
-        ('serious_incident_rate','الحوادث الخطرة','danger','bi-radioactive','عدد الحوادث الجسيمة التي تتطلب تدخل إجراء
-        فورياً.'),
-        ('incident_followup_sla','متابعة الحوادث','warning','bi-clock-history','مدى سرعة إغلاق ومتابعة البلاغات خلال
-        الوقت المتفق عليه.'),
-        ('chronic_absence_rate','الغياب المزمن','info','bi-person-dash','نسبة الأطفال الذين غابوا أكثر من 10% من إجمالي
-        أيام الدراسة.')
+        ('incident_rate',
+         ('معدل الحوادث' if ui_lang != 'en' else 'Incident Rate'),
+         'danger','bi-exclamation-triangle',
+         ('عدد الحوادث البسيطة لكل 100 طفل في اليوم.' if ui_lang != 'en' else 'Number of minor incidents per 100 children per day.')),
+        ('serious_incident_rate',
+         ('الحوادث الخطرة' if ui_lang != 'en' else 'Serious Incidents'),
+         'danger','bi-radioactive',
+         ('عدد الحوادث الجسيمة التي تتطلب تدخل إجراء فورياً.' if ui_lang != 'en' else 'Number of serious incidents requiring immediate action.')),
+        ('incident_followup_sla',
+         ('متابعة الحوادث' if ui_lang != 'en' else 'Incident Follow-up'),
+         'warning','bi-clock-history',
+         ('مدى سرعة إغلاق ومتابعة البلاغات خلال الوقت المتفق عليه.' if ui_lang != 'en' else 'Speed of closing and following up reports within agreed timeframe.')),
+        ('chronic_absence_rate',
+         ('الغياب المزمن' if ui_lang != 'en' else 'Chronic Absence'),
+         'info','bi-person-dash',
+         ('نسبة الأطفال الذين غابوا أكثر من 10% من إجمالي أيام الدراسة.' if ui_lang != 'en' else 'Percentage of children absent more than 10% of total school days.'))
         ] %}
         {% for metric,title,color,icon,desc in safety %}
         <div class="col">
@@ -359,13 +376,13 @@
                 <div class="card-header bg-white border-0 py-3">
                     <h6 class="fw-bold mb-0 text-dark">
                         <i class="bi bi-people me-2 text-info"></i>
-                        توزيع الطلاب حسب سنة الميلاد
-                        <small class="text-muted fw-normal">(70 يوم - 4 سنوات و 8 أشهر)</small>
+                        {% if ui_lang == 'en' %}Student Distribution by Birth Year{% else %}توزيع الطلاب حسب سنة الميلاد{% endif %}
+                        <small class="text-muted fw-normal">{% if ui_lang == 'en' %}(70 days – 4 years & 8 months){% else %}(70 يوم - 4 سنوات و 8 أشهر){% endif %}</small>
                     </h6>
                 </div>
                 <div class="card-body">
                     <div class="chart-container" style="position: relative; height: 250px;">
-                        <canvas id="distributionChart" aria-label="مخطط توزيع الطلاب حسب الروضات" role="img"></canvas>
+                        <canvas id="distributionChart" aria-label="{% if ui_lang == 'en' %}Student distribution chart{% else %}مخطط توزيع الطلاب حسب الروضات{% endif %}" role="img"></canvas>
                     </div>
                 </div>
             </div>
@@ -377,7 +394,7 @@
                     <div class="card shadow-sm border-0 h-100 border-top border-4 border-success">
                         <div class="card-body d-flex flex-column">
                             <h6 class="mb-3 text-success d-flex align-items-center">
-                                <i class="bi bi-trophy me-2"></i> أعلى 5 روضات أداءً
+                                <i class="bi bi-trophy me-2"></i> {% if ui_lang == 'en' %}Top 5 Performing Kindergartens{% else %}أعلى 5 روضات أداءً{% endif %}
                             </h6>
                             <ul class="list-group list-group-flush flex-grow-1" id="topPerformersList"></ul>
                         </div>
@@ -387,7 +404,7 @@
                     <div class="card shadow-sm border-0 h-100 border-top border-4 border-warning">
                         <div class="card-body d-flex flex-column">
                             <h6 class="mb-3 text-warning d-flex align-items-center">
-                                <i class="bi bi-arrow-down-circle me-2"></i> الروضات الأكثر حاجة للدعم
+                                <i class="bi bi-arrow-down-circle me-2"></i> {% if ui_lang == 'en' %}Kindergartens Most in Need of Support{% else %}الروضات الأكثر حاجة للدعم{% endif %}
                             </h6>
                             <ul class="list-group list-group-flush flex-grow-1" id="lowPerformersList"></ul>
                         </div>
@@ -400,10 +417,18 @@
 
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4">
         {% set trends = [
-        ('attendanceTrendChart','اتجاه نسبة الحضور','success','bi-calendar-check'),
-        ('incidentsTrendChart','اتجاه الحوادث والتبليغات','danger','bi-exclamation-octagon'),
-        ('enrollmentTrendChart','اتجاه تسجيلات الأطفال','info','bi-person-plus'),
-        ('gceiTrendChart','تغير مؤشر الحوكمة','primary','bi-graph-up-arrow')
+        ('attendanceTrendChart',
+         ('اتجاه نسبة الحضور' if ui_lang != 'en' else 'Attendance Trend'),
+         'success','bi-calendar-check'),
+        ('incidentsTrendChart',
+         ('اتجاه الحوادث والتبليغات' if ui_lang != 'en' else 'Incidents Trend'),
+         'danger','bi-exclamation-octagon'),
+        ('enrollmentTrendChart',
+         ('اتجاه تسجيلات الأطفال' if ui_lang != 'en' else 'Enrollment Trend'),
+         'info','bi-person-plus'),
+        ('gceiTrendChart',
+         ('تغير مؤشر الحوكمة' if ui_lang != 'en' else 'Governance Index Trend'),
+         'primary','bi-graph-up-arrow')
         ] %}
         {% for chartId,title,color,icon in trends %}
         <div class="col">

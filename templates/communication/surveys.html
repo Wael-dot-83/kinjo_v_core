@@ -1,25 +1,25 @@
 {% extends 'base.html' %}
 
-{% block title %}الاستبيانات{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Surveys{% else %}الاستبيانات{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
     <div>
         <h1 class="h2 mb-1">
             <i class="bi bi-chat-square-text me-2 text-info"></i>
-            الاستبيانات
+            {% if ui_lang == 'en' %}Surveys{% else %}الاستبيانات{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
-                <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
-                <li class="breadcrumb-item active">الاستبيانات</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}الرئيسية{% endif %}</a></li>
+                <li class="breadcrumb-item"><a href="/communication">{% if ui_lang == 'en' %}Communication{% else %}التواصل{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Surveys{% else %}الاستبيانات{% endif %}</li>
             </ol>
         </nav>
     </div>
     <div class="btn-toolbar mb-2 mb-md-0">
         <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#newSurveyModal">
-            <i class="bi bi-plus-lg me-1"></i> استبيان جديد
+            <i class="bi bi-plus-lg me-1"></i> {% if ui_lang == 'en' %}New Survey{% else %}استبيان جديد{% endif %}
         </button>
     </div>
 </div>
@@ -42,13 +42,16 @@
 
 {% block extra_js %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     document.addEventListener('DOMContentLoaded', loadSurveys);
 
     async function loadSurveys() {
         try {
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">يرجى تسجيل الدخول لعرض الاستبيانات</div>`;
+                document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">${T('يرجى تسجيل الدخول لعرض الاستبيانات', 'Please log in to view surveys')}</div>`;
                 return;
             }
 
@@ -61,11 +64,11 @@
                 const surveys = await response.json();
                 renderSurveys(surveys);
             } else {
-                document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">فشل تحميل الاستبيانات</div>`;
+                document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">${T('فشل تحميل الاستبيانات', 'Failed to load surveys')}</div>`;
             }
         } catch (error) {
             console.error(error);
-            document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">خطأ في الاتصال</div>`;
+            document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">${T('خطأ في الاتصال', 'Connection error')}</div>`;
         }
     }
 
@@ -77,7 +80,7 @@
             container.innerHTML = `
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-clipboard-check fs-1 mb-2 d-block"></i>
-                    لا توجد استبيانات نشطة حالياً
+                    ${T('لا توجد استبيانات نشطة حالياً', 'No active surveys currently')}
                 </div>
             `;
             return;
@@ -92,7 +95,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <h5 class="card-title">${survey.title}</h5>
-                        <small class="text-muted">ينتهي: ${survey.end_date}</small>
+                        <small class="text-muted">${T('ينتهي', 'Ends')}: ${survey.end_date}</small>
                     </div>
                     <p class="card-text text-secondary">${survey.description || ''}</p>
                     
@@ -100,7 +103,7 @@
                     <form onsubmit="submitSurvey(event, ${survey.id})">
                         ${survey.nps_question_enabled ? `
                         <div class="mb-3">
-                            <label class="form-label fw-bold" id="nps_label_${survey.id}">ما مدى رضاك (0 - 10)؟</label>
+                            <label class="form-label fw-bold" id="nps_label_${survey.id}">${T('ما مدى رضاك (0 - 10)؟', 'How satisfied are you (0 - 10)?')}</label>
                             <div class="d-flex justify-content-between px-2" role="radiogroup" aria-labelledby="nps_label_${survey.id}">
                                 ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `
                                     <div class="form-check form-check-inline me-0 text-center">
@@ -113,11 +116,11 @@
                         ` : ''}
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold" for="feedback_${survey.id}">ملاحظاتك</label>
-                            <textarea class="form-control" id="feedback_${survey.id}" name="feedback" rows="2" placeholder="اكتب رأيك هنا..."></textarea>
+                            <label class="form-label fw-bold" for="feedback_${survey.id}">${T('ملاحظاتك', 'Your Feedback')}</label>
+                            <textarea class="form-control" id="feedback_${survey.id}" name="feedback" rows="2" placeholder="${T('اكتب رأيك هنا...', 'Write your opinion here...')}"></textarea>
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-sm">إرسال المشاركة</button>
+                        <button type="submit" class="btn btn-primary btn-sm">${T('إرسال المشاركة', 'Submit Response')}</button>
                     </form>
                 </div>
             `;
@@ -141,7 +144,7 @@
         try {
             // Use centralized auth system
             if (!window.AuthService || !AuthService.isAuthenticated()) {
-                alert('يرجى تسجيل الدخول لإرسال الاستبيان');
+                alert(T('يرجى تسجيل الدخول لإرسال الاستبيان', 'Please log in to submit the survey'));
                 return;
             }
 
@@ -156,16 +159,16 @@
             });
 
             if (response.ok) {
-                alert('شكراً لمشاركتك!');
+                alert(T('شكراً لمشاركتك!', 'Thank you for your response!'));
                 form.reset();
             } else {
                 const err = await response.json();
-                alert('خطأ: ' + (err.detail || 'فشل الإرسال'));
+                alert(T('خطأ', 'Error') + ': ' + (err.detail || T('فشل الإرسال', 'Submission failed')));
             }
 
         } catch (error) {
             console.error(error);
-            alert('خطأ في الاتصال');
+            alert(T('خطأ في الاتصال', 'Connection error'));
         }
     }
 </script>

@@ -7,12 +7,12 @@
     <div>
         <h1 class="h2">
             <i class="bi bi-gear me-2 text-primary"></i>
-            إعدادات الحساب
+            {% if ui_lang == 'en' %}Account Settings{% else %}إعدادات الحساب{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">الإعدادات</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Settings{% else %}الإعدادات{% endif %}</li>
             </ol>
         </nav>
     </div>
@@ -28,23 +28,23 @@
                 <a class="list-group-item list-group-item-action active d-flex align-items-center" id="profile-tab"
                     data-bs-toggle="list" href="#profile" role="tab">
                     <i class="bi bi-person me-3 text-secondary"></i>
-                    الملف الشخصي
+                    {% if ui_lang == 'en' %}Profile{% else %}الملف الشخصي{% endif %}
                 </a>
                 <a class="list-group-item list-group-item-action d-flex align-items-center" id="security-tab"
                     data-bs-toggle="list" href="#security" role="tab">
                     <i class="bi bi-shield-lock me-3 text-secondary"></i>
-                    الأمان وكلمة المرور
+                    {% if ui_lang == 'en' %}Security & Password{% else %}الأمان وكلمة المرور{% endif %}
                 </a>
                 <a class="list-group-item list-group-item-action d-flex align-items-center" id="notifications-tab"
                     data-bs-toggle="list" href="#notifications" role="tab">
                     <i class="bi bi-bell me-3 text-secondary"></i>
-                    الإشعارات
+                    {% if ui_lang == 'en' %}Notifications{% else %}الإشعارات{% endif %}
                 </a>
                 {% if current_user.role == 'admin' %}
                 <a class="list-group-item list-group-item-action d-flex align-items-center" id="system-tab"
                     data-bs-toggle="list" href="#system" role="tab">
                     <i class="bi bi-sliders me-3 text-secondary"></i>
-                    إعدادات النظام (Admin)
+                    {% if ui_lang == 'en' %}System Settings (Admin){% else %}إعدادات النظام (Admin){% endif %}
                 </a>
                 {% endif %}
             </div>
@@ -57,34 +57,34 @@
                 <div class="tab-content" id="nav-tabContent">
                     <!-- Profile Settings -->
                     <div class="tab-pane fade show active" id="profile" role="tabpanel">
-                        <h5 class="mb-4 text-primary fw-bold">المعلومات الشخصية</h5>
+                        <h5 class="mb-4 text-primary fw-bold">{% if ui_lang == 'en' %}Personal Information{% else %}المعلومات الشخصية{% endif %}</h5>
                         <form>
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label for="firstName" class="form-label">الاسم الأول</label>
+                                    <label for="firstName" class="form-label">{% if ui_lang == 'en' %}First Name{% else %}الاسم الأول{% endif %}</label>
                                     <input type="text" id="firstName" class="form-control"
                                         value="{{ current_user.first_name }}">
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="lastName" class="form-label">اسم العائلة</label>
+                                    <label for="lastName" class="form-label">{% if ui_lang == 'en' %}Last Name{% else %}اسم العائلة{% endif %}</label>
                                     <input type="text" id="lastName" class="form-control"
                                         value="{{ current_user.last_name }}">
                                 </div>
                                 <div class="col-md-12">
-                                    <label for="email" class="form-label">البريد الإلكتروني</label>
+                                    <label for="email" class="form-label">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label>
                                     <input type="email" id="email" class="form-control" value="{{ current_user.email }}"
                                         readonly disabled>
-                                    <div class="form-text">لا يمكن تغيير البريد الإلكتروني. يرجى التواصل مع الدعم.</div>
+                                    <div class="form-text">{% if ui_lang == 'en' %}Email cannot be changed. Please contact support.{% else %}لا يمكن تغيير البريد الإلكتروني. يرجى التواصل مع الدعم.{% endif %}</div>
                                 </div>
                                 <div class="col-md-12">
-                                    <label for="phoneNumber" class="form-label">رقم الهاتف</label>
+                                    <label for="phoneNumber" class="form-label">{% if ui_lang == 'en' %}Phone Number{% else %}رقم الهاتف{% endif %}</label>
                                     <input type="tel" id="phoneNumber" class="form-control"
                                         value="{{ current_user.phone_number or '' }}">
                                 </div>
                                 <div class="col-12 mt-4">
                                     <button type="button" class="btn btn-primary px-4"
-                                        onclick="showToast('تم حفظ التغييرات بنجاح')">
-                                        <i class="bi bi-save me-1"></i> حفظ التغييرات
+                                        onclick="showToast('{% if ui_lang == 'en' %}Changes saved successfully{% else %}تم حفظ التغييرات بنجاح{% endif %}')">
+                                        <i class="bi bi-save me-1"></i> {% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}
                                     </button>
                                 </div>
                             </div>
@@ -93,24 +93,24 @@
 
                     <!-- Security Settings -->
                     <div class="tab-pane fade" id="security" role="tabpanel">
-                        <h5 class="mb-4 text-primary fw-bold">تغيير كلمة المرور</h5>
+                        <h5 class="mb-4 text-primary fw-bold">{% if ui_lang == 'en' %}Change Password{% else %}تغيير كلمة المرور{% endif %}</h5>
                         <form>
                             <div class="mb-3">
-                                <label for="currentPassword" class="form-label">كلمة المرور الحالية</label>
+                                <label for="currentPassword" class="form-label">{% if ui_lang == 'en' %}Current Password{% else %}كلمة المرور الحالية{% endif %}</label>
                                 <input type="password" id="currentPassword" class="form-control">
                             </div>
                             <div class="mb-3">
-                                <label for="newPassword" class="form-label">كلمة المرور الجديدة</label>
+                                <label for="newPassword" class="form-label">{% if ui_lang == 'en' %}New Password{% else %}كلمة المرور الجديدة{% endif %}</label>
                                 <input type="password" id="newPassword" class="form-control">
                             </div>
                             <div class="mb-3">
-                                <label for="confirmPassword" class="form-label">تأكيد كلمة المرور الجديدة</label>
+                                <label for="confirmPassword" class="form-label">{% if ui_lang == 'en' %}Confirm New Password{% else %}تأكيد كلمة المرور الجديدة{% endif %}</label>
                                 <input type="password" id="confirmPassword" class="form-control">
                             </div>
                             <div class="mt-4">
                                 <button type="button" class="btn btn-warning px-4"
-                                    onclick="showToast('تم تحديث كلمة المرور')">
-                                    <i class="bi bi-key me-1"></i> تحديث كلمة المرور
+                                    onclick="showToast('{% if ui_lang == 'en' %}Password updated{% else %}تم تحديث كلمة المرور{% endif %}')">
+                                    <i class="bi bi-key me-1"></i> {% if ui_lang == 'en' %}Update Password{% else %}تحديث كلمة المرور{% endif %}
                                 </button>
                             </div>
                         </form>
@@ -118,30 +118,30 @@
 
                     <!-- Notification Settings -->
                     <div class="tab-pane fade" id="notifications" role="tabpanel">
-                        <h5 class="mb-4 text-primary fw-bold">تفضيلات الإشعارات</h5>
+                        <h5 class="mb-4 text-primary fw-bold">{% if ui_lang == 'en' %}Notification Preferences{% else %}تفضيلات الإشعارات{% endif %}</h5>
                         <div class="list-group">
                             <label class="list-group-item d-flex gap-3">
                                 <input class="form-check-input flex-shrink-0" type="checkbox" checked
                                     style="font-size: 1.375em;">
                                 <span class="pt-1 form-checked-content">
-                                    <strong>إشعارات البريد الإلكتروني</strong>
-                                    <small class="d-block text-body-secondary">استلام ملخصات أسبوعية وتنبيهات
-                                        هامة.</small>
+                                    <strong>{% if ui_lang == 'en' %}Email Notifications{% else %}إشعارات البريد الإلكتروني{% endif %}</strong>
+                                    <small class="d-block text-body-secondary">{% if ui_lang == 'en' %}Receive weekly summaries and important alerts.{% else %}استلام ملخصات أسبوعية وتنبيهات
+                                        هامة.{% endif %}</small>
                                 </span>
                             </label>
                             <label class="list-group-item d-flex gap-3">
                                 <input class="form-check-input flex-shrink-0" type="checkbox" checked
                                     style="font-size: 1.375em;">
                                 <span class="pt-1 form-checked-content">
-                                    <strong>إشعارات النظام (داخل التطبيق)</strong>
-                                    <small class="d-block text-body-secondary">تنبيهات فورية عند حدوث إجراءات
-                                        هامة.</small>
+                                    <strong>{% if ui_lang == 'en' %}System Notifications (In-app){% else %}إشعارات النظام (داخل التطبيق){% endif %}</strong>
+                                    <small class="d-block text-body-secondary">{% if ui_lang == 'en' %}Instant alerts when important actions occur.{% else %}تنبيهات فورية عند حدوث إجراءات
+                                        هامة.{% endif %}</small>
                                 </span>
                             </label>
                         </div>
                         <div class="mt-4">
-                            <button type="button" class="btn btn-primary px-4" onclick="showToast('تم حفظ التفضيلات')">
-                                <i class="bi bi-save me-1"></i> حفظ التفضيلات
+                            <button type="button" class="btn btn-primary px-4" onclick="showToast('{% if ui_lang == 'en' %}Preferences saved{% else %}تم حفظ التفضيلات{% endif %}')">
+                                <i class="bi bi-save me-1"></i> {% if ui_lang == 'en' %}Save Preferences{% else %}حفظ التفضيلات{% endif %}
                             </button>
                         </div>
                     </div>
@@ -149,20 +149,20 @@
                     <!-- System Settings (Admin Only) -->
                     {% if current_user.role == 'admin' %}
                     <div class="tab-pane fade" id="system" role="tabpanel">
-                        <h5 class="mb-4 text-danger fw-bold">إعدادات النظام العامة</h5>
+                        <h5 class="mb-4 text-danger fw-bold">{% if ui_lang == 'en' %}General System Settings{% else %}إعدادات النظام العامة{% endif %}</h5>
                         <form>
                             <div class="mb-3">
-                                <label for="schoolYearStart" class="form-label">بداية العام الدراسي</label>
+                                <label for="schoolYearStart" class="form-label">{% if ui_lang == 'en' %}School Year Start{% else %}بداية العام الدراسي{% endif %}</label>
                                 <input type="date" id="schoolYearStart" class="form-control" value="2023-09-01">
                             </div>
                             <div class="mb-3">
-                                <label for="maxStudentsPerClass" class="form-label">الحد الأقصى للطلاب لكل فصل</label>
+                                <label for="maxStudentsPerClass" class="form-label">{% if ui_lang == 'en' %}Max Students Per Class{% else %}الحد الأقصى للطلاب لكل فصل{% endif %}</label>
                                 <input type="number" id="maxStudentsPerClass" class="form-control" value="25">
                             </div>
                             <div class="mt-4">
                                 <button type="button" class="btn btn-danger px-4"
-                                    onclick="showToast('تم تحديث إعدادات النظام')">
-                                    <i class="bi bi-gear-fill me-1"></i> تحديث النظام
+                                    onclick="showToast('{% if ui_lang == 'en' %}System settings updated{% else %}تم تحديث إعدادات النظام{% endif %}')">
+                                    <i class="bi bi-gear-fill me-1"></i> {% if ui_lang == 'en' %}Update System{% else %}تحديث النظام{% endif %}
                                 </button>
                             </div>
                         </form>
@@ -189,7 +189,7 @@
                     <div class="toast-body">
                         <i class="bi bi-check-circle-fill me-2"></i> ${message}
                     </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="إغلاق" onclick="this.closest('.toast').remove()"></button>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}" onclick="this.closest('.toast').remove()"></button>
                 </div>
             </div>
         `;

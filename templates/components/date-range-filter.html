@@ -1,41 +1,43 @@
-{% macro date_range_filter(start_date_id="startDate", end_date_id="endDate", start_label="من تاريخ", end_label="إلى
-تاريخ", apply_button_id="applyFilter", apply_text="تطبيق", start_id=None, end_id=None, show_governorate=True,
+{% macro date_range_filter(start_date_id="startDate", end_date_id="endDate", start_label=None, end_label=None, apply_button_id="applyFilter", apply_text=None, start_id=None, end_id=None, show_governorate=True,
 refresh_btn_id=None, on_refresh=None, show_export=True, governorate_id=None, export_modal_id=None, user_role=None) %}
+{% set _start_label = start_label or ('من تاريخ' if ui_lang != 'en' else 'From Date') %}
+{% set _end_label = end_label or ('إلى تاريخ' if ui_lang != 'en' else 'To Date') %}
+{% set _apply_text = apply_text or ('تطبيق' if ui_lang != 'en' else 'Apply') %}
 {% set start_field_id = start_id or start_date_id %}
 {% set end_field_id = end_id or end_date_id %}
 <div class="card mb-4">
     <div class="card-body">
         <div class="row g-3 align-items-end">
             <div class="col-md-3">
-                <label for="{{ start_field_id }}" class="form-label">{{ start_label }}</label>
+                <label for="{{ start_field_id }}" class="form-label">{{ _start_label }}</label>
                 <input type="date" class="form-control" id="{{ start_field_id }}">
             </div>
             <div class="col-md-3">
-                <label for="{{ end_field_id }}" class="form-label">{{ end_label }}</label>
+                <label for="{{ end_field_id }}" class="form-label">{{ _end_label }}</label>
                 <input type="date" class="form-control" id="{{ end_field_id }}">
             </div>
             <div class="col-md-2">
                 {% if refresh_btn_id %}
                 <button type="button" class="btn btn-primary w-100" id="{{ refresh_btn_id }}" {% if on_refresh
                     %}onclick="{{ on_refresh }}()" {% endif %}>
-                    <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+                    <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
                 </button>
                 {% else %}
                 <button type="button" class="btn btn-primary w-100" id="{{ apply_button_id }}">
-                    <i class="bi bi-funnel me-1"></i>{{ apply_text }}
+                    <i class="bi bi-funnel me-1"></i>{{ _apply_text }}
                 </button>
                 {% endif %}
             </div>
             <div class="col-md-2">
                 <button type="button" class="btn btn-outline-secondary w-100"
                     onclick="clearDateFilters('{{ start_field_id }}', '{{ end_field_id }}')">
-                    <i class="bi bi-x-lg me-1"></i>مسح
+                    <i class="bi bi-x-lg me-1"></i>{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}
                 </button>
             </div>
             <div class="col-md-2">
                 <button type="button" class="btn btn-outline-info w-100"
                     onclick="setLastMonth('{{ start_field_id }}', '{{ end_field_id }}')">
-                    <i class="bi bi-calendar-month me-1"></i>الشهر الماضي
+                    <i class="bi bi-calendar-month me-1"></i>{% if ui_lang == 'en' %}Last Month{% else %}الشهر الماضي{% endif %}
                 </button>
             </div>
         </div>

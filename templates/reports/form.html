@@ -7,7 +7,7 @@
     <div>
         <h1 class="h2">
             <i class="bi bi-pencil-square me-2 text-primary"></i>
-            تقرير يومي جديد
+            {% if ui_lang == 'en' %}New Daily Report{% else %}تقرير يومي جديد{% endif %}
         </h1>
     </div>
 </div>
@@ -22,14 +22,14 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <label class="form-label required" for="child_id">الطفل</label>
+                            <label class="form-label required" for="child_id">{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</label>
                             <select class="form-select" id="child_id" name="child_id" required>
-                                <option value="">اختر الطفل...</option>
+                                <option value="">{% if ui_lang == 'en' %}Select child...{% else %}اختر الطفل...{% endif %}</option>
                                 <!-- Children will be loaded dynamically -->
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" for="report_date">التاريخ</label>
+                            <label class="form-label" for="report_date">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</label>
                             <input type="date" class="form-control" id="report_date" name="report_date"
                                 value="{{ today }}" readonly>
                         </div>
@@ -39,26 +39,26 @@
                     {% if current_user.role.value == 'MANAGER' %}
                     <div class="row mt-3" id="filterOptions">
                         <div class="col-md-4">
-                            <label class="form-label" for="class_filter">الصف</label>
+                            <label class="form-label" for="class_filter">{% if ui_lang == 'en' %}Class{% else %}الصف{% endif %}</label>
                             <select class="form-select" id="class_filter" onchange="filterChildren()">
-                                <option value="">جميع الصفوف</option>
+                                <option value="">{% if ui_lang == 'en' %}All Classes{% else %}جميع الصفوف{% endif %}</option>
                                 <!-- Classes will be loaded dynamically -->
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label" for="age_filter">العمر</label>
+                            <label class="form-label" for="age_filter">{% if ui_lang == 'en' %}Age{% else %}العمر{% endif %}</label>
                             <select class="form-select" id="age_filter" onchange="filterChildren()">
-                                <option value="">جميع الأعمار (70 يوم - 56 شهر)</option>
-                                <option value="0-12">0-12 شهر (رضع)</option>
-                                <option value="12-24">12-24 شهر (1-2 سنة)</option>
-                                <option value="24-36">24-36 شهر (2-3 سنة)</option>
-                                <option value="36-48">36-48 شهر (3-4 سنة)</option>
-                                <option value="48-56">48-56 شهر (4+ سنة)</option>
+                                <option value="">{% if ui_lang == 'en' %}All Ages (70 days - 56 months){% else %}جميع الأعمار (70 يوم - 56 شهر){% endif %}</option>
+                                <option value="0-12">{% if ui_lang == 'en' %}0-12 months (Infant){% else %}0-12 شهر (رضع){% endif %}</option>
+                                <option value="12-24">{% if ui_lang == 'en' %}12-24 months (1-2 years){% else %}12-24 شهر (1-2 سنة){% endif %}</option>
+                                <option value="24-36">{% if ui_lang == 'en' %}24-36 months (2-3 years){% else %}24-36 شهر (2-3 سنة){% endif %}</option>
+                                <option value="36-48">{% if ui_lang == 'en' %}36-48 months (3-4 years){% else %}36-48 شهر (3-4 سنة){% endif %}</option>
+                                <option value="48-56">{% if ui_lang == 'en' %}48-56 months (4+ years){% else %}48-56 شهر (4+ سنة){% endif %}</option>
                             </select>
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
                             <button type="button" class="btn btn-outline-secondary" onclick="filterChildren()">
-                                <i class="bi bi-funnel me-1"></i>تصفية
+                                <i class="bi bi-funnel me-1"></i>{% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}
                             </button>
                         </div>
                     </div>
@@ -66,12 +66,12 @@
 
                     <div class="row mt-3">
                         <div class="col-md-6">
-                            <label class="form-label required" for="arrival_time">وقت الحضور</label>
+                            <label class="form-label required" for="arrival_time">{% if ui_lang == 'en' %}Arrival Time{% else %}وقت الحضور{% endif %}</label>
                             <input type="time" class="form-control" id="arrival_time" name="arrival_time" value="08:00"
                                 required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label required" for="leave_time">وقت الانصراف</label>
+                            <label class="form-label required" for="leave_time">{% if ui_lang == 'en' %}Leave Time{% else %}وقت الانصراف{% endif %}</label>
                             <input type="time" class="form-control" id="leave_time" name="leave_time" value="13:00"
                                 required>
                         </div>
@@ -82,51 +82,51 @@
             <!-- Mood & Health -->
             <div class="card mb-4">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="bi bi-emoji-smile me-2"></i>المزاج والصحة</h5>
+                    <h5 class="mb-0"><i class="bi bi-emoji-smile me-2"></i>{% if ui_lang == 'en' %}Mood & Health{% else %}المزاج والصحة{% endif %}</h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label d-block mb-3">المزاج العام</label>
+                        <label class="form-label d-block mb-3">{% if ui_lang == 'en' %}General Mood{% else %}المزاج العام{% endif %}</label>
                         <div class="d-flex justify-content-around mood-selector">
                             <input type="radio" class="btn-check" name="mood" id="mood-happy" value="happy" checked>
                             <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm"
                                 for="mood-happy">
                                 <div class="fs-1">😊</div>
-                                <div class="small">سعيد</div>
+                                <div class="small">{% if ui_lang == 'en' %}Happy{% else %}سعيد{% endif %}</div>
                             </label>
 
                             <input type="radio" class="btn-check" name="mood" id="mood-normal" value="normal">
                             <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm"
                                 for="mood-normal">
                                 <div class="fs-1">😐</div>
-                                <div class="small">عادي</div>
+                                <div class="small">{% if ui_lang == 'en' %}Normal{% else %}عادي{% endif %}</div>
                             </label>
 
                             <input type="radio" class="btn-check" name="mood" id="mood-sad" value="sad">
                             <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm" for="mood-sad">
                                 <div class="fs-1">😢</div>
-                                <div class="small">حزين</div>
+                                <div class="small">{% if ui_lang == 'en' %}Sad{% else %}حزين{% endif %}</div>
                             </label>
 
                             <input type="radio" class="btn-check" name="mood" id="mood-tired" value="tired">
                             <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm"
                                 for="mood-tired">
                                 <div class="fs-1">😴</div>
-                                <div class="small">نعسان</div>
+                                <div class="small">{% if ui_lang == 'en' %}Sleepy{% else %}نعسان{% endif %}</div>
                             </label>
 
                             <input type="radio" class="btn-check" name="mood" id="mood-sick" value="sick">
                             <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm" for="mood-sick">
                                 <div class="fs-1">🤒</div>
-                                <div class="small">مريض</div>
+                                <div class="small">{% if ui_lang == 'en' %}Sick{% else %}مريض{% endif %}</div>
                             </label>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="health_notes">ملاحظات صحية</label>
+                        <label class="form-label" for="health_notes">{% if ui_lang == 'en' %}Health Notes{% else %}ملاحظات صحية{% endif %}</label>
                         <textarea class="form-control" id="health_notes" name="health_notes" rows="2"
-                            placeholder="أي أعراض أو ملاحظات صحية..."></textarea>
+                            placeholder="{% if ui_lang == 'en' %}Any symptoms or health notes...{% else %}أي أعراض أو ملاحظات صحية...{% endif %}"></textarea>
                     </div>
                 </div>
             </div>
@@ -134,35 +134,35 @@
             <!-- Meals -->
             <div class="card mb-4">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="bi bi-egg-fried me-2"></i>الوجبات</h5>
+                    <h5 class="mb-0"><i class="bi bi-egg-fried me-2"></i>{% if ui_lang == 'en' %}Meals{% else %}الوجبات{% endif %}</h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label" for="breakfast">الفطور</label>
+                            <label class="form-label" for="breakfast">{% if ui_lang == 'en' %}Breakfast{% else %}الفطور{% endif %}</label>
                             <select class="form-select" id="breakfast" name="breakfast">
-                                <option value="all">أكل كل شيء</option>
-                                <option value="most">أكل المعظم</option>
-                                <option value="some">أكل القليل</option>
-                                <option value="none">لم يأكل</option>
+                                <option value="all">{% if ui_lang == 'en' %}Ate everything{% else %}أكل كل شيء{% endif %}</option>
+                                <option value="most">{% if ui_lang == 'en' %}Ate most{% else %}أكل المعظم{% endif %}</option>
+                                <option value="some">{% if ui_lang == 'en' %}Ate a little{% else %}أكل القليل{% endif %}</option>
+                                <option value="none">{% if ui_lang == 'en' %}Did not eat{% else %}لم يأكل{% endif %}</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label" for="lunch">الغداء</label>
+                            <label class="form-label" for="lunch">{% if ui_lang == 'en' %}Lunch{% else %}الغداء{% endif %}</label>
                             <select class="form-select" id="lunch" name="lunch" selected>
-                                <option value="all">أكل كل شيء</option>
-                                <option value="most">أكل المعظم</option>
-                                <option value="some">أكل القليل</option>
-                                <option value="none">لم يأكل</option>
+                                <option value="all">{% if ui_lang == 'en' %}Ate everything{% else %}أكل كل شيء{% endif %}</option>
+                                <option value="most">{% if ui_lang == 'en' %}Ate most{% else %}أكل المعظم{% endif %}</option>
+                                <option value="some">{% if ui_lang == 'en' %}Ate a little{% else %}أكل القليل{% endif %}</option>
+                                <option value="none">{% if ui_lang == 'en' %}Did not eat{% else %}لم يأكل{% endif %}</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label" for="snack">سناك</label>
+                            <label class="form-label" for="snack">{% if ui_lang == 'en' %}Snack{% else %}سناك{% endif %}</label>
                             <select class="form-select" id="snack" name="snack">
-                                <option value="all">أكل كل شيء</option>
-                                <option value="most">أكل المعظم</option>
-                                <option value="some">أكل القليل</option>
-                                <option value="none">لم يأكل</option>
+                                <option value="all">{% if ui_lang == 'en' %}Ate everything{% else %}أكل كل شيء{% endif %}</option>
+                                <option value="most">{% if ui_lang == 'en' %}Ate most{% else %}أكل المعظم{% endif %}</option>
+                                <option value="some">{% if ui_lang == 'en' %}Ate a little{% else %}أكل القليل{% endif %}</option>
+                                <option value="none">{% if ui_lang == 'en' %}Did not eat{% else %}لم يأكل{% endif %}</option>
                             </select>
                         </div>
                     </div>
@@ -172,17 +172,17 @@
             <!-- Sleep & Potty -->
             <div class="card mb-4">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="bi bi-moon-stars me-2"></i>النوم والحمام</h5>
+                    <h5 class="mb-0"><i class="bi bi-moon-stars me-2"></i>{% if ui_lang == 'en' %}Sleep & Potty{% else %}النوم والحمام{% endif %}</h5>
                 </div>
                 <div class="card-body">
                     <div class="row mb-4">
                         <div class="col-md-6">
-                            <label class="form-label" for="sleep_duration">مدة النوم (دقائق)</label>
+                            <label class="form-label" for="sleep_duration">{% if ui_lang == 'en' %}Sleep Duration (minutes){% else %}مدة النوم (دقائق){% endif %}</label>
                             <input type="number" class="form-control" id="sleep_duration" name="sleep_duration"
                                 value="0" step="15">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" for="bathroom_count">مرات الحمام</label>
+                            <label class="form-label" for="bathroom_count">{% if ui_lang == 'en' %}Bathroom Visits{% else %}مرات الحمام{% endif %}</label>
                             <div class="input-group">
                                 <button class="btn btn-outline-secondary" type="button"
                                     onclick="changeCount('bathroom_count', -1)">-</button>
@@ -195,16 +195,16 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" id="diaper_label">تغيير الحفاظ</label>
+                        <label class="form-label" id="diaper_label">{% if ui_lang == 'en' %}Diaper Change{% else %}تغيير الحفاظ{% endif %}</label>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="checkbox" id="diaper_change_wet"
                                 name="diaper_change_wet" value="1">
-                            <label class="form-check-label" for="diaper_change_wet">مبلل</label>
+                            <label class="form-check-label" for="diaper_change_wet">{% if ui_lang == 'en' %}Wet{% else %}مبلل{% endif %}</label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="checkbox" id="diaper_change_soiled"
                                 name="diaper_change_soiled" value="1">
-                            <label class="form-check-label" for="diaper_change_soiled">متسخ</label>
+                            <label class="form-check-label" for="diaper_change_soiled">{% if ui_lang == 'en' %}Soiled{% else %}متسخ{% endif %}</label>
                         </div>
                     </div>
                 </div>
@@ -213,46 +213,46 @@
             <!-- Activities -->
             <div class="card mb-4">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="bi bi-puzzle me-2"></i>الأنشطة والمهارات</h5>
+                    <h5 class="mb-0"><i class="bi bi-puzzle me-2"></i>{% if ui_lang == 'en' %}Activities & Skills{% else %}الأنشطة والمهارات{% endif %}</h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">أنشطة اليوم</label>
+                        <label class="form-label">{% if ui_lang == 'en' %}Today's Activities{% else %}أنشطة اليوم{% endif %}</label>
                         <div class="row g-2">
                             <div class="col-6 col-md-4">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="act_art">
-                                    <label class="form-check-label" for="act_art">رسم وفنون</label>
+                                    <label class="form-check-label" for="act_art">{% if ui_lang == 'en' %}Art & Drawing{% else %}رسم وفنون{% endif %}</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-4">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="act_music">
-                                    <label class="form-check-label" for="act_music">موسيقى</label>
+                                    <label class="form-check-label" for="act_music">{% if ui_lang == 'en' %}Music{% else %}موسيقى{% endif %}</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-4">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="act_sport">
-                                    <label class="form-check-label" for="act_sport">رياضة</label>
+                                    <label class="form-check-label" for="act_sport">{% if ui_lang == 'en' %}Sports{% else %}رياضة{% endif %}</label>
                                 </div>
                             </div>
                             <div class="col-6 col-md-4">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="act_story">
-                                    <label class="form-check-label" for="act_story">قصص</label>
+                                    <label class="form-check-label" for="act_story">{% if ui_lang == 'en' %}Stories{% else %}قصص{% endif %}</label>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="general_notes">ملاحظات عامة لولي الأمر</label>
+                        <label class="form-label" for="general_notes">{% if ui_lang == 'en' %}General Notes for Parent{% else %}ملاحظات عامة لولي الأمر{% endif %}</label>
                         <textarea class="form-control" id="general_notes" name="general_notes" rows="3"></textarea>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="photos">الصور (اختياري)</label>
+                        <label class="form-label" for="photos">{% if ui_lang == 'en' %}Photos (optional){% else %}الصور (اختياري){% endif %}</label>
                         <input type="file" class="form-control" id="photos" name="photos" multiple accept="image/*">
                     </div>
                 </div>
@@ -260,9 +260,9 @@
 
             <!-- Actions -->
             <div class="d-flex justify-content-end gap-2 mb-5">
-                <a href="/reports" class="btn btn-outline-secondary">إلغاء</a>
+                <a href="/reports" class="btn btn-outline-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
                 <button type="submit" class="btn btn-primary px-4">
-                    <i class="bi bi-send me-2"></i>إرسال التقرير
+                    <i class="bi bi-send me-2"></i>{% if ui_lang == 'en' %}Submit Report{% else %}إرسال التقرير{% endif %}
                 </button>
             </div>
         </form>
@@ -273,6 +273,9 @@
 {% block extra_js %}
 <script>
     // Auth helper
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     function getHeaders() {
         // Use centralized auth system
         if (!window.AuthService || !AuthService.isAuthenticated()) {
@@ -338,7 +341,7 @@
             const select = document.querySelector('select[name="child_id"]');
 
             if (children && children.length > 0) {
-                select.innerHTML = '<option value="">اختر الطفل...</option>' +
+                select.innerHTML = `<option value="">${T('اختر الطفل...', 'Select child...')}</option>` +
                     children.map(c => {
                         const name = c.first_name_ar && c.last_name_ar ?
                             `${c.first_name_ar} ${c.last_name_ar}` :
@@ -347,7 +350,7 @@
                         return `<option value="${c.id}">${name}${classInfo}</option>`;
                     }).join('');
             } else {
-                select.innerHTML = '<option value="">لا توجد أطفال متاحة</option>';
+                select.innerHTML = `<option value="">${T('لا توجد أطفال متاحة', 'No children available')}</option>`;
             }
         } catch (error) {
             console.error('Error loading children:', error);
@@ -372,9 +375,9 @@
             const select = document.getElementById('class_filter');
 
             if (select && classes.length > 0) {
-                select.innerHTML = '<option value="">جميع الصفوف</option>' +
+                select.innerHTML = `<option value="">${T('جميع الصفوف', 'All Classes')}</option>` +
                     classes.map(c => {
-                        const className = c.name || c.name_ar || c.name_en || `صف #${c.id}`;
+                        const className = c.name || c.name_ar || c.name_en || `${T('صف', 'Class')} #${c.id}`;
                         return `<option value="${c.id}">${className}</option>`;
                     }).join('');
             }
@@ -400,38 +403,38 @@
 
         // Mood
         const mood = fd.get('mood');
-        const moodMap = { happy: 'سعيد', normal: 'عادي', sad: 'حزين', tired: 'متعب', sick: 'مريض' };
-        if (mood) extraNotes.push(`المزاج: ${moodMap[mood] || mood}`);
+        const moodMap = { happy: T('سعيد','Happy'), normal: T('عادي','Normal'), sad: T('حزين','Sad'), tired: T('متعب','Tired'), sick: T('مريض','Sick') };
+        if (mood) extraNotes.push(`${T('المزاج','Mood')}: ${moodMap[mood] || mood}`);
 
-        if (fd.get('health_notes')) extraNotes.push(`ملاحظات صحية: ${fd.get('health_notes')}`);
+        if (fd.get('health_notes')) extraNotes.push(`${T('ملاحظات صحية','Health notes')}: ${fd.get('health_notes')}`);
 
         // Sleep & Potty
         const sleep = fd.get('sleep_duration');
-        if (sleep && parseInt(sleep) > 0) extraNotes.push(`نوم: ${sleep} دقيقة`);
+        if (sleep && parseInt(sleep) > 0) extraNotes.push(`${T('نوم','Sleep')}: ${sleep} ${T('دقيقة','min')}`);
 
         const bathroom = fd.get('bathroom_count');
-        if (bathroom && parseInt(bathroom) > 0) extraNotes.push(`حمام: ${bathroom} مرات`);
+        if (bathroom && parseInt(bathroom) > 0) extraNotes.push(`${T('حمام','Bathroom')}: ${bathroom} ${T('مرات','times')}`);
 
-        const diaperWet = fd.get('diaper_change_wet') ? 'مبلل' : '';
-        const diaperSoiled = fd.get('diaper_change_soiled') ? 'متسخ' : '';
-        if (diaperWet || diaperSoiled) extraNotes.push(`حفاظ: ${[diaperWet, diaperSoiled].filter(Boolean).join(', ')}`);
+        const diaperWet = fd.get('diaper_change_wet') ? T('مبلل','Wet') : '';
+        const diaperSoiled = fd.get('diaper_change_soiled') ? T('متسخ','Soiled') : '';
+        if (diaperWet || diaperSoiled) extraNotes.push(`${T('حفاظ','Diaper')}: ${[diaperWet, diaperSoiled].filter(Boolean).join(', ')}`);
 
         // Meals Details (Since API only takes boolean)
         const meals = ['breakfast', 'lunch', 'snack'];
-        const mealMap = { all: 'أكل كل شيء', most: 'أكل المعظم', some: 'أكل القليل', none: 'لم يأكل' };
+        const mealMap = { all: T('أكل كل شيء','Ate everything'), most: T('أكل المعظم','Ate most'), some: T('أكل القليل','Ate a little'), none: T('لم يأكل','Did not eat') };
         meals.forEach(m => {
             const val = fd.get(m); // Form value
             if (val && val !== 'none') {
-                extraNotes.push(`${m === 'breakfast' ? 'فطور' : m === 'lunch' ? 'غداء' : 'سناك'}: ${mealMap[val]}`);
+                extraNotes.push(`${m === 'breakfast' ? T('فطور','Breakfast') : m === 'lunch' ? T('غداء','Lunch') : T('سناك','Snack')}: ${mealMap[val]}`);
             }
         });
 
         // Activities
         let activitiesList = [];
-        if (document.getElementById('act_art').checked) activitiesList.push('رسم وفنون');
-        if (document.getElementById('act_music').checked) activitiesList.push('موسيقى');
-        if (document.getElementById('act_sport').checked) activitiesList.push('رياضة');
-        if (document.getElementById('act_story').checked) activitiesList.push('قصص');
+        if (document.getElementById('act_art').checked) activitiesList.push(T('رسم وفنون','Art & Drawing'));
+        if (document.getElementById('act_music').checked) activitiesList.push(T('موسيقى','Music'));
+        if (document.getElementById('act_sport').checked) activitiesList.push(T('رياضة','Sports'));
+        if (document.getElementById('act_story').checked) activitiesList.push(T('قصص','Stories'));
 
         const generalNotes = fd.get('general_notes');
         const combinedNotes = (extraNotes.join(' | ') + '\n' + (generalNotes || '')).trim();
@@ -494,15 +497,15 @@
 
             if (response.ok) {
                 // If using a toast library: showToast('تم الحفظ', 'success');
-                alert('تم إرسال التقرير بنجاح');
+                alert(T('تم إرسال التقرير بنجاح','Report submitted successfully'));
                 window.location.href = '/reports'; // Or similar redirect
             } else {
                 const err = await response.json();
-                alert('خطأ: ' + (err.detail || 'فشل الإرسال'));
+                alert(T('خطأ','Error') + ': ' + (err.detail || T('فشل الإرسال','Submission failed')));
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('حدث خطأ في الاتصال');
+            alert(T('حدث خطأ في الاتصال','Connection error'));
         }
     });
 </script>

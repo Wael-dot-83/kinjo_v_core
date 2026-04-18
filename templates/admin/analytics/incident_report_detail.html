@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
-{% block title %}تفاصيل تقرير الحوادث{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Incident Report Details{% else %}تفاصيل تقرير الحوادث{% endif %}{% endblock %}
 
 {% block page_header %}
 {{ page_header(
-title="تفاصيل تقرير الحوادث",
+title="Incident Report Details" if ui_lang == 'en' else "تفاصيل تقرير الحوادث",
 icon="bi-file-earmark-text",
 breadcrumbs=[
-{"label": "لوحة التحكم", "url": "/dashboard"},
-{"label": "التقارير اليومية", "url": "/daily-reports"},
-{"label": "تفاصيل التقرير", "url": None}
+{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Daily Reports" if ui_lang == 'en' else "التقارير اليومية", "url": "/daily-reports"},
+{"label": "Report Details" if ui_lang == 'en' else "تفاصيل التقرير", "url": None}
 ]
 ) }}
 {% endblock %}
@@ -20,13 +20,13 @@ breadcrumbs=[
     <div class="col-12">
         <div class="card shadow-sm">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0" id="reportTitle">جاري التحميل...</h5>
+                <h5 class="card-title mb-0" id="reportTitle">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</h5>
                 <div>
                     <button class="btn btn-outline-primary btn-sm me-2" onclick="exportReport()">
-                        <i class="bi bi-download me-1"></i>تصدير CSV
+                        <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
                     </button>
                     <button class="btn btn-outline-secondary btn-sm" onclick="window.history.back()">
-                        <i class="bi bi-arrow-right me-1"></i>العودة
+                        <i class="bi bi-arrow-right me-1"></i>{% if ui_lang == 'en' %}Back{% else %}العودة{% endif %}
                     </button>
                 </div>
             </div>
@@ -35,13 +35,13 @@ breadcrumbs=[
                 <div class="row mb-4" id="reportInfo">
                     <div class="col-md-6">
                         <div class="border rounded p-3 bg-light">
-                            <h6 class="text-muted mb-2">معلومات التقرير</h6>
+                            <h6 class="text-muted mb-2">{% if ui_lang == 'en' %}Report Info{% else %}معلومات التقرير{% endif %}</h6>
                             <div id="reportDetails"></div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="border rounded p-3 bg-light">
-                            <h6 class="text-muted mb-2">نطاق التقرير</h6>
+                            <h6 class="text-muted mb-2">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</h6>
                             <div id="reportScope"></div>
                         </div>
                     </div>
@@ -57,7 +57,7 @@ breadcrumbs=[
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header">
-                                <h6 class="mb-0">توزيع الحوادث حسب النوع</h6>
+                                <h6 class="mb-0">{% if ui_lang == 'en' %}Incidents by Type{% else %}توزيع الحوادث حسب النوع{% endif %}</h6>
                             </div>
                             <div class="card-body">
                                 <canvas id="incidentTypeChart" width="400" height="200"></canvas>
@@ -70,7 +70,7 @@ breadcrumbs=[
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header">
-                                <h6 class="mb-0">توزيع الحوادث حسب الشدة</h6>
+                                <h6 class="mb-0">{% if ui_lang == 'en' %}Incidents by Severity{% else %}توزيع الحوادث حسب الشدة{% endif %}</h6>
                             </div>
                             <div class="card-body">
                                 <canvas id="incidentSeverityChart" width="400" height="200"></canvas>
@@ -82,9 +82,9 @@ breadcrumbs=[
                 <!-- Loading Spinner -->
                 <div id="loadingSpinner" class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">جاري التحميل...</span>
+                        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                     </div>
-                    <div class="mt-2">جاري تحميل تفاصيل التقرير...</div>
+                    <div class="mt-2">{% if ui_lang == 'en' %}Loading report details...{% else %}جاري تحميل تفاصيل التقرير...{% endif %}</div>
                 </div>
             </div>
         </div>
@@ -96,15 +96,15 @@ breadcrumbs=[
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">تصدير التقرير</h5>
+                <h5 class="modal-title">{% if ui_lang == 'en' %}Export Report{% else %}تصدير التقرير{% endif %}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>سيتم تصدير التقرير بتنسيق CSV. هل تريد المتابعة؟</p>
+                <p>{% if ui_lang == 'en' %}The report will be exported in CSV format. Do you want to continue?{% else %}سيتم تصدير التقرير بتنسيق CSV. هل تريد المتابعة؟{% endif %}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="confirmExport()">تصدير</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="confirmExport()">{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}</button>
             </div>
         </div>
     </div>
@@ -114,6 +114,9 @@ breadcrumbs=[
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     let reportData = null;
     const reportId = {{ report_id | tojson }};
 
@@ -137,7 +140,7 @@ breadcrumbs=[
             document.getElementById('loadingSpinner').innerHTML = `
             <div class="alert alert-danger">
                 <i class="bi bi-exclamation-triangle me-2"></i>
-                فشل في تحميل تفاصيل التقرير. يرجى المحاولة مرة أخرى.
+                ${T('فشل في تحميل تفاصيل التقرير. يرجى المحاولة مرة أخرى.', 'Failed to load report details. Please try again.')}
             </div>
         `;
         }
@@ -145,22 +148,22 @@ breadcrumbs=[
 
     function displayReportDetails() {
         // Update title
-        document.getElementById('reportTitle').textContent = reportData.title || 'تقرير الحوادث';
+        document.getElementById('reportTitle').textContent = reportData.title || T('تقرير الحوادث', 'Incident Report');
 
         // Report details
         const detailsHtml = `
-        <p><strong>تاريخ الإنشاء:</strong> ${new Date(reportData.created_at).toLocaleDateString('ar-EG')}</p>
-        <p><strong>الفترة الزمنية:</strong> ${reportData.start_date} - ${reportData.end_date}</p>
-        <p><strong>أنشئ بواسطة:</strong> ${reportData.creator_name || 'غير محدد'}</p>
+        <p><strong>${T('تاريخ الإنشاء:', 'Created Date:')}</strong> ${new Date(reportData.created_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-EG')}</p>
+        <p><strong>${T('الفترة الزمنية:', 'Time Period:')}</strong> ${reportData.start_date} - ${reportData.end_date}</p>
+        <p><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong> ${reportData.creator_name || T('غير محدد', 'Unknown')}</p>
     `;
         document.getElementById('reportDetails').innerHTML = detailsHtml;
 
         // Report scope
-        let scopeHtml = `<p><strong>النوع:</strong> ${getScopeTypeLabel(reportData.scope_type)}</p>`;
+        let scopeHtml = `<p><strong>${T('النوع:', 'Type:')}</strong> ${getScopeTypeLabel(reportData.scope_type)}</p>`;
         if (reportData.scope_type === 'KINDERGARTEN' && reportData.kindergarten_name) {
-            scopeHtml += `<p><strong>الروضة:</strong> ${reportData.kindergarten_name}</p>`;
+            scopeHtml += `<p><strong>${T('الروضة:', 'Kindergarten:')}</strong> ${reportData.kindergarten_name}</p>`;
         } else if (reportData.scope_type === 'GOVERNORATE' && reportData.governorate) {
-            scopeHtml += `<p><strong>المحافظة:</strong> ${reportData.governorate}</p>`;
+            scopeHtml += `<p><strong>${T('المحافظة:', 'Governorate:')}</strong> ${reportData.governorate}</p>`;
         }
         document.getElementById('reportScope').innerHTML = scopeHtml;
 
@@ -171,7 +174,7 @@ breadcrumbs=[
             <div class="card text-center h-100">
                 <div class="card-body">
                     <div class="display-4 text-primary">${metrics.total_incidents || 0}</div>
-                    <div class="card-title">إجمالي الحوادث</div>
+                    <div class="card-title">${T('إجمالي الحوادث', 'Total Incidents')}</div>
                 </div>
             </div>
         </div>
@@ -179,7 +182,7 @@ breadcrumbs=[
             <div class="card text-center h-100">
                 <div class="card-body">
                     <div class="display-4 text-success">${metrics.open_incidents || 0}</div>
-                    <div class="card-title">حوادث مفتوحة</div>
+                    <div class="card-title">${T('حوادث مفتوحة', 'Open Incidents')}</div>
                 </div>
             </div>
         </div>
@@ -187,7 +190,7 @@ breadcrumbs=[
             <div class="card text-center h-100">
                 <div class="card-body">
                     <div class="display-4 text-warning">${metrics.closed_incidents || 0}</div>
-                    <div class="card-title">حوادث مغلقة</div>
+                    <div class="card-title">${T('حوادث مغلقة', 'Closed Incidents')}</div>
                 </div>
             </div>
         </div>
@@ -195,7 +198,7 @@ breadcrumbs=[
             <div class="card text-center h-100">
                 <div class="card-body">
                     <div class="display-4 text-danger">${metrics.incidents_by_severity?.HIGH || 0}</div>
-                    <div class="card-title">حوادث عالية الشدة</div>
+                    <div class="card-title">${T('حوادث عالية الشدة', 'High Severity Incidents')}</div>
                 </div>
             </div>
         </div>
@@ -241,7 +244,7 @@ breadcrumbs=[
             data: {
                 labels: Object.keys(severityData).map(key => getSeverityLabel(key)),
                 datasets: [{
-                    label: 'عدد الحوادث',
+                    label: T('عدد الحوادث', 'Incident Count'),
                     data: Object.values(severityData),
                     backgroundColor: '#36A2EB'
                 }]
@@ -259,30 +262,30 @@ breadcrumbs=[
 
     function getScopeTypeLabel(scopeType) {
         const labels = {
-            'ALL': 'جميع الروضات',
-            'GOVERNORATE': 'محافظة',
-            'KINDERGARTEN': 'روضة معينة'
+            'ALL': T('جميع الروضات', 'All Kindergartens'),
+            'GOVERNORATE': T('محافظة', 'Governorate'),
+            'KINDERGARTEN': T('روضة معينة', 'Specific Kindergarten')
         };
         return labels[scopeType] || scopeType;
     }
 
     function getIncidentTypeLabel(type) {
         const labels = {
-            'INJURY': 'إصابة',
-            'BEHAVIOR': 'سلوك',
-            'ILLNESS': 'مرض',
-            'ACCIDENT': 'حادث',
-            'OTHER': 'أخرى'
+            'INJURY': T('إصابة', 'Injury'),
+            'BEHAVIOR': T('سلوك', 'Behavior'),
+            'ILLNESS': T('مرض', 'Illness'),
+            'ACCIDENT': T('حادث', 'Accident'),
+            'OTHER': T('أخرى', 'Other')
         };
         return labels[type] || type;
     }
 
     function getSeverityLabel(severity) {
         const labels = {
-            'LOW': 'منخفضة',
-            'MEDIUM': 'متوسطة',
-            'HIGH': 'عالية',
-            'CRITICAL': 'حرجة'
+            'LOW': T('منخفضة', 'Low'),
+            'MEDIUM': T('متوسطة', 'Medium'),
+            'HIGH': T('عالية', 'High'),
+            'CRITICAL': T('حرجة', 'Critical')
         };
         return labels[severity] || severity;
     }

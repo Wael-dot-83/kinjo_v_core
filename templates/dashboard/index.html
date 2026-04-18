@@ -195,14 +195,14 @@
             <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
                 <div
                     class="card-header bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
-                    <h4 class="fw-bold mb-0">لوحة مؤشرات الأداء الرئيسية</h4>
+                    <h4 class="fw-bold mb-0">{% if ui_lang == 'en' %}Key Performance Indicators{% else %}لوحة مؤشرات الأداء الرئيسية{% endif %}</h4>
                     <div class="btn-group btn-group-sm rounded-pill shadow-sm overflow-hidden">
                         <button class="btn btn-light px-3 active" id="viewCardsBtn" onclick="toggleKPIView('cards')"
-                            aria-label="عرض البطاقات">
+                            aria-label="{% if ui_lang == 'en' %}Cards view{% else %}عرض البطاقات{% endif %}">
                             <i class="bi bi-grid-fill"></i>
                         </button>
                         <button class="btn btn-light px-3" id="viewTableBtn" onclick="toggleKPIView('table')"
-                            aria-label="عرض الجدول">
+                            aria-label="{% if ui_lang == 'en' %}Table view{% else %}عرض الجدول{% endif %}">
                             <i class="bi bi-list-ul"></i>
                         </button>
                     </div>
@@ -224,11 +224,11 @@
                             <table class="table table-hover align-middle">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>المؤشر</th>
-                                        <th>القيمة الحالية</th>
-                                        <th>التقييم</th>
-                                        <th>التوجه</th>
-                                        <th>إجراء</th>
+                                        <th>{% if ui_lang == 'en' %}Indicator{% else %}المؤشر{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Current Value{% else %}القيمة الحالية{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Rating{% else %}التقييم{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Trend{% else %}التوجه{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
                                     </tr>
                                 </thead>
                                 <tbody id="kpiTableBody">
@@ -244,7 +244,7 @@
             <!-- Proposed Actions Section -->
             <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
                 <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
-                    <h5 class="fw-bold mb-0">إجراءات مقترحة للتحسين</h5>
+                    <h5 class="fw-bold mb-0">{% if ui_lang == 'en' %}Suggested Improvement Actions{% else %}إجراءات مقترحة للتحسين{% endif %}</h5>
                 </div>
                 <div class="card-body p-4">
                     <div class="row g-3" id="nextActionsContainer">
@@ -256,10 +256,10 @@
                                     <i class="bi bi-plus-circle"></i>
                                 </div>
                                 <div>
-                                    <p class="mb-1 fw-bold">تسريع مراجعة التسجيلات</p>
-                                    <small class="text-muted d-block mb-2">هناك 5 طلبات تنتظر المراجعة منذ أكثر من
-                                        يومين.</small>
-                                    <span class="text-primary small fw-bold">راجع الطلبات الآن <i
+                                    <p class="mb-1 fw-bold">{% if ui_lang == 'en' %}Speed Up Enrollment Review{% else %}تسريع مراجعة التسجيلات{% endif %}</p>
+                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}There are 5 requests pending review for over 2 days.{% else %}هناك 5 طلبات تنتظر المراجعة منذ أكثر من
+                                        يومين.{% endif %}</small>
+                                    <span class="text-primary small fw-bold">{% if ui_lang == 'en' %}Review requests now{% else %}راجع الطلبات الآن{% endif %} <i
                                             class="bi bi-arrow-left ms-1"></i></span>
                                 </div>
                             </div>
@@ -271,10 +271,10 @@
                                     <i class="bi bi-calendar-check"></i>
                                 </div>
                                 <div>
-                                    <p class="mb-1 fw-bold">متابعة الغياب المتكرر</p>
-                                    <small class="text-muted d-block mb-2">تم رصد تراجع في حضور الأطفال هذا الأسبوع
-                                        بنسبة 4%.</small>
-                                    <span class="text-success small fw-bold">افحص تقرير الحضور <i
+                                    <p class="mb-1 fw-bold">{% if ui_lang == 'en' %}Follow Up on Repeated Absences{% else %}متابعة الغياب المتكرر{% endif %}</p>
+                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}A 4% decrease in children's attendance was detected this week.{% else %}تم رصد تراجع في حضور الأطفال هذا الأسبوع
+                                        بنسبة 4%.{% endif %}</small>
+                                    <span class="text-success small fw-bold">{% if ui_lang == 'en' %}Check attendance report{% else %}افحص تقرير الحضور{% endif %} <i
                                             class="bi bi-arrow-left ms-1"></i></span>
                                 </div>
                             </div>
@@ -286,17 +286,17 @@
             <!-- Recent Activity Table -->
             <div class="card border-0 shadow-sm" style="border-radius: 20px;">
                 <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
-                    <h5 class="fw-bold mb-0">نظرة عامة على الفصول</h5>
+                    <h5 class="fw-bold mb-0">{% if ui_lang == 'en' %}Class Overview{% else %}نظرة عامة على الفصول{% endif %}</h5>
                 </div>
                 <div class="card-body p-4">
                     <div class="table-responsive">
                         <table class="table table-borderless align-middle mb-0">
                             <thead class="text-muted small text-uppercase">
                                 <tr>
-                                    <th>اسم الفصل</th>
-                                    <th>المستوى</th>
-                                    <th>الحالة التقديرية</th>
-                                    <th>إجراء</th>
+                                    <th>{% if ui_lang == 'en' %}Class Name{% else %}اسم الفصل{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Level{% else %}المستوى{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Est. Status{% else %}الحالة التقديرية{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
                                 </tr>
                             </thead>
                             <tbody id="classOverviewTable">
@@ -310,7 +310,7 @@
 
         <!-- Left Column: Status Widgets (Secondary Content) -->
         <div class="col-12 col-lg-4 order-lg-2">
-            <h5 class="fw-bold mb-3 px-2">الحالة الآن</h5>
+            <h5 class="fw-bold mb-3 px-2">{% if ui_lang == 'en' %}Current Status{% else %}الحالة الآن{% endif %}</h5>
 
             <div class="row g-3">
                 <!-- Attendance Card -->
@@ -318,21 +318,21 @@
                     <div class="card h-100 border-0 shadow-sm status-widget overflow-hidden" id="attendanceCard">
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge bg-success-subtle text-success rounded-pill px-3">مؤشر إيجابي</span>
-                                <small class="text-muted">اليوم</small>
+                                <span class="badge bg-success-subtle text-success rounded-pill px-3">{% if ui_lang == 'en' %}Positive{% else %}مؤشر إيجابي{% endif %}</span>
+                                <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
                             </div>
-                            <p class="text-muted small mb-1 fw-medium">الحضور اليومي</p>
+                            <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}</p>
                             <h2 class="display-5 fw-bold mb-3" id="presentTodayValue">--</h2>
                             <div class="mb-4">
                                 <div class="progress" style="height: 6px;">
                                     <div class="progress-bar bg-success" role="progressbar" style="width: 85%"
                                         aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"
-                                        aria-label="نسبة الحضور"></div>
+                                        aria-label="{% if ui_lang == 'en' %}Attendance rate{% else %}نسبة الحضور{% endif %}"></div>
                                 </div>
-                                <small class="text-muted mt-1 d-block">85% من إجمالي الأطفال</small>
+                                <small class="text-muted mt-1 d-block">{% if ui_lang == 'en' %}85% of total children{% else %}85% من إجمالي الأطفال{% endif %}</small>
                             </div>
                             <a href="/attendance" class="btn btn-success w-100 rounded-pill py-2 fw-bold">
-                                إدارة الحضور <i class="bi bi-arrow-left ms-1"></i>
+                                {% if ui_lang == 'en' %}Manage Attendance{% else %}إدارة الحضور{% endif %} <i class="bi bi-arrow-left ms-1"></i>
                             </a>
                         </div>
                     </div>
@@ -344,13 +344,13 @@
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="badge bg-warning-subtle text-warning rounded-pill px-3"
-                                    id="pendingEnrollmentsBadge">يحتاج إجراء</span>
-                                <small class="text-muted">هذا الشهر</small>
+                                    id="pendingEnrollmentsBadge">{% if ui_lang == 'en' %}Needs Action{% else %}يحتاج إجراء{% endif %}</span>
+                                <small class="text-muted">{% if ui_lang == 'en' %}This Month{% else %}هذا الشهر{% endif %}</small>
                             </div>
-                            <p class="text-muted small mb-1 fw-medium">طلبات تسجيل معلقة</p>
+                            <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Pending Enrollment Requests{% else %}طلبات تسجيل معلقة{% endif %}</p>
                             <h2 class="display-5 fw-bold mb-4" id="pendingEnrollmentsValue">--</h2>
                             <a href="/enrollments" class="btn btn-warning w-100 rounded-pill py-2 fw-bold">
-                                مراجعة الطلبات <i class="bi bi-arrow-left ms-1"></i>
+                                {% if ui_lang == 'en' %}Review Requests{% else %}مراجعة الطلبات{% endif %} <i class="bi bi-arrow-left ms-1"></i>
                             </a>
                         </div>
                     </div>
@@ -362,13 +362,13 @@
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="badge bg-info-subtle text-info rounded-pill px-3"
-                                    id="pendingReportsBadge">قيد المراجعة</span>
-                                <small class="text-muted">اليوم</small>
+                                    id="pendingReportsBadge">{% if ui_lang == 'en' %}Under Review{% else %}قيد المراجعة{% endif %}</span>
+                                <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
                             </div>
-                            <p class="text-muted small mb-1 fw-medium">التقارير اليومية المعلقة</p>
+                            <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Pending Daily Reports{% else %}التقارير اليومية المعلقة{% endif %}</p>
                             <h2 class="display-5 fw-bold mb-4" id="pendingReportsValue">--</h2>
                             <a href="/daily-reports" class="btn btn-info text-white w-100 rounded-pill py-2 fw-bold">
-                                مراجعة التقارير <i class="bi bi-arrow-left ms-1"></i>
+                                {% if ui_lang == 'en' %}Review Reports{% else %}مراجعة التقارير{% endif %} <i class="bi bi-arrow-left ms-1"></i>
                             </a>
                         </div>
                     </div>
@@ -380,13 +380,13 @@
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="badge bg-danger-subtle text-danger rounded-pill px-3"
-                                    id="incidentsBadge">تنبيه حرج</span>
-                                <small class="text-muted">اليوم</small>
+                                    id="incidentsBadge">{% if ui_lang == 'en' %}Critical Alert{% else %}تنبيه حرج{% endif %}</span>
+                                <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
                             </div>
-                            <p class="text-muted small mb-1 fw-medium">الحوادث المبلغ عنها</p>
+                            <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Reported Incidents{% else %}الحوادث المبلغ عنها{% endif %}</p>
                             <h2 class="display-5 fw-bold mb-4" id="incidentsTodayValue">--</h2>
                             <a href="/safety" class="btn btn-danger w-100 rounded-pill py-2 fw-bold">
-                                إدارة السلامة <i class="bi bi-arrow-left ms-1"></i>
+                                {% if ui_lang == 'en' %}Safety Management{% else %}إدارة السلامة{% endif %} <i class="bi bi-arrow-left ms-1"></i>
                             </a>
                         </div>
                     </div>
@@ -404,7 +404,7 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-bar-chart-line me-2"></i>
-                    نظرة عامة على النظام
+                    {% if ui_lang == 'en' %}System Overview{% else %}نظرة عامة على النظام{% endif %}
                 </h5>
             </div>
             <div class="card-body">
@@ -412,25 +412,25 @@
                     <div class="col-6 col-md-3">
                         <div class="system-stat">
                             <div class="system-value text-primary" id="totalKindergartens">--</div>
-                            <div class="system-label">إجمالي الروضات</div>
+                            <div class="system-label">{% if ui_lang == 'en' %}Total Kindergartens{% else %}إجمالي الروضات{% endif %}</div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="system-stat">
                             <div class="system-value text-success" id="activeKindergartens">--</div>
-                            <div class="system-label">الروضات النشطة</div>
+                            <div class="system-label">{% if ui_lang == 'en' %}Active Kindergartens{% else %}الروضات النشطة{% endif %}</div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="system-stat">
                             <div class="system-value text-info" id="totalUsers">--</div>
-                            <div class="system-label">إجمالي المستخدمين</div>
+                            <div class="system-label">{% if ui_lang == 'en' %}Total Users{% else %}إجمالي المستخدمين{% endif %}</div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="system-stat">
                             <div class="system-value text-warning" id="systemHealth">--</div>
-                            <div class="system-label">حالة النظام</div>
+                            <div class="system-label">{% if ui_lang == 'en' %}System Health{% else %}حالة النظام{% endif %}</div>
                         </div>
                     </div>
                 </div>
@@ -496,16 +496,16 @@
                 </h5>
                 <div class="btn-group btn-group-sm mt-2" role="group">
                     <button type="button" class="btn btn-outline-primary active" onclick="toggleKPIView('cards')"
-                        id="viewCardsBtn" title="عرض البطاقات">
+                        id="viewCardsBtn" title="{% if ui_lang == 'en' %}Cards view{% else %}عرض البطاقات{% endif %}">
                         <i class="bi bi-columns-gap"></i>
                     </button>
                     <button type="button" class="btn btn-outline-primary" onclick="toggleKPIView('table')"
-                        id="viewTableBtn" title="عرض الجدول">
+                        id="viewTableBtn" title="{% if ui_lang == 'en' %}Table view{% else %}عرض الجدول{% endif %}">
                         <i class="bi bi-table"></i>
                     </button>
                     <button type="button" class="btn btn-outline-secondary" onclick="openKPIExplanations()"
-                        title="شرح المؤشرات">
-                        <i class="bi bi-question-circle me-1"></i>التعريفات
+                        title="{% if ui_lang == 'en' %}Explain indicators{% else %}شرح المؤشرات{% endif %}">
+                        <i class="bi bi-question-circle me-1"></i>{% if ui_lang == 'en' %}Definitions{% else %}التعريفات{% endif %}
                     </button>
                 </div>
             </div>
@@ -517,7 +517,7 @@
                             <i class="bi bi-trophy-fill"></i>
                         </div>
                         <div class="kpi-status-content">
-                            <div class="label">مؤشرات ممتازة</div>
+                            <div class="label">{% if ui_lang == 'en' %}Excellent{% else %}مؤشرات ممتازة{% endif %}</div>
                             <div class="count" id="excellentCount">0</div>
                         </div>
                     </div>
@@ -526,7 +526,7 @@
                             <i class="bi bi-exclamation-triangle-fill"></i>
                         </div>
                         <div class="kpi-status-content">
-                            <div class="label">يحتاج تحسين</div>
+                            <div class="label">{% if ui_lang == 'en' %}Needs Improvement{% else %}يحتاج تحسين{% endif %}</div>
                             <div class="count" id="cautionCount">0</div>
                         </div>
                     </div>
@@ -535,7 +535,7 @@
                             <i class="bi bi-exclamation-circle-fill"></i>
                         </div>
                         <div class="kpi-status-content">
-                            <div class="label">مؤشرات حرجة</div>
+                            <div class="label">{% if ui_lang == 'en' %}Critical{% else %}مؤشرات حرجة{% endif %}</div>
                             <div class="count" id="criticalCount">0</div>
                         </div>
                     </div>
@@ -544,7 +544,7 @@
                             <i class="bi bi-bell-fill"></i>
                         </div>
                         <div class="kpi-status-content">
-                            <div class="label">التنبيهات</div>
+                            <div class="label">{% if ui_lang == 'en' %}Alerts{% else %}التنبيهات{% endif %}</div>
                             <div class="count" id="alertCount">0</div>
                         </div>
                     </div>
@@ -612,11 +612,11 @@
                         <table class="table table-hover mb-0" id="kpiTable">
                             <thead class="table-light">
                                 <tr>
-                                    <th>المؤشر</th>
-                                    <th>القيمة</th>
-                                    <th>الحالة</th>
-                                    <th>الاتجاه</th>
-                                    <th>الإجراءات</th>
+                                    <th>{% if ui_lang == 'en' %}Indicator{% else %}المؤشر{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Value{% else %}القيمة{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Trend{% else %}الاتجاه{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                                 </tr>
                             </thead>
                             <tbody id="kpiTableBody">
@@ -639,7 +639,7 @@
                     <span class="p-2 bg-danger-subtle rounded-circle me-3">
                         <i class="bi bi-bell-fill text-danger"></i>
                     </span>
-                    التنبيهات الذكية
+                    {% if ui_lang == 'en' %}Smart Alerts{% else %}التنبيهات الذكية{% endif %}
                 </h5>
             </div>
             <div class="card-body p-4">
@@ -656,8 +656,8 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">شرح مؤشرات الأداء الرئيسية</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title">{% if ui_lang == 'en' %}KPI Explanations{% else %}شرح مؤشرات الأداء الرئيسية{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <div id="explanationsContainer">
@@ -665,9 +665,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
                 <button type="button" class="btn btn-primary" onclick="printExplanations()">
-                    <i class="bi bi-printer me-1"></i>طباعة
+                    <i class="bi bi-printer me-1"></i>{% if ui_lang == 'en' %}Print{% else %}طباعة{% endif %}
                 </button>
             </div>
         </div>
@@ -679,8 +679,8 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="actionModalTitle">إجراءات التحسين</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title" id="actionModalTitle">{% if ui_lang == 'en' %}Improvement Actions{% else %}إجراءات التحسين{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <div id="actionItemsContainer">
@@ -688,9 +688,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
                 <button type="button" class="btn btn-primary" onclick="exportActionPlan()">
-                    <i class="bi bi-download me-1"></i>تصدير خطة العمل
+                    <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export Action Plan{% else %}تصدير خطة العمل{% endif %}
                 </button>
             </div>
         </div>
@@ -703,22 +703,22 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">تفاصيل التحقق من البيانات</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title">{% if ui_lang == 'en' %}Data Validation Details{% else %}تفاصيل التحقق من البيانات{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <div class="validation-report">
                     <!-- Validation details will be loaded here by JavaScript -->
                     <div class="text-center py-4">
                         <div class="spinner-border spinner-border-sm" role="status"></div>
-                        <span class="ms-2">جاري تحميل تفاصيل التحقق...</span>
+                        <span class="ms-2">{% if ui_lang == 'en' %}Loading validation details...{% else %}جاري تحميل تفاصيل التحقق...{% endif %}</span>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
                 <button type="button" class="btn btn-primary" onclick="exportValidationReport()">
-                    <i class="bi bi-download me-1"></i>تصدير التقرير
+                    <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export Report{% else %}تصدير التقرير{% endif %}
                 </button>
             </div>
         </div>
@@ -733,37 +733,37 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-lightning me-2"></i>
-                    إجراءات سريعة
+                    {% if ui_lang == 'en' %}Quick Actions{% else %}إجراءات سريعة{% endif %}
                 </h5>
             </div>
             <div class="card-body quick-actions">
                 <a href="/attendance/check-in" class="btn btn-outline-success w-100 mb-2 text-start">
                     <i class="bi bi-box-arrow-in-left me-2"></i>
-                    تسجيل حضور
+                    {% if ui_lang == 'en' %}Record Attendance{% else %}تسجيل حضور{% endif %}
                 </a>
                 {% if current_user.role.value != 'ADMIN' %}
                 <a href="/daily-reports/create" class="btn btn-outline-primary w-100 mb-2 text-start">
                     <i class="bi bi-journal-plus me-2"></i>
-                    إنشاء تقرير يومي
+                    {% if ui_lang == 'en' %}Create Daily Report{% else %}إنشاء تقرير يومي{% endif %}
                 </a>
                 {% endif %}
                 <a href="/enrollments/new" class="btn btn-outline-info w-100 mb-2 text-start">
                     <i class="bi bi-person-plus me-2"></i>
-                    طلب تسجيل جديد
+                    {% if ui_lang == 'en' %}New Enrollment Request{% else %}طلب تسجيل جديد{% endif %}
                 </a>
                 {% if current_user.role.value == 'ADMIN' %}
                 <a href="/kindergartens/create" class="btn btn-outline-success w-100 mb-2 text-start">
                     <i class="bi bi-building-add me-2"></i>
-                    إضافة روضة جديدة
+                    {% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة روضة جديدة{% endif %}
                 </a>
                 {% endif %}
                 <a href="/incidents/create" class="btn btn-outline-warning w-100 mb-2 text-start">
                     <i class="bi bi-exclamation-triangle me-2"></i>
-                    إبلاغ عن حادث
+                    {% if ui_lang == 'en' %}Report Incident{% else %}إبلاغ عن حادث{% endif %}
                 </a>
                 <a href="/messages/new" class="btn btn-outline-secondary w-100 text-start">
                     <i class="bi bi-envelope me-2"></i>
-                    إرسال رسالة
+                    {% if ui_lang == 'en' %}Send Message{% else %}إرسال رسالة{% endif %}
                 </a>
             </div>
         </div>
@@ -775,7 +775,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-clock-history me-2"></i>
-                    تقارير معلقة
+                    {% if ui_lang == 'en' %}Pending Reports{% else %}تقارير معلقة{% endif %}
                 </h5>
                 <span class="badge bg-warning" id="pendingReportsListBadge">0</span>
             </div>
@@ -784,13 +784,13 @@
                     <!-- Populated by JavaScript -->
                     <div class="text-center py-4 text-muted">
                         <i class="bi bi-check-circle fs-1 d-block mb-2 opacity-25"></i>
-                        <span>لا توجد تقارير معلقة</span>
+                        <span>{% if ui_lang == 'en' %}No pending reports{% else %}لا توجد تقارير معلقة{% endif %}</span>
                     </div>
                 </div>
             </div>
             <div class="card-footer bg-transparent">
-                <a href="/daily-reports" class="small text-decoration-none" aria-label="عرض جميع التقارير اليومية">
-                    عرض جميع التقارير <i class="bi bi-arrow-left"></i>
+                <a href="/daily-reports" class="small text-decoration-none" aria-label="{% if ui_lang == 'en' %}View all daily reports{% else %}عرض جميع التقارير اليومية{% endif %}">
+                    {% if ui_lang == 'en' %}View All Reports{% else %}عرض جميع التقارير{% endif %} <i class="bi bi-arrow-left"></i>
                 </a>
             </div>
         </div>
@@ -802,7 +802,7 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-activity me-2"></i>
-                    النشاط الأخير
+                    {% if ui_lang == 'en' %}Recent Activity{% else %}النشاط الأخير{% endif %}
                 </h5>
             </div>
             <div class="card-body p-0">
@@ -815,8 +815,8 @@
                                 </span>
                             </div>
                             <div class="flex-grow-1">
-                                <p class="mb-1 small">تم قبول طلب تسجيل</p>
-                                <small class="text-muted">أحمد محمد - منذ 5 دقائق</small>
+                                <p class="mb-1 small">{% if ui_lang == 'en' %}Enrollment request accepted{% else %}تم قبول طلب تسجيل{% endif %}</p>
+                                <small class="text-muted">{% if ui_lang == 'en' %}Ahmed Mohammed - 5 min ago{% else %}أحمد محمد - منذ 5 دقائق{% endif %}</small>
                             </div>
                         </div>
                     </a>
@@ -828,8 +828,8 @@
                                 </span>
                             </div>
                             <div class="flex-grow-1">
-                                <p class="mb-1 small">تقرير يومي جديد</p>
-                                <small class="text-muted">سارة أحمد - منذ 15 دقيقة</small>
+                                <p class="mb-1 small">{% if ui_lang == 'en' %}New daily report{% else %}تقرير يومي جديد{% endif %}</p>
+                                <small class="text-muted">{% if ui_lang == 'en' %}Sara Ahmed - 15 min ago{% else %}سارة أحمد - منذ 15 دقيقة{% endif %}</small>
                             </div>
                         </div>
                     </a>
@@ -841,16 +841,16 @@
                                 </span>
                             </div>
                             <div class="flex-grow-1">
-                                <p class="mb-1 small">تسجيل حضور</p>
-                                <small class="text-muted">15 طفل - منذ 30 دقيقة</small>
+                                <p class="mb-1 small">{% if ui_lang == 'en' %}Attendance recorded{% else %}تسجيل حضور{% endif %}</p>
+                                <small class="text-muted">{% if ui_lang == 'en' %}15 children - 30 min ago{% else %}15 طفل - منذ 30 دقيقة{% endif %}</small>
                             </div>
                         </div>
                     </a>
                 </div>
             </div>
             <div class="card-footer bg-transparent">
-                <a href="/audit-logs" class="small text-decoration-none" aria-label="عرض السجل الكامل للنشاط">
-                    عرض السجل الكامل <i class="bi bi-arrow-left"></i>
+                <a href="/audit-logs" class="small text-decoration-none" aria-label="{% if ui_lang == 'en' %}View full activity log{% else %}عرض السجل الكامل للنشاط{% endif %}">
+                    {% if ui_lang == 'en' %}View Full Log{% else %}عرض السجل الكامل{% endif %} <i class="bi bi-arrow-left"></i>
                 </a>
             </div>
         </div>
@@ -865,10 +865,10 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-bar-chart me-2"></i>
-                    مؤشرات الأداء الرئيسية
+                    {% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}
                 </h5>
-                <a href="/kpi" class="btn btn-sm btn-outline-primary" aria-label="عرض تفاصيل مؤشرات الأداء الرئيسية">
-                    عرض التفاصيل <i class="bi bi-arrow-left ms-1"></i>
+                <a href="/kpi" class="btn btn-sm btn-outline-primary" aria-label="{% if ui_lang == 'en' %}View KPI details{% else %}عرض تفاصيل مؤشرات الأداء الرئيسية{% endif %}">
+                    {% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %} <i class="bi bi-arrow-left ms-1"></i>
                 </a>
             </div>
             <div class="card-body">
@@ -876,7 +876,7 @@
                     <div class="col-6 col-md-3">
                         <div class="kpi-card">
                             <div class="kpi-value text-success" id="kpiAttendance">--</div>
-                            <div class="kpi-label">نسبة الحضور</div>
+                            <div class="kpi-label">{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}</div>
                             <div class="kpi-trend up">
                                 <i class="bi bi-arrow-up"></i> 2.5%
                             </div>
@@ -885,7 +885,7 @@
                     <div class="col-6 col-md-3">
                         <div class="kpi-card">
                             <div class="kpi-value text-info" id="kpiRatioCompliance">--</div>
-                            <div class="kpi-label">امتثال النسبة</div>
+                            <div class="kpi-label">{% if ui_lang == 'en' %}Ratio Compliance{% else %}امتثال النسبة{% endif %}</div>
                             <div class="kpi-trend up">
                                 <i class="bi bi-arrow-up"></i> 1.2%
                             </div>
@@ -894,7 +894,7 @@
                     <div class="col-6 col-md-3">
                         <div class="kpi-card">
                             <div class="kpi-value text-warning" id="kpiIncidentRate">--</div>
-                            <div class="kpi-label">معدل الحوادث</div>
+                            <div class="kpi-label">{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}</div>
                             <div class="kpi-trend down">
                                 <i class="bi bi-arrow-down"></i> 0.5%
                             </div>
@@ -903,7 +903,7 @@
                     <div class="col-6 col-md-3">
                         <div class="kpi-card">
                             <div id="governanceBand" class="badge fs-4 px-4 py-2">--</div>
-                            <div class="kpi-label mt-2">تقييم الحوكمة</div>
+                            <div class="kpi-label mt-2">{% if ui_lang == 'en' %}Governance Rating{% else %}تقييم الحوكمة{% endif %}</div>
                             <div class="kpi-trend" id="governanceScore">--</div>
                         </div>
                     </div>
@@ -926,7 +926,7 @@
                     <i class="bi bi-house-door"></i>
                 </span>
                 <div>
-                    <div class="text-muted small">إجمالي الفصول</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Total Classes{% else %}إجمالي الفصول{% endif %}</div>
                     <div class="h4 mb-0 fw-bold" id="managerSummaryClasses">--</div>
                 </div>
             </div>
@@ -939,7 +939,7 @@
                     <i class="bi bi-journal-text"></i>
                 </span>
                 <div>
-                    <div class="text-muted small">تقارير بانتظار المراجعة</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Reports Pending Review{% else %}تقارير بانتظار المراجعة{% endif %}</div>
                     <div class="h4 mb-0 fw-bold" id="managerSummaryPendingReports">--</div>
                 </div>
             </div>
@@ -952,7 +952,7 @@
                     <i class="bi bi-person-badge"></i>
                 </span>
                 <div>
-                    <div class="text-muted small">المشرفون النشطون</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Active Supervisors{% else %}المشرفون النشطون{% endif %}</div>
                     <div class="h4 mb-0 fw-bold" id="managerSummarySupervisors">--</div>
                 </div>
             </div>
@@ -965,7 +965,7 @@
                     <i class="bi bi-people"></i>
                 </span>
                 <div>
-                    <div class="text-muted small">أولياء الأمور</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Parents{% else %}أولياء الأمور{% endif %}</div>
                     <div class="h4 mb-0 fw-bold" id="managerSummaryParents">--</div>
                 </div>
             </div>
@@ -981,12 +981,12 @@
                 <div>
                     <h5 class="card-title mb-1">
                         <i class="bi bi-journal-text me-2"></i>
-                        إدارة التقارير اليومية
+                        {% if ui_lang == 'en' %}Daily Reports Management{% else %}إدارة التقارير اليومية{% endif %}
                     </h5>
-                    <p class="manager-section-subtitle mb-0">متابعة التقارير غير المعتمدة مع تحديد الأولوية</p>
+                    <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Track unapproved reports with prioritization{% else %}متابعة التقارير غير المعتمدة مع تحديد الأولوية{% endif %}</p>
                 </div>
                 <button class="btn btn-sm btn-outline-primary" onclick="loadSubmittedReports()">
-                    <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+                    <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
                 </button>
             </div>
             <div class="card-body">
@@ -994,18 +994,18 @@
                     <table class="table table-hover align-middle manager-table">
                         <thead>
                             <tr>
-                                <th>الطفل</th>
-                                <th>التاريخ</th>
-                                <th>المشرف</th>
-                                <th>الحالة</th>
-                                <th>الإجراءات</th>
+                                <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Supervisor{% else %}المشرف{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                             </tr>
                         </thead>
                         <tbody id="reportsTable">
                             <tr>
                                 <td colspan="5" class="text-center py-4">
                                     <div class="spinner-border spinner-border-sm" role="status"></div>
-                                    <span class="ms-2">جاري تحميل التقارير...</span>
+                                    <span class="ms-2">{% if ui_lang == 'en' %}Loading reports...{% else %}جاري تحميل التقارير...{% endif %}</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -1023,15 +1023,15 @@
             <div class="card-header">
                 <h5 class="card-title mb-1">
                     <i class="bi bi-bar-chart me-2"></i>
-                    إحصائيات المشرفين
+                    {% if ui_lang == 'en' %}Supervisor Statistics{% else %}إحصائيات المشرفين{% endif %}
                 </h5>
-                <p class="manager-section-subtitle mb-0">قراءة سريعة لنشاط المشرفين ومعدل التفعيل</p>
+                <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Quick read on supervisor activity and activation rate{% else %}قراءة سريعة لنشاط المشرفين ومعدل التفعيل{% endif %}</p>
             </div>
             <div class="card-body">
                 <div id="supervisorStatsContainer">
                     <div class="text-center py-4">
                         <div class="spinner-border spinner-border-sm" role="status"></div>
-                        <span class="ms-2">جاري تحميل الإحصائيات...</span>
+                        <span class="ms-2">{% if ui_lang == 'en' %}Loading statistics...{% else %}جاري تحميل الإحصائيات...{% endif %}</span>
                     </div>
                 </div>
             </div>
@@ -1047,12 +1047,12 @@
                 <div>
                     <h5 class="card-title mb-1">
                         <i class="bi bi-house-door me-2"></i>
-                        إدارة الفصول
+                        {% if ui_lang == 'en' %}Class Management{% else %}إدارة الفصول{% endif %}
                     </h5>
-                    <p class="manager-section-subtitle mb-0">متابعة السعة والاستيعاب لكل فصل في الوقت الفعلي</p>
+                    <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Track capacity and enrollment per class in real-time{% else %}متابعة السعة والاستيعاب لكل فصل في الوقت الفعلي{% endif %}</p>
                 </div>
                 <button class="btn btn-sm btn-primary" onclick="showCreateClassModal()">
-                    <i class="bi bi-plus-circle me-1"></i>فصل جديد
+                    <i class="bi bi-plus-circle me-1"></i>{% if ui_lang == 'en' %}New Class{% else %}فصل جديد{% endif %}
                 </button>
             </div>
             <div class="card-body">
@@ -1060,20 +1060,20 @@
                     <table class="table table-hover align-middle manager-table">
                         <thead>
                             <tr>
-                                <th>اسم الفصل</th>
-                                <th>المشرف</th>
-                                <th>السعة</th>
-                                <th>الأطفال المسجلون</th>
-                                <th>الانتظار</th>
-                                <th>الحالة</th>
-                                <th>الإجراءات</th>
+                                <th>{% if ui_lang == 'en' %}Class Name{% else %}اسم الفصل{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Supervisor{% else %}المشرف{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Enrolled Children{% else %}الأطفال المسجلون{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Waitlist{% else %}الانتظار{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                             </tr>
                         </thead>
                         <tbody id="classesTable">
                             <tr>
                                 <td colspan="7" class="text-center py-4">
                                     <div class="spinner-border spinner-border-sm" role="status"></div>
-                                    <span class="ms-2">جاري تحميل الفصول...</span>
+                                    <span class="ms-2">{% if ui_lang == 'en' %}Loading classes...{% else %}جاري تحميل الفصول...{% endif %}</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -1092,16 +1092,16 @@
                 <div>
                     <h5 class="card-title mb-1">
                         <i class="bi bi-people me-2"></i>
-                        إدارة الحسابات
+                        {% if ui_lang == 'en' %}Account Management{% else %}إدارة الحسابات{% endif %}
                     </h5>
-                    <p class="manager-section-subtitle mb-0">إدارة المشرفين وأولياء الأمور مع وصول سريع للمراسلة</p>
+                    <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Manage supervisors and parents with quick messaging access{% else %}إدارة المشرفين وأولياء الأمور مع وصول سريع للمراسلة{% endif %}</p>
                 </div>
                 <div class="btn-group manager-account-actions" role="group">
                     <button class="btn btn-sm btn-success" onclick="showCreateUserModal('SUPERVISOR')">
-                        <i class="bi bi-person-plus me-1"></i>مشرف جديد
+                        <i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}New Supervisor{% else %}مشرف جديد{% endif %}
                     </button>
                     <button class="btn btn-sm btn-info" onclick="showCreateUserModal('PARENT')">
-                        <i class="bi bi-person-plus me-1"></i>والد جديد
+                        <i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}New Parent{% else %}والد جديد{% endif %}
                     </button>
                 </div>
             </div>
@@ -1110,13 +1110,13 @@
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="supervisors-tab" data-bs-toggle="tab"
                             data-bs-target="#supervisors" type="button" role="tab">
-                            المشرفون
+                            {% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="parents-tab" data-bs-toggle="tab" data-bs-target="#parents"
                             type="button" role="tab">
-                            الآباء
+                            {% if ui_lang == 'en' %}Parents{% else %}الآباء{% endif %}
                         </button>
                     </li>
                 </ul>
@@ -1126,17 +1126,17 @@
                             <table class="table table-hover align-middle manager-table">
                                 <thead>
                                     <tr>
-                                        <th>اسم المستخدم</th>
-                                        <th>البريد الإلكتروني</th>
-                                        <th>تاريخ الإنشاء</th>
-                                        <th>الإجراءات</th>
+                                        <th>{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Created{% else %}تاريخ الإنشاء{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                                     </tr>
                                 </thead>
                                 <tbody id="supervisorsTable">
                                     <tr>
                                         <td colspan="4" class="text-center py-4">
                                             <div class="spinner-border spinner-border-sm" role="status"></div>
-                                            <span class="ms-2">جاري التحميل...</span>
+                                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1148,18 +1148,18 @@
                             <table class="table table-hover align-middle manager-table">
                                 <thead>
                                     <tr>
-                                        <th>اسم الوالد</th>
-                                        <th>اسم المستخدم</th>
-                                        <th>الهاتف</th>
-                                        <th>عدد الأطفال</th>
-                                        <th>الإجراءات</th>
+                                        <th>{% if ui_lang == 'en' %}Parent Name{% else %}اسم الوالد{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Children{% else %}عدد الأطفال{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                                     </tr>
                                 </thead>
                                 <tbody id="parentsTable">
                                     <tr>
                                         <td colspan="5" class="text-center py-4">
                                             <div class="spinner-border spinner-border-sm" role="status"></div>
-                                            <span class="ms-2">جاري التحميل...</span>
+                                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1182,9 +1182,9 @@
                 <h5 class="card-title mb-0">
                     <i class="bi bi-calendar-day me-2"></i>
                     {% if current_user.role.value == 'ADMIN' %}
-                    نظرة عامة على الروضات - {{ today }}
+                    {% if ui_lang == 'en' %}Kindergarten Overview - {{ today }}{% else %}نظرة عامة على الروضات - {{ today }}{% endif %}
                     {% else %}
-                    نظرة عامة على اليوم - {{ today }}
+                    {% if ui_lang == 'en' %}Today's Overview - {{ today }}{% else %}نظرة عامة على اليوم - {{ today }}{% endif %}
                     {% endif %}
                 </h5>
             </div>
@@ -1194,27 +1194,27 @@
                         {% if current_user.role.value == 'ADMIN' %}
                         <thead>
                             <tr>
-                                <th>الروضة</th>
-                                <th>الحالة</th>
-                                <th>المسجلون</th>
-                                <th>الحضور اليوم</th>
-                                <th>التقارير المعلقة</th>
-                                <th>استغلال السعة</th>
-                                <th>الترخيص</th>
-                                <th>الإجراءات</th>
+                                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Enrolled{% else %}المسجلون{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Attendance Today{% else %}الحضور اليوم{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Pending Reports{% else %}التقارير المعلقة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Capacity Usage{% else %}استغلال السعة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}License{% else %}الترخيص{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                             </tr>
                         </thead>
                         <tbody id="kindergartensOverviewTable">
                             {% else %}
                             <thead>
                                 <tr>
-                                    <th>الفصل</th>
-                                    <th>السعة</th>
-                                    <th>الحاضرون</th>
-                                    <th>الغائبون</th>
-                                    <th>التقارير</th>
-                                    <th>الحالة</th>
-                                    <th>الإجراءات</th>
+                                    <th>{% if ui_lang == 'en' %}Class{% else %}الفصل{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Present{% else %}الحاضرون{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Absent{% else %}الغائبون{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                                 </tr>
                             </thead>
                         <tbody id="classOverviewTable">
@@ -1223,7 +1223,7 @@
                                 <td colspan="{% if current_user.role.value == 'ADMIN' %}8{% else %}7{% endif %}"
                                     class="text-center py-4">
                                     <div class="spinner-border spinner-border-sm" role="status"></div>
-                                    <span class="ms-2">جاري التحميل...</span>
+                                    <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                                 </td>
                             </tr>
                         </tbody>

@@ -1,25 +1,25 @@
 {% extends 'base.html' %}
 
-{% block title %}تفاصيل التقرير اليومي{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Daily Report Details{% else %}تفاصيل التقرير اليومي{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
             <i class="bi bi-journal-check me-2 text-primary"></i>
-            تقرير يومي: {{ report.child_name }}
+            {% if ui_lang == 'en' %}Daily Report: {{ report.child_name }}{% else %}تقرير يومي: {{ report.child_name }}{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/reports">التقارير</a></li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item"><a href="/reports">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</a></li>
                 <li class="breadcrumb-item active">{{ report.date }}</li>
             </ol>
         </nav>
     </div>
     <div class="btn-toolbar">
         <button class="btn btn-outline-primary" onclick="window.print()">
-            <i class="bi bi-printer me-2"></i>طباعة
+            <i class="bi bi-printer me-2"></i>{% if ui_lang == 'en' %}Print{% else %}طباعة{% endif %}
         </button>
     </div>
 </div>
@@ -42,12 +42,12 @@
                             <div class="text-muted">
                                 <i class="bi bi-calendar-event me-2"></i>{{ report.date }}
                                 <span class="mx-2">•</span>
-                                <i class="bi bi-person-badge me-2"></i>المعلمة: {{ report.teacher_name }}
+                                <i class="bi bi-person-badge me-2"></i>{% if ui_lang == 'en' %}Teacher{% else %}المعلمة{% endif %}: {{ report.teacher_name }}
                             </div>
                         </div>
                     </div>
                     <div class="text-center bg-white p-3 rounded shadow-sm">
-                        <div class="small text-muted mb-1">المزاج</div>
+                        <div class="small text-muted mb-1">{% if ui_lang == 'en' %}Mood{% else %}المزاج{% endif %}</div>
                         <div class="fs-1" title="{{ report.mood_text }}">{{ report.mood_emoji }}</div>
                     </div>
                 </div>
@@ -59,33 +59,33 @@
             <div class="col-md-6">
                 <div class="card h-100">
                     <div class="card-header bg-success text-white">
-                        <h5 class="mb-0 card-title text-white"><i class="bi bi-egg-fried me-2"></i>الوجبات</h5>
+                        <h5 class="mb-0 card-title text-white"><i class="bi bi-egg-fried me-2"></i>{% if ui_lang == 'en' %}Meals{% else %}الوجبات{% endif %}</h5>
                     </div>
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <span>الفطور</span>
+                                <span>{% if ui_lang == 'en' %}Breakfast{% else %}الفطور{% endif %}</span>
                                 <span
-                                    class="badge {{ 'bg-success' if report.breakfast else 'bg-secondary' }} rounded-pill px-3">{{
-                                    'نعم' if report.breakfast else 'لا' }}</span>
+                                    class="badge {{ 'bg-success' if report.breakfast else 'bg-secondary' }} rounded-pill px-3">{%
+                                    if ui_lang == 'en' %}{{ 'Yes' if report.breakfast else 'No' }}{% else %}{{ 'نعم' if report.breakfast else 'لا' }}{% endif %}</span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <span>الغداء</span>
+                                <span>{% if ui_lang == 'en' %}Lunch{% else %}الغداء{% endif %}</span>
                                 <span
-                                    class="badge {{ 'bg-success' if report.lunch else 'bg-secondary' }} rounded-pill px-3">{{
-                                    'نعم' if report.lunch else 'لا' }}</span>
+                                    class="badge {{ 'bg-success' if report.lunch else 'bg-secondary' }} rounded-pill px-3">{%
+                                    if ui_lang == 'en' %}{{ 'Yes' if report.lunch else 'No' }}{% else %}{{ 'نعم' if report.lunch else 'لا' }}{% endif %}</span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <span>سناك</span>
+                                <span>{% if ui_lang == 'en' %}Snack{% else %}سناك{% endif %}</span>
                                 <span
-                                    class="badge {{ 'bg-success' if report.snack else 'bg-secondary' }} rounded-pill px-3">{{
-                                    'نعم' if report.snack else 'لا' }}</span>
+                                    class="badge {{ 'bg-success' if report.snack else 'bg-secondary' }} rounded-pill px-3">{%
+                                    if ui_lang == 'en' %}{{ 'Yes' if report.snack else 'No' }}{% else %}{{ 'نعم' if report.snack else 'لا' }}{% endif %}</span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <span>حليب</span>
+                                <span>{% if ui_lang == 'en' %}Milk{% else %}حليب{% endif %}</span>
                                 <span
-                                    class="badge {{ 'bg-success' if report.milk else 'bg-secondary' }} rounded-pill px-3">{{
-                                    'نعم' if report.milk else 'لا' }}</span>
+                                    class="badge {{ 'bg-success' if report.milk else 'bg-secondary' }} rounded-pill px-3">{%
+                                    if ui_lang == 'en' %}{{ 'Yes' if report.milk else 'No' }}{% else %}{{ 'نعم' if report.milk else 'لا' }}{% endif %}</span>
                             </li>
                         </ul>
                     </div>
@@ -96,33 +96,33 @@
             <div class="col-md-6">
                 <div class="card h-100">
                     <div class="card-header bg-info text-white">
-                        <h5 class="mb-0 card-title text-white"><i class="bi bi-moon-stars me-2"></i>الراحة والنظافة</h5>
+                        <h5 class="mb-0 card-title text-white"><i class="bi bi-moon-stars me-2"></i>{% if ui_lang == 'en' %}Rest & Hygiene{% else %}الراحة والنظافة{% endif %}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row text-center mb-4">
                             <div class="col-6 border-end">
-                                <h6 class="text-muted">النوم</h6>
+                                <h6 class="text-muted">{% if ui_lang == 'en' %}Sleep{% else %}النوم{% endif %}</h6>
                                 <h3 class="fw-bold text-info">{{ report.sleep_minutes }}</h3>
-                                <small class="text-muted">دقيقة</small>
+                                <small class="text-muted">{% if ui_lang == 'en' %}min{% else %}دقيقة{% endif %}</small>
                             </div>
                             <div class="col-6">
-                                <h6 class="text-muted">الحمام</h6>
+                                <h6 class="text-muted">{% if ui_lang == 'en' %}Bathroom{% else %}الحمام{% endif %}</h6>
                                 <h3 class="fw-bold text-info">{{ report.bathroom_count or 0 }}</h3>
-                                <small class="text-muted">مرات</small>
+                                <small class="text-muted">{% if ui_lang == 'en' %}times{% else %}مرات{% endif %}</small>
                             </div>
                         </div>
 
                         <div class="bg-light p-3 rounded">
-                            <h6 class="mb-2 fw-bold small">تغيير الحفاظ:</h6>
+                            <h6 class="mb-2 fw-bold small">{% if ui_lang == 'en' %}Diaper Change:{% else %}تغيير الحفاظ:{% endif %}</h6>
                             <div class="d-flex gap-2">
                                 {% if report.diaper_wet %}
-                                <span class="badge bg-secondary text-dark">مبلل</span>
+                                <span class="badge bg-secondary text-dark">{% if ui_lang == 'en' %}Wet{% else %}مبلل{% endif %}</span>
                                 {% endif %}
                                 {% if report.diaper_soiled %}
-                                <span class="badge bg-secondary text-dark">متسخ</span>
+                                <span class="badge bg-secondary text-dark">{% if ui_lang == 'en' %}Soiled{% else %}متسخ{% endif %}</span>
                                 {% endif %}
                                 {% if not report.diaper_wet and not report.diaper_soiled %}
-                                <span class="text-muted small">لا يوجد</span>
+                                <span class="text-muted small">{% if ui_lang == 'en' %}None{% else %}لا يوجد{% endif %}</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -134,11 +134,11 @@
         <!-- Activities & Notes -->
         <div class="card mb-4">
             <div class="card-header bg-warning">
-                <h5 class="mb-0 card-title text-dark"><i class="bi bi-stars me-2"></i>الأنشطة والملاحظات</h5>
+                <h5 class="mb-0 card-title text-dark"><i class="bi bi-stars me-2"></i>{% if ui_lang == 'en' %}Activities & Notes{% else %}الأنشطة والملاحظات{% endif %}</h5>
             </div>
             <div class="card-body">
                 <div class="mb-4">
-                    <h6 class="fw-bold text-muted mb-3">أنشطة اليوم</h6>
+                    <h6 class="fw-bold text-muted mb-3">{% if ui_lang == 'en' %}Today's Activities{% else %}أنشطة اليوم{% endif %}</h6>
                     <div class="d-flex flex-wrap gap-2">
                         {% for activity in report.activities %}
                         <span class="badge bg-warning text-dark border border-warning fs-6 px-3 py-2">
@@ -149,8 +149,8 @@
                 </div>
 
                 <div class="p-3 bg-light rounded border-start border-4 border-warning">
-                    <h6 class="fw-bold mb-2">ملاحظات المعلمة:</h6>
-                    <p class="mb-0 text-muted">{{ report.notes or 'لا توجد ملاحظات إضافية' }}</p>
+                    <h6 class="fw-bold mb-2">{% if ui_lang == 'en' %}Teacher's Notes:{% else %}ملاحظات المعلمة:{% endif %}</h6>
+                    <p class="mb-0 text-muted">{{ report.notes or ("No additional notes" if ui_lang == 'en' else 'لا توجد ملاحظات إضافية') }}</p>
                 </div>
             </div>
         </div>
@@ -159,13 +159,13 @@
         {% if report.photos %}
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0 card-title">صور من اليوم</h5>
+                <h5 class="mb-0 card-title">{% if ui_lang == 'en' %}Photos from Today{% else %}صور من اليوم{% endif %}</h5>
             </div>
             <div class="card-body">
                 <div class="row g-2">
                     {% for photo in report.photos %}
                     <div class="col-6 col-md-3">
-                        <img src="{{ photo.url }}" class="img-fluid rounded shadow-sm" alt="نشاط يومي">
+                        <img src="{{ photo.url }}" class="img-fluid rounded shadow-sm" alt="{% if ui_lang == 'en' %}Daily activity{% else %}نشاط يومي{% endif %}">
                     </div>
                     {% endfor %}
                 </div>

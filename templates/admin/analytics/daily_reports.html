@@ -1,30 +1,30 @@
 {% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
-{% block title %}التقارير اليومية{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}{% endblock %}
 
 {% block page_header %}
 {{ page_header(
-title="التقارير اليومية",
+title="Daily Reports" if ui_lang == 'en' else "التقارير اليومية",
 icon="bi-file-earmark-text",
 breadcrumbs=[
-{"label": "لوحة التحكم", "url": "/dashboard"},
-{"label": "التقارير اليومية", "url": None}
+{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Daily Reports" if ui_lang == 'en' else "التقارير اليومية", "url": None}
 ]
 ) }}
 
 <!-- Page Help Content -->
-<div id="pageHelpContent" class="d-none" data-help-title="دليل التقارير اليومية">
+<div id="pageHelpContent" class="d-none" data-help-title="{% if ui_lang == 'en' %}Daily Reports Guide{% else %}دليل التقارير اليومية{% endif %}">
     <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-file-earmark-text me-2"></i>التقارير اليومية</h6>
-        <p>عرض وإدارة التقارير المولدة للحوادث والإحصائيات:</p>
+        <h6 class="fw-bold text-primary"><i class="bi bi-file-earmark-text me-2"></i>{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}</h6>
+        <p>{% if ui_lang == 'en' %}View and manage generated incident and statistics reports:{% else %}عرض وإدارة التقارير المولدة للحوادث والإحصائيات:{% endif %}</p>
         <ul class="list-unstyled">
-            <li class="mb-2"><strong><i class="bi bi-filter text-success me-2"></i>تصفية التقارير:</strong> يمكنك تصفية
-                التقارير حسب النطاق (روضة معينة، محافظة، أو جميع الروضات).</li>
-            <li class="mb-2"><strong><i class="bi bi-eye text-primary me-2"></i>عرض التفاصيل:</strong> انقر على "عرض"
-                لرؤية تفاصيل التقرير والإحصائيات.</li>
-            <li class="mb-2"><strong><i class="bi bi-download text-info me-2"></i>تصدير التقارير:</strong> يمكنك تصدير
-                التقارير بتنسيق CSV للتحليل الإضافي.</li>
+            <li class="mb-2"><strong><i class="bi bi-filter text-success me-2"></i>{% if ui_lang == 'en' %}Filter Reports:{% else %}تصفية التقارير:{% endif %}</strong> {% if ui_lang == 'en' %}You can filter reports by scope (specific kindergarten, governorate, or all kindergartens).{% else %}يمكنك تصفية
+                التقارير حسب النطاق (روضة معينة، محافظة، أو جميع الروضات).{% endif %}</li>
+            <li class="mb-2"><strong><i class="bi bi-eye text-primary me-2"></i>{% if ui_lang == 'en' %}View Details:{% else %}عرض التفاصيل:{% endif %}</strong> {% if ui_lang == 'en' %}Click "View" to see report details and statistics.{% else %}انقر على "عرض"
+                لرؤية تفاصيل التقرير والإحصائيات.{% endif %}</li>
+            <li class="mb-2"><strong><i class="bi bi-download text-info me-2"></i>{% if ui_lang == 'en' %}Export Reports:{% else %}تصدير التقارير:{% endif %}</strong> {% if ui_lang == 'en' %}You can export reports in CSV format for further analysis.{% else %}يمكنك تصدير
+                التقارير بتنسيق CSV للتحليل الإضافي.{% endif %}</li>
         </ul>
     </div>
 </div>
@@ -36,41 +36,41 @@ breadcrumbs=[
         <!-- Filters -->
         <div class="card mb-4">
             <div class="card-header">
-                <h6 class="mb-0">تصفية التقارير</h6>
+                <h6 class="mb-0">{% if ui_lang == 'en' %}Filter Reports{% else %}تصفية التقارير{% endif %}</h6>
             </div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">نطاق التقرير</label>
+                        <label class="form-label">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
                         <select class="form-select" id="scopeFilter">
-                            <option value="">جميع النطاقات</option>
-                            <option value="KINDERGARTEN">روضة معينة</option>
-                            <option value="GOVERNORATE">محافظة</option>
-                            <option value="ALL">جميع الروضات</option>
+                            <option value="">{% if ui_lang == 'en' %}All Scopes{% else %}جميع النطاقات{% endif %}</option>
+                            <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة معينة{% endif %}</option>
+                            <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
+                            <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">الروضة</label>
+                        <label class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
                         <select class="form-select" id="kindergartenFilter" disabled>
-                            <option value="">اختر الروضة</option>
+                            <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">المحافظة</label>
+                        <label class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
                         <select class="form-select" id="governorateFilter" disabled>
-                            <option value="">اختر المحافظة</option>
+                            <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
                         </select>
                     </div>
                 </div>
                 <div class="mt-3">
                     <button class="btn btn-primary" onclick="applyFilters()">
-                        <i class="bi bi-funnel me-2"></i>تطبيق التصفية
+                        <i class="bi bi-funnel me-2"></i>{% if ui_lang == 'en' %}Apply Filter{% else %}تطبيق التصفية{% endif %}
                     </button>
                     <button class="btn btn-outline-secondary ms-2" onclick="clearFilters()">
-                        <i class="bi bi-x-circle me-2"></i>مسح التصفية
+                        <i class="bi bi-x-circle me-2"></i>{% if ui_lang == 'en' %}Clear Filter{% else %}مسح التصفية{% endif %}
                     </button>
                     <a href="/admin/reports/incidents/generate" class="btn btn-success ms-2">
-                        <i class="bi bi-plus-circle me-2"></i>إنشاء تقرير جديد
+                        <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
                     </a>
                 </div>
             </div>
@@ -79,9 +79,9 @@ breadcrumbs=[
         <!-- Reports List -->
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">قائمة التقارير</h6>
+                <h6 class="mb-0">{% if ui_lang == 'en' %}Reports List{% else %}قائمة التقارير{% endif %}</h6>
                 <div id="loadingSpinner" class="spinner-border spinner-border-sm d-none" role="status">
-                    <span class="visually-hidden">جاري التحميل...</span>
+                    <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                 </div>
             </div>
             <div class="card-body">
@@ -106,16 +106,16 @@ breadcrumbs=[
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="reportModalTitle">تفاصيل التقرير</h5>
+                <h5 class="modal-title" id="reportModalTitle">{% if ui_lang == 'en' %}Report Details{% else %}تفاصيل التقرير{% endif %}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="reportModalBody">
                 <!-- Report details will be loaded here -->
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
                 <button type="button" class="btn btn-primary" id="exportBtn" onclick="exportReport()">
-                    <i class="bi bi-download me-2"></i>تصدير CSV
+                    <i class="bi bi-download me-2"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
                 </button>
             </div>
         </div>
@@ -125,6 +125,9 @@ breadcrumbs=[
 
 {% block scripts %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     let currentPage = 1;
     let currentFilters = {};
 
@@ -134,7 +137,7 @@ breadcrumbs=[
         const paginationContainer = document.getElementById('paginationContainer');
 
         spinner.classList.remove('d-none');
-        container.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">جاري التحميل...</span></div></div>';
+        container.innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"><span class="visually-hidden">' + T('جاري التحميل...', 'Loading...') + '</span></div></div>';
 
         try {
             const params = new URLSearchParams({ page: page, per_page: 20, ...currentFilters });
@@ -145,10 +148,10 @@ breadcrumbs=[
                 container.innerHTML = `
                 <div class="text-center py-5">
                     <i class="bi bi-file-earmark-x text-muted" style="font-size: 3rem;"></i>
-                    <h5 class="mt-3 text-muted">لا توجد تقارير</h5>
-                    <p class="text-muted">لم يتم إنشاء أي تقارير بعد. يمكنك إنشاء تقرير جديد.</p>
+                    <h5 class="mt-3 text-muted">${T('لا توجد تقارير', 'No Reports')}</h5>
+                    <p class="text-muted">${T('لم يتم إنشاء أي تقارير بعد. يمكنك إنشاء تقرير جديد.', 'No reports have been created yet. You can create a new report.')}</p>
                     <a href="/admin/reports/incidents/generate" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-2"></i>إنشاء تقرير جديد
+                        <i class="bi bi-plus-circle me-2"></i>${T('إنشاء تقرير جديد', 'Create New Report')}
                     </a>
                 </div>
             `;
@@ -163,7 +166,7 @@ breadcrumbs=[
             container.innerHTML = `
             <div class="alert alert-danger">
                 <i class="bi bi-exclamation-triangle me-2"></i>
-                فشل في تحميل التقارير. يرجى المحاولة مرة أخرى.
+                ${T('فشل في تحميل التقارير. يرجى المحاولة مرة أخرى.', 'Failed to load reports. Please try again.')}
             </div>
         `;
         } finally {
@@ -184,18 +187,18 @@ breadcrumbs=[
                     <div class="col-md-6">
                         <h6 class="card-title mb-1">${report.title}</h6>
                         <p class="card-text small text-muted mb-0">
-                            النطاق: ${report.scope_name} |
-                            الفترة: ${formatDate(report.start_date)} - ${formatDate(report.end_date)}
+                            ${T('النطاق:', 'Scope:')} ${report.scope_name} |
+                            ${T('الفترة:', 'Period:')} ${formatDate(report.start_date)} - ${formatDate(report.end_date)}
                         </p>
                     </div>
                     <div class="col-md-3">
-                        <small class="text-muted d-block">أنشئ بواسطة: ${report.created_by}</small>
-                        <small class="text-muted d-block">تاريخ الإنشاء: ${formatDateTime(report.created_at)}</small>
+                        <small class="text-muted d-block">${T('أنشئ بواسطة:', 'Created By:')} ${report.created_by}</small>
+                        <small class="text-muted d-block">${T('تاريخ الإنشاء:', 'Created Date:')} ${formatDateTime(report.created_at)}</small>
                     </div>
                     <div class="col-md-3 text-end">
-                        <span class="badge bg-info me-2">${report.total_incidents} حادثة</span>
+                        <span class="badge bg-info me-2">${report.total_incidents} ${T('حادثة', 'incidents')}</span>
                         <button class="btn btn-sm btn-outline-primary" onclick="viewReport(${report.id})">
-                            <i class="bi bi-eye me-1"></i>عرض
+                            <i class="bi bi-eye me-1"></i>${T('عرض', 'View')}
                         </button>
                     </div>
                 </div>
@@ -214,7 +217,7 @@ breadcrumbs=[
         // Previous button
         const prevLi = document.createElement('li');
         prevLi.className = `page-item ${pagination.page === 1 ? 'disabled' : ''}`;
-        prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pagination.page - 1})">السابق</a>`;
+        prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pagination.page - 1})">${T('السابق', 'Previous')}</a>`;
         paginationEl.appendChild(prevLi);
 
         // Page numbers
@@ -228,7 +231,7 @@ breadcrumbs=[
         // Next button
         const nextLi = document.createElement('li');
         nextLi.className = `page-item ${pagination.page === pagination.pages ? 'disabled' : ''}`;
-        nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pagination.page + 1})">التالي</a>`;
+        nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pagination.page + 1})">${T('التالي', 'Next')}</a>`;
         paginationEl.appendChild(nextLi);
     }
 
@@ -277,7 +280,7 @@ breadcrumbs=[
             document.getElementById('exportBtn').setAttribute('data-report-id', reportId);
         } catch (error) {
             console.error('Failed to load report details:', error);
-            showAlert('فشل في تحميل تفاصيل التقرير', 'danger');
+            showAlert(T('فشل في تحميل تفاصيل التقرير', 'Failed to load report details'), 'danger');
         }
     }
 
@@ -286,23 +289,23 @@ breadcrumbs=[
         return `
         <div class="row">
             <div class="col-md-6">
-                <h6>معلومات التقرير</h6>
+                <h6>${T('معلومات التقرير', 'Report Information')}</h6>
                 <table class="table table-sm">
-                    <tr><td><strong>النطاق:</strong></td><td>${report.scope_name}</td></tr>
-                    <tr><td><strong>تاريخ البداية:</strong></td><td>${formatDate(report.start_date)}</td></tr>
-                    <tr><td><strong>تاريخ النهاية:</strong></td><td>${formatDate(report.end_date)}</td></tr>
-                    <tr><td><strong>أنشئ بواسطة:</strong></td><td>${report.created_by}</td></tr>
-                    <tr><td><strong>تاريخ الإنشاء:</strong></td><td>${formatDateTime(report.created_at)}</td></tr>
+                    <tr><td><strong>${T('النطاق:', 'Scope:')}</strong></td><td>${report.scope_name}</td></tr>
+                    <tr><td><strong>${T('تاريخ البداية:', 'Start Date:')}</strong></td><td>${formatDate(report.start_date)}</td></tr>
+                    <tr><td><strong>${T('تاريخ النهاية:', 'End Date:')}</strong></td><td>${formatDate(report.end_date)}</td></tr>
+                    <tr><td><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong></td><td>${report.created_by}</td></tr>
+                    <tr><td><strong>${T('تاريخ الإنشاء:', 'Created Date:')}</strong></td><td>${formatDateTime(report.created_at)}</td></tr>
                 </table>
             </div>
             <div class="col-md-6">
-                <h6>الإحصائيات العامة</h6>
+                <h6>${T('الإحصائيات العامة', 'General Statistics')}</h6>
                 <div class="row g-3">
                     <div class="col-6">
                         <div class="card text-center">
                             <div class="card-body py-2">
                                 <h4 class="text-primary">${metrics.total_incidents}</h4>
-                                <small class="text-muted">إجمالي الحوادث</small>
+                                <small class="text-muted">${T('إجمالي الحوادث', 'Total Incidents')}</small>
                             </div>
                         </div>
                     </div>
@@ -310,7 +313,7 @@ breadcrumbs=[
                         <div class="card text-center">
                             <div class="card-body py-2">
                                 <h4 class="text-success">${metrics.open_incidents}</h4>
-                                <small class="text-muted">حوادث مفتوحة</small>
+                                <small class="text-muted">${T('حوادث مفتوحة', 'Open Incidents')}</small>
                             </div>
                         </div>
                     </div>
@@ -318,7 +321,7 @@ breadcrumbs=[
                         <div class="card text-center">
                             <div class="card-body py-2">
                                 <h4 class="text-danger">${metrics.closed_incidents}</h4>
-                                <small class="text-muted">حوادث مغلقة</small>
+                                <small class="text-muted">${T('حوادث مغلقة', 'Closed Incidents')}</small>
                             </div>
                         </div>
                     </div>
@@ -328,24 +331,24 @@ breadcrumbs=[
 
         <div class="row mt-4">
             <div class="col-md-6">
-                <h6>الحوادث حسب النوع</h6>
+                <h6>${T('الحوادث حسب النوع', 'Incidents by Type')}</h6>
                 <canvas id="typeChart" width="300" height="200"></canvas>
             </div>
             <div class="col-md-6">
-                <h6>الحوادث حسب الخطورة</h6>
+                <h6>${T('الحوادث حسب الخطورة', 'Incidents by Severity')}</h6>
                 <canvas id="severityChart" width="300" height="200"></canvas>
             </div>
         </div>
 
         ${metrics.per_kindergarten && Object.keys(metrics.per_kindergarten).length > 0 ? `
         <div class="mt-4">
-            <h6>الحوادث لكل روضة</h6>
+            <h6>${T('الحوادث لكل روضة', 'Incidents per Kindergarten')}</h6>
             <div class="table-responsive">
                 <table class="table table-sm">
                     <thead>
                         <tr>
-                            <th>الروضة</th>
-                            <th>عدد الحوادث</th>
+                            <th>${T('الروضة', 'Kindergarten')}</th>
+                            <th>${T('عدد الحوادث', 'Incident Count')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -368,11 +371,11 @@ breadcrumbs=[
     }
 
     function formatDate(dateStr) {
-        return new Date(dateStr).toLocaleDateString('ar-EG');
+        return new Date(dateStr).toLocaleDateString(IS_EN ? 'en-US' : 'ar-EG');
     }
 
     function formatDateTime(dateStr) {
-        return new Date(dateStr).toLocaleString('ar-EG');
+        return new Date(dateStr).toLocaleString(IS_EN ? 'en-US' : 'ar-EG');
     }
 
     function showAlert(message, type) {

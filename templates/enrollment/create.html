@@ -7,12 +7,12 @@
 
 {% block page_header %}
 {{ page_header(
-title="تسجيل طفل جديد",
+title="{% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}",
 icon="bi-person-plus",
 breadcrumbs=[
-{"label": "لوحة التحكم", "url": "/dashboard"},
-{"label": "التسجيل", "url": "/enrollments"},
-{"label": "طلب جديد", "url": None}
+{"label": "{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}", "url": "/dashboard"},
+{"label": "{% if ui_lang == 'en' %}Enrollment{% else %}التسجيل{% endif %}", "url": "/enrollments"},
+{"label": "{% if ui_lang == 'en' %}New Request{% else %}طلب جديد{% endif %}", "url": None}
 ]
 ) }}
 {% endblock %}
@@ -26,24 +26,24 @@ breadcrumbs=[
                     {% if not is_manager_supervisor %}
                     <div class="step-item active" data-step="1">
                         <div class="step-number">1</div>
-                        <div class="step-label">الروضة</div>
+                        <div class="step-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</div>
                     </div>
                     <div class="step-line"></div>
                     {% endif %}
                     <div class="step-item {% if is_manager_supervisor %}active{% else %}disabled{% endif %}"
                         data-step="2">
                         <div class="step-number">{% if is_manager_supervisor %}1{% else %}2{% endif %}</div>
-                        <div class="step-label">بيانات الطفل</div>
+                        <div class="step-label">{% if ui_lang == 'en' %}Child Info{% else %}بيانات الطفل{% endif %}</div>
                     </div>
                     <div class="step-line"></div>
                     <div class="step-item" data-step="3">
                         <div class="step-number">{% if is_manager_supervisor %}2{% else %}3{% endif %}</div>
-                        <div class="step-label">بيانات الأم</div>
+                        <div class="step-label">{% if ui_lang == 'en' %}Mother Info{% else %}بيانات الأم{% endif %}</div>
                     </div>
                     <div class="step-line"></div>
                     <div class="step-item" data-step="4">
                         <div class="step-number">{% if is_manager_supervisor %}3{% else %}4{% endif %}</div>
-                        <div class="step-label">مراجعة</div>
+                        <div class="step-label">{% if ui_lang == 'en' %}Review{% else %}مراجعة{% endif %}</div>
                     </div>
                 </div>
             </div>
@@ -58,8 +58,8 @@ breadcrumbs=[
             <div class="enrollment-step" id="step1">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-building me-2"></i>تسجيل طفل في روضة</h5>
-                        <small class="text-muted d-block mt-1">اختر المحافظة ثم المدينة أو ابحث باسم الروضة</small>
+                        <h5 class="mb-0"><i class="bi bi-building me-2"></i>{% if ui_lang == 'en' %}Register Child in Kindergarten{% else %}تسجيل طفل في روضة{% endif %}</h5>
+                        <small class="text-muted d-block mt-1">{% if ui_lang == 'en' %}Select the governorate then the city or search by kindergarten name{% else %}اختر المحافظة ثم المدينة أو ابحث باسم الروضة{% endif %}</small>
                     </div>
                     <div class="card-body">
                         <!-- Hidden field that stores the selected kindergarten ID -->
@@ -82,11 +82,11 @@ breadcrumbs=[
                                 <div class="d-flex flex-column gap-1 ms-2">
                                     <button type="button" class="btn btn-sm btn-outline-info"
                                         onclick="showKgDetails(document.getElementById('kindergartenId').value)"
-                                        title="عرض التفاصيل">
+                                        title="{% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %}">
                                         <i class="bi bi-info-circle"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger"
-                                        onclick="clearKgSelection()" title="تغيير الروضة">
+                                        onclick="clearKgSelection()" title="{% if ui_lang == 'en' %}Change Kindergarten{% else %}تغيير الروضة{% endif %}">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 </div>
@@ -99,10 +99,10 @@ breadcrumbs=[
                                 <!-- Governorate Filter -->
                                 <div class="col-md-4">
                                     <label for="govFilter" class="form-label">
-                                        <i class="bi bi-geo-alt me-1"></i>المحافظة
+                                        <i class="bi bi-geo-alt me-1"></i>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
                                     </label>
-                                    <select class="form-select" id="govFilter" aria-label="اختر المحافظة">
-                                        <option value="">جميع المحافظات</option>
+                                    <select class="form-select" id="govFilter" aria-label="{% if ui_lang == 'en' %}Select governorate{% else %}اختر المحافظة{% endif %}">
+                                        <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
                                         {% for gov in governorates %}
                                         <option value="{{ gov }}">{{ gov }}</option>
                                         {% endfor %}
@@ -111,21 +111,21 @@ breadcrumbs=[
                                 <!-- City Filter -->
                                 <div class="col-md-4">
                                     <label for="cityFilter" class="form-label">
-                                        <i class="bi bi-pin-map me-1"></i>المدينة
+                                        <i class="bi bi-pin-map me-1"></i>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}
                                     </label>
-                                    <select class="form-select" id="cityFilter" disabled aria-label="اختر المدينة">
-                                        <option value="">اختر المحافظة أولاً</option>
+                                    <select class="form-select" id="cityFilter" disabled aria-label="{% if ui_lang == 'en' %}Select city{% else %}اختر المدينة{% endif %}">
+                                        <option value="">{% if ui_lang == 'en' %}Select governorate first{% else %}اختر المحافظة أولاً{% endif %}</option>
                                     </select>
                                 </div>
                                 <!-- Name Search -->
                                 <div class="col-md-4">
                                     <label for="kgSearchInput" class="form-label">
-                                        <i class="bi bi-search me-1"></i>بحث بالاسم
+                                        <i class="bi bi-search me-1"></i>{% if ui_lang == 'en' %}Search by Name{% else %}بحث بالاسم{% endif %}
                                     </label>
                                     <div class="input-group">
                                         <input type="text" class="form-control" id="kgSearchInput"
-                                            placeholder="اكتب اسم الروضة..." autocomplete="off"
-                                            aria-label="بحث باسم الروضة">
+                                            placeholder="{% if ui_lang == 'en' %}Type kindergarten name...{% else %}اكتب اسم الروضة...{% endif %}" autocomplete="off"
+                                            aria-label="{% if ui_lang == 'en' %}Search by kindergarten name{% else %}بحث باسم الروضة{% endif %}">
                                         <span class="input-group-text" id="kgSearchSpinner" style="display:none;">
                                             <span class="spinner-border spinner-border-sm" role="status"></span>
                                         </span>
@@ -141,13 +141,13 @@ breadcrumbs=[
                                 <div id="kgResultsCount" class="text-muted small" style="display:none;"></div>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" id="clearFiltersBtn"
                                     onclick="clearFilters()" style="display:none;">
-                                    <i class="bi bi-x-circle me-1"></i>مسح عوامل التصفية
+                                    <i class="bi bi-x-circle me-1"></i>{% if ui_lang == 'en' %}Clear Filters{% else %}مسح عوامل التصفية{% endif %}
                                 </button>
                             </div>
 
                             <!-- Validation message -->
                             <div class="text-danger small mb-2" id="kgValidationMsg" style="display:none;">
-                                <i class="bi bi-exclamation-circle me-1"></i>يرجى اختيار الروضة من القائمة
+                                <i class="bi bi-exclamation-circle me-1"></i>{% if ui_lang == 'en' %}Please select a kindergarten from the list{% else %}يرجى اختيار الروضة من القائمة{% endif %}
                             </div>
 
                             <!-- Loading skeleton -->
@@ -170,15 +170,15 @@ breadcrumbs=[
                             <div id="kgResultsList" class="kg-results-list">
                                 <div class="kg-placeholder text-center text-muted py-4">
                                     <i class="bi bi-building fs-1 d-block mb-2 opacity-50"></i>
-                                    <p class="mb-1">اختر المحافظة أو اكتب اسم الروضة للبحث</p>
-                                    <small>يمكنك تصفية النتائج حسب المحافظة والمدينة والاسم</small>
+                                    <p class="mb-1">{% if ui_lang == 'en' %}Select a governorate or type a kindergarten name to search{% else %}اختر المحافظة أو اكتب اسم الروضة للبحث{% endif %}</p>
+                                    <small>{% if ui_lang == 'en' %}You can filter results by governorate, city, and name{% else %}يمكنك تصفية النتائج حسب المحافظة والمدينة والاسم{% endif %}</small>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="card-footer d-flex justify-content-end">
                         <button type="button" class="btn btn-primary" onclick="goToStep(2)">
-                            التالي <i class="bi bi-arrow-left ms-2"></i>
+                            {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-arrow-left ms-2"></i>
                         </button>
                     </div>
                 </div>
@@ -188,19 +188,19 @@ breadcrumbs=[
             <div class="enrollment-step {% if is_manager_supervisor %}d-block{% else %}d-none{% endif %}" id="step2">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-emoji-smile me-2"></i>بيانات الطفل</h5>
+                        <h5 class="mb-0"><i class="bi bi-emoji-smile me-2"></i>{% if ui_lang == 'en' %}Child Information{% else %}بيانات الطفل{% endif %}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="childFirstName" class="form-label required">الاسم الأول</label>
+                                <label for="childFirstName" class="form-label required">{% if ui_lang == 'en' %}First Name{% else %}الاسم الأول{% endif %}</label>
                                 <input type="text" class="form-control" id="childFirstName" name="first_name" required>
-                                <div class="invalid-feedback">يرجى إدخال الاسم الأول</div>
+                                <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter the first name{% else %}يرجى إدخال الاسم الأول{% endif %}</div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="childLastName" class="form-label required">اسم العائلة</label>
+                                <label for="childLastName" class="form-label required">{% if ui_lang == 'en' %}Last Name{% else %}اسم العائلة{% endif %}</label>
                                 <input type="text" class="form-control" id="childLastName" name="last_name" required>
-                                <div class="invalid-feedback">يرجى إدخال اسم العائلة</div>
+                                <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter the last name{% else %}يرجى إدخال اسم العائلة{% endif %}</div>
                             </div>
                         </div>
                         <div class="row">
@@ -208,25 +208,25 @@ breadcrumbs=[
                                 {{ gender_select(id="childGender") }}
                             </div>
                             <div class="col-md-6 mb-3">
-                                {{ date_input(name="date_of_birth", id="childDob", label="تاريخ الميلاد",
-                                invalid_feedback="يرجى إدخال تاريخ الميلاد") }}
+                                {{ date_input(name="date_of_birth", id="childDob", label="{% if ui_lang == 'en' %}Date of Birth{% else %}تاريخ الميلاد{% endif %}",
+                                invalid_feedback="{% if ui_lang == 'en' %}Please enter date of birth{% else %}يرجى إدخال تاريخ الميلاد{% endif %}") }}
                                 <div id="ageDisplay" class="form-text"></div>
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label for="fatherName" class="form-label required">اسم الأب</label>
+                            <label for="fatherName" class="form-label required">{% if ui_lang == 'en' %}Father's Name{% else %}اسم الأب{% endif %}</label>
                             <input type="text" class="form-control" id="fatherName" name="father_name" required>
-                            <div class="invalid-feedback">يرجى إدخال اسم الأب</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter father's name{% else %}يرجى إدخال اسم الأب{% endif %}</div>
                         </div>
                     </div>
                     <div class="card-footer d-flex justify-content-between">
                         {% if not is_manager_supervisor %}
                         <button type="button" class="btn btn-outline-secondary" onclick="goToStep(1)">
-                            <i class="bi bi-arrow-right me-2"></i> السابق
+                            <i class="bi bi-arrow-right me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                         </button>
                         {% endif %}
                         <button type="button" class="btn btn-primary" onclick="goToStep(3)">
-                            التالي <i class="bi bi-arrow-left ms-2"></i>
+                            {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-arrow-left ms-2"></i>
                         </button>
                     </div>
                 </div>
@@ -235,21 +235,21 @@ breadcrumbs=[
             <div class="enrollment-step d-none" id="step3">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-person-heart me-2"></i>بيانات الأم</h5>
+                        <h5 class="mb-0"><i class="bi bi-person-heart me-2"></i>{% if ui_lang == 'en' %}Mother Information{% else %}بيانات الأم{% endif %}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label for="motherFirstName" class="form-label required">الاسم الأول</label>
+                                <label for="motherFirstName" class="form-label required">{% if ui_lang == 'en' %}First Name{% else %}الاسم الأول{% endif %}</label>
                                 <input type="text" class="form-control" id="motherFirstName" name="mother_first_name"
                                     required>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label for="motherSecondName" class="form-label">الاسم الثاني</label>
+                                <label for="motherSecondName" class="form-label">{% if ui_lang == 'en' %}Middle Name{% else %}الاسم الثاني{% endif %}</label>
                                 <input type="text" class="form-control" id="motherSecondName" name="mother_second_name">
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label for="motherLastName" class="form-label required">اسم العائلة</label>
+                                <label for="motherLastName" class="form-label required">{% if ui_lang == 'en' %}Last Name{% else %}اسم العائلة{% endif %}</label>
                                 <input type="text" class="form-control" id="motherLastName" name="mother_last_name"
                                     required>
                             </div>
@@ -268,16 +268,16 @@ breadcrumbs=[
                         </div>
                         <!-- Consent & Source Fields -->
                         <hr class="my-3">
-                        <h6 class="text-muted mb-3"><i class="bi bi-shield-check me-2"></i>الموافقات ومصدر الطلب</h6>
+                        <h6 class="text-muted mb-3"><i class="bi bi-shield-check me-2"></i>{% if ui_lang == 'en' %}Consents & Request Source{% else %}الموافقات ومصدر الطلب{% endif %}</h6>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="correspondenceFlag"
                                         name="correspondence_flag" checked>
                                     <label class="form-check-label" for="correspondenceFlag">
-                                        الموافقة على المراسلة
-                                        <small class="text-muted d-block">السماح بإرسال إشعارات ومراسلات تتعلق
-                                            بالطفل</small>
+                                        {% if ui_lang == 'en' %}Communication Consent{% else %}الموافقة على المراسلة{% endif %}
+                                        <small class="text-muted d-block">{% if ui_lang == 'en' %}Allow sending notifications and correspondence about the child{% else %}السماح بإرسال إشعارات ومراسلات تتعلق
+                                            بالطفل{% endif %}</small>
                                     </label>
                                 </div>
                             </div>
@@ -286,8 +286,8 @@ breadcrumbs=[
                                     <input class="form-check-input" type="checkbox" id="mediaConsent"
                                         name="media_consent">
                                     <label class="form-check-label" for="mediaConsent">
-                                        الموافقة على الوسائط
-                                        <small class="text-muted d-block">السماح بتصوير الطفل خلال الأنشطة</small>
+                                        {% if ui_lang == 'en' %}Media Consent{% else %}الموافقة على الوسائط{% endif %}
+                                        <small class="text-muted d-block">{% if ui_lang == 'en' %}Allow photographing the child during activities{% else %}السماح بتصوير الطفل خلال الأنشطة{% endif %}</small>
                                     </label>
                                 </div>
                             </div>
@@ -295,11 +295,11 @@ breadcrumbs=[
                         {% if is_manager_supervisor %}
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="enrollmentSource" class="form-label">مصدر الطلب</label>
+                                <label for="enrollmentSource" class="form-label">{% if ui_lang == 'en' %}Request Source{% else %}مصدر الطلب{% endif %}</label>
                                 <select class="form-select" id="enrollmentSource" name="source">
-                                    <option value="walk-in">حضوري</option>
-                                    <option value="online">إلكتروني</option>
-                                    <option value="manager">تسجيل مدير</option>
+                                    <option value="walk-in">{% if ui_lang == 'en' %}Walk-in{% else %}حضوري{% endif %}</option>
+                                    <option value="online">{% if ui_lang == 'en' %}Online{% else %}إلكتروني{% endif %}</option>
+                                    <option value="manager">{% if ui_lang == 'en' %}Manager Entry{% else %}تسجيل مدير{% endif %}</option>
                                 </select>
                             </div>
                         </div>
@@ -307,10 +307,10 @@ breadcrumbs=[
                     </div>
                     <div class="card-footer d-flex justify-content-between">
                         <button type="button" class="btn btn-outline-secondary" onclick="goToStep(2)">
-                            <i class="bi bi-arrow-right me-2"></i> السابق
+                            <i class="bi bi-arrow-right me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                         </button>
                         <button type="button" class="btn btn-primary" onclick="goToStep(4)">
-                            التالي <i class="bi bi-arrow-left ms-2"></i>
+                            {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-arrow-left ms-2"></i>
                         </button>
                     </div>
                 </div>
@@ -319,12 +319,12 @@ breadcrumbs=[
             <div class="enrollment-step d-none" id="step4">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>مراجعة البيانات</h5>
+                        <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>{% if ui_lang == 'en' %}Review Data{% else %}مراجعة البيانات{% endif %}</h5>
                     </div>
                     <div class="card-body">
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
-                            يرجى مراجعة البيانات قبل إرسال الطلب
+                            {% if ui_lang == 'en' %}Please review the data before submitting the request{% else %}يرجى مراجعة البيانات قبل إرسال الطلب{% endif %}
                         </div>
                         <div id="reviewSummary">
                             <!-- Populated by JavaScript -->
@@ -332,15 +332,15 @@ breadcrumbs=[
                         <div class="form-check mt-4">
                             <input class="form-check-input" type="checkbox" id="confirmData" required>
                             <label class="form-check-label" for="confirmData">
-                                أؤكد صحة جميع البيانات المدخلة
+                                {% if ui_lang == 'en' %}I confirm the accuracy of all entered data{% else %}أؤكد صحة جميع البيانات المدخلة{% endif %}
                             </label>
                         </div>
                     </div>
                     <div class="card-footer d-flex justify-content-between">
                         <button type="button" class="btn btn-outline-secondary" onclick="goToStep(3)">
-                            <i class="bi bi-arrow-right me-2"></i> السابق
+                            <i class="bi bi-arrow-right me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                         </button>
-                        {{ submit_button(label="إرسال الطلب", loading_label="جاري الإرسال...", btn_class="btn-success
+                        {{ submit_button(label="{% if ui_lang == 'en' %}Submit Request{% else %}إرسال الطلب{% endif %}", loading_label="{% if ui_lang == 'en' %}Submitting...{% else %}جاري الإرسال...{% endif %}", btn_class="btn-success
                         btn-lg") }}
                     </div>
                 </div>
@@ -354,23 +354,23 @@ breadcrumbs=[
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="kgDetailModalLabel"><i class="bi bi-building me-2"></i>تفاصيل الروضة</h5>
+                <h5 class="modal-title" id="kgDetailModalLabel"><i class="bi bi-building me-2"></i>{% if ui_lang == 'en' %}Kindergarten Details{% else %}تفاصيل الروضة{% endif %}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="إغلاق"></button>
+                    aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body" id="kgDetailBody">
                 <div class="text-center py-4">
                     <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">جاري التحميل...</span>
+                        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                     </div>
                 </div>
             </div>
             <div class="modal-footer d-flex justify-content-between">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-arrow-right me-1"></i>رجوع للقائمة
+                    <i class="bi bi-arrow-right me-1"></i>{% if ui_lang == 'en' %}Back to List{% else %}رجوع للقائمة{% endif %}
                 </button>
                 <button type="button" class="btn btn-success" id="confirmKgBtn" onclick="confirmKgFromModal()">
-                    <i class="bi bi-check-circle me-1"></i>تأكيد اختيار الروضة
+                    <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Confirm Kindergarten Selection{% else %}تأكيد اختيار الروضة{% endif %}
                 </button>
             </div>
         </div>
@@ -657,7 +657,7 @@ breadcrumbs=[
             if (gov) {
                 fetchCities(gov);
             } else {
-                cityFilter.innerHTML = '<option value="">\u0627\u062e\u062a\u0631 \u0627\u0644\u0645\u062d\u0627\u0641\u0638\u0629 \u0623\u0648\u0644\u0627\u064b</option>';
+                cityFilter.innerHTML = '<option value="">' + enrollmentText('common.select_gov_first', 'اختر المحافظة أولاً', 'Select governorate first') + '</option>';
                 cityFilter.disabled = true;
             }
             fetchKgResults();
@@ -727,7 +727,7 @@ breadcrumbs=[
         const countEl = document.getElementById('kgResultsCount');
 
         if (items.length === 0) {
-            listEl.innerHTML = '<div class="kg-no-results"><i class="bi bi-inbox fs-3 d-block mb-2"></i>\u0644\u0627 \u062a\u0648\u062c\u062f \u0646\u062a\u0627\u0626\u062c \u0645\u0637\u0627\u0628\u0642\u0629</div>';
+            listEl.innerHTML = '<div class="kg-no-results"><i class="bi bi-inbox fs-3 d-block mb-2"></i>' + enrollmentText('common.no_matching_results', 'لا توجد نتائج مطابقة', 'No matching results') + '</div>';
             countEl.style.display = 'none';
             return;
         }
@@ -751,8 +751,8 @@ breadcrumbs=[
                     </div>
                 </div>
                 <div class="kg-actions">
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); showKgDetails(${kg.id})" title="\u0639\u0631\u0636 \u0627\u0644\u062a\u0641\u0627\u0635\u064a\u0644">
-                        <i class="bi bi-info-circle me-1"></i>\u0627\u0644\u062a\u0641\u0627\u0635\u064a\u0644
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); showKgDetails(${kg.id})" title="${enrollmentText('common.view_details', 'عرض التفاصيل', 'View details')}">
+                        <i class="bi bi-info-circle me-1"></i>${enrollmentText('common.details', 'التفاصيل', 'Details')}
                     </button>
                 </div>
             </div>`;
@@ -799,7 +799,7 @@ breadcrumbs=[
             return;
         }
 
-        cityFilter.innerHTML = '<option value="">\u062c\u0627\u0631\u064a \u0627\u0644\u062a\u062d\u0645\u064a\u0644...</option>';
+        cityFilter.innerHTML = '<option value="">' + enrollmentText('common.loading', 'جاري التحميل...', 'Loading...') + '</option>';
         cityFilter.disabled = true;
 
         try {
@@ -809,14 +809,14 @@ breadcrumbs=[
             populateCityDropdown(cities);
         } catch (err) {
             console.error('Cities fetch error:', err);
-            cityFilter.innerHTML = '<option value="">\u062c\u0645\u064a\u0639 \u0627\u0644\u0645\u062f\u0646</option>';
+            cityFilter.innerHTML = '<option value="">' + enrollmentText('common.all_cities', 'جميع المدن', 'All cities') + '</option>';
             cityFilter.disabled = false;
         }
     }
 
     function populateCityDropdown(cities) {
         const cityFilter = document.getElementById('cityFilter');
-        cityFilter.innerHTML = '<option value="">\u062c\u0645\u064a\u0639 \u0627\u0644\u0645\u062f\u0646</option>';
+        cityFilter.innerHTML = '<option value="">' + enrollmentText('common.all_cities', 'جميع المدن', 'All cities') + '</option>';
         cities.forEach(c => {
             const opt = document.createElement('option');
             opt.value = c;
@@ -832,7 +832,7 @@ breadcrumbs=[
         const cityFilter = document.getElementById('cityFilter');
         const searchInput = document.getElementById('kgSearchInput');
         govFilter.value = '';
-        cityFilter.innerHTML = '<option value="">\u0627\u062e\u062a\u0631 \u0627\u0644\u0645\u062d\u0627\u0641\u0638\u0629 \u0623\u0648\u0644\u0627\u064b</option>';
+        cityFilter.innerHTML = '<option value="">' + enrollmentText('common.select_gov_first', 'اختر المحافظة أولاً', 'Select governorate first') + '</option>';
         cityFilter.disabled = true;
         searchInput.value = '';
         updateClearFiltersBtn();
@@ -854,7 +854,7 @@ breadcrumbs=[
         const modal = new bootstrap.Modal(modalEl);
         const body = document.getElementById('kgDetailBody');
 
-        body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">\u062c\u0627\u0631\u064a \u0627\u0644\u062a\u062d\u0645\u064a\u0644...</span></div></div>';
+        body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">' + enrollmentText('common.loading', 'جاري التحميل...', 'Loading...') + '</span></div></div>';
         modal.show();
 
         try {
@@ -891,7 +891,7 @@ breadcrumbs=[
                 </div>
             `;
         } catch (err) {
-            body.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>\u062d\u062f\u062b \u062e\u0637\u0623 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u0631\u0648\u0636\u0629</div>';
+            body.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>' + enrollmentText('common.error_loading_details', 'حدث خطأ في تحميل تفاصيل الروضة', 'Error loading kindergarten details') + '</div>';
             console.error('KG detail error:', err);
         }
     }

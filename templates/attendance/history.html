@@ -7,12 +7,12 @@
     <div>
         <h1 class="h2">
             <i class="bi bi-clock-history me-2 text-primary"></i>
-            أرشيف الحضور والغياب
+            {% if ui_lang == 'en' %}Attendance Archive{% else %}أرشيف الحضور والغياب{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">سجل الحضور التاريخي</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Attendance History{% else %}سجل الحضور التاريخي{% endif %}</li>
             </ol>
         </nav>
     </div>
@@ -22,42 +22,42 @@
 {% block content %}
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0">خيارات التصفية</h5>
+        <h5 class="mb-0">{% if ui_lang == 'en' %}Filter Options{% else %}خيارات التصفية{% endif %}</h5>
     </div>
     <div class="card-body">
         <form id="historyFilters" class="row g-3">
             {% if is_admin %}
             <div class="col-md-4 col-lg-3">
-                <label class="form-label" for="kindergartenFilter">الروضة</label>
+                <label class="form-label" for="kindergartenFilter">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
                 <select class="form-select" id="kindergartenFilter">
-                    <option id="allKindergartensOption" value="" data-all-kindergartens="true">جميع الروضات</option>
+                    <option id="allKindergartensOption" value="" data-all-kindergartens="true">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
                     {% for kg in kindergartens %}
                     <option value="{{ kg.id }}">{{ kg.name_en if ui_lang == 'en' and kg.name_en else kg.name_ar }}{% if kg.governorate %} - {{ kg.governorate }}{% endif %}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="col-md-4 col-lg-3">
-                <label class="form-label" for="governorateFilter">المحافظة</label>
+                <label class="form-label" for="governorateFilter">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
                 <select class="form-select" id="governorateFilter">
-                    <option value="">جميع المحافظات</option>
+                    <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
                     {% for governorate in governorates %}
                     <option value="{{ governorate }}">{{ governorate }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="col-md-4 col-lg-3">
-                <label class="form-label" for="kindergartenNameFilter">بحث باسم الروضة</label>
+                <label class="form-label" for="kindergartenNameFilter">{% if ui_lang == 'en' %}Search Kindergarten Name{% else %}بحث باسم الروضة{% endif %}</label>
                 <input
                     type="text"
                     id="kindergartenNameFilter"
                     class="form-control"
-                    placeholder="أدخل الاسم الكامل أو جزء منه"
+                    placeholder="{% if ui_lang == 'en' %}Full or partial name{% else %}أدخل الاسم الكامل أو جزء منه{% endif %}"
                     autocomplete="off"
                 >
             </div>
             {% else %}
             <div class="col-md-4">
-                <label class="form-label" for="kindergartenReadonly">الروضة</label>
+                <label class="form-label" for="kindergartenReadonly">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
                 <input
                     type="text"
                     id="kindergartenReadonly"
@@ -69,23 +69,23 @@
             {% endif %}
 
             <div class="{% if is_admin %}col-md-4 col-lg-3{% else %}col-md-4{% endif %}">
-                <label class="form-label" for="childNameFilter">بحث باسم الطفل</label>
+                <label class="form-label" for="childNameFilter">{% if ui_lang == 'en' %}Search Child Name{% else %}بحث باسم الطفل{% endif %}</label>
                 <input
                     type="text"
                     id="childNameFilter"
                     class="form-control"
-                    placeholder="الاسم الكامل أو جزء منه"
+                    placeholder="{% if ui_lang == 'en' %}Full or partial name{% else %}الاسم الكامل أو جزء منه{% endif %}"
                     autocomplete="off"
                 >
             </div>
 
             <div class="{% if is_admin %}col-md-4 col-lg-2{% else %}col-md-3{% endif %}">
-                <label class="form-label" for="startDate">من تاريخ</label>
+                <label class="form-label" for="startDate">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %}</label>
                 <input type="date" class="form-control" id="startDate" value="{{ default_start_date }}">
             </div>
 
             <div class="{% if is_admin %}col-md-4 col-lg-2{% else %}col-md-3{% endif %}">
-                <label class="form-label" for="endDate">إلى تاريخ</label>
+                <label class="form-label" for="endDate">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %}</label>
                 <input type="date" class="form-control" id="endDate" value="{{ default_end_date }}">
             </div>
 
@@ -93,7 +93,7 @@
                 <label class="form-label d-none d-md-block">&nbsp;</label>
                 <button type="submit" id="applyHistoryFilters" class="btn btn-primary">
                     <i class="bi bi-funnel me-1"></i>
-                    عرض السجل
+                    {% if ui_lang == 'en' %}Show Records{% else %}عرض السجل{% endif %}
                 </button>
             </div>
         </form>
@@ -104,7 +104,7 @@
     <div class="col-md-3">
         <div class="card h-100 border-success bg-success bg-opacity-10">
             <div class="card-body text-center">
-                <div class="text-success small">نسبة الحضور</div>
+                <div class="text-success small">{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}</div>
                 <h3 class="mb-0 fw-bold text-success" id="summaryAttendanceRate">0%</h3>
             </div>
         </div>
@@ -112,7 +112,7 @@
     <div class="col-md-3">
         <div class="card h-100 border-primary bg-primary bg-opacity-10">
             <div class="card-body text-center">
-                <div class="text-primary small">إجمالي الحضور</div>
+                <div class="text-primary small">{% if ui_lang == 'en' %}Total Present{% else %}إجمالي الحضور{% endif %}</div>
                 <h3 class="mb-0 fw-bold text-primary" id="summaryPresent">0</h3>
             </div>
         </div>
@@ -120,7 +120,7 @@
     <div class="col-md-3">
         <div class="card h-100 border-danger bg-danger bg-opacity-10">
             <div class="card-body text-center">
-                <div class="text-danger small">إجمالي الغياب</div>
+                <div class="text-danger small">{% if ui_lang == 'en' %}Total Absent{% else %}إجمالي الغياب{% endif %}</div>
                 <h3 class="mb-0 fw-bold text-danger" id="summaryAbsent">0</h3>
             </div>
         </div>
@@ -128,7 +128,7 @@
     <div class="col-md-3">
         <div class="card h-100 border-secondary bg-secondary bg-opacity-10">
             <div class="card-body text-center">
-                <div class="text-secondary small">إجمالي السجلات</div>
+                <div class="text-secondary small">{% if ui_lang == 'en' %}Total Records{% else %}إجمالي السجلات{% endif %}</div>
                 <h3 class="mb-0 fw-bold text-secondary" id="summaryTotal">0</h3>
             </div>
         </div>
@@ -137,7 +137,7 @@
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">تفاصيل الحضور اليومية</h5>
+        <h5 class="mb-0">{% if ui_lang == 'en' %}Daily Attendance Details{% else %}تفاصيل الحضور اليومية{% endif %}</h5>
         <span id="scopeBadge" class="badge bg-secondary-subtle text-secondary-emphasis">-</span>
     </div>
     <div class="card-body p-0">
@@ -145,18 +145,18 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>التاريخ</th>
-                        <th>اليوم</th>
-                        <th class="text-success">حاضر</th>
-                        <th class="text-danger">غائب</th>
-                        <th class="text-warning">متأخر</th>
-                        <th class="text-info">معذور</th>
-                        <th>نسبة الحضور</th>
+                        <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Day{% else %}اليوم{% endif %}</th>
+                        <th class="text-success">{% if ui_lang == 'en' %}Present{% else %}حاضر{% endif %}</th>
+                        <th class="text-danger">{% if ui_lang == 'en' %}Absent{% else %}غائب{% endif %}</th>
+                        <th class="text-warning">{% if ui_lang == 'en' %}Late{% else %}متأخر{% endif %}</th>
+                        <th class="text-info">{% if ui_lang == 'en' %}Excused{% else %}معذور{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="historyTableBody">
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">جارٍ تحميل البيانات...</td>
+                        <td colspan="7" class="text-center text-muted py-4">{% if ui_lang == 'en' %}Loading data...{% else %}جارٍ تحميل البيانات...{% endif %}</td>
                     </tr>
                 </tbody>
             </table>
@@ -168,6 +168,9 @@
 {% block extra_js %}
 <script>
 (() => {
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     const isAdmin = {{ "true" if is_admin else "false" }};
     const fixedKindergartenId = {{ user_kindergarten.id if user_kindergarten else "null" }};
 
@@ -200,9 +203,9 @@
     const setLoadingState = (isLoading) => {
         submitButton.disabled = isLoading;
         if (isLoading) {
-            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>جاري التحميل...';
+            submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${T('جاري التحميل...', 'Loading...')}`;
         } else {
-            submitButton.innerHTML = '<i class="bi bi-funnel me-1"></i>عرض السجل';
+            submitButton.innerHTML = `<i class="bi bi-funnel me-1"></i>${T('عرض السجل', 'Show Records')}`;
         }
     };
 
@@ -221,30 +224,30 @@
         const filters = scope.filters || {};
         const filterParts = [];
         if (filters.governorate) {
-            filterParts.push(`المحافظة: ${filters.governorate}`);
+            filterParts.push(`${T('المحافظة', 'Gov.')}: ${filters.governorate}`);
         }
         if (filters.kindergarten_name) {
-            filterParts.push(`الاسم: ${filters.kindergarten_name}`);
+            filterParts.push(`${T('الاسم', 'Name')}: ${filters.kindergarten_name}`);
         }
         if (filters.child_name) {
-            filterParts.push(`الطفل: ${filters.child_name}`);
+            filterParts.push(`${T('الطفل', 'Child')}: ${filters.child_name}`);
         }
         const filterSuffix = filterParts.length ? ` - ${filterParts.join(" | ")}` : "";
 
         if (scope.mode === "all_kindergartens") {
-            scopeBadge.textContent = `النطاق: جميع الروضات (${scope.kindergarten_count || 0})${filterSuffix}`;
+            scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${T('جميع الروضات', 'All Kindergartens')} (${scope.kindergarten_count || 0})${filterSuffix}`;
             return;
         }
         if (scope.mode === "filtered_kindergartens") {
-            scopeBadge.textContent = `النطاق: ${scope.kindergarten_count || 0} روضة${filterSuffix}`;
+            scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${scope.kindergarten_count || 0} ${T('روضة', 'kindergartens')}${filterSuffix}`;
             return;
         }
-        scopeBadge.textContent = `النطاق: ${scope.kindergarten_name || "روضة محددة"}${filterSuffix}`;
+        scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${scope.kindergarten_name || T('روضة محددة', 'Selected kindergarten')}${filterSuffix}`;
     };
 
     const renderRows = (rows) => {
         if (!rows || rows.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">لا توجد بيانات للفترة المحددة.</td></tr>';
+            tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">${T('لا توجد بيانات للفترة المحددة.', 'No data for the selected period.')}</td></tr>`;
             return;
         }
 
@@ -270,11 +273,11 @@
         const endDate = endDateInput.value;
 
         if (!startDate || !endDate) {
-            notify("يرجى تحديد تاريخ البداية وتاريخ النهاية.", "warning");
+            notify(T("يرجى تحديد تاريخ البداية وتاريخ النهاية.", "Please select start and end dates."), "warning");
             return;
         }
         if (startDate > endDate) {
-            notify("تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية.", "warning");
+            notify(T("تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية.", "Start date must be before or equal to end date."), "warning");
             return;
         }
 
@@ -324,7 +327,7 @@
             renderRows(payload.rows || []);
         } catch (error) {
             console.error("Attendance history load failed:", error);
-            notify("تعذر تحميل سجل الحضور. يرجى المحاولة مرة أخرى.", "error");
+            notify(T("تعذر تحميل سجل الحضور. يرجى المحاولة مرة أخرى.", "Failed to load attendance history. Please try again."), "error");
         } finally {
             setLoadingState(false);
         }

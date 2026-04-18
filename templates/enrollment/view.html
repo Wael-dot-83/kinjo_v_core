@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
 
-{% block title %}تفاصيل طلب التسجيل{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Enrollment Request Details{% else %}تفاصيل طلب التسجيل{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
             <i class="bi bi-file-text me-2 text-primary"></i>
-            طلب تسجيل: {{ enrollment.child_name }}
+            {% if ui_lang == 'en' %}Enrollment: {{ enrollment.child_name }}{% else %}طلب تسجيل: {{ enrollment.child_name }}{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/enrollments">طلبات التسجيل</a></li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item"><a href="/enrollments">{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}</a></li>
                 <li class="breadcrumb-item active">{{ enrollment.child_name }}</li>
             </ol>
         </nav>
@@ -21,10 +21,10 @@
     {% if current_user.role.value in ['ADMIN', 'MANAGER'] and enrollment.status in ['submitted', 'pending_review'] %}
     <div class="btn-toolbar gap-2">
         <button class="btn btn-success" onclick="updateStatus('accepted')">
-            <i class="bi bi-check-circle me-2"></i>قبول
+            <i class="bi bi-check-circle me-2"></i>{% if ui_lang == 'en' %}Accept{% else %}قبول{% endif %}
         </button>
         <button class="btn btn-outline-danger" onclick="updateStatus('rejected')">
-            <i class="bi bi-x-circle me-2"></i>رفض
+            <i class="bi bi-x-circle me-2"></i>{% if ui_lang == 'en' %}Reject{% else %}رفض{% endif %}
         </button>
     </div>
     {% endif %}
@@ -39,13 +39,13 @@
         <div class="card mb-4 border-0 shadow-sm">
             <div class="card-body d-flex align-items-center justify-content-between p-4 bg-light rounded">
                 <div>
-                    <h5 class="mb-1">حالة الطلب</h5>
+                    <h5 class="mb-1">{% if ui_lang == 'en' %}Request Status{% else %}حالة الطلب{% endif %}</h5>
                     <div class="d-flex align-items-center">
                         <span class="badge rounded-pill bg-{{ enrollment.status | status_color }} fs-6 px-3 py-2 me-2">
                             {{ enrollment.status_ar }}
                         </span>
                         <span class="text-muted small">
-                            تاريخ التقديم: {{ enrollment.created_at }}
+                            {% if ui_lang == 'en' %}Submission Date:{% else %}تاريخ التقديم:{% endif %} {{ enrollment.created_at }}
                         </span>
                     </div>
                 </div>
@@ -53,7 +53,7 @@
                 <div class="d-none d-md-block" style="min-width: 300px;">
                     <div class="position-relative m-4">
                         <div class="progress" style="height: 2px;">
-                            <div class="progress-bar" role="progressbar" style="width: 50%;" aria-label="تقدم التسجيل"
+                            <div class="progress-bar" role="progressbar" style="width: 50%;" aria-label="{% if ui_lang == 'en' %}Registration progress{% else %}تقدم التسجيل{% endif %}"
                                 aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
                         <div class="position-absolute top-0 start-0 translate-middle btn btn-sm btn-primary rounded-pill"
@@ -64,9 +64,9 @@
                             style="width: 2rem; height:2rem;">3</div>
                     </div>
                     <div class="d-flex justify-content-between small text-muted">
-                        <span>تقديم</span>
-                        <span>مراجعة</span>
-                        <span>قرار</span>
+                        <span>{% if ui_lang == 'en' %}Submit{% else %}تقديم{% endif %}</span>
+                        <span>{% if ui_lang == 'en' %}Review{% else %}مراجعة{% endif %}</span>
+                        <span>{% if ui_lang == 'en' %}Decision{% else %}قرار{% endif %}</span>
                     </div>
                 </div>
             </div>
@@ -76,25 +76,25 @@
         <div class="card mb-4">
             <div class="card-header bg-transparent">
                 <h5 class="card-title mb-0 text-primary">
-                    <i class="bi bi-emoji-smile me-2"></i>معلومات الطفل
+                    <i class="bi bi-emoji-smile me-2"></i>{% if ui_lang == 'en' %}Child Information{% else %}معلومات الطفل{% endif %}
                 </h5>
             </div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="text-muted small">الاسم الكامل</label>
+                        <label class="text-muted small">{% if ui_lang == 'en' %}Full Name{% else %}الاسم الكامل{% endif %}</label>
                         <div class="fw-semibold">{{ enrollment.child_name }}</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="text-muted small">تاريخ الميلاد</label>
+                        <label class="text-muted small">{% if ui_lang == 'en' %}Date of Birth{% else %}تاريخ الميلاد{% endif %}</label>
                         <div class="fw-semibold">{{ enrollment.dob }} ({{ enrollment.age }})</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="text-muted small">الجنس</label>
+                        <label class="text-muted small">{% if ui_lang == 'en' %}Gender{% else %}الجنس{% endif %}</label>
                         <div class="fw-semibold">{{ enrollment.gender_ar }}</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="text-muted small">الرقم الوطني</label>
+                        <label class="text-muted small">{% if ui_lang == 'en' %}National ID{% else %}الرقم الوطني{% endif %}</label>
                         <div class="fw-semibold">{{ enrollment.national_id }}</div>
                     </div>
                 </div>
@@ -105,38 +105,38 @@
         <div class="card mb-4">
             <div class="card-header bg-transparent">
                 <h5 class="card-title mb-0 text-primary">
-                    <i class="bi bi-people me-2"></i>معلومات الوالدين
+                    <i class="bi bi-people me-2"></i>{% if ui_lang == 'en' %}Parents Information{% else %}معلومات الوالدين{% endif %}
                 </h5>
             </div>
             <div class="card-body">
                 <div class="row g-4">
                     <div class="col-md-6 border-start ps-4">
-                        <h6 class="mb-3">معلومات الأب</h6>
+                        <h6 class="mb-3">{% if ui_lang == 'en' %}Father's Information{% else %}معلومات الأب{% endif %}</h6>
                         <div class="mb-2">
-                            <label class="text-muted small">الاسم</label>
+                            <label class="text-muted small">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</label>
                             <div>{{ enrollment.father_name }}</div>
                         </div>
                         <div class="mb-2">
-                            <label class="text-muted small">رقم الهاتف</label>
+                            <label class="text-muted small">{% if ui_lang == 'en' %}Phone{% else %}رقم الهاتف{% endif %}</label>
                             <div>{{ enrollment.father_phone }}</div>
                         </div>
                         <div class="mb-2">
-                            <label class="text-muted small">المهنة</label>
+                            <label class="text-muted small">{% if ui_lang == 'en' %}Occupation{% else %}المهنة{% endif %}</label>
                             <div>{{ enrollment.father_occupation or '-' }}</div>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <h6 class="mb-3">معلومات الأم</h6>
+                        <h6 class="mb-3">{% if ui_lang == 'en' %}Mother's Information{% else %}معلومات الأم{% endif %}</h6>
                         <div class="mb-2">
-                            <label class="text-muted small">الاسم</label>
+                            <label class="text-muted small">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</label>
                             <div>{{ enrollment.mother_name }}</div>
                         </div>
                         <div class="mb-2">
-                            <label class="text-muted small">رقم الهاتف</label>
+                            <label class="text-muted small">{% if ui_lang == 'en' %}Phone{% else %}رقم الهاتف{% endif %}</label>
                             <div>{{ enrollment.mother_phone }}</div>
                         </div>
                         <div class="mb-2">
-                            <label class="text-muted small">الجنسية</label>
+                            <label class="text-muted small">{% if ui_lang == 'en' %}Nationality{% else %}الجنسية{% endif %}</label>
                             <div>{{ enrollment.mother_nationality }}</div>
                         </div>
                     </div>
@@ -148,32 +148,32 @@
         <div class="card mb-4">
             <div class="card-header bg-transparent">
                 <h5 class="card-title mb-0 text-primary">
-                    <i class="bi bi-heart-pulse me-2"></i>المعلومات الصحية
+                    <i class="bi bi-heart-pulse me-2"></i>{% if ui_lang == 'en' %}Health Information{% else %}المعلومات الصحية{% endif %}
                 </h5>
             </div>
             <div class="card-body">
                 {% if enrollment.medical_conditions %}
                 <div class="alert alert-warning">
                     <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>حالات طبية خاصة:</strong> {{ enrollment.medical_conditions }}
+                    <strong>{% if ui_lang == 'en' %}Special Medical Conditions:{% else %}حالات طبية خاصة:{% endif %}</strong> {{ enrollment.medical_conditions }}
                 </div>
                 {% else %}
                 <div class="alert alert-success bg-opacity-10 border-success">
                     <i class="bi bi-check-circle me-2"></i>
-                    لا توجد مشاكل صحية مسجلة
+                    {% if ui_lang == 'en' %}No health issues recorded{% else %}لا توجد مشاكل صحية مسجلة{% endif %}
                 </div>
                 {% endif %}
 
                 <div class="row mt-3">
                     <div class="col-md-6">
-                        <label class="text-muted small">التطعيمات</label>
+                        <label class="text-muted small">{% if ui_lang == 'en' %}Vaccinations{% else %}التطعيمات{% endif %}</label>
                         <div class="d-flex align-items-center">
                             {% if enrollment.vaccinations_up_to_date %}
                             <i class="bi bi-check-circle-fill text-success me-2"></i>
-                            <span>مكتملة حسب البرنامج الوطني</span>
+                            <span>{% if ui_lang == 'en' %}Complete per national program{% else %}مكتملة حسب البرنامج الوطني{% endif %}</span>
                             {% else %}
                             <i class="bi bi-x-circle-fill text-danger me-2"></i>
-                            <span>غير مكتملة</span>
+                            <span>{% if ui_lang == 'en' %}Incomplete{% else %}غير مكتملة{% endif %}</span>
                             {% endif %}
                         </div>
                     </div>
@@ -186,22 +186,22 @@
     <div class="col-lg-4">
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="card-title mb-0">المرفقات</h5>
+                <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Attachments{% else %}المرفقات{% endif %}</h5>
             </div>
             <div class="list-group list-group-flush">
                 <a href="#"
                     class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-file-earmark-pdf me-2 text-danger"></i>شهادة الميلاد</span>
+                    <span><i class="bi bi-file-earmark-pdf me-2 text-danger"></i>{% if ui_lang == 'en' %}Birth Certificate{% else %}شهادة الميلاد{% endif %}</span>
                     <i class="bi bi-download"></i>
                 </a>
                 <a href="#"
                     class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-file-earmark-image me-2 text-primary"></i>دفتر التطعيمات</span>
+                    <span><i class="bi bi-file-earmark-image me-2 text-primary"></i>{% if ui_lang == 'en' %}Vaccination Record{% else %}دفتر التطعيمات{% endif %}</span>
                     <i class="bi bi-download"></i>
                 </a>
                 <a href="#"
                     class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-file-earmark-image me-2 text-primary"></i>صورة شخصية</span>
+                    <span><i class="bi bi-file-earmark-image me-2 text-primary"></i>{% if ui_lang == 'en' %}Personal Photo{% else %}صورة شخصية{% endif %}</span>
                     <i class="bi bi-download"></i>
                 </a>
             </div>
@@ -209,14 +209,14 @@
 
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">سجل الملاحظات</h5>
+                <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Notes Log{% else %}سجل الملاحظات{% endif %}</h5>
             </div>
             <div class="card-body p-0">
                 <div class="p-3 bg-light border-bottom">
                     <form id="noteForm">
                         <div class="input-group">
-                            <input type="text" class="form-control" placeholder="أضف ملاحظة...">
-                            <button class="btn btn-primary" type="button" aria-label="إرسال ملاحظة"><i
+                            <input type="text" class="form-control" placeholder="{% if ui_lang == 'en' %}Add a note...{% else %}أضف ملاحظة...{% endif %}">
+                            <button class="btn btn-primary" type="button" aria-label="{% if ui_lang == 'en' %}Send note{% else %}إرسال ملاحظة{% endif %}"><i
                                     class="bi bi-send"></i></button>
                         </div>
                     </form>
@@ -225,17 +225,17 @@
                     <!-- Example Note -->
                     <div class="list-group-item">
                         <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1 small fw-bold">مدير الروضة</h6>
-                            <small class="text-muted">منذ يومين</small>
+                            <h6 class="mb-1 small fw-bold">{% if ui_lang == 'en' %}Kindergarten Manager{% else %}مدير الروضة{% endif %}</h6>
+                            <small class="text-muted">{% if ui_lang == 'en' %}2 days ago{% else %}منذ يومين{% endif %}</small>
                         </div>
-                        <p class="mb-1 small">تم التأكد من اكتمال جميع الأوراق الثبوتية.</p>
+                        <p class="mb-1 small">{% if ui_lang == 'en' %}All required documents have been verified.{% else %}تم التأكد من اكتمال جميع الأوراق الثبوتية.{% endif %}</p>
                     </div>
                     <div class="list-group-item">
                         <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1 small fw-bold">النظام</h6>
-                            <small class="text-muted">منذ 3 أيام</small>
+                            <h6 class="mb-1 small fw-bold">{% if ui_lang == 'en' %}System{% else %}النظام{% endif %}</h6>
+                            <small class="text-muted">{% if ui_lang == 'en' %}3 days ago{% else %}منذ 3 أيام{% endif %}</small>
                         </div>
-                        <p class="mb-1 small">تم إنشاء الطلب بنجاح.</p>
+                        <p class="mb-1 small">{% if ui_lang == 'en' %}Request created successfully.{% else %}تم إنشاء الطلب بنجاح.{% endif %}</p>
                     </div>
                 </div>
             </div>
@@ -249,27 +249,27 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title text-success">
-                    <i class="bi bi-check-circle me-2"></i>قبول طلب التسجيل
+                    <i class="bi bi-check-circle me-2"></i>{% if ui_lang == 'en' %}Accept Enrollment Request{% else %}قبول طلب التسجيل{% endif %}
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-success bg-opacity-10 border-success">
-                    سيتم تحويل حالة الطالب إلى "نشط" وسيتمكن ولي الأمر من متابعة التقارير.
+                    {% if ui_lang == 'en' %}The student's status will be changed to "active" and the parent will be able to follow reports.{% else %}سيتم تحويل حالة الطالب إلى "نشط" وسيتمكن ولي الأمر من متابعة التقارير.{% endif %}
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label required">تحديد الشعبة الصفية</label>
+                    <label class="form-label required">{% if ui_lang == 'en' %}Assign Class Section{% else %}تحديد الشعبة الصفية{% endif %}</label>
                     <select class="form-select" id="assignClassSelect">
-                        <option value="" selected disabled>جاري تحميل الشعب...</option>
+                        <option value="" selected disabled>{% if ui_lang == 'en' %}Loading sections...{% else %}جاري تحميل الشعب...{% endif %}</option>
                     </select>
-                    <div class="form-text">قم باختيار الشعبة المناسبة لعمر الطالب.</div>
+                    <div class="form-text">{% if ui_lang == 'en' %}Select the appropriate section for the student's age.{% else %}قم باختيار الشعبة المناسبة لعمر الطالب.{% endif %}</div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
                 <button type="button" class="btn btn-success" onclick="confirmAccept()">
-                    تأكيد القبول والتسجيل
+                    {% if ui_lang == 'en' %}Confirm Acceptance & Register{% else %}تأكيد القبول والتسجيل{% endif %}
                 </button>
             </div>
         </div>
@@ -281,18 +281,18 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">رفض طلب التسجيل</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title">{% if ui_lang == 'en' %}Reject Enrollment Request{% else %}رفض طلب التسجيل{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label required">سبب الرفض</label>
+                    <label class="form-label required">{% if ui_lang == 'en' %}Rejection Reason{% else %}سبب الرفض{% endif %}</label>
                     <textarea class="form-control" id="rejectReason" rows="3" required></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-danger" onclick="confirmReject()">تأكيد الرفض</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-danger" onclick="confirmReject()">{% if ui_lang == 'en' %}Confirm Rejection{% else %}تأكيد الرفض{% endif %}</button>
             </div>
         </div>
     </div>

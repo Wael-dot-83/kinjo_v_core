@@ -14,19 +14,19 @@
         <h1 class="h2">
             <i class="bi bi-building me-2 text-primary"></i>
             {% if current_user.role.value == 'ADMIN' %}
-            إدارة الروضات
+            {% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الروضات{% endif %}
             {% else %}
-            معلومات الروضة
+            {% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}
             {% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
                 <li class="breadcrumb-item active">
                     {% if current_user.role.value == 'ADMIN' %}
-                    إدارة الروضات
+                    {% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الروضات{% endif %}
                     {% else %}
-                    معلومات الروضة
+                    {% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}
                     {% endif %}
                 </li>
             </ol>
@@ -35,13 +35,13 @@
     {% if current_user.role.value == 'ADMIN' %}
     <div class="btn-toolbar">
         <a href="/kindergartens/create" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>إضافة روضة جديدة
+            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة روضة جديدة{% endif %}
         </a>
     </div>
     {% elif current_user.role.value == 'MANAGER' and kindergartens %}
     <div class="btn-toolbar">
         <a href="/kindergartens/{{ kindergartens[0].id }}/edit" class="btn btn-primary">
-            <i class="bi bi-pencil-square me-2"></i>تعديل المعلومات
+            <i class="bi bi-pencil-square me-2"></i>{% if ui_lang == 'en' %}Edit Information{% else %}تعديل المعلومات{% endif %}
         </a>
     </div>
     {% endif %}
@@ -57,20 +57,20 @@
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="bi bi-search me-2"></i>البحث والتصفية
+                    <i class="bi bi-search me-2"></i>{% if ui_lang == 'en' %}Search & Filter{% else %}البحث والتصفية{% endif %}
                 </h5>
             </div>
             <div class="card-body">
                 <form method="GET" class="row g-3">
                     <div class="col-md-3">
-                        <label for="name" class="form-label">اسم الروضة</label>
+                        <label for="name" class="form-label">{% if ui_lang == 'en' %}Kindergarten Name{% else %}اسم الروضة{% endif %}</label>
                         <input type="text" class="form-control" id="name" name="name" value="{{ filters.name or '' }}"
-                            placeholder="البحث بالاسم...">
+                            placeholder="{% if ui_lang == 'en' %}Search by name...{% else %}البحث بالاسم...{% endif %}">
                     </div>
                     <div class="col-md-2">
-                        <label for="governorate" class="form-label">المحافظة</label>
+                        <label for="governorate" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
                         <select class="form-select" id="governorate" name="governorate">
-                            <option value="">الكل</option>
+                            <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
                             {% for gov in governorates %}
                             <option value="{{ gov }}" {% if filters.governorate==gov %}selected{% endif %}>{{ gov }}
                             </option>
@@ -78,17 +78,17 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="city" class="form-label">المدينة</label>
+                        <label for="city" class="form-label">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
                         <input type="text" class="form-control" id="city" name="city" value="{{ filters.city or '' }}"
-                            placeholder="البحث بالمدينة...">
+                            placeholder="{% if ui_lang == 'en' %}Search by city...{% else %}البحث بالمدينة...{% endif %}">
                     </div>
                     <div class="col-md-2">
-                        <label for="status" class="form-label">الحالة</label>
+                        <label for="status" class="form-label">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
                         <select class="form-select" id="status" name="status">
-                            <option value="">الكل</option>
-                            <option value="ACTIVE" {% if filters.status=='ACTIVE' %}selected{% endif %}>نشط</option>
-                            <option value="DRAFT" {% if filters.status=='DRAFT' %}selected{% endif %}>مسودة</option>
-                            <option value="INACTIVE" {% if filters.status=='INACTIVE' %}selected{% endif %}>غير نشط
+                            <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                            <option value="ACTIVE" {% if filters.status=='ACTIVE' %}selected{% endif %}>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+                            <option value="DRAFT" {% if filters.status=='DRAFT' %}selected{% endif %}>{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</option>
+                            <option value="INACTIVE" {% if filters.status=='INACTIVE' %}selected{% endif %}>{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}
                             </option>
                         </select>
                     </div>
@@ -96,10 +96,10 @@
                         <label class="form-label">&nbsp;</label>
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-search me-1"></i>بحث
+                                <i class="bi bi-search me-1"></i>{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
                             </button>
                             <a href="/kindergartens" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-circle me-1"></i>مسح
+                                <i class="bi bi-x-circle me-1"></i>{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}
                             </a>
                         </div>
                     </div>
@@ -110,7 +110,7 @@
         <!-- Results Summary -->
         <div class="mb-3">
             <p class="text-muted">
-                عرض {{ skip + 1 }} - {{ [skip + limit, total]|min }} من أصل {{ total }} روضة
+                {% if ui_lang == 'en' %}Showing {{ skip + 1 }} - {{ [skip + limit, total]|min }} of {{ total }} kindergartens{% else %}عرض {{ skip + 1 }} - {{ [skip + limit, total]|min }} من أصل {{ total }} روضة{% endif %}
             </p>
         </div>
 
@@ -118,7 +118,7 @@
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="bi bi-list-ul me-2"></i>قائمة الروضات
+                    <i class="bi bi-list-ul me-2"></i>{% if ui_lang == 'en' %}Kindergartens List{% else %}قائمة الروضات{% endif %}
                 </h5>
             </div>
             <div class="card-body p-0">
@@ -128,11 +128,11 @@
                         <thead class="table-light">
                             <tr>
                                 <th class="border-0">#</th>
-                                <th class="border-0">الاسم</th>
-                                <th class="border-0">الموقع</th>
-                                <th class="border-0">الهاتف</th>
-                                <th class="border-0">الحالة</th>
-                                <th class="border-0">الإجراءات</th>
+                                <th class="border-0">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                                <th class="border-0">{% if ui_lang == 'en' %}Location{% else %}الموقع{% endif %}</th>
+                                <th class="border-0">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
+                                <th class="border-0">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                <th class="border-0">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -155,24 +155,24 @@
                                         {% endif %}
                                     </div>
                                 </td>
-                                <td>{{ kg.contact_phone or 'غير محدد' }}</td>
+                                <td>{{ kg.contact_phone or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</td>
                                 <td>
                                     {% if kg.status.value == 'ACTIVE' %}
-                                    <span class="badge bg-success">نشط</span>
+                                    <span class="badge bg-success">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
                                     {% elif kg.status.value == 'DRAFT' %}
-                                    <span class="badge bg-warning">مسودة</span>
+                                    <span class="badge bg-warning">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
                                     {% else %}
-                                    <span class="badge bg-secondary">غير نشط</span>
+                                    <span class="badge bg-secondary">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         <a href="/kindergartens/{{ kg.id }}" class="btn btn-outline-info btn-sm"
-                                            title="عرض">
+                                            title="{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         <a href="/kindergartens/{{ kg.id }}/edit" class="btn btn-outline-primary btn-sm"
-                                            title="تعديل">
+                                            title="{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}">
                                             <i class="bi bi-pencil"></i>
                                         </a>
                                     </div>
@@ -186,7 +186,7 @@
                 <!-- Pagination -->
                 {% if total > limit %}
                 <div class="card-footer">
-                    <nav aria-label="صفحات الروضات">
+                    <nav aria-label="{% if ui_lang == 'en' %}Kindergartens pages{% else %}صفحات الروضات{% endif %}">
                         <ul class="pagination justify-content-center mb-0">
                             {% set total_pages = (total / limit)|round(0, 'ceil')|int %}
                             {% set current_page = (skip / limit)|int + 1 %}
@@ -203,7 +203,7 @@
                             <li class="page-item">
                                 <a class="page-link"
                                     href="?{% for k,v in request.query_params.items() if k != 'skip' %}{{ k }}={{ v }}&{% endfor %}skip={{ (current_page - 2) * limit }}">
-                                    السابق
+                                    ‏{% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                                 </a>
                             </li>
                             {% endif %}
@@ -221,7 +221,7 @@
                             <li class="page-item">
                                 <a class="page-link"
                                     href="?{% for k,v in request.query_params.items() if k != 'skip' %}{{ k }}={{ v }}&{% endfor %}skip={{ current_page * limit }}">
-                                    التالي
+                                    {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %}
                                 </a>
                             </li>
                             {% endif %}
@@ -232,9 +232,9 @@
                 {% else %}
                 <div class="text-center py-5">
                     <i class="bi bi-search fs-1 text-muted mb-3"></i>
-                    <h5 class="text-muted">لا توجد روضات</h5>
-                    <p class="text-muted">لم يتم العثور على أي روضات تطابق معايير البحث</p>
-                    <a href="/kindergartens" class="btn btn-primary">عرض الكل</a>
+                    <h5 class="text-muted">{% if ui_lang == 'en' %}No Kindergartens Found{% else %}لا توجد روضات{% endif %}</h5>
+                    <p class="text-muted">{% if ui_lang == 'en' %}No kindergartens match your search criteria{% else %}لم يتم العثور على أي روضات تطابق معايير البحث{% endif %}</p>
+                    <a href="/kindergartens" class="btn btn-primary">{% if ui_lang == 'en' %}Show All{% else %}عرض الكل{% endif %}</a>
                 </div>
                 {% endif %}
             </div>
@@ -250,8 +250,8 @@
         <div class="card">
             <div class="card-body text-center py-5">
                 <i class="bi bi-exclamation-triangle fs-1 text-warning mb-3"></i>
-                <h5 class="text-muted">غير مصرح لك بالوصول</h5>
-                <p class="text-muted">لا يمكنك الوصول إلى صفحة معلومات الروضة</p>
+                <h5 class="text-muted">{% if ui_lang == 'en' %}Unauthorized Access{% else %}غير مصرح لك بالوصول{% endif %}</h5>
+                <p class="text-muted">{% if ui_lang == 'en' %}You cannot access the kindergarten information page{% else %}لا يمكنك الوصول إلى صفحة معلومات الروضة{% endif %}</p>
             </div>
         </div>
     </div>
@@ -273,15 +273,15 @@
                     <div class="col-md-6">
                         <div class="border rounded p-3">
                             <h6 class="text-muted mb-2">
-                                <i class="bi bi-translate me-1"></i>الاسم بالإنجليزية
+                                <i class="bi bi-translate me-1"></i>{% if ui_lang == 'en' %}English Name{% else %}الاسم بالإنجليزية{% endif %}
                             </h6>
-                            <p class="mb-0">{{ kg.name_en or 'غير محدد' }}</p>
+                            <p class="mb-0">{{ kg.name_en or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</p>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="border rounded p-3">
                             <h6 class="text-muted mb-2">
-                                <i class="bi bi-geo-alt me-1"></i>الموقع
+                                <i class="bi bi-geo-alt me-1"></i>{% if ui_lang == 'en' %}Location{% else %}الموقع{% endif %}
                             </h6>
                             <p class="mb-0">{{ kg.governorate }}, {{ kg.city }}, {{ kg.area }}</p>
                         </div>
@@ -289,7 +289,7 @@
                     <div class="col-md-12">
                         <div class="border rounded p-3">
                             <h6 class="text-muted mb-2">
-                                <i class="bi bi-house me-1"></i>العنوان
+                                <i class="bi bi-house me-1"></i>{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %}
                             </h6>
                             <p class="mb-0">{{ kg.address_line }}</p>
                         </div>
@@ -297,37 +297,37 @@
                     <div class="col-md-6">
                         <div class="border rounded p-3">
                             <h6 class="text-muted mb-2">
-                                <i class="bi bi-telephone me-1"></i>رقم الهاتف
+                                <i class="bi bi-telephone me-1"></i>{% if ui_lang == 'en' %}Phone Number{% else %}رقم الهاتف{% endif %}
                             </h6>
-                            <p class="mb-0">{{ kg.contact_phone or 'غير محدد' }}</p>
+                            <p class="mb-0">{{ kg.contact_phone or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</p>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="border rounded p-3">
                             <h6 class="text-muted mb-2">
-                                <i class="bi bi-envelope me-1"></i>البريد الإلكتروني
+                                <i class="bi bi-envelope me-1"></i>{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}
                             </h6>
-                            <p class="mb-0">{{ kg.contact_email or 'غير محدد' }}</p>
+                            <p class="mb-0">{{ kg.contact_email or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</p>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="border rounded p-3">
                             <h6 class="text-muted mb-2">
-                                <i class="bi bi-clock me-1"></i>ساعات العمل
+                                <i class="bi bi-clock me-1"></i>{% if ui_lang == 'en' %}Operating Hours{% else %}ساعات العمل{% endif %}
                             </h6>
                             <p class="mb-0">
-                                <span data-i18n="common.from">من</span> {{ kg.operating_hours_start or 'غير محدد' }}
-                                <span data-i18n="common.to">إلى</span> {{ kg.operating_hours_end or 'غير
-                                محدد' }}
+                                <span data-i18n="common.from">{% if ui_lang == 'en' %}From{% else %}من{% endif %}</span> {{ kg.operating_hours_start or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}
+                                <span data-i18n="common.to">{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}</span> {{ kg.operating_hours_end or ("Not specified" if ui_lang == 'en' else 'غير
+                                محدد') }}
                             </p>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="border rounded p-3">
                             <h6 class="text-muted mb-2">
-                                <i class="bi bi-card-text me-1"></i>رقم الترخيص
+                                <i class="bi bi-card-text me-1"></i>{% if ui_lang == 'en' %}License Number{% else %}رقم الترخيص{% endif %}
                             </h6>
-                            <p class="mb-0">{{ kg.license_number or 'غير محدد' }}</p>
+                            <p class="mb-0">{{ kg.license_number or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</p>
                         </div>
                     </div>
                 </div>
@@ -340,17 +340,17 @@
         <div class="card mb-4">
             <div class="card-header">
                 <h6 class="mb-0">
-                    <i class="bi bi-flag me-2"></i>حالة الروضة
+                    <i class="bi bi-flag me-2"></i>{% if ui_lang == 'en' %}Kindergarten Status{% else %}حالة الروضة{% endif %}
                 </h6>
             </div>
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     {% if kg.status.value == 'ACTIVE' %}
-                    <span class="badge bg-success fs-6">نشط</span>
+                    <span class="badge bg-success fs-6">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
                     {% elif kg.status.value == 'DRAFT' %}
-                    <span class="badge bg-warning fs-6">مسودة</span>
+                    <span class="badge bg-warning fs-6">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
                     {% else %}
-                    <span class="badge bg-secondary fs-6">غير نشط</span>
+                    <span class="badge bg-secondary fs-6">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
                     {% endif %}
                 </div>
             </div>
@@ -360,16 +360,16 @@
         <div class="card">
             <div class="card-header">
                 <h6 class="mb-0">
-                    <i class="bi bi-gear me-2"></i>إجراءات سريعة
+                    <i class="bi bi-gear me-2"></i>{% if ui_lang == 'en' %}Quick Actions{% else %}إجراءات سريعة{% endif %}
                 </h6>
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
                     <a href="/kindergartens/{{ kg.id }}/edit" class="btn btn-outline-primary">
-                        <i class="bi bi-pencil-square me-2"></i>تعديل المعلومات
+                        <i class="bi bi-pencil-square me-2"></i>{% if ui_lang == 'en' %}Edit Information{% else %}تعديل المعلومات{% endif %}
                     </a>
                     <a href="/kindergartens/{{ kg.id }}" class="btn btn-outline-info">
-                        <i class="bi bi-eye me-2"></i>عرض التفاصيل الكاملة
+                        <i class="bi bi-eye me-2"></i>{% if ui_lang == 'en' %}View Full Details{% else %}عرض التفاصيل الكاملة{% endif %}
                     </a>
                 </div>
             </div>

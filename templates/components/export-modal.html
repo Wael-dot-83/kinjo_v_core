@@ -5,14 +5,14 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="{{ modal_id }}Label">
-                    <i class="bi bi-download"></i> تصدير البيانات
+                    <i class="bi bi-download"></i> {% if ui_lang == 'en' %}Export Data{% else %}تصدير البيانات{% endif %}
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <form id="{{ form_id }}">
                     <div class="mb-3">
-                        <label class="form-label">صيغة التصدير</label>
+                        <label class="form-label">{% if ui_lang == 'en' %}Export Format{% else %}صيغة التصدير{% endif %}</label>
                         <div class="btn-group w-100" role="group">
                             <input type="radio" class="btn-check" name="exportFormat" id="formatExcel" value="excel"
                                 checked>
@@ -33,30 +33,30 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">نطاق البيانات</label>
+                        <label class="form-label">{% if ui_lang == 'en' %}Data Range{% else %}نطاق البيانات{% endif %}</label>
                         <select class="form-select" id="exportRange">
-                            <option value="current">الصفحة الحالية</option>
-                            <option value="all">جميع البيانات</option>
-                            <option value="filtered">البيانات المفلترة</option>
+                            <option value="current">{% if ui_lang == 'en' %}Current Page{% else %}الصفحة الحالية{% endif %}</option>
+                            <option value="all">{% if ui_lang == 'en' %}All Data{% else %}جميع البيانات{% endif %}</option>
+                            <option value="filtered">{% if ui_lang == 'en' %}Filtered Data{% else %}البيانات المفلترة{% endif %}</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">الأعمدة المراد تصديرها</label>
+                        <label class="form-label">{% if ui_lang == 'en' %}Columns to Export{% else %}الأعمدة المراد تصديرها{% endif %}</label>
                         <div id="exportColumns" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
                             <!-- Columns will be populated dynamically -->
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="colAll" checked>
-                                <label class="form-check-label" for="colAll">تحديد الكل</label>
+                                <label class="form-check-label" for="colAll">{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}</label>
                             </div>
                         </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
                 <button type="button" class="btn btn-primary" id="confirmExport">
-                    <i class="bi bi-download"></i> تصدير
+                    <i class="bi bi-download"></i> {% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
                 </button>
             </div>
         </div>

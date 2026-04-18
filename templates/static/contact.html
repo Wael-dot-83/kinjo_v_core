@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}اتصل بنا - كينجو{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Contact Us - Kinjo{% else %}اتصل بنا - كينجو{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="text-center mb-5">
-                <h1><i class="bi bi-envelope text-primary"></i> اتصل بنا</h1>
-                <p class="lead text-muted">نسعد بتواصلكم معنا</p>
+                <h1><i class="bi bi-envelope text-primary"></i> {% if ui_lang == 'en' %}Contact Us{% else %}اتصل بنا{% endif %}</h1>
+                <p class="lead text-muted">{% if ui_lang == 'en' %}We're happy to hear from you{% else %}نسعد بتواصلكم معنا{% endif %}</p>
             </div>
 
             <div class="row g-4">
@@ -16,7 +16,7 @@
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
                             <i class="bi bi-telephone display-4 text-primary mb-3"></i>
-                            <h5>الهاتف</h5>
+                            <h5>{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</h5>
                             <p class="text-muted mb-0">+962 6 XXX XXXX</p>
                         </div>
                     </div>
@@ -26,7 +26,7 @@
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
                             <i class="bi bi-envelope display-4 text-primary mb-3"></i>
-                            <h5>البريد الإلكتروني</h5>
+                            <h5>{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</h5>
                             <p class="text-muted mb-0">support@kinjo.jo</p>
                         </div>
                     </div>
@@ -36,8 +36,8 @@
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
                             <i class="bi bi-geo-alt display-4 text-primary mb-3"></i>
-                            <h5>العنوان</h5>
-                            <p class="text-muted mb-0">عمان، الأردن</p>
+                            <h5>{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %}</h5>
+                            <p class="text-muted mb-0">{% if ui_lang == 'en' %}Amman, Jordan{% else %}عمان، الأردن{% endif %}</p>
                         </div>
                     </div>
                 </div>
@@ -46,8 +46,8 @@
                     <div class="card h-100 shadow-sm">
                         <div class="card-body text-center">
                             <i class="bi bi-clock display-4 text-primary mb-3"></i>
-                            <h5>ساعات العمل</h5>
-                            <p class="text-muted mb-0">الأحد - الخميس: 8:00 - 16:00</p>
+                            <h5>{% if ui_lang == 'en' %}Working Hours{% else %}ساعات العمل{% endif %}</h5>
+                            <p class="text-muted mb-0">{% if ui_lang == 'en' %}Sunday - Thursday: 8:00 - 16:00{% else %}الأحد - الخميس: 8:00 - 16:00{% endif %}</p>
                         </div>
                     </div>
                 </div>
@@ -55,28 +55,28 @@
 
             <div class="card mt-5 shadow-sm">
                 <div class="card-body">
-                    <h4 class="mb-4">أرسل لنا رسالة</h4>
+                    <h4 class="mb-4">{% if ui_lang == 'en' %}Send Us a Message{% else %}أرسل لنا رسالة{% endif %}</h4>
                     <form id="contactForm">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="name" class="form-label">الاسم</label>
+                                <label for="name" class="form-label">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</label>
                                 <input type="text" class="form-control" id="name" required>
                             </div>
                             <div class="col-md-6">
-                                <label for="email" class="form-label">البريد الإلكتروني</label>
+                                <label for="email" class="form-label">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label>
                                 <input type="email" class="form-control" id="email" required>
                             </div>
                             <div class="col-12">
-                                <label for="subject" class="form-label">الموضوع</label>
+                                <label for="subject" class="form-label">{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %}</label>
                                 <input type="text" class="form-control" id="subject" required>
                             </div>
                             <div class="col-12">
-                                <label for="message" class="form-label">الرسالة</label>
+                                <label for="message" class="form-label">{% if ui_lang == 'en' %}Message{% else %}الرسالة{% endif %}</label>
                                 <textarea class="form-control" id="message" rows="5" required></textarea>
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-send"></i> إرسال
+                                    <i class="bi bi-send"></i> {% if ui_lang == 'en' %}Send{% else %}إرسال{% endif %}
                                 </button>
                             </div>
                         </div>
@@ -88,13 +88,15 @@
 </div>
 
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
     document.getElementById('contactForm').addEventListener('submit', function (e) {
         e.preventDefault();
         Swal.fire({
             icon: 'success',
-            title: 'تم الإرسال',
-            text: 'شكراً لتواصلك معنا. سنرد عليك في أقرب وقت ممكن.',
-            confirmButtonText: 'حسناً'
+            title: T('تم الإرسال', 'Sent'),
+            text: T('شكراً لتواصلك معنا. سنرد عليك في أقرب وقت ممكن.', 'Thank you for contacting us. We will get back to you as soon as possible.'),
+            confirmButtonText: T('حسناً', 'OK')
         }).then(() => {
             this.reset();
         });

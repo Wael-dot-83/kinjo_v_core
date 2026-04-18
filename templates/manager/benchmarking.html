@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
 
-{% block title %}المقارنة المعيارية{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="row pt-4 pb-2 mb-3 border-bottom align-items-center">
     <div class="col-md-8">
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb bg-transparent p-0 mb-2">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">المقارنة المعيارية</li>
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %}</li>
             </ol>
         </nav>
-        <h1 class="h3 fw-bold mb-1">مقارنة معيارية لمدير الروضة</h1>
-        <p class="text-muted small mb-0">تظهر النسبة المئوية والمجال ضمن مجموعة ندية مماثلة مع إخفاء أسماء الجهات الأخرى.</p>
+        <h1 class="h3 fw-bold mb-1">{% if ui_lang == 'en' %}Manager Benchmarking{% else %}مقارنة معيارية لمدير الروضة{% endif %}</h1>
+        <p class="text-muted small mb-0">{% if ui_lang == 'en' %}Shows percentile and band within a similar peer group with anonymized names.{% else %}تظهر النسبة المئوية والمجال ضمن مجموعة ندية مماثلة مع إخفاء أسماء الجهات الأخرى.{% endif %}</p>
     </div>
 </div>
 {% endblock %}
@@ -23,27 +23,27 @@
         <div class="card-body">
             <div class="row g-3 align-items-end">
                 <div class="col-md-3">
-                    <label class="form-label">بداية الفترة</label>
+                    <label class="form-label">{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}</label>
                     <input id="managerPeriodStart" type="date" class="form-control">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">نهاية الفترة</label>
+                    <label class="form-label">{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}</label>
                     <input id="managerPeriodEnd" type="date" class="form-control">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">نوع الشريحة</label>
+                    <label class="form-label">{% if ui_lang == 'en' %}Segment Type{% else %}نوع الشريحة{% endif %}</label>
                     <select id="managerSizeMode" class="form-select">
-                        <option value="ENROLLMENT">حسب عدد الملتحقين</option>
-                        <option value="CAPACITY">حسب السعة</option>
-                        <option value="CLASS_COUNT">حسب عدد الصفوف</option>
+                        <option value="ENROLLMENT">{% if ui_lang == 'en' %}By Enrollment{% else %}حسب عدد الملتحقين{% endif %}</option>
+                        <option value="CAPACITY">{% if ui_lang == 'en' %}By Capacity{% else %}حسب السعة{% endif %}</option>
+                        <option value="CLASS_COUNT">{% if ui_lang == 'en' %}By Class Count{% else %}حسب عدد الصفوف{% endif %}</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <button id="managerBenchmarkLoadBtn" class="btn btn-primary w-100">عرض المقارنة</button>
+                    <button id="managerBenchmarkLoadBtn" class="btn btn-primary w-100">{% if ui_lang == 'en' %}Show Comparison{% else %}عرض المقارنة{% endif %}</button>
                 </div>
             </div>
             <div class="alert alert-info mt-3 mb-0 py-2 small">
-                السهم والنسبة المئوية تعبران عن الأداء مقارنة بالفترة السابقة والمجموعة الندية فقط.
+                {% if ui_lang == 'en' %}The arrow and percentage reflect performance compared to the previous period and peer group only.{% else %}السهم والنسبة المئوية تعبران عن الأداء مقارنة بالفترة السابقة والمجموعة الندية فقط.{% endif %}
             </div>
         </div>
     </div>
@@ -54,7 +54,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small">الدرجة النهائية</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Final Score{% else %}الدرجة النهائية{% endif %}</div>
                     <div id="managerFinalScore" class="display-6 fw-bold">--</div>
                 </div>
             </div>
@@ -62,7 +62,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small">النسبة المئوية</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Percentile{% else %}النسبة المئوية{% endif %}</div>
                     <div id="managerPercentile" class="display-6 fw-bold">--</div>
                 </div>
             </div>
@@ -70,7 +70,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small">مجال الأداء</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Performance Band{% else %}مجال الأداء{% endif %}</div>
                     <div id="managerBand" class="display-6 fw-bold">--</div>
                 </div>
             </div>
@@ -78,7 +78,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <div class="text-muted small">حجم المجموعة الندية</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Peer Group Size{% else %}حجم المجموعة الندية{% endif %}</div>
                     <div id="managerPeerSize" class="display-6 fw-bold">--</div>
                 </div>
             </div>
@@ -87,16 +87,16 @@
 
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <h6 class="fw-bold">مقارنة ندية مجهولة الهوية</h6>
+            <h6 class="fw-bold">{% if ui_lang == 'en' %}Anonymous Peer Comparison{% else %}مقارنة ندية مجهولة الهوية{% endif %}</h6>
             <div class="table-responsive">
                 <table class="table table-striped align-middle">
                     <thead>
                         <tr>
-                            <th>رمز الند</th>
-                            <th>الترتيب</th>
-                            <th>النسبة المئوية</th>
-                            <th>المجال</th>
-                            <th>الدرجة</th>
+                            <th>{% if ui_lang == 'en' %}Peer Code{% else %}رمز الند{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Rank{% else %}الترتيب{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Percentile{% else %}النسبة المئوية{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Band{% else %}المجال{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Score{% else %}الدرجة{% endif %}</th>
                         </tr>
                     </thead>
                     <tbody id="managerPeersTableBody"></tbody>

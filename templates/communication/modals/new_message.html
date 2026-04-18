@@ -6,18 +6,18 @@
             <div class="modal-header bg-primary text-white">
                 <div class="d-flex flex-column">
                     <h5 class="modal-title mb-1" id="newMessageModalLabel">
-                        <i class="bi bi-envelope-plus me-2"></i>رسالة جديدة
+                        <i class="bi bi-envelope-plus me-2"></i>{% if ui_lang == 'en' %}New Message{% else %}رسالة جديدة{% endif %}
                     </h5>
                     <small class="text-primary-emphasis">
                         {% if current_user and current_user.role.value == 'ADMIN' %}
-                        أرسل رسالة لمستخدمي الروضات أو للمحافظة
+                        {% if ui_lang == 'en' %}Send a message to kindergarten users or governorate{% else %}أرسل رسالة لمستخدمي الروضات أو للمحافظة{% endif %}
                         {% else %}
-                        أرسل رسالة لمستخدمي روضتك
+                        {% if ui_lang == 'en' %}Send a message to your kindergarten users{% else %}أرسل رسالة لمستخدمي روضتك{% endif %}
                         {% endif %}
                     </small>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="إغلاق"></button>
+                    aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
 
             <!-- Modal Body -->
@@ -27,39 +27,39 @@
                     <div class="card mb-4 border-0 bg-light">
                         <div class="card-header bg-white border-bottom-0">
                             <h6 class="mb-0 text-primary">
-                                <i class="bi bi-info-circle me-2"></i>تفاصيل الرسالة
+                                <i class="bi bi-info-circle me-2"></i>{% if ui_lang == 'en' %}Message Details{% else %}تفاصيل الرسالة{% endif %}
                             </h6>
                         </div>
                         <div class="card-body">
                             <!-- Subject -->
                             <div class="mb-3">
                                 <label for="msgSubject" class="form-label fw-semibold">
-                                    الموضوع <span class="text-danger">*</span>
+                                    {% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %} <span class="text-danger">*</span>
                                 </label>
                                 <input type="text" class="form-control" id="msgSubject" required
-                                    placeholder="أدخل موضوع الرسالة">
+                                    placeholder="{% if ui_lang == 'en' %}Enter message subject{% else %}أدخل موضوع الرسالة{% endif %}">
                                 <div class="invalid-feedback">
-                                    هذا الحقل مطلوب
+                                    {% if ui_lang == 'en' %}This field is required{% else %}هذا الحقل مطلوب{% endif %}
                                 </div>
                             </div>
 
                             <!-- Message Type (hidden for Supervisors) -->
                             <div class="mb-0" id="msgTypeContainer">
-                                <label for="msgType" class="form-label fw-semibold">نوع الرسالة</label>
+                                <label for="msgType" class="form-label fw-semibold">{% if ui_lang == 'en' %}Message Type{% else %}نوع الرسالة{% endif %}</label>
                                 <select class="form-select" id="msgType">
-                                    <option value="direct">رسالة مباشرة (لشخص واحد)</option>
-                                    <option value="group">رسالة جماعية (لعدة أشخاص)</option>
+                                    <option value="direct">{% if ui_lang == 'en' %}Direct Message (to one person){% else %}رسالة مباشرة (لشخص واحد){% endif %}</option>
+                                    <option value="group">{% if ui_lang == 'en' %}Group Message (to multiple people){% else %}رسالة جماعية (لعدة أشخاص){% endif %}</option>
                                     {% if current_user and current_user.role.value == 'ADMIN' %}
-                                    <option value="announcement">إعلان (للجميع)</option>
+                                    <option value="announcement">{% if ui_lang == 'en' %}Announcement (to everyone){% else %}إعلان (للجميع){% endif %}</option>
                                     {% endif %}
                                 </select>
                             </div>
                             <!-- Supervisor Fixed Message Type -->
                             <div class="mb-0" id="supervisorMsgTypeInfo" style="display:none;">
-                                <label class="form-label fw-semibold">نوع الرسالة</label>
+                                <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Message Type{% else %}نوع الرسالة{% endif %}</label>
                                 <div class="alert alert-info mb-0 py-2">
                                     <i class="bi bi-send me-2"></i>
-                                    رسالة مباشرة لمدير الروضة
+                                    {% if ui_lang == 'en' %}Direct message to kindergarten manager{% else %}رسالة مباشرة لمدير الروضة{% endif %}
                                 </div>
                             </div>
                         </div>
@@ -69,7 +69,7 @@
                     <div class="card mb-4 border-0 bg-light" id="recipientsSection">
                         <div class="card-header bg-white border-bottom-0" id="recipientsSectionHeader">
                             <h6 class="mb-0 text-primary">
-                                <i class="bi bi-people me-2"></i>المستلمون
+                                <i class="bi bi-people me-2"></i>{% if ui_lang == 'en' %}Recipients{% else %}المستلمون{% endif %}
                             </h6>
                         </div>
                         <div class="card-body">
@@ -77,22 +77,22 @@
                             <div class="admin-targeting-section" id="adminTargetingSection" style="display:none;">
                                 <!-- Target Mode Selection -->
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold">نطاق الاستلام:</label>
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Recipient Scope:{% else %}نطاق الاستلام:{% endif %}</label>
                                     <select class="form-select" id="adminTargetMode"
                                         onchange="updateAdminTargetingUI()">
-                                        <option value="ALL_USERS">📢 جميع المستخدمين (مدراء + مشرفين + أولياء أمور)
+                                        <option value="ALL_USERS">📢 {% if ui_lang == 'en' %}All Users (Managers + Supervisors + Parents){% else %}جميع المستخدمين (مدراء + مشرفين + أولياء أمور){% endif %}
                                         </option>
-                                        <option value="ALL_MANAGERS">👔 جميع المدراء فقط</option>
-                                        <option value="ALL_SUPERVISORS">👩‍🏫 جميع المشرفين فقط</option>
-                                        <option value="ALL_PARENTS">👨‍👩‍👧‍👦 جميع أولياء الأمور فقط</option>
-                                        <option value="GOVERNORATE">🏛️ حسب المحافظة (محافظة واحدة أو أكثر)</option>
-                                        <option value="KINDERGARTENS">🏫 روضات محددة</option>
+                                        <option value="ALL_MANAGERS">👔 {% if ui_lang == 'en' %}All Managers Only{% else %}جميع المدراء فقط{% endif %}</option>
+                                        <option value="ALL_SUPERVISORS">👩‍🏫 {% if ui_lang == 'en' %}All Supervisors Only{% else %}جميع المشرفين فقط{% endif %}</option>
+                                        <option value="ALL_PARENTS">👨‍👩‍👧‍👦 {% if ui_lang == 'en' %}All Parents Only{% else %}جميع أولياء الأمور فقط{% endif %}</option>
+                                        <option value="GOVERNORATE">🏛️ {% if ui_lang == 'en' %}By Governorate{% else %}حسب المحافظة (محافظة واحدة أو أكثر){% endif %}</option>
+                                        <option value="KINDERGARTENS">🏫 {% if ui_lang == 'en' %}Specific Kindergartens{% else %}روضات محددة{% endif %}</option>
                                     </select>
                                 </div>
 
                                 <!-- Governorate Multi-Select Section (shown for GOVERNORATE mode) -->
                                 <div class="mb-3" id="adminGovernorateSection" style="display:none;">
-                                    <label class="form-label fw-semibold">اختر المحافظات:</label>
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Select Governorates:{% else %}اختر المحافظات:{% endif %}</label>
                                     <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;"
                                         id="adminGovernorateList">
                                         {% set governorate_list = (governorates if governorates is defined and
@@ -113,91 +113,91 @@
                                     </div>
                                     <div class="mt-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary"
-                                            onclick="document.querySelectorAll('.admin-gov-checkbox').forEach(c=>c.checked=true);previewRecipients();">تحديد
-                                            الكل</button>
+                                            onclick="document.querySelectorAll('.admin-gov-checkbox').forEach(c=>c.checked=true);previewRecipients();">{% if ui_lang == 'en' %}Select All{% else %}تحديد
+                                            الكل{% endif %}</button>
                                         <button type="button" class="btn btn-sm btn-outline-secondary"
-                                            onclick="document.querySelectorAll('.admin-gov-checkbox').forEach(c=>c.checked=false);previewRecipients();">إلغاء
-                                            الكل</button>
+                                            onclick="document.querySelectorAll('.admin-gov-checkbox').forEach(c=>c.checked=false);previewRecipients();">{% if ui_lang == 'en' %}Deselect All{% else %}إلغاء
+                                            الكل{% endif %}</button>
                                     </div>
                                 </div>
 
                                 <!-- Role Filter for GOVERNORATE mode -->
                                 <div class="mb-3" id="adminGovRolesSection" style="display:none;">
-                                    <label class="form-label fw-semibold">الأدوار المستهدفة:</label>
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Target Roles:{% else %}الأدوار المستهدفة:{% endif %}</label>
                                     <div class="d-flex flex-wrap gap-3">
                                         <div class="form-check">
                                             <input class="form-check-input admin-gov-role-checkbox" type="checkbox"
                                                 value="MANAGER" id="adminGovRoleManager" checked
                                                 onchange="previewRecipients()">
-                                            <label class="form-check-label" for="adminGovRoleManager">👔 مدراء</label>
+                                            <label class="form-check-label" for="adminGovRoleManager">👔 {% if ui_lang == 'en' %}Managers{% else %}مدراء{% endif %}</label>
                                         </div>
                                         <div class="form-check">
                                             <input class="form-check-input admin-gov-role-checkbox" type="checkbox"
                                                 value="SUPERVISOR" id="adminGovRoleSupervisor" checked
                                                 onchange="previewRecipients()">
                                             <label class="form-check-label" for="adminGovRoleSupervisor">👩‍🏫
-                                                مشرفين</label>
+                                                {% if ui_lang == 'en' %}Supervisors{% else %}مشرفين{% endif %}</label>
                                         </div>
                                         <div class="form-check">
                                             <input class="form-check-input admin-gov-role-checkbox" type="checkbox"
                                                 value="PARENT" id="adminGovRoleParent" checked
                                                 onchange="previewRecipients()">
-                                            <label class="form-check-label" for="adminGovRoleParent">👨‍👩‍👧‍👦 أولياء
-                                                أمور</label>
+                                            <label class="form-check-label" for="adminGovRoleParent">👨‍👩‍👧‍👦 {% if ui_lang == 'en' %}Parents{% else %}أولياء
+                                                أمور{% endif %}</label>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Kindergarten Multi-Select Section (shown for KINDERGARTENS mode) -->
                                 <div class="mb-3" id="adminKindergartenSection" style="display:none;">
-                                    <label class="form-label fw-semibold">اختر الروضات:</label>
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Select Kindergartens:{% else %}اختر الروضات:{% endif %}</label>
                                     <div class="border rounded p-2" style="max-height: 300px; overflow-y: auto;"
                                         id="adminKindergartenList">
-                                        <div class="text-muted">جاري التحميل...</div>
+                                        <div class="text-muted">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
                                     </div>
                                     <div class="mt-1">
                                         <button type="button" class="btn btn-sm btn-outline-secondary"
-                                            onclick="document.querySelectorAll('.admin-kg-checkbox').forEach(c=>c.checked=true);previewRecipients();">تحديد
-                                            الكل</button>
+                                            onclick="document.querySelectorAll('.admin-kg-checkbox').forEach(c=>c.checked=true);previewRecipients();">{% if ui_lang == 'en' %}Select All{% else %}تحديد
+                                            الكل{% endif %}</button>
                                         <button type="button" class="btn btn-sm btn-outline-secondary"
-                                            onclick="document.querySelectorAll('.admin-kg-checkbox').forEach(c=>c.checked=false);previewRecipients();">إلغاء
-                                            الكل</button>
+                                            onclick="document.querySelectorAll('.admin-kg-checkbox').forEach(c=>c.checked=false);previewRecipients();">{% if ui_lang == 'en' %}Deselect All{% else %}إلغاء
+                                            الكل{% endif %}</button>
                                     </div>
                                 </div>
 
                                 <!-- Role Filter for KINDERGARTENS mode -->
                                 <div class="mb-3" id="adminKgRolesSection" style="display:none;">
-                                    <label class="form-label fw-semibold">الأدوار المستهدفة:</label>
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Target Roles:{% else %}الأدوار المستهدفة:{% endif %}</label>
                                     <div class="d-flex flex-wrap gap-3">
                                         <div class="form-check">
                                             <input class="form-check-input admin-kg-role-checkbox" type="checkbox"
                                                 value="MANAGER" id="adminKgRoleManager" checked
                                                 onchange="previewRecipients()">
-                                            <label class="form-check-label" for="adminKgRoleManager">👔 مدراء</label>
+                                            <label class="form-check-label" for="adminKgRoleManager">👔 {% if ui_lang == 'en' %}Managers{% else %}مدراء{% endif %}</label>
                                         </div>
                                         <div class="form-check">
                                             <input class="form-check-input admin-kg-role-checkbox" type="checkbox"
                                                 value="SUPERVISOR" id="adminKgRoleSupervisor" checked
                                                 onchange="previewRecipients()">
                                             <label class="form-check-label" for="adminKgRoleSupervisor">👩‍🏫
-                                                مشرفين</label>
+                                                {% if ui_lang == 'en' %}Supervisors{% else %}مشرفين{% endif %}</label>
                                         </div>
                                         <div class="form-check">
                                             <input class="form-check-input admin-kg-role-checkbox" type="checkbox"
                                                 value="PARENT" id="adminKgRoleParent" checked
                                                 onchange="previewRecipients()">
-                                            <label class="form-check-label" for="adminKgRoleParent">👨‍👩‍👧‍👦 أولياء
-                                                أمور</label>
+                                            <label class="form-check-label" for="adminKgRoleParent">👨‍👩‍👧‍👦 {% if ui_lang == 'en' %}Parents{% else %}أولياء
+                                                أمور{% endif %}</label>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Search Filter -->
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold">البحث عن المستلمين (اختياري):</label>
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Search Recipients (optional):{% else %}البحث عن المستلمين (اختياري):{% endif %}</label>
                                     <div class="input-group">
                                         <input type="text" class="form-control" id="adminSearchInput"
-                                            placeholder="ابحث بالاسم أو البريد الإلكتروني…">
+                                            placeholder="{% if ui_lang == 'en' %}Search by name or email…{% else %}ابحث بالاسم أو البريد الإلكتروني…{% endif %}">
                                         <button class="btn btn-outline-secondary" type="button" id="adminSearchBtn">
                                             <i class="bi bi-search"></i>
                                         </button>
@@ -213,18 +213,18 @@
                                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                         <div>
                                             <i class="bi bi-people-fill"></i>
-                                            <span>عدد المستلمين: <strong id="recipientCount"
+                                            <span>{% if ui_lang == 'en' %}Recipient Count:{% else %}عدد المستلمين:{% endif %} <strong id="recipientCount"
                                                     class="fs-5">-</strong></span>
                                         </div>
                                         <button type="button" class="btn btn-sm btn-info text-white"
                                             onclick="previewRecipients()">
-                                            <i class="bi bi-eye"></i> حساب المستلمين
+                                            <i class="bi bi-eye"></i> {% if ui_lang == 'en' %}Calculate Recipients{% else %}حساب المستلمين{% endif %}
                                         </button>
                                     </div>
                                     <!-- Sample Recipients -->
                                     <div id="sampleRecipientsContainer" class="mt-2" style="display:none;">
                                         <hr>
-                                        <small class="text-muted">عينة من المستلمين:</small>
+                                        <small class="text-muted">{% if ui_lang == 'en' %}Sample Recipients:{% else %}عينة من المستلمين:{% endif %}</small>
                                         <div id="sampleRecipientsList" class="mt-1 small"></div>
                                     </div>
                                     <div id="recipientBreakdown" class="small text-muted mt-2" style="display:none;">
@@ -236,9 +236,9 @@
                             <div id="supervisorMessageSection" style="display:none;">
                                 <div class="alert alert-info mb-3">
                                     <i class="bi bi-info-circle me-2"></i>
-                                    <strong>المشرفون يمكنهم إرسال رسائل لمدير الروضة فقط.</strong>
+                                    <strong>{% if ui_lang == 'en' %}Supervisors can only send messages to the kindergarten manager.{% else %}المشرفون يمكنهم إرسال رسائل لمدير الروضة فقط.{% endif %}</strong>
                                     <br>
-                                    <small class="text-muted">سيتم إرسال رسالتك تلقائياً إلى مدير روضتك.</small>
+                                    <small class="text-muted">{% if ui_lang == 'en' %}Your message will be automatically sent to your kindergarten manager.{% else %}سيتم إرسال رسالتك تلقائياً إلى مدير روضتك.{% endif %}</small>
                                 </div>
                             </div>
 
@@ -246,21 +246,21 @@
                             <div id="directMessageSection" style="display:none;">
                                 <!-- Role Filter -->
                                 <div class="mb-3">
-                                    <label for="directRoleFilter" class="form-label fw-semibold">الدور</label>
+                                    <label for="directRoleFilter" class="form-label fw-semibold">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</label>
                                     <select class="form-select" id="directRoleFilter">
-                                        <option value="">جميع الأدوار</option>
-                                        <option value="SUPERVISOR">👩‍🏫 مشرف</option>
-                                        <option value="PARENT">👨‍👩‍👧‍👦 ولي أمر</option>
+                                        <option value="">{% if ui_lang == 'en' %}All Roles{% else %}جميع الأدوار{% endif %}</option>
+                                        <option value="SUPERVISOR">👩‍🏫 {% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
+                                        <option value="PARENT">👨‍👩‍👧‍👦 {% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</option>
                                     </select>
                                 </div>
 
                                 <!-- Search Input -->
                                 <div class="mb-3">
-                                    <label for="directUserSearch" class="form-label fw-semibold">البحث عن
-                                        المستلم</label>
+                                    <label for="directUserSearch" class="form-label fw-semibold">{% if ui_lang == 'en' %}Search for Recipient{% else %}البحث عن
+                                        المستلم{% endif %}</label>
                                     <div class="input-group">
                                         <input type="text" class="form-control" id="directUserSearch"
-                                            placeholder="ابحث بالاسم أو البريد الإلكتروني…">
+                                            placeholder="{% if ui_lang == 'en' %}Search by name or email…{% else %}ابحث بالاسم أو البريد الإلكتروني…{% endif %}">
                                         <button class="btn btn-outline-secondary" type="button"
                                             id="directUserSearchBtn">
                                             <i class="bi bi-search"></i>
@@ -270,20 +270,20 @@
                                         </button>
                                     </div>
                                     <div class="form-text">
-                                        يمكنك البحث بالاسم أو البريد الإلكتروني. يتم الإرسال داخل روضتك فقط.
+                                        {% if ui_lang == 'en' %}You can search by name or email. Sending is within your kindergarten only.{% else %}يمكنك البحث بالاسم أو البريد الإلكتروني. يتم الإرسال داخل روضتك فقط.{% endif %}
                                     </div>
                                 </div>
 
                                 <!-- Recipient Selection -->
                                 <div class="mb-3">
                                     <label for="directRecipientSelect" class="form-label fw-semibold">
-                                        اختر المستلم <span class="text-danger">*</span>
+                                        {% if ui_lang == 'en' %}Select Recipient{% else %}اختر المستلم{% endif %} <span class="text-danger">*</span>
                                     </label>
                                     <select class="form-select" id="directRecipientSelect" size="4" required>
-                                        <option value="">-- اختر مستلمًا --</option>
+                                        <option value="">{% if ui_lang == 'en' %}-- Select a recipient --{% else %}-- اختر مستلمًا --{% endif %}</option>
                                     </select>
                                     <div class="invalid-feedback">
-                                        يرجى اختيار مستلم للرسالة
+                                        {% if ui_lang == 'en' %}Please select a message recipient{% else %}يرجى اختيار مستلم للرسالة{% endif %}
                                     </div>
                                     <input type="hidden" id="msgRecipient">
                                 </div>
@@ -292,14 +292,14 @@
                             <!-- Group Message Section (Non-Admin) -->
                             <div id="groupMessageSection" style="display:none;">
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold">الأدوار المستلمة</label>
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Recipient Roles{% else %}الأدوار المستلمة{% endif %}</label>
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" value="SUPERVISOR"
                                                     id="roleSupervisors" name="recipientRole">
                                                 <label class="form-check-label" for="roleSupervisors">
-                                                    👩‍🏫 المشرفون
+                                                    👩‍🏫 {% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}
                                                 </label>
                                             </div>
                                         </div>
@@ -308,7 +308,7 @@
                                                 <input class="form-check-input" type="checkbox" value="PARENT"
                                                     id="roleParents" name="recipientRole">
                                                 <label class="form-check-label" for="roleParents">
-                                                    👨‍👩‍👧‍👦 أولياء الأمور
+                                                    👨‍👩‍👧‍👦 {% if ui_lang == 'en' %}Parents{% else %}أولياء الأمور{% endif %}
                                                 </label>
                                             </div>
                                         </div>
@@ -316,7 +316,7 @@
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="selectAllRoles">
                                         <label class="form-check-label" for="selectAllRoles">
-                                            ✅ جميع الأدوار
+                                            ✅ {% if ui_lang == 'en' %}All Roles{% else %}جميع الأدوار{% endif %}
                                         </label>
                                     </div>
                                 </div>
@@ -326,56 +326,56 @@
                             <div class="form-check mt-3">
                                 <input class="form-check-input" type="checkbox" id="allowRepliesToggle">
                                 <label class="form-check-label fw-semibold" for="allowRepliesToggle">
-                                    السماح بالرد إلى المرسل فقط
+                                    {% if ui_lang == 'en' %}Allow reply to sender only{% else %}السماح بالرد إلى المرسل فقط{% endif %}
                                 </label>
                             </div>
                         </div>
                     </div>
                     <div class="mb-3" id="recipientField" style="display:none;">
-                        <label class="form-label">المستلم</label>
+                        <label class="form-label">{% if ui_lang == 'en' %}Recipient{% else %}المستلم{% endif %}</label>
                         <div id="directRecipientLookup" style="display:none;">
                             <div class="row g-2">
                                 <div class="col-12 col-md-4">
-                                    <label for="directRoleFilter" class="form-label">الدور</label>
+                                    <label for="directRoleFilter" class="form-label">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</label>
                                     <select class="form-select" id="directRoleFilter"></select>
                                 </div>
                                 <div class="col-12 col-md-4">
-                                    <label for="directUserGovernorate" class="form-label">المحافظة</label>
+                                    <label for="directUserGovernorate" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
                                     <input type="text" class="form-control" id="directUserGovernorate"
-                                        placeholder="مثال: دمشق">
+                                        placeholder="{% if ui_lang == 'en' %}e.g. Damascus{% else %}مثال: دمشق{% endif %}">
                                 </div>
                                 <div class="col-12 col-md-4">
-                                    <label for="directUserPhone" class="form-label">الهاتف</label>
+                                    <label for="directUserPhone" class="form-label">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</label>
                                     <input type="text" class="form-control" id="directUserPhone"
-                                        placeholder="رقم الهاتف">
+                                        placeholder="{% if ui_lang == 'en' %}Phone number{% else %}رقم الهاتف{% endif %}">
                                 </div>
                                 <div class="col-12 col-md-4" id="directKindergartenFilterWrap" style="display:none;">
-                                    <label for="directKindergartenFilter" class="form-label">الروضة</label>
+                                    <label for="directKindergartenFilter" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
                                     <select class="form-select" id="directKindergartenFilter"></select>
                                 </div>
                                 <div class="col-12 col-md-8">
-                                    <label for="directUserSearch" class="form-label">بحث</label>
+                                    <label for="directUserSearch" class="form-label">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</label>
                                     <input type="text" class="form-control" id="directUserSearch"
-                                        placeholder="اسم المستخدم أو البريد">
+                                        placeholder="{% if ui_lang == 'en' %}Username or email{% else %}اسم المستخدم أو البريد{% endif %}">
                                 </div>
                             </div>
                             <div class="d-flex flex-wrap gap-2 mt-2">
                                 <button type="button" class="btn btn-outline-secondary btn-sm"
-                                    id="directUserSearchBtn">بحث</button>
+                                    id="directUserSearchBtn">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm"
-                                    id="directUserResetBtn">مسح</button>
+                                    id="directUserResetBtn">{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</button>
                             </div>
                             <select class="form-select mt-2" id="directRecipientSelect">
-                                <option value="">-- اختر مستلمًا --</option>
+                                <option value="">{% if ui_lang == 'en' %}-- Select a recipient --{% else %}-- اختر مستلمًا --{% endif %}</option>
                             </select>
                             <input type="hidden" id="msgRecipient">
-                            <div class="form-text">يمكن البحث بالاسم أو البريد الإلكتروني.</div>
+                            <div class="form-text">{% if ui_lang == 'en' %}You can search by name or email.{% else %}يمكن البحث بالاسم أو البريد الإلكتروني.{% endif %}</div>
                         </div>
                         <div id="directManagerWrap" style="display:none;">
-                            <div class="text-muted small" id="directManagerNote">سيتم إرسال الرسالة إلى مدير الروضة.
+                            <div class="text-muted small" id="directManagerNote">{% if ui_lang == 'en' %}The message will be sent to the kindergarten manager.{% else %}سيتم إرسال الرسالة إلى مدير الروضة.{% endif %}
                             </div>
                             <div class="mt-2" id="parentKindergartenWrap" style="display:none;">
-                                <label for="directParentKindergarten" class="form-label">اختر الروضة</label>
+                                <label for="directParentKindergarten" class="form-label">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</label>
                                 <select class="form-select" id="directParentKindergarten"></select>
                             </div>
                         </div>
@@ -384,35 +384,35 @@
                     <div class="card mb-4 border-0 bg-light">
                         <div class="card-header bg-white border-bottom-0">
                             <h6 class="mb-0 text-primary">
-                                <i class="bi bi-pencil-square me-2"></i>محتوى الرسالة
+                                <i class="bi bi-pencil-square me-2"></i>{% if ui_lang == 'en' %}Message Content{% else %}محتوى الرسالة{% endif %}
                             </h6>
                         </div>
                         <div class="card-body">
                             <!-- Message Body -->
                             <div class="mb-3">
                                 <label for="msgBody" class="form-label fw-semibold">
-                                    نص الرسالة <span class="text-danger">*</span>
+                                    {% if ui_lang == 'en' %}Message Body{% else %}نص الرسالة{% endif %} <span class="text-danger">*</span>
                                 </label>
                                 <textarea class="form-control" id="msgBody" rows="6"
                                     style="resize: vertical; min-height: 120px;" required
-                                    placeholder="اكتب نص الرسالة هنا..."></textarea>
+                                    placeholder="{% if ui_lang == 'en' %}Type your message here...{% else %}اكتب نص الرسالة هنا...{% endif %}"></textarea>
                                 <div class="invalid-feedback">
-                                    هذا الحقل مطلوب
+                                    {% if ui_lang == 'en' %}This field is required{% else %}هذا الحقل مطلوب{% endif %}
                                 </div>
                                 <div class="d-flex justify-between align-items-center mt-1">
                                     <small class="form-text text-muted">
-                                        رسالة طويلة مدعومة - سيتم عرض النص بشكل صحيح للمستلمين
+                                        {% if ui_lang == 'en' %}Long messages are supported — text will be displayed correctly to recipients{% else %}رسالة طويلة مدعومة - سيتم عرض النص بشكل صحيح للمستلمين{% endif %}
                                     </small>
-                                    <small class="form-text text-muted" id="charCounter">0 أحرف</small>
+                                    <small class="form-text text-muted" id="charCounter">{% if ui_lang == 'en' %}0 characters{% else %}0 أحرف{% endif %}</small>
                                 </div>
                             </div>
 
                             <!-- Attachments -->
                             <div class="mb-0">
-                                <label for="msgAttachments" class="form-label fw-semibold">المرفقات</label>
+                                <label for="msgAttachments" class="form-label fw-semibold">{% if ui_lang == 'en' %}Attachments{% else %}المرفقات{% endif %}</label>
                                 <input type="file" class="form-control" id="msgAttachments" multiple>
                                 <div class="form-text" id="attachmentHint" style="display:none;">
-                                    المرفقات متاحة للمسؤولين والمديرين فقط.
+                                    {% if ui_lang == 'en' %}Attachments are available for admins and managers only.{% else %}المرفقات متاحة للمسؤولين والمديرين فقط.{% endif %}
                                 </div>
                             </div>
                         </div>
@@ -423,10 +423,10 @@
             <!-- Modal Footer -->
             <div class="modal-footer bg-light border-top-0">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle me-2"></i>إلغاء
+                    <i class="bi bi-x-circle me-2"></i>{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
                 </button>
                 <button type="button" class="btn btn-primary" id="sendMessageBtn" onclick="submitMessage()" disabled>
-                    <i class="bi bi-send me-2"></i>إرسال
+                    <i class="bi bi-send me-2"></i>{% if ui_lang == 'en' %}Send{% else %}إرسال{% endif %}
                 </button>
             </div>
         </div>
@@ -434,6 +434,9 @@
 </div>
 
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     let currentUserRole = null;
     let currentUserKindergartenId = null;
     if (typeof currentUserId === 'undefined') var currentUserId = null;
@@ -491,7 +494,7 @@
         const counter = document.getElementById('charCounter');
         if (textarea && counter) {
             const count = textarea.value.length;
-            counter.textContent = `${count} أحرف`;
+            counter.textContent = `${count} ${IS_EN ? 'characters' : 'أحرف'}`;
             // Change color if approaching limit (optional)
             if (count > 1000) {
                 counter.className = 'form-text text-warning';
@@ -669,16 +672,16 @@
         const options = [];
         console.log('setAudienceModeOptions: currentUserRole =', currentUserRole);
         if (currentUserRole === 'ADMIN') {
-            options.push({ value: 'all_kindergartens', label: 'كل الروضات' });
-            options.push({ value: 'by_governorate', label: 'حسب المحافظة' });
-            options.push({ value: 'specific_kindergartens', label: 'روضات محددة' });
+            options.push({ value: 'all_kindergartens', label: T('كل الروضات', 'All Kindergartens') });
+            options.push({ value: 'by_governorate', label: T('حسب المحافظة', 'By Governorate') });
+            options.push({ value: 'specific_kindergartens', label: T('روضات محددة', 'Specific Kindergartens') });
         } else if (currentUserRole === 'MANAGER') {
-            options.push({ value: 'all_parents', label: 'كل أولياء الأمور في روضتي' });
-            options.push({ value: 'all_supervisors', label: 'كل المشرفين في روضتي' });
-            options.push({ value: 'all_users', label: 'كل المستخدمين في روضتي' });
+            options.push({ value: 'all_parents', label: T('كل أولياء الأمور في روضتي', 'All Parents in My KG') });
+            options.push({ value: 'all_supervisors', label: T('كل المشرفين في روضتي', 'All Supervisors in My KG') });
+            options.push({ value: 'all_users', label: T('كل المستخدمين في روضتي', 'All Users in My KG') });
         }
         if (!options.length) {
-            options.push({ value: 'all_parents', label: 'كل أولياء الأمور' });
+            options.push({ value: 'all_parents', label: T('كل أولياء الأمور', 'All Parents') });
         }
         select.innerHTML = '';
         options.forEach(option => {
@@ -738,12 +741,12 @@
         select.innerHTML = '';
         const placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = '-- اختر الروضات --';
+        placeholder.textContent = T('-- اختر الروضات --', '-- Select Kindergartens --');
         select.appendChild(placeholder);
         kindergartens.forEach(kg => {
             const opt = document.createElement('option');
             opt.value = kg.id;
-            const name = kg.name_ar || kg.name_en || `روضة رقم ${kg.id}`;
+            const name = kg.name_ar || kg.name_en || T(`روضة رقم ${kg.id}`, `Kindergarten ${kg.id}`);
             const locationParts = [kg.governorate, kg.city].filter(Boolean);
             const location = locationParts.length ? ` (${locationParts.join(' - ')})` : '';
             opt.textContent = `${name}${location}`;
@@ -767,7 +770,7 @@
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) {
-                console.error('تعذر تحميل الروضات');
+                console.error(T('تعذر تحميل الروضات', 'Failed to load kindergartens'));
                 return;
             }
             const data = await response.json();
@@ -785,14 +788,14 @@
         container.innerHTML = '';
 
         if (!kindergartens.length) {
-            container.innerHTML = '<div class="text-muted">لا توجد روضات متاحة</div>';
+            container.innerHTML = `<div class="text-muted">${T('لا توجد روضات متاحة', 'No kindergartens available')}</div>`;
             return;
         }
 
         // Group by governorate
         const grouped = {};
         kindergartens.forEach(kg => {
-            const gov = kg.governorate || 'غير محدد';
+            const gov = kg.governorate || T('غير محدد', 'Unspecified');
             if (!grouped[gov]) {
                 grouped[gov] = [];
             }
@@ -822,7 +825,7 @@
                 const label = document.createElement('label');
                 label.className = 'form-check-label';
                 label.htmlFor = `kg_${kg.id}`;
-                label.textContent = kg.name_ar || kg.name_en || `روضة ${kg.id}`;
+                label.textContent = kg.name_ar || kg.name_en || T(`روضة ${kg.id}`, `Kindergarten ${kg.id}`);
 
                 if (kg.city) {
                     label.textContent += ` (${kg.city})`;
@@ -923,13 +926,13 @@
         if (!select) return;
         const options = [];
         if (currentUserRole === 'ADMIN') {
-            options.push({ value: '', label: 'كل الأدوار' });
-            options.push({ value: 'MANAGER', label: 'المديرون' });
-            options.push({ value: 'SUPERVISOR', label: 'المشرفون' });
-            options.push({ value: 'PARENT', label: 'أولياء الأمور' });
+            options.push({ value: '', label: T('كل الأدوار', 'All Roles') });
+            options.push({ value: 'MANAGER', label: T('المديرون', 'Managers') });
+            options.push({ value: 'SUPERVISOR', label: T('المشرفون', 'Supervisors') });
+            options.push({ value: 'PARENT', label: T('أولياء الأمور', 'Parents') });
         } else if (currentUserRole === 'MANAGER') {
-            options.push({ value: 'PARENT', label: 'أولياء الأمور' });
-            options.push({ value: 'SUPERVISOR', label: 'المشرفون' });
+            options.push({ value: 'PARENT', label: T('أولياء الأمور', 'Parents') });
+            options.push({ value: 'SUPERVISOR', label: T('المشرفون', 'Supervisors') });
         }
         select.innerHTML = '';
         options.forEach(option => {
@@ -947,12 +950,12 @@
         select.innerHTML = '';
         const allOpt = document.createElement('option');
         allOpt.value = '';
-        allOpt.textContent = 'كل الروضات';
+        allOpt.textContent = T('كل الروضات', 'All Kindergartens');
         select.appendChild(allOpt);
         kindergartens.forEach(kg => {
             const opt = document.createElement('option');
             opt.value = kg.id;
-            opt.textContent = kg.name_ar || kg.name_en || `روضة رقم ${kg.id}`;
+            opt.textContent = kg.name_ar || kg.name_en || T(`روضة رقم ${kg.id}`, `Kindergarten ${kg.id}`);
             select.appendChild(opt);
         });
         select.value = '';
@@ -993,14 +996,14 @@
         const hidden = document.getElementById('msgRecipient');
         if (!select || !hidden) return;
         const roleLabels = {
-            MANAGER: 'مدير',
-            SUPERVISOR: 'مشرف',
-            PARENT: 'ولي أمر'
+            MANAGER: T('مدير', 'Manager'),
+            SUPERVISOR: T('مشرف', 'Supervisor'),
+            PARENT: T('ولي أمر', 'Parent')
         };
         select.innerHTML = '';
         const placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = users.length ? '-- اختر مستلمًا --' : 'لا توجد نتائج';
+        placeholder.textContent = users.length ? T('-- اختر مستلمًا --', '-- Select a recipient --') : T('لا توجد نتائج', 'No results');
         select.appendChild(placeholder);
         users.forEach(user => {
             if (currentUserId && user.id === currentUserId) {
@@ -1093,7 +1096,7 @@
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) {
-                note.textContent = 'تعذر تحميل بيانات الروضات.';
+                note.textContent = T('تعذر تحميل بيانات الروضات.', 'Failed to load kindergarten data.');
                 return;
             }
             const data = await response.json();
@@ -1114,36 +1117,36 @@
             const nameMap = await fetchKindergartenNames(parentActiveKindergartens);
 
             if (!parentActiveKindergartens.length) {
-                note.textContent = 'لا توجد روضات نشطة للمراسلة.';
+                note.textContent = T('لا توجد روضات نشطة للمراسلة.', 'No active kindergartens for messaging.');
                 wrap.style.display = 'none';
                 return;
             }
 
             if (parentActiveKindergartens.length === 1) {
                 const singleId = parentActiveKindergartens[0];
-                const label = nameMap[singleId] || `روضة رقم ${singleId}`;
-                note.textContent = `سيتم إرسال الرسالة إلى مدير ${label}.`;
+                const label = nameMap[singleId] || T(`روضة رقم ${singleId}`, `Kindergarten ${singleId}`);
+                note.textContent = T(`سيتم إرسال الرسالة إلى مدير ${label}.`, `The message will be sent to the manager of ${label}.`);
                 wrap.style.display = 'none';
                 return;
             }
 
-            note.textContent = 'اختر الروضة لإرسال الرسالة إلى مديرها.';
+            note.textContent = T('اختر الروضة لإرسال الرسالة إلى مديرها.', 'Select a kindergarten to send the message to its manager.');
             wrap.style.display = 'block';
             select.innerHTML = '';
             const placeholder = document.createElement('option');
             placeholder.value = '';
-            placeholder.textContent = '-- اختر الروضة --';
+            placeholder.textContent = T('-- اختر الروضة --', '-- Select Kindergarten --');
             select.appendChild(placeholder);
             parentActiveKindergartens.forEach(id => {
                 const opt = document.createElement('option');
                 opt.value = id;
-                opt.textContent = nameMap[id] || `روضة رقم ${id}`;
+                opt.textContent = nameMap[id] || T(`روضة رقم ${id}`, `Kindergarten ${id}`);
                 select.appendChild(opt);
             });
         } catch (err) {
             console.error('Error loading parent kindergartens:', err);
             if (note) {
-                note.textContent = 'تعذر تحميل بيانات الروضات.';
+                note.textContent = T('تعذر تحميل بيانات الروضات.', 'Failed to load kindergarten data.');
             }
         }
     }
@@ -1183,7 +1186,7 @@
                     return;
                 }
                 const data = await response.json();
-                const label = data.name_ar || data.name_en || `روضة رقم ${id}`;
+                const label = data.name_ar || data.name_en || T(`روضة رقم ${id}`, `Kindergarten ${id}`);
                 parentKindergartenNameCache[id] = label;
                 result[id] = label;
             } catch (err) {
@@ -1212,7 +1215,7 @@
                 if (!needed.has(Number(kg.id))) {
                     return;
                 }
-                const label = kg.name_ar || kg.name_en || `روضة رقم ${kg.id}`;
+                const label = kg.name_ar || kg.name_en || T(`روضة رقم ${kg.id}`, `Kindergarten ${kg.id}`);
                 result[kg.id] = label;
                 parentKindergartenNameCache[kg.id] = label;
             });
@@ -1418,7 +1421,7 @@
             const ready = (typeof currentUserRole !== 'undefined') && currentUserRole && (currentUserRole !== 'MANAGER' || currentUserKindergartenId);
             if (!ready) {
                 openButtons.forEach(btn => btn.setAttribute('disabled', 'disabled'));
-                notify('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'error');
+                notify(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages window now. Try logging in again.'), 'error');
             } else {
                 openButtons.forEach(btn => btn.removeAttribute('disabled'));
             }
@@ -1648,19 +1651,19 @@
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) {
-                container.innerHTML = '<div class="text-danger">تعذر تحميل الروضات</div>';
+                container.innerHTML = `<div class="text-danger">${T('تعذر تحميل الروضات', 'Failed to load kindergartens')}</div>`;
                 return;
             }
             const data = await response.json();
             const kindergartens = Array.isArray(data) ? data : (data.kindergartens || []);
             if (!kindergartens.length) {
-                container.innerHTML = '<div class="text-muted">لا توجد روضات متاحة</div>';
+                container.innerHTML = `<div class="text-muted">${T('لا توجد روضات متاحة', 'No kindergartens available')}</div>`;
                 return;
             }
             // Group by governorate
             const grouped = {};
             kindergartens.forEach(kg => {
-                const gov = kg.governorate || 'غير محدد';
+                const gov = kg.governorate || T('غير محدد', 'Unspecified');
                 if (!grouped[gov]) grouped[gov] = [];
                 grouped[gov].push(kg);
             });
@@ -1676,14 +1679,14 @@
                     const id = `adminKg_${kg.id}`;
                     div.innerHTML = `
                         <input class="form-check-input admin-kg-checkbox" type="checkbox" value="${kg.id}" id="${id}" onchange="previewRecipients()">
-                        <label class="form-check-label" for="${id}">${kg.name_ar || kg.name_en || 'روضة ' + kg.id}${kg.city ? ' (' + kg.city + ')' : ''}</label>
+                        <label class="form-check-label" for="${id}">${kg.name_ar || kg.name_en || T('روضة ', 'Kindergarten ') + kg.id}${kg.city ? ' (' + kg.city + ')' : ''}</label>
                     `;
                     container.appendChild(div);
                 });
             });
         } catch (err) {
             console.error('Error loading admin kindergartens:', err);
-            container.innerHTML = '<div class="text-danger">خطأ في تحميل الروضات</div>';
+            container.innerHTML = `<div class="text-danger">${T('خطأ في تحميل الروضات', 'Error loading kindergartens')}</div>`;
         }
     }
 
@@ -1733,7 +1736,7 @@
         const previewBtn = document.querySelector('#adminRecipientPreview button');
         if (previewBtn) {
             previewBtn.disabled = true;
-            previewBtn.innerHTML = '<i class="bi bi-eye"></i> جاري الحساب...';
+            previewBtn.innerHTML = `<i class="bi bi-eye"></i> ${T('جاري الحساب...', 'Calculating...')}`;
         }
         try {
             // Use centralized auth system
@@ -1746,7 +1749,7 @@
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) {
-                throw new Error('تعذر معاينة المستلمين');
+                throw new Error(T('تعذر معاينة المستلمين', 'Failed to preview recipients'));
             }
             const data = await response.json();
             if (countEl) {
@@ -1757,16 +1760,16 @@
         } catch (err) {
             console.error('Error previewing recipients:', err);
             if (countEl) {
-                countEl.textContent = 'خطأ';
+                countEl.textContent = T('خطأ', 'Error');
             }
             if (breakdownEl) {
-                breakdownEl.textContent = 'تعذر الحصول على البيانات';
+                breakdownEl.textContent = T('تعذر الحصول على البيانات', 'Failed to get data');
                 breakdownEl.style.display = 'block';
             }
         } finally {
             if (previewBtn) {
                 previewBtn.disabled = false;
-                previewBtn.innerHTML = '<i class="bi bi-eye"></i> حساب المستلمين';
+                previewBtn.innerHTML = `<i class="bi bi-eye"></i> ${T('حساب المستلمين', 'Calculate Recipients')}`;
             }
         }
     }
@@ -1800,19 +1803,19 @@
         if (data?.by_role && Object.keys(data.by_role).length) {
             const roleParts = Object.entries(data.by_role)
                 .map(([role, count]) => `${role} (${count})`);
-            segments.push(`حسب الدور: ${roleParts.join(' · ')}`);
+            segments.push(`${T('حسب الدور:', 'By Role:')} ${roleParts.join(' · ')}`);
         }
         if (data?.by_governorate && Object.keys(data.by_governorate).length) {
             const govParts = Object.entries(data.by_governorate)
                 .slice(0, 3)
                 .map(([gov, count]) => `${gov} (${count})`);
-            segments.push(`حسب المحافظة: ${govParts.join(' · ')}`);
+            segments.push(`${T('حسب المحافظة:', 'By Governorate:')} ${govParts.join(' · ')}`);
         }
         if (data?.by_kindergarten && Object.keys(data.by_kindergarten).length) {
             const kgParts = Object.entries(data.by_kindergarten)
                 .slice(0, 3)
-                .map(([kgId, count]) => `روضة ${kgId} (${count})`);
-            segments.push(`حسب الروضة: ${kgParts.join(' · ')}`);
+                .map(([kgId, count]) => `${T('روضة', 'KG')} ${kgId} (${count})`);
+            segments.push(`${T('حسب الروضة:', 'By Kindergarten:')} ${kgParts.join(' · ')}`);;
         }
         if (segments.length) {
             breakdownEl.textContent = segments.join(' | ');
@@ -1828,12 +1831,12 @@
         const mode = target.mode;
         // Validate governorate selection
         if (mode === 'GOVERNORATE' && (!target.governorates || !target.governorates.length)) {
-            notify('الرجاء اختيار محافظة واحدة على الأقل.', 'error');
+            notify(T('الرجاء اختيار محافظة واحدة على الأقل.', 'Please select at least one governorate.'), 'error');
             return;
         }
         // Validate kindergarten selection
         if (mode === 'KINDERGARTENS' && (!target.kindergarten_ids || !target.kindergarten_ids.length)) {
-            notify('الرجاء اختيار روضة واحدة على الأقل.', 'error');
+            notify(T('الرجاء اختيار روضة واحدة على الأقل.', 'Please select at least one kindergarten.'), 'error');
             return;
         }
         const allowRepliesToggle = document.getElementById('allowRepliesToggle');
@@ -1845,7 +1848,7 @@
         };
         // Use centralized auth system
         if (!window.AuthService || !AuthService.isAuthenticated()) {
-            notify('يرجى تسجيل الدخول لإرسال الرسالة');
+            notify(T('يرجى تسجيل الدخول لإرسال الرسالة', 'Please log in to send message'));
             return;
         }
 
@@ -1861,14 +1864,14 @@
             });
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                notify('تعذر إرسال الرسالة: ' + (err.error?.message || err.detail || response.statusText));
+                notify(T('تعذر إرسال الرسالة: ', 'Failed to send message: ') + (err.error?.message || err.detail || response.statusText));
                 return;
             }
             const created = await response.json();
             await onMessageSent(created);
         } catch (err) {
             console.error('Error sending admin message:', err);
-            notify('خطأ في الشبكة أثناء إرسال الرسالة.');
+            notify(T('خطأ في الشبكة أثناء إرسال الرسالة.', 'Network error while sending message.'));
         }
     }
 
@@ -1894,7 +1897,7 @@
     async function submitMessage() {
         // First validate the form
         if (!validateForm()) {
-            notify('يرجى إكمال جميع الحقول المطلوبة قبل الإرسال.', 'error');
+            notify(T('يرجى إكمال جميع الحقول المطلوبة قبل الإرسال.', 'Please complete all required fields before sending.'), 'error');
             return;
         }
 
@@ -1904,7 +1907,7 @@
 
         // Use centralized auth system
         if (!window.AuthService || !AuthService.isAuthenticated()) {
-            notify('يرجى تسجيل الدخول لإرسال الرسالة', 'error');
+            notify(T('يرجى تسجيل الدخول لإرسال الرسالة', 'Please log in to send message'), 'error');
             return;
         }
 
@@ -1913,7 +1916,7 @@
 
         // Disable button during sending
         sendBtn.disabled = true;
-        sendBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>جاري الإرسال...';
+        sendBtn.innerHTML = `<i class="bi bi-hourglass-split me-2"></i>${T('جاري الإرسال...', 'Sending...')}`;
 
         const payload = {
             subject: subject,
@@ -1927,7 +1930,7 @@
                 if (currentUserRole === 'ADMIN' || currentUserRole === 'MANAGER') {
                     const recipientId = document.getElementById('msgRecipient').value;
                     if (!recipientId) {
-                        notify('اختر مستلمًا للرسالة المباشرة.', 'error');
+                        notify(T('اختر مستلمًا للرسالة المباشرة.', 'Select a recipient for the direct message.'), 'error');
                         return;
                     }
                     payload.recipient_id = parseInt(recipientId, 10);
@@ -1939,12 +1942,12 @@
                         await loadParentKindergartens();
                     }
                     if (!parentActiveKindergartens.length) {
-                        notify('لا توجد روضات نشطة للمراسلة.', 'error');
+                        notify(T('لا توجد روضات نشطة للمراسلة.', 'No active kindergartens for messaging.'), 'error');
                         return;
                     }
                     const selectedKg = getSelectedParentKindergartenId();
                     if (parentActiveKindergartens.length > 1 && !selectedKg) {
-                        notify('اختر الروضة أولاً.', 'error');
+                        notify(T('اختر الروضة أولاً.', 'Select a kindergarten first.'), 'error');
                         return;
                     }
                     const targetKg = selectedKg || parentActiveKindergartens[0];
@@ -1953,12 +1956,12 @@
                     }
                 } else if (currentUserRole === 'SUPERVISOR') {
                     if (!currentUserKindergartenId) {
-                        notify('تعذر تحديد الروضة لإرسال الرسالة.', 'error');
+                        notify(T('تعذر تحديد الروضة لإرسال الرسالة.', 'Could not determine kindergarten for sending.'), 'error');
                         return;
                     }
                     payload.kindergarten_id = currentUserKindergartenId;
                 } else {
-                    notify('لا يمكن إرسال الرسالة لهذا النوع من المستخدمين.', 'error');
+                    notify(T('لا يمكن إرسال الرسالة لهذا النوع من المستخدمين.', 'Cannot send message for this user type.'), 'error');
                     return;
                 }
             } else {
@@ -1972,13 +1975,13 @@
                     const selectedRoles = Array.from(document.querySelectorAll('input[name="recipientRole"]:checked'))
                         .map(checkbox => checkbox.value);
                     if (!selectedRoles.length) {
-                        notify('اختر دورًا واحدًا على الأقل للمستلمين.', 'error');
+                        notify(T('اختر دورًا واحدًا على الأقل للمستلمين.', 'Select at least one recipient role.'), 'error');
                         return;
                     }
                     // Validate manager can only target SUPERVISOR and PARENT
                     const invalidRoles = selectedRoles.filter(r => r !== 'SUPERVISOR' && r !== 'PARENT');
                     if (invalidRoles.length) {
-                        notify('المدراء يمكنهم مراسلة المشرفين وأولياء الأمور فقط.', 'error');
+                        notify(T('المدراء يمكنهم مراسلة المشرفين وأولياء الأمور فقط.', 'Managers can only message supervisors and parents.'), 'error');
                         return;
                     }
                     payload.mode = 'audience';
@@ -1997,7 +2000,7 @@
                         .map(checkbox => checkbox.value);
 
                     if (!selectedRoles.length) {
-                        notify('اختر دورًا واحدًا على الأقل للمستلمين.', 'error');
+                        notify(T('اختر دورًا واحدًا على الأقل للمستلمين.', 'Select at least one recipient role.'), 'error');
                         return;
                     }
 
@@ -2010,7 +2013,7 @@
                     if (scope === 'governorate') {
                         const governorateId = document.getElementById('scopeGovernorate')?.value;
                         if (!governorateId) {
-                            notify('اختر المحافظة أولاً.', 'error');
+                            notify(T('اختر المحافظة أولاً.', 'Select a governorate first.'), 'error');
                             return;
                         }
                         payload.audience.governorate_id = parseInt(governorateId, 10);
@@ -2018,7 +2021,7 @@
                         const kindergartenIds = Array.from(document.querySelectorAll('input[name="recipientKindergarten"]:checked'))
                             .map(checkbox => parseInt(checkbox.value, 10));
                         if (!kindergartenIds.length) {
-                            notify('اختر روضة واحدة على الأقل.', 'error');
+                            notify(T('اختر روضة واحدة على الأقل.', 'Select at least one kindergarten.'), 'error');
                             return;
                         }
                         payload.audience.kindergarten_ids = kindergartenIds;
@@ -2042,25 +2045,25 @@
             if (response.ok) {
                 const created = await response.json();
                 await onMessageSent(created);
-                notify('تم إرسال الرسالة بنجاح!', 'success');
+                notify(T('تم إرسال الرسالة بنجاح!', 'Message sent successfully!'), 'success');
             } else {
                 const err = await response.json();
-                notify('تعذر إرسال الرسالة: ' + (err.error?.message || err.detail || response.statusText), 'error');
+                notify(T('تعذر إرسال الرسالة: ', 'Failed to send message: ') + (err.error?.message || err.detail || response.statusText), 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            notify('خطأ في الشبكة أثناء إرسال الرسالة.', 'error');
+            notify(T('خطأ في الشبكة أثناء إرسال الرسالة.', 'Network error while sending message.'), 'error');
         } finally {
             // Re-enable button and reset text
             sendBtn.disabled = false;
-            sendBtn.innerHTML = '<i class="bi bi-send me-2"></i>إرسال';
+            sendBtn.innerHTML = `<i class="bi bi-send me-2"></i>${T('إرسال', 'Send')}`;
         }
     }
 
     async function uploadAttachments(messageId, files) {
         // Use centralized auth system
         if (!window.AuthService || !AuthService.isAuthenticated()) {
-            notify('يرجى تسجيل الدخول لرفع المرفقات');
+            notify(T('يرجى تسجيل الدخول لرفع المرفقات', 'Please log in to upload attachments'));
             return;
         }
 
@@ -2075,7 +2078,7 @@
             });
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                notify(err.error?.message || err.detail || 'تعذر رفع المرفق');
+                notify(err.error?.message || err.detail || T('تعذر رفع المرفق', 'Failed to upload attachment'));
                 return;
             }
         }

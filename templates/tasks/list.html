@@ -7,18 +7,18 @@
     <div>
         <h1 class="h2">
             <i class="bi bi-check2-square me-2 text-primary"></i>
-            قائمة المهام
+            {% if ui_lang == 'en' %}Task List{% else %}قائمة المهام{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">المهام</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Tasks{% else %}المهام{% endif %}</li>
             </ol>
         </nav>
     </div>
     <div class="btn-toolbar">
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#taskModal">
-            <i class="bi bi-plus-circle me-2"></i>مهمة جديدة
+            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}New Task{% else %}مهمة جديدة{% endif %}
         </button>
     </div>
 </div>
@@ -29,22 +29,22 @@
 <ul class="nav nav-tabs mb-4" id="statusTabs" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="all-tab" data-filter="" type="button">
-            الكل <span class="badge bg-secondary ms-1" id="countAll">0</span>
+            {% if ui_lang == 'en' %}All{% else %}الكل{% endif %} <span class="badge bg-secondary ms-1" id="countAll">0</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="pending-tab" data-filter="pending" type="button">
-            قيد الانتظار <span class="badge bg-warning ms-1" id="countPending">0</span>
+            {% if ui_lang == 'en' %}Pending{% else %}قيد الانتظار{% endif %} <span class="badge bg-warning ms-1" id="countPending">0</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="progress-tab" data-filter="in_progress" type="button">
-            قيد التنفيذ <span class="badge bg-info ms-1" id="countProgress">0</span>
+            {% if ui_lang == 'en' %}In Progress{% else %}قيد التنفيذ{% endif %} <span class="badge bg-info ms-1" id="countProgress">0</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="completed-tab" data-filter="completed" type="button">
-            مكتملة <span class="badge bg-success ms-1" id="countCompleted">0</span>
+            {% if ui_lang == 'en' %}Completed{% else %}مكتملة{% endif %} <span class="badge bg-success ms-1" id="countCompleted">0</span>
         </button>
     </li>
 </ul>
@@ -54,36 +54,36 @@
     <div class="card-body">
         <div class="row g-3">
             <div class="col-md-3">
-                <label for="priorityFilter" class="form-label">الأولوية</label>
+                <label for="priorityFilter" class="form-label">{% if ui_lang == 'en' %}Priority{% else %}الأولوية{% endif %}</label>
                 <select class="form-select" id="priorityFilter">
-                    <option value="">الكل</option>
-                    <option value="urgent">عاجل</option>
-                    <option value="high">عالية</option>
-                    <option value="medium">متوسطة</option>
-                    <option value="low">منخفضة</option>
+                    <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    <option value="urgent">{% if ui_lang == 'en' %}Urgent{% else %}عاجل{% endif %}</option>
+                    <option value="high">{% if ui_lang == 'en' %}High{% else %}عالية{% endif %}</option>
+                    <option value="medium">{% if ui_lang == 'en' %}Medium{% else %}متوسطة{% endif %}</option>
+                    <option value="low">{% if ui_lang == 'en' %}Low{% else %}منخفضة{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">المهام المُسندة</label>
+                <label class="form-label">{% if ui_lang == 'en' %}Assigned Tasks{% else %}المهام المُسندة{% endif %}</label>
                 <div class="form-check mt-2">
                     <input class="form-check-input" type="checkbox" id="assignedToMeFilter">
                     <label class="form-check-label" for="assignedToMeFilter">
-                        المهام المُسندة لي
+                        {% if ui_lang == 'en' %}Tasks Assigned to Me{% else %}المهام المُسندة لي{% endif %}
                     </label>
                 </div>
             </div>
             <div class="col-md-3">
-                <label class="form-label">المهام المُنشأة</label>
+                <label class="form-label">{% if ui_lang == 'en' %}Created Tasks{% else %}المهام المُنشأة{% endif %}</label>
                 <div class="form-check mt-2">
                     <input class="form-check-input" type="checkbox" id="createdByMeFilter">
                     <label class="form-check-label" for="createdByMeFilter">
-                        المهام التي أنشأتها
+                        {% if ui_lang == 'en' %}Tasks I Created{% else %}المهام التي أنشأتها{% endif %}
                     </label>
                 </div>
             </div>
             <div class="col-md-3 d-flex align-items-end">
                 <button class="btn btn-secondary w-100" onclick="loadTasks()">
-                    <i class="bi bi-funnel me-2"></i>تطبيق الفلاتر
+                    <i class="bi bi-funnel me-2"></i>{% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}
                 </button>
             </div>
         </div>
@@ -94,7 +94,7 @@
 <div class="row g-4" id="tasksContainer">
     <div class="col-12 text-center py-5">
         <div class="spinner-border spinner-border-sm" role="status"></div>
-        <span class="ms-2">جاري التحميل...</span>
+        <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
     </div>
 </div>
 
@@ -103,50 +103,50 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="taskModalTitle">مهمة جديدة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title" id="taskModalTitle">{% if ui_lang == 'en' %}New Task{% else %}مهمة جديدة{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <form id="taskForm">
                     <input type="hidden" id="taskId">
 
                     <div class="mb-3">
-                        <label for="taskTitle" class="form-label">العنوان <span class="text-danger">*</span></label>
+                        <label for="taskTitle" class="form-label">{% if ui_lang == 'en' %}Title{% else %}العنوان{% endif %} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="taskTitle" required maxlength="255">
                     </div>
 
                     <div class="mb-3">
-                        <label for="taskDescription" class="form-label">الوصف</label>
+                        <label for="taskDescription" class="form-label">{% if ui_lang == 'en' %}Description{% else %}الوصف{% endif %}</label>
                         <textarea class="form-control" id="taskDescription" rows="3"></textarea>
                     </div>
 
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="taskPriority" class="form-label">الأولوية</label>
+                            <label for="taskPriority" class="form-label">{% if ui_lang == 'en' %}Priority{% else %}الأولوية{% endif %}</label>
                             <select class="form-select" id="taskPriority">
-                                <option value="low">منخفضة</option>
-                                <option value="medium" selected>متوسطة</option>
-                                <option value="high">عالية</option>
-                                <option value="urgent">عاجل</option>
+                                <option value="low">{% if ui_lang == 'en' %}Low{% else %}منخفضة{% endif %}</option>
+                                <option value="medium" selected>{% if ui_lang == 'en' %}Medium{% else %}متوسطة{% endif %}</option>
+                                <option value="high">{% if ui_lang == 'en' %}High{% else %}عالية{% endif %}</option>
+                                <option value="urgent">{% if ui_lang == 'en' %}Urgent{% else %}عاجل{% endif %}</option>
                             </select>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="taskDueDate" class="form-label">تاريخ الاستحقاق</label>
+                            <label for="taskDueDate" class="form-label">{% if ui_lang == 'en' %}Due Date{% else %}تاريخ الاستحقاق{% endif %}</label>
                             <input type="datetime-local" class="form-control" id="taskDueDate">
                         </div>
                     </div>
 
                     <div class="mb-3 mt-3">
-                        <label for="taskAssignedTo" class="form-label">تعيين إلى (اختياري)</label>
-                        <input type="number" class="form-control" id="taskAssignedTo" placeholder="معرف المستخدم">
-                        <div class="form-text">اتركه فارغًا لتعيينه لنفسك</div>
+                        <label for="taskAssignedTo" class="form-label">{% if ui_lang == 'en' %}Assign To (optional){% else %}تعيين إلى (اختياري){% endif %}</label>
+                        <input type="number" class="form-control" id="taskAssignedTo" placeholder="{% if ui_lang == 'en' %}User ID{% else %}معرف المستخدم{% endif %}">
+                        <div class="form-text">{% if ui_lang == 'en' %}Leave empty to assign to yourself{% else %}اتركه فارغًا لتعيينه لنفسك{% endif %}</div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="saveTask()">حفظ</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="saveTask()">{% if ui_lang == 'en' %}Save{% else %}حفظ{% endif %}</button>
             </div>
         </div>
     </div>
@@ -155,6 +155,9 @@
 
 {% block extra_js %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     let tasks = [];
     let currentFilter = '';
     let currentPriority = '';
@@ -182,7 +185,7 @@
 
         } catch (error) {
             console.error('Error loading tasks:', error);
-            showToast('حدث خطأ في تحميل المهام', 'error');
+            showToast(T('حدث خطأ في تحميل المهام', 'Error loading tasks'), 'error');
         }
     }
 
@@ -207,7 +210,7 @@
             container.innerHTML = `
                 <div class="col-12 text-center py-5">
                     <i class="bi bi-inbox fs-1 text-muted d-block mb-2 opacity-25"></i>
-                    <p class="text-muted mb-0">لا توجد مهام</p>
+                    <p class="text-muted mb-0">${T('لا توجد مهام', 'No tasks found')}</p>
                 </div>
             `;
             return;
@@ -239,7 +242,7 @@
                         <div class="btn-group w-100">
                             <button class="btn btn-sm btn-outline-primary" onclick="toggleTaskStatus(${task.id})">
                                 <i class="bi bi-${task.status === 'COMPLETED' ? 'arrow-counterclockwise' : 'check-circle'}"></i>
-                                ${task.status === 'COMPLETED' ? 'إعادة فتح' : 'إكمال'}
+                                ${task.status === 'COMPLETED' ? T('إعادة فتح', 'Reopen') : T('إكمال', 'Complete')}
                             </button>
                             <button class="btn btn-sm btn-outline-secondary" onclick="editTask(${task.id})">
                                 <i class="bi bi-pencil"></i>
@@ -252,7 +255,7 @@
                     <div class="card-footer bg-transparent border-0">
                         <small class="text-muted">
                             <i class="bi bi-clock"></i>
-                            تم الإنشاء: ${formatDate(task.created_at)}
+                            ${T('تم الإنشاء:', 'Created:')} ${formatDate(task.created_at)}
                         </small>
                     </div>
                 </div>
@@ -278,20 +281,20 @@
 
     function getPriorityBadge(priority) {
         const badges = {
-            'URGENT': '<span class="badge bg-danger">عاجل</span>',
-            'HIGH': '<span class="badge bg-warning">عالية</span>',
-            'MEDIUM': '<span class="badge bg-info">متوسطة</span>',
-            'LOW': '<span class="badge bg-secondary">منخفضة</span>'
+            'URGENT': `<span class="badge bg-danger">${T('عاجل', 'Urgent')}</span>`,
+            'HIGH': `<span class="badge bg-warning">${T('عالية', 'High')}</span>`,
+            'MEDIUM': `<span class="badge bg-info">${T('متوسطة', 'Medium')}</span>`,
+            'LOW': `<span class="badge bg-secondary">${T('منخفضة', 'Low')}</span>`
         };
         return badges[priority] || '';
     }
 
     function getStatusBadge(status) {
         const badges = {
-            'PENDING': '<span class="badge bg-warning">قيد الانتظار</span>',
-            'IN_PROGRESS': '<span class="badge bg-info">قيد التنفيذ</span>',
-            'COMPLETED': '<span class="badge bg-success">مكتملة</span>',
-            'CANCELLED': '<span class="badge bg-secondary">ملغاة</span>'
+            'PENDING': `<span class="badge bg-warning">${T('قيد الانتظار', 'Pending')}</span>`,
+            'IN_PROGRESS': `<span class="badge bg-info">${T('قيد التنفيذ', 'In Progress')}</span>`,
+            'COMPLETED': `<span class="badge bg-success">${T('مكتملة', 'Completed')}</span>`,
+            'CANCELLED': `<span class="badge bg-secondary">${T('ملغاة', 'Cancelled')}</span>`
         };
         return badges[status] || '';
     }
@@ -321,12 +324,12 @@
             const modal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
             modal.hide();
 
-            showToast('تم حفظ المهمة بنجاح', 'success');
+            showToast(T('تم حفظ المهمة بنجاح', 'Task saved successfully'), 'success');
             await loadTasks();
             resetForm();
 
         } catch (error) {
-            showToast(error.message || 'حدث خطأ', 'error');
+            showToast(error.message || T('حدث خطأ', 'An error occurred'), 'error');
         }
     }
 
@@ -336,11 +339,11 @@
 
             if (!response) return;
 
-            showToast('تم تحديث حالة المهمة', 'success');
+            showToast(T('تم تحديث حالة المهمة', 'Task status updated'), 'success');
             await loadTasks();
 
         } catch (error) {
-            showToast(error.message || 'حدث خطأ', 'error');
+            showToast(error.message || T('حدث خطأ', 'An error occurred'), 'error');
         }
     }
 
@@ -348,7 +351,7 @@
         const task = tasks.find(t => t.id === id);
         if (!task) return;
 
-        document.getElementById('taskModalTitle').textContent = 'تعديل المهمة';
+        document.getElementById('taskModalTitle').textContent = T('تعديل المهمة', 'Edit Task');
         document.getElementById('taskId').value = task.id;
         document.getElementById('taskTitle').value = task.title;
         document.getElementById('taskDescription').value = task.description || '';
@@ -361,23 +364,23 @@
     }
 
     async function deleteTask(id) {
-        if (!confirm('هل أنت متأكد من حذف هذه المهمة؟')) return;
+        if (!confirm(T('هل أنت متأكد من حذف هذه المهمة؟', 'Are you sure you want to delete this task?'))) return;
 
         try {
             const response = await window.api.delete(`/api/tasks/${id}`);
 
             if (!response) return;
 
-            showToast('تم حذف المهمة', 'success');
+            showToast(T('تم حذف المهمة', 'Task deleted'), 'success');
             await loadTasks();
 
         } catch (error) {
-            showToast(error.message || 'حدث خطأ', 'error');
+            showToast(error.message || T('حدث خطأ', 'An error occurred'), 'error');
         }
     }
 
     function resetForm() {
-        document.getElementById('taskModalTitle').textContent = 'مهمة جديدة';
+        document.getElementById('taskModalTitle').textContent = T('مهمة جديدة', 'New Task');
         document.getElementById('taskForm').reset();
         document.getElementById('taskId').value = '';
     }
@@ -385,7 +388,7 @@
     function formatDate(dateString) {
         if (!dateString) return '';
         const date = new Date(dateString);
-        return date.toLocaleDateString('ar-EG', {
+        return date.toLocaleDateString(IS_EN ? 'en-US' : 'ar-EG', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',

@@ -5,11 +5,11 @@
 
 {% block page_header %}
 {{ page_header(
-title="إدارة الشعب الصفية",
+title="{% if ui_lang == 'en' %}Classroom Management{% else %}إدارة الشعب الصفية{% endif %}",
 icon="bi-people-fill",
 breadcrumbs=[
-{"label": "لوحة التحكم", "url": "/dashboard"},
-{"label": "الشعب الصفية"}
+{"label": "{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}", "url": "/dashboard"},
+{"label": "{% if ui_lang == 'en' %}Classrooms{% else %}الشعب الصفية{% endif %}"}
 ]
 ) }}
 {% endblock %}
@@ -40,28 +40,28 @@ breadcrumbs=[
         <div class="row g-3 align-items-end">
             {% if current_user.role.value == 'ADMIN' %}
             <div class="col-md-3">
-                <label class="form-label small text-muted">الروضة</label>
+                <label class="form-label small text-muted">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
                 <select id="filterKindergarten" class="form-select form-select-sm" onchange="loadClasses()">
-                    <option value="">جميع الروضات</option>
+                    <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
                 </select>
             </div>
             {% endif %}
             <div class="col-md-3">
-                <label class="form-label small text-muted">الحالة</label>
+                <label class="form-label small text-muted">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
                 <select id="filterStatus" class="form-select form-select-sm" onchange="loadClasses()">
-                    <option value="">الكل</option>
-                    <option value="true" selected>نشط</option>
-                    <option value="false">غير نشط</option>
+                    <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    <option value="true" selected>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+                    <option value="false">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small text-muted">بحث</label>
-                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="اسم الشعبة..."
+                <label class="form-label small text-muted">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</label>
+                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="{% if ui_lang == 'en' %}Class name...{% else %}اسم الشعبة...{% endif %}"
                     oninput="filterTable()">
             </div>
             <div class="col-md-3 text-end">
                 <a href="/classes/create" class="btn btn-primary btn-sm">
-                    <i class="bi bi-plus-lg me-1"></i>إضافة شعبة
+                    <i class="bi bi-plus-lg me-1"></i>{% if ui_lang == 'en' %}Add Classroom{% else %}إضافة شعبة{% endif %}
                 </a>
             </div>
         </div>
@@ -76,22 +76,22 @@ breadcrumbs=[
                 <thead class="table-light">
                     <tr>
                         <th>#</th>
-                        <th>اسم الشعبة</th>
+                        <th>{% if ui_lang == 'en' %}Class Name{% else %}اسم الشعبة{% endif %}</th>
                         {% if current_user.role.value == 'ADMIN' %}
-                        <th>الروضة</th>
+                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
                         {% endif %}
-                        <th>الفئة العمرية</th>
-                        <th>السعة</th>
-                        <th>المشرف</th>
-                        <th>الحالة</th>
-                        <th class="text-center">الإجراءات</th>
+                        <th>{% if ui_lang == 'en' %}Age Group{% else %}الفئة العمرية{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Supervisor{% else %}المشرف{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                        <th class="text-center">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="classesBody">
                     <tr id="loadingRow">
                         <td colspan="8" class="text-center py-4">
                             <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                            <span class="ms-2">جاري التحميل...</span>
+                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                         </td>
                     </tr>
                 </tbody>
@@ -103,10 +103,10 @@ breadcrumbs=[
 <!-- Empty State -->
 <div id="emptyState" class="text-center py-5 d-none">
     <i class="bi bi-inbox fs-1 text-muted"></i>
-    <h5 class="text-muted mt-3">لا توجد شعب صفية</h5>
-    <p class="text-muted">ابدأ بإضافة شعبة صفية جديدة</p>
+    <h5 class="text-muted mt-3">{% if ui_lang == 'en' %}No classrooms found{% else %}لا توجد شعب صفية{% endif %}</h5>
+    <p class="text-muted">{% if ui_lang == 'en' %}Start by adding a new classroom{% else %}ابدأ بإضافة شعبة صفية جديدة{% endif %}</p>
     <a href="/classes/create" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>إضافة شعبة
+        <i class="bi bi-plus-lg me-1"></i>{% if ui_lang == 'en' %}Add Classroom{% else %}إضافة شعبة{% endif %}
     </a>
 </div>
 
@@ -114,6 +114,8 @@ breadcrumbs=[
     const api = new KinJoAPI();
     let allClasses = [];
     const isAdmin = '{{ current_user.role.value }}' === 'ADMIN';
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
 
     document.addEventListener('DOMContentLoaded', async () => {
         if (isAdmin) {
@@ -138,7 +140,7 @@ breadcrumbs=[
                 console.log('Added option:', kg.id, kg.name_ar || kg.name);
             });
         } catch (e) {
-            console.error('تعذر تحميل الروضات:', e);
+            console.error('Failed to load kindergartens:', e);
         }
     }
 
@@ -147,7 +149,7 @@ breadcrumbs=[
         const emptyState = document.getElementById('emptyState');
         tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">
         <div class="spinner-border spinner-border-sm text-primary"></div>
-        <span class="ms-2">جاري التحميل...</span></td></tr>`;
+        <span class="ms-2">${T('جاري التحميل...', 'Loading...')}</span></td></tr>`;
         emptyState.classList.add('d-none');
 
         try {
@@ -165,9 +167,9 @@ breadcrumbs=[
             allClasses = data.classes || data || [];
             renderTable(allClasses);
         } catch (e) {
-            console.error('تعذر تحميل الفصول:', e);
+            console.error('Failed to load classes:', e);
             tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">
-            <i class="bi bi-exclamation-triangle me-2"></i>حدث خطأ في تحميل البيانات</td></tr>`;
+            <i class="bi bi-exclamation-triangle me-2"></i>${T('حدث خطأ في تحميل البيانات', 'Error loading data')}</td></tr>`;
         }
     }
 
@@ -194,25 +196,25 @@ breadcrumbs=[
             ${isAdmin ? `<td>${c.kindergarten_name || '-'}</td>` : ''}
             <td>
                 <span class="badge bg-info bg-opacity-10 text-info age-badge">
-                    ${c.min_age_months} - ${c.max_age_months} شهر
+                    ${c.min_age_months} - ${c.max_age_months} ${T('شهر', 'mo')}
                 </span>
             </td>
             <td>${c.capacity_total || '-'}</td>
             <td>${c.current_supervisor ? c.current_supervisor.name : '<span class="text-muted">-</span>'}</td>
             <td>
                 ${c.is_active
-                ? '<span class="badge bg-success">نشط</span>'
-                : '<span class="badge bg-secondary">غير نشط</span>'}
+                ? `<span class="badge bg-success">${T('نشط', 'Active')}</span>`
+                : `<span class="badge bg-secondary">${T('غير نشط', 'Inactive')}</span>`}
             </td>
             <td class="text-center">
                 <div class="btn-group btn-group-sm">
-                    <a href="/classes/${c.id}" class="btn btn-outline-primary" title="عرض">
+                    <a href="/classes/${c.id}" class="btn btn-outline-primary" title="${T('عرض', 'View')}">
                         <i class="bi bi-eye"></i>
                     </a>
-                    <a href="/classes/${c.id}/edit" class="btn btn-outline-warning" title="تعديل">
+                    <a href="/classes/${c.id}/edit" class="btn btn-outline-warning" title="${T('تعديل', 'Edit')}">
                         <i class="bi bi-pencil"></i>
                     </a>
-                    <button class="btn btn-outline-danger" title="حذف" onclick="deleteClass(${c.id}, '${(c.name_ar || '').replace(/'/g, "\\'")}')">
+                    <button class="btn btn-outline-danger" title="${T('حذف', 'Delete')}" onclick="deleteClass(${c.id}, '${(c.name_ar || '').replace(/'/g, "\\'")}')">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -236,14 +238,14 @@ breadcrumbs=[
 
     async function deleteClass(id, name) {
         const result = await Swal.fire({
-            title: 'حذف الشعبة',
-            text: `هل أنت متأكد من حذف "${name}"؟`,
+            title: T('حذف الشعبة', 'Delete Classroom'),
+            text: T(`هل أنت متأكد من حذف "${name}"؟`, `Are you sure you want to delete "${name}"?`),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: 'نعم، احذف',
-            cancelButtonText: 'إلغاء'
+            confirmButtonText: T('نعم، احذف', 'Yes, Delete'),
+            cancelButtonText: T('إلغاء', 'Cancel')
         });
         if (!result.isConfirmed) return;
 
@@ -251,8 +253,8 @@ breadcrumbs=[
             await api.delete(`/api/classes/${id}`);
             Swal.fire({
                 icon: 'success',
-                title: 'تم الحذف',
-                text: 'تم حذف الشعبة بنجاح',
+                title: T('تم الحذف', 'Deleted'),
+                text: T('تم حذف الشعبة بنجاح', 'Classroom deleted successfully'),
                 timer: 1500,
                 showConfirmButton: false
             });
@@ -260,8 +262,8 @@ breadcrumbs=[
         } catch (e) {
             Swal.fire({
                 icon: 'error',
-                title: 'خطأ',
-                text: e.message || 'حدث خطأ أثناء الحذف'
+                title: T('خطأ', 'Error'),
+                text: e.message || T('حدث خطأ أثناء الحذف', 'An error occurred while deleting')
             });
         }
     }

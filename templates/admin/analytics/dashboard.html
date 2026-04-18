@@ -3,7 +3,7 @@
 {% from 'components/date-range-filter.html' import date_range_filter %}
 {% from 'components/export-modal.html' import export_modal %}
 
-{% block title %}لوحة التحليلات المركزية{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Central Analytics Dashboard{% else %}لوحة التحليلات المركزية{% endif %}{% endblock %}
 
 {% block page_header %}
 {% set filter_actions %}
@@ -20,11 +20,11 @@ user_role=current_user.role
 ) }}
 {% endset %}
 {{ page_header(
-title="التحليلات المركزية",
+title="Central Analytics" if ui_lang == 'en' else "التحليلات المركزية",
 icon="bi-bar-chart-line-fill",
 breadcrumbs=[
-{"label": "لوحة التحكم", "url": "/dashboard"},
-{"label": "التحليلات", "url": None}
+{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Analytics" if ui_lang == 'en' else "التحليلات", "url": None}
 ],
 actions=filter_actions
 ) }}
@@ -33,36 +33,36 @@ actions=filter_actions
 <div id="supervisorScopeHint" class="alert alert-info py-2 px-3 d-none" role="alert">
     <small class="mb-0">
         <i class="bi bi-info-circle me-1"></i>
-        لديك عدة رياض مسموح بها. اختر المحافظة لتصفية النتائج إلى نطاقك فقط.
+        {% if ui_lang == 'en' %}You have multiple allowed kindergartens. Select a governorate to filter results to your scope only.{% else %}لديك عدة رياض مسموح بها. اختر المحافظة لتصفية النتائج إلى نطاقك فقط.{% endif %}
     </small>
 </div>
 {% endif %}
 
 <!-- Page Help Content -->
-<div id="pageHelpContent" class="d-none" data-help-title="دليل لوحة التحليلات">
+<div id="pageHelpContent" class="d-none" data-help-title="{% if ui_lang == 'en' %}Analytics Dashboard Guide{% else %}دليل لوحة التحليلات{% endif %}">
     <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-speedometer2 me-2"></i>نظرة عامة</h6>
-        <p>توفر هذه اللوحة نظرة شاملة على أداء شبكة الروضات، مع التركيز على السلامة والامتثال.</p>
+        <h6 class="fw-bold text-primary"><i class="bi bi-speedometer2 me-2"></i>{% if ui_lang == 'en' %}Overview{% else %}نظرة عامة{% endif %}</h6>
+        <p>{% if ui_lang == 'en' %}This dashboard provides a comprehensive overview of the kindergarten network performance, focusing on safety and compliance.{% else %}توفر هذه اللوحة نظرة شاملة على أداء شبكة الروضات، مع التركيز على السلامة والامتثال.{% endif %}</p>
     </div>
 
     <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-info-circle me-2"></i>المؤشرات الرئيسية</h6>
+        <h6 class="fw-bold text-primary"><i class="bi bi-info-circle me-2"></i>{% if ui_lang == 'en' %}Key Indicators{% else %}المؤشرات الرئيسية{% endif %}</h6>
         <ul class="list-unstyled">
-            <li class="mb-2"><strong><i class="bi bi-check-circle text-success me-2"></i>نسبة الحضور:</strong> متوسط
-                الحضور اليومي للأطفال عبر الشبكة.</li>
-            <li class="mb-2"><strong><i class="bi bi-exclamation-triangle text-warning me-2"></i>معدل الحوادث:</strong>
-                عدد الحوادث المسجلة لكل 100 طفل.</li>
-            <li class="mb-2"><strong><i class="bi bi-shield-check text-info me-2"></i>مؤشر الحوكمة:</strong> تقييم شامل
-                لامتثال الروضات للمعايير (أخضر=ممتاز، أحمر=يحتاج تحسين).</li>
+            <li class="mb-2">{% if ui_lang == 'en' %}<strong><i class="bi bi-check-circle text-success me-2"></i>Attendance Rate:</strong> Average daily attendance of children across the network.{% else %}<strong><i class="bi bi-check-circle text-success me-2"></i>نسبة الحضور:</strong> متوسط
+                الحضور اليومي للأطفال عبر الشبكة.{% endif %}</li>
+            <li class="mb-2">{% if ui_lang == 'en' %}<strong><i class="bi bi-exclamation-triangle text-warning me-2"></i>Incident Rate:</strong> Number of incidents recorded per 100 children.{% else %}<strong><i class="bi bi-exclamation-triangle text-warning me-2"></i>معدل الحوادث:</strong>
+                عدد الحوادث المسجلة لكل 100 طفل.{% endif %}</li>
+            <li class="mb-2">{% if ui_lang == 'en' %}<strong><i class="bi bi-shield-check text-info me-2"></i>Governance Index:</strong> Comprehensive assessment of kindergarten compliance (green=excellent, red=needs improvement).{% else %}<strong><i class="bi bi-shield-check text-info me-2"></i>مؤشر الحوكمة:</strong> تقييم شامل
+                لامتثال الروضات للمعايير (أخضر=ممتاز، أحمر=يحتاج تحسين).{% endif %}</li>
         </ul>
     </div>
 
     <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-tools me-2"></i>الأدوات المتاحة</h6>
+        <h6 class="fw-bold text-primary"><i class="bi bi-tools me-2"></i>{% if ui_lang == 'en' %}Available Tools{% else %}الأدوات المتاحة{% endif %}</h6>
         <ul class="list-unstyled">
-            <li class="mb-2"><strong>تحليل المحافظات:</strong> جدول يقارن الأداء بين المناطق الجغرافية.</li>
-            <li class="mb-2"><strong>تصدير CSV:</strong> استخدم الزر في قسم "تحليل المحافظات" لتحميل تقرير مفصل.</li>
-            <li class="mb-2"><strong>تصفية الوقت:</strong> استخدم محدد التاريخ في الأعلى لتغيير الفترة الزمنية للتقرير.
+            <li class="mb-2">{% if ui_lang == 'en' %}<strong>Governorate Analysis:</strong> A table comparing performance across geographical areas.{% else %}<strong>تحليل المحافظات:</strong> جدول يقارن الأداء بين المناطق الجغرافية.{% endif %}</li>
+            <li class="mb-2">{% if ui_lang == 'en' %}<strong>Export CSV:</strong> Use the button in the "Governorate Analysis" section to download a detailed report.{% else %}<strong>تصدير CSV:</strong> استخدم الزر في قسم "تحليل المحافظات" لتحميل تقرير مفصل.{% endif %}</li>
+            <li class="mb-2">{% if ui_lang == 'en' %}<strong>Time Filter:</strong> Use the date picker at the top to change the report time period.{% else %}<strong>تصفية الوقت:</strong> استخدم محدد التاريخ في الأعلى لتغيير الفترة الزمنية للتقرير.{% endif %}
             </li>
         </ul>
     </div>
@@ -73,24 +73,24 @@ actions=filter_actions
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-cpu-fill me-2 text-primary"></i>التوقعات والإنذارات
+                        <i class="bi bi-cpu-fill me-2 text-primary"></i>{% if ui_lang == 'en' %}Predictions & Alerts{% else %}التوقعات والإنذارات{% endif %}
                     </h5>
                     <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse"
                         data-bs-target="#modelMetaPanel" aria-expanded="false">
-                        <i class="bi bi-info-circle me-1"></i>بيانات النموذج
+                        <i class="bi bi-info-circle me-1"></i>{% if ui_lang == 'en' %}Model Data{% else %}بيانات النموذج{% endif %}
                     </button>
                 </div>
                 <div class="card-body">
                     <div id="modelMetaPanel" class="collapse">
                         <div class="alert alert-light border" id="modelMeta">
-                            <div class="small text-muted">آخر تدريب: -- | الإصدار: -- | الثقة: --</div>
+                            <div class="small text-muted">{% if ui_lang == 'en' %}Last Training: -- | Version: -- | Confidence: --{% else %}آخر تدريب: -- | الإصدار: -- | الثقة: --{% endif %}</div>
                         </div>
                     </div>
                     <div class="row g-3">
                         <div class="col-md-4">
                             <div class="card border-0 bg-light h-100">
                                 <div class="card-body">
-                                    <div class="small text-muted">توقع الحضور (30 يوم)</div>
+                                    <div class="small text-muted">{% if ui_lang == 'en' %}Attendance Forecast (30 days){% else %}توقع الحضور (30 يوم){% endif %}</div>
                                     <div class="fs-4 fw-bold" id="attendanceForecast">--</div>
                                     <small class="text-muted" id="attendanceForecastBand">--</small>
                                 </div>
@@ -99,7 +99,7 @@ actions=filter_actions
                         <div class="col-md-4">
                             <div class="card border-0 bg-light h-100">
                                 <div class="card-body">
-                                    <div class="small text-muted">توقع الحوادث</div>
+                                    <div class="small text-muted">{% if ui_lang == 'en' %}Incident Forecast{% else %}توقع الحوادث{% endif %}</div>
                                     <div class="fs-4 fw-bold" id="incidentForecast">--</div>
                                     <small class="text-muted" id="incidentForecastBand">--</small>
                                 </div>
@@ -108,7 +108,7 @@ actions=filter_actions
                         <div class="col-md-4">
                             <div class="card border-0 bg-light h-100">
                                 <div class="card-body">
-                                    <div class="small text-muted">توقع التسجيل</div>
+                                    <div class="small text-muted">{% if ui_lang == 'en' %}Enrollment Forecast{% else %}توقع التسجيل{% endif %}</div>
                                     <div class="fs-4 fw-bold" id="enrollmentForecast">--</div>
                                     <small class="text-muted" id="enrollmentForecastBand">--</small>
                                 </div>
@@ -117,14 +117,14 @@ actions=filter_actions
                     </div>
                     <hr />
                     <div class="d-flex align-items-center justify-content-between mb-2">
-                        <h6 class="mb-0">مؤشرات الشذوذ</h6>
+                        <h6 class="mb-0">{% if ui_lang == 'en' %}Anomaly Indicators{% else %}مؤشرات الشذوذ{% endif %}</h6>
                         <span class="badge bg-warning" id="anomalyCount">0</span>
                     </div>
                     <div id="anomalyList" class="list-group list-group-flush"></div>
                     <hr />
                     <div class="d-flex align-items-center justify-content-between mb-2">
-                        <h6 class="mb-0">خريطة المخاطر</h6>
-                        <small class="text-muted">محافظة × مؤشر الحوكمة</small>
+                        <h6 class="mb-0">{% if ui_lang == 'en' %}Risk Map{% else %}خريطة المخاطر{% endif %}</h6>
+                        <small class="text-muted">{% if ui_lang == 'en' %}Governorate × Governance Index{% else %}محافظة × مؤشر الحوكمة{% endif %}</small>
                     </div>
                     <div id="riskHeatmap" class="row g-2"></div>
                 </div>
@@ -134,13 +134,13 @@ actions=filter_actions
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-transparent border-bottom">
                     <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-graph-up-arrow me-2 text-success"></i>جودة البيانات والتنبيهات
+                        <i class="bi bi-graph-up-arrow me-2 text-success"></i>{% if ui_lang == 'en' %}Data Quality & Alerts{% else %}جودة البيانات والتنبيهات{% endif %}
                     </h5>
                 </div>
                 <div class="card-body">
                     <div id="alertBanner" class="alert alert-danger d-none" role="alert"></div>
                     <div class="mb-3">
-                        <div class="small text-muted">جودة البيانات</div>
+                        <div class="small text-muted">{% if ui_lang == 'en' %}Data Quality{% else %}جودة البيانات{% endif %}</div>
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="fw-bold" id="dataQualityScore">--</span>
                             <span class="badge bg-success" id="dataQualityStatus">--</span>
@@ -158,7 +158,7 @@ actions=filter_actions
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-transparent border-bottom">
                     <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-bullseye me-2 text-primary"></i>الأهداف والمعايير
+                        <i class="bi bi-bullseye me-2 text-primary"></i>{% if ui_lang == 'en' %}Targets & Benchmarks{% else %}الأهداف والمعايير{% endif %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -172,7 +172,7 @@ actions=filter_actions
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-transparent border-bottom">
                     <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-lightbulb-fill me-2 text-warning"></i>التوصيات وخطط العمل
+                        <i class="bi bi-lightbulb-fill me-2 text-warning"></i>{% if ui_lang == 'en' %}Recommendations & Action Plans{% else %}التوصيات وخطط العمل{% endif %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -193,14 +193,14 @@ actions=filter_actions
             <div class="card h-100 border-start border-4 border-primary shadow-sm">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold">عدد الروضات</h6>
+                        <h6 class="text-muted mb-0 fw-semibold">{% if ui_lang == 'en' %}Kindergartens{% else %}عدد الروضات{% endif %}</h6>
                         <div class="icon-circle bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center"
                             style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="إجمالي عدد الروضات النشطة في الشبكة">
+                            title="{% if ui_lang == 'en' %}Total active kindergartens in the network{% else %}إجمالي عدد الروضات النشطة في الشبكة{% endif %}">
                             <i class="bi bi-building fs-5"></i>
                         </div>
                     </div>
-                    <h3 class="mb-2 fw-bold text-primary" id="totalKg" aria-label="عدد الروضات">
+                    <h3 class="mb-2 fw-bold text-primary" id="totalKg" aria-label="{% if ui_lang == 'en' %}Kindergartens Count{% else %}عدد الروضات{% endif %}">
                         <div class="skeleton-text w-50"></div>
                     </h3>
                     <small class="text-success fw-medium" id="kpiKgGrowth">
@@ -216,20 +216,20 @@ actions=filter_actions
             <div class="card h-100 border-start border-4 border-info shadow-sm">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold">إجمالي الأطفال</h6>
+                        <h6 class="text-muted mb-0 fw-semibold">{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}</h6>
                         <div class="icon-circle bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center"
                             style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="مجموع الأطفال المسجلين في النظام">
+                            title="{% if ui_lang == 'en' %}Total children enrolled in the system{% else %}مجموع الأطفال المسجلين في النظام{% endif %}">
                             <i class="bi bi-people fs-5"></i>
                         </div>
                     </div>
-                    <h3 class="mb-2 fw-bold text-info" id="totalChildren" aria-label="إجمالي الأطفال">
+                    <h3 class="mb-2 fw-bold text-info" id="totalChildren" aria-label="{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}">
                         <div class="skeleton-text w-50"></div>
                     </h3>
                     <div class="progress mt-2 mb-2" style="height: 6px;">
                         <div class="progress-bar bg-info" id="enrollmentRateBar" style="width: 0%"></div>
                     </div>
-                    <small class="text-muted d-block">نسبة الإشغال: <span class="fw-medium" id="enrollmentRate">
+                    <small class="text-muted d-block">{% if ui_lang == 'en' %}Occupancy Rate:{% else %}نسبة الإشغال:{% endif %} <span class="fw-medium" id="enrollmentRate">
                             <div class="skeleton-text w-25 d-inline-block"></div>
                         </span></small>
                 </div>
@@ -241,14 +241,14 @@ actions=filter_actions
             <div class="card h-100 border-start border-4 border-success shadow-sm">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold">نسبة الحضور</h6>
+                        <h6 class="text-muted mb-0 fw-semibold">{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}</h6>
                         <div class="icon-circle bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center"
                             style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="متوسط نسبة حضور الأطفال خلال الفترة المحددة">
+                            title="{% if ui_lang == 'en' %}Average children attendance rate during the selected period{% else %}متوسط نسبة حضور الأطفال خلال الفترة المحددة{% endif %}">
                             <i class="bi bi-check-circle fs-5"></i>
                         </div>
                     </div>
-                    <h3 class="mb-2 fw-bold text-success" id="avgAttendance" aria-label="نسبة الحضور">
+                    <h3 class="mb-2 fw-bold text-success" id="avgAttendance" aria-label="{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}">
                         <div class="skeleton-text w-50"></div>
                     </h3>
                     <small class="text-muted" id="attendanceTrendIndicator">
@@ -263,14 +263,14 @@ actions=filter_actions
             <div class="card h-100 border-start border-4 border-warning shadow-sm">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold">معدل الحوادث</h6>
+                        <h6 class="text-muted mb-0 fw-semibold">{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}</h6>
                         <div class="icon-circle bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center"
                             style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="عدد الحوادث المسجلة لكل 100 يوم-طفل (مؤشر السلامة)">
+                            title="{% if ui_lang == 'en' %}Incidents recorded per 100 child-days (safety indicator){% else %}عدد الحوادث المسجلة لكل 100 يوم-طفل (مؤشر السلامة){% endif %}">
                             <i class="bi bi-exclamation-triangle fs-5"></i>
                         </div>
                     </div>
-                    <h3 class="mb-2 fw-bold text-warning" id="incidentRate" aria-label="معدل الحوادث">
+                    <h3 class="mb-2 fw-bold text-warning" id="incidentRate" aria-label="{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}">
                         <div class="skeleton-text w-50"></div>
                     </h3>
                     <small class="text-muted" id="incidentTrend">
@@ -287,14 +287,14 @@ actions=filter_actions
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-transparent d-flex justify-content-between align-items-center border-bottom">
                     <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-geo-alt me-2 text-primary"></i>تحليل المحافظات
+                        <i class="bi bi-geo-alt me-2 text-primary"></i>{% if ui_lang == 'en' %}Governorate Analysis{% else %}تحليل المحافظات{% endif %}
                     </h5>
                     <div class="d-flex gap-2">
                         <button class="btn btn-sm btn-outline-primary" onclick="refreshGovernorateData()">
-                            <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+                            <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
                         </button>
                         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
-                            <i class="bi bi-download me-1"></i>تصدير CSV
+                            <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
                         </button>
                     </div>
                 </div>
@@ -304,18 +304,18 @@ actions=filter_actions
                             <thead class="table-light">
                                 <tr>
                                     <th class="fw-semibold text-muted border-0 ps-4">
-                                        <i class="bi bi-geo-alt me-1"></i>المحافظة
+                                        <i class="bi bi-geo-alt me-1"></i>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
                                     </th>
-                                    <th class="text-center fw-semibold text-muted border-0">الروضات</th>
-                                    <th class="text-center fw-semibold text-muted border-0">الطلاب</th>
+                                    <th class="text-center fw-semibold text-muted border-0">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</th>
+                                    <th class="text-center fw-semibold text-muted border-0">{% if ui_lang == 'en' %}Students{% else %}الطلاب{% endif %}</th>
                                     <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
-                                        <i class="bi bi-check-circle me-1"></i>الحضور
-                                    </th>
-                                    <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
-                                        <i class="bi bi-exclamation-triangle me-1"></i>الحوادث
+                                        <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
                                     </th>
                                     <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
-                                        <i class="bi bi-shield-check me-1"></i>مؤشر الحوكمة
+                                        <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
+                                    </th>
+                                    <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
+                                        <i class="bi bi-shield-check me-1"></i>{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}
                                     </th>
                                 </tr>
                             </thead>
@@ -392,7 +392,7 @@ actions=filter_actions
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-transparent border-bottom">
                     <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-pie-chart me-2 text-info"></i>توزيع تقييم الحوكمة
+                        <i class="bi bi-pie-chart me-2 text-info"></i>{% if ui_lang == 'en' %}Governance Rating Distribution{% else %}توزيع تقييم الحوكمة{% endif %}
                     </h5>
                 </div>
                 <div class="card-body d-flex flex-column justify-content-center align-items-center">
@@ -401,15 +401,15 @@ actions=filter_actions
                     </div>
                     <div class="mt-4 w-100">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span><i class="bi bi-circle-fill text-success me-2"></i>متميز (أخضر)</span>
+                            <span><i class="bi bi-circle-fill text-success me-2"></i>{% if ui_lang == 'en' %}Excellent (Green){% else %}متميز (أخضر){% endif %}</span>
                             <span class="fw-bold" id="countGreen">--</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span><i class="bi bi-circle-fill text-warning me-2"></i>متوسط (برتقالي)</span>
+                            <span><i class="bi bi-circle-fill text-warning me-2"></i>{% if ui_lang == 'en' %}Average (Amber){% else %}متوسط (برتقالي){% endif %}</span>
                             <span class="fw-bold" id="countAmber">--</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-circle-fill text-danger me-2"></i>يحتاج تحسين (أحمر)</span>
+                            <span><i class="bi bi-circle-fill text-danger me-2"></i>{% if ui_lang == 'en' %}Needs Improvement (Red){% else %}يحتاج تحسين (أحمر){% endif %}</span>
                             <span class="fw-bold" id="countRed">--</span>
                         </div>
                     </div>
@@ -426,18 +426,18 @@ actions=filter_actions
                 <div class="card-header bg-gradient-primary text-white border-0">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0 fw-bold">
-                            <i class="bi bi-graph-up me-2"></i>تحليل الاتجاهات الزمنية
+                            <i class="bi bi-graph-up me-2"></i>{% if ui_lang == 'en' %}Time Trend Analysis{% else %}تحليل الاتجاهات الزمنية{% endif %}
                         </h5>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="اختيار الاتجاه">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="{% if ui_lang == 'en' %}Select Trend{% else %}اختيار الاتجاه{% endif %}">
                             <input type="radio" class="btn-check" name="trendType" id="attendanceTrend"
                                 autocomplete="off" checked>
                             <label class="btn btn-outline-light active" for="attendanceTrend">
-                                <i class="bi bi-check-circle me-1"></i>الحضور
+                                <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
                             </label>
                             <input type="radio" class="btn-check" name="trendType" id="incidentsTrend"
                                 autocomplete="off">
                             <label class="btn btn-outline-light" for="incidentsTrend">
-                                <i class="bi bi-exclamation-triangle me-1"></i>الحوادث
+                                <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
                             </label>
                         </div>
                     </div>
@@ -448,9 +448,9 @@ actions=filter_actions
                         <div id="trendChartOverlay" class="d-none position-absolute top-50 start-50 translate-middle">
                             <div class="text-center">
                                 <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">جاري التحميل...</span>
+                                    <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                                 </div>
-                                <div class="mt-2 text-muted small">جاري تحميل البيانات...</div>
+                                <div class="mt-2 text-muted small">{% if ui_lang == 'en' %}Loading data...{% else %}جاري تحميل البيانات...{% endif %}</div>
                             </div>
                         </div>
                     </div>
@@ -463,28 +463,28 @@ actions=filter_actions
             <div class="card h-100 shadow-sm border-warning border-2">
                 <div class="card-header bg-warning bg-opacity-10 text-dark border-bottom border-warning">
                     <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-shield-exclamation me-2 text-warning"></i>مؤشر الخطر الذكي
+                        <i class="bi bi-shield-exclamation me-2 text-warning"></i>{% if ui_lang == 'en' %}Smart Risk Indicator{% else %}مؤشر الخطر الذكي{% endif %}
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-warning border-0 small mb-3">
                         <i class="bi bi-robot me-1"></i>
-                        يقوم النظام بتحليل البيانات لتحديد الروضات التي تحتاج انتباه عاجل.
+                        {% if ui_lang == 'en' %}The system analyzes data to identify kindergartens that need urgent attention.{% else %}يقوم النظام بتحليل البيانات لتحديد الروضات التي تحتاج انتباه عاجل.{% endif %}
                     </div>
                     <div id="riskListContainer">
                         <ul class="list-group list-group-flush" id="riskList">
                             <li class="list-group-item d-flex justify-content-between align-items-center border-0">
                                 <div>
-                                    <span class="fw-bold d-block">روضة الأمل</span>
-                                    <small class="text-danger">معدل غياب مرتفع</small>
+                                    <span class="fw-bold d-block">{% if ui_lang == 'en' %}Al-Amal Kindergarten{% else %}روضة الأمل{% endif %}</span>
+                                    <small class="text-danger">{% if ui_lang == 'en' %}High absence rate{% else %}معدل غياب مرتفع{% endif %}</small>
                                 </div>
-                                <span class="badge bg-danger rounded-pill">92% خطر</span>
+                                <span class="badge bg-danger rounded-pill">{% if ui_lang == 'en' %}92% Risk{% else %}92% خطر{% endif %}</span>
                             </li>
                         </ul>
                     </div>
                     <div id="noRiskData" class="text-center text-muted d-none">
                         <i class="bi bi-check-circle fs-1 text-success mb-2"></i>
-                        <div class="small">لا توجد حالات خطر مسجلة</div>
+                        <div class="small">{% if ui_lang == 'en' %}No risk cases recorded{% else %}لا توجد حالات خطر مسجلة{% endif %}</div>
                     </div>
                 </div>
             </div>
@@ -497,8 +497,8 @@ actions=filter_actions
             <div class="card h-100 border-0 shadow-sm border-start border-success border-4">
                 <div
                     class="card-header bg-success bg-opacity-10 text-success fw-bold border-bottom border-success border-opacity-25">
-                    <i class="bi bi-trophy-fill me-2"></i>أفضل 5 روضات أداءً
-                    <small class="float-end text-success-emphasis fw-normal">مؤشر الحوكمة</small>
+                    <i class="bi bi-trophy-fill me-2"></i>{% if ui_lang == 'en' %}Top 5 Performing Kindergartens{% else %}أفضل 5 روضات أداءً{% endif %}
+                    <small class="float-end text-success-emphasis fw-normal">{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="topPerformersList">
@@ -518,8 +518,8 @@ actions=filter_actions
             <div class="card h-100 border-0 shadow-sm border-start border-danger border-4">
                 <div
                     class="card-header bg-danger bg-opacity-10 text-danger fw-bold border-bottom border-danger border-opacity-25">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>الروضات تحتاج دعم عاجل
-                    <small class="float-end text-danger-emphasis fw-normal">مؤشر الحوكمة</small>
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>{% if ui_lang == 'en' %}Kindergartens Need Urgent Support{% else %}الروضات تحتاج دعم عاجل{% endif %}
+                    <small class="float-end text-danger-emphasis fw-normal">{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="lowPerformersList">
@@ -544,12 +544,12 @@ modal_id="exportModal",
 form_id="exportForm",
 spinner_id="exportSpinner",
 report_types=[
-{"value": "overview", "label": "نظرة عامة للشبكة"},
-{"value": "attendance", "label": "تقرير الحضور"},
-{"value": "incidents", "label": "تقرير الحوادث"},
-{"value": "compliance", "label": "تقرير الامتثال"},
-{"value": "governorate", "label": "تفصيل المحافظات"},
-{"value": "full_audit", "label": "سجل التدقيق الكامل"}
+{"value": "overview", "label": "Network Overview" if ui_lang == 'en' else "نظرة عامة للشبكة"},
+{"value": "attendance", "label": "Attendance Report" if ui_lang == 'en' else "تقرير الحضور"},
+{"value": "incidents", "label": "Incidents Report" if ui_lang == 'en' else "تقرير الحوادث"},
+{"value": "compliance", "label": "Compliance Report" if ui_lang == 'en' else "تقرير الامتثال"},
+{"value": "governorate", "label": "Governorate Detail" if ui_lang == 'en' else "تفصيل المحافظات"},
+{"value": "full_audit", "label": "Full Audit Log" if ui_lang == 'en' else "سجل التدقيق الكامل"}
 ]
 ) }}
 {% endblock %}

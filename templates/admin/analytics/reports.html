@@ -1,38 +1,38 @@
 {% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
-{% block title %}تقارير النظام{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}System Reports{% else %}تقارير النظام{% endif %}{% endblock %}
 
 {% block page_header %}
 {{ page_header(
-title="تقارير النظام",
+title="System Reports" if ui_lang == 'en' else "تقارير النظام",
 icon="bi-file-earmark-text",
 breadcrumbs=[
-{"label": "لوحة التحكم", "url": "/dashboard"},
-{"label": "التقارير", "url": None}
+{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Reports" if ui_lang == 'en' else "التقارير", "url": None}
 ]
 ) }}
 
 <!-- Page Help Content -->
-<div id="pageHelpContent" class="d-none" data-help-title="دليل التقارير المركزية">
+<div id="pageHelpContent" class="d-none" data-help-title="{% if ui_lang == 'en' %}Central Reports Guide{% else %}دليل التقارير المركزية{% endif %}">
     <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-file-earmark-text me-2"></i>أنواع التقارير</h6>
-        <p>قم باختيار نوع التقرير المناسب للحصول على البيانات التي تحتاجها:</p>
+        <h6 class="fw-bold text-primary"><i class="bi bi-file-earmark-text me-2"></i>{% if ui_lang == 'en' %}Report Types{% else %}أنواع التقارير{% endif %}</h6>
+        <p>{% if ui_lang == 'en' %}Choose the appropriate report type to get the data you need:{% else %}قم باختيار نوع التقرير المناسب للحصول على البيانات التي تحتاجها:{% endif %}</p>
         <ul class="list-unstyled">
-            <li class="mb-2"><strong><i class="bi bi-calendar-check text-success me-2"></i>تقرير الحضور:</strong> نسب
-                الحضور والغياب لكل روضة خلال الفترة المحددة.</li>
-            <li class="mb-2"><strong><i class="bi bi-exclamation-triangle text-warning me-2"></i>تقرير الحوادث:</strong>
-                تفاصيل الحوادث المسجلة، أنواعها، ودرجة خطورتها.</li>
-            <li class="mb-2"><strong><i class="bi bi-shield-check text-info me-2"></i>الامتثال والحوكمة:</strong> مدى
-                التزام الروضات بالمعايير واللوائح.</li>
-            <li class="mb-2"><strong><i class="bi bi-list-check text-primary me-2"></i>سجل التدقيق:</strong> نسخة كاملة
-                من سجلات النشاط للتدقيق والأرشفة.</li>
+            <li class="mb-2"><strong><i class="bi bi-calendar-check text-success me-2"></i>{% if ui_lang == 'en' %}Attendance Report:{% else %}تقرير الحضور:{% endif %}</strong> {% if ui_lang == 'en' %}Attendance and absence rates for each kindergarten during the specified period.{% else %}نسب
+                الحضور والغياب لكل روضة خلال الفترة المحددة.{% endif %}</li>
+            <li class="mb-2"><strong><i class="bi bi-exclamation-triangle text-warning me-2"></i>{% if ui_lang == 'en' %}Incidents Report:{% else %}تقرير الحوادث:{% endif %}</strong>
+                {% if ui_lang == 'en' %}Details of recorded incidents, their types, and severity levels.{% else %}تفاصيل الحوادث المسجلة، أنواعها، ودرجة خطورتها.{% endif %}</li>
+            <li class="mb-2"><strong><i class="bi bi-shield-check text-info me-2"></i>{% if ui_lang == 'en' %}Compliance & Governance:{% else %}الامتثال والحوكمة:{% endif %}</strong> {% if ui_lang == 'en' %}Kindergarten compliance with standards and regulations.{% else %}مدى
+                التزام الروضات بالمعايير واللوائح.{% endif %}</li>
+            <li class="mb-2"><strong><i class="bi bi-list-check text-primary me-2"></i>{% if ui_lang == 'en' %}Audit Log:{% else %}سجل التدقيق:{% endif %}</strong> {% if ui_lang == 'en' %}Complete copy of activity logs for auditing and archiving.{% else %}نسخة كاملة
+                من سجلات النشاط للتدقيق والأرشفة.{% endif %}</li>
         </ul>
     </div>
 
     <div class="alert alert-info small">
         <i class="bi bi-info-circle me-1"></i>
-        يمكنك تحميل التقارير بصيغة CSV لفتحها وتحليلها باستخدام برنامج Excel أو Google Sheets.
+        {% if ui_lang == 'en' %}You can download reports in CSV format to open and analyze them using Excel or Google Sheets.{% else %}يمكنك تحميل التقارير بصيغة CSV لفتحها وتحليلها باستخدام برنامج Excel أو Google Sheets.{% endif %}
     </div>
 </div>
 {% endblock %}
@@ -42,13 +42,13 @@ breadcrumbs=[
     <div class="col-lg-8">
         <div class="card shadow-sm">
             <div class="card-header bg-white py-3">
-                <h5 class="card-title mb-0">تصدير التقارير المركزية</h5>
+                <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Export Central Reports{% else %}تصدير التقارير المركزية{% endif %}</h5>
             </div>
             <div class="card-body p-4">
                 <form id="exportForm">
                     <!-- Report Type -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">نوع التقرير</label>
+                        <label class="form-label fw-bold">{% if ui_lang == 'en' %}Report Type{% else %}نوع التقرير{% endif %}</label>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="form-check custom-card-check">
@@ -57,8 +57,8 @@ breadcrumbs=[
                                     <label class="form-check-label w-100" for="typeAttendance">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-check text-success fs-4 mb-2 d-block"></i>
-                                            <strong>تقرير الحضور والغياب</strong>
-                                            <div class="small text-muted">ملخص الحضور لكل الروضات</div>
+                                            <strong>{% if ui_lang == 'en' %}Attendance Report{% else %}تقرير الحضور والغياب{% endif %}</strong>
+                                            <div class="small text-muted">{% if ui_lang == 'en' %}Attendance summary for all kindergartens{% else %}ملخص الحضور لكل الروضات{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
@@ -70,8 +70,8 @@ breadcrumbs=[
                                     <label class="form-check-label w-100" for="typeIncidents">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-exclamation-triangle text-warning fs-4 mb-2 d-block"></i>
-                                            <strong>تقرير الحوادث</strong>
-                                            <div class="small text-muted">تحليل الحوادث ومعدلاتها</div>
+                                            <strong>{% if ui_lang == 'en' %}Incidents Report{% else %}تقرير الحوادث{% endif %}</strong>
+                                            <div class="small text-muted">{% if ui_lang == 'en' %}Incident analysis and rates{% else %}تحليل الحوادث ومعدلاتها{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
@@ -83,8 +83,8 @@ breadcrumbs=[
                                     <label class="form-check-label w-100" for="typeCompliance">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-shield-check text-info fs-4 mb-2 d-block"></i>
-                                            <strong>تقرير الامتثال والحوكمة</strong>
-                                            <div class="small text-muted">مؤشرات الأداء والتقييم</div>
+                                            <strong>{% if ui_lang == 'en' %}Compliance & Governance Report{% else %}تقرير الامتثال والحوكمة{% endif %}</strong>
+                                            <div class="small text-muted">{% if ui_lang == 'en' %}Performance and evaluation indicators{% else %}مؤشرات الأداء والتقييم{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
@@ -96,8 +96,8 @@ breadcrumbs=[
                                     <label class="form-check-label w-100" for="typeFull">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-list-check text-primary fs-4 mb-2 d-block"></i>
-                                            <strong>سجل التدقيق الشامل</strong>
-                                            <div class="small text-muted">كافة العمليات والنشاطات</div>
+                                            <strong>{% if ui_lang == 'en' %}Comprehensive Audit Log{% else %}سجل التدقيق الشامل{% endif %}</strong>
+                                            <div class="small text-muted">{% if ui_lang == 'en' %}All operations and activities{% else %}كافة العمليات والنشاطات{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
@@ -108,21 +108,21 @@ breadcrumbs=[
                     <!-- Date Range -->
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label for="startDate" class="form-label fw-bold">من تاريخ</label>
+                            <label for="startDate" class="form-label fw-bold">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %}</label>
                             <input type="date" class="form-control" id="startDate" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="endDate" class="form-label fw-bold">إلى تاريخ</label>
+                            <label for="endDate" class="form-label fw-bold">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %}</label>
                             <input type="date" class="form-control" id="endDate" required>
                         </div>
                     </div>
 
                     <!-- Format -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">صيغة الملف</label>
+                        <label class="form-label fw-bold">{% if ui_lang == 'en' %}File Format{% else %}صيغة الملف{% endif %}</label>
                         <select class="form-select w-auto" id="exportFormat">
-                            <option value="csv">CSV (متوافق مع إكسل)</option>
-                            <option value="pdf" disabled>PDF (قريباً)</option>
+                            <option value="csv">{% if ui_lang == 'en' %}CSV (Excel compatible){% else %}CSV (متوافق مع إكسل){% endif %}</option>
+                            <option value="pdf" disabled>{% if ui_lang == 'en' %}PDF (Coming soon){% else %}PDF (قريباً){% endif %}</option>
                         </select>
                     </div>
 
@@ -130,9 +130,9 @@ breadcrumbs=[
 
                     <div class="d-flex justify-content-end gap-2">
                         <button type="button" class="btn btn-outline-secondary"
-                            onclick="window.history.back()">إلغاء</button>
+                            onclick="window.history.back()">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
                         <button type="submit" class="btn btn-primary px-4">
-                            <i class="bi bi-download me-2"></i>تحميل التقرير
+                            <i class="bi bi-download me-2"></i>{% if ui_lang == 'en' %}Download Report{% else %}تحميل التقرير{% endif %}
                         </button>
                     </div>
                 </form>

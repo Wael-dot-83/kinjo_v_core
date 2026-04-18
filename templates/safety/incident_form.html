@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
-{% block title %}تسجيل حادث جديد{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Report New Incident{% else %}تسجيل حادث جديد{% endif %}{% endblock %}
 
 {% block page_header %}
 {{ page_header(
-title="تسجيل حادث جديد",
+title="{% if ui_lang == 'en' %}Report New Incident{% else %}تسجيل حادث جديد{% endif %}",
 icon="bi-file-medical",
 icon_color="text-danger",
 breadcrumbs=[
-{"label": "الرئيسية", "url": "/dashboard"},
-{"label": "الصحة والسلامة", "url": "/safety"},
-{"label": "تسجيل حادث", "url": None}
+{"label": "الرئيسية" if ui_lang != 'en' else "Home", "url": "/dashboard"},
+{"label": "الصحة والسلامة" if ui_lang != 'en' else "Health & Safety", "url": "/safety"},
+{"label": "تسجيل حادث" if ui_lang != 'en' else "Report Incident", "url": None}
 ]
 ) }}
 {% endblock %}
@@ -23,56 +23,56 @@ breadcrumbs=[
             <div class="card-body p-4">
                 <form id="incidentForm" onsubmit="submitIncident(event)">
                     <div class="mb-3">
-                        <label for="childId" class="form-label">رقم الطفل (المعرّف)</label>
+                        <label for="childId" class="form-label">{% if ui_lang == 'en' %}Child ID{% else %}رقم الطفل (المعرّف){% endif %}</label>
                         <input type="number" class="form-control" id="childId" required
-                            placeholder="أدخل رقم هوية النظام للطفل">
-                        <div class="form-text">سيتم استبدال هذا بقائمة منسدلة في النسخة القادمة.</div>
+                            placeholder="{% if ui_lang == 'en' %}Enter the child's system ID{% else %}أدخل رقم هوية النظام للطفل{% endif %}">
+                        <div class="form-text">{% if ui_lang == 'en' %}This will be replaced with a dropdown in the next version.{% else %}سيتم استبدال هذا بقائمة منسدلة في النسخة القادمة.{% endif %}</div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="type" class="form-label">نوع الحادث</label>
+                            <label for="type" class="form-label">{% if ui_lang == 'en' %}Incident Type{% else %}نوع الحادث{% endif %}</label>
                             <select class="form-select" id="type" required>
-                                <option value="" selected disabled>اختر النوع...</option>
-                                <option value="INJURY">إصابة جسدية</option>
-                                <option value="BEHAVIOR">سلوك</option>
-                                <option value="ILLNESS">مرض</option>
-                                <option value="OTHER">آخر</option>
+                                <option value="" selected disabled>{% if ui_lang == 'en' %}Select type...{% else %}اختر النوع...{% endif %}</option>
+                                <option value="INJURY">{% if ui_lang == 'en' %}Physical Injury{% else %}إصابة جسدية{% endif %}</option>
+                                <option value="BEHAVIOR">{% if ui_lang == 'en' %}Behavior{% else %}سلوك{% endif %}</option>
+                                <option value="ILLNESS">{% if ui_lang == 'en' %}Illness{% else %}مرض{% endif %}</option>
+                                <option value="OTHER">{% if ui_lang == 'en' %}Other{% else %}آخر{% endif %}</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="severity" class="form-label">درجة الخطورة</label>
+                            <label for="severity" class="form-label">{% if ui_lang == 'en' %}Severity{% else %}درجة الخطورة{% endif %}</label>
                             <select class="form-select" id="severity" required>
-                                <option value="" selected disabled>اختر الدرجة...</option>
-                                <option value="LOW">منخفضة</option>
-                                <option value="MEDIUM">متوسطة</option>
-                                <option value="HIGH">عالية</option>
-                                <option value="CRITICAL">حرجة</option>
+                                <option value="" selected disabled>{% if ui_lang == 'en' %}Select severity...{% else %}اختر الدرجة...{% endif %}</option>
+                                <option value="LOW">{% if ui_lang == 'en' %}Low{% else %}منخفضة{% endif %}</option>
+                                <option value="MEDIUM">{% if ui_lang == 'en' %}Medium{% else %}متوسطة{% endif %}</option>
+                                <option value="HIGH">{% if ui_lang == 'en' %}High{% else %}عالية{% endif %}</option>
+                                <option value="CRITICAL">{% if ui_lang == 'en' %}Critical{% else %}حرجة{% endif %}</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="occurredAt" class="form-label">وقت الحدوث</label>
+                        <label for="occurredAt" class="form-label">{% if ui_lang == 'en' %}Time of Occurrence{% else %}وقت الحدوث{% endif %}</label>
                         <input type="datetime-local" class="form-control" id="occurredAt" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="description" class="form-label">وصف تفصيلي للحادث</label>
+                        <label for="description" class="form-label">{% if ui_lang == 'en' %}Detailed Incident Description{% else %}وصف تفصيلي للحادث{% endif %}</label>
                         <textarea class="form-control" id="description" rows="5" required
-                            placeholder="صف ما حدث بالضبط، المكان، ومن كان موجوداً..."></textarea>
+                            placeholder="{% if ui_lang == 'en' %}Describe exactly what happened, where, and who was present...{% else %}صف ما حدث بالضبط، المكان، ومن كان موجوداً...{% endif %}"></textarea>
                     </div>
 
                     <div class="form-check mb-4">
                         <input class="form-check-input" type="checkbox" id="followupRequired">
                         <label class="form-check-label" for="followupRequired">
-                            يتطلب متابعة لاحقة؟
+                            {% if ui_lang == 'en' %}Requires follow-up?{% else %}يتطلب متابعة لاحقة؟{% endif %}
                         </label>
                     </div>
 
                     <div class="d-flex justify-content-end gap-2">
-                        <a href="/safety" class="btn btn-outline-secondary">إلغاء</a>
-                        <button type="submit" class="btn btn-danger px-4">تسجيل الحادث</button>
+                        <a href="/safety" class="btn btn-outline-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
+                        <button type="submit" class="btn btn-danger px-4">{% if ui_lang == 'en' %}Report Incident{% else %}تسجيل الحادث{% endif %}</button>
                     </div>
                 </form>
             </div>
@@ -83,6 +83,9 @@ breadcrumbs=[
 
 {% block extra_js %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     document.getElementById('occurredAt').value = new Date().toISOString().slice(0, 16);
 
     async function submitIncident(e) {
@@ -101,12 +104,12 @@ breadcrumbs=[
             const response = await window.api.post('/api/incidents', data);
 
             if (response) {
-                alert('تم تسجيل الحادث بنجاح');
+                alert(T('تم تسجيل الحادث بنجاح', 'Incident reported successfully'));
                 window.location.href = '/safety';
             }
         } catch (error) {
             console.error(error);
-            alert('حدث خطأ في الاتصال: ' + error.message);
+            alert(T('حدث خطأ في الاتصال: ', 'Connection error: ') + error.message);
         }
     }
 </script>

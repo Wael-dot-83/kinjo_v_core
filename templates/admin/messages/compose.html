@@ -1,6 +1,6 @@
 ﻿{% extends 'base.html' %}
 
-{% block title %}إنشاء رسالة جديدة{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="dashboard-header">
@@ -8,14 +8,14 @@
         <div>
             <h1 class="h2 mb-1">
                 <i class="bi bi-envelope-plus me-2 text-primary"></i>
-                إنشاء رسالة جديدة
+                {% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %}
             </h1>
-            <nav aria-label="مسار التنقل">
+            <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
-                    <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                    <li class="breadcrumb-item">الرسائل</li>
-                    <li class="breadcrumb-item active">إنشاء رسالة</li>
+                    <li class="breadcrumb-item"><a href="/">{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</a></li>
+                    <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                    <li class="breadcrumb-item">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</li>
+                    <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Compose{% else %}إنشاء رسالة{% endif %}</li>
                 </ol>
             </nav>
         </div>
@@ -29,7 +29,7 @@
     <div class="col-12 col-lg-8">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="card-title mb-0">تفاصيل الرسالة</h5>
+                <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Message Details{% else %}تفاصيل الرسالة{% endif %}</h5>
             </div>
             <div class="card-body">
                 <form id="composeForm">
@@ -37,26 +37,26 @@
                         aria-live="polite"></div>
                     <!-- Subject -->
                     <div class="mb-3">
-                        <label for="subject" class="form-label">الموضوع <span class="text-danger">*</span></label>
+                        <label for="subject" class="form-label">{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="subject" name="subject" required
-                            placeholder="أدخل عنوان الرسالة">
+                            placeholder="{% if ui_lang == 'en' %}Enter message subject{% else %}أدخل عنوان الرسالة{% endif %}">
                     </div>
 
                     <!-- Message Body -->
                     <div class="mb-3">
-                        <label for="messageBody" class="form-label">نص الرسالة <span
+                        <label for="messageBody" class="form-label">{% if ui_lang == 'en' %}Message Body{% else %}نص الرسالة{% endif %} <span
                                 class="text-danger">*</span></label>
                         <textarea class="form-control" id="messageBody" name="messageBody" rows="10" required
-                            placeholder="اكتب محتوى الرسالة هنا..."></textarea>
+                            placeholder="{% if ui_lang == 'en' %}Write message content here...{% else %}اكتب محتوى الرسالة هنا...{% endif %}"></textarea>
                     </div>
 
                     <!-- Allow Replies -->
                     <div class="mb-3">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="allowReplies" checked>
-                            <label class="form-check-label" for="allowReplies">السماح بالردود</label>
+                            <label class="form-check-label" for="allowReplies">{% if ui_lang == 'en' %}Allow Replies{% else %}السماح بالردود{% endif %}</label>
                         </div>
-                        <div class="form-text">عند التفعيل، سيتمكن المستلمون من الرد على هذه الرسالة.</div>
+                        <div class="form-text">{% if ui_lang == 'en' %}When enabled, recipients can reply to this message.{% else %}عند التفعيل، سيتمكن المستلمون من الرد على هذه الرسالة.{% endif %}</div>
                     </div>
                 </form>
             </div>
@@ -67,19 +67,19 @@
     <div class="col-12 col-lg-4">
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="card-title mb-0">تحديد المستلمين</h5>
+                <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Select Recipients{% else %}تحديد المستلمين{% endif %}</h5>
             </div>
             <div class="card-body">
                 <!-- Target Mode -->
                 <div class="mb-3">
-                    <label for="targetMode" class="form-label">توجيه إلى <span class="text-danger">*</span></label>
+                    <label for="targetMode" class="form-label">{% if ui_lang == 'en' %}Send To{% else %}توجيه إلى{% endif %} <span class="text-danger">*</span></label>
                     <select class="form-select" id="targetMode" onchange="handleTargetModeChange()">
-                        <option value="ALL_USERS">جميع المستخدمين</option>
-                        <option value="ALL_MANAGERS">جميع المدراء</option>
-                        <option value="ALL_SUPERVISORS">جميع المشرفين</option>
-                        <option value="ALL_PARENTS">جميع أولياء الأمور</option>
-                        <option value="GOVERNORATE">حسب المحافظة (محافظة واحدة أو أكثر)</option>
-                        <option value="KINDERGARTENS">حسب الروضة</option>
+                        <option value="ALL_USERS">{% if ui_lang == 'en' %}All Users{% else %}جميع المستخدمين{% endif %}</option>
+                        <option value="ALL_MANAGERS">{% if ui_lang == 'en' %}All Managers{% else %}جميع المدراء{% endif %}</option>
+                        <option value="ALL_SUPERVISORS">{% if ui_lang == 'en' %}All Supervisors{% else %}جميع المشرفين{% endif %}</option>
+                        <option value="ALL_PARENTS">{% if ui_lang == 'en' %}All Parents{% else %}جميع أولياء الأمور{% endif %}</option>
+                        <option value="GOVERNORATE">{% if ui_lang == 'en' %}By Governorate{% else %}حسب المحافظة (محافظة واحدة أو أكثر){% endif %}</option>
+                        <option value="KINDERGARTENS">{% if ui_lang == 'en' %}By Kindergarten{% else %}حسب الروضة{% endif %}</option>
                     </select>
                 </div>
 
@@ -87,7 +87,7 @@
                 <div id="filtersContainer" class="d-none border-top pt-3 mt-3">
                     <!-- Governorate Filter -->
                     <div id="governorateFilter" class="mb-3 d-none">
-                        <label class="form-label">المحافظات</label>
+                        <label class="form-label">{% if ui_lang == 'en' %}Governorates{% else %}المحافظات{% endif %}</label>
                         <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
                             {% for gov in governorates %}
                             <div class="form-check">
@@ -97,58 +97,58 @@
                             {% endfor %}
                         </div>
                         <div class="mt-1">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=true)">تحديد الكل</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=false)">إلغاء الكل</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=true)">{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=false)">{% if ui_lang == 'en' %}Deselect All{% else %}إلغاء الكل{% endif %}</button>
                         </div>
                     </div>
 
                     <!-- Kindergarten Filter -->
                     <div id="kindergartenFilter" class="mb-3 d-none">
-                        <label for="kindergartenSelect" class="form-label">الروضات</label>
+                        <label for="kindergartenSelect" class="form-label">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</label>
                         <div class="input-group mb-2">
                             <input type="text" class="form-control form-control-sm" id="kgSearch"
-                                placeholder="بحث عن روضة..." onkeyup="filterKgList()">
+                                placeholder="{% if ui_lang == 'en' %}Search kindergarten...{% else %}بحث عن روضة...{% endif %}" onkeyup="filterKgList()">
                             <span class="input-group-text"><i class="bi bi-search"></i></span>
                         </div>
                         <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;"
                             id="kgListContainer">
-                            <div class="text-center text-muted small py-2">جاري التحميل...</div>
+                            <div class="text-center text-muted small py-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
                         </div>
                     </div>
 
                     <!-- Additional Roles Filter (Optional) -->
                     <div id="rolesFilter" class="mb-3">
-                        <label class="form-label d-block">الأدوار المستهدفة</label>
+                        <label class="form-label d-block">{% if ui_lang == 'en' %}Target Roles{% else %}الأدوار المستهدفة{% endif %}</label>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="checkbox" id="roleManager" value="MANAGER" checked
                                 disabled>
-                            <label class="form-check-label" for="roleManager">مدراء</label>
+                            <label class="form-check-label" for="roleManager">{% if ui_lang == 'en' %}Managers{% else %}مدراء{% endif %}</label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="checkbox" id="roleSupervisor" value="SUPERVISOR"
                                 checked disabled>
-                            <label class="form-check-label" for="roleSupervisor">مشرفين</label>
+                            <label class="form-check-label" for="roleSupervisor">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفين{% endif %}</label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="checkbox" id="roleParent" value="PARENT" checked
                                 disabled>
-                            <label class="form-check-label" for="roleParent">أولياء أمور</label>
+                            <label class="form-check-label" for="roleParent">{% if ui_lang == 'en' %}Parents{% else %}أولياء أمور{% endif %}</label>
                         </div>
                     </div>
 
                     <!-- Search Filter -->
                     <div class="mb-3">
-                        <label for="userSearch" class="form-label">بحث إضافي (اختياري)</label>
+                        <label for="userSearch" class="form-label">{% if ui_lang == 'en' %}Additional Search (optional){% else %}بحث إضافي (اختياري){% endif %}</label>
                         <input type="text" class="form-control form-control-sm" id="userSearch"
-                            placeholder="الاسم أو البريد الإلكتروني...">
-                        <div class="form-text small">لتصفية النتائج بشكل أدق.</div>
+                            placeholder="{% if ui_lang == 'en' %}Name or email...{% else %}الاسم أو البريد الإلكتروني...{% endif %}">
+                        <div class="form-text small">{% if ui_lang == 'en' %}To filter results more precisely.{% else %}لتصفية النتائج بشكل أدق.{% endif %}</div>
                     </div>
                 </div>
 
                 <!-- Preview Actions -->
                 <div class="d-grid gap-2">
                     <button type="button" class="btn btn-outline-primary" onclick="previewRecipients()">
-                        <i class="bi bi-eye me-2"></i> معاينة المستلمين
+                        <i class="bi bi-eye me-2"></i> {% if ui_lang == 'en' %}Preview Recipients{% else %}معاينة المستلمين{% endif %}
                     </button>
                 </div>
             </div>
@@ -157,12 +157,12 @@
         <!-- Preview Results -->
         <div class="card d-none" id="previewCard">
             <div class="card-header bg-light">
-                <h6 class="card-title mb-0 small text-uppercase text-muted">نتيجة المعاينة</h6>
+                <h6 class="card-title mb-0 small text-uppercase text-muted">{% if ui_lang == 'en' %}Preview Results{% else %}نتيجة المعاينة{% endif %}</h6>
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
                     <h2 class="display-6 fw-bold mb-0 text-primary" id="recipientCount">0</h2>
-                    <p class="text-muted small">مستلم متوقع</p>
+                    <p class="text-muted small">{% if ui_lang == 'en' %}expected recipients{% else %}مستلم متوقع{% endif %}</p>
                 </div>
 
                 <div id="previewBreakdown" class="small mb-3">
@@ -170,7 +170,7 @@
                 </div>
 
                 <hr>
-                <h6 class="small fw-bold mb-2">عينة من المستلمين:</h6>
+                <h6 class="small fw-bold mb-2">{% if ui_lang == 'en' %}Sample Recipients:{% else %}عينة من المستلمين:{% endif %}</h6>
                 <ul class="list-unstyled small mb-0" id="sampleRecipientsList">
                     <!-- Sample list injected via JS -->
                 </ul>
@@ -182,9 +182,9 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body d-flex justify-content-end gap-2">
-                <a href="/dashboard" class="btn btn-secondary">إلغاء</a>
+                <a href="/dashboard" class="btn btn-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
                 <button type="button" class="btn btn-primary px-4" onclick="sendMessage()" id="sendBtn">
-                    <i class="bi bi-send me-2"></i> إرسال الرسالة
+                    <i class="bi bi-send me-2"></i> {% if ui_lang == 'en' %}Send Message{% else %}إرسال الرسالة{% endif %}
                 </button>
             </div>
         </div>
@@ -194,6 +194,8 @@
 
 {% block extra_js %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
     const KG_PAGE_SIZE = 500;
     const STATUS_EL = document.getElementById('composeStatus');
     let kindergartensLoaded = false;
@@ -243,7 +245,7 @@
     async function loadKindergartens() {
         kgLoading = true;
         const container = document.getElementById('kgListContainer');
-        container.innerHTML = '<div class="text-center text-muted small py-2"><span class="spinner-border spinner-border-sm"></span> جاري التحميل...</div>';
+        container.innerHTML = '<div class="text-center text-muted small py-2"><span class="spinner-border spinner-border-sm"></span> ' + T('جاري التحميل...', 'Loading...') + '</div>';
         const accumulated = [];
         let page = 1;
 
@@ -254,7 +256,7 @@
                 const response = await fetch(`/api/admin/options/kindergartens?${params}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (!response.ok) throw new Error('فشل في تحميل الروضات');
+                if (!response.ok) throw new Error(T('فشل في تحميل الروضات', 'Failed to load kindergartens'));
                 const data = await response.json();
                 accumulated.push(...(data.kindergartens || []));
                 const pagination = data.pagination || {};
@@ -274,7 +276,7 @@
             kindergartensLoaded = true;
         } catch (error) {
             console.error(error);
-            container.innerHTML = '<div class="text-danger small text-center">فشل في تحميل قائمة الروضات</div>';
+            container.innerHTML = '<div class="text-danger small text-center">' + T('فشل في تحميل قائمة الروضات', 'Failed to load kindergartens list') + '</div>';
         } finally {
             kgLoading = false;
         }
@@ -283,7 +285,7 @@
     function renderKgList(items) {
         const container = document.getElementById('kgListContainer');
         if (items.length === 0) {
-            container.innerHTML = '<div class="text-muted small text-center">لا توجد نتائج</div>';
+            container.innerHTML = '<div class="text-muted small text-center">' + T('لا توجد نتائج', 'No results') + '</div>';
             return;
         }
 
@@ -339,7 +341,7 @@
                 const response = await fetch(url, { ...options, headers });
                 const payload = await response.json().catch(() => null);
                 if (!response.ok) {
-                    const message = payload?.detail || payload?.message || `خطأ ${response.status}`;
+                    const message = payload?.detail || payload?.message || T(`خطأ ${response.status}`, `Error ${response.status}`);
                     throw new Error(message);
                 }
                 return payload;
@@ -355,11 +357,11 @@
     async function previewRecipients() {
         const target = getTargetData();
         if (target.mode === 'GOVERNORATE' && (!target.governorates || !target.governorates.length)) {
-            Swal.fire('تنبيه', 'الرجاء اختيار محافظة واحدة على الأقل', 'warning');
+            Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار محافظة واحدة على الأقل', 'Please select at least one governorate'), 'warning');
             return;
         }
         if (target.mode === 'KINDERGARTENS' && !target.kindergarten_ids) {
-            Swal.fire('تنبيه', 'الرجاء اختيار روضة واحدة على الأقل', 'warning');
+            Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار روضة واحدة على الأقل', 'Please select at least one kindergarten'), 'warning');
             return;
         }
 
@@ -371,7 +373,7 @@
         showComposeStatus('', { visible: false });
         previewCard.classList.remove('d-none');
         countEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-        sampleList.innerHTML = '<li class="text-muted small text-center">جاري التحديث...</li>';
+        sampleList.innerHTML = '<li class="text-muted small text-center">' + T('جاري التحديث...', 'Updating...') + '</li>';
         breakdownEl.innerHTML = '';
 
         try {
@@ -391,15 +393,15 @@
             renderPreviewSamples(data.sample_recipients);
 
             if (data.total_count === 0) {
-                showComposeStatus('لا يوجد مستلمين مطابقين', { variant: 'warning', visible: true });
+                showComposeStatus(T('لا يوجد مستلمين مطابقين', 'No matching recipients'), { variant: 'warning', visible: true });
             }
         } catch (error) {
             console.error(error);
             countEl.textContent = '-';
             breakdownEl.innerHTML = '';
-            sampleList.innerHTML = '<li class="text-muted fst-italic">تعذر تحميل النتائج</li>';
-            showComposeStatus(error.message || 'فشل في المعاينة', { variant: 'danger', visible: true });
-            Swal.fire('خطأ', error.message || 'فشل في تحميل معاينة المستلمين', 'error');
+            sampleList.innerHTML = '<li class="text-muted fst-italic">' + T('تعذر تحميل النتائج', 'Failed to load results') + '</li>';
+            showComposeStatus(error.message || T('فشل في المعاينة', 'Preview failed'), { variant: 'danger', visible: true });
+            Swal.fire(T('خطأ', 'Error'), error.message || T('فشل في تحميل معاينة المستلمين', 'Failed to load recipients preview'), 'error');
         } finally {
             setPreviewLoading(false);
         }
@@ -416,9 +418,9 @@
         const breakdownEl = document.getElementById('previewBreakdown');
         const parts = [];
         if (data.by_role) {
-            if (data.by_role.MANAGER) parts.push(`${data.by_role.MANAGER} مدير`);
-            if (data.by_role.SUPERVISOR) parts.push(`${data.by_role.SUPERVISOR} مشرف`);
-            if (data.by_role.PARENT) parts.push(`${data.by_role.PARENT} أولياء أمور`);
+            if (data.by_role.MANAGER) parts.push(`${data.by_role.MANAGER} ${T('مدير', 'manager')}`);
+            if (data.by_role.SUPERVISOR) parts.push(`${data.by_role.SUPERVISOR} ${T('مشرف', 'supervisor')}`);
+            if (data.by_role.PARENT) parts.push(`${data.by_role.PARENT} ${T('أولياء أمور', 'parents')}`);
         }
         breakdownEl.innerHTML = parts.join(' • ');
     }
@@ -426,7 +428,7 @@
     function renderPreviewSamples(samples) {
         const sampleList = document.getElementById('sampleRecipientsList');
         if (!samples || samples.length === 0) {
-            sampleList.innerHTML = '<li class="text-muted fst-italic">لا يوجد بيانات عينة</li>';
+            sampleList.innerHTML = '<li class="text-muted fst-italic">' + T('لا يوجد بيانات عينة', 'No sample data') + '</li>';
             return;
         }
         sampleList.innerHTML = samples.map(u => `
@@ -447,20 +449,20 @@
         const originalText = btn.innerHTML;
 
         if (!subject || !messageBody) {
-            Swal.fire('تنبيه', 'الرجاء تعبئة الموضوع ونص الرسالة', 'warning');
+            Swal.fire(T('تنبيه', 'Notice'), T('الرجاء تعبئة الموضوع ونص الرسالة', 'Please fill in the subject and message body'), 'warning');
             return;
         }
         if (target.mode === 'GOVERNORATE' && (!target.governorates || !target.governorates.length)) {
-            Swal.fire('تنبيه', 'الرجاء اختيار محافظة واحدة على الأقل', 'warning');
+            Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار محافظة واحدة على الأقل', 'Please select at least one governorate'), 'warning');
             return;
         }
         if (target.mode === 'KINDERGARTENS' && !target.kindergarten_ids) {
-            Swal.fire('تنبيه', 'الرجاء اختيار روضة واحدة على الأقل', 'warning');
+            Swal.fire(T('تنبيه', 'Notice'), T('الرجاء اختيار روضة واحدة على الأقل', 'Please select at least one kindergarten'), 'warning');
             return;
         }
 
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> جاري الإرسال...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> ' + T('جاري الإرسال...', 'Sending...');
         showComposeStatus('', { visible: false });
 
         try {
@@ -480,17 +482,17 @@
             }, 1);
 
             await Swal.fire({
-                title: 'تم الإرسال!',
-                text: 'تم إرسال الرسالة بنجاح.',
+                title: T('تم الإرسال!', 'Sent!'),
+                text: T('تم إرسال الرسالة بنجاح.', 'Message sent successfully.'),
                 icon: 'success',
-                confirmButtonText: 'حسنًا'
+                confirmButtonText: T('حسنًا', 'OK')
             });
 
             window.location.href = '/admin/messages';
         } catch (error) {
             console.error(error);
-            showComposeStatus(error.message || 'فشل في الإرسال', { variant: 'danger', visible: true });
-            Swal.fire('خطأ', error.message || 'فشل في إرسال الرسالة', 'error');
+            showComposeStatus(error.message || T('فشل في الإرسال', 'Send failed'), { variant: 'danger', visible: true });
+            Swal.fire(T('خطأ', 'Error'), error.message || T('فشل في إرسال الرسالة', 'Failed to send message'), 'error');
             btn.disabled = false;
             btn.innerHTML = originalText;
         }

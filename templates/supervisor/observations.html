@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
 
-{% block title %}تسجيل الملاحظات{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Record Observations{% else %}تسجيل الملاحظات{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h3 mb-1">
             <i class="bi bi-eye me-2 text-primary"></i>
-            تسجيل ملاحظة تربوية
+            {% if ui_lang == 'en' %}Record an Educational Observation{% else %}تسجيل ملاحظة تربوية{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">الملاحظات</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Observations{% else %}الملاحظات{% endif %}</li>
             </ol>
         </nav>
     </div>
@@ -26,43 +26,43 @@
             <div class="card-body">
                 <form id="observationForm">
                     <div class="mb-3">
-                        <label class="form-label" for="childSearchInput">بحث عن طفل</label>
-                        <input class="form-control" id="childSearchInput" type="search" placeholder="اكتب اسم الطفل للتصفية">
+                        <label class="form-label" for="childSearchInput">{% if ui_lang == 'en' %}Search for Child{% else %}بحث عن طفل{% endif %}</label>
+                        <input class="form-control" id="childSearchInput" type="search" placeholder="{% if ui_lang == 'en' %}Type the child's name to filter{% else %}اكتب اسم الطفل للتصفية{% endif %}">
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="childSelect">الطفل</label>
+                        <label class="form-label" for="childSelect">{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</label>
                         <select class="form-select" id="childSelect" required>
-                            <option value="">جاري تحميل الأطفال...</option>
+                            <option value="">{% if ui_lang == 'en' %}Loading children...{% else %}جاري تحميل الأطفال...{% endif %}</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="domainSelect">مجال الملاحظة</label>
+                        <label class="form-label" for="domainSelect">{% if ui_lang == 'en' %}Observation Domain{% else %}مجال الملاحظة{% endif %}</label>
                         <select class="form-select" id="domainSelect" required>
-                            <option value="SOCIAL_EMOTIONAL">اجتماعي عاطفي</option>
-                            <option value="COGNITIVE">معرفي</option>
-                            <option value="PHYSICAL">بدني</option>
-                            <option value="LANGUAGE">لغوي</option>
+                            <option value="SOCIAL_EMOTIONAL">{% if ui_lang == 'en' %}Social-Emotional{% else %}اجتماعي عاطفي{% endif %}</option>
+                            <option value="COGNITIVE">{% if ui_lang == 'en' %}Cognitive{% else %}معرفي{% endif %}</option>
+                            <option value="PHYSICAL">{% if ui_lang == 'en' %}Physical{% else %}بدني{% endif %}</option>
+                            <option value="LANGUAGE">{% if ui_lang == 'en' %}Linguistic{% else %}لغوي{% endif %}</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="masterySelect">مستوى الإتقان</label>
+                        <label class="form-label" for="masterySelect">{% if ui_lang == 'en' %}Mastery Level{% else %}مستوى الإتقان{% endif %}</label>
                         <select class="form-select" id="masterySelect">
-                            <option value="">بدون تحديد</option>
-                            <option value="NEEDS_SUPPORT">يحتاج دعم</option>
-                            <option value="ON_TRACK">ضمن المستوى</option>
-                            <option value="EXCEEDS">يفوق المتوقع</option>
+                            <option value="">{% if ui_lang == 'en' %}Not specified{% else %}بدون تحديد{% endif %}</option>
+                            <option value="NEEDS_SUPPORT">{% if ui_lang == 'en' %}Needs Support{% else %}يحتاج دعم{% endif %}</option>
+                            <option value="ON_TRACK">{% if ui_lang == 'en' %}On Track{% else %}ضمن المستوى{% endif %}</option>
+                            <option value="EXCEEDS">{% if ui_lang == 'en' %}Exceeds Expectations{% else %}يفوق المتوقع{% endif %}</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="observationText">نص الملاحظة</label>
+                        <label class="form-label" for="observationText">{% if ui_lang == 'en' %}Observation Text{% else %}نص الملاحظة{% endif %}</label>
                         <textarea class="form-control" id="observationText" rows="5" required
-                            placeholder="اكتب الملاحظة التربوية بشكل واضح..."></textarea>
+                            placeholder="{% if ui_lang == 'en' %}Write the educational observation clearly...{% else %}اكتب الملاحظة التربوية بشكل واضح...{% endif %}"></textarea>
                         <div class="d-flex justify-content-between mt-1">
-                            <small class="text-muted">حد أقصى 2000 حرف</small>
+                            <small class="text-muted">{% if ui_lang == 'en' %}Maximum 2000 characters{% else %}حد أقصى 2000 حرف{% endif %}</small>
                             <small id="observationCharCount" class="text-muted">0 / 2000</small>
                         </div>
                     </div>
@@ -70,11 +70,11 @@
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary w-100" id="saveObservationBtn" disabled>
                             <i class="bi bi-check2-circle me-1"></i>
-                            حفظ الملاحظة
+                            {% if ui_lang == 'en' %}Save Observation{% else %}حفظ الملاحظة{% endif %}
                         </button>
                         <button type="button" class="btn btn-outline-secondary w-100" id="resetObservationBtn">
                             <i class="bi bi-eraser me-1"></i>
-                            مسح الحقول
+                            {% if ui_lang == 'en' %}Clear Fields{% else %}مسح الحقول{% endif %}
                         </button>
                     </div>
                 </form>
@@ -87,16 +87,16 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">
                     <i class="bi bi-clock-history me-2"></i>
-                    آخر الملاحظات
+                    {% if ui_lang == 'en' %}Recent Observations{% else %}آخر الملاحظات{% endif %}
                 </h6>
                 <button class="btn btn-sm btn-outline-secondary" type="button" onclick="loadSelectedChildObservations()">
-                    تحديث
+                    {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
                 </button>
             </div>
             <div class="card-body">
                 <div id="observationsList" class="list-group list-group-flush">
                     <div class="text-center py-4 text-muted">
-                        اختر الطفل لعرض الملاحظات المسجلة.
+                        {% if ui_lang == 'en' %}Select a child to view recorded observations.{% else %}اختر الطفل لعرض الملاحظات المسجلة.{% endif %}
                     </div>
                 </div>
             </div>
@@ -107,6 +107,9 @@
 
 {% block extra_js %}
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     let supervisorChildren = [];
     const MAX_OBSERVATION_CHARS = 2000;
 
@@ -147,10 +150,10 @@
 
         if (typeof window.fetchWithAuth === 'function') {
             const response = await window.fetchWithAuth(url, requestOptions);
-            if (!response) throw new Error('يتطلب تسجيل الدخول');
+            if (!response) throw new Error(T('يتطلب تسجيل الدخول', 'Login required'));
             if (!response.ok) {
                 const payload = await response.json().catch(() => ({}));
-                throw new Error(payload.detail || 'تعذر إتمام الطلب');
+                throw new Error(payload.detail || T('تعذر إتمام الطلب', 'Request failed'));
             }
             return response.json();
         }
@@ -158,13 +161,18 @@
         const response = await fetch(url, requestOptions);
         if (!response.ok) {
             const payload = await response.json().catch(() => ({}));
-            throw new Error(payload.detail || 'تعذر إتمام الطلب');
+            throw new Error(payload.detail || T('تعذر إتمام الطلب', 'Request failed'));
         }
         return response.json();
     }
 
     function domainLabel(value) {
-        const map = {
+        const map = IS_EN ? {
+            SOCIAL_EMOTIONAL: 'Social-Emotional',
+            COGNITIVE: 'Cognitive',
+            PHYSICAL: 'Physical',
+            LANGUAGE: 'Linguistic',
+        } : {
             SOCIAL_EMOTIONAL: 'اجتماعي عاطفي',
             COGNITIVE: 'معرفي',
             PHYSICAL: 'بدني',
@@ -174,12 +182,16 @@
     }
 
     function masteryLabel(value) {
-        const map = {
+        const map = IS_EN ? {
+            NEEDS_SUPPORT: 'Needs Support',
+            ON_TRACK: 'On Track',
+            EXCEEDS: 'Exceeds Expectations',
+        } : {
             NEEDS_SUPPORT: 'يحتاج دعم',
             ON_TRACK: 'ضمن المستوى',
             EXCEEDS: 'يفوق المتوقع',
         };
-        return map[String(value || '').toUpperCase()] || 'غير محدد';
+        return map[String(value || '').toUpperCase()] || T('غير محدد', 'Not specified');
     }
 
     function childDisplayName(child) {
@@ -205,12 +217,12 @@
             : supervisorChildren.filter((child) => childDisplayName(child).toLowerCase().includes(term));
 
         if (filtered.length === 0) {
-            childSelect.innerHTML = `<option value="">${supervisorChildren.length ? 'لا توجد نتائج مطابقة للبحث' : 'لا يوجد أطفال ضمن فصولك حالياً'}</option>`;
+            childSelect.innerHTML = `<option value="">${supervisorChildren.length ? T('لا توجد نتائج مطابقة للبحث', 'No matching results') : T('لا يوجد أطفال ضمن فصولك حالياً', 'No children in your classes currently')}</option>`;
             return [];
         }
 
         childSelect.innerHTML = `
-            <option value="">اختر الطفل</option>
+            <option value="">${T('اختر الطفل', 'Select a child')}</option>
             ${filtered.map((child) => `<option value="${child.id}">${escapeHtml(childDisplayName(child))}</option>`).join('')}
         `;
         return filtered;
@@ -252,13 +264,13 @@
                 setFormEnabled(true);
             } else {
                 document.getElementById('observationsList').innerHTML =
-                    '<div class="text-center py-4 text-muted">لا يوجد أطفال ضمن فصولك حالياً.</div>';
+                    `<div class="text-center py-4 text-muted">${T('لا يوجد أطفال ضمن فصولك حالياً.', 'No children in your classes currently.')}</div>`;
             }
         } catch (error) {
             if (childSelect) {
-                childSelect.innerHTML = '<option value="">تعذر تحميل قائمة الأطفال</option>';
+                childSelect.innerHTML = `<option value="">${T('تعذر تحميل قائمة الأطفال', 'Failed to load children list')}</option>`;
             }
-            notify(error.message || 'تعذر تحميل الأطفال', 'error');
+            notify(error.message || T('تعذر تحميل الأطفال', 'Failed to load children'), 'error');
         }
     }
 
@@ -269,20 +281,20 @@
 
         const childId = childSelect.value;
         if (!childId) {
-            listEl.innerHTML = '<div class="text-center py-4 text-muted">اختر الطفل لعرض الملاحظات المسجلة.</div>';
+            listEl.innerHTML = `<div class="text-center py-4 text-muted">${T('اختر الطفل لعرض الملاحظات المسجلة.', 'Select a child to view recorded observations.')}</div>`;
             return;
         }
 
-        listEl.innerHTML = '<div class="text-center py-3 text-muted">جاري التحميل...</div>';
+        listEl.innerHTML = `<div class="text-center py-3 text-muted">${T('جاري التحميل...', 'Loading...')}</div>`;
         try {
             const records = await apiRequest(`/api/children/${encodeURIComponent(childId)}/observations`);
             const list = Array.isArray(records) ? records : [];
             if (list.length === 0) {
-                listEl.innerHTML = '<div class="text-center py-4 text-muted">لا توجد ملاحظات مسجلة لهذا الطفل.</div>';
+                listEl.innerHTML = `<div class="text-center py-4 text-muted">${T('لا توجد ملاحظات مسجلة لهذا الطفل.', 'No recorded observations for this child.')}</div>`;
                 return;
             }
 
-            const dateFormatter = new Intl.DateTimeFormat('ar-JO', {
+            const dateFormatter = new Intl.DateTimeFormat(IS_EN ? 'en-US' : 'ar-JO', {
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
@@ -296,13 +308,13 @@
                         <span class="badge bg-light text-dark">${escapeHtml(domainLabel(item.domain))}</span>
                         <small class="text-muted">${escapeHtml(item.observed_at ? dateFormatter.format(new Date(item.observed_at)) : '-')}</small>
                     </div>
-                    <div class="small mb-1 text-muted">الإتقان: ${escapeHtml(masteryLabel(item.mastery_level))}</div>
+                    <div class="small mb-1 text-muted">${T('الإتقان', 'Mastery')}: ${escapeHtml(masteryLabel(item.mastery_level))}</div>
                     <div>${escapeHtml(item.observation_text || '')}</div>
                 </div>
             `).join('');
         } catch (error) {
-            listEl.innerHTML = '<div class="text-center py-4 text-danger">تعذر تحميل الملاحظات.</div>';
-            notify(error.message || 'تعذر تحميل الملاحظات', 'error');
+            listEl.innerHTML = `<div class="text-center py-4 text-danger">${T('تعذر تحميل الملاحظات.', 'Failed to load observations.')}</div>`;
+            notify(error.message || T('تعذر تحميل الملاحظات', 'Failed to load observations'), 'error');
         }
     }
 
@@ -315,17 +327,17 @@
         const text = document.getElementById('observationText')?.value?.trim();
 
         if (!childId || !domain || !text) {
-            notify('يرجى إكمال الحقول المطلوبة', 'warning');
+            notify(T('يرجى إكمال الحقول المطلوبة', 'Please complete the required fields'), 'warning');
             return;
         }
         if (text.length > MAX_OBSERVATION_CHARS) {
-            notify(`الحد الأقصى لنص الملاحظة هو ${MAX_OBSERVATION_CHARS} حرف`, 'warning');
+            notify(T(`الحد الأقصى لنص الملاحظة هو ${MAX_OBSERVATION_CHARS} حرف`, `Maximum observation text is ${MAX_OBSERVATION_CHARS} characters`), 'warning');
             return;
         }
 
         if (saveBtn) {
             saveBtn.disabled = true;
-            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>جاري الحفظ...';
+            saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>${T('جاري الحفظ...', 'Saving...')}`;
         }
         try {
             await apiRequest('/api/supervisor/observations/record', {
@@ -338,15 +350,15 @@
                 }),
             });
 
-            notify('تم حفظ الملاحظة بنجاح', 'success');
+            notify(T('تم حفظ الملاحظة بنجاح', 'Observation saved successfully'), 'success');
             resetObservationForm();
             await loadSelectedChildObservations();
         } catch (error) {
-            notify(error.message || 'تعذر حفظ الملاحظة', 'error');
+            notify(error.message || T('تعذر حفظ الملاحظة', 'Failed to save observation'), 'error');
         } finally {
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>حفظ الملاحظة';
+                saveBtn.innerHTML = `<i class="bi bi-check2-circle me-1"></i>${T('حفظ الملاحظة', 'Save Observation')}`;
             }
         }
     }
@@ -358,7 +370,7 @@
         document.getElementById('childSearchInput')?.addEventListener('input', (event) => {
             renderChildOptions(event.target.value || '');
             document.getElementById('observationsList').innerHTML =
-                '<div class="text-center py-4 text-muted">اختر الطفل لعرض الملاحظات المسجلة.</div>';
+                `<div class="text-center py-4 text-muted">${T('اختر الطفل لعرض الملاحظات المسجلة.', 'Select a child to view recorded observations.')}</div>`;
         });
         document.getElementById('observationText')?.addEventListener('input', updateObservationCounter);
         document.getElementById('resetObservationBtn')?.addEventListener('click', resetObservationForm);
