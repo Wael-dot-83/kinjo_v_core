@@ -8,8 +8,8 @@
 title=child.first_name ~ ' ' ~ child.last_name,
 icon="bi-person-fill",
 breadcrumbs=[
-{"name": "لوحة التحكم", "url": "/dashboard"},
-{"name": "الأطفال", "url": "/children"},
+{"name": ("Dashboard" if ui_lang == 'en' else "لوحة التحكم"), "url": "/dashboard"},
+{"name": ("Children" if ui_lang == 'en' else "الأطفال"), "url": ("/parent/children" if current_user and current_user.role.value == 'PARENT' else "/children")},
 {"name": child.first_name ~ ' ' ~ child.last_name}
 ]
 ) }}
@@ -20,30 +20,30 @@ breadcrumbs=[
     <div class="col-lg-8">
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>المعلومات الأساسية</h5>
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>{% if ui_lang == 'en' %}Basic Information{% else %}المعلومات الأساسية{% endif %}</h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
                         <dl class="row">
-                            <dt class="col-sm-4">الاسم الأول</dt>
+                            <dt class="col-sm-4">{% if ui_lang == 'en' %}First Name{% else %}الاسم الأول{% endif %}</dt>
                             <dd class="col-sm-8">{{ child.first_name }}</dd>
 
-                            <dt class="col-sm-4">الاسم الأخير</dt>
+                            <dt class="col-sm-4">{% if ui_lang == 'en' %}Last Name{% else %}الاسم الأخير{% endif %}</dt>
                             <dd class="col-sm-8">{{ child.last_name }}</dd>
 
-                            <dt class="col-sm-4">الجنس</dt>
-                            <dd class="col-sm-8">{{ 'ذكر' if child.gender.value == 'MALE' else 'أنثى' }}</dd>
+                            <dt class="col-sm-4">{% if ui_lang == 'en' %}Gender{% else %}الجنس{% endif %}</dt>
+                            <dd class="col-sm-8">{% if ui_lang == 'en' %}{{ 'Male' if child.gender.value == 'MALE' else 'Female' }}{% else %}{{ 'ذكر' if child.gender.value == 'MALE' else 'أنثى' }}{% endif %}</dd>
 
-                            <dt class="col-sm-4">تاريخ الميلاد</dt>
+                            <dt class="col-sm-4">{% if ui_lang == 'en' %}Date of Birth{% else %}تاريخ الميلاد{% endif %}</dt>
                             <dd class="col-sm-8">{{ child.date_of_birth }}</dd>
 
-                            <dt class="col-sm-4">العمر</dt>
+                            <dt class="col-sm-4">{% if ui_lang == 'en' %}Age{% else %}العمر{% endif %}</dt>
                             <dd class="col-sm-8">
-                                <span id="ageDisplay" data-dob="{{ child.date_of_birth }}">جاري الحساب...</span>
+                                <span id="ageDisplay" data-dob="{{ child.date_of_birth }}">{% if ui_lang == 'en' %}Calculating...{% else %}جاري الحساب...{% endif %}</span>
                             </dd>
 
-                            <dt class="col-sm-4">حالة الأهلية</dt>
+                            <dt class="col-sm-4">{% if ui_lang == 'en' %}Eligibility{% else %}حالة الأهلية{% endif %}</dt>
                             <dd class="col-sm-8">
                                 <span id="eligibilityBadge" class="badge"></span>
                             </dd>
@@ -51,10 +51,10 @@ breadcrumbs=[
                     </div>
                     <div class="col-md-6">
                         <dl class="row">
-                            <dt class="col-sm-4">اسم الأب</dt>
+                            <dt class="col-sm-4">{% if ui_lang == 'en' %}Father's Name{% else %}اسم الأب{% endif %}</dt>
                             <dd class="col-sm-8">{{ child.father_name or '-' }}</dd>
 
-                            <dt class="col-sm-4">اسم الأم</dt>
+                            <dt class="col-sm-4">{% if ui_lang == 'en' %}Mother's Name{% else %}اسم الأم{% endif %}</dt>
                             <dd class="col-sm-8">{{ child.mother_first_name or '-' }} {{ child.mother_last_name or '' }}
                             </dd>
                         </dl>
@@ -67,18 +67,20 @@ breadcrumbs=[
     <div class="col-lg-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>الإجراءات</h5>
+                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</h5>
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
+                    {% if not current_user or current_user.role.value != 'PARENT' %}
                     <a href="/children/{{ child.id }}/edit" class="btn btn-outline-primary">
-                        <i class="bi bi-pencil me-2"></i>تعديل البيانات
+                        <i class="bi bi-pencil me-2"></i>{% if ui_lang == 'en' %}Edit Information{% else %}تعديل البيانات{% endif %}
                     </a>
-                    <a href="/reports?child_id={{ child.id }}" class="btn btn-outline-info">
-                        <i class="bi bi-journal-text me-2"></i>التقارير اليومية
+                    {% endif %}
+                    <a href="{% if current_user and current_user.role.value == 'PARENT' %}/my-reports?child_id={{ child.id }}{% else %}/reports?child_id={{ child.id }}{% endif %}" class="btn btn-outline-info">
+                        <i class="bi bi-journal-text me-2"></i>{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}
                     </a>
-                    <a href="/attendance?child_id={{ child.id }}" class="btn btn-outline-success">
-                        <i class="bi bi-calendar-check me-2"></i>سجل الحضور
+                    <a href="{% if current_user and current_user.role.value == 'PARENT' %}/parent/attendance?child_id={{ child.id }}{% else %}/attendance?child_id={{ child.id }}{% endif %}" class="btn btn-outline-success">
+                        <i class="bi bi-calendar-check me-2"></i>{% if ui_lang == 'en' %}Attendance Record{% else %}سجل الحضور{% endif %}
                     </a>
                 </div>
             </div>
@@ -89,6 +91,9 @@ breadcrumbs=[
 
 {% block extra_js %}
 <script>
+const IS_EN = '{{ ui_lang }}' === 'en';
+const T = (ar, en) => IS_EN ? en : ar;
+
 document.addEventListener('DOMContentLoaded', function() {
     const ageDisplay = document.getElementById('ageDisplay');
     const eligibilityBadge = document.getElementById('eligibilityBadge');
@@ -97,17 +102,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (dob && window.ChildAgeValidator) {
         const ageInfo = ChildAgeValidator.calculate(dob);
 
-        // Display age
-        ageDisplay.textContent = `${ageInfo.ageMonths} شهر (${ageInfo.ageYears} سنة)`;
+        ageDisplay.textContent = IS_EN
+            ? `${ageInfo.ageMonths} months (${ageInfo.ageYears} years)`
+            : `${ageInfo.ageMonths} شهر (${ageInfo.ageYears} سنة)`;
 
-        // Display eligibility badge
         if (ageInfo.isEligible) {
-            eligibilityBadge.textContent = 'مؤهل للتسجيل';
+            eligibilityBadge.textContent = T('مؤهل للتسجيل', 'Eligible');
             eligibilityBadge.className = 'badge bg-success';
         } else {
-            eligibilityBadge.textContent = 'غير مؤهل';
+            eligibilityBadge.textContent = T('غير مؤهل', 'Not Eligible');
             eligibilityBadge.className = 'badge bg-danger';
-            eligibilityBadge.title = ageInfo.messageAr;
+            eligibilityBadge.title = IS_EN ? (ageInfo.messageEn || 'Not eligible for enrollment') : ageInfo.messageAr;
         }
     }
 });

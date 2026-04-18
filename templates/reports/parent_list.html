@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
 
-{% block title %}تقارير أطفالي{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}My Children's Reports{% else %}تقارير أطفالي{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
             <i class="bi bi-journal-text me-2 text-primary"></i>
-            تقارير أطفالي
+            {% if ui_lang == 'en' %}My Children's Reports{% else %}تقارير أطفالي{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">تقارير أطفالي</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Reports{% else %}تقارير أطفالي{% endif %}</li>
             </ol>
         </nav>
     </div>
@@ -22,12 +22,20 @@
 {% block content %}
 <div class="row g-4">
     <div class="col-lg-12">
-        <!-- Date Filter -->
-        <div class="d-flex align-items-center mb-4 bg-white p-3 rounded shadow-sm border">
-            <span class="fw-bold me-3">عرض تقارير يوم:</span>
-            <input type="date" class="form-control w-auto me-3" id="dateFilter" value="{{ today }}">
+        <!-- Filters -->
+        <div class="d-flex flex-wrap align-items-center mb-4 bg-white p-3 rounded shadow-sm border gap-3">
+            <div class="d-flex align-items-center">
+                <span class="fw-bold me-2">{% if ui_lang == 'en' %}Date:{% else %}التاريخ:{% endif %}</span>
+                <input type="date" class="form-control w-auto" id="dateFilter" value="{{ today }}">
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="fw-bold me-2">{% if ui_lang == 'en' %}Child:{% else %}الطفل:{% endif %}</span>
+                <select class="form-select w-auto" id="childFilter">
+                    <option value="">{% if ui_lang == 'en' %}All Children{% else %}جميع الأطفال{% endif %}</option>
+                </select>
+            </div>
             <button class="btn btn-outline-primary" onclick="loadReports()">
-                تحديث
+                <i class="bi bi-funnel me-1"></i>{% if ui_lang == 'en' %}Filter{% else %}تحديث{% endif %}
             </button>
         </div>
 
@@ -42,7 +50,7 @@
                             <i class="bi bi-person"></i>
                         </div>
                         <div>
-                            <strong>{{ report.child_name if report.child_name else 'طفل' }}</strong>
+                            <strong>{{ report.child_name if report.child_name else ('Child' if ui_lang == 'en' else 'طفل') }}</strong>
                             <small class="text-muted d-block">{{ report.date }}</small>
                         </div>
                     </div>
@@ -54,16 +62,16 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <h6 class="text-muted mb-2">الحالة المزاجية</h6>
-                            <p>{{ report.mood if report.mood else 'غير محدد' }}</p>
+                            <h6 class="text-muted mb-2">{% if ui_lang == 'en' %}Mood{% else %}الحالة المزاجية{% endif %}</h6>
+                            <p>{{ report.mood if report.mood else ('Not specified' if ui_lang == 'en' else 'غير محدد') }}</p>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-muted mb-2">ملاحظات</h6>
-                            <p>{{ report.notes if report.notes else 'لا توجد ملاحظات' }}</p>
+                            <h6 class="text-muted mb-2">{% if ui_lang == 'en' %}Notes{% else %}ملاحظات{% endif %}</h6>
+                            <p>{{ report.notes if report.notes else ('No notes' if ui_lang == 'en' else 'لا توجد ملاحظات') }}</p>
                         </div>
                     </div>
                     <a href="/reports/{{ report.id }}" class="btn btn-outline-primary btn-sm mt-3">
-                        <i class="bi bi-eye me-1"></i>عرض التفاصيل
+                        <i class="bi bi-eye me-1"></i>{% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %}
                     </a>
                 </div>
             </div>
@@ -71,7 +79,7 @@
             {% else %}
             <div class="alert alert-info">
                 <i class="bi bi-info-circle me-2"></i>
-                لا توجد تقارير لهذا التاريخ
+                {% if ui_lang == 'en' %}No reports for this date{% else %}لا توجد تقارير لهذا التاريخ{% endif %}
             </div>
             {% endif %}
         </div>
@@ -79,17 +87,47 @@
 </div>
 
 <script>
-    function loadReports() {
-        const date = document.getElementById('dateFilter').value;
-        window.location.href = `/my-reports?date=${date}`;
+    function getHeaders() {
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return { 'Content-Type': 'application/json' };
+        }
+        const token = AuthService.getToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        // Set today's date if not set
+    function loadReports() {
+        const date = document.getElementById('dateFilter').value;
+        const childId = document.getElementById('childFilter').value;
+        let url = `/my-reports?date=${date}`;
+        if (childId) url += `&child_id=${childId}`;
+        window.location.href = url;
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
         const dateFilter = document.getElementById('dateFilter');
         if (!dateFilter.value) {
             dateFilter.value = new Date().toISOString().split('T')[0];
         }
+
+        // Load children for filter dropdown
+        try {
+            const resp = await fetch('/api/parent/children-list', { headers: getHeaders() });
+            if (resp.ok) {
+                const data = await resp.json();
+                const sel = document.getElementById('childFilter');
+                (data.children || []).forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name;
+                    sel.appendChild(opt);
+                });
+                // Pre-select child from URL
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('child_id')) sel.value = params.get('child_id');
+            }
+        } catch (e) { console.error(e); }
     });
 </script>
 {% endblock %}

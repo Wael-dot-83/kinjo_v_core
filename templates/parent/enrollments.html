@@ -1,24 +1,24 @@
 {% extends 'base.html' %}
 
-{% block title %}طلبات التسجيل{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Enrollment Applications{% else %}طلبات التسجيل{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
             <i class="bi bi-clipboard-check me-2 text-primary"></i>
-            طلبات التسجيل
+            {% if ui_lang == 'en' %}Enrollment Applications{% else %}طلبات التسجيل{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">طلبات التسجيل</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Enrollments{% else %}طلبات التسجيل{% endif %}</li>
             </ol>
         </nav>
     </div>
     <div class="btn-toolbar">
         <a href="/enroll" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>طلب جديد
+            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}New Application{% else %}طلب جديد{% endif %}
         </a>
     </div>
 </div>
@@ -31,7 +31,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-primary" id="countTotal">0</h3>
-                <small class="text-muted">الإجمالي</small>
+                <small class="text-muted">{% if ui_lang == 'en' %}Total{% else %}الإجمالي{% endif %}</small>
             </div>
         </div>
     </div>
@@ -39,7 +39,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-success" id="countActive">0</h3>
-                <small class="text-muted">نشط / مقبول</small>
+                <small class="text-muted">{% if ui_lang == 'en' %}Active / Accepted{% else %}نشط / مقبول{% endif %}</small>
             </div>
         </div>
     </div>
@@ -47,7 +47,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-warning" id="countPending">0</h3>
-                <small class="text-muted">قيد المراجعة</small>
+                <small class="text-muted">{% if ui_lang == 'en' %}Under Review{% else %}قيد المراجعة{% endif %}</small>
             </div>
         </div>
     </div>
@@ -55,7 +55,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-danger" id="countRejected">0</h3>
-                <small class="text-muted">مرفوض</small>
+                <small class="text-muted">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</small>
             </div>
         </div>
     </div>
@@ -69,17 +69,17 @@
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>الطفل</th>
-                        <th>الروضة</th>
-                        <th>الحالة</th>
-                        <th>تاريخ التقديم</th>
+                        <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Submitted{% else %}تاريخ التقديم{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="enrollmentsTableBody">
                     <tr>
                         <td colspan="5" class="text-center py-4">
                             <div class="spinner-border spinner-border-sm" role="status"></div>
-                            <span class="ms-2">جاري التحميل...</span>
+                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                         </td>
                     </tr>
                 </tbody>
@@ -91,10 +91,13 @@
 
 {% block extra_js %}
 <script>
-    const STATUS_AR = {
-        'DRAFT': 'مسودة', 'SUBMITTED': 'مقدّم', 'PENDING_REVIEW': 'قيد المراجعة',
-        'ACCEPTED': 'مقبول', 'REJECTED': 'مرفوض', 'WITHDRAWN': 'منسحب',
-        'WAITLISTED': 'قائمة الانتظار', 'ACTIVE': 'نشط'
+    const IS_EN = '{{ ui_lang }}' === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
+    const STATUS_LABEL = {
+        'DRAFT': T('مسودة', 'Draft'), 'SUBMITTED': T('مقدّم', 'Submitted'), 'PENDING_REVIEW': T('قيد المراجعة', 'Under Review'),
+        'ACCEPTED': T('مقبول', 'Accepted'), 'REJECTED': T('مرفوض', 'Rejected'), 'WITHDRAWN': T('منسحب', 'Withdrawn'),
+        'WAITLISTED': T('قائمة الانتظار', 'Waitlisted'), 'ACTIVE': T('نشط', 'Active')
     };
 
     const STATUS_CLASS = {
@@ -115,7 +118,7 @@
 
     function formatDate(dateStr) {
         if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString('ar-SA');
+        return new Date(dateStr).toLocaleDateString(IS_EN ? 'en-US' : 'ar-SA');
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -126,7 +129,7 @@
         const tbody = document.getElementById('enrollmentsTableBody');
         try {
             const resp = await fetch('/api/parent/enrollments', { headers: getHeaders() });
-            if (!resp.ok) throw new Error('تعذر تحميل الطلبات');
+            if (!resp.ok) throw new Error('Failed to load enrollments');
 
             const data = await resp.json();
             const enrollments = data.enrollments || [];
@@ -145,9 +148,9 @@
                     <tr>
                         <td colspan="5" class="text-center py-5">
                             <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
-                            <p class="text-muted">لا توجد طلبات تسجيل</p>
+                            <p class="text-muted">${T('لا توجد طلبات تسجيل', 'No enrollment applications')}</p>
                             <a href="/enroll" class="btn btn-primary">
-                                <i class="bi bi-plus-circle me-2"></i>تقديم طلب جديد
+                                <i class="bi bi-plus-circle me-2"></i>${T('تقديم طلب جديد', 'Submit New Application')}
                             </a>
                         </td>
                     </tr>
@@ -164,7 +167,7 @@
                     <td>${e.kindergarten_name}</td>
                     <td>
                         <span class="badge ${STATUS_CLASS[e.status] || 'bg-secondary'}">
-                            ${STATUS_AR[e.status] || e.status}
+                            ${STATUS_LABEL[e.status] || e.status}
                         </span>
                     </td>
                     <td>${formatDate(e.submitted_at || e.created_at)}</td>
@@ -176,7 +179,7 @@
             tbody.innerHTML = `
                 <tr>
                     <td colspan="5" class="text-center text-danger py-4">
-                        <i class="bi bi-exclamation-triangle me-2"></i>خطأ في تحميل البيانات
+                        <i class="bi bi-exclamation-triangle me-2"></i>${T('خطأ في تحميل البيانات', 'Error loading data')}
                     </td>
                 </tr>
             `;

@@ -1,24 +1,24 @@
 {% extends 'base.html' %}
 
-{% block title %}أطفالي{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}My Children{% else %}أطفالي{% endif %}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
             <i class="bi bi-people-fill me-2 text-primary"></i>
-            أطفالي
+            {% if ui_lang == 'en' %}My Children{% else %}أطفالي{% endif %}
         </h1>
-        <nav aria-label="مسار التنقل">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">أطفالي</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}My Children{% else %}أطفالي{% endif %}</li>
             </ol>
         </nav>
     </div>
     <div class="btn-toolbar">
         <a href="/enroll" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>تسجيل طفل جديد
+            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}
         </a>
     </div>
 </div>
@@ -30,22 +30,25 @@
     <!-- Loading skeleton -->
     <div class="col-12 text-center py-5">
         <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2 text-muted">جاري تحميل بيانات أطفالك...</p>
+        <p class="mt-2 text-muted">{% if ui_lang == 'en' %}Loading children data...{% else %}جاري تحميل بيانات أطفالك...{% endif %}</p>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    const STATUS_AR = {
-        'DRAFT': 'مسودة',
-        'SUBMITTED': 'مقدّم',
-        'PENDING_REVIEW': 'قيد المراجعة',
-        'ACCEPTED': 'مقبول',
-        'REJECTED': 'مرفوض',
-        'WITHDRAWN': 'منسحب',
-        'WAITLISTED': 'قائمة الانتظار',
-        'ACTIVE': 'نشط'
+    const IS_EN = '{{ ui_lang }}' === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
+    const STATUS_LABEL = {
+        'DRAFT': T('مسودة', 'Draft'),
+        'SUBMITTED': T('مقدّم', 'Submitted'),
+        'PENDING_REVIEW': T('قيد المراجعة', 'Under Review'),
+        'ACCEPTED': T('مقبول', 'Accepted'),
+        'REJECTED': T('مرفوض', 'Rejected'),
+        'WITHDRAWN': T('منسحب', 'Withdrawn'),
+        'WAITLISTED': T('قائمة الانتظار', 'Waitlisted'),
+        'ACTIVE': T('نشط', 'Active')
     };
 
     const STATUS_CLASS = {
@@ -76,8 +79,8 @@
         let years = now.getFullYear() - dob.getFullYear();
         let months = now.getMonth() - dob.getMonth();
         if (months < 0) { years--; months += 12; }
-        if (years > 0) return `${years} سنة و ${months} شهر`;
-        return `${months} شهر`;
+        if (years > 0) return IS_EN ? `${years}y ${months}m` : `${years} سنة و ${months} شهر`;
+        return IS_EN ? `${months}m` : `${months} شهر`;
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -88,7 +91,7 @@
         const container = document.getElementById('childrenContainer');
         try {
             const resp = await fetch('/api/parent/children', { headers: getHeaders() });
-            if (!resp.ok) throw new Error('تعذر تحميل بيانات الأطفال');
+            if (!resp.ok) throw new Error('Failed to load children');
 
             const data = await resp.json();
             const children = data.children || [];
@@ -99,10 +102,10 @@
                         <div class="card border-dashed">
                             <div class="card-body text-center py-5">
                                 <i class="bi bi-person-plus fs-1 text-primary mb-3 d-block"></i>
-                                <h5>لم تقم بتسجيل أي طفل بعد</h5>
-                                <p class="text-muted">ابدأ بتسجيل طفلك في إحدى الروضات</p>
+                                <h5>${T('لم تقم بتسجيل أي طفل بعد', 'No children registered yet')}</h5>
+                                <p class="text-muted">${T('ابدأ بتسجيل طفلك في إحدى الروضات', 'Start by enrolling your child in a kindergarten')}</p>
                                 <a href="/enroll" class="btn btn-primary btn-lg">
-                                    <i class="bi bi-plus-circle me-2"></i>تسجيل طفل جديد
+                                    <i class="bi bi-plus-circle me-2"></i>${T('تسجيل طفل جديد', 'Register New Child')}
                                 </a>
                             </div>
                         </div>
@@ -111,9 +114,20 @@
                 return;
             }
 
-            container.innerHTML = children.map(child => {
+            // Children count summary
+            let summaryHtml = `
+                <div class="col-12">
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="bi bi-info-circle me-2"></i>
+                        ${T(`لديك <strong>${children.length}</strong> ${children.length === 1 ? 'طفل' : children.length === 2 ? 'طفلين' : children.length <= 10 ? 'أطفال' : 'طفل'} مسجل${children.length === 2 ? 'ين' : 'ين'}`,
+                           `You have <strong>${children.length}</strong> registered ${children.length === 1 ? 'child' : 'children'}`)}
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = summaryHtml + children.map(child => {
                 const age = calculateAge(child.date_of_birth);
-                const genderText = child.gender === 'MALE' ? 'ذكر' : child.gender === 'FEMALE' ? 'أنثى' : '—';
+                const genderText = child.gender === 'MALE' ? T('ذكر', 'Male') : child.gender === 'FEMALE' ? T('أنثى', 'Female') : '—';
                 const genderIcon = child.gender === 'MALE' ? 'bi-gender-male text-primary' : 'bi-gender-female text-danger';
 
                 // Enrollment badges
@@ -125,14 +139,14 @@
                                 <i class="bi bi-building me-1"></i>${e.kindergarten_name}
                             </small>
                             <span class="badge ${STATUS_CLASS[e.status] || 'bg-secondary'}">
-                                ${STATUS_AR[e.status] || e.status}
+                                ${STATUS_LABEL[e.status] || e.status}
                             </span>
                         </div>
                     `).join('');
                 } else {
                     enrollmentHtml = `
                         <div class="border-top pt-2 mt-2 text-center">
-                            <small class="text-muted">لا توجد طلبات تسجيل</small>
+                            <small class="text-muted">${T('لا توجد طلبات تسجيل', 'No enrollment applications')}</small>
                         </div>
                     `;
                 }
@@ -153,16 +167,16 @@
                                 </div>
                                 <div class="ms-auto">
                                     ${child.profile_complete
-                        ? '<span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle"></i></span>'
-                        : '<span class="badge bg-warning-subtle text-warning" title="الملف غير مكتمل"><i class="bi bi-exclamation-circle"></i></span>'
+                        ? `<span class="badge bg-success-subtle text-success" title="${T('مكتمل', 'Complete')}"><i class="bi bi-check-circle"></i></span>`
+                        : `<span class="badge bg-warning-subtle text-warning" title="${T('الملف غير مكتمل', 'Incomplete profile')}"><i class="bi bi-exclamation-circle"></i></span>`
                     }
                                 </div>
                             </div>
 
                             <dl class="row mb-2 small">
-                                <dt class="col-5 text-muted">تاريخ الميلاد</dt>
+                                <dt class="col-5 text-muted">${T('تاريخ الميلاد', 'Date of Birth')}</dt>
                                 <dd class="col-7">${child.date_of_birth || '—'}</dd>
-                                <dt class="col-5 text-muted">اسم الأب</dt>
+                                <dt class="col-5 text-muted">${T('اسم الأب', 'Father Name')}</dt>
                                 <dd class="col-7">${child.father_name || '—'}</dd>
                             </dl>
 
@@ -171,10 +185,10 @@
                         <div class="card-footer bg-transparent">
                             <div class="d-flex gap-2">
                                 <a href="/children/${child.id}" class="btn btn-sm btn-outline-primary flex-fill">
-                                    <i class="bi bi-eye me-1"></i>عرض
+                                    <i class="bi bi-eye me-1"></i>${T('عرض', 'View')}
                                 </a>
                                 <a href="/enroll" class="btn btn-sm btn-outline-success flex-fill">
-                                    <i class="bi bi-plus me-1"></i>تسجيل
+                                    <i class="bi bi-plus me-1"></i>${T('تسجيل', 'Enroll')}
                                 </a>
                             </div>
                         </div>
@@ -188,9 +202,9 @@
             container.innerHTML = `
                 <div class="col-12 text-center text-danger py-5">
                     <i class="bi bi-exclamation-triangle fs-1 d-block mb-3"></i>
-                    <p>خطأ في تحميل بيانات الأطفال</p>
+                    <p>${T('خطأ في تحميل بيانات الأطفال', 'Error loading children data')}</p>
                     <button class="btn btn-outline-primary" onclick="loadChildren()">
-                        <i class="bi bi-arrow-clockwise me-1"></i>إعادة المحاولة
+                        <i class="bi bi-arrow-clockwise me-1"></i>${T('إعادة المحاولة', 'Retry')}
                     </button>
                 </div>
             `;

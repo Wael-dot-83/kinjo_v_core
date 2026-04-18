@@ -144,12 +144,19 @@ def get_parent_profile(
         "phone_number": profile.phone_number,
         "email": current_user.email,
         "username": current_user.username,
+        "gender": profile.gender.value if profile.gender else None,
         "nationality": profile.nationality,
         "national_id": profile.national_id,
         "passport_number": profile.passport_number,
         "home_governorate": profile.home_governorate,
         "home_city": profile.home_city,
+        "home_area": profile.home_area,
+        "home_address_line": profile.home_address_line,
         "work_address": profile.work_address,
+        "emergency_contact_name": profile.emergency_contact_name,
+        "emergency_contact_phone": profile.emergency_contact_phone,
+        "emergency_contact_relationship": profile.emergency_contact_relationship,
+        "relationship_to_child": profile.relationship_to_child,
         "profile_complete": profile.profile_complete,
         "profile_completed_at": profile.profile_completed_at.isoformat() if profile.profile_completed_at else None,
         "correspondence_preference": profile.correspondence_preference,
@@ -257,4 +264,105 @@ def get_parent_enrollments(
     return {
         "total": len(enrollment_data),
         "enrollments": enrollment_data,
+    }
+
+
+@router.get("/parent/attendance")
+def get_parent_attendance(
+    child_id: Optional[int] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get attendance history for parent's children"""
+    if current_user.role != models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Parent access only")
+
+    profile = db.query(models.ParentProfile).filter(
+        models.ParentProfile.user_id == current_user.id
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Parent profile not found")
+
+    child_ids = [
+        cid for (cid,) in db.query(models.Child.id).filter(
+            models.Child.parent_id == profile.id
+        ).all()
+    ]
+
+    if child_id:
+        if child_id not in child_ids:
+            raise HTTPException(status_code=403, detail="Not authorized to view this child's attendance")
+        child_ids = [child_id]
+
+    if not child_ids:
+        return {"total": 0, "attendance": []}
+
+    query = db.query(models.AttendanceLog).filter(
+        models.AttendanceLog.child_id.in_(child_ids)
+    )
+
+    # Date filters
+    try:
+        if start_date:
+            query = query.filter(models.AttendanceLog.date >= date.fromisoformat(start_date))
+        if end_date:
+            query = query.filter(models.AttendanceLog.date <= date.fromisoformat(end_date))
+    except ValueError:
+        pass
+
+    # Default: last 30 days
+    if not start_date and not end_date:
+        query = query.filter(models.AttendanceLog.date >= date.today() - timedelta(days=30))
+
+    records = query.order_by(models.AttendanceLog.date.desc()).all()
+
+    # Get child names
+    children = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()}
+
+    attendance_data = []
+    for a in records:
+        child = children.get(a.child_id)
+        attendance_data.append({
+            "id": a.id,
+            "child_id": a.child_id,
+            "child_name": f"{child.first_name} {child.last_name}" if child else None,
+            "date": a.date.isoformat() if isinstance(a.date, date) else a.date,
+            "status": a.status.value if hasattr(a, 'status') and a.status else ("PRESENT" if a.check_in_at else "ABSENT"),
+            "check_in_at": a.check_in_at.strftime("%H:%M") if a.check_in_at else None,
+            "check_out_at": a.check_out_at.strftime("%H:%M") if a.check_out_at else None,
+            "notes": a.notes if hasattr(a, 'notes') else None,
+        })
+
+    return {
+        "total": len(attendance_data),
+        "attendance": attendance_data,
+    }
+
+
+@router.get("/parent/children-list")
+def get_parent_children_simple(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Simple children list for filter dropdowns"""
+    if current_user.role != models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Parent access only")
+
+    profile = db.query(models.ParentProfile).filter(
+        models.ParentProfile.user_id == current_user.id
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Parent profile not found")
+
+    children = db.query(models.Child).filter(
+        models.Child.parent_id == profile.id
+    ).all()
+
+    return {
+        "children": [
+            {"id": c.id, "name": f"{c.first_name} {c.last_name}"}
+            for c in children
+        ]
     }

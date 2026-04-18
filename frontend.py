@@ -165,6 +165,14 @@ async def parent_enrollments_page(request: Request, current_user: User = Depends
         return RedirectResponse(url="/enrollments")
     return templates.TemplateResponse(request=request, name="parent/enrollments.html", context={"current_user": current_user})
 
+@router.get("/parent/attendance", response_class=HTMLResponse)
+async def parent_attendance_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Parent attendance view page"""
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'PARENT':
+        return RedirectResponse(url="/attendance")
+    return templates.TemplateResponse(request=request, name="parent/attendance.html", context={"current_user": current_user})
+
 # -----------------------------------------------------------------------------
 # Kindergartens
 # -----------------------------------------------------------------------------

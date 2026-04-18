@@ -142,6 +142,18 @@
                     <span data-i18n="sidebar.parent_new_enrollment">{% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/parent/attendance' in request.url.path %}active{% endif %}" href="/parent/attendance">
+                    <i class="bi bi-calendar-check me-2"></i>
+                    <span data-i18n="sidebar.parent_attendance">{% if ui_lang == 'en' %}Attendance{% else %}سجل الحضور{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/absence-requests' in request.url.path %}active{% endif %}" href="/absence-requests">
+                    <i class="bi bi-calendar-x me-2"></i>
+                    <span data-i18n="sidebar.parent_absence">{% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الغياب{% endif %}</span>
+                </a>
+            </li>
             {% endif %}
 
             <!-- Management Section -->
