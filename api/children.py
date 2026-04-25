@@ -3,6 +3,7 @@ Children domain endpoints
 """
 import csv
 import io
+import logging
 import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body, UploadFile, File
@@ -19,6 +20,7 @@ from config import settings
 from database import get_db
 from dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Children"])
 
 class ParentProfileUpdateRequest(BaseModel):
@@ -258,7 +260,7 @@ def list_incidents(
             severity_enum = models.SeverityLevel(severity.upper())
             query = query.filter(models.Incident.severity_level == severity_enum)
         except ValueError:
-            pass
+            logger.warning("INVALID_FILTER severity=%r ignored — not a valid SeverityLevel", severity)
     
     incidents = query.order_by(models.Incident.occurred_at.desc()).all()
     

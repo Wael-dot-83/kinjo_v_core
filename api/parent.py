@@ -1,6 +1,8 @@
 """
 Parent domain endpoints
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -15,6 +17,7 @@ from config import settings
 from database import get_db
 from dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Parent"])
 
 @router.get("/parent/dashboard")
@@ -313,7 +316,7 @@ def get_parent_attendance(
         if end_date:
             query = query.filter(models.AttendanceLog.date <= date.fromisoformat(end_date))
     except ValueError:
-        pass
+        logger.warning("INVALID_DATE_FILTER start_date=%r end_date=%r ignored — not ISO format", start_date, end_date)
 
     # Default: last 30 days
     if not start_date and not end_date:

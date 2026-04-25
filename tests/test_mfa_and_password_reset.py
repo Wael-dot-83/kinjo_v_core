@@ -204,6 +204,92 @@ class TestPasswordResetFlow:
 
 
 # ===========================================================================
+# SMTP DELIVERY BEHAVIOR TESTS
+# ===========================================================================
+
+class TestSmtpDeliveryBehavior:
+    def test_smtp_unconfigured_returns_false_and_logs_critical(self, client, test_db, admin_user):
+        """When SMTP is not configured, deliver_password_reset_email returns False
+        and logs at CRITICAL level — the endpoint still returns 200 (anti-enumeration)."""
+        import logging
+        from api.auth.password_reset_service import deliver_password_reset_email, issue_password_reset_token
+        from unittest.mock import patch
+
+        with patch("api.auth.password_reset_service.is_smtp_configured", return_value=False):
+            token = issue_password_reset_token(test_db, admin_user)
+            with patch.object(
+                logging.getLogger("api.auth.password_reset_service"),
+                "critical",
+            ) as mock_critical:
+                result = deliver_password_reset_email("http://localhost", admin_user, token)
+
+        assert result is False
+        mock_critical.assert_called_once()
+        call_args = mock_critical.call_args[0][0]
+        assert "SMTP_UNCONFIGURED" in call_args or "unconfigured" in call_args.lower()
+
+    def test_smtp_delivery_failure_logs_critical_not_swallowed(self, client, test_db, admin_user):
+        """When SMTP is configured but send fails, CRITICAL is logged — not silently swallowed."""
+        import logging
+        import smtplib
+        from api.auth.password_reset_service import deliver_password_reset_email, issue_password_reset_token
+        from unittest.mock import patch
+
+        token = issue_password_reset_token(test_db, admin_user)
+
+        with patch("api.auth.password_reset_service.is_smtp_configured", return_value=True), \
+             patch("api.auth.password_reset_service.send_password_reset_email",
+                   side_effect=smtplib.SMTPException("Connection refused")), \
+             patch.object(
+                 logging.getLogger("api.auth.password_reset_service"),
+                 "critical",
+             ) as mock_critical:
+            result = deliver_password_reset_email("http://localhost", admin_user, token)
+
+        assert result is False
+        mock_critical.assert_called_once()
+        call_args = mock_critical.call_args[0][0]
+        assert "FAILED" in call_args or "failed" in call_args.lower()
+
+    def test_endpoint_returns_200_regardless_of_smtp_failure(self, client, test_db, admin_user):
+        """The password reset request endpoint MUST return 200 even when SMTP fails
+        (anti-enumeration: users must not be able to tell if email was delivered)."""
+        from unittest.mock import patch
+
+        with patch("api.users.deliver_password_reset_email", return_value=False):
+            response = client.post(
+                "/api/users/request-password-reset",
+                json={"email": admin_user.email},
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert "message" in data
+
+    def test_check_smtp_health_returns_unconfigured_when_no_smtp(self):
+        """check_smtp_health() returns unconfigured status when SMTP vars are missing."""
+        from email_service import check_smtp_health
+        from unittest.mock import patch
+
+        with patch("email_service.is_smtp_configured", return_value=False):
+            health = check_smtp_health()
+
+        assert health["status"] == "unconfigured"
+
+    def test_check_smtp_health_returns_error_on_connection_failure(self):
+        """check_smtp_health() returns error status when SMTP host is unreachable."""
+        import smtplib
+        from email_service import check_smtp_health
+        from unittest.mock import patch
+
+        with patch("email_service.is_smtp_configured", return_value=True), \
+             patch("smtplib.SMTP", side_effect=OSError("Connection refused")):
+            health = check_smtp_health()
+
+        assert health["status"] == "error"
+        assert "detail" in health
+
+
+# ===========================================================================
 # MIDDLEWARE TESTS
 # ===========================================================================
 

@@ -1185,6 +1185,13 @@ async def api_health_check(
             "details": health_check.details
         }
 
+    # Add SMTP health (non-blocking — failure degrades but doesn't mark service unhealthy)
+    from email_service import check_smtp_health
+    smtp_health = check_smtp_health()
+    response["services"]["smtp"] = smtp_health
+    if smtp_health.get("status") not in ("ok", "unconfigured"):
+        overall_status = "degraded"
+
     # Set HTTP status code based on overall health
     status_code = 200
     if overall_status == "unhealthy":

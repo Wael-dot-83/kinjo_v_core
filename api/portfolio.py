@@ -1,6 +1,8 @@
 """
 Portfolio domain endpoints
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -15,6 +17,7 @@ from config import settings
 from database import get_db
 from dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Portfolio"])
 
 class PortfolioCreateRequest(BaseModel):
@@ -74,7 +77,7 @@ def list_portfolios(
                 status_enum = models.PortfolioStatus(status_filter.upper())
                 query = query.filter(models.Portfolio.status == status_enum)
             except ValueError:
-                pass
+                logger.warning("INVALID_FILTER status_filter=%r ignored — not a valid PortfolioStatus", status_filter)
 
     portfolios = query.order_by(models.Portfolio.created_at.desc()).all()
 
@@ -161,7 +164,7 @@ def create_portfolio_entry(
         try:
             status_value = models.PortfolioStatus(portfolio_data.status.upper())
         except (ValueError, AttributeError):
-            pass
+            logger.warning("INVALID_STATUS status=%r — defaulting to DRAFT", portfolio_data.status)
 
     portfolio = models.Portfolio(
         child_id=portfolio_data.child_id,

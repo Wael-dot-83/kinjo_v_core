@@ -1,6 +1,8 @@
 """
 Tasks domain endpoints
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -15,6 +17,7 @@ from config import settings
 from database import get_db
 from dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Tasks"])
 
 class TaskCreate(BaseModel):
@@ -146,14 +149,14 @@ def get_tasks(
             status_enum = models.TaskStatus(status_filter.upper())
             query = query.filter(models.Task.status == status_enum)
         except ValueError:
-            pass
-    
+            logger.warning("INVALID_FILTER status_filter=%r ignored — not a valid TaskStatus", status_filter)
+
     if priority_filter:
         try:
             priority_enum = models.TaskPriority(priority_filter.upper())
             query = query.filter(models.Task.priority == priority_enum)
         except ValueError:
-            pass
+            logger.warning("INVALID_FILTER priority_filter=%r ignored — not a valid TaskPriority", priority_filter)
     
     if assigned_to_me:
         query = query.filter(models.Task.assigned_to == current_user.id)

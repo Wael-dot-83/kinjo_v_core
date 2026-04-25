@@ -1,6 +1,8 @@
 """
 Supervisor domain endpoints
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -15,6 +17,7 @@ from config import settings
 from database import get_db
 from dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Supervisor"])
 
 class SupervisorAssignmentRequest(BaseModel):
@@ -190,7 +193,7 @@ def create_observation(
         try:
             observed_at = datetime.fromisoformat(observation_data.observed_at.replace('Z', '+00:00'))
         except (ValueError, AttributeError):
-            pass
+            logger.warning("INVALID_DATETIME observed_at=%r ignored — defaulting to now()", observation_data.observed_at)
     
     observation = models.Observation(
         child_id=observation_data.child_id,

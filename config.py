@@ -313,6 +313,14 @@ def validate_production_settings():
             "Currently set to: " + settings.SESSION_COOKIE_SAMESITE
         )
 
+    # Warn when SMTP is not configured — password reset emails will not be delivered
+    if not (settings.SMTP_HOST and settings.SMTP_FROM):
+        logger.critical(
+            "SMTP_UNCONFIGURED: SMTP_HOST or SMTP_FROM is not set in production. "
+            "Password reset emails WILL NOT be delivered. "
+            "Set SMTP_HOST, SMTP_PORT, SMTP_FROM (and optionally SMTP_USERNAME/SMTP_PASSWORD) in .env."
+        )
+
     logger.info("✓ Production configuration validation passed")
 
 

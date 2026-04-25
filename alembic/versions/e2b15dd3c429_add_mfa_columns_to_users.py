@@ -19,12 +19,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Use dialect-agnostic false() so this works on both SQLite ('0') and PostgreSQL ('false').
     with op.batch_alter_table('users', schema=None) as batch_op:
         batch_op.add_column(sa.Column(
             'mfa_enabled',
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text('0'),
+            server_default=sa.false(),
         ))
         batch_op.add_column(sa.Column(
             'mfa_secret',

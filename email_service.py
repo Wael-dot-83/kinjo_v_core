@@ -1,12 +1,37 @@
 """SMTP email utilities for transactional notifications."""
 import smtplib
 from email.mime.text import MIMEText
+from typing import Any
 
 from config import settings
 
 
 def is_smtp_configured() -> bool:
     return bool(settings.SMTP_HOST and settings.SMTP_FROM)
+
+
+def check_smtp_health() -> dict[str, Any]:
+    """Probe SMTP connectivity and return a health dict.
+
+    Used by the admin health endpoint to make SMTP misconfiguration visible.
+    Does NOT send any email — only opens and closes a connection.
+    """
+    if not is_smtp_configured():
+        return {
+            "status": "unconfigured",
+            "detail": "SMTP_HOST or SMTP_FROM not set — password reset emails disabled",
+        }
+    try:
+        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=5) as smtp:
+            smtp.ehlo()
+        return {"status": "ok", "host": settings.SMTP_HOST, "port": settings.SMTP_PORT}
+    except (smtplib.SMTPException, OSError, TimeoutError) as exc:
+        return {
+            "status": "error",
+            "host": settings.SMTP_HOST,
+            "port": settings.SMTP_PORT,
+            "detail": str(exc),
+        }
 
 
 def send_email(to_email: str, subject: str, body: str) -> None:

@@ -1,6 +1,8 @@
 """
 Users domain endpoints
 """
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
 from fastapi.responses import Response
 from sqlalchemy.exc import SQLAlchemyError
@@ -15,6 +17,8 @@ import validators
 from config import settings
 from database import get_db
 from dependencies import get_current_user
+
+logger = logging.getLogger(__name__)
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -50,8 +54,8 @@ def _log_access_denied(
             ip_address=ip_address,
             sensitivity_level=2
         )
-    except (SQLAlchemyError, TypeError, ValueError):
-        pass
+    except (SQLAlchemyError, TypeError, ValueError) as exc:
+        logger.warning("AUDIT_LOG_FAILED action=%s user_id=%s: %s", action, user.id, exc)
 
 DUPLICATE_ERROR_MAP = {
     "name_ar": {"code": "error_duplicate_name_ar", "message": "This Arabic name is already registered."},
@@ -772,7 +776,13 @@ def request_password_reset(
 
     token = issue_password_reset_token(db, user)
     base_url = str(request.base_url).rstrip("/")
-    deliver_password_reset_email(base_url, user, token)
+    delivered = deliver_password_reset_email(base_url, user, token)
+    if not delivered:
+        logger.warning(
+            "PASSWORD_RESET_UNDELIVERED user_id=%s: token issued but email not sent "
+            "(check SMTP config or prior CRITICAL log for delivery error)",
+            user.id,
+        )
 
     return {"message": "If the email exists, a reset link has been sent"}
 
