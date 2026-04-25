@@ -1,6 +1,7 @@
 """Shared password reset domain service."""
 import logging
 import secrets
+import smtplib
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -63,6 +64,6 @@ def deliver_password_reset_email(base_url: str, user: models.User, token: str) -
     try:
         send_password_reset_email(user.email, token, base_url)
         return True
-    except Exception as exc:
+    except (smtplib.SMTPException, OSError, RuntimeError, ValueError) as exc:
         logger.exception("Password reset email delivery failed for user_id=%s: %s", user.id, exc)
         return False

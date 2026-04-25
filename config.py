@@ -1,10 +1,13 @@
-﻿"""
+"""
 Configuration management for KinJo platform
 """
+import logging
 from typing import Any, Dict, List
 
 from pydantic import ConfigDict, field_validator
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -44,6 +47,10 @@ class Settings(BaseSettings):
     SESSION_COOKIE_NAME: str = "kinjo_session"
     SESSION_COOKIE_SAMESITE: str = "lax"
     CSRF_COOKIE_NAME: str = "kinjo_csrf_token"
+    REQUEST_TIMEOUT_SECONDS: int = 30
+    PUBLIC_REGISTRATION_ENABLED: bool = False
+    MFA_TOTP_ISSUER: str = "KinJo"
+    MFA_TICKET_EXPIRE_MINUTES: int = 10
 
     # AI Integration
     GOOGLE_API_KEY: str = ""
@@ -258,4 +265,56 @@ class Settings(BaseSettings):
     )
 
 
+def validate_production_settings():
+    """Validate critical settings for production environment."""
+    if settings.ENVIRONMENT.lower() != "production":
+        return
+
+    logger.info("Validating production configuration...")
+
+    # Validate DEBUG is OFF
+    if settings.DEBUG:
+        raise RuntimeError(
+            "CRITICAL: DEBUG must be False in production. "
+            "Disable in .env: DEBUG=false"
+        )
+
+    # Validate API docs disabled
+    if settings.API_DOCS_ENABLED:
+        raise RuntimeError(
+            "CRITICAL: API_DOCS_ENABLED must be False in production. "
+            "Disable in .env: API_DOCS_ENABLED=false"
+        )
+
+    # Validate SECRET_KEY is secure
+    if not settings.SECRET_KEY or len(settings.SECRET_KEY) < 32:
+        raise RuntimeError(
+            "CRITICAL: SECRET_KEY must be at least 32 characters. "
+            "Set a strong SECRET_KEY in .env"
+        )
+
+    weak_markers = {"changeme", "change-me", "development-only", "test-secret-key", "your-secret-key"}
+    if any(marker in settings.SECRET_KEY.lower() for marker in weak_markers):
+        raise RuntimeError(
+            "CRITICAL: SECRET_KEY appears to be a development default. "
+            "Set a unique SECRET_KEY in .env for production"
+        )
+
+    # Validate CORS origins
+    if not settings.CORS_ALLOWED_ORIGINS:
+        raise RuntimeError(
+            "CRITICAL: CORS_ALLOWED_ORIGINS must be specified for production"
+        )
+
+    # Validate session cookie settings for HTTPS
+    if settings.SESSION_COOKIE_SAMESITE != "strict":
+        logger.warning(
+            "WARNING: SESSION_COOKIE_SAMESITE should be 'strict' in production. "
+            "Currently set to: " + settings.SESSION_COOKIE_SAMESITE
+        )
+
+    logger.info("✓ Production configuration validation passed")
+
+
 settings = Settings()
+validate_production_settings()

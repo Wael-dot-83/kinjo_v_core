@@ -2,6 +2,7 @@
 Monitoring and Health Check API Endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta, timezone
@@ -59,7 +60,7 @@ async def get_health_status(
             }
         }
 
-    except Exception as e:
+    except (SQLAlchemyError, RuntimeError, TypeError, ValueError) as e:
         logger.error(f"Health check failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -109,7 +110,7 @@ async def get_system_metrics(
             "metrics": [m.to_dict() for m in metrics[-10:]]  # Last 10 metrics
         }
 
-    except Exception as e:
+    except (RuntimeError, TypeError, ValueError) as e:
         logger.error(f"Metrics retrieval failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -134,7 +135,7 @@ async def get_detailed_metrics(
         metrics = performance_monitor.get_recent_metrics(minutes)
         return [m.to_dict() for m in metrics]
 
-    except Exception as e:
+    except (RuntimeError, TypeError, ValueError) as e:
         logger.error(f"Detailed metrics retrieval failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -163,7 +164,7 @@ async def run_manual_health_checks(
             "results": {name: check.to_dict() for name, check in health_results.items()}
         }
 
-    except Exception as e:
+    except (SQLAlchemyError, RuntimeError, TypeError, ValueError) as e:
         logger.error(f"Manual health check failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -201,7 +202,7 @@ async def get_system_info(
 
         return system_info
 
-    except Exception as e:
+    except (ImportError, AttributeError, OSError, RuntimeError, TypeError, ValueError) as e:
         logger.error(f"System info retrieval failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -239,7 +240,7 @@ async def get_realtime_metrics(
             }
         }
 
-    except Exception as e:
+    except (RuntimeError, TypeError, ValueError) as e:
         logger.error(f"Real-time metrics retrieval failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -338,7 +339,7 @@ async def get_monitoring_dashboard_overview(
 
         return dashboard_data
 
-    except Exception as e:
+    except (SQLAlchemyError, RuntimeError, TypeError, ValueError) as e:
         logger.error(f"Dashboard overview retrieval failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -397,7 +398,7 @@ async def get_metrics_history(
             "hourly_trends": trend_data
         }
 
-    except Exception as e:
+    except (RuntimeError, TypeError, ValueError) as e:
         logger.error(f"Metrics history retrieval failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

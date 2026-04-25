@@ -441,7 +441,7 @@ def seed_database():
         print("  Parent:     parent1@example.com")
         print("\nTest the API at: http://localhost:8000/docs")
 
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
         print(f"Error seeding database: {e}")
         db.rollback()
         raise

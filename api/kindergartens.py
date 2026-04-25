@@ -19,6 +19,46 @@ from api.users import DUPLICATE_ERROR_MAP
 router = APIRouter(tags=["Kindergartens"])
 
 
+@router.get("/reference/governorates")
+def get_governorates(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return list of governorates that have active kindergartens."""
+    rows = (
+        db.query(models.Kindergarten.governorate)
+        .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+        .distinct()
+        .all()
+    )
+    govs = []
+    for (gov,) in rows:
+        if not gov:
+            continue
+        try:
+            normalized = validators.validate_jordan_governorate(gov)
+        except validators.ValidationError:
+            continue
+        english_label = None
+        if normalized in settings.JORDAN_GOVERNORATES:
+            idx = settings.JORDAN_GOVERNORATES.index(normalized)
+            if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
+                english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx]
+        govs.append({
+            "id": normalized,
+            "name_ar": normalized,
+            "name_en": english_label or normalized,
+        })
+    # Deduplicate and sort
+    seen = set()
+    unique = []
+    for g in govs:
+        if g["id"] not in seen:
+            seen.add(g["id"])
+            unique.append(g)
+    return {"governorates": sorted(unique, key=lambda x: x["name_ar"])}
+
+
 @router.get("/governorates/{gov}/cities")
 def get_cities_by_governorate(
     gov: str,

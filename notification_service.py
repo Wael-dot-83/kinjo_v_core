@@ -92,12 +92,12 @@ def create_daily_report_notification(
         if notification.channel == models.NotificationChannel.EMAIL:
             try:
                 send_email_notification.delay(notification.id)
-            except Exception as e:
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to queue email notification: {e}")
         elif notification.channel == models.NotificationChannel.PUSH:
             try:
                 send_push_notification.delay(notification.id)
-            except Exception as e:
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to queue push notification: {e}")
 
     return notifications[0] if notifications else None

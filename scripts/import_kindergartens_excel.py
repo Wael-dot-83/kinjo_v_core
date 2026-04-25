@@ -155,7 +155,7 @@ def import_kindergartens(file_path: str, dry_run: bool = False, sheet_name: str 
                     db.flush()
                     logger.info("  ... flushed %d rows", inserted)
 
-            except Exception as exc:
+            except (ValueError, TypeError, AttributeError, RuntimeError) as exc:
                 logger.error("Row %d error: %s", row_num, exc)
                 errors += 1
 
@@ -171,7 +171,7 @@ def import_kindergartens(file_path: str, dry_run: bool = False, sheet_name: str 
         logger.info("  Errors:           %d", errors)
         logger.info("=" * 50)
 
-    except Exception as exc:
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as exc:
         db.rollback()
         logger.exception("Import failed: %s", exc)
     finally:

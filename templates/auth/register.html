@@ -122,6 +122,15 @@
                             
                             <div class="mb-3">
                                 {{ password_input(help_text="Must contain at least 8 characters" if ui_lang == 'en' else "يجب أن تحتوي على 8 أحرف على الأقل") }}
+                                <!-- Password strength indicator -->
+                                <div id="passwordStrengthWrapper" class="mt-2 d-none">
+                                    <div class="progress" style="height:6px;">
+                                        <div id="passwordStrengthBar" class="progress-bar" role="progressbar" style="width:0%"
+                                            aria-label="{% if ui_lang == 'en' %}Password strength{% else %}قوة كلمة المرور{% endif %}"
+                                            aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <small id="passwordStrengthLabel" class="form-text mt-1"></small>
+                                </div>
                             </div>
 
                             <div class="mb-3">
@@ -251,6 +260,47 @@
         }
     }
     
+    // Password strength indicator
+    (function() {
+        const passwordInput = document.getElementById('password');
+        const wrapper = document.getElementById('passwordStrengthWrapper');
+        const bar = document.getElementById('passwordStrengthBar');
+        const label = document.getElementById('passwordStrengthLabel');
+        if (!passwordInput || !wrapper || !bar || !label) return;
+
+        const levels = [
+            { min: 0,  pct: 10, cls: 'bg-danger',  ar: 'ضعيفة جداً',  en: 'Very weak'  },
+            { min: 1,  pct: 30, cls: 'bg-danger',  ar: 'ضعيفة',       en: 'Weak'       },
+            { min: 2,  pct: 55, cls: 'bg-warning',  ar: 'متوسطة',      en: 'Fair'       },
+            { min: 3,  pct: 78, cls: 'bg-info',     ar: 'جيدة',        en: 'Good'       },
+            { min: 4,  pct: 100, cls: 'bg-success', ar: 'قوية',        en: 'Strong'     },
+        ];
+
+        function scorePassword(pw) {
+            let score = 0;
+            if (pw.length >= 8)  score++;
+            if (/[A-Z]/.test(pw)) score++;
+            if (/[a-z]/.test(pw)) score++;
+            if (/\d/.test(pw))    score++;
+            if (/[^A-Za-z0-9]/.test(pw)) score++;
+            return score;
+        }
+
+        passwordInput.addEventListener('input', function() {
+            const pw = this.value;
+            if (!pw) { wrapper.classList.add('d-none'); return; }
+            wrapper.classList.remove('d-none');
+            const score = Math.min(scorePassword(pw), 4);
+            const lvl = levels[score];
+            bar.style.width = lvl.pct + '%';
+            bar.setAttribute('aria-valuenow', lvl.pct);
+            bar.className = 'progress-bar ' + lvl.cls;
+            const isAr = document.documentElement.dir === 'rtl';
+            label.textContent = isAr ? lvl.ar : lvl.en;
+            label.className = 'form-text mt-1 ' + lvl.cls.replace('bg-', 'text-');
+        });
+    })();
+
     // Password confirmation validation
     document.getElementById('confirmPassword').addEventListener('input', function() {
         const password = document.getElementById('password').value;

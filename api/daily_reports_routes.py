@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -112,12 +113,12 @@ def create_daily_report(
     db.add(report)
     try:
         db.commit()
-    except Exception as exc:
+    except IntegrityError:
         # Handle race condition where another report was inserted concurrently
         db.rollback()
-        from sqlalchemy.exc import IntegrityError
-        if isinstance(exc, IntegrityError):
-            raise HTTPException(status_code=409, detail="Daily report for this child and date already exists")
+        raise HTTPException(status_code=409, detail="Daily report for this child and date already exists")
+    except SQLAlchemyError:
+        db.rollback()
         raise
     db.refresh(report)
 
@@ -145,7 +146,7 @@ def submit_daily_report(
         raise HTTPException(status_code=400, detail="Only draft reports can be submitted")
     
     report.status = models.DailyReportStatus.SUBMITTED
-    report.submitted_at = datetime.now()
+    report.submitted_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(report)
     
@@ -175,7 +176,7 @@ def approve_daily_report(
     
     report.status = models.DailyReportStatus.APPROVED
     report.approved_by = current_user.id
-    report.approved_at = datetime.now()
+    report.approved_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(report)
     

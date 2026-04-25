@@ -133,7 +133,7 @@ def build_payload(row: Dict[str, str]) -> Dict:
     if payload.get("license_valid_until"):
         try:
             payload["license_valid_until"] = datetime.fromisoformat(payload["license_valid_until"]).date()
-        except Exception:
+        except (ValueError, TypeError):
             # leave as None and warn
             logger.warning("Invalid date for license_valid_until: %s", payload.get("license_valid_until"))
             payload["license_valid_until"] = None
@@ -183,7 +183,7 @@ def import_file(path: str, commit: bool = False, default_status: str = "ACTIVE",
                 try:
                     existing.status = models.KindergartenStatus(default_status)
                     changed["status"] = default_status
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     pass
             if changed:
                 updates.append((existing.id, changed))
@@ -247,7 +247,7 @@ def import_file(path: str, commit: bool = False, default_status: str = "ACTIVE",
         try:
             session.commit()
             logger.info("Changes committed to database")
-        except Exception as exc:
+        except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
             session.rollback()
             logger.error("Failed to commit changes: %s", exc)
             raise
@@ -279,7 +279,7 @@ def main(argv: Optional[List[str]] = None):
     except SystemExit as e:
         logger.error("Import aborted: %s", e)
         sys.exit(1)
-    except Exception as exc:
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as exc:
         logger.exception("Unexpected error during import: %s", exc)
         sys.exit(1)
 

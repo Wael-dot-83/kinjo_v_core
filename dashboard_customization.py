@@ -2,11 +2,15 @@
 Dashboard customization service for widget management
 """
 import json
+import logging
 from typing import Dict, List, Optional
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from database import get_db
 from cache_service import cache_service
 import models
+
+logger = logging.getLogger(__name__)
 
 
 class DashboardCustomizationService:
@@ -66,6 +70,7 @@ class DashboardCustomizationService:
 
     def update_user_widgets(self, user_id: int, widgets: List[Dict]) -> bool:
         """Update user's dashboard widget configuration"""
+        db: Optional[Session] = None
         try:
             db = next(get_db())
 
@@ -94,10 +99,19 @@ class DashboardCustomizationService:
             cache_service.delete(cache_key)
 
             return True
-        except Exception as e:
-            db.rollback()
-            print(f"Error updating user widgets: {e}")
+        except SQLAlchemyError as e:
+            if db is not None:
+                db.rollback()
+            logger.error("Database error updating dashboard widgets for user_id=%s: %s", user_id, str(e), exc_info=True)
             return False
+        except (TypeError, ValueError) as e:
+            if db is not None:
+                db.rollback()
+            logger.warning("Invalid dashboard widget payload for user_id=%s: %s", user_id, str(e))
+            return False
+        finally:
+            if db is not None:
+                db.close()
 
     def reset_user_widgets(self, user_id: int, role: str) -> bool:
         """Reset user's widgets to role-based defaults"""

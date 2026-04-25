@@ -23,7 +23,7 @@ from enum import Enum
 from fastapi import Request, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from pydantic import BaseModel, Field, field_validator, EmailStr
+from pydantic import BaseModel, Field, field_validator, EmailStr, ValidationError
 from sqlalchemy.orm import Session
 
 import models
@@ -569,7 +569,7 @@ def validate_csv_row(
     try:
         validated = schema(**sanitized)
         return validated, []
-    except Exception as e:
+    except (ValidationError, ValueError, TypeError) as e:
         if hasattr(e, 'errors'):
             for error in e.errors():
                 field = '.'.join(str(loc) for loc in error.get('loc', []))

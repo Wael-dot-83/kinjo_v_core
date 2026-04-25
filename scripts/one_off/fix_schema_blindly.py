@@ -1,4 +1,4 @@
-from database import get_db
+﻿from database import get_db
 from sqlalchemy import text
 
 db = next(get_db())
@@ -23,7 +23,7 @@ for col_name, col_type in columns_to_add:
     try:
         db.execute(text(f"ALTER TABLE messages ADD COLUMN {col_name} {col_type}"))
         print(f"Added {col_name}")
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
         # Ignore "duplicate column name" error
         if "duplicate column" not in str(e).lower():
             print(f"Error adding {col_name}: {e}")
@@ -33,8 +33,9 @@ for col_name, col_type in columns_to_add:
 try:
     db.commit()
     print("Migration committed.")
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     print(f"Commit failed: {e}")
     db.rollback()
 finally:
     db.close()
+

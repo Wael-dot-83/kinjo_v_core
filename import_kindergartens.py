@@ -26,7 +26,7 @@ def main():
     try:
         import_kindergartens_cli(args.path)
         print("Import completed successfully!")
-    except Exception as e:
+    except (FileNotFoundError, ValueError, OSError) as e:
         print(f"Import failed: {str(e)}")
         sys.exit(1)
 

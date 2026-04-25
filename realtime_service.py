@@ -72,7 +72,7 @@ class ConnectionManager:
                 await connection.send_json(message)
                 # Record successful message
                 performance_monitor.collector.record_websocket_message()
-            except Exception as e:
+            except (WebSocketDisconnect, RuntimeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to send message to {role} connection: {e}")
                 disconnected.add(connection)
 
@@ -87,16 +87,18 @@ class ConnectionManager:
                 await self.user_connections[user_id].send_json(message)
                 # Record successful message
                 performance_monitor.collector.record_websocket_message()
-            except Exception as e:
+            except (WebSocketDisconnect, RuntimeError, TypeError, ValueError) as e:
                 logger.warning(f"Failed to send message to user {user_id}: {e}")
                 # Clean up failed connection
                 del self.user_connections[user_id]
 
     async def broadcast_kpi_update(self, role: str = None):
         """Broadcast KPI data updates to connected clients"""
+        db_gen = get_db()
+        db = None
         try:
             # Get fresh KPI data
-            db = next(get_db())
+            db = next(db_gen)
             kpi_data = {"message": "KPI data temporarily disabled"}
 
             message = {
@@ -114,8 +116,15 @@ class ConnectionManager:
 
             logger.info(f"KPI update broadcasted to {role or 'all roles'}")
 
-        except Exception as e:
+        except (RuntimeError, StopIteration, TypeError, ValueError) as e:
             logger.error(f"Failed to broadcast KPI update: {e}")
+        finally:
+            try:
+                if db is not None:
+                    db.close()
+                db_gen.close()
+            except RuntimeError:
+                pass
 
     async def broadcast_alert(self, alert_type: str, title: str, message: str, priority: str = "info", roles: List[str] = None):
         """Broadcast alert/notification to specified roles"""
@@ -181,7 +190,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str, role: str):
 
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id, role)
-    except Exception as e:
+    except (RuntimeError, TypeError, ValueError) as e:
         logger.error(f"WebSocket error for user {user_id}: {e}")
         manager.disconnect(websocket, user_id, role)
 
@@ -197,7 +206,7 @@ async def periodic_kpi_updates():
             # Wait for next update (every 5 minutes)
             await asyncio.sleep(300)
 
-        except Exception as e:
+        except (RuntimeError, TypeError, ValueError) as e:
             logger.error(f"Error in periodic KPI updates: {e}")
             await asyncio.sleep(60)  # Wait a minute before retrying
 
@@ -253,7 +262,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str, role: str):
             except WebSocketDisconnect:
                 break
 
-    except Exception as e:
+    except (RuntimeError, TypeError, ValueError) as e:
         logger.error(f"WebSocket error for user {user_id}: {e}")
     finally:
         manager.disconnect(websocket, user_id, role)

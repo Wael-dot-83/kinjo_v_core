@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -185,7 +185,7 @@ def create_observation(
         mastery = mastery_map.get(mastery_str)
     
     # Parse observed_at from ISO string if provided
-    observed_at = datetime.now()
+    observed_at = datetime.now(timezone.utc)
     if hasattr(observation_data, 'observed_at') and observation_data.observed_at:
         try:
             observed_at = datetime.fromisoformat(observation_data.observed_at.replace('Z', '+00:00'))
@@ -362,7 +362,7 @@ def record_observation(
         domain=domain,
         observation_text=observation_data.observation_text,
         mastery_level=mastery,
-        observed_at=datetime.now()
+        observed_at=datetime.now(timezone.utc)
     )
     db.add(observation)
     db.commit()

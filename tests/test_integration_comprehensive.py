@@ -613,8 +613,8 @@ class TestKPIGovernanceIntegration:
         )
         assert response.status_code == 200
         kpi = response.json()
-        assert kpi["kpi_name"] == "attendance_rate"
-        assert 0 <= kpi["kpi_value"] <= 100
+        assert "attendance_rate" in kpi
+        assert 0 <= kpi["attendance_rate"] <= 100
 
     def test_governance_score_calculation(
         self, client, test_db, auth_headers_admin, sample_kindergarten
@@ -631,9 +631,9 @@ class TestKPIGovernanceIntegration:
         )
         assert response.status_code == 200
         score = response.json()
-        assert "final_governance_score" in score
-        assert "band" in score
-        assert score["band"] in ["RED", "AMBER", "GREEN"]
+        assert "governance_score" in score
+        assert "governance_band" in score
+        assert score["governance_band"] in ["RED", "AMBER", "GREEN"]
 
 
 # ============================================================================

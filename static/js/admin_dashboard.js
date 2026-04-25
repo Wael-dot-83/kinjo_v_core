@@ -102,20 +102,82 @@ class AdminDashboard {
   renderDashboard(data) {
     console.log("Rendering dashboard with data:", data);
 
+    const normalized = this.normalizePayload(data || {});
+
     // Render KPI cards
-    this.renderKPICards(data.kpis);
+    this.renderKPICards(normalized.kpis);
 
     // Render charts
-    this.renderCharts(data.charts);
+    this.renderCharts(normalized.charts);
 
     // Render activity feed
-    this.renderActivityFeed(data.recent_activity);
+    this.renderActivityFeed(normalized.recent_activity);
 
     // Render alerts
-    this.renderAlerts(data.alerts);
+    this.renderAlerts(normalized.alerts);
 
     // Show dashboard content
     this.showDashboardContent();
+  }
+
+  normalizePayload(data) {
+    const summary = data.summary || {};
+    const systemOverview = data.system_overview || {};
+    const alerts = Array.isArray(data.alerts) ? data.alerts : [];
+
+    // Backward compatibility: keep supporting legacy "kpis" shape.
+    const kpis = data.kpis || {
+      total_users: this.toNumber(systemOverview.total_users),
+      active_users: this.toNumber(summary.attendance_today),
+      total_kindergartens: this.toNumber(systemOverview.total_kindergartens),
+      active_kindergartens: this.toNumber(systemOverview.active_kindergartens),
+      total_submissions: this.toNumber(summary.pending_applications),
+      pending_submissions: this.toNumber(summary.pending_daily_reports),
+      page_load_time: this.getPageLoadDuration(),
+      data_quality_score: this.toNumber(summary.attendance_rate),
+    };
+
+    const chartPayload = data.charts || {};
+    const userActivityChart = chartPayload.user_activity || {
+      labels: Array.isArray(chartPayload.attendance)
+        ? chartPayload.attendance.map((item) => item.date)
+        : [],
+      values: Array.isArray(chartPayload.attendance)
+        ? chartPayload.attendance.map((item) => this.toNumber(item.value))
+        : [],
+    };
+
+    const enrollment = chartPayload.enrollment || {};
+    const submissionChart = chartPayload.data_submissions || {
+      labels: Object.keys(enrollment),
+      values: Object.values(enrollment).map((value) => this.toNumber(value)),
+    };
+
+    const recentActivity = Array.isArray(data.recent_activity)
+      ? data.recent_activity
+      : this.buildRecentActivityFromAlerts(alerts);
+
+    return {
+      kpis,
+      charts: {
+        user_activity: userActivityChart,
+        data_submissions: submissionChart,
+      },
+      recent_activity: recentActivity,
+      alerts,
+    };
+  }
+
+  buildRecentActivityFromAlerts(alerts) {
+    if (!Array.isArray(alerts) || alerts.length === 0) {
+      return [];
+    }
+
+    return alerts.slice(0, 5).map((alert) => ({
+      type: "system_update",
+      message: alert.title || alert.message || "System update",
+      timestamp: alert.timestamp,
+    }));
   }
 
   renderKPICards(kpis) {
@@ -162,10 +224,10 @@ class AdminDashboard {
         format: "number",
       },
       {
-        key: "system_uptime",
-        icon: "fas fa-server",
+        key: "page_load_time",
+        icon: "fas fa-stopwatch",
         color: "secondary",
-        format: "percentage",
+        format: "duration",
       },
       {
         key: "data_quality_score",
@@ -194,6 +256,10 @@ class AdminDashboard {
     switch (config.format) {
       case "percentage":
         formattedValue = `${value}%`;
+        break;
+      case "duration":
+        formattedValue = `${this.getPageLoadDuration().toFixed(2)}s`;
+        subtitle = "Measured from this page load";
         break;
       case "number":
         formattedValue = this.formatNumber(value);
@@ -243,7 +309,7 @@ class AdminDashboard {
         labels: data.labels,
         datasets: [
           {
-            label: AdminI18n.translate("dashboard.active_users"),
+            label: this.t("dashboard.active_users", "Active users"),
             data: data.values,
             borderColor: "rgb(54, 162, 235)",
             backgroundColor: "rgba(54, 162, 235, 0.1)",
@@ -292,7 +358,7 @@ class AdminDashboard {
         labels: data.labels,
         datasets: [
           {
-            label: AdminI18n.translate("dashboard.total_submissions"),
+            label: this.t("dashboard.total_submissions", "Total submissions"),
             data: data.values,
             backgroundColor: "rgba(255, 159, 64, 0.8)",
             borderColor: "rgb(255, 159, 64)",
@@ -398,8 +464,21 @@ class AdminDashboard {
     return new Intl.NumberFormat().format(num);
   }
 
+  toNumber(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
   formatTitle(key) {
     return key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  }
+
+  getPageLoadDuration() {
+    if (window.performance?.timing?.navigationStart) {
+      const elapsed = Date.now() - window.performance.timing.navigationStart;
+      return Math.max(elapsed / 1000, 0);
+    }
+    return 0;
   }
 
   formatTimeAgo(timestamp) {
@@ -411,10 +490,20 @@ class AdminDashboard {
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return AdminI18n.translate("common.just_now");
-    if (minutes < 60) return `${minutes} ${AdminI18n.translate("common.minutes_ago")}`;
-    if (hours < 24) return `${hours} ${AdminI18n.translate("common.hours_ago")}`;
-    return `${days} ${AdminI18n.translate("common.days_ago")}`;
+    if (minutes < 1) return this.t("common.just_now", "just now");
+    if (minutes < 60)
+      return `${minutes} ${this.t("common.minutes_ago", "minutes ago")}`;
+    if (hours < 24)
+      return `${hours} ${this.t("common.hours_ago", "hours ago")}`;
+    return `${days} ${this.t("common.days_ago", "days ago")}`;
+  }
+
+  t(key, fallback = "") {
+    const i18n = window.AdminI18n;
+    if (i18n && typeof i18n.translate === "function") {
+      return i18n.translate(key, fallback);
+    }
+    return fallback || key;
   }
 
   getActivityIcon(type) {

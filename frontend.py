@@ -36,6 +36,12 @@ def language_context_processor(request: Request) -> dict:
     return {
         "ui_lang": lang,
         "ui_dir": "rtl" if lang == "ar" else "ltr",
+        "public_registration_enabled": settings.PUBLIC_REGISTRATION_ENABLED or settings.TESTING,
+        "csrf_token": getattr(
+            request.state,
+            "csrf_token",
+            request.cookies.get(settings.CSRF_COOKIE_NAME, ""),
+        ),
     }
 
 
@@ -85,11 +91,34 @@ async def index(request: Request, current_user: typing.Optional[User] = Depends(
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return templates.TemplateResponse(request=request, name="auth/login.html", context={"current_user": None, "messages": []})
+    return templates.TemplateResponse(
+        request=request,
+        name="auth/login.html",
+        context={"current_user": None, "messages": []},
+    )
 
 @router.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    return templates.TemplateResponse(request=request, name="auth/register.html", context={"current_user": None, "messages": []})
+    if not (settings.PUBLIC_REGISTRATION_ENABLED or settings.TESTING):
+        return RedirectResponse(url="/login?registration=disabled", status_code=302)
+    return templates.TemplateResponse(
+        request=request,
+        name="auth/register.html",
+        context={
+            "current_user": None,
+            "messages": [],
+            "registration_open": settings.PUBLIC_REGISTRATION_ENABLED or settings.TESTING,
+        },
+    )
+
+
+@router.get("/mfa/setup", response_class=HTMLResponse)
+async def mfa_setup_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="auth/mfa_setup.html",
+        context={"current_user": None, "messages": []},
+    )
 
 @router.get("/favicon.ico", include_in_schema=False)
 async def favicon():
@@ -99,6 +128,16 @@ async def favicon():
 async def change_password_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Change password page for users who must change their password"""
     return templates.TemplateResponse(request=request, name="auth/change-password.html", context={"current_user": current_user, "messages": []})
+
+@router.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request):
+    """Forgot password page — allows users to request a password reset email"""
+    return templates.TemplateResponse(request=request, name="auth/forgot-password.html", context={})
+
+@router.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(request: Request, token: str = ""):
+    """Reset password page — consumes the token from the email link"""
+    return templates.TemplateResponse(request=request, name="auth/reset-password.html", context={"token": token})
 
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
@@ -216,7 +255,7 @@ async def list_kindergartens(
             normalized_governorate = governorate
             try:
                 normalized_governorate = validate_jordan_governorate(governorate)
-            except Exception:
+            except (TypeError, ValueError):
                 normalized_governorate = governorate
             query = query.filter(Kindergarten.governorate.ilike(f"%{normalized_governorate}%"))
 
@@ -389,9 +428,11 @@ async def create_enrollment_page(request: Request, db: Session = Depends(get_db)
             Kindergarten.id == current_user.kindergarten_id
         ).all()
         user_kindergarten = kgs[0] if kgs else None
+        from config import settings as app_settings
         context = {
             "current_user": current_user,
             "kindergartens": kgs,
+            "governorates": app_settings.JORDAN_GOVERNORATES,
             "user_kindergarten": user_kindergarten,
             "is_manager_supervisor": True
         }

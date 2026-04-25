@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if ui_lang == 'en' %}Multi-Factor Authentication{% else %}المصادقة متعددة العوامل{% endif %}{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <div class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-lg-5 col-md-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4 p-lg-5" id="mfaSetupApp">
+                    <div class="text-center mb-4">
+                        <div class="display-6 text-primary mb-2"><i class="bi bi-shield-lock"></i></div>
+                        <h2 class="h4 mb-2" id="mfaHeading">
+                            {% if ui_lang == 'en' %}Set up multi-factor authentication{% else %}إعداد المصادقة متعددة العوامل{% endif %}
+                        </h2>
+                        <p class="text-muted mb-0" id="mfaIntro">
+                            {% if ui_lang == 'en' %}Scan the QR code with your authenticator app, then enter the 6-digit code to continue.{% else %}امسح رمز QR بتطبيق المصادقة ثم أدخل الرمز المكون من 6 أرقام للمتابعة.{% endif %}
+                        </p>
+                    </div>
+
+                    <div id="mfaError" class="alert alert-danger d-none" role="alert">
+                        <i class="bi bi-x-circle me-2"></i>
+                        <span id="mfaErrorMessage"></span>
+                    </div>
+
+                    <div id="mfaSetupPanel">
+                        <div class="text-center border rounded-3 p-3 bg-light mb-3" id="mfaQrPanel">
+                            <div id="mfaQrSpinner" class="py-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                                </div>
+                            </div>
+                            <img id="mfaQrImage" alt="MFA QR" class="img-fluid d-none" style="max-width: 220px;">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                {% if ui_lang == 'en' %}Manual setup key{% else %}مفتاح الإعداد اليدوي{% endif %}
+                            </label>
+                            <div class="form-control bg-light text-center" id="mfaManualKey" dir="ltr">......</div>
+                            <small class="text-muted d-block mt-2">
+                                {% if ui_lang == 'en' %}Use this secret if your authenticator app cannot scan QR codes.{% else %}استخدم هذا المفتاح إذا تعذر على تطبيق المصادقة مسح رمز QR.{% endif %}
+                            </small>
+                        </div>
+                    </div>
+
+                    <form id="mfaVerifyForm" novalidate>
+                        <div class="mb-3">
+                            <label for="mfaCode" class="form-label fw-semibold">
+                                {% if ui_lang == 'en' %}Verification code{% else %}رمز التحقق{% endif %}
+                            </label>
+                            <input type="text" class="form-control form-control-lg text-center" id="mfaCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required dir="ltr">
+                            <div class="form-text">
+                                {% if ui_lang == 'en' %}Enter the current 6-digit code from your authenticator app.{% else %}أدخل الرمز الحالي المكون من 6 أرقام من تطبيق المصادقة.{% endif %}
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                {% if ui_lang == 'en' %}Verify and continue{% else %}تحقق وتابع{% endif %}
+                            </button>
+                            <a href="/login" class="btn btn-outline-secondary">
+                                {% if ui_lang == 'en' %}Back to sign in{% else %}العودة إلى تسجيل الدخول{% endif %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

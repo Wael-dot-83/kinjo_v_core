@@ -1375,6 +1375,12 @@ class AppI18n {
     bootstrapLink.dataset.rtlHref = rtlHref;
     bootstrapLink.dataset.ltrHref = ltrHref;
     bootstrapLink.setAttribute("href", lang === "ar" ? rtlHref : ltrHref);
+    const rtlIntegrity = bootstrapLink.dataset.rtlIntegrity || "";
+    const ltrIntegrity = bootstrapLink.dataset.ltrIntegrity || "";
+    const targetIntegrity = lang === "ar" ? rtlIntegrity : ltrIntegrity;
+    if (targetIntegrity) {
+      bootstrapLink.setAttribute("integrity", targetIntegrity);
+    }
   }
 
   setHtmlLanguage(lang) {

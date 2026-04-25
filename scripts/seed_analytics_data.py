@@ -584,7 +584,7 @@ def seed_all():
         print(f"Supervisor login: supervisor_kg1_1 / supervisor123")
         print(f"Parent login: parent_1 / parent123")
 
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
         print(f"Error during seeding: {e}")
         db.rollback()
         raise

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -35,7 +35,7 @@ def list_enrollments(
     ).join(
         models.Child, models.EnrollmentApplication.child_id == models.Child.id
     ).join(
-        models.ParentProfile, models.Child.parent_id == models.ParentProfile.user_id
+        models.ParentProfile, models.Child.parent_id == models.ParentProfile.id
     ).join(
         models.Kindergarten, models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id
     )
@@ -279,7 +279,7 @@ def submit_enrollment(
         )
 
     enrollment.status = models.EnrollmentStatus.SUBMITTED
-    enrollment.submitted_at = datetime.now()
+    enrollment.submitted_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(enrollment)
 
@@ -293,7 +293,7 @@ def submit_enrollment(
 @router.post("/enrollment/{enrollment_id}/review")
 def review_enrollment(
     enrollment_id: int,
-    decision: str = Query(..., regex="^(accept|reject)$"),
+    decision: str = Query(..., pattern="^(accept|reject)$"),
     reason: Optional[str] = Query(None),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -320,7 +320,7 @@ def review_enrollment(
         if not reason or not reason.strip():
             raise HTTPException(status_code=400, detail="سبب الرفض مطلوب")
         enrollment.status = models.EnrollmentStatus.REJECTED
-        enrollment.rejected_at = datetime.now()
+        enrollment.rejected_at = datetime.now(timezone.utc)
         audit_action = "REJECT"
     else:
         # Verify profile completeness before accepting
@@ -333,11 +333,11 @@ def review_enrollment(
         if not docs_ok:
             raise HTTPException(status_code=400, detail={"missing_documents": missing_docs})
         enrollment.status = models.EnrollmentStatus.ACCEPTED
-        enrollment.accepted_at = datetime.now()
+        enrollment.accepted_at = datetime.now(timezone.utc)
         audit_action = "ACCEPT"
 
     enrollment.decision_by = current_user.id
-    enrollment.decision_at = datetime.now()
+    enrollment.decision_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(enrollment)
 

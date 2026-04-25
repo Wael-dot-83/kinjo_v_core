@@ -69,7 +69,7 @@ class DailyReportScheduler:
         try:
             from notification_tasks import send_daily_report_reminder
             send_daily_report_reminder.delay()
-        except Exception as exc:
+        except (ImportError, RuntimeError, AttributeError, TypeError) as exc:
             logger.error("Failed to queue reminder task: %s", exc)
         self._reschedule()
 
@@ -78,7 +78,7 @@ class DailyReportScheduler:
         try:
             from notification_tasks import check_daily_report_compliance
             check_daily_report_compliance.delay()
-        except Exception as exc:
+        except (ImportError, RuntimeError, AttributeError, TypeError) as exc:
             logger.error("Failed to queue compliance task: %s", exc)
         self._reschedule()
 

@@ -71,7 +71,7 @@ def _coerce_user_role(role):
     if isinstance(role, str):
         try:
             return models.UserRole(role)
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return role
     return role
 
@@ -82,7 +82,7 @@ def _coerce_user_status(status_value):
     if isinstance(status_value, str):
         try:
             return models.UserStatus(status_value)
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             return status_value
     return status_value
 

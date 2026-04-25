@@ -93,6 +93,7 @@ test.db
 # Logs
 *.log
 logs/
+kinjo-backup-*.tar.gz
 
 # Testing
 .pytest_cache/

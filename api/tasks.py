@@ -24,6 +24,7 @@ class TaskCreate(BaseModel):
     priority: Optional[str] = Field(default="MEDIUM")
     assigned_to: Optional[int] = None
     due_date: Optional[date] = None
+    kindergarten_id: Optional[int] = None
 
 
 class TaskUpdate(BaseModel):
@@ -64,13 +65,23 @@ def create_task(
     if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR]:
         raise HTTPException(status_code=403, detail="Not authorized to create tasks")
     
-    # Admin must specify kindergarten, others use their assigned one
+    # Resolve kindergarten: admins may optionally specify one; others use their assigned one
     if current_user.role == models.UserRole.ADMIN:
-        # For admin, default to first kindergarten if none specified
-        kindergarten = db.query(models.Kindergarten).first()
-        if not kindergarten:
-            raise HTTPException(status_code=400, detail="No kindergarten available")
-        kindergarten_id = kindergarten.id
+        if task_data.kindergarten_id:
+            kindergarten = db.query(models.Kindergarten).filter(
+                models.Kindergarten.id == task_data.kindergarten_id
+            ).first()
+            if not kindergarten:
+                raise HTTPException(status_code=404, detail="Kindergarten not found")
+            kindergarten_id = kindergarten.id
+        else:
+            # Fall back to first active kindergarten for admin-level tasks
+            kindergarten = db.query(models.Kindergarten).filter(
+                models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+            ).first()
+            if not kindergarten:
+                raise HTTPException(status_code=400, detail="No active kindergarten found; please provide kindergarten_id")
+            kindergarten_id = kindergarten.id
     else:
         if not current_user.kindergarten_id:
             raise HTTPException(status_code=400, detail="User not assigned to a kindergarten")

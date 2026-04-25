@@ -2,9 +2,25 @@
 Database configuration and session management
 """
 import logging
-from sqlalchemy import create_engine, event
+import sqlite3
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import sessionmaker, declarative_base, with_loader_criteria, Session
 from config import settings
+
+logger = logging.getLogger(__name__)
+
+# Validate production database configuration
+def _validate_production_database():
+    """Ensure production uses PostgreSQL (not SQLite)."""
+    if settings.ENVIRONMENT.lower() == "production":
+        if not settings.DATABASE_URL.startswith("postgresql"):
+            raise RuntimeError(
+                "CRITICAL: Production environment must use PostgreSQL. "
+                f"DATABASE_URL must start with 'postgresql', got: {settings.DATABASE_URL[:30]}..."
+            )
+        logger.info("Production database validation: PostgreSQL confirmed")
+
+_validate_production_database()
 
 # Create database engine with appropriate settings for SQLite or PostgreSQL
 connect_args = {}
@@ -33,7 +49,7 @@ if settings.DATABASE_URL.startswith("sqlite"):
         for pragma in pragmas:
             try:
                 cursor.execute(pragma)
-            except Exception:
+            except (sqlite3.DatabaseError, AttributeError):
                 # Keep startup resilient even if a specific pragma is unsupported.
                 continue
         cursor.close()
@@ -159,3 +175,29 @@ def init_db():
         logger.info("Skipping Base.metadata.create_all() in production; use Alembic migrations.")
         return
     Base.metadata.create_all(bind=engine)
+    ensure_runtime_security_schema()
+
+
+def ensure_runtime_security_schema():
+    """Backfill local-dev security columns when Alembic has not run yet."""
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("users")}
+    statements = []
+    if "mfa_enabled" not in existing_columns:
+        statements.append("ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN NOT NULL DEFAULT 0")
+    if "mfa_secret" not in existing_columns:
+        statements.append("ALTER TABLE users ADD COLUMN mfa_secret VARCHAR(255)")
+    if "mfa_enrolled_at" not in existing_columns:
+        statements.append("ALTER TABLE users ADD COLUMN mfa_enrolled_at DATETIME")
+    if "mfa_last_verified_at" not in existing_columns:
+        statements.append("ALTER TABLE users ADD COLUMN mfa_last_verified_at DATETIME")
+
+    if not statements:
+        return
+
+    with engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))

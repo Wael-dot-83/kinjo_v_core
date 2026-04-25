@@ -1,4 +1,4 @@
-"""
+﻿"""
 Script to read Word documents and extract requirements for implementation
 """
 from docx import Document
@@ -30,7 +30,7 @@ def read_word_file(file_path):
 
         return content
 
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
         print(f"Error reading {file_path}: {str(e)}")
         return []
 
@@ -46,3 +46,4 @@ if __name__ == "__main__":
     print(f"\n\n{'='*80}")
     print(f"Found {len(word_files)} Word document(s)")
     print(f"{'='*80}")
+

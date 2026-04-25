@@ -127,7 +127,7 @@
         const IS_EN = document.documentElement.lang === 'en';
         const T = (ar, en) => IS_EN ? en : ar;
 
-        const TOKEN = localStorage.getItem('access_token') || '';
+        const TOKEN = (window.AuthStorage ? AuthStorage.getToken() : null) || localStorage.getItem('kinjo_token') || '';
         const HEADERS = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN };
         let currentFilter = 'all';
 

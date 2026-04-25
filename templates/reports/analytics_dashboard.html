@@ -270,7 +270,7 @@
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 
 <script>
-    const csrfToken = '{{ request.cookies.get("csrf_token", "") }}';
+    const csrfToken = '{{ csrf_token }}';
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
 

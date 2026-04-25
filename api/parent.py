@@ -101,7 +101,7 @@ def get_parent_dashboard(
         },
         "children": children_data,
         "total_children": len(children),
-        "notifications": []  # Placeholder for notifications
+        "notifications": []
     }
 
 
@@ -210,6 +210,7 @@ def get_parent_children(
             "father_name": child.father_name,
             "mother_first_name": child.mother_first_name,
             "mother_last_name": child.mother_last_name,
+            "profile_complete": child.profile_complete if hasattr(child, 'profile_complete') else False,
             "enrollments": enrollment_list,
         })
 
@@ -259,6 +260,8 @@ def get_parent_enrollments(
             "kindergarten_name": kg.name_ar if kg else None,
             "status": e.status.value,
             "status_ar": _ENROLLMENT_STATUS_AR.get(e.status.value, e.status.value),
+            "submitted_at": e.submitted_at.isoformat() if e.submitted_at else None,
+            "created_at": e.created_at.isoformat() if e.created_at else None,
         })
 
     return {

@@ -1,4 +1,4 @@
-
+﻿
 import sys
 import os
 from datetime import date, datetime, timedelta
@@ -112,7 +112,7 @@ try:
     print("SEEDING COMPLETE")
     print("-" * 50)
 
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     print(f"SEEDING FAILED: {e}")
     sys.exit(1)
 
@@ -126,7 +126,7 @@ try:
     log("Supervisor Check-In", "PASS", "Supervisor successfully checked in child.")
 except HTTPException as e:
     log("Supervisor Check-In", "FAIL", f"Supervisor access denied: {e.status_code} - {e.detail}")
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     log("Supervisor Check-In", "ERROR", f"Unexpected error: {str(e)}")
 
 
@@ -156,7 +156,7 @@ except HTTPException as e:
 try:
     check_out_child(child_id=child.id, picked_by_name="Dad", current_user=manager, db=db)
     log("Manager Check-Out", "PASS", "Manager successfully checked out child.")
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     log("Manager Check-Out", "FAIL", f"Error: {e}")
 
 
@@ -169,6 +169,7 @@ except IntegrityError:
     db.rollback() # Reset for next test
 except HTTPException as e:
      log("Re-Check-In Same Day", "PASS", f"Handled correctly with HTTP {e.status_code}: {e.detail}")
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     log("Re-Check-In Same Day", "FAIL (Unknown)", f"Error: {type(e)} - {str(e)}")
+
 

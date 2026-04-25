@@ -99,7 +99,7 @@ def is_active_enrollment_status(status_value) -> bool:
         return status_value in ACTIVE_ENROLLMENT_STATUSES
     try:
         return EnrollmentStatus(status_value) in ACTIVE_ENROLLMENT_STATUSES
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
         return False
 
 
@@ -314,6 +314,10 @@ class User(Base):
     locked_until = Column(DateTime(timezone=True), nullable=True)
     password_changed_at = Column(DateTime(timezone=True), nullable=True)
     last_login_at = Column(DateTime(timezone=True), nullable=True)
+    mfa_enabled = Column(Boolean, default=False, nullable=False, server_default="0")
+    mfa_secret = Column(String(255), nullable=True)
+    mfa_enrolled_at = Column(DateTime(timezone=True), nullable=True)
+    mfa_last_verified_at = Column(DateTime(timezone=True), nullable=True)
     preferred_language = Column(String(10), nullable=False, default="ar", server_default="ar")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

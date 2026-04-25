@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from jose import jwt
 from auth import get_password_hash, verify_password
 import models

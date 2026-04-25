@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 
 
 def test_kpi_dashboard_admin_view(client, test_db, admin_user, auth_headers_admin, sample_kindergarten):

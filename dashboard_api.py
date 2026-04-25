@@ -1,7 +1,10 @@
 """
 Dashboard customization API endpoints
 """
+import json
+import logging
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from typing import List, Dict
 from database import get_db
@@ -10,6 +13,7 @@ from dashboard_customization import dashboard_customization
 import models
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard Customization"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/widgets")
@@ -21,7 +25,11 @@ async def get_user_widgets(
     try:
         widgets = dashboard_customization.get_user_widgets(current_user.id, current_user.role.value.lower())
         return {"widgets": widgets}
-    except Exception as e:
+    except SQLAlchemyError as e:
+        logger.error("Database error fetching dashboard widgets for user_id=%s: %s", current_user.id, str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="تعذر جلب إعدادات لوحة التحكم")
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logger.warning("Invalid dashboard widget configuration for user_id=%s: %s", current_user.id, str(e))
         raise HTTPException(status_code=500, detail="تعذر جلب إعدادات لوحة التحكم")
 
 
@@ -40,7 +48,8 @@ async def update_user_widgets(
         return {"message": "تم تحديث إعدادات لوحة التحكم بنجاح"}
     except HTTPException:
         raise
-    except Exception as e:
+    except (TypeError, ValueError) as e:
+        logger.warning("Invalid dashboard widget update request for user_id=%s: %s", current_user.id, str(e))
         raise HTTPException(status_code=500, detail="تعذر تحديث إعدادات لوحة التحكم")
 
 
@@ -56,7 +65,8 @@ async def reset_user_widgets(
             raise HTTPException(status_code=500, detail="تعذر إعادة ضبط إعدادات لوحة التحكم")
 
         return {"message": "تمت إعادة ضبط إعدادات لوحة التحكم إلى الوضع الافتراضي"}
-    except Exception as e:
+    except (TypeError, ValueError) as e:
+        logger.warning("Invalid dashboard reset request for user_id=%s: %s", current_user.id, str(e))
         raise HTTPException(status_code=500, detail="تعذر إعادة ضبط إعدادات لوحة التحكم")
 
 
@@ -76,7 +86,8 @@ async def toggle_widget(
         return {"message": f"تم {'تفعيل' if enabled else 'تعطيل'} العنصر بنجاح"}
     except HTTPException:
         raise
-    except Exception as e:
+    except (TypeError, ValueError) as e:
+        logger.warning("Invalid dashboard toggle request for user_id=%s widget_id=%s: %s", current_user.id, widget_id, str(e))
         raise HTTPException(status_code=500, detail="تعذر تغيير حالة العنصر")
 
 
@@ -95,7 +106,8 @@ async def reorder_widgets(
         return {"message": "تم تحديث ترتيب العناصر بنجاح"}
     except HTTPException:
         raise
-    except Exception as e:
+    except (TypeError, ValueError) as e:
+        logger.warning("Invalid dashboard reorder request for user_id=%s: %s", current_user.id, str(e))
         raise HTTPException(status_code=500, detail="تعذر تحديث ترتيب العناصر")
 
 
@@ -108,5 +120,6 @@ async def get_available_widgets(
     try:
         widgets = dashboard_customization.get_available_widgets(current_user.role.value.lower())
         return {"widgets": widgets}
-    except Exception as e:
+    except (TypeError, ValueError) as e:
+        logger.warning("Invalid role while fetching available dashboard widgets for user_id=%s: %s", current_user.id, str(e))
         raise HTTPException(status_code=500, detail="تعذر جلب العناصر المتاحة")

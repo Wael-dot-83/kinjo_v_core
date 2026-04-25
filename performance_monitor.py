@@ -149,7 +149,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
             return response
 
-        except Exception as e:
+        except (RuntimeError, TypeError, ValueError, AttributeError) as e:
             # Record failed request
             response_time = time.time() - start_time
             performance_monitor.record_request(response_time, is_error=True)
@@ -179,7 +179,7 @@ def setup_database_monitoring(engine):
                         f"checked_out: {pool.checkedout()}, overflow: {pool.overflow()}"
                     )
                     time.sleep(300)  # Log every 5 minutes
-                except Exception as e:
+                except (RuntimeError, TypeError, ValueError, AttributeError) as e:
                     logger.error(f"Error logging pool stats: {e}")
                     time.sleep(60)
 
@@ -189,7 +189,7 @@ def setup_database_monitoring(engine):
 
         logger.info("Database monitoring setup completed")
 
-    except Exception as e:
+    except (RuntimeError, TypeError, ValueError, AttributeError) as e:
         logger.error(f"Failed to setup database monitoring: {e}")
 
 
@@ -205,7 +205,7 @@ def start_system_monitoring():
 
         logger.info("System monitoring started successfully")
 
-    except Exception as e:
+    except (RuntimeError, TypeError, ValueError, AttributeError, ImportError) as e:
         logger.error(f"Failed to start system monitoring: {e}")
 
 

@@ -3,6 +3,7 @@ Users domain endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
 from fastapi.responses import Response
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta, UTC
@@ -49,7 +50,7 @@ def _log_access_denied(
             ip_address=ip_address,
             sensitivity_level=2
         )
-    except Exception:
+    except (SQLAlchemyError, TypeError, ValueError):
         pass
 
 DUPLICATE_ERROR_MAP = {
@@ -68,12 +69,14 @@ DUPLICATE_ERROR_MAP = {
 class UserResponse(BaseModel):
     id: int
     username: str
-    email: str
+    email: Optional[str] = None
     role: str
     status: str
     kindergarten_id: Optional[int] = None
+    must_change_password: bool = False
+    mfa_enabled: bool = False
     created_at: Optional[datetime] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -90,6 +93,8 @@ def get_current_user_info(
         role=current_user.role.value,
         status=current_user.status.value,
         kindergarten_id=current_user.kindergarten_id,
+        must_change_password=current_user.must_change_password,
+        mfa_enabled=bool(getattr(current_user, "mfa_enabled", False)),
         created_at=current_user.created_at
     )
 
@@ -300,7 +305,7 @@ def list_users(
 
 @router.get("/users/export")
 def export_users(
-    format: str = Query("csv", regex="^(csv)$"),
+    format: str = Query("csv", pattern="^(csv)$"),
     role: Optional[models.UserRole] = None,
     status_filter: Optional[models.UserStatus] = Query(None, alias="status"),
     kindergarten_id: Optional[int] = None,
@@ -721,7 +726,7 @@ def admin_reset_password(
         _log_access_denied(db, current_user, "admin_reset_password", "Cannot reset admin passwords", request)
         raise HTTPException(status_code=403, detail="Cannot reset admin passwords")
 
-    from auth import get_password_hash, verify_password
+    from auth import verify_password, change_user_password
     ip_address = request.client.host if request.client else None
     if not verify_password(reset_data.admin_password, current_user.hashed_password):
         validators.log_audit_action(
@@ -735,9 +740,9 @@ def admin_reset_password(
             sensitivity_level=3
         )
         raise HTTPException(status_code=401, detail="Admin password verification failed")
-    user.hashed_password = get_password_hash(reset_data.new_password)
 
-    db.commit()
+    from auth import change_user_password
+    change_user_password(db, user, reset_data.new_password)
 
     validators.log_audit_action(
         db=db,
@@ -753,35 +758,23 @@ def admin_reset_password(
     return {"message": "Password reset successfully"}
 
 @router.post("/users/request-password-reset")
+@limiter.limit("5/hour")
 def request_password_reset(
+    request: Request,
     reset_request: PasswordResetRequest,
     db: Session = Depends(get_db)
 ):
     """Request password reset token (for self-service)"""
     user = db.query(models.User).filter(models.User.email == reset_request.email).first()
+    # Always return the same message — never reveal whether email exists
     if not user:
-        # Don't reveal if email exists or not for security
         return {"message": "If the email exists, a reset link has been sent"}
 
-    # Generate secure token
-    import secrets
+    token = issue_password_reset_token(db, user)
+    base_url = str(request.base_url).rstrip("/")
+    deliver_password_reset_email(base_url, user, token)
 
-    token = secrets.token_urlsafe(32)
-    expires_at = datetime.now(UTC) + timedelta(hours=24)
-
-    # Save token
-    reset_token = models.PasswordResetToken(
-        user_id=user.id,
-        token=token,
-        expires_at=expires_at
-    )
-
-    db.add(reset_token)
-    db.commit()
-
-    # TODO: Send email with reset link
-    # For now, just return the token (in production, this would be emailed)
-    return {"message": "If the email exists, a reset link has been sent", "token": token}
+    return {"message": "If the email exists, a reset link has been sent"}
 
 @router.post("/users/reset-password")
 def reset_password(
@@ -790,19 +783,17 @@ def reset_password(
 ):
     """Reset password using token"""
 
-    token_record = db.query(models.PasswordResetToken).filter(
-        models.PasswordResetToken.token == reset_data.token,
-        models.PasswordResetToken.used == False,
-        models.PasswordResetToken.expires_at > datetime.now(UTC)
-    ).first()
+    token_record = resolve_valid_token(db, reset_data.token)
 
     if not token_record:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
 
-    from auth import get_password_hash
-    token_record.user.hashed_password = get_password_hash(reset_data.new_password)
+    from auth import change_user_password
+    try:
+        change_user_password(db, token_record.user, reset_data.new_password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     token_record.used = True
-
     db.commit()
 
     validators.log_audit_action(
@@ -988,7 +979,7 @@ def bulk_create_users(
                 "role": new_user.role.value
             })
 
-        except Exception as e:
+        except (SQLAlchemyError, TypeError, ValueError) as e:
             errors.append({
                 "row": i + 1,
                 "field": "unknown",

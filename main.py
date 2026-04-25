@@ -15,11 +15,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, File
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.concurrency import iterate_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from slowapi.errors import RateLimitExceeded
 
 
@@ -54,11 +56,34 @@ class UTF8StaticFiles(StaticFiles):
 
 
 import logging
+logger = logging.getLogger(__name__)
+
 import models
 from database import get_db, init_db
 from auth import authenticate_user, create_access_token, get_password_hash
 from config import settings
 from dependencies import get_current_user, get_current_user_optional, RedirectToLogin
+from middleware.auth import (
+    build_generic_auth_exception,
+    classify_login_identifier,
+    is_privileged_role,
+    sanitize_response_payload,
+)
+from middleware.csrf import csrf_protection_middleware
+from middleware.security import (
+    audit_state_changes_middleware,
+    request_timeout_middleware,
+    sanitize_json_response_middleware,
+    security_headers_middleware,
+)
+from mfa_service import (
+    decrypt_secret,
+    encrypt_secret,
+    generate_totp_secret,
+    provisioning_uri,
+    qr_code_data_url,
+    verify_code,
+)
 import validators
 from admin_security import CorrelationIdMiddleware, APIError, api_error_handler
 from rate_limiter import limiter, rate_limit_exceeded_handler
@@ -136,6 +161,19 @@ from manager_analytics_endpoints import router as manager_analytics_router
 from classification_service import router as classification_router
 from daily_reports_organization_api import router as daily_reports_organization_router
 from api.parent import router as parent_router
+from api.kindergartens import router as kindergartens_router
+from api.enrollment import router as enrollment_router
+from api.daily_reports_routes import router as daily_reports_api_router
+from api.children import router as children_router
+from api.classes import router as classes_router
+from api.attendance_routes import router as attendance_api_router
+from api.registration import router as registration_router
+from api.absence_requests import router as absence_requests_router
+from api.users import router as users_router
+from api.tasks import router as tasks_router
+from api.manager import router as manager_router
+from api.supervisor import router as supervisor_router
+from api.portfolio import router as portfolio_router
 
 # =============================================================================
 # Lifespan Event Handler
@@ -166,9 +204,13 @@ async def lifespan(app: FastAPI):
         performance_monitor.start_monitoring()
         auto_scaler.start_auto_scaling()
 
-        # Start WebSocket periodic updates
-        # from realtime_service import periodic_kpi_updates
-        # asyncio.create_task(periodic_kpi_updates())
+        # Start WebSocket periodic updates for real-time dashboards
+        try:
+            from realtime_service import periodic_kpi_updates
+            asyncio.create_task(periodic_kpi_updates())
+            logger.info("WebSocket real-time KPI updates enabled")
+        except ImportError as e:
+            logger.warning(f"Failed to enable WebSocket real-time updates: {e}")
 
     yield
     # Shutdown
@@ -228,18 +270,15 @@ app.add_middleware(
 # Compression middleware for faster API/template responses over network.
 app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
+# Request timeout middleware
+@app.middleware("http")
+async def enforce_request_timeout(request: Request, call_next):
+    return await request_timeout_middleware(request, call_next)
+
 # Security headers middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-    if settings.ENVIRONMENT == "production":
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    return response
+    return await security_headers_middleware(request, call_next)
 
 
 def _likely_contains_arabic_utf8(payload: bytes) -> bool:
@@ -318,7 +357,7 @@ async def enforce_english_language_integrity(request: Request, call_next):
         if is_gzip:
             response.headers["content-encoding"] = "gzip"
             response.headers["vary"] = "Accept-Encoding"
-    except Exception:
+    except (RuntimeError, TypeError, UnicodeDecodeError, OSError):
         if body:
             _restore_response_body(response, body)
         # Do not block responses if translation enforcement fails.
@@ -402,6 +441,20 @@ async def csrf_origin_check(request: Request, call_next):
             # may omit both in some privacy configs; SameSite=Lax handles this).
     return await call_next(request)
 
+@app.middleware("http")
+async def strict_csrf_protection(request: Request, call_next):
+    return await csrf_protection_middleware(request, call_next)
+
+
+@app.middleware("http")
+async def audit_state_changes(request: Request, call_next):
+    return await audit_state_changes_middleware(request, call_next)
+
+
+@app.middleware("http")
+async def sanitize_json_responses(request: Request, call_next):
+    return await sanitize_json_response_middleware(request, call_next)
+
 # Add UTF-8 Content-Type middleware for proper Arabic text encoding
 app.add_middleware(UTF8ContentTypeMiddleware)
 
@@ -417,8 +470,11 @@ app.add_exception_handler(APIError, api_error_handler)
 # Mount static files
 try:
     app.mount("/static", UTF8StaticFiles(directory="static"), name="static")
-except Exception:
-    pass  # Static folder might not exist
+    logger.info("Static files mounted successfully from 'static' directory")
+except FileNotFoundError as e:
+    logger.warning("Static files directory not found: %s - serving without static files", str(e))
+except (OSError, RuntimeError) as e:
+    logger.error("Failed to mount static files: %s", str(e), exc_info=False)
 
 # =============================================================================
 # Authentication Endpoints (defined BEFORE routers to take precedence)
@@ -451,9 +507,12 @@ def _log_auth_event(
             ip_address=ip_address,
             sensitivity_level=sensitivity_level
         )
-    except Exception:
-        # Avoid blocking auth flows if audit logging fails.
-        pass
+    except SQLAlchemyError as e:
+        logger.error("Failed to log audit action (database error): %s", str(e), exc_info=False)
+        # Avoid blocking auth flows if audit logging fails
+    except (RuntimeError, TypeError, ValueError, AttributeError) as e:
+        logger.error("Unexpected error logging audit action: %s", str(e), exc_info=True)
+        # Avoid blocking auth flows if audit logging fails
 
 
 def _normalize_ui_language(value: Optional[str]) -> str:
@@ -470,7 +529,7 @@ def _resolve_user_language(db: Session, user_id: int) -> str:
         )
         if pref and isinstance(pref.filter_config, dict):
             return _normalize_ui_language(pref.filter_config.get("user_lang"))
-    except Exception:
+    except (SQLAlchemyError, AttributeError, TypeError):
         pass
     return "ar"
 
@@ -540,55 +599,102 @@ def _clear_authenticated_session(response: Response) -> None:
 
 
 async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: Session):
-    """Internal login logic with account lockout support"""
+    """Internal login logic with server-side identifier validation and MFA."""
     from sqlalchemy import or_
+
     ip_address = _get_request_ip(request)
     form = await request.form()
     remember_raw = form.get("remember_me")
     remember_me = str(remember_raw).lower() in {"1", "true", "on", "yes"}
-    username = form_data.username.strip()
+    raw_username = form_data.username.strip()
 
-    # Pre-check: is the account locked?
-    from datetime import datetime as _dt, timezone as _tz
-    target_user = db.query(models.User).filter(
-        or_(models.User.username == username, models.User.email == username)
-    ).first()
-    now_utc = _dt.now(_tz.utc)
+    try:
+        identifier_type, normalized_identifier = classify_login_identifier(raw_username)
+    except ValueError:
+        raise build_generic_auth_exception()
+
+    filters = []
+    if identifier_type == "phone":
+        filters.append(models.User.phone_number == normalized_identifier)
+    elif identifier_type == "email":
+        filters.append(models.User.email == normalized_identifier)
+    else:
+        filters.extend(
+            [
+                models.User.username == normalized_identifier,
+                models.User.email == normalized_identifier.lower(),
+            ]
+        )
+
+    target_user = db.query(models.User).filter(or_(*filters)).first()
+    now_utc = datetime.now(timezone.utc)
     if target_user and target_user.locked_until:
-        # Handle both timezone-aware and naive datetimes
         locked_until = target_user.locked_until
         if locked_until.tzinfo is None:
-            # If naive, assume it's UTC
-            locked_until = locked_until.replace(tzinfo=_tz.utc)
+            locked_until = locked_until.replace(tzinfo=timezone.utc)
         if locked_until > now_utc:
             _log_auth_event(
                 db=db,
                 user_id=target_user.id,
                 action="LOGIN_LOCKED",
-                details=f"Account locked until {target_user.locked_until.isoformat()}",
+                details="Account lockout enforced",
                 ip_address=ip_address,
-                sensitivity_level=3
+                sensitivity_level=3,
             )
-            raise HTTPException(
-                status_code=status.HTTP_423_LOCKED,
-                detail="Account is temporarily locked due to too many failed login attempts. Please try again later.",
-            )
+            raise build_generic_auth_exception(status_code=status.HTTP_423_LOCKED)
 
-    user = authenticate_user(db, username, form_data.password)
+    user = authenticate_user(db, normalized_identifier, form_data.password)
     if not user:
         _log_auth_event(
             db=db,
             user_id=target_user.id if target_user else None,
             action="LOGIN_FAILED",
-            details=f"username={username}",
+            details="Credential validation failed",
             ip_address=ip_address,
-            sensitivity_level=3
+            sensitivity_level=3,
         )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+        raise build_generic_auth_exception()
+
+    user_lang = _resolve_user_language(db, user.id)
+    base_payload = {
+        "user_lang": user_lang,
+        "remember_me": remember_me,
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role.value,
+            "must_change_password": user.must_change_password,
+            "mfa_enabled": bool(getattr(user, "mfa_enabled", False)),
+        },
+    }
+
+    if not settings.TESTING and is_privileged_role(user.role):
+        purpose = "mfa_challenge" if user.mfa_enabled else "mfa_setup"
+        mfa_ticket = create_access_token(
+            data={
+                "sub": user.username,
+                "role": user.role.value,
+                "purpose": purpose,
+                "remember_me": remember_me,
+            },
+            expires_delta=timedelta(minutes=settings.MFA_TICKET_EXPIRE_MINUTES),
         )
+        _log_auth_event(
+            db=db,
+            user_id=user.id,
+            action="MFA_REQUIRED",
+            details=f"purpose={purpose}",
+            ip_address=ip_address,
+            sensitivity_level=2,
+        )
+        return {
+            **base_payload,
+            "mfa_required": True,
+            "mfa_setup_required": purpose == "mfa_setup",
+            "mfa_ticket": mfa_ticket,
+            "mfa_redirect": "/mfa/setup?mode=setup" if purpose == "mfa_setup" else "/mfa/setup?mode=challenge",
+        }
 
     access_token_expires = timedelta(
         minutes=(
@@ -599,7 +705,7 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
     )
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role.value},
-        expires_delta=access_token_expires
+        expires_delta=access_token_expires,
     )
 
     _log_auth_event(
@@ -608,23 +714,55 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
         action="LOGIN_SUCCESS",
         details=f"Login successful (remember_me={remember_me})",
         ip_address=ip_address,
-        sensitivity_level=2
+        sensitivity_level=2,
     )
-    user_lang = _resolve_user_language(db, user.id)
 
     return {
+        **base_payload,
         "access_token": access_token,
         "token_type": "bearer",
-        "user_lang": user_lang,
-        "remember_me": remember_me,
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "role": user.role.value,
-            "must_change_password": user.must_change_password
-        }
+        "mfa_required": False,
     }
+
+
+def _issue_auth_response(payload: dict, *, status_code: int = 200) -> JSONResponse:
+    response_payload = sanitize_response_payload(dict(payload))
+    response_payload.pop("remember_me", None)
+    response = JSONResponse(content=response_payload, status_code=status_code)
+    if payload.get("access_token"):
+        _set_authenticated_session(
+            response,
+            access_token=payload["access_token"],
+            remember_me=bool(payload.get("remember_me")),
+        )
+    else:
+        _set_no_store_headers(response)
+    _set_ui_language_cookie(response, payload.get("user_lang", "ar"))
+    return response
+
+
+def _decode_mfa_ticket(token: str, db: Session, *, expected_purposes: set[str]) -> tuple[models.User, str, bool]:
+    from jose import JWTError, jwt as _jwt
+
+    try:
+        payload = _jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except JWTError as exc:
+        raise HTTPException(status_code=401, detail="MFA session expired.") from exc
+
+    username = payload.get("sub")
+    purpose = payload.get("purpose")
+    if not username or purpose not in expected_purposes:
+        raise HTTPException(status_code=401, detail="MFA session expired.")
+
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user or user.status != models.UserStatus.ACTIVE:
+        raise HTTPException(status_code=401, detail="MFA session expired.")
+
+    return user, purpose, bool(payload.get("remember_me"))
+
+
+class MFACodeRequest(BaseModel):
+    code: str
 
 
 @app.post("/token")
@@ -636,16 +774,7 @@ async def token_login(
 ):
     """OAuth2 token endpoint (for frontend)"""
     payload = await _do_login(request, form_data, db)
-    response_payload = dict(payload)
-    response_payload.pop("remember_me", None)
-    response = JSONResponse(content=response_payload)
-    _set_authenticated_session(
-        response,
-        access_token=payload["access_token"],
-        remember_me=bool(payload.get("remember_me")),
-    )
-    _set_ui_language_cookie(response, payload.get("user_lang", "ar"))
-    return response
+    return _issue_auth_response(payload, status_code=202 if payload.get("mfa_required") else 200)
 
 
 @app.post("/api/auth/login")
@@ -657,16 +786,7 @@ async def api_login(
 ):
     """API login endpoint"""
     payload = await _do_login(request, form_data, db)
-    response_payload = dict(payload)
-    response_payload.pop("remember_me", None)
-    response = JSONResponse(content=response_payload)
-    _set_authenticated_session(
-        response,
-        access_token=payload["access_token"],
-        remember_me=bool(payload.get("remember_me")),
-    )
-    _set_ui_language_cookie(response, payload.get("user_lang", "ar"))
-    return response
+    return _issue_auth_response(payload, status_code=202 if payload.get("mfa_required") else 200)
 
 
 @app.post("/api/auth/logout")
@@ -688,6 +808,128 @@ async def logout(
     response = JSONResponse(content={"message": "Logged out successfully"})
     _clear_authenticated_session(response)
     return response
+
+
+@app.post("/api/auth/mfa/setup")
+async def mfa_setup(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Generate or return the TOTP setup payload for a privileged user."""
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="MFA session expired.")
+
+    user, purpose, _remember_me = _decode_mfa_ticket(
+        auth_header[7:].strip(),
+        db,
+        expected_purposes={"mfa_setup"},
+    )
+    if settings.TESTING or not is_privileged_role(user.role):
+        raise HTTPException(status_code=400, detail="MFA setup is not required.")
+
+    if user.mfa_enabled:
+        raise HTTPException(status_code=409, detail="MFA is already configured.")
+
+    secret = decrypt_secret(user.mfa_secret)
+    if not secret:
+        secret = generate_totp_secret()
+        user.mfa_secret = encrypt_secret(secret)
+        db.commit()
+        db.refresh(user)
+
+    otpauth_uri = provisioning_uri(secret, user.email or user.username)
+    return {
+        "mode": purpose,
+        "username": user.username,
+        "issuer": settings.MFA_TOTP_ISSUER,
+        "manual_key": secret,
+        "otpauth_uri": otpauth_uri,
+        "qr_code_data_url": qr_code_data_url(otpauth_uri),
+    }
+
+
+@app.post("/api/auth/mfa/verify")
+async def mfa_verify(
+    request: Request,
+    payload: MFACodeRequest,
+    db: Session = Depends(get_db),
+):
+    """Complete privileged MFA setup or challenge and issue the real session."""
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="MFA session expired.")
+
+    user, purpose, remember_me = _decode_mfa_ticket(
+        auth_header[7:].strip(),
+        db,
+        expected_purposes={"mfa_setup", "mfa_challenge"},
+    )
+
+    secret = decrypt_secret(user.mfa_secret)
+    if not secret:
+        raise HTTPException(status_code=400, detail="MFA setup has not started.")
+    if not verify_code(secret, payload.code):
+        _log_auth_event(
+            db=db,
+            user_id=user.id,
+            action="MFA_FAILED",
+            details=f"purpose={purpose}",
+            ip_address=_get_request_ip(request),
+            sensitivity_level=3,
+        )
+        raise HTTPException(status_code=401, detail="Invalid verification code.")
+
+    now_utc = datetime.now(timezone.utc)
+    if purpose == "mfa_setup":
+        # Validate MFA secret is properly set before enabling MFA
+        if not user.mfa_secret:
+            raise HTTPException(
+                status_code=500,
+                detail="MFA secret not properly initialized. Please contact support."
+            )
+        user.mfa_enabled = True
+        user.mfa_enrolled_at = now_utc
+    user.mfa_last_verified_at = now_utc
+    db.commit()
+    db.refresh(user)
+
+    access_token_expires = timedelta(
+        minutes=(
+            settings.ACCESS_TOKEN_EXPIRE_MINUTES_REMEMBER
+            if remember_me
+            else settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+    )
+    access_token = create_access_token(
+        data={"sub": user.username, "role": user.role.value},
+        expires_delta=access_token_expires,
+    )
+    _log_auth_event(
+        db=db,
+        user_id=user.id,
+        action="MFA_VERIFIED",
+        details=f"purpose={purpose}",
+        ip_address=_get_request_ip(request),
+        sensitivity_level=2,
+    )
+
+    auth_payload = {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_lang": _resolve_user_language(db, user.id),
+        "remember_me": remember_me,
+        "mfa_required": False,
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role.value,
+            "must_change_password": user.must_change_password,
+            "mfa_enabled": bool(user.mfa_enabled),
+        },
+    }
+    return _issue_auth_response(auth_payload)
 
 
 @app.post("/api/auth/refresh")
@@ -747,6 +989,19 @@ app.include_router(dr_analytics_frontend)
 app.include_router(daily_reports_organization_router, prefix="/api", tags=["Daily Reports Organization"])
 app.include_router(frontend_router)
 app.include_router(parent_router, prefix="/api", tags=["Parent"])
+app.include_router(kindergartens_router, prefix="/api", tags=["Kindergartens"])
+app.include_router(enrollment_router, prefix="/api", tags=["Enrollment"])
+app.include_router(daily_reports_api_router, prefix="/api", tags=["Daily Reports API"])
+app.include_router(children_router, prefix="/api", tags=["Children"])
+app.include_router(classes_router, prefix="/api", tags=["Classes"])
+app.include_router(attendance_api_router, prefix="/api", tags=["Attendance API"])
+app.include_router(registration_router, prefix="/api", tags=["Registration"])
+app.include_router(absence_requests_router, prefix="/api", tags=["Absence Requests"])
+app.include_router(users_router, prefix="/api", tags=["Users"])
+app.include_router(tasks_router, prefix="/api", tags=["Tasks"])
+app.include_router(manager_router, prefix="/api", tags=["Manager"])
+app.include_router(supervisor_router, prefix="/api", tags=["Supervisor"])
+app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
 
 # WebSocket endpoint for real-time dashboard updates
 from dependencies import get_current_user_optional
@@ -872,7 +1127,7 @@ async def health_check(db: Session = Depends(get_db)):
         from sqlalchemy import text
         db.execute(text("SELECT 1"))
         return {"status": "healthy", "app": settings.APP_NAME, "version": "1.0.0"}
-    except Exception:
+    except (SQLAlchemyError, RuntimeError):
         return JSONResponse(
             status_code=503,
             content={"status": "unhealthy", "app": settings.APP_NAME, "version": "1.0.0"},
@@ -905,7 +1160,7 @@ async def api_health_check(
         from sqlalchemy import text
         db.execute(text("SELECT 1"))
         db_status = "connected"
-    except Exception as e:
+    except (SQLAlchemyError, RuntimeError, AttributeError) as e:
         db_status = f"error: {str(e)}"
         overall_status = "unhealthy"
 
@@ -994,7 +1249,7 @@ async def get_system_metrics(
             "system_health_score": performance_monitor.get_system_health_score()
         }
 
-    except Exception as e:
+    except (RuntimeError, AttributeError, TypeError) as e:
         return {"error": str(e)}
 
 
@@ -1026,7 +1281,7 @@ async def get_scaling_history(
             "time_range_hours": hours
         }
 
-    except Exception as e:
+    except (RuntimeError, AttributeError, TypeError) as e:
         return {"error": str(e)}
 
 
@@ -1071,7 +1326,7 @@ async def predict_attendance_rate(
         raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
+    except (RuntimeError, AttributeError, TypeError):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -1113,7 +1368,7 @@ async def predict_incident_trend(
         raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
+    except (RuntimeError, AttributeError, TypeError):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -1155,7 +1410,7 @@ async def predict_capacity_utilization(
         raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
+    except (RuntimeError, AttributeError, TypeError):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -1204,7 +1459,7 @@ async def analyze_trends(
         raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
+    except (RuntimeError, AttributeError, TypeError):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -1235,7 +1490,7 @@ async def get_predictive_insights(
         raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception:
+    except (RuntimeError, AttributeError, TypeError):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

@@ -503,6 +503,12 @@ class AdminI18n {
     bootstrapLink.dataset.rtlHref = rtlHref;
     bootstrapLink.dataset.ltrHref = ltrHref;
     bootstrapLink.setAttribute("href", direction === "rtl" ? rtlHref : ltrHref);
+    const rtlIntegrity = bootstrapLink.dataset.rtlIntegrity || "";
+    const ltrIntegrity = bootstrapLink.dataset.ltrIntegrity || "";
+    const targetIntegrity = direction === "rtl" ? rtlIntegrity : ltrIntegrity;
+    if (targetIntegrity) {
+      bootstrapLink.setAttribute("integrity", targetIntegrity);
+    }
   }
 
   ingestCatalogLiteralPairs(arCatalog, enCatalog) {

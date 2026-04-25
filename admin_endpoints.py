@@ -79,7 +79,8 @@ def _admin_dashboard_cache_get(key: str):
         return None
     try:
         return cache_service.get(key)
-    except Exception:
+    except (RuntimeError, AttributeError, TypeError, ValueError) as e:
+        logger.warning(f"Cache get failed for key '{key}': {e}", exc_info=False)
         return None
 
 
@@ -92,9 +93,9 @@ def _admin_dashboard_cache_set(
         return
     try:
         cache_service.set(key, value, ttl_seconds=ttl_seconds)
-    except Exception:
+    except (RuntimeError, AttributeError, TypeError, ValueError) as e:
         # Best-effort caching should never break dashboard reads.
-        return
+        logger.warning(f"Cache set failed for key '{key}': {e}", exc_info=False)
 
 
 # =============================================================================
@@ -150,14 +151,16 @@ def validate_bulk_manager_assignments(
         if isinstance(role, str):
             try:
                 role = models.UserRole(role)
-            except Exception:
-                pass
+            except ValueError as e:
+                logger.warning(f"Invalid role '{role}' at record {i}: {e}")
+                role = None
         status_value = user_data.get('status', models.UserStatus.ACTIVE)
         if isinstance(status_value, str):
             try:
                 status_value = models.UserStatus(status_value)
-            except Exception:
-                pass
+            except ValueError as e:
+                logger.warning(f"Invalid status '{status_value}' at record {i}: {e}")
+                status_value = models.UserStatus.INACTIVE
         if role == models.UserRole.MANAGER:
             kg_id = user_data.get('kindergarten_id')
             if kg_id is None:
@@ -943,6 +946,104 @@ def confirm_password_reset(
 
 
 # =============================================================================
+# MFA Management Endpoints (Admin Only)
+# =============================================================================
+
+class MFABypassSchema(BaseModel):
+    """Request schema for MFA bypass (emergency admin action)"""
+    user_id: int
+    reason: str = "Emergency unlock"
+    admin_password: str  # Verify admin identity
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "user_id": 5,
+            "reason": "User locked out - lost MFA device",
+            "admin_password": "AdminPassword123!"
+        }
+    })
+
+
+@router.post("/admin/users/{user_id:int}/mfa-bypass")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+def admin_mfa_bypass(
+    request: Request,
+    user_id: int,
+    mfa_request: MFABypassSchema,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Emergency MFA bypass for locked-out users (Admin only).
+    Requires admin password verification and logs audit trail.
+    
+    WARNING: This is an emergency-only endpoint. Use sparingly and audit all usage.
+    """
+    # Verify admin's own password
+    if not verify_password(mfa_request.admin_password, current_user.hashed_password):
+        log_audit_event(
+            db, "MFA_BYPASS_FAILED_AUTH", current_user, "User",
+            target_ids=user_id,
+            metadata={"reason": "Admin password verification failed"},
+            sensitivity_level=3
+        )
+        raise unauthenticated_error("Admin password verification failed")
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise not_found_error("User not found")
+
+    # Reset MFA but don't disable it - require re-setup
+    user.mfa_secret = None
+    user.mfa_enabled = False
+    user.mfa_enrolled_at = None
+    user.mfa_last_verified_at = None
+    db.commit()
+
+    # Audit log with high sensitivity
+    log_audit_event(
+        db, "MFA_BYPASS_INITIATED", current_user, "User",
+        target_ids=user_id,
+        metadata={
+            "reason": mfa_request.reason,
+            "initiated_by": current_user.username,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        },
+        sensitivity_level=3  # Critical security event
+    )
+
+    return {
+        "message": "MFA bypass completed. User must re-enroll MFA on next login.",
+        "user_id": user_id,
+        "correlation_id": get_correlation_id()
+    }
+
+
+@router.get("/admin/users/{user_id:int}/mfa-status")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_user_mfa_status(
+    request: Request,
+    user_id: int,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get MFA status for a user (Admin only)."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise not_found_error("User not found")
+
+    return {
+        "user_id": user.id,
+        "username": user.username,
+        "mfa_enabled": user.mfa_enabled,
+        "mfa_enrolled_at": user.mfa_enrolled_at.isoformat() if user.mfa_enrolled_at else None,
+        "mfa_last_verified_at": user.mfa_last_verified_at.isoformat() if user.mfa_last_verified_at else None,
+        "mfa_secret_set": bool(user.mfa_secret),
+        "correlation_id": get_correlation_id()
+    }
+
+
+# =============================================================================
 # Bulk Operations (Hardened with Guardrails)
 # =============================================================================
 
@@ -1090,7 +1191,7 @@ def bulk_update_status(
                 before_state = model_to_dict(user)
                 user.status = bulk_data.new_status
                 succeeded.append(user_id)
-        except Exception as e:
+        except (AttributeError, ValueError, TypeError) as e:
             failed.append(user_id)
             errors.append({"user_id": user_id, "error": str(e)})
 
@@ -1329,7 +1430,7 @@ def bulk_create_users(
                 db.add(new_user)
                 db.flush()
                 succeeded.append({"row": row_num, "id": new_user.id, "username": new_user.username})
-            except Exception as e:
+            except (SQLAlchemyError, AttributeError, ValueError, KeyError) as e:
                 failed.append(row_num)
                 errors.append({
                     "row": row_num,
@@ -1394,7 +1495,7 @@ async def import_users_csv(
     try:
         contents = await file.read()
         decoded = contents.decode('utf-8-sig')  # Handle BOM
-    except Exception as e:
+    except (UnicodeDecodeError, OSError) as e:
         raise validation_error(f"Could not read file: {str(e)}")
 
     # Parse CSV
@@ -1447,7 +1548,7 @@ async def import_users_csv(
                 role=models.UserRole(role_str),
                 kindergarten_id=int(sanitized_row['kindergarten_id']) if sanitized_row.get('kindergarten_id') else None
             )
-        except Exception as e:
+        except (ValueError, AttributeError, KeyError, TypeError) as e:
             if hasattr(e, 'errors'):
                 for err in e.errors():
                     errors.append(CSVRowError(
@@ -2432,7 +2533,7 @@ def create_admin_message(
                 metadata={"reason": "notifications_disabled"},
                 sensitivity_level=1
             )
-    except Exception as exc:
+    except (SQLAlchemyError, RuntimeError, TypeError, AttributeError) as exc:
         logger.warning("Failed to enqueue notifications for message %s: %s", message.id, exc)
         warnings.append("فشل نظام الإشعارات؛ الرجاء التحقق يدوياً.")
 
@@ -2796,7 +2897,7 @@ def get_performance_metrics(
 
     try:
         return get_performance_report()
-    except Exception as e:
+    except (RuntimeError, AttributeError, TypeError, ValueError) as e:
         logger.error(f"Failed to get performance metrics: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve performance metrics")
 
@@ -2814,7 +2915,7 @@ def get_request_metrics(
 
     try:
         return performance_monitor.get_request_metrics()
-    except Exception as e:
+    except (RuntimeError, AttributeError, TypeError, ValueError) as e:
         logger.error(f"Failed to get request metrics: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve request metrics")
 
@@ -2836,7 +2937,7 @@ def get_database_metrics(
             "recent_queries": performance_monitor.get_db_metrics(limit),
             "slow_queries": performance_monitor.get_slow_queries(2.0)
         }
-    except Exception as e:
+    except (RuntimeError, AttributeError, TypeError, ValueError) as e:
         logger.error(f"Failed to get database metrics: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve database metrics")
 
@@ -2855,7 +2956,7 @@ def get_system_metrics(
 
     try:
         return performance_monitor.get_system_metrics(limit)
-    except Exception as e:
+    except (RuntimeError, AttributeError, TypeError, ValueError) as e:
         logger.error(f"Failed to get system metrics: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve system metrics")
 
@@ -3305,7 +3406,7 @@ def create_backup(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (OSError, IOError, SQLAlchemyError, ValueError) as e:
         logger.error(f"Backup creation failed: {e}")
         raise HTTPException(status_code=500, detail="Backup creation failed")
 
@@ -3324,7 +3425,7 @@ def list_backups(
 
     try:
         return backup_manager.list_backups(backup_type)
-    except Exception as e:
+    except (OSError, IOError, ValueError, KeyError) as e:
         logger.error(f"Failed to list backups: {e}")
         raise HTTPException(status_code=500, detail="Failed to list backups")
 
@@ -3378,7 +3479,7 @@ def restore_backup(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (OSError, IOError, SQLAlchemyError, ValueError) as e:
         logger.error(f"Backup restore failed: {e}")
         raise HTTPException(status_code=500, detail="Restore failed due to an internal error")
 
@@ -3423,7 +3524,7 @@ def delete_backup(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (OSError, IOError, ValueError, KeyError) as e:
         logger.error(f"Backup deletion failed: {e}")
         raise HTTPException(status_code=500, detail="Deletion failed")
 
@@ -3456,7 +3557,7 @@ def get_backup_info(
         return metadata_copy
     except HTTPException:
         raise
-    except Exception as e:
+    except (OSError, IOError, KeyError, ValueError) as e:
         logger.error(f"Failed to get backup info: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve backup info")
 
@@ -3486,7 +3587,7 @@ def cleanup_old_backups(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (OSError, IOError, ValueError, KeyError) as e:
         logger.error(f"Backup cleanup failed: {e}")
         raise HTTPException(status_code=500, detail="Cleanup failed")
 
@@ -3518,7 +3619,7 @@ def validate_backup(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (OSError, IOError, ValueError, KeyError) as e:
         logger.error(f"Backup validation failed: {e}")
         raise HTTPException(status_code=500, detail="Validation failed")
 
@@ -3577,7 +3678,7 @@ def import_kindergartens_from_excel(
         ws = wb.worksheets[0]  # Use first sheet
         rows = list(ws.iter_rows(min_row=2, values_only=True))  # skip header
         wb.close()
-    except Exception:
+    except (OSError, IOError, KeyError, ValueError, IndexError) as e:
         logger.exception("Failed to read uploaded Excel file")
         raise HTTPException(status_code=400, detail="Could not read Excel file")
 
@@ -3631,7 +3732,7 @@ def import_kindergartens_from_excel(
                     status=models.KindergartenStatus.ACTIVE,
                 )
                 db.add(kg)
-            except Exception as exc:
+            except (SQLAlchemyError, AttributeError, ValueError, KeyError) as exc:
                 logger.error(f"Excel import row {row_num} error: {exc}")
                 row_errors.append({"row": row_num, "error": "Failed to insert row"})
                 continue
@@ -3642,7 +3743,7 @@ def import_kindergartens_from_excel(
     if not dry_run:
         try:
             db.commit()
-        except Exception:
+        except (SQLAlchemyError, OSError) as e:
             db.rollback()
             logger.exception("Failed to commit kindergarten import")
             raise HTTPException(status_code=500, detail="Database commit failed")
@@ -3866,7 +3967,7 @@ async def import_kindergartens(
         with open(file_path, "wb") as f:
             content = await file.read()
             f.write(content)
-    except Exception as e:
+    except (OSError, IOError) as e:
         raise APIError(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             code=ErrorCode.INTERNAL_ERROR,
@@ -3900,7 +4001,7 @@ async def import_kindergartens(
             "result": result
         }
 
-    except Exception as e:
+    except (SQLAlchemyError, OSError, IOError, ValueError) as e:
         # Clean up file on error
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -4019,7 +4120,7 @@ def generate_incident_report(
     except HTTPException:
         db.rollback()
         raise
-    except Exception as e:
+    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
         logger.error(f"Failed to generate incident report: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -4096,7 +4197,7 @@ def list_incident_reports(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
         logger.error(f"Failed to list incident reports: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -4142,7 +4243,7 @@ def get_incident_report_detail(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
         logger.error(f"Failed to get incident report detail: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -4241,7 +4342,7 @@ def export_incident_report_csv(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (SQLAlchemyError, ValueError, IOError, OSError) as e:
         log_audit_event(
             db=db,
             action=AuditAction.INCIDENT_REPORT_EXPORT_FAILED,
@@ -4270,6 +4371,6 @@ def get_available_scopes(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
         logger.error(f"Failed to get available scopes: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

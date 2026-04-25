@@ -14,6 +14,7 @@ import os
 import json
 
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from database import get_db
 from config import settings
@@ -164,7 +165,7 @@ class MetricsCollector:
 
             return metric
 
-        except Exception as e:
+        except (psutil.Error, OSError, RuntimeError, TypeError, ValueError) as e:
             logger.error(f"Error collecting system metrics: {e}")
             return SystemMetric(timestamp=datetime.now(timezone.utc))
 
@@ -264,7 +265,7 @@ class PerformanceMonitor:
             try:
                 self.collector.collect_system_metrics()
                 time.sleep(self.collection_interval)
-            except Exception as e:
+            except (psutil.Error, OSError, RuntimeError, TypeError, ValueError) as e:
                 logger.error(f"Error in monitoring loop: {e}")
                 time.sleep(5)
 
@@ -289,7 +290,7 @@ class PerformanceMonitor:
 
             return round(health_score, 2)
 
-        except Exception as e:
+        except (psutil.Error, RuntimeError, TypeError, ValueError) as e:
             logger.error(f"Error calculating health score: {e}")
             return 50.0
 
@@ -333,8 +334,10 @@ class HealthChecker:
     async def _check_database(self) -> HealthCheckResult:
         """Check database connectivity and performance"""
         start_time = time.time()
+        db_gen = get_db()
+        db = None
         try:
-            db = next(get_db())
+            db = next(db_gen)
             # Simple query to test connectivity
             result = db.execute(text("SELECT 1")).fetchone()
             response_time = time.time() - start_time
@@ -354,7 +357,7 @@ class HealthChecker:
                     details={"error": "Invalid response"}
                 )
 
-        except Exception as e:
+        except (SQLAlchemyError, RuntimeError, StopIteration) as e:
             response_time = time.time() - start_time
             return HealthCheckResult(
                 status="unhealthy",
@@ -362,6 +365,13 @@ class HealthChecker:
                 message=f"Database connection failed: {str(e)}",
                 details={"error": str(e)}
             )
+        finally:
+            try:
+                if db is not None:
+                    db.close()
+                db_gen.close()
+            except RuntimeError:
+                pass
 
     async def _check_system_resources(self) -> HealthCheckResult:
         """Check system resource usage"""
@@ -398,7 +408,7 @@ class HealthChecker:
                 }
             )
 
-        except Exception as e:
+        except (psutil.Error, OSError, RuntimeError, TypeError, ValueError) as e:
             response_time = time.time() - start_time
             return HealthCheckResult(
                 status="unhealthy",
@@ -432,7 +442,7 @@ class HealthChecker:
                 details={"modules_loaded": ["models", "auth", "validators"]}
             )
 
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError, TypeError, ValueError) as e:
             response_time = time.time() - start_time
             return HealthCheckResult(
                 status="unhealthy",
@@ -466,7 +476,7 @@ class HealthChecker:
                 details=services_status
             )
 
-        except Exception as e:
+        except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             response_time = time.time() - start_time
             return HealthCheckResult(
                 status="warning",

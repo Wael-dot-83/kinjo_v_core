@@ -428,7 +428,7 @@ def seed_tasks():
 
         print("\n" + "="*60)
 
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
         print(f"\n❌ Error: {e}")
         db.rollback()
         raise

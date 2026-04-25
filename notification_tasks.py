@@ -92,7 +92,7 @@ def send_email_notification(notification_id: int) -> None:
         notification.status = models.NotificationStatus.SENT
         notification.sent_at = datetime.now(timezone.utc)
         db.commit()
-    except Exception as exc:
+    except (smtplib.SMTPException, httpx.HTTPError, OSError, RuntimeError, TypeError, ValueError, AttributeError) as exc:
         notification = db.query(models.Notification).filter(models.Notification.id == notification_id).first()
         if notification:
             notification.status = models.NotificationStatus.FAILED
@@ -137,7 +137,7 @@ def send_push_notification(notification_id: int) -> None:
         notification.status = models.NotificationStatus.SENT
         notification.sent_at = datetime.now(timezone.utc)
         db.commit()
-    except Exception as exc:
+    except (httpx.HTTPError, RuntimeError, OSError, TypeError, ValueError, AttributeError) as exc:
         notification = db.query(models.Notification).filter(models.Notification.id == notification_id).first()
         if notification:
             notification.status = models.NotificationStatus.FAILED
@@ -252,7 +252,7 @@ def check_daily_report_compliance() -> None:
                     db.add(mgr_notification)
                     db.commit()
 
-    except Exception as exc:
+    except (RuntimeError, TypeError, ValueError, AttributeError, OSError) as exc:
         logger.error("Error in daily report compliance check: %s", exc)
     finally:
         db.close()
@@ -319,7 +319,7 @@ def send_daily_report_reminder() -> None:
             if settings.NOTIFICATIONS_PUSH_ENABLED:
                 send_push_notification.delay(notification.id)
 
-    except Exception as exc:
+    except (RuntimeError, TypeError, ValueError, AttributeError, OSError) as exc:
         logger.error("Error in daily report reminder: %s", exc)
     finally:
         db.close()

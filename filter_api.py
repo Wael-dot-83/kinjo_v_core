@@ -1,7 +1,10 @@
 """
 Advanced filtering and search API endpoints
 """
+import json
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Any
 from database import get_db
@@ -10,6 +13,7 @@ from filter_service import filter_service
 import models
 
 router = APIRouter(prefix="/api/filters", tags=["Advanced Filtering"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/preferences")
@@ -21,7 +25,11 @@ async def get_user_filter_preferences(
     try:
         filters = filter_service.get_user_filters(current_user.id)
         return {"filters": filters}
-    except Exception as e:
+    except SQLAlchemyError as e:
+        logger.error("Database error retrieving filter preferences for user_id=%s: %s", current_user.id, str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve filter preferences")
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logger.warning("Invalid stored filter preferences for user_id=%s: %s", current_user.id, str(e))
         raise HTTPException(status_code=500, detail="Failed to retrieve filter preferences")
 
 
@@ -40,7 +48,8 @@ async def save_user_filter_preferences(
         return {"message": "Filter preferences saved successfully"}
     except HTTPException:
         raise
-    except Exception as e:
+    except (TypeError, ValueError) as e:
+        logger.warning("Invalid filter preference save request for user_id=%s: %s", current_user.id, str(e))
         raise HTTPException(status_code=500, detail="Failed to save filter preferences")
 
 
@@ -53,7 +62,8 @@ async def get_filter_options(
     try:
         options = filter_service.get_filter_options(current_user)
         return {"options": options}
-    except Exception as e:
+    except SQLAlchemyError as e:
+        logger.error("Database error retrieving filter options for user_id=%s: %s", current_user.id, str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to retrieve filter options")
 
 
@@ -73,7 +83,11 @@ async def search_kindergartens(
         return {"results": results}
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError as e:
+        logger.error("Database error searching kindergartens for user_id=%s query=%s: %s", current_user.id, q, str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Search failed")
+    except (TypeError, ValueError) as e:
+        logger.warning("Invalid kindergarten search request for user_id=%s query=%s: %s", current_user.id, q, str(e))
         raise HTTPException(status_code=500, detail="Search failed")
 
 
@@ -102,7 +116,11 @@ async def apply_filters(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError as e:
+        logger.error("Database error applying filters for user_id=%s entity_type=%s: %s", current_user.id, entity_type, str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to apply filters")
+    except (AttributeError, TypeError, ValueError) as e:
+        logger.warning("Invalid filter application request for user_id=%s entity_type=%s: %s", current_user.id, entity_type, str(e))
         raise HTTPException(status_code=500, detail="Failed to apply filters")
 
 

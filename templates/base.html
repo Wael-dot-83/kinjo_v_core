@@ -1,10 +1,15 @@
 ﻿<!DOCTYPE html>
-<html lang="{{ ui_lang | default('ar') }}" dir="{{ ui_dir | default('rtl') }}">
+{% if ui_lang == 'en' %}
+<html lang="en" dir="{{ ui_dir | default('ltr') }}">
+{% else %}
+<html lang="ar" dir="{{ ui_dir | default('rtl') }}">
+{% endif %}
 
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token | default('') }}">
     <meta name="description"
         content="{% if ui_lang == 'en' %}KinJo - Kindergarten and child care management platform{% else %}KinJo - منصة إدارة الروضات ورعاية الأطفال{% endif %}">
     <meta name="author" content="KinJo">
@@ -26,12 +31,17 @@
     <!-- Bootstrap 5.3 CSS (direction-aware on initial SSR) -->
     <link id="bootstrapCss"
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/{% if ui_dir == 'ltr' %}bootstrap.min.css{% else %}bootstrap.rtl.min.css{% endif %}"
+        integrity="{% if ui_dir == 'ltr' %}sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN{% else %}sha384-nU14brUcp6StFntEOOEBvcJm4huWjB0OcIeQ3fltAfSmuZFrkAif0T+UtNGlKKQv{% endif %}"
         data-rtl-href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css"
-        data-ltr-href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
-        crossorigin="anonymous">
+        data-ltr-href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+        data-rtl-integrity="sha384-nU14brUcp6StFntEOOEBvcJm4huWjB0OcIeQ3fltAfSmuZFrkAif0T+UtNGlKKQv"
+        data-ltr-integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+        rel="stylesheet" crossorigin="anonymous">
 
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+"
+        crossorigin="anonymous">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/css/kinjo.css">
@@ -39,8 +49,12 @@
     <script src="/static/js/page_load_timer.js"></script>
 
     <!-- SweetAlert2 -->
-    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css" rel="stylesheet"
+        integrity="sha384-9zhnRArCpusIVIudEVdI3QmXKH9nCjEGc2rNvdcQ1utx3a3zbLtW3rBOeJ2PvupL"
+        crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"
+        integrity="sha384-YB/DdIkloKoRpclWB8bNcYXWakt57USgtQPDzvnIDHYU0lasD5eWlXVo1S4ODukY"
+        crossorigin="anonymous"></script>
 
     <style>
         /* Skeleton Loader Styles */
@@ -163,7 +177,9 @@
         crossorigin="anonymous"></script>
 
     <!-- Chart.js for KPI dashboards -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+        integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
+        crossorigin="anonymous"></script>
 
     <!-- Custom JavaScript -->
     <script src="/static/js/auth.js?v=2.0"></script>

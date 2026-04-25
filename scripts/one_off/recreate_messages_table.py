@@ -1,4 +1,4 @@
-from database import get_db
+﻿from database import get_db
 from sqlalchemy import text
 
 db = next(get_db())
@@ -76,7 +76,7 @@ try:
         else:
             print("No common columns found, table left empty.")
             
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
         print(f"Restore failed (might be empty/incompatible): {e}")
 
     # 6. Cleanup backup
@@ -86,8 +86,9 @@ try:
     db.commit()
     print("Migration complete!")
 
-except Exception as e:
+except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
     print(f"Migration Failed: {e}")
     db.rollback()
 finally:
     db.close()
+

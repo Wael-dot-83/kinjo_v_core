@@ -8,6 +8,7 @@ from typing import List, Optional, Dict, Any
 from datetime import date, datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, case, desc, asc
+from sqlalchemy.exc import SQLAlchemyError
 from enum import Enum
 import os
 from pathlib import Path
@@ -1006,9 +1007,12 @@ def get_consolidated_dashboard_data(
     
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error fetching analytics data: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Internal server error while fetching analytics data: {str(e)}")
+    except SQLAlchemyError as e:
+        logger.error("Database error fetching analytics data: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while fetching analytics data")
+    except (TypeError, ValueError) as e:
+        logger.error("Invalid analytics data while fetching analytics data: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while fetching analytics data")
 
 
 
@@ -1127,17 +1131,9 @@ def export_analytics_data(
         kgs = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE).all()
         for kg in kgs:
             ratio = KPIService.compute_ratio_compliance(db, kg.id, start_date, end_date)
-            # Governance Score logic might be complex, verify if exists in KPIService
-            # KPIService.compute_governance_score returns (score, band)
-            # Assuming compute_governance_score exists as previously viewed/inferred
-            # If not, we might error. Let's assume it exists or use placeholder.
-            # I will use a safe try/except or placeholder if not sure. 
-            # Reviewing code items: 'KPIService.compute_governance_quality_index' was in viewed_code_items.
-            # But 'compute_governance_score' was mentioned in 'get_kindergarten_metrics' snippet (line 737)
-            # So it likely exists.
             try:
                 gov_score, _ = KPIService.compute_governance_score(db, kg.id, start_date, end_date)
-            except Exception:
+            except (SQLAlchemyError, TypeError, ValueError):
                 gov_score = 0
             writer.writerow([kg.name_ar, ratio, gov_score])
 
@@ -2190,34 +2186,52 @@ def get_kpi_analytics(
         
         children_query = db.query(models.Child)
         if kg_id:
-            # Get children enrolled in this kindergarten
-            enrolled_parent_ids = db.query(models.EnrollmentApplication.parent_id).filter(
+            children_query = children_query.join(
+                models.EnrollmentApplication,
+                models.EnrollmentApplication.child_id == models.Child.id,
+            ).filter(
                 models.EnrollmentApplication.kindergarten_id == kg_id,
-                models.EnrollmentApplication.status == models.EnrollmentStatus.ENROLLED
-            ).subquery()
-            children_query = children_query.filter(models.Child.parent_id.in_(enrolled_parent_ids))
+                models.EnrollmentApplication.is_active.is_(True),
+            ).distinct()
         total_children = children_query.count()
         
         days_in_period = (period_end - period_start).days + 1
         expected_logs = total_children * days_in_period
         if expected_logs > 0:
             attendance_rate = round((attendance_count / expected_logs) * 100, 2)
-    except Exception:
-        logger.exception("Failed to compute attendance rate KPI")
+    except SQLAlchemyError as e:
+        logger.error(
+            "Failed to compute attendance rate KPI for kg_id=%s period=[%s,%s]: %s",
+            kg_id, period_start, period_end, str(e),
+            exc_info=True
+        )
+    except ZeroDivisionError as e:
+        logger.warning("Division by zero in attendance rate calculation: %s", str(e))
+    except (TypeError, ValueError) as e:
+        logger.error(
+            "Invalid data computing attendance rate KPI: %s", str(e),
+            exc_info=True, extra={"kg_id": kg_id, "period_start": period_start, "period_end": period_end}
+        )
     
     # Get governance score
     governance_score = 0.0
     try:
-        scores_query = db.query(func.avg(models.GovernanceScore.overall_score)).filter(
-            models.GovernanceScore.calculated_at >= period_start,
-            models.GovernanceScore.calculated_at <= period_end
+        scores_query = db.query(func.avg(models.GovernanceScore.final_governance_score)).filter(
+            models.GovernanceScore.period_start <= period_end,
+            models.GovernanceScore.period_end >= period_start,
         )
         if kg_id:
             scores_query = scores_query.filter(models.GovernanceScore.kindergarten_id == kg_id)
         avg_score = scores_query.scalar()
         governance_score = round(float(avg_score) if avg_score else 0.0, 2)
-    except Exception:
-        logger.exception("Failed to compute governance score KPI")
+    except SQLAlchemyError as e:
+        logger.error(
+            "Failed to compute governance score KPI for kg_id=%s period=[%s,%s]: %s",
+            kg_id, period_start, period_end, str(e),
+            exc_info=True
+        )
+    except (TypeError, ValueError) as e:
+        logger.warning("Invalid data in governance score calculation: %s", str(e))
     
     # Get incident rate
     incident_rate = 0.0
@@ -2233,26 +2247,51 @@ def get_kpi_analytics(
         total_children = children_query.count() if 'children_query' in dir() else 0
         if total_children > 0:
             incident_rate = round((incident_count / total_children) * 100, 2)
-    except Exception:
-        logger.exception("Failed to compute incident rate KPI")
+    except SQLAlchemyError as e:
+        logger.error(
+            "Failed to compute incident rate KPI for kg_id=%s period=[%s,%s]: %s",
+            kg_id, period_start, period_end, str(e),
+            exc_info=True
+        )
+    except ZeroDivisionError as e:
+        logger.warning("Division by zero in incident rate calculation: %s", str(e))
+    except (TypeError, ValueError) as e:
+        logger.error(
+            "Invalid data computing incident rate KPI: %s", str(e),
+            exc_info=True
+        )
     
     # Get report completion rate
     report_completion = 0.0
     try:
         reports_query = db.query(models.DailyReport).filter(
-            func.date(models.DailyReport.report_date) >= period_start,
-            func.date(models.DailyReport.report_date) <= period_end
+            models.DailyReport.date >= period_start,
+            models.DailyReport.date <= period_end,
         )
         if kg_id:
             reports_query = reports_query.filter(models.DailyReport.kindergarten_id == kg_id)
         total_reports = reports_query.count()
         completed_reports = reports_query.filter(
-            models.DailyReport.status.in_([models.ReportStatus.APPROVED, models.ReportStatus.SENT])
+            models.DailyReport.status.in_([
+                models.DailyReportStatus.APPROVED,
+                models.DailyReportStatus.SENT_TO_PARENT,
+            ])
         ).count()
         if total_reports > 0:
             report_completion = round((completed_reports / total_reports) * 100, 2)
-    except Exception:
-        logger.exception("Failed to compute report completion KPI")
+    except SQLAlchemyError as e:
+        logger.error(
+            "Failed to compute report completion KPI for kg_id=%s period=[%s,%s]: %s",
+            kg_id, period_start, period_end, str(e),
+            exc_info=True
+        )
+    except ZeroDivisionError as e:
+        logger.warning("Division by zero in report completion calculation: %s", str(e))
+    except (TypeError, ValueError) as e:
+        logger.error(
+            "Invalid data computing report completion KPI: %s", str(e),
+            exc_info=True
+        )
     
     return {
         "attendance_rate": attendance_rate,
@@ -2387,10 +2426,13 @@ def get_analytics_dashboard(
         kpis["attendance_rate"] = round((attendance_count / expected * 100) if expected > 0 else 0, 2)
         
         # Governance score
-        avg_governance = db.query(func.avg(models.GovernanceScore.overall_score)).filter(
-            models.GovernanceScore.calculated_at >= period_start,
-            models.GovernanceScore.calculated_at <= period_end
-        ).scalar()
+        governance_query = db.query(func.avg(models.GovernanceScore.final_governance_score)).filter(
+            models.GovernanceScore.period_start <= period_end,
+            models.GovernanceScore.period_end >= period_start,
+        )
+        if kg_id:
+            governance_query = governance_query.filter(models.GovernanceScore.kindergarten_id == kg_id)
+        avg_governance = governance_query.scalar()
         kpis["governance_score"] = round(float(avg_governance) if avg_governance else 0, 2)
         
         # Incidents
@@ -2405,18 +2447,23 @@ def get_analytics_dashboard(
         
         # Report completion
         reports = db.query(models.DailyReport).filter(
-            func.date(models.DailyReport.report_date) >= period_start,
-            func.date(models.DailyReport.report_date) <= period_end
+            models.DailyReport.date >= period_start,
+            models.DailyReport.date <= period_end,
         )
         if kg_id:
             reports = reports.filter(models.DailyReport.kindergarten_id == kg_id)
         total_reports = reports.count()
         completed = reports.filter(
-            models.DailyReport.status.in_([models.ReportStatus.APPROVED, models.ReportStatus.SENT])
+            models.DailyReport.status.in_([
+                models.DailyReportStatus.APPROVED,
+                models.DailyReportStatus.SENT_TO_PARENT,
+            ])
         ).count()
         kpis["report_completion"] = round((completed / total_reports * 100) if total_reports > 0 else 0, 2)
-    except Exception:
-        logger.exception("Failed to compute dashboard KPIs")
+    except SQLAlchemyError:
+        logger.exception("Failed to compute dashboard KPIs due to database error")
+    except (ZeroDivisionError, TypeError, ValueError):
+        logger.exception("Failed to compute dashboard KPIs due to invalid analytics data")
     
     return {
         "summary": {
@@ -2790,7 +2837,7 @@ def process_export_job(job_id: int):
             file_path=job.file_path,
             file_size=job.file_size,
         )
-    except Exception as exc:  # noqa: BLE001
+    except (SQLAlchemyError, OSError, ValueError, TypeError, AttributeError, RuntimeError, ImportError, csv.Error) as exc:
         job = db.query(models.ExportJob).filter(models.ExportJob.id == job_id).first()
         if job:
             job.status = models.ExportStatus.FAILED
@@ -2875,7 +2922,7 @@ class AnalyticsService:
                 models.Class.is_active == True
             ).scalar() or 0
         else:
-            total_capacity = 0  # TODO: Add capacity field to Kindergarten model
+            total_capacity = 0
 
         # Calculate enrollment rate
         enrollment_rate = (total_children / total_capacity * 100) if total_capacity > 0 else 0.0
@@ -3409,8 +3456,11 @@ class AnalyticsService:
             total_score = attendance_score + incident_score + serious_incident_score + ratio_score
 
             return round(total_score, 2)
-        except Exception:
-            logger.exception("Failed to compute kindergarten governance score")
+        except SQLAlchemyError:
+            logger.exception("Failed to compute kindergarten governance score due to database error")
+            return 0.0
+        except (ZeroDivisionError, TypeError, ValueError):
+            logger.exception("Failed to compute kindergarten governance score due to invalid analytics data")
             return 0.0
 
     @staticmethod
@@ -3779,8 +3829,10 @@ class AnalyticsService:
                     period_start,
                     period_end
                 )
-            except Exception:
-                logger.exception("Failed to cache advanced analytics")
+            except SQLAlchemyError:
+                logger.exception("Failed to cache advanced analytics due to database error")
+            except (TypeError, ValueError):
+                logger.exception("Failed to cache advanced analytics due to invalid analytics data")
 
         return KindergartenMetrics(
             id=kg.id,

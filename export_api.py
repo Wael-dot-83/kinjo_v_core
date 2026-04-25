@@ -1,8 +1,10 @@
 """
 Export and reporting API endpoints
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any
 from datetime import date
@@ -12,6 +14,7 @@ from export_service import export_service
 import models
 
 router = APIRouter(prefix="/api/export", tags=["Export & Reporting"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/kpi-dashboard")
@@ -34,8 +37,15 @@ async def export_kpi_dashboard(
             headers={"Content-Disposition": f"attachment; filename={result['filename']}"}
         )
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    except ValueError as e:
+        logger.warning("Invalid KPI export request for user_id=%s format=%s: %s", current_user.id, format, str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+    except SQLAlchemyError as e:
+        logger.error("Database error exporting KPI dashboard for user_id=%s: %s", current_user.id, str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Export failed")
+    except TypeError as e:
+        logger.error("Invalid KPI export payload for user_id=%s: %s", current_user.id, str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Export failed")
 
 
 @router.get("/analytics-report")
@@ -74,8 +84,33 @@ async def export_analytics_report(
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    except ValueError as e:
+        logger.warning(
+            "Invalid analytics export request for user_id=%s report_type=%s format=%s: %s",
+            current_user.id,
+            report_type,
+            format,
+            str(e),
+        )
+        raise HTTPException(status_code=400, detail=str(e))
+    except SQLAlchemyError as e:
+        logger.error(
+            "Database error exporting analytics report for user_id=%s report_type=%s: %s",
+            current_user.id,
+            report_type,
+            str(e),
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail="Export failed")
+    except TypeError as e:
+        logger.error(
+            "Invalid analytics export payload for user_id=%s report_type=%s: %s",
+            current_user.id,
+            report_type,
+            str(e),
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail="Export failed")
 
 
 @router.get("/formats")

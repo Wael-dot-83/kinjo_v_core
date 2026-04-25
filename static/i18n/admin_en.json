@@ -24,6 +24,7 @@
     "user_menu": "User menu"
   },
   "common": {
+    "refresh": "Refresh",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -70,7 +71,11 @@
     "success": "Success",
     "error": "Error",
     "warning": "Warning",
-    "info": "Information"
+    "info": "Information",
+    "just_now": "just now",
+    "minutes_ago": "minutes ago",
+    "hours_ago": "hours ago",
+    "days_ago": "days ago"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -78,6 +83,9 @@
     "subtitle": "Monitor system performance and manage operations",
     "total_users": "Total Users",
     "active_users": "Active Users",
+    "total_submissions": "Total Submissions",
+    "user_activity": "User Activity",
+    "data_submissions": "Data Submissions",
     "reports_today": "Reports Today",
     "compliance_rate": "Compliance Rate",
     "system_status": "System Status",

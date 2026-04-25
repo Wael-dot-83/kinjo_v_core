@@ -57,7 +57,7 @@ def _load_json(path: Path) -> dict[str, Any]:
         return {}
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
         return {}
 
 
@@ -129,7 +129,7 @@ def _collect_pairs_from_js_literals(path: Path, pairs: dict[str, str]) -> None:
         return
     try:
         source = path.read_text(encoding="utf-8")
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         return
     for match in JS_PAIR_RE.finditer(source):
         ar_candidate = _decode_js_string(match.group(1))
@@ -142,7 +142,7 @@ def _collect_pairs_from_bilingual_calls(path: Path, pairs: dict[str, str]) -> No
         return
     try:
         source = path.read_text(encoding="utf-8")
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         return
 
     # Patterns like: tr("AR", "EN")
@@ -171,7 +171,7 @@ def _collect_pairs_from_template_conditionals(pairs: dict[str, str]) -> None:
     for template_path in TEMPLATES_DIR.rglob("*.html"):
         try:
             content = template_path.read_text(encoding="utf-8")
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             continue
         for match in JINJA_IF_UI_LANG_RE.finditer(content):
             en_raw = _strip_jinja_controls(match.group(1))

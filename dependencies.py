@@ -95,22 +95,31 @@ async def get_current_user(
 
 async def get_current_user_with_password_check(
     request: Request,
+    token: Optional[str] = Depends(oauth2_scheme),
+    kinjo_session: Optional[str] = Cookie(default=None),
+    kinjo_token: Optional[str] = Cookie(default=None),
     db: Session = Depends(get_db)
 ) -> models.User:
     """Get current user and check if password change is required"""
-    user = await get_current_user(request, db)
-    
+    user = await get_current_user(
+        request=request,
+        token=token,
+        kinjo_session=kinjo_session,
+        kinjo_token=kinjo_token,
+        db=db,
+    )
+
     # Import here to avoid circular imports
     from auth import requires_password_change
-    
+
     if requires_password_change(user):
-        # Redirect to password change page instead of allowing access
+        # Reject with 403 so API callers receive a clear signal
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Password change required",
-            headers={"X-Password-Change-Required": "true"}
+            headers={"X-Password-Change-Required": "true"},
         )
-    
+
     return user
 
 
@@ -248,5 +257,11 @@ async def get_current_user_or_redirect(
 
     if user.status != models.UserStatus.ACTIVE:
         raise RedirectToLogin("/login?inactive=true")
+
+    # Enforce server-side must_change_password — redirect to /change-password
+    # unless the user is already on that page (prevents infinite redirect loop).
+    from auth import requires_password_change
+    if requires_password_change(user) and request.url.path != "/change-password":
+        raise RedirectToLogin("/change-password")
 
     return user

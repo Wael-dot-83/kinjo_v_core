@@ -7,6 +7,7 @@ import json
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime, date
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from database import get_db
 from kpi_service import get_consolidated_kpi_dashboard_data
@@ -29,6 +30,7 @@ class ExportService:
         export_format: str = "csv"
     ) -> Dict[str, Any]:
         """Export KPI dashboard data"""
+        db: Optional[Session] = None
         try:
             if export_format not in self.supported_formats:
                 raise ValueError(f"Unsupported export format: {export_format}")
@@ -45,10 +47,15 @@ class ExportService:
                 return self._export_kpi_excel(kpi_data)
             elif export_format == "pdf":
                 return self._export_kpi_pdf(kpi_data, user)
-
-        except Exception as e:
-            logger.error(f"Failed to export KPI dashboard: {e}")
+        except SQLAlchemyError as e:
+            logger.error("Failed to export KPI dashboard due to database error: %s", str(e), exc_info=True)
             raise
+        except (TypeError, ValueError) as e:
+            logger.error("Failed to export KPI dashboard due to invalid export data: %s", str(e), exc_info=True)
+            raise
+        finally:
+            if db is not None:
+                db.close()
 
     def _export_kpi_json(self, kpi_data: Dict[str, Any]) -> Dict[str, Any]:
         """Export KPI data as JSON"""
@@ -123,6 +130,7 @@ class ExportService:
         export_format: str = "csv"
     ) -> Dict[str, Any]:
         """Export analytics report"""
+        db: Optional[Session] = None
         try:
             if export_format not in self.supported_formats:
                 raise ValueError(f"Unsupported export format: {export_format}")
@@ -139,10 +147,15 @@ class ExportService:
                 return self._export_report_excel(report_data, report_type)
             elif export_format == "pdf":
                 return self._export_report_pdf(report_data, report_type, user)
-
-        except Exception as e:
-            logger.error(f"Failed to export analytics report: {e}")
+        except SQLAlchemyError as e:
+            logger.error("Failed to export analytics report due to database error: %s", str(e), exc_info=True)
             raise
+        except (TypeError, ValueError) as e:
+            logger.error("Failed to export analytics report due to invalid export data: %s", str(e), exc_info=True)
+            raise
+        finally:
+            if db is not None:
+                db.close()
 
     def _get_report_data(self, db: Session, user: models.User, report_type: str, date_from: date, date_to: date) -> List[Dict]:
         """Get report data based on type"""

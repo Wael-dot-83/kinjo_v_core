@@ -57,6 +57,12 @@ def register_parent(
     """Register a new parent user with profile"""
     from auth import get_password_hash
 
+    if not (settings.PUBLIC_REGISTRATION_ENABLED or settings.TESTING):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Public registration is disabled. Contact an administrator for an invite.",
+        )
+
     # Check if email already exists
     existing_user = db.query(models.User).filter(
         models.User.email == registration_data.email
@@ -71,10 +77,12 @@ def register_parent(
             detail="يجب إدخال الرقم الوطني أو رقم جواز السفر"
         )
 
-    # Validate password strength (minimum 8 characters)
+    # Validate password strength (complexity policy)
     password = registration_data.password
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="كلمة المرور يجب أن تكون 8 أحرف على الأقل")
+    try:
+        validators.validate_password_policy(password)
+    except validators.ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # Create user
     user = models.User(

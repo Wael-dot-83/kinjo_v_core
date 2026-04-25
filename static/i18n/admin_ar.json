@@ -24,6 +24,7 @@
     "user_menu": "قائمة المستخدم"
   },
   "common": {
+    "refresh": "تحديث",
     "save": "حفظ",
     "cancel": "إلغاء",
     "delete": "حذف",
@@ -70,7 +71,11 @@
     "success": "نجح",
     "error": "خطأ",
     "warning": "تحذير",
-    "info": "معلومات"
+    "info": "معلومات",
+    "just_now": "الآن",
+    "minutes_ago": "دقائق مضت",
+    "hours_ago": "ساعات مضت",
+    "days_ago": "أيام مضت"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -78,6 +83,9 @@
     "subtitle": "مراقبة أداء النظام وإدارة العمليات",
     "total_users": "إجمالي المستخدمين",
     "active_users": "المستخدمون النشطون",
+    "total_submissions": "إجمالي الإدخالات",
+    "user_activity": "نشاط المستخدمين",
+    "data_submissions": "عمليات الإدخال",
     "reports_today": "التقارير اليوم",
     "compliance_rate": "معدل الامتثال",
     "system_status": "حالة النظام",

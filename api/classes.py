@@ -174,7 +174,7 @@ def get_class_required_supervisors(
     children_count = cls.enrolled_children_count if hasattr(cls, 'enrolled_children_count') and cls.enrolled_children_count else 0
     try:
         count = validators.calculate_required_supervisors(age_group, children_count)
-    except Exception as e:
+    except (validators.ValidationError, ValueError, TypeError) as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"required_supervisors": count, "age_group": age_group, "children_count": children_count, "class_id": class_id}
 
@@ -190,7 +190,7 @@ def get_required_supervisors(
     validators.validate_manager_role(current_user)
     try:
         count = validators.calculate_required_supervisors(age_group, children_count)
-    except Exception as e:
+    except (validators.ValidationError, ValueError, TypeError) as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"required_supervisors": count, "age_group": age_group, "children_count": children_count}
 

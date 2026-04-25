@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -59,7 +59,7 @@ def check_in_child(
         class_id=active_enrollment.class_id,
         date=today,
         status=models.AttendanceStatus.PRESENT,
-        check_in_at=datetime.now(),
+        check_in_at=datetime.now(timezone.utc),
         recorded_by=current_user.id
     )
     db.add(attendance)
@@ -106,7 +106,7 @@ def check_out_child(
     if not attendance:
         raise HTTPException(status_code=400, detail="Child is not checked in today")
     
-    attendance.check_out_at = datetime.now()
+    attendance.check_out_at = datetime.now(timezone.utc)
     attendance.picked_by_name = picked_by_name
     db.commit()
     db.refresh(attendance)

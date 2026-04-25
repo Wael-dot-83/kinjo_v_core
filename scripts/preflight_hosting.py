@@ -35,7 +35,7 @@ def check_routes() -> List[str]:
     errors: List[str] = []
     try:
         from main import app
-    except Exception as exc:  # pragma: no cover - preflight only
+    except (ImportError, RuntimeError, AttributeError, TypeError, ValueError) as exc:  # pragma: no cover - preflight only
         return [f"Unable to import app from main.py: {exc}"]
 
     route_methods = set()

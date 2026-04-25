@@ -5,16 +5,19 @@ Handles reading Excel files, validating data, and importing into database.
 import os
 import re
 import uuid
+import logging
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import pandas as pd
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException
 
 from models import ImportedKindergarten, ImportLog
 from database import get_db
+
+logger = logging.getLogger(__name__)
 
 
 class KindergartenImportService:
@@ -95,7 +98,7 @@ class KindergartenImportService:
         try:
             # Read Excel file
             df = pd.read_excel(file_path, sheet_name=0, header=0)
-        except Exception as e:
+        except (OSError, ValueError, ImportError) as e:
             raise ValueError(f"Error reading Excel file: {str(e)}")
 
         total_rows = len(df)
@@ -162,7 +165,9 @@ class KindergartenImportService:
                     imported += 1
                 else:
                     updated += 1
-            except Exception as e:
+            except (IntegrityError, SQLAlchemyError, KeyError, TypeError, ValueError) as e:
+                self.db.rollback()
+                logger.warning("Failed to import kindergarten row %s: %s", row_num, str(e), exc_info=isinstance(e, (IntegrityError, SQLAlchemyError)))
                 errors.append({
                     "row": row_num,
                     "errors": [f"Database error: {str(e)}"]
@@ -268,7 +273,8 @@ def import_kindergartens_cli(file_path: str) -> None:
             if len(result['errors']) > 5:
                 print(f"  ... and {len(result['errors']) - 5} more")
 
-    except Exception as e:
+    except (FileNotFoundError, ValueError, IntegrityError, SQLAlchemyError, OSError) as e:
+        logger.error("Kindergarten import failed for file %s: %s", file_path, str(e), exc_info=True)
         print(f"Import failed: {str(e)}")
         raise
     finally:

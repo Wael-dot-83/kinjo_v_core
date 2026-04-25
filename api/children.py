@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response, StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -132,13 +132,13 @@ def update_child_profile(
         try:
             child.gender = models.Gender(payload.gender.upper())
             changed = True
-        except Exception:
+        except ValueError:
             raise HTTPException(status_code=400, detail="Invalid gender")
     if payload.date_of_birth is not None:
         try:
             child.date_of_birth = date.fromisoformat(payload.date_of_birth)
             changed = True
-        except Exception:
+        except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date_of_birth")
     for field in ['father_name','mother_first_name','mother_second_name','mother_last_name','mother_nationality','mother_national_id','mother_passport_number']:
         val = getattr(payload, field)
@@ -212,12 +212,12 @@ def create_incident_json(
         description=incident_data.description,
         occurred_at=datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00')),
         followup_required_flag=incident_data.followup_required_flag or False,
-        notify_parent_at=datetime.now()
+        notify_parent_at=datetime.now(timezone.utc)
     )
     
     if incident.followup_required_flag:
         # Set 48 hour SLA
-        incident.followup_sla_deadline = datetime.now() + timedelta(hours=48)
+        incident.followup_sla_deadline = datetime.now(timezone.utc) + timedelta(hours=48)
     
     db.add(incident)
     db.commit()
@@ -301,12 +301,12 @@ def create_incident(
         description=description,
         occurred_at=datetime.fromisoformat(occurred_at),
         followup_required_flag=followup_required,
-        notify_parent_at=datetime.now()
+        notify_parent_at=datetime.now(timezone.utc)
     )
     
     if followup_required:
         # Set 48 hour SLA
-        incident.followup_sla_deadline = datetime.now() + timedelta(hours=48)
+        incident.followup_sla_deadline = datetime.now(timezone.utc) + timedelta(hours=48)
     
     db.add(incident)
     db.commit()
@@ -475,7 +475,7 @@ def verify_child_document(
 
     doc.verified = True
     doc.verified_by = current_user.id
-    doc.verified_at = datetime.now()
+    doc.verified_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(doc)
 

@@ -237,7 +237,8 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{% if ui_lang == 'en' %}Send Reminder{% else %}إرسال تذكير{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                    aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <p>{% if ui_lang == 'en' %}Do you want to send a governance reminder to <strong id="reminderTargetName"></strong>?{% else %}هل تريد إرسال تذكير حوكمة إلى <strong id="reminderTargetName"></strong>؟{% endif %}</p>
@@ -255,6 +256,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+    integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
+    crossorigin="anonymous"></script>
 <script src="/static/js/admin_governance.js" charset="utf-8"></script>
 {% endblock %}

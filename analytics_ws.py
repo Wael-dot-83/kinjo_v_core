@@ -4,6 +4,8 @@ WebSocket endpoint for live analytics dashboard updates (FastAPI)
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List
 import asyncio
+import logging
+from builtins import Exception as BuiltinException
 from jose import JWTError, jwt
 import json
 from datetime import datetime, timezone
@@ -14,6 +16,8 @@ from database import SessionLocal
 from data_quality_service import data_quality_service
 from cache_service import dashboard_cache
 from monitoring_service import performance_monitor, health_checker
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Analytics WebSocket"])
 
@@ -30,17 +34,28 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
 
     async def broadcast(self, message: str):
+        disconnected_connections = []
         for connection in self.active_connections:
             try:
                 await connection.send_text(message)
-            except Exception:
-                pass
+            except WebSocketDisconnect:
+                logger.debug("Client disconnected during broadcast")
+                disconnected_connections.append(connection)
+            except (RuntimeError, TypeError, BuiltinException) as e:
+                logger.warning("Failed to send broadcast message to WebSocket client: %s", str(e), exc_info=False)
+                disconnected_connections.append(connection)
+        
+        # Clean up disconnected clients
+        for conn in disconnected_connections:
+            self.disconnect(conn)
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
         try:
             await websocket.send_text(message)
-        except Exception:
-            pass
+        except WebSocketDisconnect:
+            logger.debug("Client disconnected before message delivery")
+        except (RuntimeError, TypeError, BuiltinException) as e:
+            logger.warning("Failed to send personal message to WebSocket client: %s", str(e), exc_info=False)
 
 manager = ConnectionManager()
 
@@ -128,16 +143,17 @@ async def websocket_dashboard(websocket: WebSocket):
                     health_status = health_checker.get_overall_health_status()
 
                     # Add monitoring section to dashboard data
+                    latest_metric = recent_metrics[-1] if isinstance(recent_metrics, list) and recent_metrics else None
                     dashboard_data['monitoring'] = {
                         'system_health_score': system_health_score,
                         'overall_health_status': health_status,
                         'performance_metrics': {
-                            'cpu_percent': recent_metrics[-1].cpu_percent if recent_metrics else 0,
-                            'memory_percent': recent_metrics[-1].memory_percent if recent_metrics else 0,
-                            'response_time_avg': recent_metrics[-1].response_time_avg if recent_metrics else 0,
-                            'error_rate': recent_metrics[-1].error_rate if recent_metrics else 0,
-                            'cache_hit_rate': recent_metrics[-1].cache_hit_rate if recent_metrics else 0
-                        } if recent_metrics else {}
+                            'cpu_percent': latest_metric.cpu_percent if latest_metric else 0,
+                            'memory_percent': latest_metric.memory_percent if latest_metric else 0,
+                            'response_time_avg': latest_metric.response_time_avg if latest_metric else 0,
+                            'error_rate': latest_metric.error_rate if latest_metric else 0,
+                            'cache_hit_rate': latest_metric.cache_hit_rate if latest_metric else 0
+                        } if latest_metric else {}
                     }
 
                 # Send validated data
@@ -148,24 +164,32 @@ async def websocket_dashboard(websocket: WebSocket):
                     "validation_status": "passed"
                 }))
 
-            except Exception as e:
+            except (RuntimeError, TypeError, ValueError, AttributeError, BuiltinException) as e:
+                logger.error("Error in WebSocket dashboard update: %s", str(e), exc_info=True)
                 # Send error information
-                await websocket.send_text(json.dumps({
-                    "type": "validation_error",
-                    "error": str(e),
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "validation_status": "failed"
-                }))
+                try:
+                    await websocket.send_text(json.dumps({
+                        "type": "validation_error",
+                        "error": str(e),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "validation_status": "failed"
+                    }))
+                except (WebSocketDisconnect, RuntimeError, TypeError, BuiltinException) as send_error:
+                    logger.warning("Failed to send error message to client: %s", str(send_error), exc_info=False)
             finally:
                 db.close()
 
             # Wait 30 seconds before next update
-            await asyncio.sleep(30)
+            try:
+                await asyncio.sleep(30)
+            except BuiltinException as sleep_error:
+                logger.debug("Stopping analytics WebSocket loop: %s", str(sleep_error))
+                break
 
     except WebSocketDisconnect:
-        pass
-    except Exception as e:
-        print(f"WebSocket error: {e}")
+        logger.debug("Client disconnected from analytics WebSocket")
+    except (RuntimeError, TypeError, ValueError, AttributeError, BuiltinException) as e:
+        logger.error("Unexpected error in WebSocket handler: %s", str(e), exc_info=True)
     finally:
         manager.disconnect(websocket)
 
@@ -243,7 +267,7 @@ async def _compute_admin_dashboard_data(db):
 
     # Add recent performance metrics if available
     recent_metrics = performance_monitor.get_recent_metrics(minutes=5)
-    if recent_metrics:
+    if isinstance(recent_metrics, list) and recent_metrics:
         latest = recent_metrics[-1]
         data['monitoring']['performance_metrics'] = {
             'cpu_percent': round(latest.cpu_percent, 1),
@@ -268,7 +292,7 @@ async def _update_admin_cache_async():
         db = SessionLocal()
         fresh_data = await _compute_admin_dashboard_data(db)
         # Cache is already updated in _compute_admin_dashboard_data
-    except Exception as e:
+    except (RuntimeError, TypeError, ValueError, AttributeError, BuiltinException) as e:
         print(f"Background admin cache update failed: {e}")
     finally:
         if db:

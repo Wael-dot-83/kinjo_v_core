@@ -7,6 +7,7 @@ import logging
 from typing import Any, Optional
 from datetime import datetime, timedelta, timezone
 import redis
+from redis.exceptions import RedisError
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -38,8 +39,8 @@ class CacheService:
                 logger.info("Redis cache initialized successfully")
             else:
                 logger.warning("Redis URL not configured, using in-memory cache")
-        except Exception as e:
-            logger.warning(f"Redis connection failed: {e}, falling back to in-memory cache")
+        except (RedisError, OSError, TypeError, ValueError) as e:
+            logger.warning("Redis connection failed: %s, falling back to in-memory cache", str(e))
             self.redis_client = None
 
     def _make_key(self, key: str) -> str:
@@ -70,8 +71,14 @@ class CacheService:
                         self._record_miss()
                         if MONITORING_AVAILABLE:
                             performance_monitor.collector.record_cache_request(is_hit=False)
-            except Exception as e:
-                logger.warning(f"Redis get error: {e}")
+            except RedisError as e:
+                logger.warning("Redis get error for key %s: %s", key, str(e))
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+                logger.warning("Invalid cached payload for key %s: %s", key, str(e))
+                try:
+                    self.redis_client.delete(cache_key)
+                except RedisError as delete_error:
+                    logger.warning("Failed to delete invalid Redis cache entry for key %s: %s", key, str(delete_error))
 
         # Fall back to memory cache
         entry = self.memory_cache.get(key)
@@ -111,8 +118,10 @@ class CacheService:
                 logger.debug(f"Cache set (Redis): {key} (TTL: {ttl_seconds}s)")
                 self._record_sets()
                 return
-            except Exception as e:
-                logger.warning(f"Redis set error: {e}")
+            except RedisError as e:
+                logger.warning("Redis set error for key %s: %s", key, str(e))
+            except (TypeError, ValueError) as e:
+                logger.warning("Cache value for key %s could not be serialized for Redis: %s", key, str(e))
 
         # Fallback to memory cache
         self.memory_cache[key] = {
@@ -131,8 +140,8 @@ class CacheService:
             try:
                 self.redis_client.delete(cache_key)
                 logger.debug(f"Cache deleted (Redis): {key}")
-            except Exception as e:
-                logger.warning(f"Redis delete error: {e}")
+            except RedisError as e:
+                logger.warning("Redis delete error for key %s: %s", key, str(e))
 
         # Also remove from memory cache
         if key in self.memory_cache:
@@ -149,8 +158,8 @@ class CacheService:
                 if keys:
                     self.redis_client.delete(*keys)
                 logger.info("Redis cache cleared")
-            except Exception as e:
-                logger.warning(f"Redis clear error: {e}")
+            except RedisError as e:
+                logger.warning("Redis clear error: %s", str(e))
 
         # Clear memory cache
         self.memory_cache.clear()
@@ -170,8 +179,8 @@ class CacheService:
             try:
                 redis_keys = self.redis_client.keys("kinjo:*")
                 stats['redis_entries'] = len(redis_keys)
-            except Exception as e:
-                logger.warning(f"Redis stats error: {e}")
+            except RedisError as e:
+                logger.warning("Redis stats error: %s", str(e))
                 stats['redis_entries'] = 0
 
         # Calculate hit rate
@@ -214,8 +223,11 @@ class CacheService:
                 if not missing_keys:
                     return result
 
-            except Exception as e:
-                logger.warning(f"Redis mget error: {e}")
+            except RedisError as e:
+                logger.warning("Redis mget error for %d keys: %s", len(keys), str(e))
+                missing_keys = keys.copy()
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+                logger.warning("Invalid cached payload during mget: %s", str(e))
                 missing_keys = keys.copy()
 
         # Fallback to memory cache for missing keys
@@ -257,8 +269,10 @@ class CacheService:
                 logger.debug(f"Cache mset (Redis): {len(key_value_pairs)} keys")
                 return
 
-            except Exception as e:
-                logger.warning(f"Redis mset error: {e}")
+            except RedisError as e:
+                logger.warning("Redis mset error for %d keys: %s", len(key_value_pairs), str(e))
+            except (TypeError, ValueError) as e:
+                logger.warning("One or more cache values could not be serialized for Redis mset: %s", str(e))
 
         # Fallback to memory cache
         for key, value in key_value_pairs.items():
@@ -315,8 +329,8 @@ class CacheService:
                 ttl = self.redis_client.ttl(cache_key)
                 if ttl > 0:
                     return ttl
-            except Exception as e:
-                logger.warning(f"Redis TTL error: {e}")
+            except RedisError as e:
+                logger.warning("Redis TTL error for key %s: %s", key, str(e))
 
         # Fallback to memory cache
         entry = self.memory_cache.get(key)

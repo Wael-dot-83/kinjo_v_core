@@ -181,7 +181,7 @@
             if (!resp.ok) throw new Error('Failed');
 
             const data = await resp.json();
-            const records = data.records || data.attendance || [];
+            const records = data.attendance || [];
 
             // Update summary
             document.getElementById('countTotal').textContent = records.length;
@@ -214,8 +214,8 @@
                             ${STATUS_LABEL[r.status] || r.status}
                         </span>
                     </td>
-                    <td>${formatTime(r.check_in_time)}</td>
-                    <td>${formatTime(r.check_out_time)}</td>
+                    <td>${formatTime(r.check_in_at)}</td>
+                    <td>${formatTime(r.check_out_at)}</td>
                     <td>${r.notes || '—'}</td>
                 </tr>
             `).join('');

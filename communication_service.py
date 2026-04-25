@@ -1001,7 +1001,7 @@ def send_message(
                 metadata={"recipient_count": len(recipients)},
                 sensitivity_level=1
             )
-    except Exception as exc:
+    except (RuntimeError, TypeError, ValueError, AttributeError) as exc:
         logger.warning("Failed to enqueue notifications for message %s: %s", msg.id, exc)
 
     return _serialize_message_detail(msg, read_at=None, archived_at=None, current_user=current_user)
@@ -1782,7 +1782,7 @@ def reply_to_message(
                 metadata={"recipient_count": len(recipients)},
                 sensitivity_level=1
             )
-    except Exception as exc:
+    except (RuntimeError, TypeError, ValueError, AttributeError) as exc:
         logger.warning("Failed to enqueue notifications for message %s: %s", reply_msg.id, exc)
 
     return _serialize_message_detail(reply_msg, read_at=None, archived_at=None, current_user=current_user)

@@ -8,7 +8,8 @@ import json
 import shutil
 import hashlib
 import logging
-from datetime import datetime, timedelta, timezone
+import threading
+from datetime import datetime, timedelta, timezone, time
 from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ class BackupManager:
             try:
                 with open(_METADATA_FILE, "r", encoding="utf-8") as f:
                     return json.load(f)
-            except Exception:
+            except (OSError, json.JSONDecodeError):
                 logger.warning("Corrupt backup metadata — starting fresh")
         return {}
 
@@ -161,7 +162,7 @@ class BackupManager:
             return False
         try:
             return _file_sha256(path) == info.get("checksum")
-        except Exception:
+        except OSError:
             return False
 
     def restore_database_backup(self, backup_name: str) -> bool:
@@ -178,7 +179,7 @@ class BackupManager:
                 shutil.copy2(_DB_PATH, pre)
             shutil.copy2(src, _DB_PATH)
             return True
-        except Exception as e:
+        except (OSError, shutil.Error) as e:
             logger.error(f"Restore failed: {e}")
             return False
 
@@ -191,7 +192,7 @@ class BackupManager:
             created = info.get("created_at", "")
             try:
                 created_dt = datetime.fromisoformat(created)
-            except Exception:
+            except (TypeError, ValueError):
                 continue
             # Make offset-naive for comparison if needed
             if created_dt.tzinfo is None:
@@ -214,12 +215,90 @@ class BackupManager:
 
 
 class BackupScheduler:
-    """Stub backup scheduler"""
-    def start_scheduler(self):
-        pass
+    """Automatic backup scheduler that runs daily at configured time."""
 
-    def stop_scheduler(self):
-        pass
+    def __init__(self, backup_time: time = time(2, 0)):  # 2:00 AM UTC by default
+        """
+        Initialize backup scheduler.
+        
+        Args:
+            backup_time: time of day to run automated backups (default 2:00 AM)
+        """
+        self.backup_time = backup_time
+        self._timers: list[threading.Timer] = []
+        self._running = False
+
+    def start_scheduler(self) -> None:
+        """Start the automatic backup scheduler."""
+        if self._running:
+            logger.warning("BackupScheduler already running")
+            return
+
+        self._running = True
+        self._schedule_next_backup()
+        logger.info(f"BackupScheduler started (runs daily at {self.backup_time.strftime('%H:%M')} UTC)")
+
+    def stop_scheduler(self) -> None:
+        """Stop the automatic backup scheduler."""
+        self._running = False
+        for timer in self._timers:
+            timer.cancel()
+        self._timers.clear()
+        logger.info("BackupScheduler stopped")
+
+    def _schedule_next_backup(self) -> None:
+        """Schedule the next backup to run."""
+        if not self._running:
+            return
+
+        now = datetime.now(timezone.utc)
+        target_dt = datetime.combine(now.date(), self.backup_time, tzinfo=timezone.utc)
+
+        # If scheduled time already passed today, schedule for tomorrow
+        if target_dt <= now:
+            target_dt += timedelta(days=1)
+
+        delay_seconds = (target_dt - now).total_seconds()
+        logger.debug(f"Next backup scheduled in {delay_seconds:.0f} seconds ({target_dt.isoformat()})")
+
+        timer = threading.Timer(delay_seconds, self._run_backup)
+        timer.daemon = True
+        timer.start()
+        self._timers.append(timer)
+
+    def _run_backup(self) -> None:
+        """Execute the automated backup."""
+        logger.info("Running automated database backup")
+        try:
+            # Create database backup
+            db_backup = backup_manager.create_database_backup(backup_type="automated")
+            logger.info(f"Database backup created: {db_backup['name']} ({db_backup['size_bytes']} bytes)")
+
+            # Create uploads backup
+            uploads_backup = backup_manager.create_uploads_backup(backup_type="automated")
+            logger.info(f"Uploads backup created: {uploads_backup['name']} ({uploads_backup['size_bytes']} bytes)")
+
+            # Create config backup
+            config_backup = backup_manager.create_config_backup(backup_type="automated")
+            logger.info(f"Config backup created: {config_backup['name']} ({config_backup['size_bytes']} bytes)")
+
+            # Cleanup old backups
+            backup_manager.cleanup_old_backups(retention_days=30)
+
+            logger.info("Automated backup completed successfully")
+
+        except (OSError, shutil.Error, json.JSONDecodeError, ValueError, TypeError) as e:
+            logger.error(f"Automated backup failed: {e}", exc_info=True)
+
+        finally:
+            # Reschedule for tomorrow
+            self._reschedule()
+
+    def _reschedule(self) -> None:
+        """Clean up finished timers and schedule next backup."""
+        self._timers = [t for t in self._timers if t.is_alive()]
+        if self._running:
+            self._schedule_next_backup()
 
 
 # Global instances

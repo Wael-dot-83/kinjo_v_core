@@ -1,13 +1,20 @@
 """
 Advanced filtering and search service for dashboard
 """
+import json
+import csv
+import logging
+import io
 from typing import Dict, List, Optional, Any
 from datetime import datetime, date, timedelta
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from database import get_db
 from cache_service import cache_service
 import models
+
+logger = logging.getLogger(__name__)
 
 
 class DashboardFilterService:
@@ -40,25 +47,35 @@ class DashboardFilterService:
             return cached
 
         # Get from database or use defaults
-        db = next(get_db())
-        user_filters = db.query(models.UserFilterPreference).filter(
-            models.UserFilterPreference.user_id == user_id
-        ).first()
+        db: Optional[Session] = None
+        try:
+            db = next(get_db())
+            user_filters = db.query(models.UserFilterPreference).filter(
+                models.UserFilterPreference.user_id == user_id
+            ).first()
 
-        if user_filters and user_filters.filter_config:
-            import json
-            filters = json.loads(user_filters.filter_config)
-        else:
-            filters = self.default_filters.copy()
+            if user_filters and user_filters.filter_config:
+                stored_filters = user_filters.filter_config
+                if isinstance(stored_filters, str):
+                    filters = json.loads(stored_filters)
+                elif isinstance(stored_filters, dict):
+                    filters = stored_filters
+                else:
+                    filters = self.default_filters.copy()
+            else:
+                filters = self.default_filters.copy()
 
-        # Cache for 30 minutes
-        cache_service.set(cache_key, filters, 1800)
-        return filters
+            # Cache for 30 minutes
+            cache_service.set(cache_key, filters, 1800)
+            return filters
+        finally:
+            if db is not None:
+                db.close()
 
     def save_user_filters(self, user_id: int, filters: Dict[str, Any]) -> bool:
         """Save user's filter preferences"""
+        db: Optional[Session] = None
         try:
-            import json
             db = next(get_db())
 
             # Validate filters
@@ -71,11 +88,11 @@ class DashboardFilterService:
             ).first()
 
             if user_filters:
-                user_filters.filter_config = json.dumps(filters)
+                user_filters.filter_config = filters
             else:
                 user_filters = models.UserFilterPreference(
                     user_id=user_id,
-                    filter_config=json.dumps(filters)
+                    filter_config=filters
                 )
                 db.add(user_filters)
 
@@ -86,10 +103,19 @@ class DashboardFilterService:
             cache_service.delete(cache_key)
 
             return True
-        except Exception as e:
-            db.rollback()
-            print(f"Error saving user filters: {e}")
+        except SQLAlchemyError as e:
+            if db is not None:
+                db.rollback()
+            logger.error("Database error saving filter preferences for user_id=%s: %s", user_id, str(e), exc_info=True)
             return False
+        except (TypeError, ValueError) as e:
+            if db is not None:
+                db.rollback()
+            logger.warning("Invalid filter payload for user_id=%s: %s", user_id, str(e))
+            return False
+        finally:
+            if db is not None:
+                db.close()
 
     def _validate_filters(self, filters: Dict[str, Any]) -> bool:
         """Validate filter configuration"""
@@ -125,15 +151,16 @@ class DashboardFilterService:
             if isinstance(end_date, str):
                 end_date = datetime.fromisoformat(end_date).date()
 
-            # Apply date filter (this will vary based on the model)
-            # This is a generic implementation - specific models may need custom date field filtering
-            pass
+            if hasattr(models.Kindergarten, "created_at"):
+                query = query.filter(
+                    func.date(models.Kindergarten.created_at) >= start_date,
+                    func.date(models.Kindergarten.created_at) <= end_date,
+                )
 
         # Kindergarten filter
         kindergarten_ids = filters.get("kindergarten_ids", [])
-        if kindergarten_ids and user.role != models.UserRole.ADMIN:
-            # Non-admin users can only see their own kindergarten
-            kindergarten_ids = [user.kindergarten_id]
+        if user.role != models.UserRole.ADMIN:
+            kindergarten_ids = [user.kindergarten_id] if user.kindergarten_id else []
 
         if kindergarten_ids:
             query = query.filter(models.Kindergarten.id.in_(kindergarten_ids))
@@ -151,14 +178,26 @@ class DashboardFilterService:
         # Status filter
         status = filters.get("status")
         if status and status != "all":
-            # This will vary based on the model - generic implementation
-            pass
+            try:
+                query = query.filter(models.Kindergarten.status == models.KindergartenStatus(str(status).upper()))
+            except (ValueError, TypeError):
+                logger.debug("Ignoring unsupported kindergarten status filter: %s", status)
 
         # Search query
         search_query = filters.get("search_query", "").strip()
         if search_query:
-            # Generic text search - specific models should implement their own search logic
-            pass
+            search_term = f"%{search_query}%"
+            query = query.filter(
+                or_(
+                    models.Kindergarten.name_ar.ilike(search_term),
+                    models.Kindergarten.name_en.ilike(search_term),
+                    models.Kindergarten.governorate.ilike(search_term),
+                    models.Kindergarten.city.ilike(search_term),
+                    models.Kindergarten.area.ilike(search_term),
+                    models.Kindergarten.address_line.ilike(search_term),
+                    models.Kindergarten.license_number.ilike(search_term),
+                )
+            )
 
         return query
 
@@ -168,11 +207,24 @@ class DashboardFilterService:
         sort_by = filters.get("sort_by", "date")
         sort_order = filters.get("sort_order", "desc")
 
-        # This is generic - specific models should implement their own sorting
+        sortable_fields = {
+            "id": models.Kindergarten.id,
+            "name_ar": models.Kindergarten.name_ar,
+            "name_en": models.Kindergarten.name_en,
+            "governorate": models.Kindergarten.governorate,
+            "city": models.Kindergarten.city,
+            "area": models.Kindergarten.area,
+            "status": models.Kindergarten.status,
+            "created_at": models.Kindergarten.created_at,
+            "updated_at": models.Kindergarten.updated_at,
+            "date": models.Kindergarten.created_at,
+        }
+        sort_column = sortable_fields.get(sort_by, models.Kindergarten.created_at)
+
         if sort_order == "desc":
-            query = query.order_by(getattr(models.Kindergarten, sort_by).desc())
+            query = query.order_by(sort_column.desc())
         else:
-            query = query.order_by(getattr(models.Kindergarten, sort_by).asc())
+            query = query.order_by(sort_column.asc())
 
         # Pagination
         page = filters.get("page", 1)
@@ -192,61 +244,101 @@ class DashboardFilterService:
 
     def get_filter_options(self, user: models.User) -> Dict[str, List]:
         """Get available filter options based on user permissions"""
-        db = next(get_db())
+        db: Optional[Session] = None
+        try:
+            db = next(get_db())
 
-        # Base query for kindergartens user can access
-        kg_query = db.query(models.Kindergarten)
+            kg_query = db.query(models.Kindergarten)
+            if user.role != models.UserRole.ADMIN:
+                kg_query = kg_query.filter(models.Kindergarten.id == user.kindergarten_id)
 
-        if user.role != models.UserRole.ADMIN:
-            kg_query = kg_query.filter(models.Kindergarten.id == user.kindergarten_id)
+            kindergartens = kg_query.all()
+            governorates = sorted({kg.governorate for kg in kindergartens if kg.governorate})
+            cities = sorted({kg.city for kg in kindergartens if kg.city})
 
-        kindergartens = kg_query.all()
-
-        # Extract unique values
-        governorates = sorted(list(set(kg.governorate for kg in kindergartens if kg.governorate)))
-        cities = sorted(list(set(kg.city for kg in kindergartens if kg.city)))
-
-        return {
-            "kindergartens": [{"id": kg.id, "name": kg.name_ar or kg.name_en} for kg in kindergartens],
-            "governorates": governorates,
-            "cities": cities,
-            "statuses": ["active", "inactive", "draft"]  # Generic statuses
-        }
+            return {
+                "kindergartens": [{"id": kg.id, "name": kg.name_ar or kg.name_en} for kg in kindergartens],
+                "governorates": list(governorates),
+                "cities": list(cities),
+                "statuses": [status.value.lower() for status in models.KindergartenStatus],
+            }
+        finally:
+            if db is not None:
+                db.close()
 
     def search_kindergartens(self, query: str, user: models.User, limit: int = 10) -> List[Dict]:
         """Search kindergartens by name"""
-        db = next(get_db())
+        db: Optional[Session] = None
+        try:
+            db = next(get_db())
 
-        # Base query
-        kg_query = db.query(models.Kindergarten).filter(
-            or_(
-                models.Kindergarten.name_ar.ilike(f"%{query}%"),
-                models.Kindergarten.name_en.ilike(f"%{query}%")
+            kg_query = db.query(models.Kindergarten).filter(
+                or_(
+                    models.Kindergarten.name_ar.ilike(f"%{query}%"),
+                    models.Kindergarten.name_en.ilike(f"%{query}%"),
+                    models.Kindergarten.governorate.ilike(f"%{query}%"),
+                    models.Kindergarten.city.ilike(f"%{query}%"),
+                )
             )
-        )
 
-        # Apply permissions
-        if user.role != models.UserRole.ADMIN:
-            kg_query = kg_query.filter(models.Kindergarten.id == user.kindergarten_id)
+            if user.role != models.UserRole.ADMIN:
+                kg_query = kg_query.filter(models.Kindergarten.id == user.kindergarten_id)
 
-        kindergartens = kg_query.limit(limit).all()
+            kindergartens = kg_query.order_by(models.Kindergarten.name_ar.asc()).limit(limit).all()
 
-        return [
-            {
-                "id": kg.id,
-                "name_ar": kg.name_ar,
-                "name_en": kg.name_en,
-                "governorate": kg.governorate,
-                "city": kg.city
-            }
-            for kg in kindergartens
-        ]
+            return [
+                {
+                    "id": kg.id,
+                    "name_ar": kg.name_ar,
+                    "name_en": kg.name_en,
+                    "governorate": kg.governorate,
+                    "city": kg.city,
+                }
+                for kg in kindergartens
+            ]
+        finally:
+            if db is not None:
+                db.close()
 
     def export_filtered_data(self, filters: Dict[str, Any], user: models.User, export_format: str = "csv"):
         """Export filtered data in specified format"""
-        # This is a placeholder for export functionality
-        # Implementation would depend on what data is being exported
-        pass
+        db: Optional[Session] = None
+        try:
+            db = next(get_db())
+            query = db.query(models.Kindergarten)
+            query = self.apply_filters_to_query(query, filters, user)
+            query = query.order_by(models.Kindergarten.id.asc())
+            rows = query.all()
+
+            serialized_rows = [
+                {
+                    "id": kg.id,
+                    "name_ar": kg.name_ar,
+                    "name_en": kg.name_en,
+                    "governorate": kg.governorate,
+                    "city": kg.city,
+                    "area": kg.area,
+                    "status": kg.status.value if hasattr(kg.status, "value") else str(kg.status),
+                    "license_number": kg.license_number,
+                    "license_valid_until": kg.license_valid_until.isoformat() if kg.license_valid_until else None,
+                }
+                for kg in rows
+            ]
+
+            if export_format.lower() == "json":
+                return json.dumps(serialized_rows, ensure_ascii=False)
+
+            output = io.StringIO()
+            writer = csv.DictWriter(
+                output,
+                fieldnames=["id", "name_ar", "name_en", "governorate", "city", "area", "status", "license_number", "license_valid_until"],
+            )
+            writer.writeheader()
+            writer.writerows(serialized_rows)
+            return output.getvalue()
+        finally:
+            if db is not None:
+                db.close()
 
 
 # Global instance
