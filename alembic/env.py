@@ -76,12 +76,9 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        # Enable batch mode for SQLite to handle schema changes
-        render_as_batch = connection.dialect.name == "sqlite"
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            render_as_batch=render_as_batch
         )
 
         with context.begin_transaction():

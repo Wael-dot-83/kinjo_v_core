@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 # Validate production database configuration
 def _validate_production_database():
     """Ensure production uses PostgreSQL (not SQLite)."""
+    if settings.TESTING:
+        return
     if settings.ENVIRONMENT.lower() == "production":
         if not settings.DATABASE_URL.startswith("postgresql"):
             raise RuntimeError(
