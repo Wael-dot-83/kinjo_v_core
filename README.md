@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# Kinjo_v2
-python 
-=======
 # KinJo - Kindergarten & Childcare Management Platform
 
 Enterprise-grade management platform for kindergartens and childcare facilities in Jordan.
@@ -599,4 +595,3 @@ Proprietary - All rights reserved
 - User Stories: 22/22 implemented
 - Validation Levels: L1-L5 complete
 - KPIs: Full governance dashboard
->>>>>>> 7afd898 (Initial commit)
