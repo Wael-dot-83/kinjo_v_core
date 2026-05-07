@@ -1,0 +1,546 @@
+# Translations template for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-04-26 08:13+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: i18n.py:159 templates/attendance/absence_requests.html:14
+#: templates/parent/attendance.html:14 templates/parent/children.html:14
+#: templates/parent/enrollments.html:14 templates/parent/profile.html:14
+#: templates/reports/parent_list.html:14
+msgid "Dashboard"
+msgstr ""
+
+#: i18n.py:160 templates/parent/children.html:3
+#: templates/parent/children.html:10 templates/parent/children.html:15
+#: templates/parent/profile.html:291
+msgid "My Children"
+msgstr ""
+
+#: i18n.py:161 templates/parent/attendance.html:15
+msgid "Attendance"
+msgstr ""
+
+#: i18n.py:162 templates/reports/parent_list.html:15
+msgid "Reports"
+msgstr ""
+
+#: i18n.py:163
+msgid "Profile"
+msgstr ""
+
+#: i18n.py:164 templates/parent/enrollments.html:15
+msgid "Enrollments"
+msgstr ""
+
+#: i18n.py:165 templates/attendance/absence_requests.html:3
+#: templates/attendance/absence_requests.html:10
+#: templates/attendance/absence_requests.html:15
+#: templates/parent/profile.html:303
+msgid "Absence Requests"
+msgstr ""
+
+#: i18n.py:166 templates/parent/attendance.html:54
+msgid "Present"
+msgstr ""
+
+#: i18n.py:167 templates/parent/attendance.html:62
+msgid "Absent"
+msgstr ""
+
+#: i18n.py:168 templates/parent/attendance.html:70
+msgid "Late"
+msgstr ""
+
+#: i18n.py:169
+msgid "Pending"
+msgstr ""
+
+#: i18n.py:170 templates/attendance/absence_requests.html:36
+#: templates/reports/parent_list.html:59
+msgid "Approved"
+msgstr ""
+
+#: i18n.py:171 templates/attendance/absence_requests.html:39
+#: templates/parent/enrollments.html:58 templates/reports/parent_list.html:63
+msgid "Rejected"
+msgstr ""
+
+#: i18n.py:172
+msgid "No data found"
+msgstr ""
+
+#: i18n.py:173 templates/attendance/absence_requests.html:64
+#: templates/parent/attendance.html:96 templates/parent/enrollments.html:82
+#: templates/parent/profile.html:278
+msgid "Loading..."
+msgstr ""
+
+#: i18n.py:174
+msgid "Submit"
+msgstr ""
+
+#: i18n.py:175 templates/attendance/absence_requests.html:112
+#: templates/parent/profile.html:123 templates/parent/profile.html:200
+#: templates/parent/profile.html:257
+msgid "Cancel"
+msgstr ""
+
+#: i18n.py:176 templates/parent/profile.html:120
+msgid "Save Changes"
+msgstr ""
+
+#: i18n.py:177
+msgid "Delete"
+msgstr ""
+
+#: i18n.py:178 templates/parent/profile.html:39
+#: templates/parent/profile.html:138 templates/parent/profile.html:215
+msgid "Edit"
+msgstr ""
+
+#: i18n.py:179
+msgid "Parent access only"
+msgstr ""
+
+#: api/children.py:59 i18n.py:180
+msgid "Parent profile not found"
+msgstr ""
+
+#: i18n.py:181
+msgid "Not authorized to view this child's attendance"
+msgstr ""
+
+#: api/children.py:75 api/users.py:130 i18n.py:182
+msgid "Supported languages: ar, en"
+msgstr ""
+
+#: i18n.py:183
+msgid "Are you sure?"
+msgstr ""
+
+#: i18n.py:184
+msgid "Saved successfully"
+msgstr ""
+
+#: i18n.py:185
+msgid "An error occurred"
+msgstr ""
+
+#: api/children.py:66
+msgid "Not authorized to update this profile"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:12
+#: templates/parent/attendance.html:12 templates/parent/children.html:12
+#: templates/parent/enrollments.html:12 templates/parent/profile.html:12
+#: templates/reports/parent_list.html:12
+msgid "Breadcrumb"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:20
+#: templates/attendance/absence_requests.html:79
+msgid "New Absence Request"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:30
+msgid "All"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:33
+#: templates/parent/enrollments.html:50 templates/reports/parent_list.html:62
+msgid "Under Review"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:51
+#: templates/attendance/absence_requests.html:86
+msgid "Child Name"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:52
+msgid "From"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:53
+msgid "To"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:54
+#: templates/attendance/absence_requests.html:106
+msgid "Reason"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:55
+#: templates/parent/attendance.html:86 templates/parent/enrollments.html:74
+msgid "Status"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:56
+#: templates/parent/attendance.html:89 templates/reports/parent_list.html:74
+msgid "Notes"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:57
+msgid "Action"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:81
+msgid "Close"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:88
+msgid "Select child..."
+msgstr ""
+
+#: templates/attendance/absence_requests.html:96
+msgid "From Date"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:101
+msgid "To Date"
+msgstr ""
+
+#: templates/attendance/absence_requests.html:108
+msgid "Please state the reason for absence..."
+msgstr ""
+
+#: templates/attendance/absence_requests.html:114
+msgid "Submit Request"
+msgstr ""
+
+#: templates/dashboard/parent.html:3
+msgid "Parent Dashboard"
+msgstr ""
+
+#: templates/dashboard/parent.html:11
+msgid "Welcome"
+msgstr ""
+
+#: templates/dashboard/parent.html:13
+msgid "Follow your children's news and daily reports"
+msgstr ""
+
+#: templates/dashboard/parent.html:25 templates/parent/children.html:33
+msgid "Loading children data..."
+msgstr ""
+
+#: templates/dashboard/parent.html:38 templates/parent/children.html:21
+#: templates/parent/profile.html:294
+msgid "Register New Child"
+msgstr ""
+
+#: templates/dashboard/parent.html:44
+msgid "Daily Reports"
+msgstr ""
+
+#: templates/dashboard/parent.html:50
+msgid "Messages"
+msgstr ""
+
+#: templates/dashboard/parent.html:56 templates/parent/profile.html:3
+#: templates/parent/profile.html:10 templates/parent/profile.html:15
+msgid "My Profile"
+msgstr ""
+
+#: templates/dashboard/parent.html:72
+msgid "Latest Daily Reports"
+msgstr ""
+
+#: templates/dashboard/parent.html:74
+msgid "View All"
+msgstr ""
+
+#: templates/dashboard/parent.html:90
+msgid "Upcoming Events"
+msgstr ""
+
+#: templates/dashboard/parent.html:97
+msgid "No upcoming events"
+msgstr ""
+
+#: templates/dashboard/parent.html:107
+msgid "Need Help?"
+msgstr ""
+
+#: templates/dashboard/parent.html:108
+msgid "Contact kindergarten management"
+msgstr ""
+
+#: templates/dashboard/parent.html:110
+msgid "Contact Us"
+msgstr ""
+
+#: templates/parent/attendance.html:3 templates/parent/attendance.html:10
+msgid "Attendance Record"
+msgstr ""
+
+#: templates/parent/attendance.html:26 templates/reports/parent_list.html:32
+msgid "Child:"
+msgstr ""
+
+#: templates/parent/attendance.html:28 templates/reports/parent_list.html:34
+msgid "All Children"
+msgstr ""
+
+#: templates/parent/attendance.html:32 templates/reports/parent_list.html:28
+msgid "Date:"
+msgstr ""
+
+#: templates/parent/attendance.html:36 templates/reports/parent_list.html:38
+msgid "Filter"
+msgstr ""
+
+#: templates/parent/attendance.html:46
+msgid "Total Records"
+msgstr ""
+
+#: templates/parent/attendance.html:84 templates/parent/enrollments.html:72
+#: templates/reports/parent_list.html:53
+msgid "Child"
+msgstr ""
+
+#: templates/parent/attendance.html:85
+msgid "Date"
+msgstr ""
+
+#: templates/parent/attendance.html:87
+msgid "Check-in"
+msgstr ""
+
+#: templates/parent/attendance.html:88
+msgid "Check-out"
+msgstr ""
+
+#: templates/parent/enrollments.html:3 templates/parent/enrollments.html:10
+msgid "Enrollment Applications"
+msgstr ""
+
+#: templates/parent/enrollments.html:21
+msgid "New Application"
+msgstr ""
+
+#: templates/parent/enrollments.html:34
+msgid "Total"
+msgstr ""
+
+#: templates/parent/enrollments.html:42
+msgid "Active / Accepted"
+msgstr ""
+
+#: templates/parent/enrollments.html:73
+msgid "Kindergarten"
+msgstr ""
+
+#: templates/parent/enrollments.html:75
+msgid "Submitted"
+msgstr ""
+
+#: templates/parent/profile.html:26
+msgid "Your profile is incomplete."
+msgstr ""
+
+#: templates/parent/profile.html:27
+msgid "You must complete all required fields to submit enrollment requests."
+msgstr ""
+
+#: templates/parent/profile.html:36
+msgid "Personal Information"
+msgstr ""
+
+#: templates/parent/profile.html:47 templates/parent/profile.html:93
+msgid "First Name"
+msgstr ""
+
+#: templates/parent/profile.html:51 templates/parent/profile.html:97
+msgid "Middle Name"
+msgstr ""
+
+#: templates/parent/profile.html:55 templates/parent/profile.html:101
+msgid "Last Name"
+msgstr ""
+
+#: templates/parent/profile.html:59 templates/parent/profile.html:105
+msgid "Phone Number"
+msgstr ""
+
+#: templates/parent/profile.html:63
+msgid "Email"
+msgstr ""
+
+#: templates/parent/profile.html:67
+msgid "Gender"
+msgstr ""
+
+#: templates/parent/profile.html:71
+msgid "Nationality"
+msgstr ""
+
+#: templates/parent/profile.html:75 templates/parent/profile.html:109
+msgid "Relationship to Child"
+msgstr ""
+
+#: templates/parent/profile.html:79
+msgid "National ID"
+msgstr ""
+
+#: templates/parent/profile.html:83
+msgid "Passport Number"
+msgstr ""
+
+#: templates/parent/profile.html:111
+msgid "Select..."
+msgstr ""
+
+#: templates/parent/profile.html:112
+msgid "Father"
+msgstr ""
+
+#: templates/parent/profile.html:113
+msgid "Mother"
+msgstr ""
+
+#: templates/parent/profile.html:114
+msgid "Guardian"
+msgstr ""
+
+#: templates/parent/profile.html:115
+msgid "Other"
+msgstr ""
+
+#: templates/parent/profile.html:135
+msgid "Address"
+msgstr ""
+
+#: templates/parent/profile.html:146 templates/parent/profile.html:172
+msgid "Governorate"
+msgstr ""
+
+#: templates/parent/profile.html:150 templates/parent/profile.html:178
+msgid "City"
+msgstr ""
+
+#: templates/parent/profile.html:154 templates/parent/profile.html:184
+msgid "Area"
+msgstr ""
+
+#: templates/parent/profile.html:158 templates/parent/profile.html:188
+msgid "Home Address"
+msgstr ""
+
+#: templates/parent/profile.html:162 templates/parent/profile.html:192
+msgid "Work Address"
+msgstr ""
+
+#: templates/parent/profile.html:174
+msgid "Select governorate"
+msgstr ""
+
+#: templates/parent/profile.html:180
+msgid "Select governorate first"
+msgstr ""
+
+#: templates/parent/profile.html:197
+msgid "Save Address"
+msgstr ""
+
+#: templates/parent/profile.html:212
+msgid "Emergency Contact"
+msgstr ""
+
+#: templates/parent/profile.html:223 templates/parent/profile.html:241
+msgid "Contact Name"
+msgstr ""
+
+#: templates/parent/profile.html:227 templates/parent/profile.html:245
+msgid "Contact Phone"
+msgstr ""
+
+#: templates/parent/profile.html:231 templates/parent/profile.html:249
+msgid "Relationship"
+msgstr ""
+
+#: templates/parent/profile.html:254
+msgid "Save Emergency Contact"
+msgstr ""
+
+#: templates/parent/profile.html:276
+msgid "Parent"
+msgstr ""
+
+#: templates/parent/profile.html:286
+msgid "Quick Links"
+msgstr ""
+
+#: templates/parent/profile.html:297
+msgid "Enrollment Requests"
+msgstr ""
+
+#: templates/parent/profile.html:300
+msgid "My Reports"
+msgstr ""
+
+#: templates/parent/profile.html:312
+msgid "Preferences"
+msgstr ""
+
+#: templates/parent/profile.html:318
+msgid "Receive correspondence"
+msgstr ""
+
+#: templates/parent/profile.html:321
+msgid "Language"
+msgstr ""
+
+#: templates/parent/profile.html:323
+msgid "Arabic"
+msgstr ""
+
+#: templates/parent/profile.html:324
+msgid "English"
+msgstr ""
+
+#: templates/reports/parent_list.html:3 templates/reports/parent_list.html:10
+msgid "My Children's Reports"
+msgstr ""
+
+#: templates/reports/parent_list.html:60
+msgid "Draft"
+msgstr ""
+
+#: templates/reports/parent_list.html:61
+msgid "Sent"
+msgstr ""
+
+#: templates/reports/parent_list.html:70
+msgid "Mood"
+msgstr ""
+
+#: templates/reports/parent_list.html:71
+msgid "Not specified"
+msgstr ""
+
+#: templates/reports/parent_list.html:75
+msgid "No notes"
+msgstr ""
+
+#: templates/reports/parent_list.html:79
+msgid "View Details"
+msgstr ""
+
+#: templates/reports/parent_list.html:87
+msgid "No reports for this date"
+msgstr ""
+

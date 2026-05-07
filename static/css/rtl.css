@@ -1,0 +1,107 @@
+/**
+ * RTL Supplementary Stylesheet
+ * Complements Bootstrap RTL and kinjo.css for Arabic (right-to-left) layout.
+ * Loaded conditionally when ui_dir == 'rtl' via base.html.
+ */
+
+[dir="rtl"] {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] .navbar-nav {
+  padding-right: 0;
+  padding-left: auto;
+}
+
+[dir="rtl"] .dropdown-menu {
+  text-align: right;
+}
+
+[dir="rtl"] .form-control,
+[dir="rtl"] .form-select {
+  text-align: right;
+}
+
+[dir="rtl"] .alert {
+  border-right: 4px solid;
+  border-left: none;
+}
+
+[dir="rtl"] .fa-arrow-left::before {
+  content: "\f061";
+}
+
+[dir="rtl"] .ml-auto {
+  margin-right: auto !important;
+  margin-left: 0 !important;
+}
+
+/* ============================================================================
+   1. Number & Phone Inputs — keep numeric text LTR inside RTL layout
+   ============================================================================ */
+[dir="rtl"] input[type="tel"],
+[dir="rtl"] input[type="number"],
+[dir="rtl"] input[data-type="national-id"],
+[dir="rtl"] input[data-type="passport"] {
+  direction: ltr;
+  text-align: left;
+}
+
+/* ============================================================================
+   2. Date & Time Inputs — browsers render date pickers LTR always
+   ============================================================================ */
+[dir="rtl"] input[type="date"],
+[dir="rtl"] input[type="time"],
+[dir="rtl"] input[type="datetime-local"] {
+  direction: ltr;
+  text-align: left;
+}
+
+/* ============================================================================
+   3. Badges and status chips — preserve internal spacing in RTL
+   ============================================================================ */
+[dir="rtl"] .badge > i.bi {
+  margin-left: 0.25rem;
+  margin-right: 0;
+}
+
+/* ============================================================================
+   4. Breadcrumb separator — Bootstrap RTL uses CSS content, ensure it's correct
+   ============================================================================ */
+[dir="rtl"] .breadcrumb-item + .breadcrumb-item::before {
+  float: right;
+  padding-left: 0.5rem;
+  padding-right: 0;
+  content: "\\";
+}
+
+/* ============================================================================
+   5. List-group items with icons — consistent icon spacing in RTL
+   ============================================================================ */
+[dir="rtl"] .list-group-item .bi {
+  margin-left: 0.5rem;
+  margin-right: 0;
+}
+
+/* ============================================================================
+   6. Progress bar — Bootstrap RTL flips fill direction automatically
+   ============================================================================ */
+
+/* ============================================================================
+   7. Card border-start accent — Bootstrap RTL swaps start/end; reinforce accent
+   ============================================================================ */
+[dir="rtl"] .border-start {
+  border-right: var(--bs-border-width) var(--bs-border-style)
+    var(--bs-border-color) !important;
+  border-left: 0 !important;
+}
+
+/* ============================================================================
+   8. Print — ensure Arabic content prints RTL
+   ============================================================================ */
+@media print {
+  [dir="rtl"] * {
+    direction: rtl;
+  }
+}

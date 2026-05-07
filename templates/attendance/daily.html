@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
-
-{% block title %}تقرير الحضور اليومي{% endblock %}
+{% block title %}تقرير الحضور اليومي — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-bar-chart-line me-2 text-primary"></i>
-            تقرير الحضور اليومي
-        </h1>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-calendar-check-fill"></i>
+            إدارة الحضور
+        </div>
+        <h1 class="page-header-title">تقرير الحضور اليومي</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
                 <li class="breadcrumb-item active">تقارير الحضور</li>
             </ol>
         </nav>
@@ -20,232 +20,260 @@
 {% endblock %}
 
 {% block content %}
-<!-- Multi-Step Filter Workflow -->
-<div class="card mb-4">
-    <div class="card-header">
-        <ul class="nav nav-tabs card-header-tabs" id="filterTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1" type="button" role="tab">
-                    <i class="bi bi-building me-1"></i>1. اختيار الروضة
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link disabled" id="step2-tab" data-bs-toggle="tab" data-bs-target="#step2" type="button" role="tab">
-                    <i class="bi bi-diagram-3 me-1"></i>2. اختيار الشعب
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link disabled" id="step3-tab" data-bs-toggle="tab" data-bs-target="#step3" type="button" role="tab">
-                    <i class="bi bi-people me-1"></i>3. اختيار الأطفال
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link disabled" id="step4-tab" data-bs-toggle="tab" data-bs-target="#step4" type="button" role="tab">
-                    <i class="bi bi-calendar me-1"></i>4. تحديد الفترة
-                </button>
-            </li>
-        </ul>
-    </div>
-    <div class="card-body">
-        <div class="tab-content" id="filterTabsContent">
-            <!-- Step 1: Kindergarten Selection -->
-            <div class="tab-pane fade show active" id="step1" role="tabpanel">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">البحث بالروضة</label>
-                        <input type="text" class="form-control" id="kgSearch" placeholder="اسم الروضة...">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">المحافظة</label>
-                        <select class="form-select" id="kgGovernorate">
-                            <option value="">جميع المحافظات</option>
-                            <option value="عمان">عمان</option>
-                            <option value="إربد">إربد</option>
-                            <option value="الزرقاء">الزرقاء</option>
-                            <option value="العقبة">العقبة</option>
-                            <option value="المفرق">المفرق</option>
-                            <option value="جرش">جرش</option>
-                            <option value="عجلون">عجلون</option>
-                            <option value="الطفيلة">الطفيلة</option>
-                            <option value="الكرك">الكرك</option>
-                            <option value="معان">معان</option>
-                            <option value="السلط">السلط</option>
-                            <option value="مادبا">مادبا</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">رقم الهاتف</label>
-                        <input type="text" class="form-control" id="kgPhone" placeholder="رقم الهاتف...">
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button class="btn btn-primary w-100" onclick="searchKindergartens()">
-                            <i class="bi bi-search me-1"></i>بحث
-                        </button>
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <select class="form-select" id="kindergartenSelect" size="5">
-                        <option value="">اختر روضة...</option>
-                    </select>
-                </div>
-                <div class="mt-3 text-end">
-                    <button class="btn btn-success" onclick="nextStep(1)">
-                        التالي: اختيار الشعب <i class="bi bi-arrow-left me-1"></i>
-                    </button>
-                </div>
-            </div>
 
-            <!-- Step 2: Class Selection -->
-            <div class="tab-pane fade" id="step2" role="tabpanel">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="classSelection" id="allClasses" value="all" checked>
-                            <label class="form-check-label fw-bold" for="allClasses">
-                                جميع الشعب في الروضة المحددة
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="classSelection" id="specificClasses" value="specific">
-                            <label class="form-check-label fw-bold" for="specificClasses">
-                                اختيار شعب محددة
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div id="classSelectionArea" class="mt-3" style="display: none;">
-                    <div class="border rounded p-3 bg-light">
-                        <label class="form-label">اختر الشعب:</label>
-                        <div id="classCheckboxes" class="row g-2">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-3 d-flex justify-content-between">
-                    <button class="btn btn-outline-secondary" onclick="prevStep(2)">
-                        <i class="bi bi-arrow-right me-1"></i> السابق
-                    </button>
-                    <button class="btn btn-success" onclick="nextStep(2)">
-                        التالي: اختيار الأطفال <i class="bi bi-arrow-left me-1"></i>
-                    </button>
-                </div>
+<!-- Step Progress Indicator -->
+<div class="step-progress mb-4">
+    <div class="step-track">
+        <div class="step-item active" id="si-1">
+            <div class="step-circle">
+                <span class="step-num">1</span>
+                <i class="bi bi-check-lg step-check"></i>
             </div>
-
-            <!-- Step 3: Child Selection -->
-            <div class="tab-pane fade" id="step3" role="tabpanel">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="radio" name="childSelection" id="allChildren" value="all" checked>
-                            <label class="form-check-label fw-bold" for="allChildren">
-                                جميع الأطفال في الشعب المحددة
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="childSelection" id="specificChildren" value="specific">
-                            <label class="form-check-label fw-bold" for="specificChildren">
-                                اختيار أطفال محددين
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div id="childSelectionArea" class="mt-3" style="display: none;">
-                    <div class="border rounded p-3 bg-light">
-                        <label class="form-label">اختر الأطفال:</label>
-                        <div id="childCheckboxes" class="row g-2">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-3 d-flex justify-content-between">
-                    <button class="btn btn-outline-secondary" onclick="prevStep(3)">
-                        <i class="bi bi-arrow-right me-1"></i> السابق
-                    </button>
-                    <button class="btn btn-success" onclick="nextStep(3)">
-                        التالي: تحديد الفترة <i class="bi bi-arrow-left me-1"></i>
-                    </button>
-                </div>
+            <span class="step-label">الروضة</span>
+        </div>
+        <div class="step-line" id="sl-1"></div>
+        <div class="step-item" id="si-2">
+            <div class="step-circle">
+                <span class="step-num">2</span>
+                <i class="bi bi-check-lg step-check"></i>
             </div>
-
-            <!-- Step 4: Date/Period Selection -->
-            <div class="tab-pane fade" id="step4" role="tabpanel">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">نوع الفترة</label>
-                        <select class="form-select" id="periodType" onchange="toggleDateInputs()">
-                            <option value="day">يوم واحد</option>
-                            <option value="week">أسبوع</option>
-                            <option value="month">شهر</option>
-                            <option value="range">فترة مخصصة</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3" id="singleDateGroup">
-                        <label class="form-label">التاريخ</label>
-                        <input type="date" class="form-control" id="singleDate" value="{{ today }}">
-                    </div>
-                    <div class="col-md-3" id="startDateGroup" style="display: none;">
-                        <label class="form-label">من تاريخ</label>
-                        <input type="date" class="form-control" id="startDate">
-                    </div>
-                    <div class="col-md-3" id="endDateGroup" style="display: none;">
-                        <label class="form-label">إلى تاريخ</label>
-                        <input type="date" class="form-control" id="endDate">
-                    </div>
-                </div>
-                <div class="mt-3 d-flex justify-content-between">
-                    <button class="btn btn-outline-secondary" onclick="prevStep(4)">
-                        <i class="bi bi-arrow-right me-1"></i> السابق
-                    </button>
-                    <button class="btn btn-primary" onclick="generateReport()">
-                        <i class="bi bi-bar-chart me-1"></i> إنشاء التقرير
-                    </button>
-                </div>
+            <span class="step-label">الشعب</span>
+        </div>
+        <div class="step-line" id="sl-2"></div>
+        <div class="step-item" id="si-3">
+            <div class="step-circle">
+                <span class="step-num">3</span>
+                <i class="bi bi-check-lg step-check"></i>
             </div>
+            <span class="step-label">الأطفال</span>
+        </div>
+        <div class="step-line" id="sl-3"></div>
+        <div class="step-item" id="si-4">
+            <div class="step-circle">
+                <span class="step-num">4</span>
+                <i class="bi bi-check-lg step-check"></i>
+            </div>
+            <span class="step-label">الفترة</span>
         </div>
     </div>
 </div>
 
-<!-- Report Display Area -->
-<div id="reportArea" style="display: none;">
-    <!-- Report Header -->
+<!-- Wizard Card -->
+<div class="card mb-4">
+    <div class="card-body p-4">
+
+        <!-- Step 1: Kindergarten -->
+        <div id="step1" class="wizard-step">
+            <h6 class="wizard-step-title">
+                <i class="bi bi-building-fill me-2 text-primary"></i>اختيار الروضة
+            </h6>
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="filter-label">اسم الروضة</label>
+                    <input type="text" class="form-control" id="kgSearch" placeholder="ابحث باسم الروضة...">
+                </div>
+                <div class="col-md-3">
+                    <label class="filter-label">المحافظة</label>
+                    <select class="form-select" id="kgGovernorate">
+                        <option value="">جميع المحافظات</option>
+                        <option value="عمان">عمان</option>
+                        <option value="إربد">إربد</option>
+                        <option value="الزرقاء">الزرقاء</option>
+                        <option value="العقبة">العقبة</option>
+                        <option value="المفرق">المفرق</option>
+                        <option value="جرش">جرش</option>
+                        <option value="عجلون">عجلون</option>
+                        <option value="الطفيلة">الطفيلة</option>
+                        <option value="الكرك">الكرك</option>
+                        <option value="معان">معان</option>
+                        <option value="السلط">السلط</option>
+                        <option value="مادبا">مادبا</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="filter-label">رقم الهاتف</label>
+                    <input type="text" class="form-control" id="kgPhone" placeholder="رقم الهاتف...">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" onclick="searchKindergartens()">
+                        <i class="bi bi-search me-1"></i>بحث
+                    </button>
+                </div>
+            </div>
+            <div class="kg-select-wrap">
+                <select class="form-select kg-list-select" id="kindergartenSelect" size="6" aria-label="قائمة الروضات">
+                    <option value="">ابحث باستخدام الفلاتر أعلاه...</option>
+                </select>
+            </div>
+            <div class="wizard-nav mt-4">
+                <div></div>
+                <button class="btn btn-primary" onclick="nextStep(1)">
+                    التالي: اختيار الشعب <i class="bi bi-arrow-left me-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Classes -->
+        <div id="step2" class="wizard-step d-none">
+            <h6 class="wizard-step-title">
+                <i class="bi bi-diagram-3-fill me-2 text-primary"></i>اختيار الشعب
+            </h6>
+            <div class="selection-options mb-3">
+                <label class="selection-opt">
+                    <input type="radio" name="classSelection" value="all" id="allClasses" checked>
+                    <div class="selection-opt-card">
+                        <i class="bi bi-grid-fill"></i>
+                        <span>جميع الشعب</span>
+                    </div>
+                </label>
+                <label class="selection-opt">
+                    <input type="radio" name="classSelection" value="specific" id="specificClasses">
+                    <div class="selection-opt-card">
+                        <i class="bi bi-check2-square"></i>
+                        <span>شعب محددة</span>
+                    </div>
+                </label>
+            </div>
+            <div id="classSelectionArea" class="checkbox-selection-area d-none">
+                <div id="classCheckboxes" class="row g-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            <div class="wizard-nav mt-4">
+                <button class="btn btn-ghost" onclick="prevStep(2)">
+                    <i class="bi bi-arrow-right me-1"></i>السابق
+                </button>
+                <button class="btn btn-primary" onclick="nextStep(2)">
+                    التالي: اختيار الأطفال <i class="bi bi-arrow-left me-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Children -->
+        <div id="step3" class="wizard-step d-none">
+            <h6 class="wizard-step-title">
+                <i class="bi bi-people-fill me-2 text-primary"></i>اختيار الأطفال
+            </h6>
+            <div class="selection-options mb-3">
+                <label class="selection-opt">
+                    <input type="radio" name="childSelection" value="all" id="allChildren" checked>
+                    <div class="selection-opt-card">
+                        <i class="bi bi-people-fill"></i>
+                        <span>جميع الأطفال</span>
+                    </div>
+                </label>
+                <label class="selection-opt">
+                    <input type="radio" name="childSelection" value="specific" id="specificChildren">
+                    <div class="selection-opt-card">
+                        <i class="bi bi-person-check-fill"></i>
+                        <span>أطفال محددون</span>
+                    </div>
+                </label>
+            </div>
+            <div id="childSelectionArea" class="checkbox-selection-area d-none">
+                <div id="childCheckboxes" class="row g-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            <div class="wizard-nav mt-4">
+                <button class="btn btn-ghost" onclick="prevStep(3)">
+                    <i class="bi bi-arrow-right me-1"></i>السابق
+                </button>
+                <button class="btn btn-primary" onclick="nextStep(3)">
+                    التالي: تحديد الفترة <i class="bi bi-arrow-left me-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 4: Date Period -->
+        <div id="step4" class="wizard-step d-none">
+            <h6 class="wizard-step-title">
+                <i class="bi bi-calendar-range-fill me-2 text-primary"></i>تحديد الفترة الزمنية
+            </h6>
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <label class="filter-label">نوع الفترة</label>
+                    <select class="form-select" id="periodType" onchange="toggleDateInputs()">
+                        <option value="day">يوم واحد</option>
+                        <option value="week">أسبوع</option>
+                        <option value="month">شهر</option>
+                        <option value="range">فترة مخصصة</option>
+                    </select>
+                </div>
+                <div class="col-md-3" id="singleDateGroup">
+                    <label class="filter-label">التاريخ</label>
+                    <input type="date" class="form-control" id="singleDate" value="{{ today }}">
+                </div>
+                <div class="col-md-3 d-none" id="startDateGroup">
+                    <label class="filter-label">من تاريخ</label>
+                    <input type="date" class="form-control" id="startDate">
+                </div>
+                <div class="col-md-3 d-none" id="endDateGroup">
+                    <label class="filter-label">إلى تاريخ</label>
+                    <input type="date" class="form-control" id="endDate">
+                </div>
+            </div>
+            <div class="wizard-nav mt-4">
+                <button class="btn btn-ghost" onclick="prevStep(4)">
+                    <i class="bi bi-arrow-right me-1"></i>السابق
+                </button>
+                <button class="btn btn-primary btn-lg" onclick="generateReport()">
+                    <i class="bi bi-bar-chart-fill me-2"></i>إنشاء التقرير
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Loading State -->
+<div id="loadingOverlay" class="d-none">
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+            <p class="text-muted mb-0">جاري إنشاء التقرير...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Report Display -->
+<div id="reportArea" style="display:none;">
+
+    <!-- Report Header Card -->
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-                <i class="bi bi-file-earmark-bar-graph me-2"></i>
-                تقرير الحضور - <span id="reportPeriod"></span>
-            </h5>
+        <div class="card-header" style="background:var(--kinjo-gradient-primary);">
+            <h6 class="mb-0 text-white fw-800">
+                <i class="bi bi-file-earmark-bar-graph-fill me-2"></i>
+                تقرير الحضور — <span id="reportPeriod"></span>
+            </h6>
         </div>
         <div class="card-body">
-            <div class="row g-3" id="reportHeader">
-                <!-- Populated by JS -->
-            </div>
+            <div class="row g-3" id="reportHeader"></div>
         </div>
     </div>
 
-    <!-- Summary Cards -->
-    <div class="row g-3 mb-4" id="summaryCards">
-        <!-- Populated by JS -->
-    </div>
+    <!-- Summary Stat Cards -->
+    <div class="row g-3 mb-4" id="summaryCards"></div>
 
-    <!-- Charts -->
+    <!-- Charts Row -->
     <div class="row g-3 mb-4">
-        <div class="col-md-6">
-            <div class="card">
+        <div class="col-md-5">
+            <div class="card h-100">
                 <div class="card-header">
-                    <h6 class="mb-0">توزيع الحضور</h6>
+                    <h6 class="card-title-sm mb-0"><i class="bi bi-pie-chart-fill me-2 text-primary"></i>توزيع الحضور</h6>
                 </div>
-                <div class="card-body">
-                    <canvas id="statusChart"></canvas>
+                <div class="card-body d-flex align-items-center justify-content-center" style="min-height:220px;">
+                    <canvas id="statusChart" style="max-height:220px;"></canvas>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card">
+        <div class="col-md-7">
+            <div class="card h-100">
                 <div class="card-header">
-                    <h6 class="mb-0">اتجاه الحضور اليومي</h6>
+                    <h6 class="card-title-sm mb-0"><i class="bi bi-graph-up me-2 text-primary"></i>اتجاه الحضور اليومي</h6>
                 </div>
-                <div class="card-body">
-                    <canvas id="trendChart"></canvas>
+                <div class="card-body" style="min-height:220px;">
+                    <canvas id="trendChart" style="max-height:220px;"></canvas>
                 </div>
             </div>
         </div>
@@ -253,151 +281,175 @@
 
     <!-- Matrix Table -->
     <div class="card">
-        <div class="card-header">
-            <h6 class="mb-0">جدول الحضور التفصيلي</h6>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="card-title-sm mb-0"><i class="bi bi-table me-2 text-primary"></i>جدول الحضور التفصيلي</h6>
+            <button class="btn btn-ghost btn-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i>طباعة
+            </button>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover mb-0" id="attendanceMatrix">
-                    <!-- Populated by JS -->
-                </table>
+                <table class="table table-bordered att-matrix-table mb-0" id="attendanceMatrix"></table>
             </div>
         </div>
     </div>
+
 </div>
 
-<!-- Loading Overlay -->
-<div id="loadingOverlay" class="d-none">
-    <div class="d-flex justify-content-center align-items-center" style="height: 200px;">
-        <div class="text-center">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">جاري التحميل...</span>
-            </div>
-            <p class="mt-2 text-muted">جاري إنشاء التقرير...</p>
-        </div>
-    </div>
-</div>
+<style>
+/* Page header */
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+
+/* Step progress */
+.step-progress { display:flex;justify-content:center; }
+.step-track { display:flex;align-items:center;gap:0; }
+.step-item { display:flex;flex-direction:column;align-items:center;gap:0.35rem; }
+.step-circle {
+    width:36px;height:36px;border-radius:50%;
+    border:2px solid var(--kinjo-border);
+    background:var(--kinjo-surface);
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.8rem;font-weight:800;color:var(--kinjo-text-muted);
+    transition:all 0.3s;
+    position:relative;
+}
+.step-check { display:none;font-size:0.9rem; }
+.step-num { display:block; }
+.step-item.active .step-circle { border-color:var(--kinjo-primary);background:var(--kinjo-primary);color:#fff; }
+.step-item.done .step-circle { border-color:var(--kinjo-success);background:var(--kinjo-success);color:#fff; }
+.step-item.done .step-num { display:none; }
+.step-item.done .step-check { display:block; }
+.step-label { font-size:0.72rem;font-weight:700;color:var(--kinjo-text-muted);white-space:nowrap; }
+.step-item.active .step-label { color:var(--kinjo-primary); }
+.step-line { width:60px;height:2px;background:var(--kinjo-border);margin-bottom:1.2rem; }
+.step-line.done { background:var(--kinjo-success); }
+
+/* Wizard */
+.wizard-step-title { font-size:1rem;font-weight:800;color:var(--kinjo-text-primary);margin-bottom:1.25rem; }
+.wizard-nav { display:flex;justify-content:space-between;align-items:center;padding-top:1rem;border-top:1px solid var(--kinjo-border); }
+.filter-label { font-size:0.8rem;font-weight:700;color:var(--kinjo-text-muted);display:block;margin-bottom:0.35rem; }
+
+/* KG list select */
+.kg-list-select { border-radius:var(--kinjo-radius-lg);border-color:var(--kinjo-border);font-size:0.875rem; }
+.kg-list-select option { padding:0.5rem 0.75rem; }
+.kg-list-select option:checked { background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
+
+/* Selection options (radio cards) */
+.selection-options { display:flex;gap:0.75rem;flex-wrap:wrap; }
+.selection-opt { cursor:pointer; }
+.selection-opt input { position:absolute;opacity:0;pointer-events:none; }
+.selection-opt-card {
+    display:flex;align-items:center;gap:0.5rem;
+    padding:0.625rem 1.25rem;border-radius:var(--kinjo-radius-lg);
+    border:2px solid var(--kinjo-border);background:var(--kinjo-surface);
+    font-size:0.875rem;font-weight:700;color:var(--kinjo-text-secondary);
+    transition:all 0.2s;
+}
+.selection-opt-card i { font-size:1.1rem; }
+.selection-opt input:checked + .selection-opt-card {
+    border-color:var(--kinjo-primary);background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
+}
+
+/* Checkbox selection area */
+.checkbox-selection-area {
+    background:var(--kinjo-surface);border:1px solid var(--kinjo-border);
+    border-radius:var(--kinjo-radius-lg);padding:1rem;
+    max-height:220px;overflow-y:auto;
+}
+
+/* Att matrix */
+.att-matrix-table thead th { font-size:0.75rem;font-weight:700;background:var(--kinjo-surface);text-align:center;vertical-align:middle; }
+.att-matrix-table td { font-size:0.8rem;vertical-align:middle; }
+.att-matrix-table .sticky-col { position:sticky;right:0;background:var(--kinjo-card-bg);z-index:1;font-weight:700;min-width:140px; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 let currentStep = 1;
 let selectedKindergarten = null;
-let selectedClasses = [];
-let selectedChildren = [];
-let reportData = null;
+let statusChart = null;
+let trendChart = null;
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize date inputs
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('singleDate').value = today;
-
-    // Event listeners
-    document.querySelectorAll('input[name="classSelection"]').forEach(radio => {
-        radio.addEventListener('change', toggleClassSelection);
-    });
-    document.querySelectorAll('input[name="childSelection"]').forEach(radio => {
-        radio.addEventListener('change', toggleChildSelection);
-    });
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('singleDate').value = new Date().toISOString().split('T')[0];
+    document.querySelectorAll('input[name="classSelection"]').forEach(r => r.addEventListener('change', () => {
+        document.getElementById('classSelectionArea').classList.toggle('d-none', r.value !== 'specific' || !document.getElementById('specificClasses').checked);
+        toggleClassSelection();
+    }));
+    document.querySelectorAll('input[name="childSelection"]').forEach(r => r.addEventListener('change', () => {
+        toggleChildSelection();
+    }));
 });
 
-function toggleDateInputs() {
-    const periodType = document.getElementById('periodType').value;
-    const singleDateGroup = document.getElementById('singleDateGroup');
-    const startDateGroup = document.getElementById('startDateGroup');
-    const endDateGroup = document.getElementById('endDateGroup');
-
-    if (periodType === 'range') {
-        singleDateGroup.style.display = 'none';
-        startDateGroup.style.display = 'block';
-        endDateGroup.style.display = 'block';
-    } else {
-        singleDateGroup.style.display = 'block';
-        startDateGroup.style.display = 'none';
-        endDateGroup.style.display = 'none';
+function updateStepIndicator(step) {
+    for (let i = 1; i <= 4; i++) {
+        const si = document.getElementById(`si-${i}`);
+        si.classList.remove('active','done');
+        if (i < step) si.classList.add('done');
+        else if (i === step) si.classList.add('active');
     }
+    for (let i = 1; i <= 3; i++) {
+        const sl = document.getElementById(`sl-${i}`);
+        if (sl) sl.classList.toggle('done', i < step);
+    }
+}
+
+function showStep(step) {
+    for (let i = 1; i <= 4; i++) {
+        document.getElementById(`step${i}`).classList.toggle('d-none', i !== step);
+    }
+    currentStep = step;
+    updateStepIndicator(step);
+}
+
+function prevStep(step) { showStep(step - 1); }
+
+async function nextStep(step) {
+    if (step === 1) {
+        const kgId = document.getElementById('kindergartenSelect').value;
+        if (!kgId) { showToast('يرجى اختيار روضة', 'warning'); return; }
+        selectedKindergarten = kgId;
+        await loadClasses();
+    } else if (step === 2) {
+        await loadChildren();
+    }
+    showStep(step + 1);
 }
 
 async function searchKindergartens() {
     const search = document.getElementById('kgSearch').value;
     const governorate = document.getElementById('kgGovernorate').value;
     const phone = document.getElementById('kgPhone').value;
-
-    console.log('Search parameters:', { search, governorate, phone });
-
     try {
-        const response = await api.searchKindergartens({ search, governorate, phone });
-        console.log('API response:', response);
-
-        const select = document.getElementById('kindergartenSelect');
-        select.innerHTML = '<option value="">اختر روضة...</option>';
-
-        if (response.kindergartens && response.kindergartens.length > 0) {
-            response.kindergartens.forEach(kg => {
-                const option = document.createElement('option');
-                option.value = kg.id;
-                option.textContent = `${kg.name_ar} - ${kg.governorate}`;
-                select.appendChild(option);
-            });
-            showToast(`تم العثور على ${response.kindergartens.length} روضة`, 'success');
-        } else {
-            showToast('لم يتم العثور على روضات مطابقة', 'info');
-        }
-    } catch (error) {
-        console.error('Search error:', error);
-        showToast(`خطأ في البحث عن الروضات: ${error.message}`, 'error');
-    }
-}
-
-function nextStep(currentStep) {
-    if (currentStep === 1) {
-        const kgId = document.getElementById('kindergartenSelect').value;
-        if (!kgId) {
-            showToast('يرجى اختيار روضة', 'warning');
-            return;
-        }
-        selectedKindergarten = kgId;
-        loadClasses();
-    } else if (currentStep === 2) {
-        // Classes already selected via radio/checkboxes
-        loadChildren();
-    } else if (currentStep === 3) {
-        // Children already selected
-    }
-
-    // Enable next tab and switch
-    const nextTab = document.getElementById(`step${currentStep + 1}-tab`);
-    nextTab.classList.remove('disabled');
-    nextTab.click();
-}
-
-function prevStep(currentStep) {
-    const prevTab = document.getElementById(`step${currentStep - 1}-tab`);
-    prevTab.click();
+        const resp = await api.searchKindergartens({ search, governorate, phone });
+        const sel = document.getElementById('kindergartenSelect');
+        sel.innerHTML = '<option value="">اختر روضة...</option>';
+        (resp.kindergartens || []).forEach(kg => {
+            const o = document.createElement('option');
+            o.value = kg.id;
+            o.textContent = `${kg.name_ar} — ${kg.governorate}`;
+            sel.appendChild(o);
+        });
+        if (!resp.kindergartens?.length) showToast('لم يتم العثور على نتائج', 'info');
+        else showToast(`${resp.kindergartens.length} روضة`, 'success');
+    } catch (e) { showToast('خطأ في البحث: ' + e.message, 'error'); }
 }
 
 async function loadClasses() {
     try {
-        const response = await api.getKindergartenClasses(selectedKindergarten);
-        const container = document.getElementById('classCheckboxes');
-        container.innerHTML = '';
-
-        response.classes.forEach(cls => {
-            const div = document.createElement('div');
-            div.className = 'col-md-4';
-            div.innerHTML = `
+        const resp = await api.getKindergartenClasses(selectedKindergarten);
+        const c = document.getElementById('classCheckboxes');
+        c.innerHTML = (resp.classes || []).map(cls => `
+            <div class="col-md-4">
                 <div class="form-check">
                     <input class="form-check-input class-checkbox" type="checkbox" id="class-${cls.id}" value="${cls.id}">
-                    <label class="form-check-label" for="class-${cls.id}">
-                        ${cls.name_ar || cls.name_en}
-                    </label>
+                    <label class="form-check-label small fw-600" for="class-${cls.id}">${cls.name_ar || cls.name_en}</label>
                 </div>
-            `;
-            container.appendChild(div);
-        });
-    } catch (error) {
-        showToast('خطأ في تحميل الشعب', 'error');
-    }
+            </div>`).join('');
+    } catch { showToast('خطأ في تحميل الشعب', 'error'); }
 }
 
 async function loadChildren() {
@@ -405,275 +457,152 @@ async function loadChildren() {
     let classIds = null;
     if (classSelection === 'specific') {
         classIds = Array.from(document.querySelectorAll('.class-checkbox:checked')).map(cb => cb.value);
-        if (classIds.length === 0) {
-            showToast('يرجى اختيار شعبة واحدة على الأقل', 'warning');
-            return;
-        }
+        if (!classIds.length) { showToast('يرجى اختيار شعبة واحدة على الأقل', 'warning'); throw new Error(); }
     }
-
     try {
-        const response = await api.getKindergartenChildren(selectedKindergarten, classIds);
-        const container = document.getElementById('childCheckboxes');
-        container.innerHTML = '';
-
-        response.children.forEach(child => {
-            const div = document.createElement('div');
-            div.className = 'col-md-4';
-            div.innerHTML = `
+        const resp = await api.getKindergartenChildren(selectedKindergarten, classIds);
+        const c = document.getElementById('childCheckboxes');
+        c.innerHTML = (resp.children || []).map(ch => `
+            <div class="col-md-4">
                 <div class="form-check">
-                    <input class="form-check-input child-checkbox" type="checkbox" id="child-${child.id}" value="${child.id}">
-                    <label class="form-check-label" for="child-${child.id}">
-                        ${child.first_name_ar || child.first_name} ${child.last_name_ar || child.last_name}
-                    </label>
+                    <input class="form-check-input child-checkbox" type="checkbox" id="child-${ch.id}" value="${ch.id}">
+                    <label class="form-check-label small fw-600" for="child-${ch.id}">${ch.first_name_ar||ch.first_name} ${ch.last_name_ar||ch.last_name}</label>
                 </div>
-            `;
-            container.appendChild(div);
-        });
-    } catch (error) {
-        showToast('خطأ في تحميل الأطفال', 'error');
-    }
+            </div>`).join('');
+    } catch { showToast('خطأ في تحميل الأطفال', 'error'); }
 }
 
 function toggleClassSelection() {
-    const selection = document.querySelector('input[name="classSelection"]:checked').value;
-    const area = document.getElementById('classSelectionArea');
-    area.style.display = selection === 'specific' ? 'block' : 'none';
+    const sel = document.querySelector('input[name="classSelection"]:checked').value;
+    document.getElementById('classSelectionArea').classList.toggle('d-none', sel !== 'specific');
+}
+function toggleChildSelection() {
+    const sel = document.querySelector('input[name="childSelection"]:checked').value;
+    document.getElementById('childSelectionArea').classList.toggle('d-none', sel !== 'specific');
 }
 
-function toggleChildSelection() {
-    const selection = document.querySelector('input[name="childSelection"]:checked').value;
-    const area = document.getElementById('childSelectionArea');
-    area.style.display = selection === 'specific' ? 'block' : 'none';
+function toggleDateInputs() {
+    const t = document.getElementById('periodType').value;
+    const isRange = t === 'range';
+    document.getElementById('singleDateGroup').classList.toggle('d-none', isRange);
+    document.getElementById('startDateGroup').classList.toggle('d-none', !isRange);
+    document.getElementById('endDateGroup').classList.toggle('d-none', !isRange);
 }
 
 async function generateReport() {
-    // Collect parameters
     const periodType = document.getElementById('periodType').value;
-    let params = {
-        kindergarten_id: selectedKindergarten,
-        period_type: periodType
-    };
-
-    // Add class selection
-    const classSelection = document.querySelector('input[name="classSelection"]:checked').value;
-    if (classSelection === 'specific') {
-        params.class_ids = Array.from(document.querySelectorAll('.class-checkbox:checked')).map(cb => cb.value);
-    }
-
-    // Add child selection
-    const childSelection = document.querySelector('input[name="childSelection"]:checked').value;
-    if (childSelection === 'specific') {
-        params.child_ids = Array.from(document.querySelectorAll('.child-checkbox:checked')).map(cb => cb.value);
-    }
-
-    // Add date parameters
+    const params = { kindergarten_id: selectedKindergarten, period_type: periodType };
+    const cs = document.querySelector('input[name="classSelection"]:checked').value;
+    if (cs === 'specific') params.class_ids = Array.from(document.querySelectorAll('.class-checkbox:checked')).map(cb=>cb.value);
+    const ch = document.querySelector('input[name="childSelection"]:checked').value;
+    if (ch === 'specific') params.child_ids = Array.from(document.querySelectorAll('.child-checkbox:checked')).map(cb=>cb.value);
     if (periodType === 'range') {
         params.start_date = document.getElementById('startDate').value;
-        params.end_date = document.getElementById('endDate').value;
+        params.end_date   = document.getElementById('endDate').value;
     } else {
         params.date = document.getElementById('singleDate').value;
     }
 
-    // Show loading
     document.getElementById('loadingOverlay').classList.remove('d-none');
     document.getElementById('reportArea').style.display = 'none';
 
     try {
-        const response = await api.getAttendanceReport(params);
-        reportData = response;
-        renderReport();
+        const data = await api.getAttendanceReport(params);
+        renderReport(data);
         document.getElementById('reportArea').style.display = 'block';
-    } catch (error) {
-        showToast('خطأ في إنشاء التقرير', 'error');
-    } finally {
-        document.getElementById('loadingOverlay').classList.add('d-none');
-    }
+    } catch { showToast('خطأ في إنشاء التقرير', 'error'); }
+    finally { document.getElementById('loadingOverlay').classList.add('d-none'); }
 }
 
-function renderReport() {
-    // Header
-    const header = document.getElementById('reportHeader');
-    const kg = reportData.meta.kindergarten;
-    header.innerHTML = `
+function renderReport(data) {
+    const kg = data.meta.kindergarten;
+    document.getElementById('reportPeriod').textContent = `${formatDate(data.meta.start_date)} — ${formatDate(data.meta.end_date)}`;
+    document.getElementById('reportHeader').innerHTML = `
         <div class="col-md-6">
-            <h6>${kg.name_ar}</h6>
-            <p class="mb-1"><strong>المحافظة:</strong> ${kg.governorate}</p>
-            <p class="mb-1"><strong>المدينة:</strong> ${kg.city}</p>
-            <p class="mb-0"><strong>الهاتف:</strong> ${kg.phone || 'غير محدد'}</p>
+            <h6 class="fw-800">${kg.name_ar}</h6>
+            <p class="mb-1 small"><strong>المحافظة:</strong> ${kg.governorate}</p>
+            <p class="mb-0 small"><strong>الهاتف:</strong> ${kg.phone || '—'}</p>
         </div>
         <div class="col-md-6">
-            <h6>فترة التقرير</h6>
-            <p class="mb-1"><strong>من:</strong> ${formatDate(reportData.meta.start_date)}</p>
-            <p class="mb-1"><strong>إلى:</strong> ${formatDate(reportData.meta.end_date)}</p>
-            <p class="mb-0"><strong>نوع الفترة:</strong> ${getPeriodTypeLabel(reportData.meta.period_type)}</p>
-        </div>
-    `;
+            <h6 class="fw-800">فترة التقرير</h6>
+            <p class="mb-1 small"><strong>من:</strong> ${formatDate(data.meta.start_date)}</p>
+            <p class="mb-0 small"><strong>إلى:</strong> ${formatDate(data.meta.end_date)}</p>
+        </div>`;
 
-    document.getElementById('reportPeriod').textContent = `${formatDate(reportData.meta.start_date)} - ${formatDate(reportData.meta.end_date)}`;
-
-    // Summary cards
-    const summary = reportData.totals.summary;
-    const cards = document.getElementById('summaryCards');
-    cards.innerHTML = `
-        <div class="col-md-3">
-            <div class="card text-center">
+    const s = data.totals.summary;
+    document.getElementById('summaryCards').innerHTML = [
+        ['إجمالي الأطفال', s.total_children, 'people-fill', 'var(--kinjo-primary)'],
+        ['أيام الدراسة', s.total_school_days, 'calendar-check-fill', '#0891b2'],
+        ['معدل الحضور', s.attendance_rate + '%', 'graph-up-arrow', 'var(--kinjo-success)'],
+        ['إجمالي الحضور', data.totals.overall.present, 'check-circle-fill', '#d97706'],
+    ].map(([label, val, icon, color]) => `
+        <div class="col-6 col-md-3">
+            <div class="stat-card card">
                 <div class="card-body">
-                    <h3 class="text-primary">${summary.total_children}</h3>
-                    <p class="mb-0">إجمالي الأطفال</p>
+                    <div class="stat-info">
+                        <div class="stat-label">${label}</div>
+                        <div class="stat-value">${val}</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:${color}22;color:${color};">
+                        <i class="bi bi-${icon}"></i>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h3 class="text-info">${summary.total_school_days}</h3>
-                    <p class="mb-0">أيام الدراسة</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h3 class="text-success">${summary.attendance_rate}%</h3>
-                    <p class="mb-0">معدل الحضور</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h3 class="text-warning">${reportData.totals.overall.present}</h3>
-                    <p class="mb-0">إجمالي الحضور</p>
-                </div>
-            </div>
-        </div>
-    `;
+        </div>`).join('');
 
-    // Charts
-    renderCharts();
+    if (statusChart) statusChart.destroy();
+    if (trendChart)  trendChart.destroy();
 
-    // Matrix table
-    renderMatrix();
-}
-
-function renderCharts() {
-    // Status breakdown chart
-    const statusCtx = document.getElementById('statusChart').getContext('2d');
-    new Chart(statusCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['حاضر', 'غائب'],
-            datasets: [{
-                data: [reportData.totals.overall.present, reportData.totals.overall.absent],
-                backgroundColor: ['#28a745', '#dc3545']
-            }]
+    const COLORS = { primary:'#0A5C8E', success:'#2A9D8F', danger:'#E76F51' };
+    statusChart = new Chart(document.getElementById('statusChart'), {
+        type:'doughnut',
+        data:{
+            labels:['حاضر','غائب'],
+            datasets:[{ data:[data.totals.overall.present, data.totals.overall.absent],
+                backgroundColor:[COLORS.success, COLORS.danger],
+                borderWidth:0, hoverOffset:6 }]
         },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
+        options:{ responsive:true, cutout:'65%', plugins:{ legend:{ position:'bottom', labels:{ font:{family:'Cairo',size:13}, padding:16 }}}}
+    });
+    trendChart = new Chart(document.getElementById('trendChart'), {
+        type:'line',
+        data:{
+            labels: data.dates.map(d => formatDateShort(d)),
+            datasets:[{ label:'عدد الحاضرين', data: data.dates.map(d => data.totals.per_day[d]),
+                borderColor:COLORS.primary, backgroundColor:'rgba(79,70,229,0.08)',
+                tension:0.4, fill:true, pointRadius:4, pointBackgroundColor:COLORS.primary }]
+        },
+        options:{ responsive:true, scales:{ y:{ beginAtZero:true }}}
     });
 
-    // Trend chart
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: reportData.dates.map(d => formatDate(d)),
-            datasets: [{
-                label: 'عدد الحاضرين',
-                data: reportData.dates.map(d => reportData.totals.per_day[d]),
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-
-function renderMatrix() {
+    // Matrix
     const table = document.getElementById('attendanceMatrix');
-    let html = '<thead class="table-light"><tr><th rowspan="2" class="sticky-col">الطفل</th><th rowspan="2">الشعبة</th>';
-
-    // Date headers
-    reportData.dates.forEach(date => {
-        html += `<th class="text-center">${formatDateShort(date)}</th>`;
-    });
-    html += '<th rowspan="2" class="text-center">الحضور</th><th rowspan="2" class="text-center">الغياب</th></tr>';
-
-    // Day totals row
-    html += '<tr>';
-    reportData.dates.forEach(date => {
-        const count = reportData.totals.per_day[date];
-        html += `<th class="text-center bg-light">${count}</th>`;
-    });
-    html += '</tr></thead><tbody>';
-
-    // Child rows
-    reportData.children.forEach(child => {
-        html += `<tr>
-            <td class="sticky-col fw-bold">${child.name_ar}</td>
-            <td>${child.class_name || 'غير محدد'}</td>`;
-
-        let presentCount = 0;
-        let absentCount = 0;
-
-        reportData.dates.forEach(date => {
-            const status = reportData.matrix[child.id][date];
-            const badgeClass = status.status === 'present' ? 'bg-success' : 'bg-danger';
-            const icon = status.status === 'present' ? '✓' : '✗';
-            html += `<td class="text-center"><span class="badge ${badgeClass}">${icon}</span></td>`;
-
-            if (status.status === 'present') presentCount++;
-            else absentCount++;
+    let html = '<thead><tr><th class="sticky-col">الطفل</th><th>الشعبة</th>';
+    data.dates.forEach(d => { html += `<th class="text-center">${formatDateShort(d)}</th>`; });
+    html += '<th class="text-center">حضور</th><th class="text-center">غياب</th></tr></thead><tbody>';
+    data.children.forEach(child => {
+        let p = 0, a = 0;
+        html += `<tr><td class="sticky-col fw-700">${child.name_ar}</td><td style="font-size:0.8rem;color:var(--kinjo-text-muted);">${child.class_name||'—'}</td>`;
+        data.dates.forEach(d => {
+            const status = data.matrix[child.id]?.[d]?.status;
+            const isPresent = status === 'present';
+            if (isPresent) p++; else a++;
+            html += `<td class="text-center">
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:0.7rem;font-weight:800;
+                    background:${isPresent ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)'};
+                    color:${isPresent ? 'var(--kinjo-success)' : 'var(--kinjo-danger)'};">
+                    ${isPresent ? '✓' : '✗'}
+                </span>
+            </td>`;
         });
-
-        html += `<td class="text-center fw-bold text-success">${presentCount}</td>
-                 <td class="text-center fw-bold text-danger">${absentCount}</td>
-                 </tr>`;
+        html += `<td class="text-center fw-700" style="color:var(--kinjo-success);">${p}</td>
+                 <td class="text-center fw-700" style="color:var(--kinjo-danger);">${a}</td></tr>`;
     });
-
-    html += '</tbody>';
-    table.innerHTML = html;
+    table.innerHTML = html + '</tbody>';
 }
 
-function formatDate(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ar-JO', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
-
-function formatDateShort(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ar-JO', {
-        month: 'short',
-        day: 'numeric'
-    });
-}
-
-function getPeriodTypeLabel(type) {
-    const labels = {
-        'day': 'يوم واحد',
-        'week': 'أسبوع',
-        'month': 'شهر',
-        'range': 'فترة مخصصة'
-    };
-    return labels[type] || type;
-}
+function formatDate(d) { return d ? new Date(d).toLocaleDateString('ar-SA', {year:'numeric',month:'long',day:'numeric'}) : '—'; }
+function formatDateShort(d) { return d ? new Date(d).toLocaleDateString('ar-SA', {month:'short',day:'numeric'}) : '—'; }
 </script>
+<script src="/static/js/attendance.js" defer></script>
 {% endblock %}

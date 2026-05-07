@@ -1,120 +1,158 @@
 {% extends 'base.html' %}
-
-{% block title %}لوحة مؤشرات الأداء (KPIs){% endblock %}
+{% block title %}مؤشرات الأداء — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
-            مؤشرات الأداء والحوكمة
-        </h1>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-graph-up-arrow"></i>
+            الحوكمة والأداء
+        </div>
+        <h1 class="page-header-title">مؤشرات الأداء الرئيسية</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">KPIs</li>
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
+                <li class="breadcrumb-item active">مؤشرات الأداء</li>
             </ol>
         </nav>
     </div>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <button id="refreshBtn" type="button" class="btn btn-sm btn-outline-secondary" onclick="loadKPIData()">
-            <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+    <div class="page-header-actions">
+        <button id="refreshBtn" type="button" class="btn btn-ghost" onclick="loadKPIData()">
+            <i class="bi bi-arrow-clockwise me-2"></i>تحديث
         </button>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- Governance Score Card -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card bg-primary text-white overflow-hidden position-relative">
-            <div class="card-body p-4 position-relative z-1">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <h2 class="display-4 fw-bold mb-0">
-                            <span id="gqiScore">--</span>/100
-                        </h2>
-                        <p class="lead mb-2">مؤشر الحوكمة العام (GQI)</p>
-                        <div class="d-flex align-items-center gap-3 text-white-50">
-                            <small id="gqiBandText"><i class="bi bi-activity me-1"></i>جاري التحميل...</small>
-                        </div>
-                    </div>
-                    <div class="col-md-4 text-center">
-                        <div class="d-inline-block position-relative" style="width: 120px; height: 120px;">
-                            <canvas id="scoreGauge"></canvas>
-                        </div>
-                    </div>
-                </div>
+
+<!-- GQI Hero Card -->
+<div class="gqi-hero-card mb-4">
+    <div class="gqi-hero-bg"></div>
+    <div class="row align-items-center g-4 position-relative">
+        <div class="col-md-7">
+            <div class="gqi-eyebrow">مؤشر الحوكمة العام</div>
+            <div class="gqi-score-wrap">
+                <span class="gqi-score" id="gqiScore">—</span>
+                <span class="gqi-score-total">/100</span>
             </div>
-            <div class="position-absolute top-0 end-0 h-100 w-50 bg-white opacity-10" 
-                 style="transform: skewX(-20deg) translateX(50px);"></div>
+            <div class="gqi-band" id="gqiBandText">
+                <i class="bi bi-activity me-1"></i>جاري التحميل...
+            </div>
+            <div class="gqi-progress-bar-wrap mt-3">
+                <div class="gqi-progress-bar" id="gqiProgressBar" style="width:0%;"></div>
+            </div>
+        </div>
+        <div class="col-md-5 d-flex justify-content-center">
+            <div class="gqi-gauge-wrap">
+                <canvas id="scoreGauge" width="160" height="80"></canvas>
+                <div class="gqi-gauge-label" id="gqiGaugeLabel">—</div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Detailed Metrics -->
-<div class="row g-4 mb-4">
-    <!-- Operational Excellence -->
-    <div class="col-md-6 col-xl-4">
-        <div class="card h-100">
-            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold">التميز التشغيلي</h6>
-                <span class="badge bg-success-subtle text-success">Active</span>
-            </div>
+<!-- KPI Metric Cards -->
+<div class="row g-3 mb-4 stagger-children">
+    <div class="col-6 col-md-3">
+        <div class="stat-card card">
             <div class="card-body">
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="small fw-semibold">نسبة الحضور</span>
-                        <span class="small fw-bold" id="attRate">--%</span>
-                    </div>
-                    <div class="progress" style="height: 6px;">
-                        <div id="attRateBar" class="progress-bar bg-success" style="width: 0%"></div>
-                    </div>
+                <div class="stat-info">
+                    <div class="stat-label">نسبة الحضور</div>
+                    <div class="stat-value" id="attRate">—%</div>
                 </div>
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="small fw-semibold">الامتثال لنسبة الموظفين</span>
-                        <span class="small fw-bold" id="ratioComp">--%</span>
-                    </div>
-                    <div class="progress" style="height: 6px;">
-                        <div id="ratioCompBar" class="progress-bar bg-info" style="width: 0%"></div>
-                    </div>
+                <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                    <i class="bi bi-calendar-check-fill"></i>
                 </div>
-                <div class="mb-0">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="small fw-semibold">التدريب والتطوير (تقديري)</span>
-                        <span class="small fw-bold">90%</span>
-                    </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-warning" style="width: 90%"></div>
-                    </div>
+            </div>
+            <div class="progress mt-2" style="height:4px;border-radius:0;margin:-1px -1px 0;">
+                <div class="progress-bar bg-success" id="attRateBar" style="width:0%;transition:width 1s;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">امتثال نسبة الموظفين</div>
+                    <div class="stat-value" id="ratioComp">—%</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(6,182,212,0.12);color:#0891b2;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+            <div class="progress mt-2" style="height:4px;border-radius:0;margin:-1px -1px 0;">
+                <div class="progress-bar" id="ratioCompBar" style="width:0%;background:#0891b2;transition:width 1s;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">معدل الحوادث</div>
+                    <div class="stat-value" id="incRate">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                    <i class="bi bi-shield-fill-check"></i>
                 </div>
             </div>
         </div>
     </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card danger card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">الحوادث الخطرة</div>
+                    <div class="stat-value" id="serIncRate">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
+                    <i class="bi bi-shield-exclamation"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <!-- Safety & Compliance -->
+<!-- Charts Row -->
+<div class="row g-4">
+
+    <!-- Operational Excellence detail -->
     <div class="col-md-6 col-xl-4">
         <div class="card h-100">
-            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold">السلامة والامتثال</h6>
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-gear-wide-connected me-2 text-primary"></i>
+                    التميز التشغيلي
+                </h6>
             </div>
             <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-0">معدل الحوادث</h6>
-                        <small class="text-muted">لكل 100 طفل-يوم</small>
+                <div class="kpi-metric-row mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="kpi-metric-label">نسبة الحضور</span>
+                        <span class="kpi-metric-val fw-700" id="attRateDetail">—%</span>
                     </div>
-                    <h3 class="mb-0 text-success fw-bold" id="incRate">--</h3>
+                    <div class="progress" style="height:6px;border-radius:50px;">
+                        <div id="attRateBarDetail" class="progress-bar bg-success" style="width:0%;transition:width 1.2s;"></div>
+                    </div>
                 </div>
-                <hr>
-                <div class="d-flex align-items-center mb-3">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-0 text-danger">الحوادث الخطرة</h6>
-                        <small class="text-muted">High/Critical</small>
+                <div class="kpi-metric-row mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="kpi-metric-label">الامتثال لنسبة الموظفين</span>
+                        <span class="kpi-metric-val fw-700" id="ratioCompDetail">—%</span>
                     </div>
-                    <h3 class="mb-0 text-danger fw-bold" id="serIncRate">--</h3>
+                    <div class="progress" style="height:6px;border-radius:50px;">
+                        <div id="ratioCompBarDetail" class="progress-bar" style="width:0%;background:#0891b2;transition:width 1.2s;"></div>
+                    </div>
+                </div>
+                <div class="kpi-metric-row mb-0">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="kpi-metric-label">التدريب والتطوير</span>
+                        <span class="kpi-metric-val fw-700">90%</span>
+                    </div>
+                    <div class="progress" style="height:6px;border-radius:50px;">
+                        <div class="progress-bar" style="width:90%;background:#d97706;transition:width 1.2s;"></div>
+                    </div>
                 </div>
             </div>
             <div class="card-footer bg-transparent">
@@ -123,172 +161,219 @@
         </div>
     </div>
 
-    <!-- Charts -->
+    <!-- Student Distribution -->
     <div class="col-md-6 col-xl-4">
         <div class="card h-100">
-             <div class="card-header bg-transparent">
-                <h5 class="card-title mb-0">توزيع الطلاب</h5>
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-pie-chart-fill me-2 text-primary"></i>
+                    توزيع الأطفال
+                </h6>
             </div>
-            <div class="card-body">
-                <canvas id="levelsChart" height="200"></canvas>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <canvas id="levelsChart" style="max-height:220px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Band Explanation -->
+    <div class="col-md-12 col-xl-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-info-circle-fill me-2 text-primary"></i>
+                    نطاقات الأداء (GQI)
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="band-row" style="border-color:rgba(16,185,129,0.3);">
+                    <div class="band-color-dot" style="background:var(--kinjo-success);"></div>
+                    <div>
+                        <div class="band-label">الشريط الأخضر (80+)</div>
+                        <div class="band-desc">أداء متميز — معايير مثلى</div>
+                    </div>
+                    <span class="band-score-range">80–100</span>
+                </div>
+                <div class="band-row" style="border-color:rgba(245,158,11,0.3);">
+                    <div class="band-color-dot" style="background:#d97706;"></div>
+                    <div>
+                        <div class="band-label">الشريط الأصفر (60–79)</div>
+                        <div class="band-desc">أداء متوسط — يستدعي المتابعة</div>
+                    </div>
+                    <span class="band-score-range">60–79</span>
+                </div>
+                <div class="band-row" style="border-bottom:none;border-color:rgba(239,68,68,0.3);">
+                    <div class="band-color-dot" style="background:var(--kinjo-danger);"></div>
+                    <div>
+                        <div class="band-label">الشريط الأحمر (&lt;60)</div>
+                        <div class="band-desc">يحتاج تحسيناً عاجلاً</div>
+                    </div>
+                    <span class="band-score-range">&lt;60</span>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
+
+/* GQI Hero */
+.gqi-hero-card {
+    background:var(--kinjo-gradient-primary);
+    border-radius:var(--kinjo-radius-2xl,24px);
+    padding:2rem 2.5rem;
+    position:relative; overflow:hidden;
+    color:#fff;
+    box-shadow:var(--kinjo-shadow-primary);
+}
+.gqi-hero-bg {
+    position:absolute;top:-60px;left:-60px;
+    width:300px;height:300px;border-radius:50%;
+    background:rgba(255,255,255,0.07);
+    pointer-events:none;
+}
+.gqi-eyebrow { font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.8;margin-bottom:0.25rem; }
+.gqi-score-wrap { display:flex;align-items:baseline;gap:0.25rem; }
+.gqi-score { font-size:4rem;font-weight:900;line-height:1; }
+.gqi-score-total { font-size:1.5rem;font-weight:600;opacity:0.7; }
+.gqi-band { font-size:0.9rem;font-weight:600;opacity:0.85;margin-top:0.35rem; }
+.gqi-progress-bar-wrap { height:6px;border-radius:50px;background:rgba(255,255,255,0.25); }
+.gqi-progress-bar { height:100%;border-radius:50px;background:#fff;transition:width 1.5s cubic-bezier(0.4,0,0.2,1); }
+.gqi-gauge-wrap { position:relative;text-align:center; }
+.gqi-gauge-label { position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);font-size:0.75rem;font-weight:700;color:rgba(255,255,255,0.8); }
+
+/* KPI metrics */
+.kpi-metric-label { font-size:0.82rem;color:var(--kinjo-text-secondary); }
+.kpi-metric-val { font-size:0.875rem; }
+
+/* Band rows */
+.band-row { display:flex;align-items:center;gap:0.875rem;padding:0.875rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
+.band-color-dot { width:14px;height:14px;border-radius:50%;flex-shrink:0; }
+.band-label { font-size:0.84rem;font-weight:700;color:var(--kinjo-text-primary); }
+.band-desc { font-size:0.76rem;color:var(--kinjo-text-muted); }
+.band-score-range { margin-right:auto;font-size:0.8rem;font-weight:700;color:var(--kinjo-text-muted);flex-shrink:0; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.2/dist/chart.umd.js"></script>
 <script>
-    let gaugeChart = null;
+let gaugeChart = null;
+let levelsChart = null;
 
-    document.addEventListener('DOMContentLoaded', function() {
-        initCharts();
-        loadKPIData();
+document.addEventListener('DOMContentLoaded', () => {
+    initCharts();
+    loadKPIData();
+});
+
+function initCharts() {
+    const ctx = document.getElementById('scoreGauge').getContext('2d');
+    gaugeChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['النتيجة', 'المتبقي'],
+            datasets: [{
+                data: [0, 100],
+                backgroundColor: ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.2)'],
+                borderWidth: 0, circumference: 180, rotation: 270, cutout: '80%'
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            animation: { animateRotate: true }
+        }
     });
 
-    function initCharts() {
-        // Governance Gauge
-        const ctx = document.getElementById('scoreGauge');
-        gaugeChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Score', 'Remaining'],
-                datasets: [{
-                    data: [0, 100],
-                    backgroundColor: ['#ffffff', 'rgba(255, 255, 255, 0.2)'],
-                    borderWidth: 0,
-                    circumference: 180,
-                    rotation: 270,
-                    cutout: '85%'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                animation: { animateRotate: true, animateScale: true }
-            }
-        });
-
-        // Levels Chart - Real data from enrollments
-        fetch('/api/kpi/student-distribution', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(response => response.json())
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    fetch('/api/kpi/student-distribution', { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
         .then(data => {
-            new Chart(document.getElementById('levelsChart'), {
+            const labels = data?.labels || ['KG1', 'KG2', 'حضانة'];
+            const values = data?.values || [45, 55, 35];
+            levelsChart = new Chart(document.getElementById('levelsChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: data.labels || ['KG1', 'KG2', 'حضانة'],
-                    datasets: [{
-                        data: data.values || [45, 55, 35],
-                        backgroundColor: ['#0d6efd', '#6610f2', '#0dcaf0'],
+                    labels, datasets: [{
+                        data: values,
+                        backgroundColor: ['#0A5C8E','#2A9D8F','#06B6D4'],
+                        borderWidth: 0, hoverOffset: 6
                     }]
                 },
                 options: {
-                    responsive: true,
-                    plugins: { legend: { position: 'bottom' } }
+                    responsive: true, cutout: '60%',
+                    plugins: { legend: { position: 'bottom', labels: { font: { family: 'Cairo', size: 12 }, padding: 14 }}}
                 }
             });
         })
-        .catch(error => {
-            console.error('Failed to load student distribution:', error);
-            // Fallback to mock data
-            new Chart(document.getElementById('levelsChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['KG1', 'KG2', 'حضانة'],
-                    datasets: [{
-                        data: [45, 55, 35],
-                        backgroundColor: ['#0d6efd', '#6610f2', '#0dcaf0'],
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { position: 'bottom' } }
-                }
-            });
-        });
+        .catch(() => {});
+}
+
+async function loadKPIData() {
+    const btn = document.getElementById('refreshBtn');
+    if (btn) { btn.disabled = true; btn.querySelector('i').classList.add('spin'); }
+    try {
+        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+        const r = await fetch('/api/kpi/summary', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!r.ok) throw new Error(r.status === 403 ? 'ليس لديك صلاحية' : 'خطأ في الخادم');
+        const data = await r.json();
+        updateDashboard(data);
+    } catch (e) {
+        showError(e.message || 'خطأ في تحميل البيانات');
+    } finally {
+        if (btn) { btn.disabled = false; btn.querySelector('i').classList.remove('spin'); }
+    }
+}
+
+function updateDashboard(data) {
+    const score = Math.round(data.gqi_score || 0);
+    document.getElementById('gqiScore').textContent    = score;
+    document.getElementById('gqiBandText').textContent = getBandText(score);
+    document.getElementById('gqiGaugeLabel').textContent = score + '/100';
+    document.getElementById('gqiProgressBar').style.width = score + '%';
+
+    if (gaugeChart) {
+        gaugeChart.data.datasets[0].data = [score, 100 - score];
+        gaugeChart.update();
     }
 
-    async function loadKPIData() {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                showError('يرجى تسجيل الدخول لعرض مؤشرات الأداء');
-                return;
-            }
+    updateMetric('attRate', 'attRateBar', data.attendance_rate);
+    updateMetric('ratioComp', 'ratioCompBar', data.ratio_compliance);
+    updateMetric('attRateDetail', 'attRateBarDetail', data.attendance_rate);
+    updateMetric('ratioCompDetail', 'ratioCompBarDetail', data.ratio_compliance);
 
-            const response = await fetch('/api/kpi/summary', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+    document.getElementById('incRate').textContent    = data.incident_rate    ?? '—';
+    document.getElementById('serIncRate').textContent = data.serious_incident_rate ?? '—';
+}
 
-            if (response.ok) {
-                const data = await response.json();
-                updateDashboard(data);
-            } else if (response.status === 401) {
-                showError('انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول');
-                setTimeout(() => window.location.href = '/login', 2000);
-            } else if (response.status === 403) {
-                showError('ليس لديك صلاحية لعرض مؤشرات الأداء');
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                showError(`خطأ في تحميل البيانات: ${errorData.detail || response.statusText}`);
-            }
-        } catch (error) {
-            console.error('Network error:', error);
-            showError('خطأ في الاتصال بالخادم، يرجى المحاولة لاحقاً');
-        }
-    }
+function updateMetric(textId, barId, value) {
+    const v = value ?? 0;
+    const el = document.getElementById(textId);
+    const bar = document.getElementById(barId);
+    if (el)  el.textContent = v + '%';
+    if (bar) bar.style.width = v + '%';
+}
 
-    function showError(message) {
-        // Update all KPI displays to show error state
-        document.getElementById('gqiScore').innerText = 'خطأ';
-        document.getElementById('gqiBandText').innerText = message;
+function getBandText(score) {
+    if (score >= 80) return 'أداء متميز — الشريط الأخضر';
+    if (score >= 60) return 'أداء متوسط — الشريط الأصفر';
+    return 'يحتاج تحسيناً — الشريط الأحمر';
+}
 
-        // Reset progress bars
-        ['attRate', 'ratioComp'].forEach(id => {
-            document.getElementById(id).innerText = '--%';
-            document.getElementById(id + 'Bar').style.width = '0%';
-        });
-
-        // Reset incident rates
-        document.getElementById('incRate').innerText = '--';
-        document.getElementById('serIncRate').innerText = '--';
-    }
-
-    function updateDashboard(data) {
-        // GQI Score
-        document.getElementById('gqiScore').innerText = Math.round(data.gqi_score);
-        document.getElementById('gqiBandText').innerText = getBandText(data.gqi_score);
-        
-        // Update Gauge
-        if (gaugeChart) {
-            gaugeChart.data.datasets[0].data = [data.gqi_score, 100 - data.gqi_score];
-            gaugeChart.update();
-        }
-
-        // Operational Excellence
-        updateMetric('attRate', 'attRateBar', data.attendance_rate);
-        updateMetric('ratioComp', 'ratioCompBar', data.ratio_compliance);
-
-        // Safety
-        document.getElementById('incRate').innerText = data.incident_rate;
-        document.getElementById('serIncRate').innerText = data.serious_incident_rate;
-    }
-
-    function updateMetric(textId, barId, value) {
-        document.getElementById(textId).innerText = value + '%';
-        if (document.getElementById(barId)) {
-            document.getElementById(barId).style.width = value + '%';
-        }
-    }
-
-    function getBandText(score) {
-        if (score >= 80) return "اداء متميز (Green Band)";
-        if (score >= 60) return "اداء متوسط (Amber Band)";
-        return "يحتاج تحسين (Red Band)";
-    }
+function showError(msg) {
+    document.getElementById('gqiScore').textContent  = '—';
+    document.getElementById('gqiBandText').textContent = msg;
+    ['attRate','ratioComp','incRate','serIncRate'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '—';
+    });
+    ['attRateBar','ratioCompBar','attRateBarDetail','ratioCompBarDetail'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.width = '0%';
+    });
+}
 </script>
 {% endblock %}
