@@ -5,9 +5,9 @@ Adds CRUD operations and complete workflows
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_, func, text
 from datetime import date, datetime, timedelta
-from typing import List, Optional
+from typing import Any, List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -15,7 +15,7 @@ from slowapi.util import get_remote_address
 import models
 import validators
 from config import settings
-from database import get_db
+from database import get_db, engine as _db_engine
 from dependencies import get_current_user
 
 
@@ -710,7 +710,7 @@ class KindergartenCreate(BaseModel):
     def validate_governorate(cls, value):
         if not validators.validate_jordan_governorate(value):
             raise ValueError(f"Invalid governorate: {value}. Must be one of: {', '.join(settings.JORDAN_GOVERNORATES)}")
-        return value
+        return validators.normalise_jordan_governorate(value)
 
 
 def detect_kindergarten_duplicate(db: Session, data: KindergartenCreate, exclude_id: Optional[int] = None) -> Optional[str]:
@@ -1531,6 +1531,16 @@ def assign_child_to_class(
     except validators.ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    # Acquire a row-level lock on the class record before counting seats.
+    # This eliminates the TOCTOU race on PostgreSQL where two concurrent
+    # requests both read the count before either writes, causing over-enrollment.
+    # SQLite serialises at the connection level so no explicit lock is needed.
+    if _db_engine.dialect.name == "postgresql":
+        db.execute(
+            text("SELECT id FROM classes WHERE id = :id FOR UPDATE"),
+            {"id": class_id},
+        )
+
     # Check capacity
     enrolled_count = db.query(func.count(models.EnrollmentApplication.id)).filter(
         models.EnrollmentApplication.class_id == class_id,
@@ -1957,10 +1967,16 @@ def get_admin_dashboard(
 
     for kg in expiring_soon:
         days = (kg.license_valid_until - today).days
+        if days < 0:
+            msg  = f"ترخيص روضة «{kg.name_ar}» منتهٍ منذ {abs(days)} يوم"
+            prio = "critical"
+        else:
+            msg  = f"ترخيص روضة «{kg.name_ar}» ينتهي خلال {days} يوم"
+            prio = "high"
         alerts.append({
             "type": "license_expiry",
-            "message": f"License for {kg.name_ar} expires in {days} days",
-            "priority": "critical" if days < 0 else "high",
+            "message": msg,
+            "priority": prio,
             "kindergarten_id": kg.id
         })
 
@@ -1968,7 +1984,7 @@ def get_admin_dashboard(
     if pending_applications > 10:
         alerts.append({
             "type": "high_pending_applications",
-            "message": f"{pending_applications} applications pending review across all kindergartens",
+            "message": f"يوجد {pending_applications} طلب تسجيل معلق يتطلب المراجعة",
             "priority": "high"
         })
 
@@ -1978,7 +1994,7 @@ def get_admin_dashboard(
         if attendance_rate < 70:
             alerts.append({
                 "type": "low_attendance",
-                "message": f"Today's attendance rate is only {attendance_rate:.1f}%",
+                "message": f"نسبة الحضور اليوم {attendance_rate:.1f}% فقط (أقل من الحد المطلوب 70%)",
                 "priority": "medium"
             })
 
@@ -1986,7 +2002,7 @@ def get_admin_dashboard(
     if recent_incidents > 5:
         alerts.append({
             "type": "high_incidents",
-            "message": f"{recent_incidents} incidents reported in the last 7 days",
+            "message": f"تم تسجيل {recent_incidents} حادثة في الأسبوع الأخير",
             "priority": "medium"
         })
 
@@ -2072,7 +2088,7 @@ def get_parent_dashboard(
             "id": child.id,
             "first_name": child.first_name,
             "last_name": child.last_name,
-            "age_months": validators.validate_age_months(child.date_of_birth),
+            "age_months": (date.today() - child.date_of_birth).days // 30 if child.date_of_birth else None,
             "enrollment": None,
             "attendance_today": None,
             "latest_report_date": None
@@ -2104,6 +2120,87 @@ def get_parent_dashboard(
         "children": children_data,
         "total_children": len(children),
         "notifications": []  # Placeholder for notifications
+    }
+
+
+@router.get("/parent/children")
+def get_parent_children(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get list of parent's children"""
+    if current_user.role != models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Parent access only")
+
+    parent_profile = db.query(models.ParentProfile).filter(
+        models.ParentProfile.user_id == current_user.id
+    ).first()
+
+    if not parent_profile:
+        return {"children": []}
+
+    children = db.query(models.Child).filter(
+        models.Child.parent_id == parent_profile.id
+    ).all()
+
+    return {
+        "children": [
+            {
+                "id": c.id,
+                "full_name_ar": f"{c.first_name} {c.last_name}",
+                "name": f"{c.first_name} {c.last_name}",
+                "first_name": c.first_name,
+                "last_name": c.last_name,
+            }
+            for c in children
+        ]
+    }
+
+
+@router.get("/reports")
+def get_reports(
+    shared_with_parent: Optional[bool] = None,
+    child_id: Optional[int] = None,
+    report_type: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get reports list, filtered by query params"""
+    query = db.query(models.DailyReport)
+
+    if current_user.role == models.UserRole.PARENT:
+        # Parents only see approved reports for their children
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        if not parent_profile:
+            return {"reports": []}
+        child_ids = [c.id for c in db.query(models.Child).filter(
+            models.Child.parent_id == parent_profile.id
+        ).all()]
+        query = query.filter(
+            models.DailyReport.child_id.in_(child_ids),
+            models.DailyReport.status == models.DailyReportStatus.APPROVED
+        )
+
+    if child_id:
+        query = query.filter(models.DailyReport.child_id == child_id)
+
+    reports = query.order_by(models.DailyReport.date.desc()).limit(50).all()
+
+    return {
+        "reports": [
+            {
+                "id": r.id,
+                "child_id": r.child_id,
+                "date": r.date.isoformat() if r.date else None,
+                "status": r.status.value,
+                "activities": r.activities,
+                "notes": r.notes,
+                "report_type": "PROGRESS",
+            }
+            for r in reports
+        ]
     }
 
 
@@ -2448,7 +2545,7 @@ class ParentRegistrationRequest(BaseModel):
     def validate_home_governorate(cls, value):
         if not validators.validate_jordan_governorate(value):
             raise ValueError(f"Invalid governorate: {value}. Must be one of: {', '.join(settings.JORDAN_GOVERNORATES)}")
-        return value
+        return validators.normalise_jordan_governorate(value)
 
 
 @router.post("/register/parent", status_code=status.HTTP_201_CREATED)
@@ -3872,7 +3969,7 @@ def get_supervisor_children(
             "first_name": child.first_name,
             "last_name": child.last_name,
             "gender": child.gender.value,
-            "photo_url": child.photo_url,
+            "photo_url": None,
             "class_id": enrollment.class_id if enrollment else None,
             "attendance_status": status,
             "check_in_time": check_in_time,
@@ -3920,11 +4017,11 @@ def list_children(
             "id": child.id,
             "first_name": child.first_name,
             "last_name": child.last_name,
-            "first_name_ar": child.first_name_ar,
-            "last_name_ar": child.last_name_ar,
+            "first_name_ar": child.first_name,
+            "last_name_ar": child.last_name,
             "gender": child.gender.value if child.gender else None,
             "date_of_birth": child.date_of_birth.isoformat() if child.date_of_birth else None,
-            "photo_url": child.photo_url,
+            "photo_url": None,
             "enrollment_id": enrollment.id if enrollment else None,
             "class_id": enrollment.class_id if enrollment else None,
             "kindergarten_id": enrollment.kindergarten_id if enrollment else None
@@ -4309,6 +4406,11 @@ class HealthAlertCreateRequest(BaseModel):
     description: str
     severity: str
 
+    @field_validator("severity", mode="before")
+    @classmethod
+    def coerce_severity_upper(cls, v: Any) -> str:
+        return v.upper() if isinstance(v, str) else v
+
 
 @router.get("/children/{child_id}/health-alerts")
 def get_child_health_alerts(
@@ -4572,3 +4674,39 @@ def export_audit_logs(
 
     else:
         raise HTTPException(status_code=400, detail="Unsupported export format")
+
+
+# ============================================================================
+# Parent Profile Endpoint
+# ============================================================================
+
+@router.get("/parent/profile")
+def get_parent_profile(
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get parent profile. Returns 403 with translated message for non-parent users."""
+    if current_user.role != models.UserRole.PARENT:
+        from i18n import request_language, gettext
+        lang = request_language(request)
+        if lang == "ar":
+            detail = "الوصول للوالدين فقط"
+        else:
+            detail = "Parent access only"
+        raise HTTPException(status_code=403, detail=detail)
+
+    parent_profile = db.query(models.ParentProfile).filter(
+        models.ParentProfile.user_id == current_user.id
+    ).first()
+
+    if not parent_profile:
+        raise HTTPException(status_code=404, detail="Parent profile not found")
+
+    return {
+        "id": parent_profile.id,
+        "first_name": parent_profile.first_name,
+        "last_name": parent_profile.last_name,
+        "phone_number": parent_profile.phone_number,
+        "user_id": parent_profile.user_id,
+    }

@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Enrollments') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
+            <i class="bi bi-clipboard-check-fill"></i>
+            بوابة ولي الأمر
+        </div>
+        <h1 class="page-header-title">{{ _('Enrollments') }}</h1>
+        <p class="page-header-sub">حالة طلبات التسجيل المقدمة</p>
+    </div>
+    <a href="/enrollments/create" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>طلب تسجيل جديد
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="enrollmentsList">
+    <div class="text-center py-5 text-muted">
+        <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+        جاري التحميل...
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
+
+.enroll-item { display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
+.enroll-item:last-child { border-bottom:none; }
+.enroll-item:hover { background:var(--kinjo-surface); }
+.enroll-icon { width:44px;height:44px;border-radius:12px;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0; }
+.enroll-body { flex:1;min-width:0; }
+.enroll-name { font-weight:700;font-size:0.9rem;color:var(--kinjo-text-primary); }
+.enroll-meta { font-size:0.75rem;color:var(--kinjo-text-muted); }
+.enroll-badge { display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.72rem;font-weight:800; }
+.enroll-badge.pending  { background:rgba(245,158,11,0.12);color:#d97706; }
+.enroll-badge.approved { background:rgba(16,185,129,0.12);color:var(--kinjo-success); }
+.enroll-badge.rejected { background:rgba(239,68,68,0.12);color:var(--kinjo-danger); }
+.enroll-badge.active   { background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const r = await fetch('/api/parent/enrollments', { headers: authHeaders });
+        const data = r.ok ? await r.json() : null;
+        render(data?.enrollments || data || []);
+    } catch { render([]); }
+});
+
+const statusLabels = { pending:'قيد المراجعة', approved:'مقبول', rejected:'مرفوض', active:'نشط' };
+
+function render(items) {
+    const c = document.getElementById('enrollmentsList');
+    if (!items.length) {
+        c.innerHTML = `<div class="card"><div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-clipboard-x d-block fs-1 mb-3 opacity-25"></i>
+            <p class="mb-3">لا توجد طلبات تسجيل</p>
+            <a href="/enrollments/create" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>قدّم طلباً الآن
+            </a>
+        </div></div>`;
+        return;
+    }
+    c.innerHTML = `<div class="card"><div class="card-body p-0">${items.map(e => {
+        const st  = e.status || 'pending';
+        const dt  = e.created_at ? new Date(e.created_at).toLocaleDateString('ar-SA',{year:'numeric',month:'short',day:'numeric'}) : '—';
+        return `<div class="enroll-item">
+            <div class="enroll-icon"><i class="bi bi-clipboard-check"></i></div>
+            <div class="enroll-body">
+                <div class="enroll-name">${e.child_name || e.child_id || '—'}</div>
+                <div class="enroll-meta">${e.kindergarten_name || '—'} · ${dt}</div>
+            </div>
+            <span class="enroll-badge ${st}">${statusLabels[st] || st}</span>
+            <a href="/enrollments/${e.id}" class="btn btn-ghost btn-sm">عرض</a>
+        </div>`;
+    }).join('')}</div></div>`;
+}
+</script>
+{% endblock %}

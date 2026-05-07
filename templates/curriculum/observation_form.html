@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
-
-{% block title %}تسجيل ملاحظة نمائية{% endblock %}
+{% block title %}تسجيل ملاحظة نمائية — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2 mb-1">
-            <i class="bi bi-eye me-2 text-success"></i>
-            تسجيل ملاحظة نمائية
-        </h1>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-success);">
+            <i class="bi bi-journal-richtext"></i>
+            التعلم والنمو
+        </div>
+        <h1 class="page-header-title">تسجيل ملاحظة نمائية</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
-                <li class="breadcrumb-item"><a href="/curriculum">المنهج</a></li>
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="/curriculum" class="text-decoration-none">المنهج</a></li>
                 <li class="breadcrumb-item active">تسجيل ملاحظة</li>
             </ol>
         </nav>
@@ -22,96 +22,326 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <form id="obsForm" onsubmit="submitObservation(event)">
-                    <div class="mb-3">
-                        <label for="childId" class="form-label">رقم الطفل (ID)</label>
-                        <input type="number" class="form-control" id="childId" required placeholder="أدخل رقم هوية النظام للطفل">
+    <div class="col-lg-8 col-xl-7">
+
+        <!-- Domain Selector Cards -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-grid-3x3-gap me-2 text-success"></i>
+                    مجال التعلم
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="domain-grid" id="domainGrid">
+                    <label class="domain-pick-card">
+                        <input type="radio" name="domain" value="SOCIAL_EMOTIONAL" class="visually-hidden" required>
+                        <div class="domain-pick-inner social">
+                            <i class="bi bi-people-fill"></i>
+                            <span>الاجتماعي والعاطفي</span>
+                        </div>
+                    </label>
+                    <label class="domain-pick-card">
+                        <input type="radio" name="domain" value="COGNITIVE" class="visually-hidden">
+                        <div class="domain-pick-inner cognitive">
+                            <i class="bi bi-lightbulb-fill"></i>
+                            <span>المعرفي والإدراكي</span>
+                        </div>
+                    </label>
+                    <label class="domain-pick-card">
+                        <input type="radio" name="domain" value="PHYSICAL" class="visually-hidden">
+                        <div class="domain-pick-inner physical">
+                            <i class="bi bi-activity"></i>
+                            <span>الجسمي والحركي</span>
+                        </div>
+                    </label>
+                    <label class="domain-pick-card">
+                        <input type="radio" name="domain" value="LANGUAGE" class="visually-hidden">
+                        <div class="domain-pick-inner language">
+                            <i class="bi bi-chat-quote-fill"></i>
+                            <span>اللغوي</span>
+                        </div>
+                    </label>
+                </div>
+                <div class="invalid-feedback" id="domainError" style="display:none;">الرجاء اختيار مجال التعلم</div>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-pencil-square me-2 text-success"></i>
+                    تفاصيل الملاحظة
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="obsForm" onsubmit="submitObservation(event)" novalidate>
+
+                    <!-- Child Search -->
+                    <div class="mb-4">
+                        <label class="obs-label" for="childSearch">الطفل</label>
+                        <div class="child-search-wrap">
+                            <div class="search-box-inline mb-2">
+                                <i class="bi bi-search search-box-icon"></i>
+                                <input type="text" class="form-control" id="childSearch"
+                                       placeholder="ابحث باسم الطفل..." autocomplete="off">
+                            </div>
+                            <div id="childResults" class="child-results-drop d-none"></div>
+                            <input type="hidden" id="childId">
+                            <div id="selectedChild" class="selected-child-badge d-none">
+                                <i class="bi bi-person-fill me-2 text-success"></i>
+                                <span id="selectedChildName"></span>
+                                <button type="button" class="btn-close btn-close-sm ms-auto" onclick="clearChild()" aria-label="إلغاء اختيار الطفل"></button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="domain" class="form-label">مجال التعلم</label>
-                            <select class="form-select" id="domain" required>
-                                <option value="" selected disabled>اختر المجال...</option>
-                                <option value="SOCIAL_EMOTIONAL">الاجتماعي الانفعالي</option>
-                                <option value="PHYSICAL">الجسمي الحركي</option>
-                                <option value="COGNITIVE">المعرفي الإدراكي</option>
-                                <option value="LANGUAGE">اللغوي</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="mastery" class="form-label">مستوى الإتقان</label>
-                            <select class="form-select" id="mastery">
-                                <option value="" selected>-- غير محدد --</option>
-                                <option value="NEEDS_SUPPORT">يحتاج دعم</option>
-                                <option value="ON_TRACK">في المسار الصحيح</option>
-                                <option value="EXCEEDS">يفوق التوقعات</option>
-                            </select>
+                    <!-- Mastery Level -->
+                    <div class="mb-4">
+                        <label class="obs-label">مستوى الإتقان</label>
+                        <div class="mastery-grid">
+                            <label class="mastery-card">
+                                <input type="radio" name="mastery" value="NEEDS_SUPPORT" class="visually-hidden">
+                                <div class="mastery-inner needs-support">
+                                    <i class="bi bi-hand-thumbs-down"></i>
+                                    <span>يحتاج إلى دعم</span>
+                                </div>
+                            </label>
+                            <label class="mastery-card">
+                                <input type="radio" name="mastery" value="ON_TRACK" class="visually-hidden" checked>
+                                <div class="mastery-inner on-track">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span>في المسار الصحيح</span>
+                                </div>
+                            </label>
+                            <label class="mastery-card">
+                                <input type="radio" name="mastery" value="EXCEEDS" class="visually-hidden">
+                                <div class="mastery-inner exceeds">
+                                    <i class="bi bi-stars"></i>
+                                    <span>يفوق التوقعات</span>
+                                </div>
+                            </label>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="observedAt" class="form-label">تاريخ الملاحظة</label>
+                    <!-- Date -->
+                    <div class="mb-4">
+                        <label class="obs-label" for="observedAt">تاريخ ووقت الملاحظة</label>
                         <input type="datetime-local" class="form-control" id="observedAt" required>
                     </div>
 
+                    <!-- Notes -->
                     <div class="mb-4">
-                        <label for="notes" class="form-label">نص الملاحظة</label>
-                        <textarea class="form-control" id="notes" rows="4" required placeholder="سجل ما لاحظته عن سلوك أو مهارة الطفل..."></textarea>
-                        <div class="form-text">اكتب وصفاً موضوعياً لما قام به الطفل.</div>
+                        <label class="obs-label" for="notes">نص الملاحظة</label>
+                        <textarea class="form-control" id="notes" rows="5" required
+                                  placeholder="صِف ما لاحظته عن سلوك أو مهارة الطفل بصورة موضوعية ومحددة..."></textarea>
+                        <div class="form-text mt-1">
+                            <i class="bi bi-info-circle me-1"></i>
+                            اكتب ما فعله الطفل بالتحديد، لا ما تعتقد أنه يشعر به.
+                        </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2">
-                        <a href="/curriculum" class="btn btn-outline-secondary">إلغاء</a>
-                        <button type="submit" class="btn btn-success px-4">حفظ الملاحظة</button>
+                    <!-- Actions -->
+                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                        <a href="/curriculum" class="btn btn-ghost">إلغاء</a>
+                        <button type="submit" class="btn btn-success px-4" id="submitBtn">
+                            <i class="bi bi-check-lg me-2"></i>حفظ الملاحظة
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.obs-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:0.6rem; }
+
+/* Domain picker */
+.domain-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem; }
+@media(min-width:576px) { .domain-grid { grid-template-columns:repeat(4,1fr); } }
+.domain-pick-card { cursor:pointer; }
+.domain-pick-inner {
+    display:flex;flex-direction:column;align-items:center;gap:0.5rem;
+    padding:1rem 0.5rem;border-radius:var(--kinjo-radius-lg);
+    border:2px solid var(--kinjo-border);background:var(--kinjo-surface);
+    font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);
+    transition:all 0.2s;
+}
+.domain-pick-inner i { font-size:1.6rem; }
+.domain-pick-card input:checked + .domain-pick-inner.social    { border-color:#6366f1;background:rgba(99,102,241,0.1);color:#6366f1; }
+.domain-pick-card input:checked + .domain-pick-inner.cognitive { border-color:#f59e0b;background:rgba(245,158,11,0.1);color:#d97706; }
+.domain-pick-card input:checked + .domain-pick-inner.physical  { border-color:#10b981;background:rgba(16,185,129,0.1);color:#059669; }
+.domain-pick-card input:checked + .domain-pick-inner.language  { border-color:#ef4444;background:rgba(239,68,68,0.1);color:#dc2626; }
+.domain-pick-inner.social    { color:#6366f1; }
+.domain-pick-inner.cognitive { color:#f59e0b; }
+.domain-pick-inner.physical  { color:#10b981; }
+.domain-pick-inner.language  { color:#ef4444; }
+
+/* Mastery cards */
+.mastery-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem; }
+.mastery-card { cursor:pointer; }
+.mastery-inner {
+    display:flex;flex-direction:column;align-items:center;gap:0.4rem;
+    padding:0.85rem 0.5rem;border-radius:var(--kinjo-radius-lg);
+    border:2px solid var(--kinjo-border);background:var(--kinjo-surface);
+    font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);
+    transition:all 0.2s;
+}
+.mastery-inner i { font-size:1.4rem; }
+.mastery-card input:checked + .mastery-inner.needs-support { border-color:#ef4444;background:rgba(239,68,68,0.1);color:#dc2626; }
+.mastery-card input:checked + .mastery-inner.on-track      { border-color:#10b981;background:rgba(16,185,129,0.1);color:#059669; }
+.mastery-card input:checked + .mastery-inner.exceeds       { border-color:#f59e0b;background:rgba(245,158,11,0.1);color:#d97706; }
+.mastery-inner.needs-support { color:#ef4444; }
+.mastery-inner.on-track      { color:#10b981; }
+.mastery-inner.exceeds       { color:#f59e0b; }
+
+/* Child search */
+.search-box-inline { position:relative; }
+.search-box-icon { position:absolute;inset-block-start:50%;transform:translateY(-50%);inset-inline-start:0.75rem;color:var(--kinjo-text-muted);pointer-events:none; }
+.search-box-inline .form-control { padding-inline-start:2.25rem; }
+.child-results-drop {
+    position:absolute;z-index:100;width:100%;background:var(--kinjo-card-bg);
+    border:1px solid var(--kinjo-border);border-radius:var(--kinjo-radius-lg);
+    box-shadow:var(--kinjo-shadow-lg);max-height:200px;overflow-y:auto;
+}
+.child-result-item {
+    padding:0.6rem 1rem;cursor:pointer;font-size:0.85rem;
+    border-bottom:1px solid var(--kinjo-border);
+    display:flex;align-items:center;gap:0.5rem;
+}
+.child-result-item:last-child { border-bottom:none; }
+.child-result-item:hover { background:var(--kinjo-surface); }
+.child-search-wrap { position:relative; }
+.selected-child-badge {
+    display:flex;align-items:center;gap:0.5rem;
+    padding:0.6rem 0.85rem;border-radius:var(--kinjo-radius-lg);
+    border:2px solid var(--kinjo-success);background:rgba(16,185,129,0.08);
+    font-size:0.85rem;font-weight:700;color:var(--kinjo-success);
+}
+</style>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
-    document.getElementById('observedAt').value = new Date().toISOString().slice(0, 16);
+const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
 
-    async function submitObservation(e) {
-        e.preventDefault();
-        
-        const data = {
-            child_id: parseInt(document.getElementById('childId').value),
-            domain: document.getElementById('domain').value,
-            mastery_level: document.getElementById('mastery').value || null,
-            observation_text: document.getElementById('notes').value,
-            observed_at: new Date(document.getElementById('observedAt').value).toISOString()
-        };
+document.getElementById('observedAt').value = new Date().toISOString().slice(0, 16);
 
-        try {
-            const token = localStorage.getItem('token'); 
-            const response = await fetch('/api/observations', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
+// Domain picker visual feedback
+document.querySelectorAll('input[name="domain"]').forEach(r => {
+    r.addEventListener('change', () => {
+        document.getElementById('domainError').style.display = 'none';
+    });
+});
 
-            if (response.ok) {
-                alert('تم حفظ الملاحظة بنجاح');
-                window.location.href = '/curriculum';
-            } else {
-                const err = await response.json();
-                alert('خطأ: ' + (err.detail || 'فشل الحفظ'));
-            }
-        } catch (error) {
-            console.error(error);
-            alert('حدث خطأ في الاتصال');
-        }
+// Child search
+let searchTimer;
+document.getElementById('childSearch').addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    const q = this.value.trim();
+    if (q.length < 2) { hideResults(); return; }
+    searchTimer = setTimeout(() => searchChildren(q), 300);
+});
+
+async function searchChildren(q) {
+    try {
+        const r = await fetch(`/api/children?search=${encodeURIComponent(q)}&limit=10`, { headers: authHeaders });
+        if (!r.ok) return;
+        const data = await r.json();
+        const children = data.children || data || [];
+        showResults(children);
+    } catch { hideResults(); }
+}
+
+function showResults(children) {
+    const drop = document.getElementById('childResults');
+    if (!children.length) {
+        drop.innerHTML = `<div class="child-result-item text-muted"><i class="bi bi-search me-2"></i>لا توجد نتائج</div>`;
+    } else {
+        drop.innerHTML = children.map(c =>
+            `<div class="child-result-item" onclick="selectChild(${c.id},'${(c.full_name_ar||c.name||'').replace(/'/g,"\\'")}')" >
+                <i class="bi bi-person-fill text-success"></i>
+                <span>${c.full_name_ar || c.name || '#'+c.id}</span>
+            </div>`
+        ).join('');
     }
+    drop.classList.remove('d-none');
+}
+
+function hideResults() { document.getElementById('childResults').classList.add('d-none'); }
+
+function selectChild(id, name) {
+    document.getElementById('childId').value = id;
+    document.getElementById('selectedChildName').textContent = name;
+    document.getElementById('selectedChild').classList.remove('d-none');
+    document.getElementById('childSearch').parentElement.classList.add('d-none');
+    hideResults();
+}
+
+function clearChild() {
+    document.getElementById('childId').value = '';
+    document.getElementById('selectedChild').classList.add('d-none');
+    document.getElementById('childSearch').parentElement.classList.remove('d-none');
+    document.getElementById('childSearch').value = '';
+}
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('.child-search-wrap')) hideResults();
+});
+
+async function submitObservation(e) {
+    e.preventDefault();
+    const domain = document.querySelector('input[name="domain"]:checked')?.value;
+    if (!domain) {
+        document.getElementById('domainError').style.display = 'block';
+        document.getElementById('domainGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+    const childId = document.getElementById('childId').value;
+    const notes = document.getElementById('notes').value.trim();
+    const observedAt = document.getElementById('observedAt').value;
+    const mastery = document.querySelector('input[name="mastery"]:checked')?.value || null;
+
+    if (!notes || !observedAt) { showToast('الرجاء تعبئة جميع الحقول المطلوبة', 'error'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>جاري الحفظ...';
+
+    const body = {
+        domain,
+        mastery_level: mastery,
+        observation_text: notes,
+        observed_at: new Date(observedAt).toISOString()
+    };
+    if (childId) body.child_id = parseInt(childId);
+
+    try {
+        const r = await fetch('/api/observations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify(body)
+        });
+        if (r.ok) {
+            showToast('تم حفظ الملاحظة بنجاح', 'success');
+            setTimeout(() => window.location.href = '/curriculum', 1200);
+        } else {
+            const err = await r.json().catch(() => ({}));
+            showToast('خطأ: ' + (err.detail || 'فشل الحفظ'), 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>حفظ الملاحظة';
+        }
+    } catch {
+        showToast('حدث خطأ في الاتصال', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>حفظ الملاحظة';
+    }
+}
 </script>
 {% endblock %}

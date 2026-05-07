@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Absence Requests') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
+            <i class="bi bi-calendar-x-fill"></i>
+            الحضور والغياب
+        </div>
+        <h1 class="page-header-title">{{ _('Absence Requests') }}</h1>
+        <p class="page-header-sub">إدارة طلبات الغياب بعذر</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAbsenceModal">
+        <i class="bi bi-plus-circle me-2"></i>طلب غياب جديد
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Requests List -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="card-title-sm mb-0">
+            <i class="bi bi-list-check me-2 text-primary"></i>
+            طلبات الغياب المقدمة
+        </h6>
+        <span class="text-muted small" id="reqCount">—</span>
+    </div>
+    <div class="card-body p-0" id="requestsList">
+        <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+            جاري التحميل...
+        </div>
+    </div>
+</div>
+
+<!-- New Absence Modal -->
+<div class="modal fade" id="newAbsenceModal" tabindex="-1" aria-labelledby="newAbsenceModalLabel">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-800" id="newAbsenceModalLabel">
+                    <i class="bi bi-calendar-x me-2 text-primary"></i>طلب غياب بعذر
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <form id="absenceForm" onsubmit="submitAbsence(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-700" style="font-size:0.85rem;">الطفل</label>
+                        <select class="form-select" id="absenceChild" required>
+                            <option value="">— اختر الطفل —</option>
+                        </select>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-700" style="font-size:0.85rem;">من تاريخ</label>
+                            <input type="date" class="form-control" id="absenceFrom" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-700" style="font-size:0.85rem;">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="absenceTo" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-700" style="font-size:0.85rem;">سبب الغياب</label>
+                        <select class="form-select" id="absenceReason" required>
+                            <option value="">— اختر السبب —</option>
+                            <option value="sick">مرض</option>
+                            <option value="family">ظروف عائلية</option>
+                            <option value="travel">سفر</option>
+                            <option value="other">أخرى</option>
+                        </select>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-700" style="font-size:0.85rem;">ملاحظات إضافية</label>
+                        <textarea class="form-control" id="absenceNotes" rows="2" placeholder="تفاصيل إضافية..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary" id="absenceSubmitBtn">
+                        <i class="bi bi-send me-2"></i>إرسال الطلب
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
+
+.req-item { display:flex;align-items:flex-start;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
+.req-item:last-child { border-bottom:none; }
+.req-icon { width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0; }
+.req-body { flex:1;min-width:0; }
+.req-title { font-weight:700;font-size:0.88rem;color:var(--kinjo-text-primary); }
+.req-sub { font-size:0.75rem;color:var(--kinjo-text-muted);margin-top:0.15rem; }
+.req-badge { display:inline-flex;align-items:center;gap:0.25rem;padding:0.2rem 0.6rem;border-radius:50px;font-size:0.7rem;font-weight:800; }
+.req-badge.pending  { background:rgba(245,158,11,0.12);color:#d97706; }
+.req-badge.approved { background:rgba(16,185,129,0.12);color:var(--kinjo-success); }
+.req-badge.rejected { background:rgba(239,68,68,0.12);color:var(--kinjo-danger); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadChildren();
+    loadRequests();
+    document.getElementById('absenceFrom').value = new Date().toISOString().slice(0,10);
+    document.getElementById('absenceTo').value   = new Date().toISOString().slice(0,10);
+});
+
+async function loadChildren() {
+    try {
+        const r = await fetch('/api/parent/children', { headers: authHeaders });
+        const data = r.ok ? await r.json() : null;
+        const children = data?.children || data || [];
+        const sel = document.getElementById('absenceChild');
+        if (children.length) {
+            sel.innerHTML = '<option value="">— اختر الطفل —</option>' +
+                children.map(c => `<option value="${c.id}">${c.full_name_ar||c.name}</option>`).join('');
+        }
+    } catch {}
+}
+
+async function loadRequests() {
+    try {
+        const r = await fetch('/api/attendance/absence-requests', { headers: authHeaders });
+        const data = r.ok ? await r.json() : null;
+        render(data?.requests || data || []);
+    } catch { render([]); }
+}
+
+const reasonLabels = { sick:'مرض', family:'ظروف عائلية', travel:'سفر', other:'أخرى' };
+const statusLabels = { pending:'قيد المراجعة', approved:'مقبول', rejected:'مرفوض' };
+
+function render(reqs) {
+    document.getElementById('reqCount').textContent = reqs.length + ' طلب';
+    const c = document.getElementById('requestsList');
+    if (!reqs.length) {
+        c.innerHTML = `<div class="text-center py-5 text-muted">
+            <i class="bi bi-calendar-check d-block fs-1 mb-3 opacity-25"></i>
+            <p class="mb-0">لا توجد طلبات غياب مسجلة</p>
+        </div>`;
+        return;
+    }
+    c.innerHTML = reqs.map(req => {
+        const st  = req.status || 'pending';
+        const from = req.from_date ? new Date(req.from_date).toLocaleDateString('ar-SA',{month:'short',day:'numeric'}) : '—';
+        const to   = req.to_date   ? new Date(req.to_date).toLocaleDateString('ar-SA',{month:'short',day:'numeric'}) : '—';
+        const iconBg = st === 'approved' ? 'rgba(16,185,129,0.12)' : st === 'rejected' ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)';
+        const iconColor = st === 'approved' ? '#10b981' : st === 'rejected' ? '#ef4444' : '#f59e0b';
+        return `<div class="req-item">
+            <div class="req-icon" style="background:${iconBg};color:${iconColor};">
+                <i class="bi bi-calendar-x"></i>
+            </div>
+            <div class="req-body">
+                <div class="req-title">${req.child_name || '—'}</div>
+                <div class="req-sub">${from} — ${to} · ${reasonLabels[req.reason]||req.reason||'—'}</div>
+            </div>
+            <span class="req-badge ${st}">${statusLabels[st]||st}</span>
+        </div>`;
+    }).join('');
+}
+
+async function submitAbsence(e) {
+    e.preventDefault();
+    const btn = document.getElementById('absenceSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>جاري الإرسال...';
+    try {
+        const r = await fetch('/api/attendance/absence-requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({
+                child_id:  parseInt(document.getElementById('absenceChild').value),
+                from_date: document.getElementById('absenceFrom').value,
+                to_date:   document.getElementById('absenceTo').value,
+                reason:    document.getElementById('absenceReason').value,
+                notes:     document.getElementById('absenceNotes').value,
+            })
+        });
+        if (r.ok) {
+            showToast('تم إرسال طلب الغياب', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('newAbsenceModal')).hide();
+            document.getElementById('absenceForm').reset();
+            loadRequests();
+        } else {
+            showToast('فشل إرسال الطلب', 'error');
+        }
+    } catch { showToast('حدث خطأ في الاتصال', 'error'); }
+    finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send me-2"></i>إرسال الطلب';
+    }
+}
+</script>
+{% endblock %}

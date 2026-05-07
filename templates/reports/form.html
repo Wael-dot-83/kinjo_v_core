@@ -1,354 +1,388 @@
 {% extends 'base.html' %}
-
-{% block title %}تقرير يومي جديد{% endblock %}
+{% block title %}تقرير يومي جديد — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-pencil-square me-2 text-primary"></i>
-            تقرير يومي جديد
-        </h1>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-pencil-square"></i>
+            إعداد التقرير
+        </div>
+        <h1 class="page-header-title">تقرير يومي جديد</h1>
+        <p class="page-header-sub">سجّل نشاط الطفل اليومي وأرسله لولي الأمر</p>
     </div>
+    <a href="/reports" class="btn btn-ghost">
+        <i class="bi bi-arrow-right me-2"></i>العودة للقائمة
+    </a>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-8">
-        <form id="reportForm">
-            <!-- Child Selection -->
+    <div class="col-xl-8 col-lg-9">
+        <form id="reportForm" novalidate>
+
+            <!-- Child + Date -->
             <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-person-fill me-2 text-primary"></i>
+                        الطفل والتاريخ
+                    </h6>
+                </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label required">الطفل</label>
-                            <select class="form-select" name="child_id" required>
+                            <label class="form-label fw-600">الطفل <span class="text-danger">*</span></label>
+                            <select class="form-select" name="child_id" id="childSelect" required>
                                 <option value="">اختر الطفل...</option>
-                                <option value="1">أحمد محمد</option>
-                                <option value="2">سارة علي</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">التاريخ</label>
+                            <label class="form-label fw-600">تاريخ التقرير</label>
                             <input type="date" class="form-control" name="report_date" value="{{ today }}">
                         </div>
-                    </div>
-                    <div class="row mt-3">
-                         <div class="col-md-6">
-                            <label class="form-label required">وقت الحضور</label>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">وقت الحضور <span class="text-danger">*</span></label>
                             <input type="time" class="form-control" name="arrival_time" value="08:00" required>
                         </div>
-                         <div class="col-md-6">
-                            <label class="form-label required">وقت الانصراف</label>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">وقت الانصراف <span class="text-danger">*</span></label>
                             <input type="time" class="form-control" name="leave_time" value="13:00" required>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Mood & Health -->
+
+            <!-- Mood -->
             <div class="card mb-4">
-                <div class="card-header bg-light">
-                     <h5 class="mb-0"><i class="bi bi-emoji-smile me-2"></i>المزاج والصحة</h5>
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-emoji-smile me-2" style="color:#f59e0b;"></i>
+                        المزاج والصحة
+                    </h6>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label d-block mb-3">المزاج العام</label>
-                        <div class="d-flex justify-content-around mood-selector">
-                            <input type="radio" class="btn-check" name="mood" id="mood-happy" value="happy" checked>
-                            <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm" for="mood-happy">
-                                <div class="fs-1">😊</div>
-                                <div class="small">سعيد</div>
-                            </label>
-                            
-                            <input type="radio" class="btn-check" name="mood" id="mood-normal" value="normal">
-                            <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm" for="mood-normal">
-                                <div class="fs-1">😐</div>
-                                <div class="small">عادي</div>
-                            </label>
-                            
-                            <input type="radio" class="btn-check" name="mood" id="mood-sad" value="sad">
-                            <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm" for="mood-sad">
-                                <div class="fs-1">😢</div>
-                                <div class="small">حزين</div>
-                            </label>
-                            
-                             <input type="radio" class="btn-check" name="mood" id="mood-tired" value="tired">
-                            <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm" for="mood-tired">
-                                <div class="fs-1">😴</div>
-                                <div class="small">نعسان</div>
-                            </label>
-                            
-                            <input type="radio" class="btn-check" name="mood" id="mood-sick" value="sick">
-                            <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm" for="mood-sick">
-                                <div class="fs-1">🤒</div>
-                                <div class="small">مريض</div>
-                            </label>
-                        </div>
+                    <label class="filter-label mb-3">المزاج العام اليوم</label>
+                    <div class="mood-selector-grid">
+                        {% set moods = [('happy','😊','سعيد'),('normal','😐','عادي'),('sad','😢','حزين'),('tired','😴','نعسان'),('sick','🤒','مريض')] %}
+                        {% for val, emoji, label in moods %}
+                        <input type="radio" class="btn-check" name="mood" id="mood-{{ val }}" value="{{ val }}" {% if val == 'happy' %}checked{% endif %}>
+                        <label class="mood-option" for="mood-{{ val }}">
+                            <div class="mood-emoji">{{ emoji }}</div>
+                            <div class="mood-label">{{ label }}</div>
+                        </label>
+                        {% endfor %}
                     </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">ملاحظات صحية</label>
-                        <textarea class="form-control" name="health_notes" rows="2" placeholder="أي أعراض أو ملاحظات صحية..."></textarea>
+
+                    <div class="mt-4">
+                        <label class="form-label fw-600">ملاحظات صحية</label>
+                        <textarea class="form-control" name="health_notes" rows="2"
+                                  placeholder="أي أعراض أو ملاحظات صحية مهمة..."></textarea>
                     </div>
                 </div>
             </div>
-            
+
             <!-- Meals -->
             <div class="card mb-4">
-                <div class="card-header bg-light">
-                     <h5 class="mb-0"><i class="bi bi-egg-fried me-2"></i>الوجبات</h5>
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-egg-fried me-2" style="color:#10b981;"></i>
+                        الوجبات
+                    </h6>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
+                        {% for name, label in [('breakfast','الفطور'),('lunch','الغداء'),('snack','الوجبة الخفيفة')] %}
                         <div class="col-md-4">
-                            <label class="form-label">الفطور</label>
-                            <select class="form-select" name="breakfast">
-                                <option value="all">أكل كل شيء</option>
-                                <option value="most">أكل المعظم</option>
-                                <option value="some">أكل القليل</option>
-                                <option value="none">لم يأكل</option>
-                            </select>
+                            <label class="filter-label mb-2">{{ label }}</label>
+                            <div class="meal-selector">
+                                {% for val, icon, txt in [('all','✅','أكل الكل'),('most','👍','أكل المعظم'),('some','🫤','أكل القليل'),('none','❌','لم يأكل')] %}
+                                <input type="radio" class="btn-check" name="{{ name }}" id="{{ name }}-{{ val }}" value="{{ val }}" {% if val == 'all' %}checked{% endif %}>
+                                <label class="meal-option" for="{{ name }}-{{ val }}" title="{{ txt }}">{{ icon }}</label>
+                                {% endfor %}
+                            </div>
                         </div>
-                         <div class="col-md-4">
-                            <label class="form-label">الغداء</label>
-                             <select class="form-select" name="lunch" selected>
-                                <option value="all">أكل كل شيء</option>
-                                <option value="most">أكل المعظم</option>
-                                <option value="some">أكل القليل</option>
-                                <option value="none">لم يأكل</option>
-                            </select>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sleep & Bathroom -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-moon-stars me-2" style="color:#6366f1;"></i>
+                        النوم والنظافة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4 align-items-end">
+                        <div class="col-md-4">
+                            <label class="filter-label mb-2">مدة النوم</label>
+                            <div class="sleep-selector">
+                                <div class="sleep-display" id="sleepDisplay">0 دق</div>
+                                <input type="range" class="form-range" name="sleep_duration" id="sleepSlider"
+                                       min="0" max="120" step="15" value="0"
+                                       oninput="updateSleepDisplay(this.value)">
+                                <div class="d-flex justify-content-between" style="font-size:0.7rem;color:var(--kinjo-text-muted);">
+                                    <span>0</span><span>60 دق</span><span>120 دق</span>
+                                </div>
+                            </div>
                         </div>
-                         <div class="col-md-4">
-                            <label class="form-label">سناك</label>
-                            <select class="form-select" name="snack">
-                                <option value="all">أكل كل شيء</option>
-                                <option value="most">أكل المعظم</option>
-                                <option value="some">أكل القليل</option>
-                                <option value="none">لم يأكل</option>
-                            </select>
+
+                        <div class="col-md-4">
+                            <label class="filter-label mb-2">مرات الحمام</label>
+                            <div class="counter-control">
+                                <button type="button" class="counter-btn minus" onclick="changeCount('bathroom_count', -1)">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <input type="number" class="counter-input" id="bathroom_count" name="bathroom_count" value="0" readonly>
+                                <button type="button" class="counter-btn plus" onclick="changeCount('bathroom_count', 1)">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="filter-label mb-2">تغيير الحفاظ</label>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" name="diaper_change_wet" value="1" id="diaperWet">
+                                    <label class="form-check-label small" for="diaperWet">مبلل</label>
+                                </div>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" name="diaper_change_soiled" value="1" id="diaperSoiled">
+                                    <label class="form-check-label small" for="diaperSoiled">متسخ</label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Sleep & Potty -->
+
+            <!-- Activities & Notes -->
             <div class="card mb-4">
-                <div class="card-header bg-light">
-                     <h5 class="mb-0"><i class="bi bi-moon-stars me-2"></i>النوم والحمام</h5>
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-stars me-2" style="color:#f59e0b;"></i>
+                        الأنشطة والملاحظات
+                    </h6>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label">مدة النوم (دقائق)</label>
-                            <input type="number" class="form-control" name="sleep_duration" value="0" step="15">
-                        </div>
-                         <div class="col-md-6">
-                            <label class="form-label">مرات الحمام</label>
-                            <div class="input-group">
-                                <button class="btn btn-outline-secondary" type="button" onclick="changeCount('bathroom_count', -1)">-</button>
-                                <input type="number" class="form-control text-center" id="bathroom_count" name="bathroom_count" value="0" readonly>
-                                <button class="btn btn-outline-secondary" type="button" onclick="changeCount('bathroom_count', 1)">+</button>
-                            </div>
-                        </div>
+                    <label class="filter-label mb-3">أنشطة اليوم</label>
+                    <div class="activities-grid mb-4">
+                        {% for id, icon, label in [
+                            ('art','🎨','رسم وفنون'),
+                            ('music','🎵','موسيقى'),
+                            ('sport','⚽','رياضة'),
+                            ('story','📖','قصص'),
+                            ('outdoor','🌳','نشاط خارجي'),
+                            ('science','🔬','علوم')
+                        ] %}
+                        <input type="checkbox" class="activity-check" id="act_{{ id }}" value="{{ label }}">
+                        <label class="activity-chip" for="act_{{ id }}">
+                            <span class="activity-icon">{{ icon }}</span>
+                            <span>{{ label }}</span>
+                        </label>
+                        {% endfor %}
                     </div>
-                    
+
                     <div class="mb-3">
-                         <label class="form-label">تغيير الحفاظ</label>
-                         <div class="form-check form-check-inline">
-                             <input class="form-check-input" type="checkbox" name="diaper_change_wet" value="1">
-                             <label class="form-check-label">مبلل</label>
-                         </div>
-                         <div class="form-check form-check-inline">
-                             <input class="form-check-input" type="checkbox" name="diaper_change_soiled" value="1">
-                             <label class="form-check-label">متسخ</label>
-                         </div>
+                        <label class="form-label fw-600">ملاحظات لولي الأمر</label>
+                        <textarea class="form-control" name="general_notes" rows="3"
+                                  placeholder="أي ملاحظات تودّ إيصالها لولي الأمر..."></textarea>
                     </div>
-                </div>
-            </div>
-            
-            <!-- Activities -->
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                     <h5 class="mb-0"><i class="bi bi-puzzle me-2"></i>الأنشطة والمهارات</h5>
-                </div>
-                <div class="card-body">
-                     <div class="mb-3">
-                        <label class="form-label">أنشطة اليوم</label>
-                        <div class="row g-2">
-                            <div class="col-6 col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="act_art">
-                                    <label class="form-check-label" for="act_art">رسم وفنون</label>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="act_music">
-                                    <label class="form-check-label" for="act_music">موسيقى</label>
-                                </div>
-                            </div>
-                             <div class="col-6 col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="act_sport">
-                                    <label class="form-check-label" for="act_sport">رياضة</label>
-                                </div>
-                            </div>
-                             <div class="col-6 col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="act_story">
-                                    <label class="form-check-label" for="act_story">قصص</label>
-                                </div>
-                            </div>
-                        </div>
-                     </div>
-                     
-                     <div class="mb-3">
-                        <label class="form-label">ملاحظات عامة لولي الأمر</label>
-                        <textarea class="form-control" name="general_notes" rows="3"></textarea>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">الصور (اختياري)</label>
+
+                    <div class="mb-1">
+                        <label class="form-label fw-600">صور من اليوم <span class="text-muted fw-400">(اختياري)</span></label>
                         <input type="file" class="form-control" name="photos" multiple accept="image/*">
                     </div>
                 </div>
             </div>
-            
-            <!-- Actions -->
+
+            <!-- Submit -->
             <div class="d-flex justify-content-end gap-2 mb-5">
-                <a href="/reports" class="btn btn-outline-secondary">إلغاء</a>
-                <button type="submit" class="btn btn-primary px-4">
-                    <i class="bi bi-send me-2"></i>إرسال التقرير
+                <a href="/reports" class="btn btn-ghost">إلغاء</a>
+                <button type="submit" class="btn btn-primary px-5" id="submitBtn">
+                    <span class="btn-text"><i class="bi bi-send me-2"></i>إرسال التقرير</span>
+                    <span class="btn-loading d-none">
+                        <span class="spinner-border spinner-border-sm me-2"></span>جاري الإرسال...
+                    </span>
                 </button>
             </div>
+
         </form>
     </div>
 </div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
+.fw-600 { font-weight:600; }
+.filter-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em; }
+
+/* Mood selector */
+.mood-selector-grid { display:flex;gap:0.75rem;flex-wrap:wrap; }
+.mood-option {
+    display:flex;flex-direction:column;align-items:center;gap:0.3rem;
+    padding:0.75rem 1rem;border-radius:var(--kinjo-radius-lg);border:2px solid var(--kinjo-border);
+    cursor:pointer;transition:all 0.2s;background:var(--kinjo-surface);
+    min-width:80px;
+}
+.mood-option:hover { border-color:var(--kinjo-primary-light);transform:translateY(-2px); }
+.btn-check:checked + .mood-option { border-color:var(--kinjo-primary);background:var(--kinjo-primary-xlight);box-shadow:0 0 0 3px var(--kinjo-primary-light); }
+.mood-emoji { font-size:2rem;line-height:1; }
+.mood-label { font-size:0.75rem;font-weight:700;color:var(--kinjo-text-secondary); }
+
+/* Meal selector */
+.meal-selector { display:flex;gap:0.4rem; }
+.meal-option {
+    display:flex;align-items:center;justify-content:center;
+    width:44px;height:44px;border-radius:10px;border:2px solid var(--kinjo-border);
+    cursor:pointer;font-size:1.3rem;transition:all 0.15s;background:var(--kinjo-surface);
+}
+.meal-option:hover { border-color:var(--kinjo-primary-light);transform:scale(1.1); }
+.btn-check:checked + .meal-option { border-color:var(--kinjo-primary);background:var(--kinjo-primary-xlight);box-shadow:0 0 0 3px var(--kinjo-primary-light); }
+
+/* Sleep slider */
+.sleep-selector { text-align:center; }
+.sleep-display { font-size:1.5rem;font-weight:800;color:var(--kinjo-primary);margin-bottom:0.5rem; }
+.form-range::-webkit-slider-thumb { background:var(--kinjo-primary); }
+.form-range::-webkit-slider-track { background:var(--kinjo-primary-light); }
+
+/* Counter */
+.counter-control { display:inline-flex;align-items:center;border:1px solid var(--kinjo-border);border-radius:var(--kinjo-radius-md);overflow:hidden;background:var(--kinjo-card-bg); }
+.counter-btn { border:none;background:none;width:40px;height:40px;cursor:pointer;color:var(--kinjo-text-primary);font-size:1rem;transition:background 0.15s;display:flex;align-items:center;justify-content:center; }
+.counter-btn:hover { background:var(--kinjo-surface); }
+.counter-input { border:none;outline:none;width:50px;text-align:center;font-weight:800;font-size:1rem;background:transparent;color:var(--kinjo-text-primary); }
+
+/* Activities */
+.activities-grid { display:flex;flex-wrap:wrap;gap:0.5rem; }
+.activity-check { display:none; }
+.activity-chip {
+    display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.85rem;
+    border-radius:50px;border:2px solid var(--kinjo-border);background:var(--kinjo-surface);
+    cursor:pointer;font-size:0.83rem;font-weight:600;color:var(--kinjo-text-secondary);
+    transition:all 0.15s;
+}
+.activity-chip:hover { border-color:var(--kinjo-primary-light);color:var(--kinjo-primary); }
+.activity-check:checked + .activity-chip { border-color:var(--kinjo-primary);background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
+.activity-icon { font-size:1rem; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Auth helper
-    function getHeaders() {
-        const token = localStorage.getItem('access_token');
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        return headers;
-    }
+function getHeaders() {
+    const token = localStorage.getItem('access_token');
+    return { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+}
 
-    function changeCount(id, delta) {
-        const input = document.getElementById(id);
-        const val = parseInt(input.value) || 0;
-        input.value = Math.max(0, val + delta);
-    }
-    
-    document.addEventListener('DOMContentLoaded', loadChildren);
+function changeCount(id, delta) {
+    const input = document.getElementById(id);
+    input.value = Math.max(0, (parseInt(input.value) || 0) + delta);
+}
 
-    async function loadChildren() {
-        try {
-            const res = await fetch('/api/supervisor/children', { headers: getHeaders() });
-            if (!res.ok) return;
-            
-            const data = await res.json();
-            const select = document.querySelector('select[name="child_id"]');
-            
-            if (data.children && data.children.length > 0) {
-                 select.innerHTML = '<option value="">اختر الطفل...</option>' + 
-                    data.children.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-            } else {
-                 select.innerHTML = '<option value="">لا يوجد أطفال (لم يتم تعيينك كمشرف)</option>';
-            }
+function updateSleepDisplay(val) {
+    document.getElementById('sleepDisplay').textContent = val > 0 ? `${val} دق` : 'لا نوم';
+}
 
-            const urlParams = new URLSearchParams(window.location.search);
-            const childId = urlParams.get('child_id');
-            if (childId) select.value = childId;
-            
-        } catch (err) {
-            console.error('Error loading children:', err);
+document.addEventListener('DOMContentLoaded', loadChildren);
+
+async function loadChildren() {
+    try {
+        const res = await fetch('/api/supervisor/children', { headers: getHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        const select = document.getElementById('childSelect');
+        const children = data.children || data || [];
+        if (children.length) {
+            select.innerHTML = '<option value="">اختر الطفل...</option>' +
+                children.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        } else {
+            select.innerHTML = '<option value="">لا يوجد أطفال مسجلين</option>';
         }
-    }
-    
-    document.getElementById('reportForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const form = e.target;
-        const fd = new FormData(form);
-        
-        // Construct detailed notes from UI fields that are not in API schema
-        let extraNotes = [];
-        
-        // Mood
-        const mood = fd.get('mood');
-        const moodMap = { happy: 'سعيد', normal: 'عادي', sad: 'حزين', tired: 'متعب', sick: 'مريض' };
-        if (mood) extraNotes.push(`المزاج: ${moodMap[mood] || mood}`);
-        
-        if (fd.get('health_notes')) extraNotes.push(`ملاحظات صحية: ${fd.get('health_notes')}`);
-        
-        // Sleep & Potty
-        const sleep = fd.get('sleep_duration');
-        if (sleep && parseInt(sleep) > 0) extraNotes.push(`نوم: ${sleep} دقيقة`);
-        
-        const bathroom = fd.get('bathroom_count');
-        if (bathroom && parseInt(bathroom) > 0) extraNotes.push(`حمام: ${bathroom} مرات`);
-        
-        const diaperWet = fd.get('diaper_change_wet') ? 'مبلل' : '';
-        const diaperSoiled = fd.get('diaper_change_soiled') ? 'متسخ' : '';
-        if (diaperWet || diaperSoiled) extraNotes.push(`حفاظ: ${[diaperWet, diaperSoiled].filter(Boolean).join(', ')}`);
-        
-        // Meals Details (Since API only takes boolean)
-        const meals = ['breakfast', 'lunch', 'snack'];
-        const mealMap = { all: 'أكل كل شيء', most: 'أكل المعظم', some: 'أكل القليل', none: 'لم يأكل' };
-        meals.forEach(m => {
-            const val = fd.get(m); // Form value
-            if (val && val !== 'none') {
-                extraNotes.push(`${m === 'breakfast' ? 'فطور' : m === 'lunch' ? 'غداء' : 'سناك'}: ${mealMap[val]}`);
-            }
-        });
+        const urlParams = new URLSearchParams(window.location.search);
+        const childId = urlParams.get('child_id');
+        if (childId) select.value = childId;
+    } catch {}
+}
 
-        // Activities
-        let activitiesList = [];
-        if (document.getElementById('act_art').checked) activitiesList.push('رسم وفنون');
-        if (document.getElementById('act_music').checked) activitiesList.push('موسيقى');
-        if (document.getElementById('act_sport').checked) activitiesList.push('رياضة');
-        if (document.getElementById('act_story').checked) activitiesList.push('قصص');
-        
-        const generalNotes = fd.get('general_notes');
-        const combinedNotes = (extraNotes.join(' | ') + '\n' + (generalNotes || '')).trim();
+document.getElementById('reportForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const fd = new FormData(form);
 
-        const payload = {
-            child_id: parseInt(fd.get('child_id')),
-            date: fd.get('report_date'),
-            arrival_time: fd.get('arrival_time'),
-            leave_time: fd.get('leave_time'),
-            breakfast: fd.get('breakfast') !== 'none',
-            lunch: fd.get('lunch') !== 'none',
-            snack: fd.get('snack') !== 'none',
-            milk: false, // Not in UI
-            activities: activitiesList.join(', '),
-            notes: combinedNotes
-        };
-        
-        try {
-            const response = await fetch('/api/daily-reports/create', {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(payload)
-            });
-            
-            if (response.ok) {
-                // If using a toast library: showToast('تم الحفظ', 'success');
-                alert('تم إرسال التقرير بنجاح');
-                window.location.href = '/reports'; // Or similar redirect
-            } else {
-                const err = await response.json();
-                alert('خطأ: ' + (err.detail || 'فشل الإرسال'));
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('حدث خطأ في الاتصال');
+    const btn = document.getElementById('submitBtn');
+    btn.querySelector('.btn-text').classList.add('d-none');
+    btn.querySelector('.btn-loading').classList.remove('d-none');
+    btn.disabled = true;
+
+    let extraNotes = [];
+    const mood = fd.get('mood');
+    const moodMap = { happy:'سعيد', normal:'عادي', sad:'حزين', tired:'نعسان', sick:'مريض' };
+    if (mood) extraNotes.push(`المزاج: ${moodMap[mood] || mood}`);
+    if (fd.get('health_notes')) extraNotes.push(`صحة: ${fd.get('health_notes')}`);
+    const sleep = fd.get('sleep_duration');
+    if (sleep && parseInt(sleep) > 0) extraNotes.push(`نوم: ${sleep} دقيقة`);
+    const bathroom = fd.get('bathroom_count');
+    if (bathroom && parseInt(bathroom) > 0) extraNotes.push(`حمام: ${bathroom} مرات`);
+    if (fd.get('diaper_change_wet'))    extraNotes.push('حفاظ مبلل');
+    if (fd.get('diaper_change_soiled')) extraNotes.push('حفاظ متسخ');
+
+    const mealMap = { all:'أكل الكل', most:'أكل المعظم', some:'أكل القليل', none:'لم يأكل' };
+    ['breakfast','lunch','snack'].forEach(m => {
+        const val = fd.get(m);
+        if (val && val !== 'all') {
+            const labels = { breakfast:'فطور', lunch:'غداء', snack:'وجبة خفيفة' };
+            extraNotes.push(`${labels[m]}: ${mealMap[val]}`);
         }
     });
+
+    const activities = [...document.querySelectorAll('.activity-check:checked')].map(c => c.value);
+    if (activities.length) extraNotes.push(`أنشطة: ${activities.join('، ')}`);
+
+    const generalNotes = fd.get('general_notes') || '';
+    const combinedNotes = [extraNotes.join(' | '), generalNotes].filter(Boolean).join('\n');
+
+    const payload = {
+        child_id: parseInt(fd.get('child_id')),
+        date: fd.get('report_date'),
+        arrival_time: fd.get('arrival_time'),
+        leave_time: fd.get('leave_time'),
+        breakfast: fd.get('breakfast') !== 'none',
+        lunch: fd.get('lunch') !== 'none',
+        snack: fd.get('snack') !== 'none',
+        milk: false,
+        activities: activities.join(', '),
+        notes: combinedNotes
+    };
+
+    try {
+        const response = await fetch('/api/daily-reports/create', {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(payload)
+        });
+        if (response.ok) {
+            window.showToast('تم إرسال التقرير بنجاح', 'success');
+            setTimeout(() => window.location.href = '/reports', 1500);
+        } else {
+            const err = await response.json();
+            window.showToast('خطأ: ' + (err.detail || 'فشل الإرسال'), 'error');
+            btn.disabled = false;
+            btn.querySelector('.btn-text').classList.remove('d-none');
+            btn.querySelector('.btn-loading').classList.add('d-none');
+        }
+    } catch {
+        window.showToast('حدث خطأ في الاتصال', 'error');
+        btn.disabled = false;
+        btn.querySelector('.btn-text').classList.remove('d-none');
+        btn.querySelector('.btn-loading').classList.add('d-none');
+    }
+});
 </script>
 {% endblock %}

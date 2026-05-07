@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status, BackgroundTasks
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional, Dict, Any
 from datetime import date
 import models
@@ -36,8 +36,7 @@ class AdvancedAnalyticsCacheResponse(BaseModel):
     staffing_quality_correlation: Optional[float] = None
     health_alerts_count: Optional[int] = None
     curriculum_progress: Optional[float] = None
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class InvalidateCacheRequest(BaseModel):
     dimension_type: Optional[str] = None

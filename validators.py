@@ -23,9 +23,33 @@ def validate_jordan_phone(phone: str) -> bool:
     return bool(re.match(pattern, phone))
 
 
+_GOVERNORATE_EN_TO_AR: dict = {
+    "amman":    "عمان",
+    "irbid":    "إربد",
+    "zarqa":    "الزرقاء",
+    "aqaba":    "العقبة",
+    "mafraq":   "المفرق",
+    "jerash":   "جرش",
+    "ajloun":   "عجلون",
+    "tafilah":  "الطفيلة",
+    "karak":    "الكرك",
+    "maan":     "معان",
+    "balqa":    "السلط",
+    "salt":     "السلط",
+    "madaba":   "مادبا",
+}
+
+
+def normalise_jordan_governorate(governorate: str) -> str:
+    """Return the canonical Arabic form of a governorate name (accept English too)."""
+    arabic = _GOVERNORATE_EN_TO_AR.get(governorate.strip().lower())
+    return arabic if arabic else governorate.strip()
+
+
 def validate_jordan_governorate(governorate: str) -> bool:
-    """Validate governorate is a valid Jordanian governorate"""
-    return governorate in settings.JORDAN_GOVERNORATES
+    """Validate governorate is a valid Jordanian governorate (Arabic or English)."""
+    canonical = normalise_jordan_governorate(governorate)
+    return canonical in settings.JORDAN_GOVERNORATES
 
 
 def validate_child_age(date_of_birth: date) -> bool:

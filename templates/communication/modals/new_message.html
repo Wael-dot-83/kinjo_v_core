@@ -4,7 +4,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="newMessageModalLabel">رسالة جديدة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body">
                 <form id="newMessageForm">
@@ -16,12 +16,12 @@
                         <label for="msgType" class="form-label">نوع الرسالة</label>
                         <select class="form-select" id="msgType">
                             <option value="broadcast">إعلان عام (للجميع)</option>
-                            <option value="direct">رسالة مباشرة (تتطلب معرف مستقبل)</option>
+                            <option value="direct">رسالة مباشرة (تتطلب معرِّف المتلقِّي)</option>
                         </select>
                     </div>
                     <div class="mb-3" id="recipientField" style="display:none;">
-                        <label for="msgRecipient" class="form-label">معرف المستخدم المستقبل</label>
-                        <input type="number" class="form-control" id="msgRecipient" placeholder="User ID">
+                        <label for="msgRecipient" class="form-label">معرِّف المستخدم المُتلقِّي</label>
+                        <input type="number" class="form-control" id="msgRecipient" placeholder="رقم المستخدم">
                     </div>
                     <div class="mb-3">
                         <label for="msgBody" class="form-label">نص الرسالة</label>

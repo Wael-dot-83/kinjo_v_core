@@ -11,9 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 class UTF8ContentTypeMiddleware(BaseHTTPMiddleware):
@@ -41,8 +43,18 @@ def ensure_not_testing_in_production() -> None:
 
 ensure_not_testing_in_production()
 
-# Rate limiter setup
-limiter = Limiter(key_func=get_remote_address)
+# Rate limiter setup — use Redis backend when REDIS_URL is set and reachable;
+# falls back to in-memory storage so the app starts cleanly without Redis.
+def _build_limiter() -> Limiter:
+    try:
+        import redis as _redis
+        _redis.from_url(settings.REDIS_URL).ping()
+        lim = Limiter(key_func=get_remote_address, storage_uri=settings.REDIS_URL)
+    except Exception:
+        lim = Limiter(key_func=get_remote_address)
+    return lim
+
+limiter = _build_limiter()
 # Disable rate limiting during automated tests to avoid flakiness
 if settings.TESTING:
     limiter.enabled = False
@@ -56,6 +68,33 @@ from curriculum_service import router as curriculum_router
 from kpi_service import router as kpi_router
 from analytics_service import router as analytics_router
 from analytics_ws import router as analytics_ws_router
+from government_api import router as government_router
+from routers.ai import router as ai_router
+
+# =============================================================================
+# Scheduled Jobs
+# =============================================================================
+
+async def expire_waitlist_entries() -> None:
+    """Mark waitlist offers as EXPIRED when their offer_expiry_at has passed."""
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        db.execute(
+            text(
+                "UPDATE waitlist_entries "
+                "SET status = 'EXPIRED' "
+                "WHERE status = 'OFFERED' "
+                "  AND offer_expiry_at IS NOT NULL "
+                "  AND offer_expiry_at < NOW()"
+            )
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
 
 # =============================================================================
 # Lifespan Event Handler
@@ -66,8 +105,22 @@ async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events"""
     # Startup
     init_db()
+    from ai.insights import generate_daily_insights
+    from ai.llm import run_llm_daily_jobs
+    from ai.ml import run_ml_daily_jobs
+    from ai.embeddings import run_embedding_daily_jobs
+    from government_api import refresh_development_dashboard
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(expire_waitlist_entries,    "interval", minutes=15, id="expire_waitlist")
+    scheduler.add_job(generate_daily_insights,    "cron", hour=2, minute=0,  id="ai_daily_insights")
+    scheduler.add_job(refresh_development_dashboard, "cron", hour=3, minute=0, id="refresh_dev_dashboard")
+    scheduler.add_job(run_llm_daily_jobs,         "cron", hour=3, minute=30, id="llm_daily_jobs")
+    scheduler.add_job(run_ml_daily_jobs,          "cron", hour=4, minute=0,  id="ml_daily_jobs")
+    scheduler.add_job(run_embedding_daily_jobs,   "cron", hour=5, minute=0,  id="embedding_daily_jobs")
+    scheduler.start()
     yield
-    # Shutdown (if needed)
+    # Shutdown
+    scheduler.shutdown(wait=False)
 
 
 # Create FastAPI application
@@ -276,6 +329,8 @@ app.include_router(curriculum_router, prefix="/api", tags=["Curriculum"])
 app.include_router(kpi_router, prefix="/api", tags=["KPI"])
 app.include_router(analytics_router, prefix="/api", tags=["Analytics"])
 app.include_router(analytics_ws_router)
+app.include_router(government_router, prefix="/api", tags=["Government"])
+app.include_router(ai_router, prefix="/api", tags=["AI"])
 app.include_router(frontend_router)
 
 

@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Profile') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
+            <i class="bi bi-person-circle"></i>
+            بوابة ولي الأمر
+        </div>
+        <h1 class="page-header-title">{{ _('Profile') }}</h1>
+        <p class="page-header-sub">إدارة بياناتك الشخصية وإعدادات الحساب</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+    <!-- Profile Card -->
+    <div class="col-lg-4">
+        <div class="card text-center">
+            <div class="card-body py-4">
+                <div class="profile-avatar mx-auto mb-3" id="profileAvatar">—</div>
+                <h5 class="fw-800 mb-0" id="profileName">—</h5>
+                <p class="text-muted small mt-1 mb-3" id="profileEmail">—</p>
+                <span class="badge bg-primary-subtle text-primary fw-700">ولي أمر</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-pencil-square me-2 text-primary"></i>
+                    تعديل البيانات
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="profileForm" onsubmit="saveProfile(event)">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" style="font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;">الاسم الأول</label>
+                            <input type="text" class="form-control" id="firstName" placeholder="الاسم الأول">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" style="font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;">اسم العائلة</label>
+                            <input type="text" class="form-control" id="lastName" placeholder="اسم العائلة">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" style="font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;">البريد الإلكتروني</label>
+                            <input type="email" class="form-control" id="email" placeholder="البريد الإلكتروني">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" style="font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;">رقم الهاتف</label>
+                            <input type="tel" class="form-control" id="phone" placeholder="+962 7X XXX XXXX">
+                        </div>
+                        <div class="col-12 d-flex justify-content-end pt-2 border-top">
+                            <button type="submit" class="btn btn-primary" id="saveBtn">
+                                <i class="bi bi-check-lg me-2"></i>حفظ التغييرات
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-lock me-2 text-warning"></i>
+                    تغيير كلمة المرور
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="pwdForm" onsubmit="changePassword(event)">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label" style="font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;">الحالية</label>
+                            <input type="password" class="form-control" id="currentPwd" placeholder="••••••••">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" style="font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;">الجديدة</label>
+                            <input type="password" class="form-control" id="newPwd" placeholder="••••••••">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" style="font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;">تأكيد الجديدة</label>
+                            <input type="password" class="form-control" id="confirmPwd" placeholder="••••••••">
+                        </div>
+                        <div class="col-12 d-flex justify-content-end pt-2 border-top">
+                            <button type="submit" class="btn btn-warning text-white">
+                                <i class="bi bi-shield-lock me-2"></i>تحديث كلمة المرور
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
+.profile-avatar { width:80px;height:80px;border-radius:50%;background:var(--kinjo-gradient-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+document.addEventListener('DOMContentLoaded', loadProfile);
+
+async function loadProfile() {
+    try {
+        const r = await fetch('/api/users/me', { headers: authHeaders });
+        if (!r.ok) return;
+        const u = await r.json();
+        document.getElementById('profileName').textContent  = `${u.first_name||''} ${u.last_name||''}`.trim() || '—';
+        document.getElementById('profileEmail').textContent = u.email || '—';
+        document.getElementById('profileAvatar').textContent = (u.first_name||'?').charAt(0).toUpperCase();
+        document.getElementById('firstName').value = u.first_name || '';
+        document.getElementById('lastName').value  = u.last_name  || '';
+        document.getElementById('email').value     = u.email      || '';
+        document.getElementById('phone').value     = u.phone      || '';
+    } catch {}
+}
+
+async function saveProfile(e) {
+    e.preventDefault();
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>جاري الحفظ...';
+    try {
+        const r = await fetch('/api/users/me', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({
+                first_name: document.getElementById('firstName').value,
+                last_name:  document.getElementById('lastName').value,
+                email:      document.getElementById('email').value,
+                phone:      document.getElementById('phone').value,
+            })
+        });
+        showToast(r.ok ? 'تم حفظ البيانات بنجاح' : 'فشل الحفظ', r.ok ? 'success' : 'error');
+        if (r.ok) loadProfile();
+    } catch { showToast('حدث خطأ في الاتصال', 'error'); }
+    finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>حفظ التغييرات';
+    }
+}
+
+async function changePassword(e) {
+    e.preventDefault();
+    const np = document.getElementById('newPwd').value;
+    const cp = document.getElementById('confirmPwd').value;
+    if (np !== cp) { showToast('كلمتا المرور غير متطابقتين', 'error'); return; }
+    try {
+        const r = await fetch('/api/users/me/password', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({ current_password: document.getElementById('currentPwd').value, new_password: np })
+        });
+        showToast(r.ok ? 'تم تحديث كلمة المرور' : 'فشل تحديث كلمة المرور', r.ok ? 'success' : 'error');
+        if (r.ok) document.getElementById('pwdForm').reset();
+    } catch { showToast('حدث خطأ في الاتصال', 'error'); }
+}
+</script>
+{% endblock %}

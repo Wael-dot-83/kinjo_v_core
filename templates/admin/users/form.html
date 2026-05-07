@@ -1,202 +1,253 @@
 {% extends 'base.html' %}
-
-{% block title %}{% if user_obj %}تعديل المستخدم{% else %}إضافة مستخدم جديد{% endif %}{% endblock %}
+{% block title %}{% if user_obj %}تعديل المستخدم{% else %}مستخدم جديد{% endif %} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-person me-2 text-primary"></i>
-            {% if user_obj %}تعديل المستخدم: {{ user_obj.username }}{% else %}إضافة مستخدم جديد{% endif %}
+        <div class="page-header-eyebrow">
+            <i class="bi bi-person-gear"></i>
+            إدارة المستخدمين
+        </div>
+        <h1 class="page-header-title">
+            {% if user_obj %}تعديل: {{ user_obj.username }}{% else %}إضافة مستخدم جديد{% endif %}
         </h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/admin/users">المستخدمين</a></li>
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="/admin/users" class="text-decoration-none">المستخدمين</a></li>
                 <li class="breadcrumb-item active">{% if user_obj %}تعديل{% else %}إضافة{% endif %}</li>
             </ol>
         </nav>
     </div>
+    <a href="/admin/users" class="btn btn-ghost">
+        <i class="bi bi-arrow-right me-2"></i>رجوع
+    </a>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <form id="userForm" class="needs-validation" novalidate data-user-id="{{ user_obj.id if user_obj else '' }}">
-                    <h5 class="mb-4 text-muted">بيانات الحساب</h5>
-                    
-                    <div class="row g-3 mb-3">
+    <div class="col-xl-7 col-lg-8">
+
+        <form id="userForm" class="needs-validation" novalidate
+              data-user-id="{{ user_obj.id if user_obj else '' }}">
+
+            <!-- Account Credentials -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-shield-lock me-2 text-primary"></i>
+                        بيانات الحساب
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="username" class="form-label required">اسم المستخدم</label>
-                            <input type="text" class="form-control" id="username" name="username" 
-                                   value="{{ user_obj.username if user_obj else '' }}" 
+                            <label class="form-label fw-600" for="username">
+                                اسم المستخدم
+                                {% if not user_obj %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username"
+                                   value="{{ user_obj.username if user_obj else '' }}"
                                    {% if user_obj %}disabled{% else %}required{% endif %}
-                                   pattern="[a-zA-Z0-9_]+" minlength="3">
-                            <div class="form-text">أحرف إنجليزية وأرقام وشرطة سفلية فقط، بدون مسافات.</div>
-                            <div class="invalid-feedback">مطلوب (أحرف إنجليزية وأرقام وشرطة سفلية فقط)</div>
+                                   pattern="[a-zA-Z0-9_]+" minlength="3"
+                                   placeholder="username_123">
+                            <div class="form-text">أحرف إنجليزية وأرقام وشرطة سفلية فقط، بدون مسافات</div>
+                            <div class="invalid-feedback">مطلوب (أحرف وأرقام وشرطة سفلية فقط)</div>
                         </div>
-                        
                         <div class="col-md-6">
-                            <label for="email" class="form-label required">البريد الإلكتروني</label>
-                            <input type="email" class="form-control" id="email" name="email" 
-                                   value="{{ user_obj.email if user_obj else '' }}" required>
+                            <label class="form-label fw-600" for="email">البريد الإلكتروني <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   value="{{ user_obj.email if user_obj else '' }}"
+                                   required placeholder="user@example.com">
                             <div class="invalid-feedback">يرجى إدخال بريد إلكتروني صحيح</div>
                         </div>
-                    </div>
-
-                    <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label for="password" class="form-label {% if not user_obj %}required{% endif %}">كلمة المرور</label>
-                            <input type="password" class="form-control" id="password" name="password" 
-                                   {% if not user_obj %}required{% endif %} minlength="8">
+                            <label class="form-label fw-600" for="password">
+                                كلمة المرور
+                                {% if not user_obj %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="password" name="password"
+                                       {% if not user_obj %}required{% endif %} minlength="8"
+                                       placeholder="{% if user_obj %}اتركها فارغة للإبقاء على الحالية{% else %}8 أحرف على الأقل{% endif %}">
+                                <button class="btn btn-ghost border" type="button"
+                                        onclick="togglePw('password', this)" aria-label="إظهار كلمة المرور">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
                             {% if user_obj %}
-                            <div class="form-text">اتركها فارغة للإبقاء على كلمة المرور الحالية.</div>
+                            <div class="form-text">اتركها فارغة للإبقاء على كلمة المرور الحالية</div>
                             {% endif %}
                             <div class="invalid-feedback">كلمة المرور يجب أن تكون 8 أحرف على الأقل</div>
                         </div>
-                        
                         <div class="col-md-6">
-                            <label for="role" class="form-label required">الدور (الصلاحية)</label>
+                            <label class="form-label fw-600" for="role">الدور (الصلاحية) <span class="text-danger">*</span></label>
                             <select class="form-select" id="role" name="role" required onchange="toggleKindergartenField()">
                                 <option value="">اختر الدور...</option>
                                 {% if current_user.role.value == 'ADMIN' %}
-                                <option value="ADMIN" {% if user_obj and user_obj.role.value == 'ADMIN' %}selected{% endif %}>مدير النظام (Admin)</option>
+                                <option value="ADMIN"    {% if user_obj and user_obj.role.value == 'ADMIN'    %}selected{% endif %}>مدير النظام</option>
+                                <option value="MANAGER"  {% if user_obj and user_obj.role.value == 'MANAGER'  %}selected{% endif %}>مدير الروضة</option>
                                 {% endif %}
-                                {% if current_user.role.value == 'ADMIN' %}
-                                <option value="MANAGER" {% if user_obj and user_obj.role.value == 'MANAGER' %}selected{% endif %}>مدير روضة (Manager)</option>
-                                {% endif %}
-                                <option value="SUPERVISOR" {% if user_obj and user_obj.role.value == 'SUPERVISOR' %}selected{% endif %}>مشرف (Supervisor)</option>
-                                <option value="PARENT" {% if user_obj and user_obj.role.value == 'PARENT' %}selected{% endif %}>ولي أمر (Parent)</option>
+                                <option value="SUPERVISOR" {% if user_obj and user_obj.role.value == 'SUPERVISOR' %}selected{% endif %}>مشرف</option>
+                                <option value="PARENT"   {% if user_obj and user_obj.role.value == 'PARENT'   %}selected{% endif %}>ولي أمر</option>
                             </select>
                             <div class="form-text" id="roleHelp"></div>
                             <div class="invalid-feedback">يرجى اختيار الصلاحية</div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                                        <div id="kindergartenSection" class="mb-4 {% if user_obj and user_obj.role.value == 'ADMIN' %}d-none{% endif %}">
-                        <label for="kindergarten_id" class="form-label">?????? ?????? ???</label>
-                        <div class="row g-2 mb-3" id="kgFilters">
-                            <div class="col-md-6">
-                                <label for="kgGovernorateFilter" class="form-label">????????</label>
-                                <select class="form-select" id="kgGovernorateFilter">
-                                    <option value="">?? ?????????</option>
-                                    {% set govs = namespace(items=[]) %}
-                                    {% for kg in kindergartens %}
-                                        {% if kg.governorate and kg.governorate not in govs.items %}
-                                            {% set _ = govs.items.append(kg.governorate) %}
-                                        {% endif %}
-                                    {% endfor %}
-                                    {% for gov in govs.items %}
-                                    <option value="{{ gov }}">{{ gov }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="kgSearch" class="form-label">??? ?????? ?? ??????</label>
-                                <input type="text" class="form-control" id="kgSearch" placeholder="???? ?????? ?? ??????">
-                            </div>
+            <!-- Kindergarten Assignment -->
+            <div id="kindergartenSection" class="card mb-4 {% if user_obj and user_obj.role.value == 'ADMIN' %}d-none{% endif %}">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-building me-2 text-primary"></i>
+                        ربط بروضة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="filter-label mb-2" for="kgGovernorateFilter">تصفية بالمحافظة</label>
+                            <select class="form-select form-select-sm" id="kgGovernorateFilter">
+                                <option value="">كل المحافظات</option>
+                                {% set govs = namespace(items=[]) %}
+                                {% for kg in kindergartens %}
+                                    {% if kg.governorate and kg.governorate not in govs.items %}
+                                        {% set _ = govs.items.append(kg.governorate) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% for gov in govs.items %}
+                                <option value="{{ gov }}">{{ gov }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <small class="text-muted d-block mb-2" id="kgNoResults" style="display: none;">?? ???? ????? ??????.</small>
-                        <select class="form-select" id="kindergarten_id" name="kindergarten_id">
-                            <option value="">-- ???? ?????? --</option>
-                            {% for kg in kindergartens %}
-                            <option value="{{ kg.id }}" data-governorate="{{ kg.governorate or '' }}" data-name="{{ (kg.name_ar or '') }} {{ (kg.name_en or '') }}" data-phone="{{ kg.contact_phone or '' }}"
+                        <div class="col-md-6">
+                            <label class="filter-label mb-2" for="kgSearch">بحث باسم الروضة</label>
+                            <input type="text" class="form-control form-control-sm" id="kgSearch" placeholder="اسم الروضة أو رقم الهاتف...">
+                        </div>
+                    </div>
+
+                    <label class="form-label fw-600" for="kindergarten_id">الروضة</label>
+                    <select class="form-select" id="kindergarten_id" name="kindergarten_id">
+                        <option value="">— اختر الروضة —</option>
+                        {% for kg in kindergartens %}
+                        <option value="{{ kg.id }}"
+                                data-governorate="{{ kg.governorate or '' }}"
+                                data-name="{{ (kg.name_ar or '') }} {{ (kg.name_en or '') }}"
+                                data-phone="{{ kg.contact_phone or '' }}"
                                 {% if user_obj and user_obj.kindergarten_id == kg.id %}selected
                                 {% elif not user_obj and request.query_params.get('kindergarten_id') and request.query_params.get('kindergarten_id')|int == kg.id %}selected
                                 {% endif %}>
-                                {{ kg.name_ar }} ({{ kg.city }})
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-text">مطلوب للمدراء والمشرفين وأولياء الأمور لربطهم بروضة محددة.</div>
-                    </div>
-
-                    {% if user_obj %}
-                    <div class="mb-4">
-                        <label for="status" class="form-label">حالة الحساب</label>
-                        <select class="form-select" id="status" name="status">
-                            <option value="ACTIVE" {% if user_obj.status.value == 'ACTIVE' %}selected{% endif %}>نشط</option>
-                            <option value="SUSPENDED" {% if user_obj.status.value == 'SUSPENDED' %}selected{% endif %}>موقوف</option>
-                            <option value="INACTIVE" {% if user_obj.status.value == 'INACTIVE' %}selected{% endif %}>غير نشط</option>
-                        </select>
-                    </div>
-                    {% endif %}
-
-                    <div class="d-flex justify-content-between border-top pt-4">
-                        <a href="/admin/users" class="btn btn-outline-secondary">إلغاء</a>
-                        <button type="submit" class="btn btn-primary" id="submitBtn">
-                            <span class="btn-text">
-                                <i class="bi bi-save me-2"></i>
-                                {% if user_obj %}حفظ التعديلات{% else %}إنشاء المستخدم{% endif %}
-                            </span>
-                            <span class="btn-loading d-none">
-                                <span class="spinner-border spinner-border-sm me-2"></span>
-                                جاري المعالجة...
-                            </span>
-                        </button>
-                    </div>
-                </form>
+                            {{ kg.name_ar }} ({{ kg.city }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted d-none mt-1" id="kgNoResults">لا توجد روضات تطابق البحث.</small>
+                    <div class="form-text">مطلوب للمديرين والمشرفين لربطهم بروضة محددة</div>
+                </div>
             </div>
-        </div>
+
+            <!-- Status (edit only) -->
+            {% if user_obj %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-toggle-on me-2 text-primary"></i>
+                        حالة الحساب
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="status-selector">
+                        {% for val, label, color, icon in [
+                            ('ACTIVE','نشط','success','bi-check-circle-fill'),
+                            ('SUSPENDED','موقوف','warning','bi-pause-circle-fill'),
+                            ('INACTIVE','غير نشط','secondary','bi-dash-circle-fill')
+                        ] %}
+                        <input type="radio" class="btn-check" name="status" id="status-{{ val }}" value="{{ val }}"
+                               {% if user_obj.status.value == val %}checked{% endif %}>
+                        <label class="status-option status-{{ val }}" for="status-{{ val }}">
+                            <i class="bi {{ icon }}"></i> {{ label }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="d-flex justify-content-between align-items-center border-top pt-4 mb-5">
+                <a href="/admin/users" class="btn btn-ghost">إلغاء</a>
+                <div class="d-flex gap-2">
+                    {% if user_obj %}
+                    <button type="button" class="btn btn-ghost" onclick="showPasswordResetModal({{ user_obj.id }}, '{{ user_obj.username }}')">
+                        <i class="bi bi-key me-2"></i>إعادة تعيين كلمة المرور
+                    </button>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary px-5" id="submitBtn">
+                        <span class="btn-text">
+                            <i class="bi bi-save me-2"></i>
+                            {% if user_obj %}حفظ التعديلات{% else %}إنشاء المستخدم{% endif %}
+                        </span>
+                        <span class="btn-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            جاري المعالجة...
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+        </form>
     </div>
 </div>
-{% endblock %}
 
 <!-- Password Reset Modal -->
-<div class="modal fade" id="passwordResetModal" tabindex="-1" aria-labelledby="passwordResetModalLabel" aria-hidden="true">
+<div class="modal fade" id="passwordResetModal" tabindex="-1" aria-labelledby="passwordResetModalLabel">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="passwordResetModalLabel">
-                    <i class="bi bi-key me-2 text-warning"></i>
-                    إعادة تعيين كلمة المرور
+            <div class="modal-header" style="background:rgba(245,158,11,0.08);">
+                <h5 class="modal-title" id="passwordResetModalLabel" style="color:#d97706;">
+                    <i class="bi bi-key me-2"></i>إعادة تعيين كلمة المرور
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body">
                 <form id="passwordResetForm" novalidate>
                     <div class="mb-3">
-                        <label for="resetPassword" class="form-label fw-semibold">كلمة المرور الجديدة</label>
+                        <label class="form-label fw-600" for="resetPassword">كلمة المرور الجديدة</label>
                         <div class="input-group">
-                            <input type="password" class="form-control" id="resetPassword" required minlength="8" autocomplete="new-password" aria-describedby="resetPasswordHelp">
-                            <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('resetPassword', this)" aria-label="إظهار كلمة المرور">
+                            <input type="password" class="form-control" id="resetPassword" required minlength="8"
+                                   autocomplete="new-password" aria-describedby="resetPasswordHelp">
+                            <button class="btn btn-ghost border" type="button" onclick="togglePw('resetPassword', this)" aria-label="إظهار">
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
-                        <div id="resetPasswordHelp" class="form-text">كلمة المرور يجب أن تكون 8 أحرف على الأقل</div>
+                        <div id="resetPasswordHelp" class="form-text">8 أحرف على الأقل</div>
                     </div>
                     <div class="mb-3">
-                        <label for="confirmResetPassword" class="form-label fw-semibold">تأكيد كلمة المرور</label>
+                        <label class="form-label fw-600" for="confirmResetPassword">تأكيد كلمة المرور</label>
                         <div class="input-group">
                             <input type="password" class="form-control" id="confirmResetPassword" required minlength="8" autocomplete="new-password">
-                            <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('confirmResetPassword', this)" aria-label="إظهار كلمة المرور">
+                            <button class="btn btn-ghost border" type="button" onclick="togglePw('confirmResetPassword', this)" aria-label="إظهار">
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
                     </div>
-                                    <div class="mb-3">
-                        <label for="adminPassword" class="form-label fw-semibold">كلمة مرور المدير</label>
+                    <div class="mb-1">
+                        <label class="form-label fw-600" for="adminPassword">كلمة مرور المدير (للتأكيد)</label>
                         <input type="password" class="form-control" id="adminPassword" required minlength="8" autocomplete="current-password">
-                        <div class="form-text">أدخل كلمة مرورك الحالية للتأكيد.</div>
+                        <div class="form-text">أدخل كلمة مرورك الحالية للتحقق</div>
                     </div>
-</form>
+                </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i>
-                    إلغاء
-                </button>
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">إلغاء</button>
                 <button type="button" class="btn btn-warning" id="resetPasswordBtn">
-                    <span class="btn-text">
-                        <i class="bi bi-key me-2"></i>
-                        إعادة التعيين
-                    </span>
+                    <span class="btn-text"><i class="bi bi-key me-2"></i>إعادة التعيين</span>
                     <span class="btn-loading d-none">
-                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        جاري المعالجة...
+                        <span class="spinner-border spinner-border-sm me-2"></span>جاري المعالجة...
                     </span>
                 </button>
             </div>
@@ -204,279 +255,180 @@
     </div>
 </div>
 
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.fw-600 { font-weight:600; }
+.filter-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em; }
+
+/* Status selector */
+.status-selector { display:flex;gap:0.5rem;flex-wrap:wrap; }
+.status-option {
+    display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 1.25rem;
+    border-radius:50px;border:2px solid var(--kinjo-border);background:var(--kinjo-surface);
+    cursor:pointer;font-weight:700;font-size:0.84rem;color:var(--kinjo-text-secondary);
+    transition:all 0.15s;
+}
+.btn-check:checked + .status-ACTIVE    { border-color:var(--kinjo-success);background:rgba(16,185,129,0.1);color:var(--kinjo-success); }
+.btn-check:checked + .status-SUSPENDED { border-color:#d97706;background:rgba(245,158,11,0.1);color:#d97706; }
+.btn-check:checked + .status-INACTIVE  { border-color:var(--kinjo-text-muted);background:var(--kinjo-surface);color:var(--kinjo-text-muted); }
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
-    // Get user ID from form attribute to avoid Jinja/JS syntax confusion
-    function getUserID() {
-        const form = document.getElementById('userForm');
-        const id = form.getAttribute('data-user-id');
-        return id ? parseInt(id) : null;
-    }
+function getUserID() {
+    const id = document.getElementById('userForm').getAttribute('data-user-id');
+    return id ? parseInt(id) : null;
+}
+const userId = getUserID();
 
-    const userId = getUserID();
+function togglePw(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon  = btn.querySelector('i');
+    const isPass = input.type === 'password';
+    input.type = isPass ? 'text' : 'password';
+    icon.classList.toggle('bi-eye', !isPass);
+    icon.classList.toggle('bi-eye-slash', isPass);
+    btn.setAttribute('aria-label', isPass ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+}
 
-    // Toggle password visibility
-    function togglePasswordVisibility(inputId, button) {
-        const input = document.getElementById(inputId);
-        const icon = button.querySelector('i');
+const roleHelps = {
+    MANAGER:    'يدير روضة واحدة ولديه صلاحيات إدارية كاملة.',
+    SUPERVISOR: 'يشرف على شعبة ويسجّل التقارير اليومية.',
+    PARENT:     'ولي أمر طفل مسجّل — وصول للتقارير فقط.',
+    ADMIN:      'صلاحيات النظام الكاملة على جميع الروضات.'
+};
 
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('bi-eye');
-            icon.classList.add('bi-eye-slash');
-            button.setAttribute('aria-label', 'إخفاء كلمة المرور');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('bi-eye-slash');
-            icon.classList.add('bi-eye');
-            button.setAttribute('aria-label', 'إظهار كلمة المرور');
-        }
-    }
-    
-    function updateRoleHelp(role) {
-        const roleHelp = document.getElementById('roleHelp');
-        if (!roleHelp) return;
+function updateRoleHelp(role) {
+    const el = document.getElementById('roleHelp');
+    if (el) el.textContent = roleHelps[role] || '';
+}
 
-        const messages = {
-            MANAGER: '?????? ????? ????? ????? ???? ?????? ??????.',
-            SUPERVISOR: '?????? ????? ????? ????? ?????? ???? ??????.',
-            PARENT: '??? ????? ???? ???? ????? (???????).',
-            ADMIN: '???? ?????? ????? ????? ??????.'
-        };
+function filterKindergartenOptions() {
+    const sel = document.getElementById('kindergarten_id');
+    const gov = (document.getElementById('kgGovernorateFilter')?.value || '').toLowerCase();
+    const q   = (document.getElementById('kgSearch')?.value || '').toLowerCase();
+    const noRes = document.getElementById('kgNoResults');
+    let count = 0;
+    Array.from(sel.options).forEach((opt, i) => {
+        if (i === 0) return;
+        const og = (opt.dataset.governorate || '').toLowerCase();
+        const on = (opt.dataset.name || '').toLowerCase();
+        const op = (opt.dataset.phone || '').toLowerCase();
+        const match = (!gov || og === gov) && (!q || on.includes(q) || op.includes(q));
+        opt.hidden = !match && !opt.selected;
+        if (!opt.hidden) count++;
+    });
+    if (noRes) noRes.classList.toggle('d-none', count > 0);
+}
 
-        roleHelp.textContent = messages[role] || '';
-    }
-
-    function filterKindergartenOptions() {
-        const kgSelect = document.getElementById('kindergarten_id');
-        const governorateFilter = document.getElementById('kgGovernorateFilter');
-        const searchInput = document.getElementById('kgSearch');
-        const noResults = document.getElementById('kgNoResults');
-
-        if (!kgSelect) return;
-
-        const governorate = governorateFilter ? governorateFilter.value.trim().toLowerCase() : '';
-        const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
-
-        let visibleCount = 0;
-        Array.from(kgSelect.options).forEach((option, index) => {
-            if (index == 0) {
-                return;
-            }
-
-            const optGovernorate = (option.dataset.governorate || '').toLowerCase();
-            const optName = (option.dataset.name || '').toLowerCase();
-            const optPhone = (option.dataset.phone || '').toLowerCase();
-
-            let matches = true;
-            if (governorate && optGovernorate !== governorate) {
-                matches = false;
-            }
-
-            if (query && !(optName.includes(query) || optPhone.includes(query))) {
-                matches = false;
-            }
-
-            if (option.selected) {
-                matches = true;
-            }
-
-            option.hidden = !matches;
-            if (matches) {
-                visibleCount += 1;
-            }
-        });
-
-        if (noResults) {
-            noResults.style.display = visibleCount === 0 ? 'block' : 'none';
-        }
-    }
-
-    function initKindergartenFilters() {
-        const governorateFilter = document.getElementById('kgGovernorateFilter');
-        const searchInput = document.getElementById('kgSearch');
-
-        if (governorateFilter) {
-            governorateFilter.addEventListener('change', filterKindergartenOptions);
-        }
-
-        if (searchInput) {
-            searchInput.addEventListener('input', filterKindergartenOptions);
-        }
-
-        filterKindergartenOptions();
-    }
-
-    function toggleKindergartenField() {
-        const role = document.getElementById('role').value;
-        const section = document.getElementById('kindergartenSection');
-        const kgSelect = document.getElementById('kindergarten_id');
-
-        updateRoleHelp(role);
-
-        if (!section || !kgSelect) {
-            return;
-        }
-
-        if (role === 'ADMIN') {
-            section.classList.add('d-none');
-            kgSelect.value = '';
-            kgSelect.removeAttribute('required');
-            return;
-        }
-
+function toggleKindergartenField() {
+    const role = document.getElementById('role').value;
+    const section = document.getElementById('kindergartenSection');
+    const kgSel = document.getElementById('kindergarten_id');
+    updateRoleHelp(role);
+    if (!section || !kgSel) return;
+    if (role === 'ADMIN') {
+        section.classList.add('d-none');
+        kgSel.value = '';
+        kgSel.removeAttribute('required');
+    } else {
         section.classList.remove('d-none');
-
-        if (role === 'MANAGER' || role === 'SUPERVISOR') {
-            kgSelect.setAttribute('required', 'required');
-        } else {
-            kgSelect.removeAttribute('required');
-        }
-
+        if (role === 'MANAGER' || role === 'SUPERVISOR') kgSel.setAttribute('required', 'required');
+        else kgSel.removeAttribute('required');
         filterKindergartenOptions();
     }
+}
 
-    // Run on load
+document.addEventListener('DOMContentLoaded', () => {
+    toggleKindergartenField();
+    document.getElementById('kgGovernorateFilter')?.addEventListener('change', filterKindergartenOptions);
+    document.getElementById('kgSearch')?.addEventListener('input', filterKindergartenOptions);
 
-    document.addEventListener('DOMContentLoaded', () => {
-        toggleKindergartenField();
-        initKindergartenFilters();
-    });
-
-    // Check for password reset parameter
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('reset_password') === '1') {
-        const userId = getUserID();
+    if (urlParams.get('reset_password') === '1' && userId) {
+        api.get(`/api/users/${userId}`)
+            .then(u => showPasswordResetModal(userId, u.username))
+            .catch(() => window.showToast('خطأ في تحميل بيانات المستخدم', 'error'));
+    }
+});
+
+document.getElementById('userForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    toggleKindergartenField();
+    const form = e.target;
+    if (!form.checkValidity()) {
+        form.classList.add('was-validated');
+        return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.querySelector('.btn-text').classList.add('d-none');
+    btn.querySelector('.btn-loading').classList.remove('d-none');
+    btn.disabled = true;
+
+    try {
+        const data = Object.fromEntries(new FormData(form).entries());
+        if (!data.kindergarten_id) data.kindergarten_id = null;
+        else data.kindergarten_id = parseInt(data.kindergarten_id);
+        if (userId && !data.password) delete data.password;
+
         if (userId) {
-            // Get user info and show modal
-            api.get(`/api/users/${userId}`)
-                .then(user => {
-                    showPasswordResetModal(userId, user.username);
-                })
-                .catch(error => {
-                    console.error('Error fetching user info:', error);
-                    showToast('حدث خطأ في تحميل بيانات المستخدم', 'error');
-                });
+            await api.put(`/api/users/${userId}`, data);
+            window.showToast('تم تحديث بيانات المستخدم بنجاح', 'success');
+        } else {
+            await api.post('/api/users', data);
+            window.showToast('تم إنشاء المستخدم بنجاح', 'success');
         }
+        setTimeout(() => window.location.href = '/admin/users', 1200);
+
+    } catch (error) {
+        btn.disabled = false;
+        btn.querySelector('.btn-text').classList.remove('d-none');
+        btn.querySelector('.btn-loading').classList.add('d-none');
+        window.showToast(error?.message || 'حدث خطأ غير متوقع', 'error');
     }
+});
 
-    document.getElementById('userForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const form = e.target;
-        
-        // Ensure validation state is current
-        toggleKindergartenField();
+let currentResetUserId = null;
 
-        if (!form.checkValidity()) {
-            e.stopPropagation();
-            form.classList.add('was-validated');
-            return;
-        }
+window.showPasswordResetModal = (uid, username) => {
+    currentResetUserId = uid;
+    document.getElementById('passwordResetForm').reset();
+    document.getElementById('passwordResetModalLabel').innerHTML =
+        `<i class="bi bi-key me-2"></i>إعادة تعيين كلمة مرور — ${username}`;
+    new bootstrap.Modal(document.getElementById('passwordResetModal')).show();
+};
 
-        const btn = document.getElementById('submitBtn');
-        const btnText = btn.querySelector('.btn-text');
-        const btnLoading = btn.querySelector('.btn-loading');
-        
-        btn.disabled = true;
-        btnText.classList.add('d-none');
-        btnLoading.classList.remove('d-none');
+document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
+    const pw  = document.getElementById('resetPassword').value;
+    const cpw = document.getElementById('confirmResetPassword').value;
+    const adm = document.getElementById('adminPassword').value;
 
-        try {
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-            
-            // Convert empty KG to null
-            if (!data.kindergarten_id) data.kindergarten_id = null;
-            else data.kindergarten_id = parseInt(data.kindergarten_id);
-            
-            // Clean up empty password if editing
-            if (userId && !data.password) {
-                delete data.password;
-            }
+    if (pw !== cpw)    { window.showToast('كلمات المرور غير متطابقة', 'error'); return; }
+    if (pw.length < 8) { window.showToast('كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'error'); return; }
+    if (!adm)          { window.showToast('يرجى إدخال كلمة مرور المدير', 'error'); return; }
 
-            if (userId) {
-                await api.put(`/api/users/${userId}`, data);
-                showToast('تم تحديث بيانات المستخدم بنجاح', 'success');
-            } else {
-                await api.post('/api/users', data);
-                showToast('تم إنشاء المستخدم بنجاح', 'success');
-            }
-            
-            setTimeout(() => {
-                window.location.href = '/admin/users';
-            }, 1000);
+    const btn = document.getElementById('resetPasswordBtn');
+    btn.querySelector('.btn-text').classList.add('d-none');
+    btn.querySelector('.btn-loading').classList.remove('d-none');
+    btn.disabled = true;
 
-        } catch (error) {
-            btn.disabled = false;
-            btnText.classList.remove('d-none');
-            btnLoading.classList.add('d-none');
-            
-            console.error(error);
-            showToast(error.message || 'حدث خطأ غير متوقع', 'error');
-        }
-    });
-
-    // Password Reset Modal Functionality
-    let currentResetUserId = null;
-
-    window.showPasswordResetModal = (userId, username) => {
-        currentResetUserId = userId;
-        document.getElementById('passwordResetForm').reset();
-        document.querySelector('#passwordResetModal .modal-title').textContent = `إعادة تعيين كلمة المرور - ${username}`;
-        const modal = new bootstrap.Modal(document.getElementById('passwordResetModal'));
-        modal.show();
+    try {
+        await api.post(`/api/users/${currentResetUserId}/admin-reset-password`, {
+            new_password: pw, admin_password: adm
+        });
+        window.showToast('تم إعادة تعيين كلمة المرور بنجاح', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('passwordResetModal')).hide();
+    } catch (error) {
+        window.showToast(error?.message || 'فشل إعادة تعيين كلمة المرور', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.querySelector('.btn-text').classList.remove('d-none');
+        btn.querySelector('.btn-loading').classList.add('d-none');
     }
-
-    document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
-        const password = document.getElementById('resetPassword').value;
-        const confirmPassword = document.getElementById('confirmResetPassword').value;
-        const adminPassword = document.getElementById('adminPassword').value;
-
-        if (password !== confirmPassword) {
-            showToast('كلمات المرور غير متطابقة', 'error');
-            return;
-        }
-
-        if (password.length < 8) {
-            showToast('كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'error');
-            return;
-        }
-
-        if (!adminPassword) {
-            showToast('يرجى إدخال كلمة مرور المدير', 'error');
-            return;
-        }
-
-        if (adminPassword.length < 8) {
-            showToast('كلمة مرور المدير يجب أن تكون 8 أحرف على الأقل', 'error');
-            return;
-        }
-
-        const btn = document.getElementById('resetPasswordBtn');
-        const btnText = btn.querySelector('.btn-text');
-        const btnLoading = btn.querySelector('.btn-loading');
-
-        btn.disabled = true;
-        btnText.classList.add('d-none');
-        btnLoading.classList.remove('d-none');
-
-        try {
-            await api.post(`/api/users/${currentResetUserId}/admin-reset-password`, {
-                new_password: password,
-                admin_password: adminPassword
-            });
-
-            showToast('تم إعادة تعيين كلمة المرور بنجاح', 'success');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('passwordResetModal'));
-            modal.hide();
-
-        } catch (error) {
-            showToast(error.message || 'فشل إعادة تعيين كلمة المرور', 'error');
-        } finally {
-            btn.disabled = false;
-            btnText.classList.remove('d-none');
-            btnLoading.classList.add('d-none');
-        }
-    });
+});
 </script>
 {% endblock %}

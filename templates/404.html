@@ -1,16 +1,250 @@
 {% extends "base.html" %}
-
-{% block title %}الصفحة غير موجودة - كينجو{% endblock %}
+{% block title %}الصفحة غير موجودة — KinJo{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center justify-content-center vh-100 bg-light">
-    <div class="text-center">
-        <h1 class="display-1 fw-bold text-primary">404</h1>
-        <p class="fs-3"> <span class="text-danger">عذراً!</span> الصفحة غير موجودة.</p>
-        <p class="lead">
-            يبدو أن الصفحة التي تبحث عنها غير موجودة.
+<div class="error-page-wrapper">
+
+    <!-- Animated background blobs -->
+    <div class="error-blob error-blob-1"></div>
+    <div class="error-blob error-blob-2"></div>
+    <div class="error-blob error-blob-3"></div>
+
+    <div class="error-card">
+
+        <!-- Animated 404 number -->
+        <div class="error-number-wrap">
+            <span class="error-digit" style="--delay:0s">4</span>
+            <span class="error-zero">
+                <i class="bi bi-emoji-dizzy-fill"></i>
+            </span>
+            <span class="error-digit" style="--delay:0.15s">4</span>
+        </div>
+
+        <!-- Icon badge -->
+        <div class="error-icon-badge">
+            <i class="bi bi-map-fill"></i>
+        </div>
+
+        <h1 class="error-title">عذراً، الصفحة غير موجودة!</h1>
+        <p class="error-desc">
+            يبدو أن الصفحة التي تبحث عنها قد انتقلت إلى مكان آخر،<br>
+            أو ربما لم تكن موجودة أصلاً.
         </p>
-        <a href="/dashboard" class="btn btn-primary">العودة للرئيسية</a>
+
+        <!-- Actions -->
+        <div class="error-actions">
+            <a href="/dashboard" class="btn btn-primary btn-lg error-btn-primary">
+                <i class="bi bi-grid-1x2-fill me-2"></i>
+                العودة للوحة التحكم
+            </a>
+            <button onclick="history.back()" class="btn btn-ghost btn-lg">
+                <i class="bi bi-arrow-right me-2"></i>
+                الصفحة السابقة
+            </button>
+        </div>
+
+        <!-- Quick links -->
+        <div class="error-quick-links">
+            <p class="error-quick-label">روابط مفيدة</p>
+            <div class="error-links-row">
+                <a href="/dashboard" class="error-link-chip">
+                    <i class="bi bi-grid-1x2-fill"></i>
+                    <span>لوحة التحكم</span>
+                </a>
+                <a href="/kindergartens" class="error-link-chip">
+                    <i class="bi bi-building-fill"></i>
+                    <span>الروضات</span>
+                </a>
+                <a href="/messages" class="error-link-chip">
+                    <i class="bi bi-chat-dots-fill"></i>
+                    <span>الرسائل</span>
+                </a>
+                <a href="/help" class="error-link-chip">
+                    <i class="bi bi-question-circle-fill"></i>
+                    <span>المساعدة</span>
+                </a>
+            </div>
+        </div>
+
     </div>
 </div>
+
+<style>
+.error-page-wrapper {
+    min-height: calc(100vh - var(--kinjo-navbar-height, 64px));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background: var(--kinjo-bg);
+    padding: 2rem 1rem;
+}
+.error-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.18;
+    pointer-events: none;
+    animation: blobFloat 14s ease-in-out infinite alternate;
+}
+.error-blob-1 {
+    width: 480px; height: 480px;
+    background: var(--kinjo-primary);
+    top: -120px; right: -120px;
+    animation-duration: 12s;
+}
+.error-blob-2 {
+    width: 360px; height: 360px;
+    background: var(--kinjo-accent);
+    bottom: -80px; left: -80px;
+    animation-duration: 16s;
+    animation-delay: -4s;
+}
+.error-blob-3 {
+    width: 240px; height: 240px;
+    background: var(--kinjo-success);
+    top: 40%; left: 30%;
+    animation-duration: 20s;
+    animation-delay: -8s;
+    opacity: 0.1;
+}
+@keyframes blobFloat {
+    0%   { transform: translate(0,0) scale(1); }
+    50%  { transform: translate(30px,-20px) scale(1.05); }
+    100% { transform: translate(-20px,30px) scale(0.95); }
+}
+.error-card {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    max-width: 560px;
+    width: 100%;
+    background: var(--kinjo-card-bg);
+    border: 1px solid var(--kinjo-border);
+    border-radius: var(--kinjo-radius-2xl, 24px);
+    padding: 3rem 2.5rem 2.5rem;
+    box-shadow: var(--kinjo-shadow-lg);
+    animation: scaleIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes scaleIn {
+    from { opacity:0; transform: scale(0.88) translateY(24px); }
+    to   { opacity:1; transform: scale(1) translateY(0); }
+}
+.error-number-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    line-height: 1;
+}
+.error-digit {
+    font-size: 7rem;
+    font-weight: 900;
+    background: var(--kinjo-gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.04em;
+    animation: digitBounce 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+    animation-delay: var(--delay, 0s);
+}
+.error-zero {
+    font-size: 5.5rem;
+    color: var(--kinjo-primary-light);
+    animation: spinIn 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.08s both;
+    display: flex;
+    align-items: center;
+}
+@keyframes digitBounce {
+    from { opacity:0; transform: translateY(-30px) scale(0.7); }
+    to   { opacity:1; transform: translateY(0) scale(1); }
+}
+@keyframes spinIn {
+    from { opacity:0; transform: rotate(-90deg) scale(0.5); }
+    to   { opacity:1; transform: rotate(0deg) scale(1); }
+}
+.error-icon-badge {
+    width: 56px; height: 56px;
+    background: var(--kinjo-primary-xlight);
+    color: var(--kinjo-primary);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto 1.25rem;
+    border: 2px solid rgba(79,70,229,0.15);
+}
+.error-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--kinjo-text-primary);
+    margin-bottom: 0.75rem;
+}
+.error-desc {
+    font-size: 0.95rem;
+    color: var(--kinjo-text-muted);
+    line-height: 1.7;
+    margin-bottom: 2rem;
+}
+.error-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+}
+.error-btn-primary {
+    background: var(--kinjo-gradient-primary);
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    border-radius: var(--kinjo-radius-lg);
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: var(--kinjo-shadow-primary);
+}
+.error-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(79,70,229,0.35);
+    color: #fff;
+}
+.error-quick-links {
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--kinjo-border);
+}
+.error-quick-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--kinjo-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.75rem;
+}
+.error-links-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+}
+.error-link-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.375rem 0.875rem;
+    background: var(--kinjo-surface);
+    border: 1px solid var(--kinjo-border);
+    border-radius: 50px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--kinjo-text-secondary);
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.error-link-chip:hover {
+    background: var(--kinjo-primary-xlight);
+    border-color: var(--kinjo-primary-light);
+    color: var(--kinjo-primary);
+    transform: translateY(-1px);
+}
+</style>
 {% endblock %}

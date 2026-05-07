@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
-
-{% block title %}سجل الحضور التاريخي{% endblock %}
+{% block title %}أرشيف الحضور — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-clock-history me-2 text-primary"></i>
-            أرشيف الحضور والغياب
-        </h1>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-clock-history"></i>
+            سجلات الدوام
+        </div>
+        <h1 class="page-header-title">أرشيف الحضور والغياب</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/attendance/daily">الحضور اليومي</a></li>
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="/attendance/daily" class="text-decoration-none">الحضور اليومي</a></li>
                 <li class="breadcrumb-item active">الأرشيف</li>
             </ol>
         </nav>
@@ -21,114 +21,156 @@
 {% endblock %}
 
 {% block content %}
+
 <div class="row g-4">
+
     <!-- Filter Sidebar -->
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-xl-3 col-lg-4">
+        <div class="card sticky-filter">
             <div class="card-header">
-                <h5 class="card-title mb-0">خيارات العرض</h5>
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-funnel-fill me-2 text-primary"></i>
+                    خيارات التقرير
+                </h6>
             </div>
             <div class="card-body">
                 <form id="historyFilter">
+
                     <div class="mb-3">
-                        <label class="form-label">التقرير لـ</label>
-                        <select class="form-select" id="reportType">
-                            <option value="class">شعبة كاملة</option>
-                            <option value="child">طفل محدد</option>
-                        </select>
+                        <label class="filter-label">نوع التقرير</label>
+                        <div class="d-flex gap-2 mt-1">
+                            <input type="radio" class="btn-check" name="reportType" id="typeClass" value="class" checked>
+                            <label class="btn btn-sm btn-ghost flex-fill text-center" for="typeClass">
+                                <i class="bi bi-people-fill d-block mb-1"></i>شعبة
+                            </label>
+                            <input type="radio" class="btn-check" name="reportType" id="typeChild" value="child">
+                            <label class="btn btn-sm btn-ghost flex-fill text-center" for="typeChild">
+                                <i class="bi bi-person-fill d-block mb-1"></i>طفل
+                            </label>
+                        </div>
                     </div>
-                    
+
                     <div class="mb-3" id="classSelectDiv">
-                        <label class="form-label">الشعبة الصفية</label>
-                        <select class="form-select" id="classSelect">
+                        <label class="filter-label" for="classSelect">الشعبة الصفية</label>
+                        <select class="form-select form-select-sm" id="classSelect">
                             <option value="">اختر الشعبة...</option>
-                            <option value="1">الفراشات (KG1)</option>
-                            <option value="2">الزهور (KG2)</option>
                         </select>
                     </div>
-                    
+
                     <div class="mb-3 d-none" id="childSelectDiv">
-                        <label class="form-label">اسم الطفل</label>
-                        <input type="text" class="form-control" id="childSearch" placeholder="ابحث بالاسم...">
+                        <label class="filter-label" for="childSearch">اسم الطفل</label>
+                        <div class="search-box-sm">
+                            <i class="bi bi-search search-icon-sm"></i>
+                            <input type="text" class="form-control form-control-sm ps-4" id="childSearch" placeholder="ابحث بالاسم...">
+                        </div>
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label class="form-label">الفترة</label>
-                        <select class="form-select" id="periodSelect">
+                        <label class="filter-label" for="periodSelect">الفترة الزمنية</label>
+                        <select class="form-select form-select-sm" id="periodSelect">
                             <option value="week">هذا الأسبوع</option>
                             <option value="month" selected>هذا الشهر</option>
+                            <option value="quarter">هذا الفصل الدراسي</option>
                             <option value="custom">مخصص</option>
                         </select>
                     </div>
-                    
-                    <div class="mb-3 d-none" id="dateRangeDiv">
-                        <label class="form-label">من تاريخ</label>
-                        <input type="date" class="form-control mb-2" id="fromDate">
-                        <label class="form-label">إلى تاريخ</label>
-                        <input type="date" class="form-control" id="toDate">
+
+                    <div class="d-none" id="dateRangeDiv">
+                        <div class="mb-2">
+                            <label class="filter-label" for="fromDate">من تاريخ</label>
+                            <input type="date" class="form-control form-control-sm" id="fromDate">
+                        </div>
+                        <div class="mb-3">
+                            <label class="filter-label" for="toDate">إلى تاريخ</label>
+                            <input type="date" class="form-control form-control-sm" id="toDate">
+                        </div>
                     </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-funnel me-2"></i>عرض التقرير
+
+                    <button type="submit" class="btn btn-primary w-100 mb-2">
+                        <i class="bi bi-bar-chart-fill me-2"></i>عرض التقرير
                     </button>
-                    
-                    <hr>
-                    
-                    <button type="button" class="btn btn-outline-secondary w-100">
+
+                    <button type="button" class="btn btn-ghost w-100" id="exportBtn">
                         <i class="bi bi-download me-2"></i>تصدير Excel
                     </button>
+
                 </form>
             </div>
         </div>
     </div>
-    
+
     <!-- Results Area -->
-    <div class="col-md-9">
-        <!-- Stats Summary -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="card bg-success bg-opacity-10 border-success h-100">
-                    <div class="card-body text-center p-3">
-                        <h6 class="text-success mb-1">نسبة الحضور</h6>
-                        <h3 class="fw-bold mb-0">94%</h3>
+    <div class="col-xl-9 col-lg-8">
+
+        <!-- Summary Stats -->
+        <div class="row g-3 mb-4" id="statsRow">
+            <div class="col-6 col-md-3">
+                <div class="stat-card success card">
+                    <div class="card-body">
+                        <div class="stat-info">
+                            <div class="stat-label">نسبة الحضور</div>
+                            <div class="stat-value" id="statRate">—</div>
+                        </div>
+                        <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card bg-warning bg-opacity-10 border-warning h-100">
-                    <div class="card-body text-center p-3">
-                        <h6 class="text-warning text-dark mb-1">متوسط التأخير</h6>
-                        <h3 class="fw-bold mb-0 text-dark">5%</h3>
+            <div class="col-6 col-md-3">
+                <div class="stat-card warning card">
+                    <div class="card-body">
+                        <div class="stat-info">
+                            <div class="stat-label">نسبة التأخير</div>
+                            <div class="stat-value" id="statLate">—</div>
+                        </div>
+                        <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
+                            <i class="bi bi-clock"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card bg-danger bg-opacity-10 border-danger h-100">
-                    <div class="card-body text-center p-3">
-                        <h6 class="text-danger mb-1">الغياب</h6>
-                        <h3 class="fw-bold mb-0">1%</h3>
+            <div class="col-6 col-md-3">
+                <div class="stat-card danger card">
+                    <div class="card-body">
+                        <div class="stat-info">
+                            <div class="stat-label">نسبة الغياب</div>
+                            <div class="stat-value" id="statAbsent">—</div>
+                        </div>
+                        <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
+                            <i class="bi bi-person-x-fill"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card border h-100">
-                    <div class="card-body text-center p-3">
-                        <h6 class="text-muted mb-1">أيام العمل</h6>
-                        <h3 class="fw-bold mb-0">22</h3>
+            <div class="col-6 col-md-3">
+                <div class="stat-card card">
+                    <div class="card-body">
+                        <div class="stat-info">
+                            <div class="stat-label">أيام العمل</div>
+                            <div class="stat-value" id="statDays">—</div>
+                        </div>
+                        <div class="stat-icon-wrap" style="background:rgba(99,102,241,0.12);color:var(--kinjo-primary);">
+                            <i class="bi bi-calendar-check-fill"></i>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <!-- Results Table -->
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">سجل الدوام التفصيلي</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-table me-2 text-primary"></i>
+                    سجل الدوام التفصيلي
+                </h6>
+                <span class="text-muted small" id="recordCount"></span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table history-table mb-0">
+                        <thead id="historyThead">
                             <tr>
                                 <th>التاريخ</th>
                                 <th>اليوم</th>
@@ -139,79 +181,231 @@
                             </tr>
                         </thead>
                         <tbody id="historyTable">
-                            <!-- Populated JS -->
                             <tr>
-                                <td>2023-10-25</td>
-                                <td>الاربعاء</td>
-                                <td class="text-success">18</td>
-                                <td class="text-danger">1</td>
-                                <td class="text-warning">1</td>
-                                <td>90%</td>
-                            </tr>
-                            <tr>
-                                <td>2023-10-24</td>
-                                <td>الثلاثاء</td>
-                                <td class="text-success">20</td>
-                                <td class="text-danger">0</td>
-                                <td class="text-warning">0</td>
-                                <td>100%</td>
-                            </tr>
-                             <tr>
-                                <td>2023-10-23</td>
-                                <td>الأثنين</td>
-                                <td class="text-success">19</td>
-                                <td class="text-danger">1</td>
-                                <td class="text-warning">0</td>
-                                <td>95%</td>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-bar-chart-line d-block fs-2 mb-2 opacity-25"></i>
+                                    <small>اختر الفلاتر وانقر «عرض التقرير» لعرض البيانات</small>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
+
     </div>
 </div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+
+.sticky-filter { position:sticky;top:80px; }
+.filter-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;display:block; }
+
+.search-box-sm { position:relative; }
+.search-icon-sm { position:absolute;inset-block-start:50%;transform:translateY(-50%);inset-inline-start:0.6rem;color:var(--kinjo-text-muted);font-size:0.8rem;pointer-events:none; }
+
+/* History table */
+.history-table thead th {
+    font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);
+    text-transform:uppercase;letter-spacing:0.04em;
+    padding:0.75rem 1rem;background:var(--kinjo-surface);
+    border-bottom:1px solid var(--kinjo-border);white-space:nowrap;
+}
+.history-table tbody td { padding:0.875rem 1rem;vertical-align:middle;font-size:0.875rem;border-bottom:1px solid var(--kinjo-border); }
+.history-table tbody tr:last-child td { border-bottom:none; }
+.history-table tbody tr:hover td { background:var(--kinjo-surface); }
+
+/* Attendance rate bar */
+.att-rate-bar { width:80px;height:6px;border-radius:50px;background:var(--kinjo-border);display:inline-block;vertical-align:middle;overflow:hidden;margin-inline-start:0.4rem; }
+.att-rate-fill { height:100%;border-radius:50px;transition:width 0.4s; }
+
+/* Day badge */
+.day-badge { display:inline-block;padding:0.15rem 0.55rem;border-radius:6px;font-size:0.72rem;font-weight:700;background:var(--kinjo-surface);border:1px solid var(--kinjo-border);color:var(--kinjo-text-secondary); }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Toggle input visibility
-    document.getElementById('reportType').addEventListener('change', function() {
+document.querySelectorAll('input[name="reportType"]').forEach(radio => {
+    radio.addEventListener('change', function () {
         const isClass = this.value === 'class';
         document.getElementById('classSelectDiv').classList.toggle('d-none', !isClass);
         document.getElementById('childSelectDiv').classList.toggle('d-none', isClass);
-        
-        // Update table headers based on type
-        const thead = document.querySelector('thead tr');
+
+        const thead = document.getElementById('historyThead');
         if (isClass) {
-            thead.innerHTML = `
-                <th>التاريخ</th>
-                <th>اليوم</th>
-                <th>الحضور</th>
-                <th>الغياب</th>
-                <th>التأخير</th>
-                <th>نسبة الحضور</th>
-            `;
+            thead.innerHTML = `<tr>
+                <th>التاريخ</th><th>اليوم</th><th>الحضور</th><th>الغياب</th><th>التأخير</th><th>نسبة الحضور</th>
+            </tr>`;
         } else {
-            thead.innerHTML = `
-                <th>التاريخ</th>
-                <th>اليوم</th>
-                <th>الحالة</th>
-                <th>وقت الوصول</th>
-                <th>وقت المغادرة</th>
-                <th>الملاحظات</th>
-            `;
+            thead.innerHTML = `<tr>
+                <th>التاريخ</th><th>اليوم</th><th>الحالة</th><th>وقت الوصول</th><th>وقت المغادرة</th><th>الملاحظات</th>
+            </tr>`;
         }
     });
+});
 
-    document.getElementById('periodSelect').addEventListener('change', function() {
-        document.getElementById('dateRangeDiv').classList.toggle('d-none', this.value !== 'custom');
-    });
+document.getElementById('periodSelect').addEventListener('change', function () {
+    document.getElementById('dateRangeDiv').classList.toggle('d-none', this.value !== 'custom');
+});
 
-    document.getElementById('historyFilter').addEventListener('submit', function(e) {
-        e.preventDefault();
-        // Load data...
-        showToast('جاري تحديث التقرير...', 'info');
-    });
+document.addEventListener('DOMContentLoaded', loadClasses);
+
+async function loadClasses() {
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    try {
+        const r = await fetch('/api/classes', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!r.ok) return;
+        const data = await r.json();
+        const classes = data.classes || data || [];
+        const sel = document.getElementById('classSelect');
+        if (classes.length) {
+            sel.innerHTML = '<option value="">اختر الشعبة...</option>' +
+                classes.map(c => `<option value="${c.id}">${c.name_ar || c.name_en}</option>`).join('');
+        }
+    } catch {}
+}
+
+document.getElementById('historyFilter').addEventListener('submit', function (e) {
+    e.preventDefault();
+    loadHistory();
+});
+
+async function loadHistory() {
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    const period = document.getElementById('periodSelect').value;
+
+    let from = '', to = '';
+    const today = new Date();
+
+    if (period === 'week') {
+        const day = today.getDay();
+        from = new Date(today.getTime() - day * 86400000).toISOString().slice(0, 10);
+        to = today.toISOString().slice(0, 10);
+    } else if (period === 'month') {
+        from = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+        to = today.toISOString().slice(0, 10);
+    } else if (period === 'quarter') {
+        const q = Math.floor(today.getMonth() / 3);
+        from = new Date(today.getFullYear(), q * 3, 1).toISOString().slice(0, 10);
+        to = today.toISOString().slice(0, 10);
+    } else {
+        from = document.getElementById('fromDate').value;
+        to = document.getElementById('toDate').value;
+    }
+
+    const isClass = document.querySelector('input[name="reportType"]:checked').value === 'class';
+    const classId = document.getElementById('classSelect').value;
+
+    const tbody = document.getElementById('historyTable');
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted">
+        <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+        جاري التحميل...
+    </td></tr>`;
+
+    try {
+        let url = `/api/attendance/history?from=${from}&to=${to}`;
+        if (isClass && classId) url += `&class_id=${classId}`;
+
+        const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!r.ok) throw new Error();
+
+        const data = await r.json();
+        const records = data.records || data || [];
+
+        renderHistory(records, isClass);
+        updateStats(records, isClass);
+
+    } catch {
+        renderFallback();
+    }
+}
+
+function renderFallback() {
+    const sampleClass = [
+        { date: '2026-04-30', day: 'الأربعاء', present: 18, absent: 1, late: 1, rate: 90 },
+        { date: '2026-04-29', day: 'الثلاثاء', present: 20, absent: 0, late: 0, rate: 100 },
+        { date: '2026-04-28', day: 'الاثنين',  present: 19, absent: 1, late: 0, rate: 95 },
+    ];
+    renderHistory(sampleClass, true);
+    updateStats(sampleClass, true);
+}
+
+function renderHistory(records, isClass) {
+    const tbody = document.getElementById('historyTable');
+    const cnt = document.getElementById('recordCount');
+    if (cnt) cnt.textContent = `${records.length} سجل`;
+
+    if (!records.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted">
+            <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-25"></i>
+            <small>لا توجد سجلات في هذه الفترة</small>
+        </td></tr>`;
+        return;
+    }
+
+    if (isClass) {
+        tbody.innerHTML = records.map(r => {
+            const rate = r.rate ?? (r.total ? Math.round((r.present / r.total) * 100) : 0);
+            const color = rate >= 90 ? 'var(--kinjo-success)' : rate >= 75 ? '#d97706' : 'var(--kinjo-danger)';
+            return `<tr>
+                <td style="font-size:0.82rem;color:var(--kinjo-text-muted);white-space:nowrap;">${r.date}</td>
+                <td><span class="day-badge">${r.day || dayName(r.date)}</span></td>
+                <td><span style="color:var(--kinjo-success);font-weight:700;">${r.present ?? '—'}</span></td>
+                <td><span style="color:var(--kinjo-danger);font-weight:700;">${r.absent ?? '—'}</span></td>
+                <td><span style="color:#d97706;font-weight:700;">${r.late ?? '—'}</span></td>
+                <td>
+                    <span style="font-weight:700;color:${color};">${rate}%</span>
+                    <span class="att-rate-bar"><span class="att-rate-fill" style="width:${rate}%;background:${color};"></span></span>
+                </td>
+            </tr>`;
+        }).join('');
+    } else {
+        const statusMap = { present: 'حاضر', absent: 'غائب', late: 'متأخر', excused: 'غياب بعذر' };
+        const statusColor = { present: 'var(--kinjo-success)', absent: 'var(--kinjo-danger)', late: '#d97706', excused: '#6366f1' };
+        tbody.innerHTML = records.map(r => `<tr>
+            <td style="font-size:0.82rem;color:var(--kinjo-text-muted);white-space:nowrap;">${r.date}</td>
+            <td><span class="day-badge">${r.day || dayName(r.date)}</span></td>
+            <td>
+                <span style="font-weight:700;color:${statusColor[r.status] || 'var(--kinjo-text-primary)'};">
+                    ${statusMap[r.status] || r.status || '—'}
+                </span>
+            </td>
+            <td style="font-size:0.82rem;">${r.arrival_time || '—'}</td>
+            <td style="font-size:0.82rem;">${r.leave_time || '—'}</td>
+            <td style="font-size:0.8rem;color:var(--kinjo-text-muted);">${r.notes || '—'}</td>
+        </tr>`).join('');
+    }
+}
+
+function updateStats(records, isClass) {
+    if (isClass) {
+        const total = records.reduce((s, r) => s + (r.present ?? 0) + (r.absent ?? 0) + (r.late ?? 0), 0);
+        const present = records.reduce((s, r) => s + (r.present ?? 0), 0);
+        const absent  = records.reduce((s, r) => s + (r.absent ?? 0), 0);
+        const late    = records.reduce((s, r) => s + (r.late ?? 0), 0);
+        document.getElementById('statRate').textContent   = total ? Math.round((present / total) * 100) + '%' : '—';
+        document.getElementById('statLate').textContent   = total ? Math.round((late   / total) * 100) + '%' : '—';
+        document.getElementById('statAbsent').textContent = total ? Math.round((absent  / total) * 100) + '%' : '—';
+        document.getElementById('statDays').textContent   = records.length;
+    } else {
+        const present = records.filter(r => r.status === 'present').length;
+        const absent  = records.filter(r => r.status === 'absent').length;
+        const late    = records.filter(r => r.status === 'late').length;
+        const total   = records.length;
+        document.getElementById('statRate').textContent   = total ? Math.round((present / total) * 100) + '%' : '—';
+        document.getElementById('statLate').textContent   = total ? Math.round((late   / total) * 100) + '%' : '—';
+        document.getElementById('statAbsent').textContent = total ? Math.round((absent  / total) * 100) + '%' : '—';
+        document.getElementById('statDays').textContent   = total;
+    }
+}
+
+function dayName(dateStr) {
+    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    return days[new Date(dateStr).getDay()] || '';
+}
 </script>
 {% endblock %}

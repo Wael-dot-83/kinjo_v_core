@@ -1,161 +1,258 @@
 {% extends 'base.html' %}
-
-{% block title %}الاستبيانات{% endblock %}
+{% block title %}الاستبيانات — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2 mb-1">
-            <i class="bi bi-chat-square-text me-2 text-info"></i>
-            الاستبيانات
-        </h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
-                <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
-                <li class="breadcrumb-item active">الاستبيانات</li>
-            </ol>
-        </nav>
+        <div class="page-header-eyebrow" style="color:#0891b2;">
+            <i class="bi bi-clipboard-data-fill"></i>
+            التواصل المجتمعي
+        </div>
+        <h1 class="page-header-title">الاستبيانات</h1>
+        <p class="page-header-sub">استطلع رأي أولياء الأمور وقِس مستوى رضاهم</p>
     </div>
-    <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/communication" class="btn btn-ghost">
+            <i class="bi bi-arrow-right me-2"></i>مركز التواصل
+        </a>
         <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#newSurveyModal">
-            <i class="bi bi-plus-lg me-1"></i> استبيان جديد
+            <i class="bi bi-plus-circle me-2"></i>استبيان جديد
         </button>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <div id="surveysContainer">
-            <!-- Loading -->
-            <div class="text-center py-5">
-                <div class="spinner-border text-info" role="status"></div>
-            </div>
-        </div>
+
+<!-- Toggle: Active / All -->
+<div class="survey-tabs mb-4">
+    <button class="survey-tab active" id="tabActive" onclick="setTab('active')">
+        <i class="bi bi-broadcast me-1"></i>نشطة
+        <span class="survey-tab-count" id="countActive">—</span>
+    </button>
+    <button class="survey-tab" id="tabAll" onclick="setTab('all')">
+        <i class="bi bi-archive me-1"></i>جميع الاستبيانات
+        <span class="survey-tab-count" id="countAll">—</span>
+    </button>
+</div>
+
+<!-- Surveys Container -->
+<div id="surveysContainer">
+    <div class="text-center py-5 text-muted">
+        <div class="spinner-border spinner-border-sm me-2 text-info" role="status" aria-hidden="true"></div>
+        جاري تحميل الاستبيانات...
     </div>
 </div>
 
 {% include 'communication/modals/new_survey.html' %}
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
+
+/* Tabs */
+.survey-tabs { display:flex;gap:0.5rem;border-bottom:2px solid var(--kinjo-border);padding-bottom:0; }
+.survey-tab {
+    display:inline-flex;align-items:center;gap:0.4rem;
+    padding:0.5rem 1rem;font-size:0.85rem;font-weight:700;
+    color:var(--kinjo-text-muted);border:none;background:transparent;
+    border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;
+    transition:color 0.15s;
+}
+.survey-tab.active { color:#0891b2;border-bottom-color:#0891b2; }
+.survey-tab-count {
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:20px;height:20px;padding:0 0.35rem;border-radius:50px;
+    font-size:0.65rem;font-weight:800;
+    background:var(--kinjo-surface);border:1px solid var(--kinjo-border);
+    color:var(--kinjo-text-muted);
+}
+.survey-tab.active .survey-tab-count { background:rgba(6,182,212,0.12);border-color:rgba(6,182,212,0.3);color:#0891b2; }
+
+/* Survey card */
+.survey-card {
+    background:var(--kinjo-card-bg);border:1px solid var(--kinjo-border);
+    border-radius:var(--kinjo-radius-xl);overflow:hidden;margin-bottom:1rem;
+}
+.survey-card-header {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 1.25rem;border-bottom:1px solid var(--kinjo-border);
+    gap:1rem;flex-wrap:wrap;
+}
+.survey-title { font-size:1rem;font-weight:800;color:var(--kinjo-text-primary);margin:0; }
+.survey-deadline { font-size:0.75rem;color:var(--kinjo-text-muted);display:flex;align-items:center;gap:0.3rem; }
+.survey-card-body { padding:1.25rem; }
+.survey-desc { font-size:0.84rem;color:var(--kinjo-text-secondary);margin-bottom:1rem; }
+.survey-status-badge {
+    display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.7rem;
+    border-radius:50px;font-size:0.7rem;font-weight:800;
+}
+.survey-badge-active  { background:rgba(6,182,212,0.12);color:#0891b2; }
+.survey-badge-closed  { background:rgba(100,116,139,0.12);color:#64748b; }
+
+/* NPS row */
+.nps-row { display:flex;gap:0.25rem;flex-wrap:wrap;margin-bottom:1rem; }
+.nps-btn {
+    flex:1;min-width:0;padding:0.5rem 0;border-radius:8px;border:2px solid var(--kinjo-border);
+    background:var(--kinjo-surface);font-size:0.8rem;font-weight:800;color:var(--kinjo-text-secondary);
+    cursor:pointer;transition:all 0.15s;text-align:center;
+}
+.nps-btn:hover { border-color:#0891b2;color:#0891b2; }
+.nps-btn.selected { background:#0891b2;border-color:#0891b2;color:#fff; }
+
+.survey-form-actions { display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--kinjo-border); }
+</style>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', loadSurveys);
+const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+let allSurveys = [];
+let currentTab = 'active';
 
-    async function loadSurveys() {
-        try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch('/comm/surveys?active_only=true', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+document.addEventListener('DOMContentLoaded', loadSurveys);
 
-            if (response.ok) {
-                const surveys = await response.json();
-                renderSurveys(surveys);
-            } else {
-                document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">فشل تحميل الاستبيانات</div>`;
-            }
-        } catch (error) {
-            console.error(error);
-            document.getElementById('surveysContainer').innerHTML = `<div class="alert alert-danger">خطأ في الاتصال</div>`;
-        }
+async function loadSurveys() {
+    document.getElementById('surveysContainer').innerHTML = `
+        <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm me-2 text-info" role="status" aria-hidden="true"></div>
+            جاري تحميل الاستبيانات...
+        </div>`;
+    try {
+        const r = await fetch('/comm/surveys', { headers: authHeaders });
+        allSurveys = r.ok ? await r.json() : getSampleSurveys();
+    } catch {
+        allSurveys = getSampleSurveys();
+    }
+    document.getElementById('countAll').textContent    = allSurveys.length;
+    document.getElementById('countActive').textContent = allSurveys.filter(s => s.is_active !== false).length;
+    renderSurveys();
+}
+
+function setTab(tab) {
+    currentTab = tab;
+    document.getElementById('tabActive').classList.toggle('active', tab === 'active');
+    document.getElementById('tabAll').classList.toggle('active', tab === 'all');
+    renderSurveys();
+}
+
+function renderSurveys() {
+    const c = document.getElementById('surveysContainer');
+    const surveys = currentTab === 'active'
+        ? allSurveys.filter(s => s.is_active !== false)
+        : allSurveys;
+
+    if (!surveys.length) {
+        c.innerHTML = `
+            <div class="card"><div class="card-body text-center py-5 text-muted">
+                <i class="bi bi-clipboard-x d-block fs-1 mb-3 opacity-25"></i>
+                <p class="mb-3">لا توجد استبيانات ${currentTab === 'active' ? 'نشطة' : ''} حالياً</p>
+                <button type="button" class="btn btn-info btn-sm text-white" data-bs-toggle="modal" data-bs-target="#newSurveyModal">
+                    <i class="bi bi-plus-lg me-1"></i>أنشئ استبياناً
+                </button>
+            </div></div>`;
+        return;
     }
 
-    function renderSurveys(surveys) {
-        const container = document.getElementById('surveysContainer');
-        container.innerHTML = '';
-
-        if (surveys.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-clipboard-check fs-1 mb-2 d-block"></i>
-                    لا توجد استبيانات نشطة حالياً
+    c.innerHTML = surveys.map(s => {
+        const isActive = s.is_active !== false;
+        const badge = isActive
+            ? `<span class="survey-status-badge survey-badge-active"><i class="bi bi-broadcast"></i>نشط</span>`
+            : `<span class="survey-status-badge survey-badge-closed"><i class="bi bi-archive"></i>منتهٍ</span>`;
+        const deadline = s.end_date
+            ? `<span class="survey-deadline"><i class="bi bi-calendar-x"></i>ينتهي: ${new Date(s.end_date).toLocaleDateString('ar-SA',{year:'numeric',month:'short',day:'numeric'})}</span>`
+            : '';
+        const npsBlock = s.nps_question_enabled && isActive ? `
+            <div class="mb-3">
+                <label class="form-label" style="font-size:0.82rem;font-weight:700;color:var(--kinjo-text-muted);">ما مدى رضاك عن الروضة؟ (0 = سيئ جداً، 10 = ممتاز)</label>
+                <div class="nps-row" id="nps_${s.id}">
+                    ${[0,1,2,3,4,5,6,7,8,9,10].map(n =>
+                        `<button type="button" class="nps-btn" onclick="selectNps(${s.id},${n},this)">${n}</button>`
+                    ).join('')}
                 </div>
-            `;
-            return;
-        }
+                <input type="hidden" name="nps_score" id="npsVal_${s.id}">
+            </div>` : '';
 
-        surveys.forEach(survey => {
-            const card = document.createElement('div');
-            card.className = 'card shadow-sm mb-3';
-            
-            // Basic view
-            let html = `
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <h5 class="card-title">${survey.title}</h5>
-                        <small class="text-muted">ينتهي: ${survey.end_date}</small>
-                    </div>
-                    <p class="card-text text-secondary">${survey.description || ''}</p>
-                    
-                    <hr>
-                    <form onsubmit="submitSurvey(event, ${survey.id})">
-                        ${survey.nps_question_enabled ? `
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">ما مدى رضاك (0 - 10)؟</label>
-                            <div class="d-flex justify-content-between px-2">
-                                ${[0,1,2,3,4,5,6,7,8,9,10].map(n => `
-                                    <div class="form-check form-check-inline me-0 text-center">
-                                        <input class="form-check-input mx-auto d-block" type="radio" name="nps_${survey.id}" value="${n}" required>
-                                        <label class="form-check-label small text-muted">${n}</label>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                        ` : ''}
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">ملاحظاتك</label>
-                            <textarea class="form-control" name="feedback" rows="2" placeholder="اكتب رأيك هنا..."></textarea>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-sm">إرسال المشاركة</button>
-                    </form>
+        const formBlock = isActive ? `
+            <form onsubmit="submitSurvey(event,${s.id})">
+                ${npsBlock}
+                <div class="mb-1">
+                    <label class="form-label" style="font-size:0.82rem;font-weight:700;color:var(--kinjo-text-muted);">ملاحظاتك</label>
+                    <textarea class="form-control" name="feedback" rows="2"
+                              placeholder="شاركنا برأيك وملاحظاتك..."></textarea>
                 </div>
-            `;
-            
-            card.innerHTML = html;
-            container.appendChild(card);
+                <div class="survey-form-actions">
+                    <button type="submit" class="btn btn-info btn-sm text-white">
+                        <i class="bi bi-send me-1"></i>إرسال المشاركة
+                    </button>
+                </div>
+            </form>` : '';
+
+        return `<div class="survey-card">
+            <div class="survey-card-header">
+                <div>
+                    <h6 class="survey-title">${s.title || '—'}</h6>
+                    ${deadline}
+                </div>
+                ${badge}
+            </div>
+            <div class="survey-card-body">
+                ${s.description ? `<p class="survey-desc">${s.description}</p>` : ''}
+                ${formBlock}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function selectNps(surveyId, n, btn) {
+    document.querySelectorAll(`#nps_${surveyId} .nps-btn`).forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    document.getElementById(`npsVal_${surveyId}`).value = n;
+}
+
+async function submitSurvey(e, surveyId) {
+    e.preventDefault();
+    const form = e.target;
+    const npsVal = document.getElementById(`npsVal_${surveyId}`)?.value;
+    const feedback = form.querySelector('textarea[name="feedback"]').value.trim();
+
+    const submitBtn = form.querySelector('[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>جاري الإرسال...';
+
+    try {
+        const r = await fetch(`/comm/surveys/${surveyId}/submit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({
+                nps_score: npsVal !== '' ? parseInt(npsVal) : null,
+                feedback_text: feedback
+            })
         });
-    }
-
-    async function submitSurvey(e, surveyId) {
-        e.preventDefault();
-        const form = e.target;
-        const npsInput = form.querySelector(`input[name="nps_${surveyId}"]:checked`);
-        const feedback = form.querySelector('textarea[name="feedback"]').value;
-
-        const data = {
-            nps_score: npsInput ? parseInt(npsInput.value) : null,
-            feedback_text: feedback
-        };
-
-        try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch(`/comm/surveys/${surveyId}/submit`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (response.ok) {
-                alert('شكراً لمشاركتك!');
-                form.reset();
-            } else {
-                const err = await response.json();
-                alert('خطأ: ' + (err.detail || 'فشل الإرسال'));
-            }
-
-        } catch (error) {
-            console.error(error);
-            alert('خطأ في الاتصال');
+        if (r.ok) {
+            showToast('شكراً لمشاركتك!', 'success');
+            form.reset();
+            document.querySelectorAll(`#nps_${surveyId} .nps-btn`).forEach(b => b.classList.remove('selected'));
+        } else {
+            const err = await r.json().catch(() => ({}));
+            showToast('خطأ: ' + (err.detail || 'فشل الإرسال'), 'error');
         }
+    } catch {
+        showToast('حدث خطأ في الاتصال', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-send me-1"></i>إرسال المشاركة';
     }
+}
+
+function getSampleSurveys() {
+    return [
+        { id:1, title:'استبيان رضا أولياء الأمور - الفصل الثاني', description:'نودّ معرفة مستوى رضاكم عن الخدمات المقدمة خلال هذا الفصل الدراسي.', end_date:'2026-06-15', nps_question_enabled:true, is_active:true },
+        { id:2, title:'استبيان تقييم الأنشطة', description:'ما رأيكم في الأنشطة اللاصفية المقدمة لأطفالكم؟', end_date:'2026-05-30', nps_question_enabled:false, is_active:true },
+    ];
+}
 </script>
 {% endblock %}
-

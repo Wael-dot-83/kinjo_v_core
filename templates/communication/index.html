@@ -1,115 +1,252 @@
 {% extends "base.html" %}
+{% block title %}مركز التواصل — KinJo{% endblock %}
 
-{% block title %}مركز التواصل{% endblock %}
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-chat-square-dots-fill"></i>
+            التواصل المجتمعي
+        </div>
+        <h1 class="page-header-title">مركز التواصل</h1>
+        <p class="page-header-sub">إدارة الرسائل والفعاليات والاستبيانات من مكان واحد</p>
+    </div>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">مركز التواصل</h1>
+
+<!-- Hub Cards -->
+<div class="row g-4 mb-4">
+
+    <!-- Messages -->
+    <div class="col-md-4">
+        <div class="comm-hub-card">
+            <div class="comm-hub-icon" style="background:var(--kinjo-gradient-primary);">
+                <i class="bi bi-chat-dots-fill"></i>
+            </div>
+            <h5 class="comm-hub-title">الرسائل</h5>
+            <p class="comm-hub-desc">المراسلات المباشرة مع أولياء الأمور والموظفين</p>
+            <div class="d-grid gap-2">
+                <a href="/communication/messages" class="btn btn-primary">
+                    <i class="bi bi-inbox-fill me-2"></i>فتح البريد الوارد
+                </a>
+                <button type="button" class="btn btn-ghost" data-bs-toggle="modal" data-bs-target="#newMessageModal">
+                    <i class="bi bi-plus-lg me-2"></i>رسالة جديدة
+                </button>
+            </div>
+            <div class="comm-hub-stat" id="msgStat">
+                <span class="comm-hub-stat-num" id="unreadCount">—</span>
+                <span class="comm-hub-stat-label">رسالة غير مقروءة</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Events -->
+    <div class="col-md-4">
+        <div class="comm-hub-card">
+            <div class="comm-hub-icon" style="background:linear-gradient(135deg,#10b981,#059669);">
+                <i class="bi bi-calendar-event-fill"></i>
+            </div>
+            <h5 class="comm-hub-title">الفعاليات</h5>
+            <p class="comm-hub-desc">إدارة التقويم المدرسي ودعوة أولياء الأمور</p>
+            <div class="d-grid gap-2">
+                <a href="/communication/events" class="btn btn-success">
+                    <i class="bi bi-calendar3 me-2"></i>عرض الفعاليات
+                </a>
+                <button type="button" class="btn btn-ghost" data-bs-toggle="modal" data-bs-target="#newEventModal">
+                    <i class="bi bi-plus-lg me-2"></i>فعالية جديدة
+                </button>
+            </div>
+            <div class="comm-hub-stat">
+                <span class="comm-hub-stat-num" id="eventsCount">—</span>
+                <span class="comm-hub-stat-label">فعالية قادمة</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Surveys -->
+    <div class="col-md-4">
+        <div class="comm-hub-card">
+            <div class="comm-hub-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+                <i class="bi bi-clipboard-data-fill"></i>
+            </div>
+            <h5 class="comm-hub-title">الاستبيانات</h5>
+            <p class="comm-hub-desc">قياس رضا أولياء الأمور وجمع الملاحظات</p>
+            <div class="d-grid gap-2">
+                <a href="/communication/surveys" class="btn btn-warning">
+                    <i class="bi bi-bar-chart-fill me-2"></i>إدارة الاستبيانات
+                </a>
+                <button type="button" class="btn btn-ghost" data-bs-toggle="modal" data-bs-target="#newSurveyModal">
+                    <i class="bi bi-plus-lg me-2"></i>استبيان جديد
+                </button>
+            </div>
+            <div class="comm-hub-stat">
+                <span class="comm-hub-stat-num" id="surveysCount">—</span>
+                <span class="comm-hub-stat-label">استبيان نشط</span>
+            </div>
+        </div>
+    </div>
+
 </div>
 
-<div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
-    <!-- Messages Card -->
-    <div class="col">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body text-center">
-                <div class="display-4 text-primary mb-3">
-                    <i class="bi bi-chat-dots-fill"></i>
-                </div>
-                <h5 class="card-title">الرسائل</h5>
-                <p class="card-text">المراسلات المباشرة مع أولياء الأمور والموظفين.</p>
-                <div class="d-grid gap-2">
-                    <a href="/communication/messages" class="btn btn-outline-primary">فتح البريد الوارد</a>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
-                        <i class="bi bi-plus-lg"></i> رسالة جديدة
-                    </button>
-                </div>
-            </div>
-        </div>
+<!-- Recent Activity -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="card-title-sm mb-0">
+            <i class="bi bi-clock-history me-2 text-primary"></i>
+            آخر النشاطات
+        </h6>
+        <span class="text-muted small" id="activityCount"></span>
     </div>
-
-    <!-- Events Card -->
-    <div class="col">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body text-center">
-                <div class="display-4 text-success mb-3">
-                    <i class="bi bi-calendar-event-fill"></i>
-                </div>
-                <h5 class="card-title">الفعاليات</h5>
-                <p class="card-text">إدارة التقويم المدرسي ودعوة أولياء الأمور.</p>
-                <div class="d-grid gap-2">
-                    <a href="/communication/events" class="btn btn-outline-success">عرض الفعاليات</a>
-                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newEventModal">
-                        <i class="bi bi-plus-lg"></i> فعالية جديدة
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Surveys Card -->
-    <div class="col">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body text-center">
-                <div class="display-4 text-warning mb-3">
-                    <i class="bi bi-clipboard-data-fill"></i>
-                </div>
-                <h5 class="card-title">الاستبيانات</h5>
-                <p class="card-text">قياس رضا أولياء الأمور وجمع الملاحظات.</p>
-                <div class="d-grid gap-2">
-                    <a href="/communication/surveys" class="btn btn-outline-warning">إدارة الاستبيانات</a>
-                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#newSurveyModal">
-                        <i class="bi bi-plus-lg"></i> استبيان جديد
-                    </button>
-                </div>
-            </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table comm-activity-table mb-0">
+                <thead>
+                    <tr>
+                        <th>النوع</th>
+                        <th>العنوان</th>
+                        <th>التاريخ</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody id="recentActivityTable">
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+                            جاري التحميل...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<!-- Quick Stats -->
-<div class="row">
-    <div class="col-md-12">
-        <div class="card shadow-sm">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">آخر النشاطات</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>النوع</th>
-                                <th>العنوان</th>
-                                <th>التاريخ</th>
-                                <th>الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recentActivityTable">
-                            <!-- Populated by JS -->
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">جاري تحميل البيانات...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modals for Quick Actions -->
+<!-- Modals -->
 {% include 'communication/modals/new_message.html' %}
 {% include 'communication/modals/new_event.html' %}
 {% include 'communication/modals/new_survey.html' %}
 
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
+
+/* Hub cards */
+.comm-hub-card {
+    background:var(--kinjo-card-bg);
+    border:1px solid var(--kinjo-border);
+    border-radius:var(--kinjo-radius-xl);
+    padding:1.75rem;
+    height:100%;
+    transition:all 0.25s;
+    display:flex;flex-direction:column;gap:0.75rem;
+}
+.comm-hub-card:hover { transform:translateY(-3px);box-shadow:var(--kinjo-shadow-lg);border-color:var(--kinjo-primary-light); }
+.comm-hub-icon {
+    width:60px;height:60px;border-radius:18px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.6rem;color:#fff;
+    box-shadow:var(--kinjo-shadow-primary);
+    flex-shrink:0;align-self:flex-start;
+}
+.comm-hub-title { font-size:1.1rem;font-weight:800;color:var(--kinjo-text-primary);margin:0; }
+.comm-hub-desc { font-size:0.84rem;color:var(--kinjo-text-muted);margin:0;flex:1; }
+.comm-hub-stat {
+    display:flex;align-items:baseline;gap:0.4rem;
+    padding-top:0.75rem;border-top:1px solid var(--kinjo-border);
+    margin-top:auto;
+}
+.comm-hub-stat-num { font-size:1.5rem;font-weight:800;color:var(--kinjo-primary); }
+.comm-hub-stat-label { font-size:0.8rem;color:var(--kinjo-text-muted); }
+
+/* Activity table */
+.comm-activity-table thead th {
+    font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);
+    text-transform:uppercase;letter-spacing:0.04em;
+    padding:0.75rem 1rem;background:var(--kinjo-surface);
+    border-bottom:1px solid var(--kinjo-border);
+}
+.comm-activity-table tbody td { padding:0.875rem 1rem;vertical-align:middle;font-size:0.875rem;border-bottom:1px solid var(--kinjo-border); }
+.comm-activity-table tbody tr:last-child td { border-bottom:none; }
+.comm-activity-table tbody tr:hover td { background:var(--kinjo-surface); }
+
+/* Activity type badge */
+.activity-type { display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.72rem;font-weight:700; }
+.activity-type.message { background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
+.activity-type.event   { background:rgba(16,185,129,0.15);color:var(--kinjo-success); }
+.activity-type.survey  { background:rgba(245,158,11,0.15);color:#d97706; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Placeholder for loading recent activity
-    document.addEventListener('DOMContentLoaded', async function() {
-        console.log('Communication center loaded');
-        // Future: Fetch recent messages/events and populate table
-    });
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadRecentActivity();
+});
+
+async function loadRecentActivity() {
+    const token = localStorage.getItem('access_token');
+    try {
+        // Try to fetch stats (graceful degradation if endpoints don't exist yet)
+        const r = await fetch('/api/communication/stats', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (r.ok) {
+            const data = await r.json();
+            if (data.unread_messages !== undefined) document.getElementById('unreadCount').textContent = data.unread_messages;
+            if (data.upcoming_events !== undefined)  document.getElementById('eventsCount').textContent  = data.upcoming_events;
+            if (data.active_surveys !== undefined)   document.getElementById('surveysCount').textContent = data.active_surveys;
+
+            renderActivity(data.recent_activity || []);
+        } else {
+            renderActivity([]);
+        }
+    } catch {
+        renderActivity([]);
+    }
+}
+
+function renderActivity(activities) {
+    const tbody = document.getElementById('recentActivityTable');
+    const cnt   = document.getElementById('activityCount');
+    if (cnt) cnt.textContent = `${activities.length} نشاط`;
+
+    if (!activities.length) {
+        tbody.innerHTML = `
+            <tr><td colspan="4" class="text-center py-5 text-muted">
+                <i class="bi bi-activity d-block fs-2 mb-2 opacity-25"></i>
+                <small>لا توجد نشاطات مؤخراً</small>
+            </td></tr>`;
+        return;
+    }
+
+    const typeMap = { message:'رسالة', event:'فعالية', survey:'استبيان' };
+    tbody.innerHTML = activities.map(a => `
+        <tr>
+            <td>
+                <span class="activity-type ${a.type}">
+                    <i class="bi bi-${a.type === 'message' ? 'chat-dots' : a.type === 'event' ? 'calendar-event' : 'clipboard-data'}-fill"></i>
+                    ${typeMap[a.type] || a.type}
+                </span>
+            </td>
+            <td style="font-weight:600;">${a.title || '—'}</td>
+            <td style="font-size:0.8rem;color:var(--kinjo-text-muted);">${formatDate(a.created_at)}</td>
+            <td>
+                <span style="font-size:0.75rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:50px;
+                    background:${a.status === 'sent' || a.status === 'published' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)'};
+                    color:${a.status === 'sent' || a.status === 'published' ? 'var(--kinjo-success)' : '#d97706'};">
+                    ${a.status === 'sent' ? 'مُرسل' : a.status === 'published' ? 'منشور' : 'مسودة'}
+                </span>
+            </td>
+        </tr>`).join('');
+}
+
+function formatDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' });
+}
 </script>
 {% endblock %}

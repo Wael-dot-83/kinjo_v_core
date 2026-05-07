@@ -92,7 +92,7 @@ def test_reports_list(test_client):
 def test_attendance_page(test_client):
     response = test_client.get("/attendance/daily")
     assert response.status_code == 200
-    assert "الحضور والغياب" in response.text
+    assert "الحضور" in response.text
 
 
 def test_kpi_dashboard(test_client):

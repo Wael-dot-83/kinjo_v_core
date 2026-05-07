@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('My Children') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
+            <i class="bi bi-people-fill"></i>
+            بوابة ولي الأمر
+        </div>
+        <h1 class="page-header-title">{{ _('My Children') }}</h1>
+        <p class="page-header-sub">متابعة بيانات أطفالك وتقدمهم</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="childrenGrid">
+    <div class="text-center py-5 text-muted">
+        <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+        جاري تحميل بيانات الأطفال...
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
+
+.child-card { background:var(--kinjo-card-bg);border:1px solid var(--kinjo-border);border-radius:var(--kinjo-radius-xl);overflow:hidden;transition:box-shadow 0.2s,transform 0.2s; }
+.child-card:hover { box-shadow:var(--kinjo-shadow-lg);transform:translateY(-2px); }
+.child-card-top { padding:1.5rem 1.25rem;text-align:center; }
+.child-avatar { width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800;color:#fff;margin:0 auto 0.75rem; }
+.child-name { font-size:1rem;font-weight:800;color:var(--kinjo-text-primary);margin:0 0 0.2rem; }
+.child-class { font-size:0.78rem;color:var(--kinjo-text-muted); }
+.child-card-stats { display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--kinjo-border); }
+.child-stat { text-align:center;padding:0.75rem 0.5rem; }
+.child-stat + .child-stat { border-inline-start:1px solid var(--kinjo-border); }
+.child-stat-val { font-size:1.2rem;font-weight:800;color:var(--kinjo-text-primary); }
+.child-stat-label { font-size:0.65rem;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.03em; }
+.child-card-footer { padding:0.75rem 1rem;display:flex;gap:0.5rem;border-top:1px solid var(--kinjo-border); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+const avatarColors = ['#6366f1','#10b981','#f59e0b','#ef4444','#06b6d4','#8b5cf6'];
+
+document.addEventListener('DOMContentLoaded', loadChildren);
+
+async function loadChildren() {
+    try {
+        const r = await fetch('/api/parent/children', { headers: authHeaders });
+        const data = r.ok ? await r.json() : null;
+        renderChildren(data?.children || data || []);
+    } catch { renderChildren([]); }
+}
+
+function renderChildren(children) {
+    const c = document.getElementById('childrenGrid');
+    if (!children.length) {
+        c.innerHTML = `<div class="card"><div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-people d-block fs-1 mb-3 opacity-25"></i>
+            <p class="mb-0">لا يوجد أطفال مسجلون في حسابك حالياً</p>
+        </div></div>`;
+        return;
+    }
+    c.innerHTML = `<div class="row g-4">${children.map((ch, i) => {
+        const color = avatarColors[i % avatarColors.length];
+        const init  = (ch.full_name_ar || ch.name || '#').charAt(0);
+        return `<div class="col-sm-6 col-lg-4">
+            <div class="child-card">
+                <div class="child-card-top">
+                    <div class="child-avatar" style="background:${color};">${init}</div>
+                    <div class="child-name">${ch.full_name_ar || ch.name || '—'}</div>
+                    <div class="child-class">${ch.class_name || ch.section || '—'}</div>
+                </div>
+                <div class="child-card-stats">
+                    <div class="child-stat">
+                        <div class="child-stat-val">${ch.attendance_rate != null ? ch.attendance_rate+'%' : '—'}</div>
+                        <div class="child-stat-label">الحضور</div>
+                    </div>
+                    <div class="child-stat">
+                        <div class="child-stat-val">${ch.reports_count ?? '—'}</div>
+                        <div class="child-stat-label">تقارير</div>
+                    </div>
+                    <div class="child-stat">
+                        <div class="child-stat-val">${ch.age ?? '—'}</div>
+                        <div class="child-stat-label">العمر</div>
+                    </div>
+                </div>
+                <div class="child-card-footer">
+                    <a href="/parent/attendance" class="btn btn-ghost btn-sm flex-fill">
+                        <i class="bi bi-calendar-check me-1"></i>الحضور
+                    </a>
+                    <a href="/parent/reports" class="btn btn-primary btn-sm flex-fill">
+                        <i class="bi bi-file-text me-1"></i>التقارير
+                    </a>
+                </div>
+            </div>
+        </div>`;
+    }).join('')}</div>`;
+}
+</script>
+{% endblock %}

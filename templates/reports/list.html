@@ -1,169 +1,330 @@
 {% extends 'base.html' %}
-
-{% block title %}التقارير اليومية{% endblock %}
+{% block title %}التقارير اليومية — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-journal-text me-2 text-primary"></i>
-            التقارير اليومية
-        </h1>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-journal-richtext"></i>
+            متابعة الأطفال
+        </div>
+        <h1 class="page-header-title">التقارير اليومية</h1>
         <nav aria-label="breadcrumb">
-             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
                 <li class="breadcrumb-item active">التقارير</li>
             </ol>
         </nav>
     </div>
-    {% if current_user.role.value in ['teacher', 'admin', 'supervisor'] %}
-    <div class="btn-toolbar">
-         <a href="/reports/create" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>إنشاء تقرير جديد
+    <div class="page-header-actions">
+        {% if current_user.role.value in ['ADMIN', 'MANAGER', 'SUPERVISOR'] %}
+        <a href="/daily-reports/create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>تقرير جديد
         </a>
-    </div>
-    {% endif %}
-</div>
-{% endblock %}
-
-{% block content %}
-<div class="row g-4">
-    <!-- Main Feed -->
-    <div class="col-lg-8">
-        <!-- Date Filter -->
-        <div class="d-flex align-items-center mb-4 bg-white p-3 rounded shadow-sm border">
-            <span class="fw-bold me-3">عرض تقارير يوم:</span>
-            <input type="date" class="form-control w-auto me-3" id="dateFilter" value="{{ today }}">
-            <button class="btn btn-outline-primary" onclick="loadReports()">
-                تحديث
-            </button>
-        </div>
-
-        <div id="reportsContainer">
-            <!-- Example Reports -->
-            <div class="card mb-3 report-card">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
-                             <i class="bi bi-person"></i>
-                        </div>
-                        <div>
-                            <h6 class="mb-0 fw-bold">أحمد محمد</h6>
-                            <small class="text-muted">شعبة الفراشات • 25 تشرين الأول 2023</small>
-                        </div>
-                    </div>
-                    <a href="/reports/1" class="btn btn-sm btn-outline-primary rounded-pill px-3">عرض التفاصيل</a>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center g-0">
-                         <div class="col-3 border-end">
-                             <div class="text-muted small mb-1">المزاج</div>
-                             <div class="fs-4">😊</div>
-                         </div>
-                         <div class="col-3 border-end">
-                             <div class="text-muted small mb-1">الأكل</div>
-                             <div class="fs-4">⭐⭐⭐</div>
-                         </div>
-                         <div class="col-3 border-end">
-                             <div class="text-muted small mb-1">النوم</div>
-                             <div class="fw-bold">45 دقيقة</div>
-                         </div>
-                         <div class="col-3">
-                             <div class="text-muted small mb-1">الحمام</div>
-                             <div class="fw-bold">3 مرات</div>
-                         </div>
-                    </div>
-                </div>
-            </div>
-            
-             <div class="card mb-3 report-card">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-sm bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-3">
-                             <i class="bi bi-person"></i>
-                        </div>
-                        <div>
-                            <h6 class="mb-0 fw-bold">سارة علي</h6>
-                            <small class="text-muted">شعبة الفراشات • 25 تشرين الأول 2023</small>
-                        </div>
-                    </div>
-                    <a href="/reports/2" class="btn btn-sm btn-outline-primary rounded-pill px-3">عرض التفاصيل</a>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center g-0">
-                         <div class="col-3 border-end">
-                             <div class="text-muted small mb-1">المزاج</div>
-                             <div class="fs-4">😴</div>
-                         </div>
-                         <div class="col-3 border-end">
-                             <div class="text-muted small mb-1">الأكل</div>
-                             <div class="fs-4">⭐⭐</div>
-                         </div>
-                         <div class="col-3 border-end">
-                             <div class="text-muted small mb-1">النوم</div>
-                             <div class="fw-bold">90 دقيقة</div>
-                         </div>
-                         <div class="col-3">
-                             <div class="text-muted small mb-1">الحمام</div>
-                             <div class="fw-bold">2 مرات</div>
-                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Pagination or Load More -->
-         <div class="text-center mt-4">
-            <button class="btn btn-outline-secondary">تحميل المزيد</button>
-        </div>
-    </div>
-    
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <!-- Quick Stats -->
-        <div class="card mb-4">
-            <div class="card-header"><h6 class="mb-0">ملخص اليوم</h6></div>
-            <div class="card-body">
-                 <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                     <span>عدد التقارير المرسلة</span>
-                     <span class="fw-bold">18/20</span>
-                 </div>
-                 <div class="d-flex justify-content-between mb-2">
-                     <span>الأكثر تناولا للطعام</span>
-                     <span class="fw-bold text-success">85%</span>
-                 </div>
-            </div>
-        </div>
-        
-        <!-- Pending Reports (For Teachers) -->
-        {% if current_user.role.value in ['teacher', 'supervisor'] %}
-        <div class="card">
-            <div class="card-header bg-warning bg-opacity-10">
-                <h6 class="mb-0 text-warning text-dark"><i class="bi bi-clock-history me-2"></i>بانتظار التقرير</h6>
-            </div>
-            <div class="list-group list-group-flush">
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <span>ليلى حسن</span>
-                    <a href="/reports/create?child_id=104" class="btn btn-sm btn-outline-primary">إنشاء</a>
-                </div>
-                 <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <span>يوسف إبراهيم</span>
-                     <a href="/reports/create?child_id=105" class="btn btn-sm btn-outline-primary">إنشاء</a>
-                </div>
-            </div>
-        </div>
         {% endif %}
     </div>
 </div>
 {% endblock %}
 
+{% block content %}
+<div class="row g-4">
+
+    <!-- Main Feed -->
+    <div class="col-lg-8">
+
+        <!-- Date filter bar -->
+        <div class="date-filter-bar card mb-4">
+            <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
+                <span class="fw-700" style="font-size:0.875rem;white-space:nowrap;">تقارير يوم:</span>
+                <input type="date" class="form-control form-control-sm" id="dateFilter"
+                       value="{{ today }}" style="width:auto;border-radius:var(--kinjo-radius-lg);">
+                <button class="btn btn-primary btn-sm" onclick="loadReports()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>تحديث
+                </button>
+                <span class="ms-auto text-muted small" id="reportsCount"></span>
+            </div>
+        </div>
+
+        <!-- Reports feed -->
+        <div id="reportsContainer">
+            <!-- Skeleton cards -->
+            <div class="report-skeleton mb-3 skeleton-item">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="skeleton" style="width:40px;height:40px;border-radius:50%;"></div>
+                            <div>
+                                <div class="skeleton mb-1" style="width:100px;height:14px;border-radius:6px;"></div>
+                                <div class="skeleton" style="width:150px;height:11px;border-radius:5px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-0">
+                            <div class="col-3 p-2 text-center"><div class="skeleton mx-auto" style="width:32px;height:32px;border-radius:50%;"></div></div>
+                            <div class="col-3 p-2 text-center"><div class="skeleton mx-auto" style="width:40px;height:14px;border-radius:5px;"></div></div>
+                            <div class="col-3 p-2 text-center"><div class="skeleton mx-auto" style="width:40px;height:14px;border-radius:5px;"></div></div>
+                            <div class="col-3 p-2 text-center"><div class="skeleton mx-auto" style="width:40px;height:14px;border-radius:5px;"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="report-skeleton mb-3 skeleton-item">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="skeleton" style="width:40px;height:40px;border-radius:50%;"></div>
+                            <div>
+                                <div class="skeleton mb-1" style="width:120px;height:14px;border-radius:6px;"></div>
+                                <div class="skeleton" style="width:130px;height:11px;border-radius:5px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-0">
+                            <div class="col-3 p-2 text-center"><div class="skeleton mx-auto" style="width:32px;height:32px;border-radius:50%;"></div></div>
+                            <div class="col-3 p-2 text-center"><div class="skeleton mx-auto" style="width:40px;height:14px;border-radius:5px;"></div></div>
+                            <div class="col-3 p-2 text-center"><div class="skeleton mx-auto" style="width:40px;height:14px;border-radius:5px;"></div></div>
+                            <div class="col-3 p-2 text-center"><div class="skeleton mx-auto" style="width:40px;height:14px;border-radius:5px;"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Load More -->
+        <div class="text-center mt-3" id="loadMoreWrap" style="display:none;">
+            <button class="btn btn-ghost" onclick="loadMore()">
+                <i class="bi bi-chevron-down me-1"></i>تحميل المزيد
+            </button>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+
+        <!-- Today's Summary -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-bar-chart-fill me-2 text-primary"></i>
+                    ملخص اليوم
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="summary-row">
+                    <span class="summary-label">التقارير المُرسلة</span>
+                    <span class="summary-value" id="sumSent">—</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">معدل الحضور</span>
+                    <span class="summary-value" style="color:var(--kinjo-success);" id="sumAttendance">—</span>
+                </div>
+                <div class="summary-row" style="border-bottom:none;">
+                    <span class="summary-label">الأكثر تناولاً للطعام</span>
+                    <span class="summary-value" id="sumEating">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending reports (supervisor/admin) -->
+        {% if current_user.role.value in ['ADMIN', 'MANAGER', 'SUPERVISOR'] %}
+        <div class="card">
+            <div class="card-header" style="background:rgba(245,158,11,0.08);border-bottom-color:rgba(245,158,11,0.2);">
+                <h6 class="card-title-sm mb-0" style="color:#d97706;">
+                    <i class="bi bi-clock-history me-2"></i>بانتظار التقرير
+                </h6>
+            </div>
+            <div class="card-body p-0" id="pendingChildrenList">
+                <div class="empty-state-mini">
+                    <i class="bi bi-check-circle" style="color:var(--kinjo-success);"></i>
+                    <span>جميع التقارير مكتملة</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
+
+/* Date filter bar */
+.date-filter-bar { border-color:var(--kinjo-border); }
+
+/* Report card */
+.report-card-item {
+    border:1px solid var(--kinjo-border);
+    border-radius:var(--kinjo-radius-xl);
+    overflow:hidden;
+    background:var(--kinjo-card-bg);
+    transition:all 0.2s;
+    margin-bottom:0.875rem;
+}
+.report-card-item:hover { box-shadow:var(--kinjo-shadow-md);border-color:var(--kinjo-primary-light); }
+.report-card-header {
+    display:flex;justify-content:space-between;align-items:center;
+    padding:1rem 1.25rem;border-bottom:1px solid var(--kinjo-border);
+    background:var(--kinjo-surface);
+}
+.report-child-avatar {
+    width:42px;height:42px;border-radius:50%;flex-shrink:0;
+    background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
+    display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+}
+.report-child-name { font-size:0.9rem;font-weight:800;color:var(--kinjo-text-primary); }
+.report-child-meta { font-size:0.75rem;color:var(--kinjo-text-muted); }
+
+/* Metrics grid */
+.report-metrics { display:grid;grid-template-columns:repeat(4,1fr); }
+.report-metric { padding:0.875rem 0.5rem;text-align:center;border-left:1px solid var(--kinjo-border); }
+.report-metric:first-child { border-left:none; }
+[dir="rtl"] .report-metric { border-left:none;border-right:1px solid var(--kinjo-border); }
+[dir="rtl"] .report-metric:last-child { border-right:none; }
+.report-metric-label { font-size:0.72rem;color:var(--kinjo-text-muted);font-weight:600;margin-bottom:0.3rem; }
+.report-metric-val { font-size:1.4rem;line-height:1; }
+.report-metric-val.text { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+
+/* Skeleton */
+.skeleton { background:var(--kinjo-skeleton-base,#e2e8f0);animation:shimmer 1.5s infinite; }
+@keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* Sidebar */
+.summary-row { display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
+.summary-label { font-size:0.85rem;color:var(--kinjo-text-secondary); }
+.summary-value { font-size:0.875rem;font-weight:700;color:var(--kinjo-text-primary); }
+.empty-state-mini { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;padding:1.5rem;color:var(--kinjo-text-muted);font-size:0.85rem; }
+.empty-state-mini i { font-size:2rem;opacity:0.25; }
+
+/* Pending item */
+.pending-child-item { display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
+.pending-child-item:last-child { border-bottom:none; }
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
-    async function loadReports() {
-        const date = document.getElementById('dateFilter').value;
-        showLoading();
-        // api.getDailyReports(date)...
-        setTimeout(() => hideLoading(), 500);
+const MOOD_EMOJIS = { happy:'😊', sleepy:'😴', crying:'😢', excited:'🤩', sick:'🤒', calm:'😌' };
+const STAR_COUNT  = { great:3, good:2, poor:1, none:0 };
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadReports();
+    document.getElementById('dateFilter').addEventListener('change', loadReports);
+});
+
+async function loadReports() {
+    const date = document.getElementById('dateFilter').value;
+    const container = document.getElementById('reportsContainer');
+
+    // Remove skeletons
+    container.querySelectorAll('.skeleton-item').forEach(el => el.remove());
+
+    // Show spinner
+    container.innerHTML = `<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>جاري التحميل...</div>`;
+
+    try {
+        const token = localStorage.getItem('access_token');
+        const r = await fetch(`/api/daily-reports?date=${date}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!r.ok) throw new Error();
+        const data = await r.json();
+        const reports = data.reports || [];
+
+        const cnt = document.getElementById('reportsCount');
+        if (cnt) cnt.textContent = `${reports.length} تقرير`;
+
+        renderReports(reports, container);
+        updateSummary(data.summary);
+    } catch {
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-exclamation-circle d-block fs-2 mb-2 opacity-25"></i>
+                <p>تعذّر تحميل التقارير</p>
+                <button class="btn btn-ghost btn-sm" onclick="loadReports()">إعادة المحاولة</button>
+            </div>`;
     }
+}
+
+function renderReports(reports, container) {
+    if (!reports.length) {
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-journal d-block fs-1 mb-2 opacity-25"></i>
+                <p>لا توجد تقارير لهذا اليوم</p>
+                {% if current_user.role.value in ['ADMIN', 'MANAGER', 'SUPERVISOR'] %}
+                <a href="/daily-reports/create" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle me-2"></i>إنشاء تقرير
+                </a>
+                {% endif %}
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = reports.map(r => {
+        const mood = MOOD_EMOJIS[r.mood] || '😊';
+        const stars = '⭐'.repeat(STAR_COUNT[r.meal_rating] || 0) || '—';
+        const sleep = r.nap_minutes ? `${r.nap_minutes} دقيقة` : '—';
+        const bathroom = r.bathroom_count ? `${r.bathroom_count} مرات` : '—';
+        return `
+        <div class="report-card-item">
+            <div class="report-card-header">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="report-child-avatar"><i class="bi bi-emoji-smile-fill"></i></div>
+                    <div>
+                        <div class="report-child-name">${r.child_name || '—'}</div>
+                        <div class="report-child-meta">
+                            ${r.class_name ? r.class_name + ' • ' : ''}${formatDate(r.date)}
+                        </div>
+                    </div>
+                </div>
+                <a href="/daily-reports/${r.id}" class="btn btn-ghost btn-sm">
+                    عرض التفاصيل <i class="bi bi-arrow-left ms-1"></i>
+                </a>
+            </div>
+            <div class="report-metrics">
+                <div class="report-metric">
+                    <div class="report-metric-label">المزاج</div>
+                    <div class="report-metric-val">${mood}</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-label">الأكل</div>
+                    <div class="report-metric-val" style="font-size:0.85rem;">${stars}</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-label">النوم</div>
+                    <div class="report-metric-val text">${sleep}</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-label">الحمام</div>
+                    <div class="report-metric-val text">${bathroom}</div>
+                </div>
+            </div>
+            ${r.notes ? `
+            <div style="padding:0.75rem 1.25rem;border-top:1px solid var(--kinjo-border);font-size:0.82rem;color:var(--kinjo-text-secondary);">
+                <i class="bi bi-chat-text me-1 text-muted"></i>${r.notes}
+            </div>` : ''}
+        </div>`;
+    }).join('');
+}
+
+function updateSummary(summary) {
+    if (!summary) return;
+    const sent = document.getElementById('sumSent');
+    const att  = document.getElementById('sumAttendance');
+    const eat  = document.getElementById('sumEating');
+    if (sent) sent.textContent = summary.sent ? `${summary.sent}/${summary.total}` : '—';
+    if (att)  att.textContent  = summary.attendance_rate ? `${summary.attendance_rate}%` : '—';
+    if (eat)  eat.textContent  = summary.eating_rate     ? `${summary.eating_rate}%`     : '—';
+}
+
+function formatDate(d) {
+    if (!d) return '';
+    return new Date(d).toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' });
+}
 </script>
 {% endblock %}

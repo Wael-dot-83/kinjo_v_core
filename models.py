@@ -44,6 +44,14 @@ class ExportStatus(str, PyEnum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
+
+class ExportFormat(str, PyEnum):
+    """Export file formats"""
+    CSV = "CSV"
+    PDF = "PDF"
+    EXCEL = "EXCEL"
+
+
 # Enums
 class UserRole(str, enum.Enum):
     ADMIN = "ADMIN"
@@ -162,6 +170,14 @@ class TaskPriority(str, enum.Enum):
     URGENT = "URGENT"
 
 
+class SafeguardingStatus(str, enum.Enum):
+    OPEN = "OPEN"
+    UNDER_INVESTIGATION = "UNDER_INVESTIGATION"
+    ESCALATED = "ESCALATED"
+    PENDING_CLOSURE = "PENDING_CLOSURE"
+    CLOSED = "CLOSED"
+
+
 # Models
 class Kindergarten(Base):
     __tablename__ = "kindergartens"
@@ -207,11 +223,13 @@ class User(Base):
     kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="users")
-    parent_profile = relationship("ParentProfile", back_populates="user", uselist=False)
-    supervisor_assignments = relationship("SupervisorAssignment", back_populates="supervisor")
+    parent_profile = relationship("ParentProfile", foreign_keys="[ParentProfile.user_id]", back_populates="user", uselist=False)
+    supervisor_assignments = relationship("SupervisorAssignment", foreign_keys="[SupervisorAssignment.supervisor_id]", back_populates="supervisor")
     daily_reports_submitted = relationship("DailyReport", foreign_keys="DailyReport.submitted_by", back_populates="submitter")
     daily_reports_approved = relationship("DailyReport", foreign_keys="DailyReport.approved_by", back_populates="approver")
     observations = relationship("Observation", back_populates="observer")
@@ -254,11 +272,14 @@ class ParentProfile(Base):
     home_address_line = Column(Text, nullable=False)
     work_address = Column(Text, nullable=True)
     correspondence_preference = Column(Boolean, nullable=False, default=True)
+    notification_language = Column(String(10), nullable=False, server_default="ar")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
-    user = relationship("User", back_populates="parent_profile")
+    user = relationship("User", foreign_keys=[user_id], back_populates="parent_profile")
     children = relationship("Child", back_populates="parent")
 
 
@@ -280,8 +301,17 @@ class Child(Base):
     mother_passport_number = Column(String(50), nullable=True)
     media_consent = Column(Boolean, nullable=False, default=False)
     correspondence_flag = Column(Boolean, nullable=False, default=True)
+    medical_notes = Column(Text, nullable=True)
+    allergy_notes = Column(Text, nullable=True)
+    special_needs_notes = Column(Text, nullable=True)
+    emergency_contact_name = Column(String(255), nullable=True)
+    emergency_contact_phone = Column(String(20), nullable=True)
+    blood_type = Column(String(5), nullable=True)
+    vaccination_up_to_date = Column(Boolean, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
     parent = relationship("ParentProfile", back_populates="children")
@@ -307,6 +337,13 @@ class Class(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    @property
+    def capacity(self) -> int:
+        """Alias for capacity_total used by the capacity trigger."""
+        return self.capacity_total
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="classes")
@@ -325,10 +362,12 @@ class SupervisorAssignment(Base):
     end_date = Column(Date, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
     class_ = relationship("Class", back_populates="supervisor_assignments")
-    supervisor = relationship("User", back_populates="supervisor_assignments")
+    supervisor = relationship("User", foreign_keys=[supervisor_id], back_populates="supervisor_assignments")
 
 
 class KindergartenService(Base):
@@ -341,6 +380,8 @@ class KindergartenService(Base):
     enabled_flag = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="services")
@@ -378,6 +419,8 @@ class EnrollmentApplication(Base):
     class_assignment_date = Column(Date, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
     child = relationship("Child", back_populates="enrollments")
@@ -407,6 +450,7 @@ class AttendanceLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
+    class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)
     date = Column(Date, nullable=False)
     check_in_at = Column(DateTime(timezone=True), nullable=False)
     check_out_at = Column(DateTime(timezone=True), nullable=True)
@@ -414,6 +458,8 @@ class AttendanceLog(Base):
     dropped_by_name = Column(String(255), nullable=True)
     picked_by_name = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
     child = relationship("Child", back_populates="attendance_logs")
@@ -464,8 +510,13 @@ class Incident(Base):
     followup_required_flag = Column(Boolean, nullable=False, default=False)
     followup_sla_deadline = Column(DateTime(timezone=True), nullable=True)
     closed_at = Column(DateTime(timezone=True), nullable=True)
+    reported_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)
+    closed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
     child = relationship("Child", back_populates="incidents")
@@ -512,7 +563,7 @@ class HealthAlert(Base):
     child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
     alert_type = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
-    severity = Column(String(50), nullable=False)
+    severity = Column(Enum(SeverityLevel), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -532,6 +583,8 @@ class Message(Base):
     subject = Column(String(255), nullable=True)
     message_body = Column(Text, nullable=False)
     translated_text = Column(Text, nullable=True)
+    is_read = Column(Boolean, nullable=False, default=False)
+    read_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -553,6 +606,8 @@ class Event(Base):
     end_at = Column(DateTime(timezone=True), nullable=False)
     requires_consent_flag = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="events")
@@ -569,6 +624,8 @@ class Survey(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="surveys")
@@ -585,6 +642,10 @@ class SurveyResponse(Base):
     feedback_text = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    __table_args__ = (
+        UniqueConstraint("survey_id", "parent_id", name="uq_survey_response_per_parent"),
+    )
+
     # Relationships
     survey = relationship("Survey", back_populates="responses")
     parent = relationship("User") # No back_populate needed on User for now strictly
@@ -598,7 +659,11 @@ class AuditLog(Base):
     action = Column(String(100), nullable=False)
     entity_type = Column(String(100), nullable=False)
     entity_id = Column(Integer, nullable=True)
-    details = Column(Text, nullable=True)
+    details = Column(JSON, nullable=True)
+    old_data = Column(JSON, nullable=True)
+    new_data = Column(JSON, nullable=True)
+    actor_role = Column(String(50), nullable=True)
+    request_id = Column(String(36), nullable=True)
     ip_address = Column(String(50), nullable=True)
     sensitivity_level = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -675,6 +740,8 @@ class SafeguardingCase(Base):
     child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
     kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
     case_description = Column(Text, nullable=False)
+    status = Column(Enum(SafeguardingStatus), nullable=False, default=SafeguardingStatus.OPEN)
+    assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
     opened_at = Column(DateTime(timezone=True), nullable=False)
     escalated_at = Column(DateTime(timezone=True), nullable=True)
     closed_at = Column(DateTime(timezone=True), nullable=True)
@@ -699,23 +766,14 @@ class Task(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
 
 # =============================================================================
 # Analytics & Reporting Models
 # =============================================================================
 
-class AnalyticsDimensionType(str, PyEnum):
-    """Dimension types for analytics aggregation"""
-    NETWORK = "NETWORK"
-    GOVERNORATE = "GOVERNORATE"
-    KINDERGARTEN = "KINDERGARTEN"
-    CLASS = "CLASS"
-    CHILD = "CHILD"
-    CITY = "CITY"
-    AREA = "AREA"
-    STAFF = "STAFF"
-    PARENT = "PARENT"
 # Advanced Analytics Cache for multi-dimensional, advanced, and predictive metrics
 class AdvancedAnalyticsCache(Base):
     """
@@ -765,30 +823,6 @@ class AdvancedAnalyticsCache(Base):
         Index('ix_adv_analytics_cache_period', 'period_type', 'period_start', 'period_end'),
         Index('ix_adv_analytics_cache_lookup', 'dimension_type', 'dimension_id', 'period_type', 'period_start', 'period_end', unique=True),
     )
-
-
-class AnalyticsPeriodType(str, PyEnum):
-    """Period types for analytics aggregation"""
-    DAILY = "DAILY"
-    WEEKLY = "WEEKLY"
-    MONTHLY = "MONTHLY"
-    QUARTERLY = "QUARTERLY"
-    YEARLY = "YEARLY"
-
-
-class ExportStatus(str, PyEnum):
-    """Export job status"""
-    PENDING = "PENDING"
-    PROCESSING = "PROCESSING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-
-
-class ExportFormat(str, PyEnum):
-    """Export file formats"""
-    CSV = "CSV"
-    PDF = "PDF"
-    EXCEL = "EXCEL"
 
 
 class AnalyticsDimensionCache(Base):
@@ -877,4 +911,168 @@ class ExportJob(Base):
 
     __table_args__ = (
         Index('ix_export_jobs_user_status', 'user_id', 'status'),
+    )
+
+
+# =============================================================================
+# AI Infrastructure Models
+# =============================================================================
+
+class AIParentRecommendation(Base):
+    """AI-generated recommendations surfaced to parents via the daily report or app feed."""
+    __tablename__ = "ai_parent_recommendations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
+    report_date = Column(Date, nullable=False)
+    source_report_id = Column(Integer, ForeignKey("daily_reports.id"), nullable=True)
+    recommendation_type = Column(String(50), nullable=False)
+    content_ar = Column(Text, nullable=True)
+    content_en = Column(Text, nullable=True)
+    model_version = Column(String(50), nullable=True)
+    prompt_version = Column(String(20), nullable=True)
+    confidence = Column(Float, nullable=True)
+    evidence_json = Column(JSON, nullable=True)
+    parent_feedback = Column(String(20), nullable=True)
+    feedback_at = Column(DateTime(timezone=True), nullable=True)
+    human_reviewed = Column(Boolean, nullable=False, default=False)
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    review_note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index('idx_ai_parent_child_date', 'child_id', 'report_date'),
+    )
+
+
+class AIManagerAlert(Base):
+    """AI-generated alerts surfaced to kindergarten managers."""
+    __tablename__ = "ai_manager_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
+    alert_type = Column(String(100), nullable=False)
+    severity = Column(String(20), nullable=False)
+    target_entity_type = Column(String(50), nullable=True)
+    target_entity_id = Column(Integer, nullable=True)
+    details = Column(JSON, nullable=False)
+    rule_version = Column(String(20), nullable=True)
+    acknowledged = Column(Boolean, nullable=False, default=False)
+    acknowledged_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    dismissed = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index('idx_ai_manager_alerts_kg', 'kindergarten_id', 'created_at'),
+    )
+
+
+class AIJobLog(Base):
+    """Execution log for all AI batch jobs."""
+    __tablename__ = "ai_job_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_name = Column(String(100), nullable=False)
+    job_type = Column(String(50), nullable=False)
+    started_at = Column(DateTime(timezone=True), nullable=False)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(20), nullable=False)
+    records_in = Column(Integer, nullable=True)
+    records_out = Column(Integer, nullable=True)
+    error_message = Column(Text, nullable=True)
+    model_version = Column(String(50), nullable=True)
+    prompt_version = Column(String(20), nullable=True)
+    job_metadata = Column(JSON, nullable=True)
+
+    __table_args__ = (
+        Index('idx_ai_job_logs_type_started', 'job_type', 'started_at'),
+    )
+
+
+class AIFeature(Base):
+    """Pre-computed feature vectors for ML models."""
+    __tablename__ = "ai_features"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entity_type = Column(String(50), nullable=False)
+    entity_id = Column(Integer, nullable=False)
+    feature_name = Column(String(100), nullable=False)
+    feature_value = Column(Float, nullable=True)
+    feature_json = Column(JSON, nullable=True)
+    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+    valid_until = Column(DateTime(timezone=True), nullable=True)
+    model_version = Column(String(50), nullable=True)
+
+    __table_args__ = (
+        Index('idx_ai_features_entity_feature', 'entity_type', 'entity_id', 'feature_name', unique=True),
+    )
+
+
+class AIModelVersion(Base):
+    """Registry of deployed AI/ML model versions for audit and reproducibility."""
+    __tablename__ = "ai_model_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    model_name = Column(String(100), nullable=False)
+    version = Column(String(20), nullable=False)
+    model_type = Column(String(50), nullable=False)
+    description = Column(Text, nullable=True)
+    parameters = Column(JSON, nullable=True)
+    deployed_at = Column(DateTime(timezone=True), server_default=func.now())
+    retired_at = Column(DateTime(timezone=True), nullable=True)
+    deployed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint('model_name', 'version', name='uq_ai_model_version'),
+    )
+
+
+class AIFeedback(Base):
+    """User feedback on AI-generated content for RLHF pipelines."""
+    __tablename__ = "ai_feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_table = Column(String(100), nullable=False)
+    source_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_role = Column(String(50), nullable=True)
+    feedback_type = Column(String(50), nullable=False)
+    feedback_note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index('idx_ai_feedback_source', 'source_table', 'source_id'),
+    )
+
+
+class AIEmbedding(Base):
+    """Dense vector embeddings for semantic search (Phase 5).
+
+    On PostgreSQL the `embedding` column holds a pgvector VECTOR(768) type
+    managed via raw DDL in the migration.  The ORM maps it as Text here so
+    that the model remains importable without the pgvector Python package;
+    application code casts as needed before passing to SQL.
+
+    On SQLite the column stores the embedding as a JSON-serialised list of
+    floats (nearest-neighbour search is not supported on SQLite).
+    """
+    __tablename__ = "ai_embeddings"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    source_table = Column(String(100), nullable=False)
+    source_id    = Column(Integer,     nullable=False)
+    chunk_index  = Column(Integer,     nullable=False, default=0)
+    # Stored as TEXT at ORM level; pgvector type is enforced by the migration.
+    embedding    = Column(Text,        nullable=False)
+    model_name   = Column(String(100), nullable=False, default="nomic-embed-text")
+    computed_at  = Column(DateTime(timezone=True), server_default=func.now())
+    content_hash = Column(String(64),  nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "source_table", "source_id", "chunk_index", "model_name",
+            name="uq_ai_embeddings_source",
+        ),
+        Index("idx_ai_embeddings_source_lookup", "source_table", "source_id"),
     )

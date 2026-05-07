@@ -1,14 +1,16 @@
-from fastapi import APIRouter, Request, Depends, status, HTTPException
+from fastapi import APIRouter, Request, Depends, status, HTTPException, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from jinja2 import pass_context
 from sqlalchemy.orm import Session
 from datetime import date
 import typing
 
 from database import get_db
 from dependencies import get_current_user_optional, get_current_user, get_current_user_or_redirect
-from models import User, UserRole, Kindergarten, EnrollmentApplication, AttendanceLog, DailyReport
+from models import User, UserRole, Kindergarten, KindergartenStatus, EnrollmentApplication, AttendanceLog, DailyReport
+from i18n import normalize_language, make_gettext
 
 # Setup templates with UTF-8 encoding
 templates = Jinja2Templates(directory="templates")
@@ -16,7 +18,40 @@ templates.env.globals['encoding'] = 'utf-8'
 # Ensure auto_reload for development
 templates.env.auto_reload = True
 
+
+def _resolve_lang(request: Request) -> str:
+    """Resolve UI language: ui_lang cookie > default (ar).
+    Accept-Language is intentionally ignored — the platform defaults to Arabic."""
+    lang = request.cookies.get("ui_lang", "")
+    return normalize_language(lang, default="ar")
+
+
+@pass_context
+def _jinja_gettext(ctx: dict, message: str, **kwargs) -> str:
+    req = ctx.get("request")
+    lang = _resolve_lang(req) if req else "ar"
+    return make_gettext(lang)(message, **kwargs)
+
+
+@pass_context
+def _jinja_ui_lang(ctx: dict) -> str:
+    req = ctx.get("request")
+    return _resolve_lang(req) if req else "ar"
+
+
+@pass_context
+def _jinja_ui_dir(ctx: dict) -> str:
+    req = ctx.get("request")
+    lang = _resolve_lang(req) if req else "ar"
+    return "rtl" if lang == "ar" else "ltr"
+
+
+templates.env.globals["_"] = _jinja_gettext
+templates.env.globals["ui_lang"] = _jinja_ui_lang
+templates.env.globals["ui_dir"] = _jinja_ui_dir
+
 router = APIRouter(include_in_schema=False)
+
 
 # -----------------------------------------------------------------------------
 # Home & Auth
@@ -96,7 +131,7 @@ async def list_enrollments(request: Request, current_user: User = Depends(get_cu
 
 @router.get("/enrollments/create", response_class=HTMLResponse)
 async def create_enrollment_page(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    kgs = db.query(Kindergarten).filter(Kindergarten.status == 'active').all()
+    kgs = db.query(Kindergarten).filter(Kindergarten.status == KindergartenStatus.ACTIVE).all()
     return templates.TemplateResponse(request=request, name="enrollment/create.html", context={"current_user": current_user, "kindergartens": kgs})
 
 @router.get("/enrollments/{app_id}", response_class=HTMLResponse)
@@ -274,7 +309,7 @@ async def new_message(request: Request, current_user: User = Depends(get_current
 @router.get("/profile", response_class=HTMLResponse)
 async def user_profile(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """User profile page"""
-    return templates.TemplateResponse(request=request, name="user/profile.html", context={"current_user": current_user})
+    return templates.TemplateResponse(request=request, name="parent/profile.html", context={"current_user": current_user})
 
 
 @router.get("/settings", response_class=HTMLResponse)
@@ -404,4 +439,26 @@ async def admin_analytics(request: Request, current_user: User = Depends(get_cur
         name="admin/analytics/index.html",
         context={"current_user": current_user, "today": date.today()}
     )
+
+
+# -----------------------------------------------------------------------------
+# Language Switch
+# -----------------------------------------------------------------------------
+
+@router.get("/set-language/{lang}")
+async def set_language(lang: str, request: Request, next: str = "/dashboard"):
+    """Switch UI language by setting a cookie, then redirect back."""
+    safe_lang = normalize_language(lang, default="ar")
+    # Validate next is a relative path to prevent open-redirect
+    if not next.startswith("/"):
+        next = "/dashboard"
+    response = RedirectResponse(url=next, status_code=302)
+    response.set_cookie(
+        key="ui_lang",
+        value=safe_lang,
+        max_age=60 * 60 * 24 * 365,  # 1 year
+        httponly=False,  # JS may read for dynamic UI
+        samesite="lax",
+    )
+    return response
 

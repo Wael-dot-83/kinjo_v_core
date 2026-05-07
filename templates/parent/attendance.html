@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Attendance') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-success);">
+            <i class="bi bi-calendar-check-fill"></i>
+            بوابة ولي الأمر
+        </div>
+        <h1 class="page-header-title">{{ _('Attendance') }}</h1>
+        <p class="page-header-sub">سجل حضور أطفالك اليومي</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/parent/children" class="btn btn-ghost">
+            <i class="bi bi-people me-2"></i>أطفالي
+        </a>
+        <button class="btn btn-primary" onclick="requestAbsence()">
+            <i class="bi bi-calendar-x me-2"></i>طلب غياب
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="att-stat present">
+            <i class="bi bi-check-circle-fill"></i>
+            <div class="att-stat-num" id="statPresent">—</div>
+            <div class="att-stat-lbl">حاضر</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="att-stat absent">
+            <i class="bi bi-x-circle-fill"></i>
+            <div class="att-stat-num" id="statAbsent">—</div>
+            <div class="att-stat-lbl">غائب</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="att-stat excused">
+            <i class="bi bi-calendar-minus-fill"></i>
+            <div class="att-stat-num" id="statExcused">—</div>
+            <div class="att-stat-lbl">غياب بعذر</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="att-stat rate">
+            <i class="bi bi-graph-up-arrow"></i>
+            <div class="att-stat-num" id="statRate">—</div>
+            <div class="att-stat-lbl">نسبة الحضور</div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="card-title-sm mb-0">
+            <i class="bi bi-list-check me-2 text-success"></i>
+            سجل الحضور الشهري
+        </h6>
+        <div class="d-flex gap-2 align-items-center">
+            <button class="btn btn-ghost btn-sm" onclick="prevMonth()" aria-label="الشهر السابق"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+            <span class="fw-700 small" id="monthLabel">—</span>
+            <button class="btn btn-ghost btn-sm" onclick="nextMonth()" aria-label="الشهر التالي"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div id="attendanceList">
+            <div class="text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+                جاري التحميل...
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
+
+.att-stat { background:var(--kinjo-card-bg);border:1px solid var(--kinjo-border);border-radius:var(--kinjo-radius-xl);padding:1rem;text-align:center; }
+.att-stat i { font-size:1.4rem;margin-bottom:0.4rem; }
+.att-stat-num { font-size:1.6rem;font-weight:800;color:var(--kinjo-text-primary);line-height:1; }
+.att-stat-lbl { font-size:0.7rem;color:var(--kinjo-text-muted);margin-top:0.2rem; }
+.att-stat.present i { color:var(--kinjo-success); }
+.att-stat.absent  i { color:var(--kinjo-danger); }
+.att-stat.excused i { color:#f59e0b; }
+.att-stat.rate    i { color:var(--kinjo-primary); }
+
+.att-row { display:flex;align-items:center;gap:1rem;padding:0.75rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
+.att-row:last-child { border-bottom:none; }
+.att-date { font-size:0.8rem;font-weight:700;color:var(--kinjo-text-primary);min-width:90px; }
+.att-badge { display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.72rem;font-weight:800; }
+.att-badge.present { background:rgba(16,185,129,0.12);color:var(--kinjo-success); }
+.att-badge.absent  { background:rgba(239,68,68,0.12);color:var(--kinjo-danger); }
+.att-badge.excused { background:rgba(245,158,11,0.12);color:#d97706; }
+.att-notes { font-size:0.75rem;color:var(--kinjo-text-muted);margin-inline-start:auto; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+let viewDate = new Date();
+
+document.addEventListener('DOMContentLoaded', loadAttendance);
+
+function prevMonth() { viewDate.setMonth(viewDate.getMonth() - 1); loadAttendance(); }
+function nextMonth() { viewDate.setMonth(viewDate.getMonth() + 1); loadAttendance(); }
+
+async function loadAttendance() {
+    const y = viewDate.getFullYear(), m = viewDate.getMonth() + 1;
+    document.getElementById('monthLabel').textContent =
+        viewDate.toLocaleDateString('ar-SA', { year:'numeric', month:'long' });
+    document.getElementById('attendanceList').innerHTML =
+        `<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>جاري التحميل...</div>`;
+    try {
+        const r = await fetch(`/api/parent/attendance?year=${y}&month=${m}`, { headers: authHeaders });
+        const data = r.ok ? await r.json() : null;
+        renderAttendance(data?.records || data || []);
+    } catch { renderAttendance([]); }
+}
+
+function renderAttendance(records) {
+    const statuses = { present:0, absent:0, excused:0 };
+    records.forEach(r => { if (statuses[r.status] !== undefined) statuses[r.status]++; });
+    const total = statuses.present + statuses.absent + statuses.excused;
+    const rate  = total ? Math.round(statuses.present / total * 100) : 0;
+
+    document.getElementById('statPresent').textContent = statuses.present;
+    document.getElementById('statAbsent').textContent  = statuses.absent;
+    document.getElementById('statExcused').textContent = statuses.excused;
+    document.getElementById('statRate').textContent    = rate + '%';
+
+    const c = document.getElementById('attendanceList');
+    if (!records.length) {
+        c.innerHTML = `<div class="text-center py-5 text-muted"><i class="bi bi-calendar3 d-block fs-1 mb-2 opacity-25"></i><p>لا توجد بيانات لهذا الشهر</p></div>`;
+        return;
+    }
+    const labels = { present:'حاضر', absent:'غائب', excused:'بعذر' };
+    c.innerHTML = records.map(r => {
+        const d    = new Date(r.date).toLocaleDateString('ar-SA', { weekday:'short', month:'short', day:'numeric' });
+        const cls  = r.status || 'absent';
+        return `<div class="att-row">
+            <span class="att-date">${d}</span>
+            <span class="att-badge ${cls}">${labels[cls] || cls}</span>
+            ${r.notes ? `<span class="att-notes">${r.notes}</span>` : ''}
+        </div>`;
+    }).join('');
+}
+
+function requestAbsence() {
+    window.location.href = '/attendance/absence-requests';
+}
+</script>
+{% endblock %}

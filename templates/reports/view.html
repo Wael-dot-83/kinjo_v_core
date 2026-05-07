@@ -1,166 +1,358 @@
 {% extends 'base.html' %}
-
-{% block title %}تفاصيل التقرير اليومي{% endblock %}
+{% block title %}تقرير: {{ report.child_name }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-journal-check me-2 text-primary"></i>
-            تقرير يومي: {{ report.child_name }}
-        </h1>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-journal-check"></i>
+            التقارير اليومية
+        </div>
+        <h1 class="page-header-title">تقرير: {{ report.child_name }}</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/reports">التقارير</a></li>
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="/reports" class="text-decoration-none">التقارير</a></li>
                 <li class="breadcrumb-item active">{{ report.date }}</li>
             </ol>
         </nav>
     </div>
-    <div class="btn-toolbar">
-         <button class="btn btn-outline-primary" onclick="window.print()">
+    <div class="d-flex gap-2">
+        <button class="btn btn-ghost" onclick="window.print()">
             <i class="bi bi-printer me-2"></i>طباعة
         </button>
+        <a href="/reports" class="btn btn-ghost">
+            <i class="bi bi-arrow-right me-2"></i>رجوع
+        </a>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-10">
-        <!-- Header Card -->
-        <div class="card mb-4 border-0 shadow-sm bg-primary bg-opacity-10">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center">
-                         <div class="avatar-lg bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm me-3" 
-                              style="width: 64px; height: 64px;">
-                             <i class="bi bi-person fs-3 text-primary"></i>
-                        </div>
-                        <div>
-                            <h4 class="mb-1 text-primary fw-bold">{{ report.child_name }}</h4>
-                            <div class="text-muted">
-                                <i class="bi bi-calendar-event me-2"></i>{{ report.date }}
-                                <span class="mx-2">•</span>
-                                <i class="bi bi-person-badge me-2"></i>المعلمة: {{ report.teacher_name }}
-                            </div>
+    <div class="col-xl-9 col-lg-10">
+
+        <!-- Hero Header Card -->
+        <div class="report-hero-card mb-4">
+            <div class="report-hero-bg"></div>
+            <div class="report-hero-content">
+                <div class="report-child-info">
+                    <div class="report-child-avatar">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="report-child-name">{{ report.child_name }}</h4>
+                        <div class="report-meta">
+                            <span><i class="bi bi-calendar-event me-1"></i>{{ report.date }}</span>
+                            <span class="mx-2">•</span>
+                            <span><i class="bi bi-person-badge me-1"></i>المعلم/المعلمة: {{ report.teacher_name }}</span>
                         </div>
                     </div>
-                    <div class="text-center bg-white p-3 rounded shadow-sm">
-                        <div class="small text-muted mb-1">المزاج</div>
-                        <div class="fs-1" title="{{ report.mood_text }}">{{ report.mood_emoji }}</div>
-                    </div>
+                </div>
+                <div class="report-mood-bubble">
+                    <div class="mood-big">{{ report.mood_emoji }}</div>
+                    <div class="mood-label">{{ report.mood_text }}</div>
                 </div>
             </div>
         </div>
 
-        <div class="row g-4 mb-4">
-            <!-- Meals -->
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0 card-title text-white"><i class="bi bi-egg-fried me-2"></i>الوجبات</h5>
+        <!-- Quick Metrics -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="metric-bubble">
+                    <div class="metric-icon">🍽️</div>
+                    <div class="metric-title">الوجبات</div>
+                    <div class="metric-val">
+                        {% set ate = [report.meals.breakfast, report.meals.lunch, report.meals.snack] | selectattr | list | length %}
+                        {{ ate }}/3
                     </div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <span>الفطور</span>
-                                <span class="badge bg-success rounded-pill px-3">{{ report.meals.breakfast }}</span>
-                            </li>
-                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <span>الغداء</span>
-                                <span class="badge bg-primary rounded-pill px-3">{{ report.meals.lunch }}</span>
-                            </li>
-                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <span>سناك</span>
-                                <span class="badge bg-info rounded-pill px-3">{{ report.meals.snack }}</span>
-                            </li>
-                        </ul>
-                    </div>
+                    <div class="metric-sub">وجبة تناولها</div>
                 </div>
             </div>
+            <div class="col-6 col-md-3">
+                <div class="metric-bubble">
+                    <div class="metric-icon">😴</div>
+                    <div class="metric-title">النوم</div>
+                    <div class="metric-val">{{ report.sleep_minutes }}</div>
+                    <div class="metric-sub">دقيقة</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="metric-bubble">
+                    <div class="metric-icon">🚽</div>
+                    <div class="metric-title">الحمام</div>
+                    <div class="metric-val">{{ report.bathroom_count }}</div>
+                    <div class="metric-sub">مرة</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="metric-bubble" style="border-color:rgba(99,102,241,0.2);background:rgba(99,102,241,0.05);">
+                    <div class="metric-icon">🎯</div>
+                    <div class="metric-title">الأنشطة</div>
+                    <div class="metric-val" style="color:var(--kinjo-primary);">{{ report.activities | length }}</div>
+                    <div class="metric-sub">نشاط</div>
+                </div>
+            </div>
+        </div>
 
-            <!-- Sleep & Bathroom -->
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0 card-title text-white"><i class="bi bi-moon-stars me-2"></i>الراحة والنظافة</h5>
+        <div class="row g-4">
+
+            <!-- Left Column -->
+            <div class="col-lg-8">
+
+                <!-- Meals Detail -->
+                <div class="card mb-4">
+                    <div class="card-header" style="background:rgba(16,185,129,0.08);border-bottom-color:rgba(16,185,129,0.2);">
+                        <h6 class="card-title-sm mb-0" style="color:var(--kinjo-success);">
+                            <i class="bi bi-egg-fried me-2"></i>الوجبات
+                        </h6>
                     </div>
                     <div class="card-body">
-                        <div class="row text-center mb-4">
-                            <div class="col-6 border-end">
-                                <h6 class="text-muted">النوم</h6>
-                                <h3 class="fw-bold text-info">{{ report.sleep_minutes }}</h3>
-                                <small class="text-muted">دقيقة</small>
+                        <div class="meals-list">
+                            {% for meal_name, meal_key, meal_icon in [('الفطور','breakfast','🌅'),('الغداء','lunch','☀️'),('الوجبة الخفيفة','snack','🍎')] %}
+                            <div class="meal-row">
+                                <span class="meal-icon">{{ meal_icon }}</span>
+                                <span class="meal-name">{{ meal_name }}</span>
+                                <span class="meal-badge {% if report.meals[meal_key] %}ate{% else %}no-eat{% endif %}">
+                                    {{ report.meals[meal_key] or 'لم يتناول' }}
+                                </span>
                             </div>
-                             <div class="col-6">
-                                <h6 class="text-muted">الحمام</h6>
-                                <h3 class="fw-bold text-info">{{ report.bathroom_count }}</h3>
-                                <small class="text-muted">مرات</small>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sleep & Hygiene -->
+                <div class="card mb-4">
+                    <div class="card-header" style="background:rgba(99,102,241,0.08);border-bottom-color:rgba(99,102,241,0.2);">
+                        <h6 class="card-title-sm mb-0" style="color:var(--kinjo-primary);">
+                            <i class="bi bi-moon-stars me-2"></i>الراحة والنظافة
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 text-center mb-3">
+                            <div class="col-6">
+                                <div class="sleep-display-box">
+                                    <div class="big-num">{{ report.sleep_minutes }}</div>
+                                    <div class="big-unit">دقيقة نوم</div>
+                                    {% if report.sleep_minutes > 0 %}
+                                    <div class="progress mt-2" style="height:6px;">
+                                        <div class="progress-bar" style="width:{{ [report.sleep_minutes / 120 * 100, 100] | min }}%;background:var(--kinjo-primary);border-radius:50px;"></div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="sleep-display-box">
+                                    <div class="big-num">{{ report.bathroom_count }}</div>
+                                    <div class="big-unit">مرات الحمام</div>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="bg-light p-3 rounded">
-                            <h6 class="mb-2 fw-bold small">تغيير الحفاظ:</h6>
-                            <div class="d-flex gap-2">
+
+                        <div class="diaper-section">
+                            <h6 class="fw-700 small mb-2">تغيير الحفاظ</h6>
+                            <div class="d-flex gap-2 flex-wrap">
                                 {% if report.diaper.wet %}
-                                <span class="badge bg-secondary text-dark">مبلل</span>
+                                <span class="diaper-tag wet">💧 مبلل</span>
                                 {% endif %}
                                 {% if report.diaper.soiled %}
-                                <span class="badge bg-secondary text-dark">متسخ</span>
+                                <span class="diaper-tag soiled">🟤 متسخ</span>
                                 {% endif %}
                                 {% if not report.diaper.wet and not report.diaper.soiled %}
-                                <span class="text-muted small">لا يوجد</span>
+                                <span class="text-muted small">لا يوجد تغيير</span>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Activities & Notes -->
-        <div class="card mb-4">
-            <div class="card-header bg-warning">
-                 <h5 class="mb-0 card-title text-dark"><i class="bi bi-stars me-2"></i>الأنشطة والملاحظات</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-4">
-                    <h6 class="fw-bold text-muted mb-3">أنشطة اليوم</h6>
-                    <div class="d-flex flex-wrap gap-2">
-                        {% for activity in report.activities %}
-                        <span class="badge bg-warning text-dark border border-warning fs-6 px-3 py-2">
-                            <i class="bi bi-check-circle me-1"></i>{{ activity }}
-                        </span>
-                        {% endfor %}
-                    </div>
-                </div>
-                
-                <div class="p-3 bg-light rounded border-start border-4 border-warning">
-                    <h6 class="fw-bold mb-2">ملاحظات المعلمة:</h6>
-                    <p class="mb-0 text-muted">{{ report.notes or 'لا توجد ملاحظات إضافية' }}</p>
-                </div>
-            </div>
-        </div>
 
-        <!-- Photos -->
-        {% if report.photos %}
-        <div class="card mb-4">
-             <div class="card-header">
-                 <h5 class="mb-0 card-title">صور من اليوم</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-2">
-                    {% for photo in report.photos %}
-                    <div class="col-6 col-md-3">
-                         <img src="{{ photo.url }}" class="img-fluid rounded shadow-sm" alt="نشاط يومي">
+                <!-- Activities -->
+                <div class="card mb-4">
+                    <div class="card-header" style="background:rgba(245,158,11,0.08);border-bottom-color:rgba(245,158,11,0.2);">
+                        <h6 class="card-title-sm mb-0" style="color:#d97706;">
+                            <i class="bi bi-stars me-2"></i>الأنشطة
+                        </h6>
                     </div>
-                    {% endfor %}
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2 mb-4">
+                            {% if report.activities %}
+                                {% for activity in report.activities %}
+                                <span class="activity-tag">
+                                    <i class="bi bi-check-circle-fill me-1" style="color:var(--kinjo-success);"></i>
+                                    {{ activity }}
+                                </span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted small">لا توجد أنشطة مسجلة</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="notes-block">
+                            <h6 class="fw-700 small mb-2">ملاحظات المعلم/المعلمة</h6>
+                            <p class="mb-0 notes-text">{{ report.notes or 'لا توجد ملاحظات إضافية' }}</p>
+                        </div>
+                    </div>
                 </div>
+
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-4">
+
+                <!-- Time Info -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title-sm mb-0">
+                            <i class="bi bi-clock-fill me-2 text-primary"></i>
+                            أوقات الحضور
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="time-row">
+                            <span class="time-dot arrive"></span>
+                            <div>
+                                <div class="time-label">وقت الحضور</div>
+                                <div class="time-val">{{ report.arrival_time or '—' }}</div>
+                            </div>
+                        </div>
+                        <div class="time-connector"></div>
+                        <div class="time-row">
+                            <span class="time-dot leave"></span>
+                            <div>
+                                <div class="time-label">وقت الانصراف</div>
+                                <div class="time-val">{{ report.leave_time or '—' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Photos -->
+                {% if report.photos %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title-sm mb-0">
+                            <i class="bi bi-images me-2 text-primary"></i>
+                            صور اليوم
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="photos-grid">
+                            {% for photo in report.photos %}
+                            <a href="{{ photo.url }}" target="_blank" class="photo-thumb">
+                                <img src="{{ photo.url }}" alt="نشاط يومي" loading="lazy">
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Teacher Info -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title-sm mb-0">
+                            <i class="bi bi-person-badge me-2 text-primary"></i>
+                            معلومات التقرير
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="info-row-sm">
+                            <span class="info-lbl">المعلم/المعلمة</span>
+                            <span class="info-val">{{ report.teacher_name }}</span>
+                        </div>
+                        <div class="info-row-sm">
+                            <span class="info-lbl">الشعبة</span>
+                            <span class="info-val">{{ report.class_name or '—' }}</span>
+                        </div>
+                        <div class="info-row-sm" style="border-bottom:none;">
+                            <span class="info-lbl">وقت الإنشاء</span>
+                            <span class="info-val" style="font-size:0.78rem;">{{ report.created_at or '—' }}</span>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
-        {% endif %}
 
     </div>
 </div>
+
+<style>
+@media print {
+    .btn, nav, .sidebar-wrap, .topbar { display:none !important; }
+    .report-hero-card { print-color-adjust:exact; }
+}
+
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+
+/* Hero card */
+.report-hero-card { position:relative;border-radius:var(--kinjo-radius-xl);overflow:hidden;background:var(--kinjo-gradient-primary);padding:2rem;color:#fff; }
+.report-hero-bg { position:absolute;inset:0;background:radial-gradient(ellipse at bottom left, rgba(255,255,255,0.15), transparent 60%);pointer-events:none; }
+.report-hero-content { position:relative;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap; }
+.report-child-info { display:flex;align-items:center;gap:1rem; }
+.report-child-avatar { width:64px;height:64px;background:rgba(255,255,255,0.25);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0; }
+.report-child-name { font-size:1.4rem;font-weight:800;margin:0 0 0.25rem; }
+.report-meta { font-size:0.84rem;opacity:0.9;display:flex;align-items:center;flex-wrap:wrap;gap:0.25rem; }
+.report-mood-bubble { text-align:center;background:rgba(255,255,255,0.2);border-radius:16px;padding:1rem 1.5rem; }
+.mood-big { font-size:2.5rem;line-height:1; }
+.mood-label { font-size:0.8rem;font-weight:700;margin-top:0.3rem;opacity:0.9; }
+
+/* Metrics */
+.metric-bubble { background:var(--kinjo-card-bg);border:1px solid var(--kinjo-border);border-radius:var(--kinjo-radius-xl);padding:1.25rem;text-align:center;height:100%; }
+.metric-icon { font-size:1.5rem;margin-bottom:0.4rem; }
+.metric-title { font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--kinjo-text-muted);margin-bottom:0.25rem; }
+.metric-val { font-size:1.75rem;font-weight:800;color:var(--kinjo-success);line-height:1; }
+.metric-sub { font-size:0.72rem;color:var(--kinjo-text-muted);margin-top:0.2rem; }
+
+/* Meals */
+.meals-list { display:flex;flex-direction:column;gap:0.5rem; }
+.meal-row { display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0.75rem;border-radius:var(--kinjo-radius-md);background:var(--kinjo-surface); }
+.meal-icon { font-size:1.2rem;flex-shrink:0; }
+.meal-name { font-weight:600;font-size:0.875rem;flex:1; }
+.meal-badge { font-size:0.72rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:50px; }
+.meal-badge.ate { background:rgba(16,185,129,0.15);color:var(--kinjo-success); }
+.meal-badge.no-eat { background:rgba(239,68,68,0.12);color:var(--kinjo-danger); }
+
+/* Sleep display */
+.sleep-display-box { background:var(--kinjo-surface);border-radius:var(--kinjo-radius-lg);padding:1rem;height:100%; }
+.big-num { font-size:2rem;font-weight:800;color:var(--kinjo-primary); }
+.big-unit { font-size:0.78rem;color:var(--kinjo-text-muted); }
+
+/* Diaper */
+.diaper-section { padding-top:1rem;border-top:1px solid var(--kinjo-border); }
+.diaper-tag { display:inline-flex;align-items:center;gap:0.25rem;padding:0.25rem 0.75rem;border-radius:50px;font-size:0.78rem;font-weight:700; }
+.diaper-tag.wet    { background:rgba(6,182,212,0.12);color:#0891b2; }
+.diaper-tag.soiled { background:rgba(180,83,9,0.12);color:#92400e; }
+
+/* Notes */
+.notes-block { background:var(--kinjo-surface);border-radius:var(--kinjo-radius-md);padding:1rem;border-inline-start:3px solid #f59e0b; }
+[dir="rtl"] .notes-block { border-inline-start:none;border-inline-end:3px solid #f59e0b; }
+.notes-text { font-size:0.875rem;color:var(--kinjo-text-secondary);line-height:1.7; }
+
+/* Activities */
+.activity-tag { display:inline-flex;align-items:center;padding:0.3rem 0.75rem;border-radius:50px;font-size:0.8rem;font-weight:600;background:rgba(245,158,11,0.1);color:#d97706;border:1px solid rgba(245,158,11,0.3); }
+
+/* Time rows */
+.time-row { display:flex;align-items:center;gap:0.75rem; }
+.time-dot { width:12px;height:12px;border-radius:50%;flex-shrink:0; }
+.time-dot.arrive { background:var(--kinjo-success); }
+.time-dot.leave  { background:var(--kinjo-danger); }
+.time-connector { width:2px;height:24px;background:var(--kinjo-border);margin-inline-start:5px; }
+.time-label { font-size:0.72rem;color:var(--kinjo-text-muted);font-weight:600;text-transform:uppercase; }
+.time-val { font-size:1rem;font-weight:800;color:var(--kinjo-text-primary); }
+
+/* Photos */
+.photos-grid { display:grid;grid-template-columns:repeat(2, 1fr);gap:0.5rem; }
+.photo-thumb { border-radius:var(--kinjo-radius-md);overflow:hidden;aspect-ratio:1;display:block; }
+.photo-thumb img { width:100%;height:100%;object-fit:cover;transition:transform 0.2s; }
+.photo-thumb:hover img { transform:scale(1.05); }
+
+/* Info rows */
+.info-row-sm { display:flex;justify-content:space-between;align-items:center;padding:0.625rem 1rem;border-bottom:1px solid var(--kinjo-border);font-size:0.84rem; }
+.info-lbl { color:var(--kinjo-text-muted);font-size:0.75rem;font-weight:600; }
+.info-val { font-weight:600;color:var(--kinjo-text-primary); }
+</style>
 {% endblock %}

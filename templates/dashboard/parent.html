@@ -1,268 +1,477 @@
 {% extends 'base.html' %}
-
-{% block title %}لوحة ولي الأمر{% endblock %}
+{% block title %}{{ _('Dashboard') }} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="dashboard-header">
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
-        <div>
-            <h1 class="h2 mb-1">
-                <i class="bi bi-house-heart me-2 text-primary"></i>
-                مرحباً بك
-            </h1>
-            <p class="text-muted mb-0">تابع أخبار أطفالك وتقاريرهم اليومية</p>
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-house-heart-fill"></i>
+            {{ _('Parent Portal') }}
         </div>
+        <h1 class="page-header-title">
+            {{ _('Welcome,') }} <span style="color:var(--kinjo-primary)">{{ current_user.username }}</span>
+        </h1>
+        <p class="page-header-sub">{{ _("Track your children's news and daily reports from one place") }}</p>
+    </div>
+    <div class="page-header-actions">
+        <a href="/enroll" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>{{ _('Register New Child') }}
+        </a>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- Children Overview -->
-<div class="row g-4 mb-4" id="childrenCards">
-    <!-- Populated by JavaScript -->
-    <div class="col-12 text-center py-5">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2 text-muted">جاري تحميل بيانات أطفالك...</p>
-    </div>
-</div>
 
-<!-- Quick Actions for Parents -->
-<div class="row g-3 mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <a href="/enroll" class="btn btn-primary btn-lg w-100 py-3">
-                            <i class="bi bi-person-plus fs-3 d-block mb-2"></i>
-                            تسجيل طفل جديد
-                        </a>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="/my-reports" class="btn btn-success btn-lg w-100 py-3">
-                            <i class="bi bi-journal-text fs-3 d-block mb-2"></i>
-                            التقارير اليومية
-                        </a>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="/messages" class="btn btn-info btn-lg w-100 py-3">
-                            <i class="bi bi-chat-dots fs-3 d-block mb-2"></i>
-                            الرسائل
-                        </a>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="/profile" class="btn btn-secondary btn-lg w-100 py-3">
-                            <i class="bi bi-gear fs-3 d-block mb-2"></i>
-                            الإعدادات
-                        </a>
-                    </div>
+<!-- Children Cards -->
+<section class="mb-4">
+    <div class="section-label-row mb-3">
+        <span class="section-label"><i class="bi bi-people-fill me-2"></i>{{ _('My Children') }}</span>
+        <span class="section-label-count" id="childrenCountLabel"></span>
+    </div>
+    <div class="row g-3" id="childrenCards">
+        <!-- Skeleton loaders -->
+        <div class="col-md-6 col-lg-4 skeleton-child-col">
+            <div class="card child-skeleton-card">
+                <div class="card-body">
+                    <div class="skeleton skeleton-avatar mx-auto mb-3"></div>
+                    <div class="skeleton skeleton-text mx-auto mb-2" style="width:60%"></div>
+                    <div class="skeleton skeleton-text mx-auto mb-3" style="width:40%"></div>
+                    <div class="skeleton skeleton-btn mb-2"></div>
+                    <div class="skeleton skeleton-btn"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4 skeleton-child-col">
+            <div class="card child-skeleton-card">
+                <div class="card-body">
+                    <div class="skeleton skeleton-avatar mx-auto mb-3"></div>
+                    <div class="skeleton skeleton-text mx-auto mb-2" style="width:60%"></div>
+                    <div class="skeleton skeleton-text mx-auto mb-3" style="width:40%"></div>
+                    <div class="skeleton skeleton-btn mb-2"></div>
+                    <div class="skeleton skeleton-btn"></div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
-<!-- Latest Reports Section -->
+<!-- Quick Actions -->
+<section class="mb-4">
+    <div class="section-label-row mb-3">
+        <span class="section-label"><i class="bi bi-lightning-fill me-2"></i>{{ _('Quick Services') }}</span>
+    </div>
+    <div class="row g-3">
+        <div class="col-6 col-md-3">
+            <a href="/enroll" class="quick-action-card text-decoration-none">
+                <div class="qac-icon" style="background:var(--kinjo-primary-xlight); color:var(--kinjo-primary);">
+                    <i class="bi bi-person-plus-fill"></i>
+                </div>
+                <div class="qac-body">
+                    <div class="qac-title">{{ _('Register Child') }}</div>
+                    <div class="qac-sub">{{ _('Add New Child') }}</div>
+                </div>
+                <i class="bi bi-arrow-left qac-arrow"></i>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="/my-reports" class="quick-action-card text-decoration-none">
+                <div class="qac-icon" style="background:rgba(16,185,129,0.12); color:var(--kinjo-success);">
+                    <i class="bi bi-journal-text"></i>
+                </div>
+                <div class="qac-body">
+                    <div class="qac-title">{{ _('Daily Reports') }}</div>
+                    <div class="qac-sub">{{ _("Children's Reports") }}</div>
+                </div>
+                <i class="bi bi-arrow-left qac-arrow"></i>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="/messages" class="quick-action-card text-decoration-none">
+                <div class="qac-icon" style="background:rgba(6,182,212,0.12); color:#0891b2;">
+                    <i class="bi bi-chat-dots-fill"></i>
+                </div>
+                <div class="qac-body">
+                    <div class="qac-title">{{ _('Messages') }}</div>
+                    <div class="qac-sub">{{ _('Contact the Kindergarten') }}</div>
+                </div>
+                <i class="bi bi-arrow-left qac-arrow"></i>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="/profile" class="quick-action-card text-decoration-none">
+                <div class="qac-icon" style="background:rgba(245,158,11,0.12); color:#d97706;">
+                    <i class="bi bi-gear-fill"></i>
+                </div>
+                <div class="qac-body">
+                    <div class="qac-title">{{ _('Settings') }}</div>
+                    <div class="qac-sub">{{ _('My Account') }}</div>
+                </div>
+                <i class="bi bi-arrow-left qac-arrow"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Latest Reports + Sidebar -->
 <div class="row g-3">
+    <!-- Latest Reports -->
     <div class="col-12 col-lg-8">
-        <div class="card">
+        <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-journal-text me-2"></i>
-                    آخر التقارير اليومية
-                </h5>
-                <a href="/my-reports" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-journal-richtext me-2 text-primary"></i>
+                    {{ _('Latest Daily Reports') }}
+                </h6>
+                <a href="/my-reports" class="btn btn-ghost btn-sm">
+                    {{ _('View All') }} <i class="bi bi-arrow-left ms-1"></i>
+                </a>
             </div>
             <div class="card-body p-0">
-                <div class="list-group list-group-flush" id="latestReports">
-                    <!-- Populated by JavaScript -->
+                <div id="latestReports" class="reports-feed">
+                    <!-- Skeleton -->
+                    <div class="report-feed-item skeleton-item">
+                        <div class="skeleton skeleton-avatar-sm"></div>
+                        <div class="flex-grow-1">
+                            <div class="skeleton skeleton-text mb-1" style="width:40%"></div>
+                            <div class="skeleton skeleton-text" style="width:70%"></div>
+                        </div>
+                    </div>
+                    <div class="report-feed-item skeleton-item">
+                        <div class="skeleton skeleton-avatar-sm"></div>
+                        <div class="flex-grow-1">
+                            <div class="skeleton skeleton-text mb-1" style="width:50%"></div>
+                            <div class="skeleton skeleton-text" style="width:60%"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    
+
+    <!-- Sidebar: Events + Support -->
     <div class="col-12 col-lg-4">
+
         <!-- Upcoming Events -->
         <div class="card mb-3">
             <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-calendar-event me-2"></i>
-                    الفعاليات القادمة
-                </h5>
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-calendar-event-fill me-2 text-warning"></i>
+                    {{ _('Upcoming Events') }}
+                </h6>
             </div>
-            <div class="card-body p-0">
-                <div class="list-group list-group-flush" id="upcomingEvents">
-                    <div class="list-group-item text-center text-muted py-4">
-                        <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-25"></i>
-                        <small>لا توجد فعاليات قادمة</small>
-                    </div>
+            <div class="card-body p-0" id="upcomingEvents">
+                <div class="empty-state-mini">
+                    <i class="bi bi-calendar-x"></i>
+                    <span>{{ _('No upcoming events') }}</span>
                 </div>
             </div>
         </div>
-        
-        <!-- Contact Support -->
-        <div class="card">
-            <div class="card-body text-center">
-                <i class="bi bi-headset fs-1 text-primary mb-3"></i>
-                <h5>تحتاج مساعدة؟</h5>
-                <p class="text-muted small">تواصل مع إدارة الروضة</p>
-                <a href="/contact" class="btn btn-outline-primary">
-                    <i class="bi bi-chat me-2"></i>تواصل معنا
+
+        <!-- Support Card -->
+        <div class="card support-card">
+            <div class="card-body text-center p-4">
+                <div class="support-icon-wrap">
+                    <i class="bi bi-headset"></i>
+                </div>
+                <h6 class="fw-700 mt-3 mb-1">{{ _('Need Help?') }}</h6>
+                <p class="text-muted small mb-3">{{ _('Support team is ready to help') }}</p>
+                <a href="/contact" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-chat me-2"></i>{{ _('Contact Us') }}
                 </a>
             </div>
         </div>
+
     </div>
 </div>
+
+<style>
+/* Section labels */
+.section-label-row { display:flex; align-items:center; justify-content:space-between; }
+.section-label { font-size:0.82rem; font-weight:700; color:var(--kinjo-text-muted); text-transform:uppercase; letter-spacing:0.06em; }
+.section-label-count { font-size:0.78rem; font-weight:600; color:var(--kinjo-text-muted); }
+
+/* Child card skeletons */
+.child-skeleton-card .card-body { padding:1.5rem; text-align:center; }
+.skeleton { border-radius:8px; background:var(--kinjo-skeleton-base, #e2e8f0); animation:shimmer 1.5s infinite; }
+.skeleton-avatar { width:72px; height:72px; border-radius:50%; }
+.skeleton-avatar-sm { width:40px; height:40px; border-radius:50%; flex-shrink:0; }
+.skeleton-text { height:12px; border-radius:6px; }
+.skeleton-btn { height:36px; border-radius:10px; }
+@keyframes shimmer {
+    0%,100% { opacity:1; } 50% { opacity:0.5; }
+}
+
+/* Quick action cards */
+.quick-action-card {
+    display:flex;
+    align-items:center;
+    gap:0.875rem;
+    padding:0.875rem 1rem;
+    background:var(--kinjo-card-bg);
+    border:1px solid var(--kinjo-border);
+    border-radius:var(--kinjo-radius-lg);
+    transition:all 0.2s;
+    color:var(--kinjo-text-primary);
+}
+.quick-action-card:hover {
+    border-color:var(--kinjo-primary-light);
+    box-shadow:var(--kinjo-shadow-md);
+    transform:translateY(-2px);
+    color:var(--kinjo-text-primary);
+}
+.qac-icon {
+    width:44px; height:44px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.2rem; flex-shrink:0;
+}
+.qac-body { flex:1; min-width:0; }
+.qac-title { font-size:0.875rem; font-weight:700; color:var(--kinjo-text-primary); }
+.qac-sub { font-size:0.75rem; color:var(--kinjo-text-muted); }
+.qac-arrow { font-size:0.8rem; color:var(--kinjo-text-muted); transition:transform 0.2s; }
+[dir="rtl"] .qac-arrow { transform:scaleX(-1); }
+.quick-action-card:hover .qac-arrow { color:var(--kinjo-primary); }
+
+/* Children cards (rendered) */
+.child-card {
+    border:none;
+    border-radius:var(--kinjo-radius-xl);
+    background:var(--kinjo-card-bg);
+    box-shadow:var(--kinjo-shadow-sm);
+    transition:all 0.25s;
+    overflow:hidden;
+    border:1px solid var(--kinjo-border);
+}
+.child-card:hover { transform:translateY(-3px); box-shadow:var(--kinjo-shadow-lg); }
+.child-card.present { border-color:rgba(16,185,129,0.4); }
+.child-avatar-wrap {
+    width:76px; height:76px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:2rem; margin:0 auto;
+    background:var(--kinjo-primary-xlight);
+    color:var(--kinjo-primary);
+    position:relative;
+}
+.child-status-dot {
+    position:absolute; bottom:4px; left:4px;
+    width:16px; height:16px; border-radius:50%;
+    border:2px solid var(--kinjo-card-bg);
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.55rem; font-weight:800; color:#fff;
+}
+.child-status-dot.present { background:var(--kinjo-success); }
+.child-status-dot.absent  { background:var(--kinjo-text-muted); }
+
+/* Reports feed */
+.reports-feed { padding:0.5rem 0; }
+.report-feed-item {
+    display:flex; align-items:center; gap:0.875rem;
+    padding:0.875rem 1.25rem;
+    border-bottom:1px solid var(--kinjo-border);
+    transition:background 0.15s;
+}
+.report-feed-item:last-child { border-bottom:none; }
+.report-feed-item:hover { background:var(--kinjo-surface); }
+.skeleton-item { pointer-events:none; }
+.report-child-avatar {
+    width:40px; height:40px; border-radius:50%; flex-shrink:0;
+    background:var(--kinjo-primary-xlight); color:var(--kinjo-primary);
+    display:flex; align-items:center; justify-content:center; font-size:1rem;
+}
+.report-feed-name { font-size:0.875rem; font-weight:700; color:var(--kinjo-text-primary); }
+.report-feed-notes { font-size:0.8rem; color:var(--kinjo-text-muted); }
+.report-feed-date { font-size:0.75rem; color:var(--kinjo-text-muted); }
+
+/* Empty state mini */
+.empty-state-mini {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:0.5rem; padding:1.5rem; color:var(--kinjo-text-muted);
+    font-size:0.85rem;
+}
+.empty-state-mini i { font-size:2rem; opacity:0.25; }
+
+/* Support card */
+.support-card { border:none; background:var(--kinjo-gradient-primary); color:#fff; }
+.support-card .text-muted { color:rgba(255,255,255,0.75) !important; }
+.support-card h6 { color:#fff; }
+.support-icon-wrap {
+    width:56px; height:56px; border-radius:50%;
+    background:rgba(255,255,255,0.2); margin:0 auto;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.6rem; color:#fff;
+}
+.support-card .btn-primary {
+    background:#fff; color:var(--kinjo-primary); border:none;
+    font-weight:700;
+}
+.support-card .btn-primary:hover { background:rgba(255,255,255,0.9); }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Auth helper
-    function getHeaders() {
-        const token = localStorage.getItem('access_token');
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        return headers;
+// Server-rendered translations for dynamic JS content
+const T = {
+    approved:       "{{ _('Approved') }}",
+    underReview:    "{{ _('Under Review') }}",
+    draft:          "{{ _('Draft') }}",
+    noReports:      "{{ _('No reports yet') }}",
+    noNotes:        "{{ _('No notes') }}",
+    children:       "{{ _('children') }}",
+    presentToday:   "{{ _('Present today') }}",
+    notArrivedYet:  "{{ _('Not arrived yet') }}",
+    todayReport:    "{{ _("Today's report available") }}",
+    noChildren:     "{{ _('You have not registered any children yet') }}",
+    startEnrolling: "{{ _('Start by enrolling your child in a kindergarten') }}",
+    registerChild:  "{{ _('Register Child') }}",
+    reportsLabel:   "{{ _('Reports') }}",
+    profile:        "{{ _('Profile') }}",
+};
+
+function getHeaders() {
+    const token = localStorage.getItem('access_token');
+    const h = { 'Content-Type': 'application/json' };
+    if (token) h['Authorization'] = `Bearer ${token}`;
+    return h;
+}
+
+function formatDate(d) {
+    if (!d) return '';
+    const lang = document.documentElement.lang || 'ar';
+    return new Date(d).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-GB', { year:'numeric', month:'short', day:'numeric' });
+}
+
+function statusBadge(status) {
+    const map = {
+        approved:  `<span class="badge" style="background:rgba(16,185,129,0.15);color:var(--kinjo-success);font-weight:700;">${T.approved}</span>`,
+        submitted: `<span class="badge" style="background:rgba(245,158,11,0.15);color:#d97706;font-weight:700;">${T.underReview}</span>`,
+        draft:     `<span class="badge" style="background:var(--kinjo-surface);color:var(--kinjo-text-muted);font-weight:700;">${T.draft}</span>`
+    };
+    return map[status] || `<span class="badge bg-secondary">غير محدد</span>`;
+}
+
+document.addEventListener('DOMContentLoaded', () => loadParentDashboard());
+
+async function loadParentDashboard() {
+    try {
+        const resp = await fetch('/api/parent/dashboard', { headers: getHeaders() });
+        if (!resp.ok) throw new Error();
+        const data = await resp.json();
+        const children = data.children || [];
+
+        // Remove skeleton cols
+        document.querySelectorAll('.skeleton-child-col').forEach(el => el.remove());
+        renderChildrenCards(children);
+
+        const reportsPromises = children.map(child =>
+            fetch(`/api/daily-reports/child/${child.id}`, { headers: getHeaders() })
+                .then(r => r.ok ? r.json() : { reports: [] })
+                .then(d => (d.reports || []).map(r => ({ ...r, child_name: child.first_name, child_id: child.id })))
+        );
+        const results = await Promise.all(reportsPromises);
+        const allReports = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
+        renderLatestReports(allReports.slice(0, 6));
+
+    } catch {
+        document.querySelectorAll('.skeleton-child-col').forEach(el => el.remove());
+        document.getElementById('childrenCards').innerHTML = `
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-person-plus-fill d-block fs-1 mb-3" style="color:var(--kinjo-primary-light)"></i>
+                        <h6 class="fw-bold">${T.noChildren}</h6>
+                        <p class="text-muted small">${T.startEnrolling}</p>
+                        <a href="/enroll" class="btn btn-primary"><i class="bi bi-plus-circle me-2"></i>${T.registerChild}</a>
+                    </div>
+                </div>
+            </div>`;
     }
-    
-    function formatDate(dateStr) {
-        if (!dateStr) return '';
-        return new Date(dateStr).toLocaleDateString('ar-SA'); // or suitable locale
-    }
-    
-    function getStatusBadge(status) {
-        const badges = {
-            'approved': '<span class="badge bg-success">معتمد</span>',
-            'submitted': '<span class="badge bg-warning text-dark">قيد المراجعة</span>',
-            'draft': '<span class="badge bg-secondary">مسودة</span>'
-        };
-        return badges[status] || '<span class="badge bg-light text-dark">غير معروف</span>';
+}
+
+function renderChildrenCards(children) {
+    const container = document.getElementById('childrenCards');
+    const label = document.getElementById('childrenCountLabel');
+    if (label) label.textContent = `${children.length} ${T.children}`;
+
+    if (!children.length) {
+        container.innerHTML = `
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-person-plus-fill d-block fs-1 mb-3" style="color:var(--kinjo-primary-light)"></i>
+                        <h6 class="fw-bold">${T.noChildren}</h6>
+                        <p class="text-muted small mb-3">${T.startEnrolling}</p>
+                        <a href="/enroll" class="btn btn-primary"><i class="bi bi-plus-circle me-2"></i>${T.registerChild}</a>
+                    </div>
+                </div>
+            </div>`;
+        return;
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        await loadParentDashboard();
-    });
-    
-    async function loadParentDashboard() {
-        try {
-            const resp = await fetch('/api/parent/dashboard', { headers: getHeaders() });
-            if (!resp.ok) throw new Error("Failed to load dashboard");
-            
-            const data = await resp.json();
-            const children = data.children || [];
-            
-            renderChildrenCards(children);
-            
-            // Fetch latest reports for all children
-            const reportsPromises = children.map(child => 
-                fetch(`/api/daily-reports/child/${child.id}`, { headers: getHeaders() })
-                    .then(r => r.ok ? r.json() : { reports: [] })
-                    .then(d => d.reports.map(r => ({ ...r, child_name: child.first_name, child_id: child.id })))
-            );
-            
-            const results = await Promise.all(reportsPromises);
-            const allReports = results.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            renderLatestReports(allReports.slice(0, 5)); // Show top 5
-            
-        } catch (error) {
-            console.error('Error loading parent dashboard:', error);
-            document.getElementById('childrenCards').innerHTML = 
-                '<div class="col-12 text-center text-danger">خطأ في تحميل البيانات</div>';
-        }
-    }
-    
-    function renderChildrenCards(children) {
-        const container = document.getElementById('childrenCards');
-        
-        if (!children || children.length === 0) {
-            container.innerHTML = `
-                <div class="col-12">
-                    <div class="card border-dashed">
-                        <div class="card-body text-center py-5">
-                            <i class="bi bi-person-plus fs-1 text-primary mb-3"></i>
-                            <h5>لم تقم بتسجيل أي طفل بعد</h5>
-                            <p class="text-muted">ابدأ بتسجيل طفلك في إحدى الروضات</p>
-                            <a href="/enroll" class="btn btn-primary btn-lg">
-                                <i class="bi bi-plus-circle me-2"></i>تسجيل طفل
-                            </a>
-                        </div>
+    const today = new Date().toISOString().split('T')[0];
+    container.innerHTML = children.map(child => {
+        const isPresent = child.attendance_today?.checked_in && !child.attendance_today?.checked_out;
+        const hasReport = child.latest_report_date === today;
+        return `
+        <div class="col-md-6 col-lg-4">
+            <div class="card child-card${isPresent ? ' present' : ''}">
+                <div class="card-body text-center p-4">
+                    <div class="child-avatar-wrap mb-3">
+                        <i class="bi bi-emoji-smile-fill"></i>
+                        <span class="child-status-dot ${isPresent ? 'present' : 'absent'}"
+                              title="${isPresent ? T.presentToday : T.notArrivedYet}">
+                            ${isPresent ? '✓' : '–'}
+                        </span>
                     </div>
-                </div>
-            `;
-            return;
-        }
-        
-        container.innerHTML = children.map(child => {
-            const isPresent = child.attendance_today && child.attendance_today.checked_in && !child.attendance_today.checked_out;
-            const hasReport = child.latest_report_date === new Date().toISOString().split('T')[0];
-            
-            return `
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100 ${isPresent ? 'border-success' : ''}">
-                    <div class="card-body text-center">
-                        <div class="position-relative d-inline-block mb-3">
-                            <div class="avatar-lg bg-primary bg-opacity-10 rounded-circle 
-                                        d-flex align-items-center justify-content-center mx-auto">
-                                <i class="bi bi-emoji-smile text-primary fs-1"></i>
-                            </div>
-                            ${isPresent ? `
-                                <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-success">
-                                    <i class="bi bi-check-lg"></i> حاضر
-                                </span>
-                            ` : ''}
-                        </div>
-                        <h4 class="card-title mb-1">${child.first_name} ${child.last_name}</h4>
-                        <p class="text-muted mb-2">${child.enrollment ? 'مسجل' : 'بانتظار التسجيل'}</p>
-                        
-                        <div class="d-grid gap-2">
-                            <a href="/children/${child.id}" class="btn btn-outline-primary">
-                                <i class="bi bi-person me-2"></i>الملف الشخصي
-                            </a>
-                            <a href="/my-reports?child_id=${child.id}" class="btn btn-outline-success">
-                                <i class="bi bi-journal-text me-2"></i>التقارير
-                            </a>
-                        </div>
-                    </div>
+                    <h5 class="fw-800 mb-0">${child.first_name} ${child.last_name}</h5>
+                    <p class="text-muted small mt-1 mb-3">
+                        ${isPresent
+                            ? `<span style="color:var(--kinjo-success);font-weight:600;"><i class="bi bi-check-circle-fill me-1"></i>${T.presentToday}</span>`
+                            : `<span class="text-muted">${T.notArrivedYet}</span>`}
+                    </p>
                     ${hasReport ? `
-                        <div class="card-footer bg-success bg-opacity-10 text-success text-center">
-                            <i class="bi bi-check-circle me-1"></i>
-                            تقرير اليوم متاح
-                        </div>
-                    ` : ''}
+                        <div class="mb-3">
+                            <span class="badge" style="background:rgba(16,185,129,0.15);color:var(--kinjo-success);font-size:0.78rem;font-weight:700;padding:0.3rem 0.7rem;border-radius:50px;">
+                                <i class="bi bi-check-circle-fill me-1"></i>${T.todayReport}
+                            </span>
+                        </div>` : ''}
+                    <div class="d-grid gap-2">
+                        <a href="/my-reports?child_id=${child.id}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-journal-text me-2"></i>${T.reportsLabel}
+                        </a>
+                        <a href="/children/${child.id}" class="btn btn-ghost btn-sm">
+                            <i class="bi bi-person me-2"></i>${T.profile}
+                        </a>
+                    </div>
                 </div>
             </div>
-            `;
-        }).join('');
+        </div>`;
+    }).join('');
+}
+
+function renderLatestReports(reports) {
+    const container = document.getElementById('latestReports');
+    if (!reports.length) {
+        container.innerHTML = `<div class="empty-state-mini"><i class="bi bi-journal"></i><span>${T.noReports}</span></div>`;
+        return;
     }
-    
-    function renderLatestReports(reports) {
-        const container = document.getElementById('latestReports');
-        
-        if (!reports || reports.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-4 text-muted">
-                    <i class="bi bi-journal d-block fs-2 mb-2 opacity-25"></i>
-                    <small>لا توجد تقارير حالياً</small>
-                </div>
-            `;
-            return;
-        }
-        
-        container.innerHTML = reports.map(report => `
-            <div class="list-group-item list-group-item-action">
+    container.innerHTML = reports.map(r => `
+        <div class="report-feed-item">
+            <div class="report-child-avatar"><i class="bi bi-emoji-smile"></i></div>
+            <div class="flex-grow-1 min-width-0">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="mb-1">${report.child_name}</h6>
-                        <p class="mb-1 text-muted small">${report.notes || 'لا توجد ملاحظات'}</p>
-                        <small class="text-muted">
-                            <i class="bi bi-calendar me-1"></i>${formatDate(report.date)}
-                        </small>
+                        <div class="report-feed-name">${r.child_name}</div>
+                        <div class="report-feed-notes text-truncate">${r.notes || T.noNotes}</div>
                     </div>
-                    ${getStatusBadge(report.status)}
+                    <div class="d-flex flex-column align-items-end gap-1 ms-2">
+                        ${statusBadge(r.status)}
+                        <span class="report-feed-date">${formatDate(r.date)}</span>
+                    </div>
                 </div>
             </div>
-        `).join('');
-    }
+        </div>
+    `).join('');
+}
 </script>
 {% endblock %}

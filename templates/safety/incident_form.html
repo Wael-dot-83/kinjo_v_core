@@ -1,126 +1,304 @@
 {% extends 'base.html' %}
-
-{% block title %}تسجيل حادث جديد{% endblock %}
+{% block title %}تسجيل حادث — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2 mb-1">
-            <i class="bi bi-file-medical me-2 text-danger"></i>
-            تسجيل حادث جديد
-        </h1>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-danger,#ef4444);">
+            <i class="bi bi-shield-exclamation"></i>
+            الصحة والسلامة
+        </div>
+        <h1 class="page-header-title">تسجيل حادث جديد</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
-                <li class="breadcrumb-item"><a href="/safety">الصحة والسلامة</a></li>
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">الرئيسية</a></li>
+                <li class="breadcrumb-item"><a href="/safety" class="text-decoration-none">الصحة والسلامة</a></li>
                 <li class="breadcrumb-item active">تسجيل حادث</li>
             </ol>
         </nav>
     </div>
+    <a href="/safety" class="btn btn-ghost">
+        <i class="bi bi-arrow-right me-2"></i>رجوع
+    </a>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <form id="incidentForm" onsubmit="submitIncident(event)">
-                    <div class="mb-3">
-                        <label for="childId" class="form-label">رقم الطفل (ID)</label>
-                        <input type="number" class="form-control" id="childId" required placeholder="أدخل رقم هوية النظام للطفل">
-                        <div class="form-text">سيتم استبدال هذا بقائمة منسدلة في النسخة القادمة.</div>
-                    </div>
+    <div class="col-xl-7 col-lg-8">
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="type" class="form-label">نوع الحادث</label>
-                            <select class="form-select" id="type" required>
-                                <option value="" selected disabled>اختر النوع...</option>
-                                <option value="INJURY">إصابة جسدية</option>
-                                <option value="BEHAVIOR">سلوك</option>
-                                <option value="ILLNESS">مرض</option>
-                                <option value="OTHER">آخر</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="severity" class="form-label">درجة الخطورة</label>
-                            <select class="form-select" id="severity" required>
-                                <option value="" selected disabled>اختر الدرجة...</option>
-                                <option value="LOW">منخفضة (Low)</option>
-                                <option value="MEDIUM">متوسطة (Medium)</option>
-                                <option value="HIGH">عالية (High)</option>
-                                <option value="CRITICAL">حرجة (Critical)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="occurredAt" class="form-label">وقت الحدوث</label>
-                        <input type="datetime-local" class="form-control" id="occurredAt" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">وصف تفصيلي للحادث</label>
-                        <textarea class="form-control" id="description" rows="5" required placeholder="صف ما حدث بالضبط، المكان، ومن كان موجوداً..."></textarea>
-                    </div>
-
-                    <div class="form-check mb-4">
-                        <input class="form-check-input" type="checkbox" id="followupRequired">
-                        <label class="form-check-label" for="followupRequired">
-                            يتطلب متابعة لاحقة؟
-                        </label>
-                    </div>
-
-                    <div class="d-flex justify-content-end gap-2">
-                        <a href="/safety" class="btn btn-outline-secondary">إلغاء</a>
-                        <button type="submit" class="btn btn-danger px-4">تسجيل الحادث</button>
-                    </div>
-                </form>
+        <!-- Alert Banner -->
+        <div class="incident-alert-banner mb-4">
+            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+            <div>
+                <div class="fw-700">تأكد من توثيق الحادث بدقة</div>
+                <div style="font-size:0.82rem;opacity:0.9;">سيتم إعلام ولي أمر الطفل وفريق الإدارة فور التسجيل</div>
             </div>
         </div>
+
+        <form id="incidentForm">
+
+            <!-- Child + Time -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-person-fill me-2 text-primary"></i>
+                        الطفل ووقت الحادث
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="filter-label" for="childSelect">الطفل <span class="text-danger">*</span></label>
+                            <select class="form-select" id="childSelect" required>
+                                <option value="">اختر الطفل...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="filter-label" for="occurredAt">وقت الحادث <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control" id="occurredAt" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Type + Severity -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-tag-fill me-2 text-primary"></i>
+                        تصنيف الحادث
+                    </h6>
+                </div>
+                <div class="card-body">
+
+                    <div class="mb-4">
+                        <label class="filter-label mb-3">نوع الحادث <span class="text-danger">*</span></label>
+                        <div class="type-selector-grid">
+                            {% set types = [
+                                ('INJURY','🩹','إصابة جسدية','bi-bandaid-fill'),
+                                ('ILLNESS','🤒','مرض','bi-thermometer-high'),
+                                ('ALLERGY','🤧','حساسية','bi-droplet-fill'),
+                                ('BEHAVIORAL','😤','سلوكي','bi-emoji-frown-fill'),
+                                ('OTHER','📋','أخرى','bi-three-dots')
+                            ] %}
+                            {% for val, emoji, label, icon in types %}
+                            <input type="radio" class="btn-check" name="incident_type" id="type-{{ val }}" value="{{ val }}" {% if val == 'INJURY' %}checked{% endif %}>
+                            <label class="type-option" for="type-{{ val }}">
+                                <span class="type-emoji">{{ emoji }}</span>
+                                <span class="type-label">{{ label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="filter-label mb-3">درجة الخطورة <span class="text-danger">*</span></label>
+                        <div class="severity-selector-grid">
+                            {% set severities = [
+                                ('LOW','منخفض','LOW-bg','خدوش بسيطة وإصابات طفيفة'),
+                                ('MEDIUM','متوسط','MEDIUM-bg','تستدعي الرعاية والمتابعة'),
+                                ('HIGH','عالٍ','HIGH-bg','تحتاج عناية طبية فورية'),
+                                ('CRITICAL','حرج','CRITICAL-bg','حالة طوارئ طبية')
+                            ] %}
+                            {% for val, label, cls, desc in severities %}
+                            <input type="radio" class="btn-check" name="severity_level" id="sev-{{ val }}" value="{{ val }}">
+                            <label class="severity-option {{ cls }}" for="sev-{{ val }}">
+                                <span class="severity-label">{{ label }}</span>
+                                <span class="severity-desc">{{ desc }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-card-text me-2 text-primary"></i>
+                        وصف الحادث
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <label class="filter-label mb-2" for="description">وصف تفصيلي <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="description" rows="5" required
+                              placeholder="صف ما حدث بالضبط: المكان، الملابسات، من كان موجوداً، الإجراء الفوري المتخذ..."></textarea>
+                    <div class="d-flex justify-content-end mt-1">
+                        <span class="text-muted" style="font-size:0.72rem;" id="charCount">0 / 1000</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-clipboard2-check me-2 text-primary"></i>
+                        المتابعة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="followupRequired" role="switch">
+                        <label class="form-check-label fw-600" for="followupRequired">
+                            يتطلب متابعة لاحقة
+                        </label>
+                    </div>
+                    <div class="form-text mt-1">
+                        إذا كانت الحالة تستدعي زيارة طبية أو متابعة من الإدارة
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex justify-content-end gap-2 mb-5">
+                <a href="/safety" class="btn btn-ghost">إلغاء</a>
+                <button type="submit" class="btn btn-danger px-5" id="submitBtn">
+                    <span class="btn-text"><i class="bi bi-exclamation-triangle me-2"></i>تسجيل الحادث</span>
+                    <span class="btn-loading d-none">
+                        <span class="spinner-border spinner-border-sm me-2"></span>جاري التسجيل...
+                    </span>
+                </button>
+            </div>
+
+        </form>
     </div>
 </div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.filter-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block; }
+.fw-600 { font-weight:600; }
+
+/* Alert banner */
+.incident-alert-banner {
+    display:flex;align-items:flex-start;gap:1rem;padding:1rem 1.25rem;
+    border-radius:var(--kinjo-radius-lg);
+    background:linear-gradient(135deg,#fef2f2,#fee2e2);
+    border:1px solid rgba(239,68,68,0.25);
+    color:var(--kinjo-danger);
+    font-size:0.875rem;
+}
+.incident-alert-banner i { font-size:1.25rem;margin-top:0.1rem; }
+
+/* Type selector */
+.type-selector-grid { display:flex;flex-wrap:wrap;gap:0.5rem; }
+.type-option {
+    display:inline-flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;
+    border-radius:50px;border:2px solid var(--kinjo-border);background:var(--kinjo-surface);
+    cursor:pointer;font-size:0.84rem;font-weight:600;color:var(--kinjo-text-secondary);
+    transition:all 0.15s;
+}
+.type-option:hover { border-color:var(--kinjo-primary-light);color:var(--kinjo-primary); }
+.btn-check:checked + .type-option { border-color:var(--kinjo-danger);background:rgba(239,68,68,0.08);color:var(--kinjo-danger); }
+.type-emoji { font-size:1rem; }
+.type-label { font-size:0.83rem; }
+
+/* Severity selector */
+.severity-selector-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem; }
+@media (min-width:768px) { .severity-selector-grid { grid-template-columns:repeat(4,1fr); } }
+.severity-option {
+    display:flex;flex-direction:column;gap:0.25rem;padding:0.75rem 1rem;
+    border-radius:var(--kinjo-radius-lg);border:2px solid var(--kinjo-border);
+    cursor:pointer;transition:all 0.15s;background:var(--kinjo-surface);
+}
+.severity-label { font-weight:800;font-size:0.84rem; }
+.severity-desc { font-size:0.7rem;opacity:0.8; }
+.btn-check:checked + .LOW-bg    { border-color:#0891b2;background:rgba(6,182,212,0.1);color:#0891b2; }
+.btn-check:checked + .MEDIUM-bg { border-color:#d97706;background:rgba(245,158,11,0.1);color:#d97706; }
+.btn-check:checked + .HIGH-bg   { border-color:var(--kinjo-danger);background:rgba(239,68,68,0.1);color:var(--kinjo-danger); }
+.btn-check:checked + .CRITICAL-bg { border-color:#7c3aed;background:rgba(124,58,237,0.1);color:#7c3aed; }
+.LOW-bg .severity-label    { color:#0891b2; }
+.MEDIUM-bg .severity-label { color:#d97706; }
+.HIGH-bg .severity-label   { color:var(--kinjo-danger); }
+.CRITICAL-bg .severity-label { color:#7c3aed; }
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.getElementById('occurredAt').value = new Date().toISOString().slice(0, 16);
+document.getElementById('occurredAt').value = new Date().toISOString().slice(0, 16);
 
-    async function submitIncident(e) {
-        e.preventDefault();
-        
-        const data = {
-            child_id: parseInt(document.getElementById('childId').value),
-            type: document.getElementById('type').value,
-            severity_level: document.getElementById('severity').value,
-            description: document.getElementById('description').value,
-            occurred_at: new Date(document.getElementById('occurredAt').value).toISOString(),
-            followup_required_flag: document.getElementById('followupRequired').checked
-        };
+const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
 
-        try {
-            const token = localStorage.getItem('token'); // Assuming standard token storage
-            const response = await fetch('/api/incidents', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (response.ok) {
-                alert('تم تسجيل الحادث بنجاح');
-                window.location.href = '/safety';
-            } else {
-                const err = await response.json();
-                alert('خطأ: ' + (err.detail || 'فشل التسجيل'));
-            }
-        } catch (error) {
-            console.error(error);
-            alert('حدث خطأ في الاتصال');
+async function loadChildren() {
+    try {
+        const r = await fetch('/api/supervisor/children', { headers });
+        if (!r.ok) return;
+        const data = await r.json();
+        const children = data.children || data || [];
+        const sel = document.getElementById('childSelect');
+        if (children.length) {
+            sel.innerHTML = '<option value="">اختر الطفل...</option>' +
+                children.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
         }
+        const id = new URLSearchParams(location.search).get('child_id');
+        if (id) sel.value = id;
+    } catch {}
+}
+
+document.addEventListener('DOMContentLoaded', loadChildren);
+
+document.getElementById('description').addEventListener('input', function () {
+    document.getElementById('charCount').textContent = `${this.value.length} / 1000`;
+});
+
+document.getElementById('incidentForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const childId = document.getElementById('childSelect').value;
+    const type = document.querySelector('input[name="incident_type"]:checked')?.value;
+    const severity = document.querySelector('input[name="severity_level"]:checked')?.value;
+    const description = document.getElementById('description').value;
+    const occurredAt = document.getElementById('occurredAt').value;
+
+    if (!childId || !type || !severity || !description || !occurredAt) {
+        window.showToast('يرجى تعبئة جميع الحقول المطلوبة', 'error');
+        return;
     }
+
+    const btn = document.getElementById('submitBtn');
+    btn.querySelector('.btn-text').classList.add('d-none');
+    btn.querySelector('.btn-loading').classList.remove('d-none');
+    btn.disabled = true;
+
+    const payload = {
+        child_id: parseInt(childId),
+        type,
+        severity_level: severity,
+        description,
+        occurred_at: new Date(occurredAt).toISOString(),
+        followup_required_flag: document.getElementById('followupRequired').checked
+    };
+
+    try {
+        const r = await fetch('/api/incidents', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload)
+        });
+        if (r.ok) {
+            window.showToast('تم تسجيل الحادث بنجاح', 'success');
+            setTimeout(() => window.location.href = '/safety', 1500);
+        } else {
+            const err = await r.json();
+            window.showToast('خطأ: ' + (err.detail || 'فشل التسجيل'), 'error');
+            btn.disabled = false;
+            btn.querySelector('.btn-text').classList.remove('d-none');
+            btn.querySelector('.btn-loading').classList.add('d-none');
+        }
+    } catch {
+        window.showToast('حدث خطأ في الاتصال', 'error');
+        btn.disabled = false;
+        btn.querySelector('.btn-text').classList.remove('d-none');
+        btn.querySelector('.btn-loading').classList.add('d-none');
+    }
+});
 </script>
 {% endblock %}

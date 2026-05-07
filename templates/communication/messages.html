@@ -1,159 +1,225 @@
 {% extends 'base.html' %}
-
-{% block title %}صندوق الرسائل{% endblock %}
+{% block title %}صندوق الرسائل — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2 mb-1">
-            <i class="bi bi-envelope me-2 text-primary"></i>
-            صندوق الرسائل
-        </h1>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-chat-square-dots-fill"></i>
+            التواصل المجتمعي
+        </div>
+        <h1 class="page-header-title">صندوق الرسائل</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">الرئيسية</a></li>
-                <li class="breadcrumb-item"><a href="/communication">التواصل</a></li>
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">الرئيسية</a></li>
+                <li class="breadcrumb-item"><a href="/communication" class="text-decoration-none">التواصل</a></li>
                 <li class="breadcrumb-item active">الرسائل</li>
             </ol>
         </nav>
     </div>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
-            <i class="bi bi-plus-lg me-1"></i> رسالة جديدة
-        </button>
-    </div>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
+        <i class="bi bi-plus-lg me-2"></i>رسالة جديدة
+    </button>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="card shadow-sm">
-    <div class="card-header bg-white py-3">
-        <div class="row align-items-center">
-            <div class="col-md-4">
-                <input type="text" class="form-control" id="msgSearch" placeholder="بحث في الرسائل...">
-            </div>
-            <div class="col-md-8 text-md-end mt-2 mt-md-0">
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" onclick="filterMsgs('all')">الكل</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="filterMsgs('direct')">مباشر</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="filterMsgs('broadcast')">تعميم</button>
-                </div>
-            </div>
-        </div>
+
+<!-- Filter + Search Bar -->
+<div class="msg-filter-bar mb-3">
+    <div class="msg-tabs">
+        <button class="msg-tab active" data-filter="all" onclick="filterMsgs('all', this)">
+            <i class="bi bi-inbox me-1"></i>الكل
+            <span class="msg-tab-count" id="countAll">—</span>
+        </button>
+        <button class="msg-tab" data-filter="DIRECT" onclick="filterMsgs('DIRECT', this)">
+            <i class="bi bi-chat-dots me-1"></i>مباشر
+            <span class="msg-tab-count" id="countDirect">—</span>
+        </button>
+        <button class="msg-tab" data-filter="BROADCAST" onclick="filterMsgs('BROADCAST', this)">
+            <i class="bi bi-megaphone me-1"></i>تعميم
+            <span class="msg-tab-count" id="countBroadcast">—</span>
+        </button>
+        <button class="msg-tab" data-filter="CLASS" onclick="filterMsgs('CLASS', this)">
+            <i class="bi bi-people me-1"></i>شعبة
+            <span class="msg-tab-count" id="countClass">—</span>
+        </button>
     </div>
-    <div class="list-group list-group-flush" id="messagesList">
-        <!-- Loading State -->
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">جاري التحميل...</span>
+    <div class="search-box-inline" style="max-width:260px;">
+        <i class="bi bi-search search-box-icon"></i>
+        <input type="text" class="form-control" id="msgSearch" placeholder="بحث في الرسائل...">
+    </div>
+</div>
+
+<!-- Messages List -->
+<div class="card">
+    <div class="card-body p-0">
+        <div id="messagesList">
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2 text-primary" role="status" aria-hidden="true"></div>
+                جاري تحميل الرسائل...
             </div>
         </div>
     </div>
 </div>
 
-<!-- Reuse the New Message Modal -->
+<!-- New Message Modal -->
 {% include 'communication/modals/new_message.html' %}
 
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+
+/* Filter bar */
+.msg-filter-bar { display:flex;align-items:center;gap:1rem;flex-wrap:wrap;justify-content:space-between; }
+.msg-tabs { display:flex;gap:0.25rem;background:var(--kinjo-surface);border-radius:var(--kinjo-radius-lg);padding:0.25rem; }
+.msg-tab {
+    display:inline-flex;align-items:center;gap:0.35rem;padding:0.4rem 0.9rem;border-radius:var(--kinjo-radius-md);
+    font-size:0.82rem;font-weight:600;border:none;background:none;color:var(--kinjo-text-muted);cursor:pointer;
+    transition:all 0.15s;white-space:nowrap;
+}
+.msg-tab:hover { color:var(--kinjo-text-primary);background:var(--kinjo-card-bg); }
+.msg-tab.active { background:var(--kinjo-card-bg);color:var(--kinjo-primary);box-shadow:var(--kinjo-shadow-sm); }
+.msg-tab-count { font-size:0.7rem;background:var(--kinjo-border);border-radius:50px;padding:0.05rem 0.45rem;font-weight:700; }
+.msg-tab.active .msg-tab-count { background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
+
+.search-box-inline { position:relative; }
+.search-box-icon { position:absolute;inset-block-start:50%;transform:translateY(-50%);inset-inline-start:0.75rem;color:var(--kinjo-text-muted);pointer-events:none; }
+[dir="rtl"] .search-box-icon { inset-inline-start:auto;inset-inline-end:0.75rem; }
+.search-box-inline .form-control { padding-inline-start:2.25rem; }
+
+/* Message items */
+.msg-item {
+    display:flex;align-items:flex-start;gap:1rem;padding:1rem 1.25rem;
+    border-bottom:1px solid var(--kinjo-border);cursor:pointer;
+    transition:background 0.15s;text-decoration:none;color:inherit;
+}
+.msg-item:last-child { border-bottom:none; }
+.msg-item:hover { background:var(--kinjo-surface); }
+.msg-item.unread { background:var(--kinjo-primary-xlight); }
+.msg-item.unread:hover { background:rgba(99,102,241,0.07); }
+
+.msg-avatar {
+    width:44px;height:44px;border-radius:14px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+}
+.msg-avatar.direct    { background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
+.msg-avatar.broadcast { background:rgba(245,158,11,0.12);color:#d97706; }
+.msg-avatar.class     { background:rgba(16,185,129,0.12);color:var(--kinjo-success); }
+
+.msg-body { flex:1;min-width:0; }
+.msg-top { display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.2rem; }
+.msg-subject { font-weight:700;font-size:0.9rem;color:var(--kinjo-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.msg-time { font-size:0.72rem;color:var(--kinjo-text-muted);flex-shrink:0; }
+.msg-preview { font-size:0.8rem;color:var(--kinjo-text-muted);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden; }
+.msg-footer { display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem; }
+.msg-type-badge {
+    display:inline-flex;align-items:center;gap:0.25rem;padding:0.1rem 0.55rem;
+    border-radius:50px;font-size:0.68rem;font-weight:700;
+}
+.msg-type-badge.direct    { background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
+.msg-type-badge.broadcast { background:rgba(245,158,11,0.12);color:#d97706; }
+.msg-type-badge.class     { background:rgba(16,185,129,0.12);color:var(--kinjo-success); }
+.msg-unread-dot { width:8px;height:8px;border-radius:50%;background:var(--kinjo-primary);flex-shrink:0; }
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    let allMessages = [];
+let allMessages = [];
 
-    document.addEventListener('DOMContentLoaded', loadMessages);
+document.addEventListener('DOMContentLoaded', loadMessages);
 
-    async function loadMessages() {
-        try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch('/comm/messages', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                allMessages = await response.json();
-                renderMessages(allMessages);
-            } else {
-                document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">فشل تحميل الرسائل (Session expired or invalid)</div>`;
-            }
-        } catch (error) {
-            console.error(error);
-            document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">خطأ في الاتصال</div>`;
-        }
-    }
-
-    function renderMessages(messages) {
-        const container = document.getElementById('messagesList');
-        container.innerHTML = '';
-
-        if (messages.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-inbox fs-1 mb-2 d-block"></i>
-                    لا توجد رسائل
-                </div>
-            `;
-            return;
-        }
-
-        const sorted = [...messages].reverse();
-
-        sorted.forEach(msg => {
-            let icon = 'bi-envelope';
-            let badgeClass = 'bg-secondary';
-            let badgeText = 'رسالة';
-
-            if (msg.thread_type === 'BROADCAST') {
-                icon = 'bi-megaphone';
-                badgeClass = 'bg-warning text-dark';
-                badgeText = 'تعميم';
-            } else if (msg.thread_type === 'CLASS') {
-                icon = 'bi-people';
-                badgeClass = 'bg-info text-dark';
-                badgeText = 'فصل';
-            }
-
-            const item = document.createElement('a');
-            item.className = 'list-group-item list-group-item-action py-3';
-            item.href = '#';
-            item.innerHTML = `
-                <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">
-                        <i class="bi ${icon} me-2 text-muted"></i>
-                        ${msg.subject || 'بدون عنوان'}
-                    </h5>
-                    <small class="text-muted">#${msg.id}</small>
-                </div>
-                <div class="mb-1 text-break" style="max-height: 100px; overflow: hidden; text-overflow: ellipsis;">
-                    ${msg.message_body}
-                </div>
-                <div class="mt-2">
-                    <span class="badge ${badgeClass}">${badgeText}</span>
-                </div>
-            `;
-            container.appendChild(item);
+async function loadMessages() {
+    const token = localStorage.getItem('access_token');
+    try {
+        const r = await fetch('/comm/messages', {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-    }
-
-    function filterMsgs(type) {
-        document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
-
-        if (type === 'all') {
-            renderMessages(allMessages);
+        if (r.ok) {
+            allMessages = await r.json();
         } else {
-            const filtered = allMessages.filter(m => m.thread_type === type.toUpperCase());
-            renderMessages(filtered);
+            allMessages = [];
         }
+    } catch {
+        allMessages = [];
     }
-    
-    document.getElementById('msgSearch').addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        const filtered = allMessages.filter(m => 
-            (m.subject && m.subject.toLowerCase().includes(term)) || 
-            (m.message_body && m.message_body.toLowerCase().includes(term))
-        );
-        renderMessages(filtered);
-    });
+    renderMessages(allMessages);
+    updateCounts();
+}
+
+function updateCounts() {
+    document.getElementById('countAll').textContent      = allMessages.length;
+    document.getElementById('countDirect').textContent   = allMessages.filter(m => m.thread_type === 'DIRECT').length;
+    document.getElementById('countBroadcast').textContent = allMessages.filter(m => m.thread_type === 'BROADCAST').length;
+    document.getElementById('countClass').textContent    = allMessages.filter(m => m.thread_type === 'CLASS').length;
+}
+
+function renderMessages(messages) {
+    const container = document.getElementById('messagesList');
+
+    if (!messages.length) {
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox d-block fs-1 mb-3 opacity-25"></i>
+                <p class="mb-0">لا توجد رسائل في هذا القسم</p>
+            </div>`;
+        return;
+    }
+
+    const typeMap = { DIRECT:'مباشر', BROADCAST:'تعميم', CLASS:'شعبة' };
+    const typeIcon = { DIRECT:'bi-chat-dots-fill', BROADCAST:'bi-megaphone-fill', CLASS:'bi-people-fill' };
+    const typeClass = { DIRECT:'direct', BROADCAST:'broadcast', CLASS:'class' };
+
+    container.innerHTML = [...messages].reverse().map(msg => {
+        const tc = typeClass[msg.thread_type] || 'direct';
+        const tl = typeMap[msg.thread_type] || msg.thread_type;
+        const ic = typeIcon[msg.thread_type] || 'bi-envelope-fill';
+        const preview = (msg.message_body || '').replace(/<[^>]*>/g, '').substring(0, 80);
+        const isUnread = !msg.read_at;
+        const time = msg.created_at ? new Date(msg.created_at).toLocaleDateString('ar-SA',{month:'short',day:'numeric'}) : '';
+
+        return `<div class="msg-item${isUnread ? ' unread' : ''}" onclick="openMessage(${msg.id})">
+            <div class="msg-avatar ${tc}">
+                <i class="bi ${ic}"></i>
+            </div>
+            <div class="msg-body">
+                <div class="msg-top">
+                    <span class="msg-subject">${msg.subject || 'بدون عنوان'}</span>
+                    <span class="msg-time">${time}</span>
+                </div>
+                <div class="msg-preview">${preview || 'لا يوجد محتوى'}</div>
+                <div class="msg-footer">
+                    <span class="msg-type-badge ${tc}">
+                        <i class="bi ${ic}"></i>${tl}
+                    </span>
+                    ${isUnread ? '<span class="msg-unread-dot"></span>' : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function filterMsgs(type, btn) {
+    document.querySelectorAll('.msg-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filtered = type === 'all' ? allMessages : allMessages.filter(m => m.thread_type === type);
+    renderMessages(filtered);
+}
+
+document.getElementById('msgSearch').addEventListener('input', function () {
+    const term = this.value.toLowerCase();
+    const filtered = allMessages.filter(m =>
+        (m.subject || '').toLowerCase().includes(term) ||
+        (m.message_body || '').toLowerCase().includes(term)
+    );
+    renderMessages(filtered);
+});
+
+function openMessage(id) {
+    // Open inline or navigate to message detail
+    window.location.href = `/communication/messages/${id}`;
+}
 </script>
 {% endblock %}
-

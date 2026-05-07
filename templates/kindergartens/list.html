@@ -1,40 +1,49 @@
 {% extends 'base.html' %}
-
-{% block title %}إدارة الروضات{% endblock %}
+{% block title %}إدارة الروضات — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-building me-2 text-primary"></i>
-            إدارة الروضات
-        </h1>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-building-fill"></i>
+            إدارة المنشآت
+        </div>
+        <h1 class="page-header-title">الروضات والحضانات</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
                 <li class="breadcrumb-item active">الروضات</li>
             </ol>
         </nav>
     </div>
-    {% if current_user.role.value == 'ADMIN' %}
-    <div class="btn-toolbar">
+    <div class="page-header-actions">
+        {% if current_user.role.value == 'ADMIN' %}
         <a href="/kindergartens/create" class="btn btn-primary">
             <i class="bi bi-plus-circle me-2"></i>إضافة روضة جديدة
         </a>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- Filters -->
+
+<!-- Filter Card -->
 <div class="card mb-4">
-    <div class="card-body">
-        <form id="filterForm" class="row g-3">
+    <div class="card-body py-3">
+        <form id="filterForm" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="filter-label">اسم الروضة أو منطقة البحث</label>
+                <div class="search-box-inline">
+                    <i class="bi bi-search search-box-icon"></i>
+                    <input type="text" class="form-control search-box-input" id="searchQuery"
+                           placeholder="ابحث بالاسم أو المنطقة...">
+                </div>
+            </div>
             <div class="col-md-2">
-                <label for="filterGovernorate" class="form-label">المحافظة</label>
-                <select class="form-select" id="filterGovernorate" name="governorate">
-                    <option value="">الكل</option>
+                <label class="filter-label">المحافظة</label>
+                <select class="form-select form-select-sm" id="filterGovernorate" name="governorate">
+                    <option value="">جميع المحافظات</option>
                     <option value="عمان">عمان</option>
                     <option value="إربد">إربد</option>
                     <option value="الزرقاء">الزرقاء</option>
@@ -50,251 +59,262 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="filterStatus" class="form-label">الحالة</label>
-                <select class="form-select" id="filterStatus" name="status">
-                    <option value="">الكل</option>
+                <label class="filter-label">الحالة</label>
+                <select class="form-select form-select-sm" id="filterStatus" name="status">
+                    <option value="">جميع الحالات</option>
                     <option value="active">نشط</option>
                     <option value="draft">مسودة</option>
                     <option value="inactive">غير نشط</option>
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="filterPhone" class="form-label">رقم الهاتف</label>
-                <input type="text" class="form-control" id="filterPhone" name="phone" placeholder="رقم الهاتف...">
-            </div>
-            <div class="col-md-3">
-                <label for="filterName" class="form-label">اسم الروضة</label>
-                <input type="text" class="form-control" id="filterName" name="name" placeholder="اسم الروضة...">
-            </div>
-            <div class="col-md-3">
-                <label for="searchQuery" class="form-label">البحث العام</label>
-                <input type="text" class="form-control" id="searchQuery" placeholder="ابحث بالاسم أو المنطقة...">
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-outline-primary w-100">
-                    <i class="bi bi-search me-1"></i>بحث
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-funnel-fill me-1"></i>تصفية
                 </button>
+            </div>
+            <div class="col-md-auto">
+                <span class="text-muted small" id="kgCount"></span>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Kindergartens Grid/Table -->
+<!-- Kindergartens Grid -->
 <div class="row g-4" id="kindergartensGrid">
-    <!-- Populated by JavaScript -->
+    <!-- Skeleton loaders -->
+    {% for i in range(6) %}
+    <div class="col-md-6 col-lg-4 kg-skeleton-col">
+        <div class="card h-100">
+            <div class="card-header" style="background:var(--kinjo-surface);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="skeleton" style="width:55%;height:16px;border-radius:6px;"></div>
+                    <div class="skeleton" style="width:20%;height:20px;border-radius:50px;"></div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="skeleton mb-2" style="width:70%;height:12px;border-radius:5px;"></div>
+                <div class="skeleton mb-2" style="width:60%;height:12px;border-radius:5px;"></div>
+                <div class="skeleton mb-3" style="width:50%;height:12px;border-radius:5px;"></div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <div class="d-flex gap-2">
+                    <div class="skeleton flex-fill" style="height:36px;border-radius:10px;"></div>
+                    <div class="skeleton flex-fill" style="height:36px;border-radius:10px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 
 <!-- Pagination -->
-<nav class="mt-4" id="paginationNav" style="display: none;">
-    <ul class="pagination justify-content-center">
-        <li class="page-item disabled">
-            <a class="page-link" href="#" tabindex="-1">السابق</a>
-        </li>
-        <li class="page-item active"><a class="page-link" href="#">1</a></li>
-        <li class="page-item"><a class="page-link" href="#">2</a></li>
-        <li class="page-item"><a class="page-link" href="#">3</a></li>
-        <li class="page-item">
-            <a class="page-link" href="#">التالي</a>
-        </li>
-    </ul>
+<nav class="mt-4 d-none" id="paginationNav" aria-label="تنقل الصفحات">
+    <ul class="pagination justify-content-center" id="paginationList"></ul>
 </nav>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
+.filter-label { font-size:0.8rem;font-weight:700;color:var(--kinjo-text-muted);display:block;margin-bottom:0.35rem; }
+
+.search-box-inline { position:relative; }
+.search-box-icon { position:absolute;top:50%;right:0.875rem;transform:translateY(-50%);color:var(--kinjo-text-muted);font-size:0.9rem;pointer-events:none;z-index:2; }
+[dir="rtl"] .search-box-icon { right:auto;left:0.875rem; }
+.search-box-input { padding-right:2.5rem;border-radius:var(--kinjo-radius-lg);border-color:var(--kinjo-border);font-size:0.875rem; }
+[dir="rtl"] .search-box-input { padding-right:0.75rem;padding-left:2.5rem; }
+
+/* KG Card */
+.kg-card {
+    border:1px solid var(--kinjo-border);
+    border-radius:var(--kinjo-radius-xl);
+    background:var(--kinjo-card-bg);
+    transition:all 0.25s;
+    overflow:hidden;
+}
+.kg-card:hover { transform:translateY(-3px);box-shadow:var(--kinjo-shadow-lg);border-color:var(--kinjo-primary-light); }
+.kg-card-header {
+    background:var(--kinjo-primary-xlight);
+    padding:1rem 1.25rem;
+    border-bottom:1px solid rgba(79,70,229,0.12);
+    display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;
+}
+.kg-card-name { font-size:0.95rem;font-weight:800;color:var(--kinjo-primary);flex:1;min-width:0; }
+.kg-card-icon {
+    width:40px;height:40px;border-radius:12px;flex-shrink:0;
+    background:var(--kinjo-primary);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+}
+.kg-info-row { display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;font-size:0.84rem;color:var(--kinjo-text-secondary); }
+.kg-info-row i { color:var(--kinjo-primary-light);font-size:0.9rem;flex-shrink:0; }
+.kg-info-row a { color:var(--kinjo-primary);text-decoration:none; }
+.kg-info-row a:hover { text-decoration:underline; }
+
+/* Status pills */
+.kg-status { display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.72rem;font-weight:700; }
+.kg-status.ACTIVE   { background:rgba(16,185,129,0.15);color:var(--kinjo-success); }
+.kg-status.inactive { background:rgba(100,116,139,0.12);color:#64748b; }
+.kg-status.draft    { background:rgba(245,158,11,0.15);color:#d97706; }
+
+/* Skeleton */
+.skeleton { background:var(--kinjo-skeleton-base,#e2e8f0);animation:shimmer 1.5s infinite; }
+@keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.5} }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    let kindergartens = [];
-    
-    document.addEventListener('DOMContentLoaded', async () => {
-        await loadKindergartens();
+let kindergartens = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadKindergartens();
+    document.getElementById('filterForm').addEventListener('submit', async e => { e.preventDefault(); await loadKindergartens(); });
+    let searchT;
+    document.getElementById('searchQuery').addEventListener('input', e => {
+        clearTimeout(searchT);
+        searchT = setTimeout(() => {
+            const q = e.target.value.toLowerCase();
+            const filtered = kindergartens.filter(kg =>
+                (kg.name_ar||'').toLowerCase().includes(q) ||
+                (kg.name_en||'').toLowerCase().includes(q) ||
+                (kg.area||'').toLowerCase().includes(q)
+            );
+            renderKindergartens(filtered);
+        }, 280);
     });
-    
-    async function loadKindergartens() {
-        try {
-            showLoading();
-            
-            const params = new FormData(document.getElementById('filterForm'));
-            const queryParams = Object.fromEntries(params.entries());
-            
-            const response = await api.getKindergartens(queryParams);
-            kindergartens = response.kindergartens || [];
-            
-            renderKindergartens(kindergartens);
-            hideLoading();
-            
-        } catch (error) {
-            hideLoading();
-            showToast('حدث خطأ في تحميل البيانات', 'error');
-        }
+});
+
+async function loadKindergartens() {
+    try {
+        const params = Object.fromEntries(new FormData(document.getElementById('filterForm')));
+        const response = await api.getKindergartens(params);
+        kindergartens = response.kindergartens || [];
+        document.querySelectorAll('.kg-skeleton-col').forEach(el => el.remove());
+        renderKindergartens(kindergartens);
+    } catch {
+        document.querySelectorAll('.kg-skeleton-col').forEach(el => el.remove());
+        showToast('حدث خطأ في تحميل البيانات', 'error');
+        document.getElementById('kindergartensGrid').innerHTML = `
+            <div class="col-12 text-center py-5 text-muted">
+                <i class="bi bi-exclamation-circle d-block fs-2 mb-2 opacity-25"></i>
+                <p>تعذّر تحميل الروضات</p>
+                <button class="btn btn-ghost btn-sm" onclick="loadKindergartens()">إعادة المحاولة</button>
+            </div>`;
     }
-    
-    function renderKindergartens(data) {
-        const grid = document.getElementById('kindergartensGrid');
-        
-        if (!data || data.length === 0) {
-            grid.innerHTML = `
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-body text-center py-5">
-                            <i class="bi bi-building fs-1 text-muted mb-3 d-block opacity-25"></i>
-                            <h5 class="text-muted">لا توجد روضات مسجلة</h5>
-                            <p class="text-muted">ابدأ بإضافة روضة جديدة</p>
-                            <a href="/kindergartens/create" class="btn btn-primary">
-                                <i class="bi bi-plus-circle me-2"></i>إضافة روضة
-                            </a>
-                        </div>
+}
+
+function renderKindergartens(data) {
+    const grid = document.getElementById('kindergartensGrid');
+    const cnt = document.getElementById('kgCount');
+    if (cnt) cnt.textContent = `${data.length} روضة`;
+
+    if (!data.length) {
+        grid.innerHTML = `
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-building d-block fs-1 mb-3 opacity-25 text-muted"></i>
+                        <h6 class="fw-700 mb-2">لا توجد روضات مسجلة</h6>
+                        <p class="text-muted small mb-3">جرّب تغيير معايير البحث أو أضف روضة جديدة</p>
+                        {% if current_user.role.value == 'ADMIN' %}
+                        <a href="/kindergartens/create" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>إضافة روضة
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
-            `;
-            return;
-        }
-        
-        grid.innerHTML = data.map(kg => `
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                    <div class="card-header bg-primary bg-opacity-10">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0 text-primary">
-                                <i class="bi bi-building me-2"></i>
-                                ${kg.name_ar}
-                            </h5>
-                            ${getStatusBadge(kg.status)}
-                        </div>
+            </div>`;
+        return;
+    }
+
+    grid.innerHTML = data.map(kg => {
+        const status = (kg.status || 'draft').toLowerCase();
+        const statusLabel = { active:'نشط', inactive:'غير نشط', draft:'مسودة' }[status] || status;
+        return `
+        <div class="col-md-6 col-lg-4">
+            <div class="card kg-card h-100">
+                <div class="kg-card-header">
+                    <div>
+                        <div class="kg-card-name">${kg.name_ar}</div>
+                        ${kg.name_en ? `<div style="font-size:0.75rem;color:var(--kinjo-primary-light);margin-top:0.15rem;">${kg.name_en}</div>` : ''}
                     </div>
-                    <div class="card-body">
-                        ${kg.name_en ? `<p class="text-muted small mb-2">${kg.name_en}</p>` : ''}
-                        
-                        <div class="mb-3">
-                            <i class="bi bi-geo-alt text-primary me-2"></i>
-                            <span>${kg.governorate}، ${kg.city}، ${kg.area}</span>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <i class="bi bi-telephone text-primary me-2"></i>
-                            <a href="tel:${kg.contact_phone}" class="text-decoration-none">${kg.contact_phone}</a>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <i class="bi bi-envelope text-primary me-2"></i>
-                            ${kg.contact_email ? `<a href="mailto:${kg.contact_email}" class="text-decoration-none">${kg.contact_email}</a>` : `<span class="text-muted">—</span>`}
-                        </div>
-                        
-                        ${kg.operating_hours_start && kg.operating_hours_end ? `
-                            <div class="mb-3">
-                                <i class="bi bi-clock text-primary me-2"></i>
-                                <span>${kg.operating_hours_start} - ${kg.operating_hours_end}</span>
-                            </div>
-                        ` : ''}
-                        
-                        ${kg.license_number ? `
-                            <div class="mb-0">
-                                <i class="bi bi-card-checklist text-primary me-2"></i>
-                                <span>ترخيص: ${kg.license_number}</span>
-                            </div>
-                        ` : ''}
+                    <div class="d-flex align-items-start gap-2 flex-shrink-0">
+                        <span class="kg-status ${kg.status || 'draft'}">${statusLabel}</span>
+                        <div class="kg-card-icon"><i class="bi bi-building-fill"></i></div>
                     </div>
-                    <div class="card-footer bg-transparent">
-                        <div class="d-flex gap-2">
-                            <a href="/kindergartens/${kg.id}" class="btn btn-outline-primary flex-fill">
-                                <i class="bi bi-eye me-1"></i>عرض
-                            </a>
-                            <a href="/kindergartens/${kg.id}/edit" class="btn btn-outline-secondary flex-fill">
-                                <i class="bi bi-pencil me-1"></i>تعديل
-                            </a>
-                            ${kg.status === 'ACTIVE' ? 
-                                `<button onclick="confirmArchive(${kg.id}, '${kg.name_ar}')" class="btn btn-outline-warning flex-fill">
-                                    <i class="bi bi-archive me-1"></i>أرشفة
-                                </button>` :
-                                `<button onclick="confirmRestore(${kg.id}, '${kg.name_ar}')" class="btn btn-outline-success flex-fill">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i>استعادة
-                                </button>`
-                            }
-                        </div>
+                </div>
+                <div class="card-body py-3 px-4">
+                    <div class="kg-info-row">
+                        <i class="bi bi-geo-alt-fill"></i>
+                        <span>${kg.governorate}، ${kg.city}، ${kg.area}</span>
+                    </div>
+                    <div class="kg-info-row">
+                        <i class="bi bi-telephone-fill"></i>
+                        <a href="tel:${kg.contact_phone}">${kg.contact_phone}</a>
+                    </div>
+                    ${kg.contact_email ? `
+                    <div class="kg-info-row">
+                        <i class="bi bi-envelope-fill"></i>
+                        <a href="mailto:${kg.contact_email}">${kg.contact_email}</a>
+                    </div>` : ''}
+                    ${kg.operating_hours_start && kg.operating_hours_end ? `
+                    <div class="kg-info-row">
+                        <i class="bi bi-clock-fill"></i>
+                        <span>${kg.operating_hours_start} — ${kg.operating_hours_end}</span>
+                    </div>` : ''}
+                    ${kg.license_number ? `
+                    <div class="kg-info-row">
+                        <i class="bi bi-card-checklist"></i>
+                        <span>رخصة: ${kg.license_number}</span>
+                    </div>` : ''}
+                </div>
+                <div class="card-footer bg-transparent" style="padding:0.875rem 1.25rem;">
+                    <div class="d-flex gap-2">
+                        <a href="/kindergartens/${kg.id}" class="btn btn-primary btn-sm flex-fill">
+                            <i class="bi bi-eye me-1"></i>عرض
+                        </a>
+                        <a href="/kindergartens/${kg.id}/edit" class="btn btn-ghost btn-sm flex-fill">
+                            <i class="bi bi-pencil me-1"></i>تعديل
+                        </a>
+                        ${kg.status === 'ACTIVE' ?
+                            `<button onclick="confirmArchive(${kg.id}, '${kg.name_ar.replace(/'/g,"\\'")}'')" class="btn btn-ghost btn-sm" style="color:#d97706;" title="أرشفة">
+                                <i class="bi bi-archive"></i>
+                            </button>` :
+                            `<button onclick="confirmRestore(${kg.id}, '${kg.name_ar.replace(/'/g,"\\'")}'')" class="btn btn-ghost btn-sm" style="color:var(--kinjo-success);" title="استعادة">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>`
+                        }
                     </div>
                 </div>
             </div>
-        `).join('');
-    }
+        </div>`;
+    }).join('');
+}
 
-    // Archive/Restore functionality
-    window.confirmArchive = (id, name) => {
-        if(confirm(`هل أنت متأكد من رغبتك في أرشفة روضة "${name}"؟ سيتم إخفاؤها من القوائم النشطة.`)) {
-            archiveKindergarten(id);
-        }
-    };
+function authHeaders() {
+    const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token') || localStorage.getItem('access_token');
+    return { 'Content-Type':'application/json', 'Authorization': `Bearer ${t}` };
+}
 
-    window.confirmRestore = (id, name) => {
-        if(confirm(`هل أنت متأكد من رغبتك في استعادة روضة "${name}"؟`)) {
-            restoreKindergarten(id);
-        }
-    };
+window.confirmArchive = async (id, name) => {
+    if (!confirm(`هل أنت متأكد من أرشفة روضة "${name}"؟`)) return;
+    try {
+        const r = await fetch(`/api/kindergartens/${id}/archive`, { method:'POST', headers: authHeaders() });
+        const res = await r.json();
+        if (r.ok) { showToast(res.message || 'تمت الأرشفة', 'success'); loadKindergartens(); }
+        else showToast(res.detail || 'فشلت الأرشفة', 'error');
+    } catch { showToast('خطأ في الأرشفة', 'error'); }
+};
 
-    async function archiveKindergarten(id) {
-        try {
-            const response = await fetch(`/api/kindergartens/${id}/archive`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token')}`
-                }
-            });
-            
-            if (response.ok) {
-                const result = await response.json();
-                showToast(result.message, 'success');
-                loadKindergartens(); // Reload list
-            } else {
-                const error = await response.json();
-                showToast(error.detail || 'فشل في الأرشفة', 'error');
-            }
-        } catch (error) {
-            console.error('Archive error:', error);
-            showToast('حدث خطأ في الأرشفة', 'error');
-        }
-    }
-
-    async function restoreKindergarten(id) {
-        try {
-            const response = await fetch(`/api/kindergartens/${id}/restore`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token')}`
-                }
-            });
-            
-            if (response.ok) {
-                const result = await response.json();
-                showToast(result.message, 'success');
-                loadKindergartens(); // Reload list
-            } else {
-                const error = await response.json();
-                showToast(error.detail || 'فشل في الاستعادة', 'error');
-            }
-        } catch (error) {
-            console.error('Restore error:', error);
-            showToast('حدث خطأ في الاستعادة', 'error');
-        }
-    }
-    
-    // Filter form submission
-    document.getElementById('filterForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await loadKindergartens();
-    });
-    
-    // Search debounce
-    let searchTimeout;
-    document.getElementById('searchQuery').addEventListener('input', (e) => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const query = e.target.value.toLowerCase();
-            const filtered = kindergartens.filter(kg => 
-                kg.name_ar.toLowerCase().includes(query) ||
-                (kg.name_en && kg.name_en.toLowerCase().includes(query)) ||
-                kg.area.toLowerCase().includes(query)
-            );
-            renderKindergartens(filtered);
-        }, 300);
-    });
+window.confirmRestore = async (id, name) => {
+    if (!confirm(`هل أنت متأكد من استعادة روضة "${name}"؟`)) return;
+    try {
+        const r = await fetch(`/api/kindergartens/${id}/restore`, { method:'POST', headers: authHeaders() });
+        const res = await r.json();
+        if (r.ok) { showToast(res.message || 'تمت الاستعادة', 'success'); loadKindergartens(); }
+        else showToast(res.detail || 'فشلت الاستعادة', 'error');
+    } catch { showToast('خطأ في الاستعادة', 'error'); }
+};
 </script>
 {% endblock %}

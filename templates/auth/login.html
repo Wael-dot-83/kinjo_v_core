@@ -1,127 +1,623 @@
 {% extends 'base.html' %}
 
 {% block title %}تسجيل الدخول{% endblock %}
-{% block body_class %}auth-page bg-light{% endblock %}
+{% block body_class %}auth-page{% endblock %}
 
 {% block body %}
-<div class="container">
-    <div class="row justify-content-center align-items-center min-vh-100">
-        <div class="col-md-6 col-lg-5 col-xl-4">
-            <!-- Logo Card -->
-            <div class="text-center mb-4">
-                <a href="/" class="text-decoration-none">
-                    <div class="d-inline-flex align-items-center justify-content-center bg-primary rounded-circle p-3 mb-3">
-                        <i class="bi bi-building text-white fs-1"></i>
-                    </div>
-                    <h2 class="text-primary fw-bold mb-1">KinJo</h2>
-                    <p class="text-muted small">منصة إدارة الروضات</p>
-                </a>
+<div class="auth-wrapper">
+
+    <!-- ──────── Left decorative panel ──────── -->
+    <div class="auth-panel d-none d-lg-flex" aria-hidden="true">
+
+        <!-- Floating blobs -->
+        <div class="auth-blob auth-blob-1"></div>
+        <div class="auth-blob auth-blob-2"></div>
+        <div class="auth-blob auth-blob-3"></div>
+
+        <!-- Grid pattern overlay -->
+        <div class="auth-grid-overlay"></div>
+
+        <div class="auth-panel-content">
+            <!-- Logo -->
+            <div class="auth-panel-logo">
+                <i class="bi bi-building-fill"></i>
             </div>
-            
-            <!-- Login Card -->
-            <div class="card shadow-lg border-0">
-                <div class="card-body p-4 p-lg-5">
-                    <h4 class="card-title text-center mb-4">تسجيل الدخول</h4>
-                    
-                    <!-- Alert for expired session -->
-                    <div id="sessionExpiredAlert" class="alert alert-warning d-none" role="alert">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى
+
+            <h2 class="auth-panel-title">KinJo</h2>
+            <p class="auth-panel-subtitle">منصة إدارة الروضات والحضانات المتكاملة</p>
+
+            <!-- Feature List -->
+            <div class="auth-panel-features">
+                <div class="auth-feature">
+                    <div class="auth-feature-icon">
+                        <i class="bi bi-calendar-check-fill"></i>
                     </div>
-                    
-                    <!-- Error Alert -->
-                    <div id="loginError" class="alert alert-danger d-none" role="alert">
-                        <i class="bi bi-x-circle me-2"></i>
-                        <span id="loginErrorMessage"></span>
+                    <div>
+                        <div class="auth-feature-title">إدارة الحضور والغياب</div>
+                        <div class="auth-feature-desc">تتبع يومي دقيق لجميع الأطفال</div>
                     </div>
-                    
-                    <!-- Login Form -->
-                    <form id="loginForm" method="POST" action="/token">
-                        <div class="mb-3">
-                            <label for="username" class="form-label required">اسم المستخدم أو البريد الإلكتروني</label>
-                            <input type="text" class="form-control" id="username" name="username" 
-                                   placeholder="أدخل اسم المستخدم" autocomplete="username" required>
-                            <div class="invalid-feedback">
-                                يرجى إدخال اسم المستخدم
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="password" class="form-label required">كلمة المرور</label>
-                            <input type="password" class="form-control" id="password" name="password" 
-                                   placeholder="أدخل كلمة المرور" autocomplete="current-password" required>
-                            <div class="invalid-feedback">
-                                يرجى إدخال كلمة المرور
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="rememberMe" name="remember_me">
-                                <label class="form-check-label small" for="rememberMe">
-                                    تذكرني
-                                </label>
-                            </div>
-                            <a href="/forgot-password" class="small text-decoration-none">نسيت كلمة المرور؟</a>
-                        </div>
-                        
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg" id="loginBtn">
-                                <span class="btn-text">
-                                    <i class="bi bi-box-arrow-in-left me-2"></i>
-                                    تسجيل الدخول
-                                </span>
-                                <span class="btn-loading d-none">
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    جاري تسجيل الدخول...
-                                </span>
-                            </button>
-                        </div>
-                    </form>
-                    
-                    <hr class="my-4">
-                    
-                    <div class="text-center">
-                        <p class="mb-0 small text-muted">
-                            ليس لديك حساب؟ 
-                            <a href="/register" class="text-decoration-none fw-semibold">إنشاء حساب جديد</a>
-                        </p>
+                </div>
+                <div class="auth-feature">
+                    <div class="auth-feature-icon">
+                        <i class="bi bi-journal-richtext"></i>
+                    </div>
+                    <div>
+                        <div class="auth-feature-title">التقارير اليومية للأطفال</div>
+                        <div class="auth-feature-desc">تواصل مباشر بين المشرفين وأولياء الأمور</div>
+                    </div>
+                </div>
+                <div class="auth-feature">
+                    <div class="auth-feature-icon">
+                        <i class="bi bi-bar-chart-line-fill"></i>
+                    </div>
+                    <div>
+                        <div class="auth-feature-title">مؤشرات الأداء والتحليلات</div>
+                        <div class="auth-feature-desc">لوحات بيانات تفاعلية ومتكاملة</div>
+                    </div>
+                </div>
+                <div class="auth-feature">
+                    <div class="auth-feature-icon">
+                        <i class="bi bi-shield-fill-check"></i>
+                    </div>
+                    <div>
+                        <div class="auth-feature-title">نظام السلامة والحوادث</div>
+                        <div class="auth-feature-desc">رصد وإدارة الحوادث فور وقوعها</div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Footer Links -->
-            <div class="text-center mt-4">
-                <a href="/help" class="text-muted small text-decoration-none me-3">المساعدة</a>
-                <a href="/privacy" class="text-muted small text-decoration-none me-3">الخصوصية</a>
-                <a href="/terms" class="text-muted small text-decoration-none">الشروط</a>
+
+            <!-- Stats bar -->
+            <div class="auth-stats">
+                <div class="auth-stat">
+                    <div class="auth-stat-value">+50</div>
+                    <div class="auth-stat-label">روضة مشتركة</div>
+                </div>
+                <div class="auth-stat-divider"></div>
+                <div class="auth-stat">
+                    <div class="auth-stat-value">+2K</div>
+                    <div class="auth-stat-label">طفل مسجّل</div>
+                </div>
+                <div class="auth-stat-divider"></div>
+                <div class="auth-stat">
+                    <div class="auth-stat-value">99%</div>
+                    <div class="auth-stat-label">وقت التشغيل</div>
+                </div>
             </div>
-            
-            <p class="text-center text-muted small mt-3">
-                &copy; 2024 KinJo - جميع الحقوق محفوظة
-            </p>
+        </div>
+    </div>
+
+    <!-- ──────── Right form panel ──────── -->
+    <div class="auth-form-panel">
+        <div class="auth-form-inner scale-in">
+
+            <!-- Mobile Logo -->
+            <div class="text-center mb-4 d-lg-none">
+                <div class="auth-mobile-logo mx-auto">
+                    <i class="bi bi-building-fill"></i>
+                </div>
+                <h3 class="fw-bold mt-2" style="color:var(--kinjo-primary); letter-spacing:-0.01em;">KinJo</h3>
+                <p style="font-size:0.8rem; color:var(--kinjo-text-muted); margin-top:0.125rem;">منصة إدارة الروضات</p>
+            </div>
+
+            <!-- Heading -->
+            <div class="mb-4">
+                <h1 class="auth-form-title">مرحباً بعودتك</h1>
+                <p class="auth-form-desc">سجّل دخولك للوصول إلى لوحة التحكم</p>
+            </div>
+
+            <!-- Session Expired Alert -->
+            <div id="sessionExpiredAlert" class="alert alert-warning d-none" role="alert">
+                <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى
+            </div>
+
+            <!-- Error Alert -->
+            <div id="loginError" class="alert alert-danger d-none" role="alert">
+                <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+                <span id="loginErrorMessage">بيانات الدخول غير صحيحة</span>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" method="POST" action="/token" novalidate>
+
+                <!-- Username -->
+                <div class="mb-3">
+                    <label for="username" class="form-label required">اسم المستخدم أو البريد الإلكتروني</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-person" style="color:var(--kinjo-primary);"></i>
+                        </span>
+                        <input type="text"
+                               class="form-control"
+                               id="username"
+                               name="username"
+                               placeholder="أدخل اسم المستخدم"
+                               autocomplete="username"
+                               required>
+                    </div>
+                    <div class="invalid-feedback">يرجى إدخال اسم المستخدم</div>
+                </div>
+
+                <!-- Password -->
+                <div class="mb-3">
+                    <label for="password" class="form-label required">كلمة المرور</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-lock" style="color:var(--kinjo-primary);"></i>
+                        </span>
+                        <input type="password"
+                               class="form-control"
+                               id="password"
+                               name="password"
+                               placeholder="أدخل كلمة المرور"
+                               autocomplete="current-password"
+                               required>
+                        <button class="input-group-text"
+                                type="button"
+                                id="togglePasswordBtn"
+                                aria-label="إظهار أو إخفاء كلمة المرور"
+                                style="cursor:pointer; background:white; border-color:var(--kinjo-border-color); transition:var(--kinjo-transition-fast);">
+                            <i class="bi bi-eye" id="togglePasswordIcon" style="color:var(--kinjo-text-muted);"></i>
+                        </button>
+                    </div>
+                    <div class="invalid-feedback">يرجى إدخال كلمة المرور</div>
+                </div>
+
+                <!-- Remember + Forgot -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="rememberMe" name="remember_me">
+                        <label class="form-check-label" for="rememberMe"
+                               style="font-size:0.85rem; color:var(--kinjo-text-secondary); cursor:pointer;">
+                            تذكّرني
+                        </label>
+                    </div>
+                    <a href="/forgot-password"
+                       class="text-decoration-none"
+                       style="font-size:0.85rem; color:var(--kinjo-primary); font-weight:600;">
+                        نسيت كلمة المرور؟
+                    </a>
+                </div>
+
+                <!-- Submit -->
+                <div class="d-grid mb-4">
+                    <button type="submit" class="btn btn-primary btn-lg" id="loginBtn" style="border-radius:var(--kinjo-radius);">
+                        <span class="btn-text">
+                            <i class="bi bi-box-arrow-in-left"></i>
+                            تسجيل الدخول
+                        </span>
+                        <span class="btn-loading d-none">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            جاري تسجيل الدخول...
+                        </span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Sign up link -->
+            <div class="text-center auth-signup-link">
+                ليس لديك حساب؟
+                <a href="/register" class="text-decoration-none fw-bold" style="color:var(--kinjo-primary);">
+                    إنشاء حساب جديد
+                </a>
+            </div>
+
+            <!-- Footer links -->
+            <div class="auth-form-footer">
+                <a href="/help" class="text-decoration-none">المساعدة</a>
+                <span class="auth-footer-dot"></span>
+                <a href="/privacy" class="text-decoration-none">الخصوصية</a>
+                <span class="auth-footer-dot"></span>
+                <a href="/terms" class="text-decoration-none">الشروط</a>
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+/* ──────────────────────────────────────────
+   Auth Page Layout
+   ────────────────────────────────────────── */
+.auth-page,
+.auth-page body { overflow: hidden; }
+
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+}
+
+/* ──────────────────────────────────────────
+   Left Panel
+   ────────────────────────────────────────── */
+.auth-panel {
+    width: 440px;
+    flex-shrink: 0;
+    background: linear-gradient(160deg, #1E293B 0%, #0F172A 55%, #1a1060 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Animated blobs */
+.auth-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+    animation: blobFloat 12s ease-in-out infinite;
+}
+
+.auth-blob-1 {
+    width: 320px;
+    height: 320px;
+    background: rgba(79, 70, 229, 0.2);
+    top: -80px;
+    right: -80px;
+    animation-delay: 0s;
+}
+
+.auth-blob-2 {
+    width: 240px;
+    height: 240px;
+    background: rgba(16, 185, 129, 0.12);
+    bottom: -60px;
+    left: -60px;
+    animation-delay: -4s;
+}
+
+.auth-blob-3 {
+    width: 180px;
+    height: 180px;
+    background: rgba(124, 58, 237, 0.15);
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation-delay: -8s;
+}
+
+@keyframes blobFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%  { transform: translate(20px, -20px) scale(1.05); }
+    66%  { transform: translate(-15px, 15px) scale(0.95); }
+}
+
+/* Grid overlay */
+.auth-grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+}
+
+.auth-panel-content {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+}
+
+.auth-panel-logo {
+    width: 68px;
+    height: 68px;
+    background: var(--kinjo-gradient-primary);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+    box-shadow: 0 16px 40px rgba(79, 70, 229, 0.45);
+    margin-bottom: 1.25rem;
+    animation: logoGlow 3s ease-in-out infinite;
+}
+
+@keyframes logoGlow {
+    0%, 100% { box-shadow: 0 16px 40px rgba(79, 70, 229, 0.45); }
+    50%       { box-shadow: 0 20px 48px rgba(79, 70, 229, 0.65); }
+}
+
+.auth-panel-title {
+    font-size: 2.75rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #fff 30%, var(--kinjo-primary-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.auth-panel-subtitle {
+    color: rgba(255,255,255,0.45);
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 2.25rem;
+}
+
+/* Feature list */
+.auth-panel-features {
+    display: flex;
+    flex-direction: column;
+    gap: 1.125rem;
+    margin-bottom: 2.25rem;
+}
+
+.auth-feature {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+.auth-feature-icon {
+    width: 38px;
+    height: 38px;
+    background: rgba(79, 70, 229, 0.18);
+    border: 1px solid rgba(79, 70, 229, 0.28);
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: var(--kinjo-primary-light);
+    flex-shrink: 0;
+    transition: var(--kinjo-transition);
+}
+
+.auth-feature:hover .auth-feature-icon {
+    background: rgba(79, 70, 229, 0.3);
+    transform: scale(1.08);
+}
+
+.auth-feature-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 0.15rem;
+}
+
+.auth-feature-desc {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.38);
+}
+
+/* Stats bar */
+.auth-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1rem 1.25rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--kinjo-radius);
+    backdrop-filter: blur(8px);
+}
+
+.auth-stat {
+    text-align: center;
+    flex: 1;
+}
+
+.auth-stat-value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, white, var(--kinjo-primary-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.auth-stat-label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.35);
+    font-weight: 500;
+    margin-top: 0.1rem;
+}
+
+.auth-stat-divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(255,255,255,0.08);
+    flex-shrink: 0;
+}
+
+/* ──────────────────────────────────────────
+   Right Form Panel
+   ────────────────────────────────────────── */
+.auth-form-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #F8FAFC;
+    padding: 2rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle background circles */
+.auth-form-panel::before {
+    content: '';
+    position: absolute;
+    top: -120px;
+    left: -120px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(79,70,229,0.04) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.auth-form-panel::after {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    right: -80px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(16,185,129,0.04) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.auth-form-inner {
+    width: 100%;
+    max-width: 420px;
+    background: white;
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow:
+        0 0 0 1px var(--kinjo-border-color),
+        0 8px 32px rgba(0,0,0,0.06),
+        0 2px 8px rgba(0,0,0,0.04);
+    position: relative;
+    z-index: 1;
+}
+
+.auth-mobile-logo {
+    width: 58px;
+    height: 58px;
+    background: var(--kinjo-gradient-primary);
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    color: white;
+    box-shadow: var(--kinjo-shadow-primary);
+}
+
+.auth-form-title {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: var(--kinjo-text-primary);
+    letter-spacing: -0.025em;
+    margin-bottom: 0.25rem;
+}
+
+.auth-form-desc {
+    color: var(--kinjo-text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+/* Input group RTL fixes */
+[dir="rtl"] .auth-form-inner .input-group > .input-group-text:first-child {
+    border-radius: 0 var(--kinjo-radius-sm) var(--kinjo-radius-sm) 0;
+    border-inline-end: none;
+}
+
+[dir="rtl"] .auth-form-inner .input-group > .form-control {
+    border-radius: 0 !important;
+    border-inline: none;
+}
+
+[dir="rtl"] .auth-form-inner .input-group > .input-group-text:last-child {
+    border-radius: var(--kinjo-radius-sm) 0 0 var(--kinjo-radius-sm);
+    border-inline-start: none;
+}
+
+/* Sign up / Footer */
+.auth-signup-link {
+    font-size: 0.875rem;
+    color: var(--kinjo-text-secondary);
+    margin-bottom: 1.25rem;
+}
+
+.auth-form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding-top: 1.125rem;
+    border-top: 1px solid var(--kinjo-border-color);
+}
+
+.auth-form-footer a {
+    font-size: 0.775rem;
+    color: var(--kinjo-text-muted);
+    font-weight: 500;
+    transition: var(--kinjo-transition-fast);
+}
+
+.auth-form-footer a:hover { color: var(--kinjo-primary); }
+
+.auth-footer-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--kinjo-border-dark);
+    flex-shrink: 0;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Auth module is already loaded in base.html -->
 <script>
-    // Toggle password visibility (utility function)
-    function togglePassword() {
-        const passwordInput = document.getElementById('password');
-        const icon = document.getElementById('togglePasswordIcon');
-        
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            icon.classList.remove('bi-eye');
-            icon.classList.add('bi-eye-slash');
-        } else {
-            passwordInput.type = 'password';
-            icon.classList.remove('bi-eye-slash');
-            icon.classList.add('bi-eye');
-        }
+(function() {
+    /* Password visibility toggle */
+    const btn  = document.getElementById('togglePasswordBtn');
+    const icon = document.getElementById('togglePasswordIcon');
+    const inp  = document.getElementById('password');
+
+    if (btn && icon && inp) {
+        btn.addEventListener('click', () => {
+            const show = inp.type === 'password';
+            inp.type   = show ? 'text' : 'password';
+            icon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+            icon.style.color = show ? 'var(--kinjo-primary)' : 'var(--kinjo-text-muted)';
+        });
     }
+
+    /* Session expired banner */
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('expired') === '1' || params.get('session') === 'expired') {
+        const el = document.getElementById('sessionExpiredAlert');
+        if (el) el.classList.remove('d-none');
+    }
+
+    /* Form submit with loading state */
+    const form    = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+
+    if (form && loginBtn) {
+        form.addEventListener('submit', function(e) {
+            /* Basic client-side validation */
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                form.classList.add('was-validated');
+                return;
+            }
+
+            /* Show loading */
+            const textEl    = loginBtn.querySelector('.btn-text');
+            const loadingEl = loginBtn.querySelector('.btn-loading');
+            if (textEl)    textEl.classList.add('d-none');
+            if (loadingEl) loadingEl.classList.remove('d-none');
+            loginBtn.disabled = true;
+
+            /* If auth.js handles AJAX, re-enable on error via custom event */
+            window.addEventListener('kinjo:loginError', function handler(ev) {
+                if (textEl)    textEl.classList.remove('d-none');
+                if (loadingEl) loadingEl.classList.add('d-none');
+                loginBtn.disabled = false;
+
+                const errEl  = document.getElementById('loginError');
+                const errMsg = document.getElementById('loginErrorMessage');
+                if (errEl && errMsg) {
+                    errMsg.textContent = ev.detail?.message || 'بيانات الدخول غير صحيحة. يرجى المحاولة مرة أخرى.';
+                    errEl.classList.remove('d-none');
+                    errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                window.removeEventListener('kinjo:loginError', handler);
+            });
+        });
+    }
+})();
 </script>
 {% endblock %}

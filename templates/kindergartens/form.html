@@ -1,274 +1,277 @@
 {% extends 'base.html' %}
-
-{% block title %}{% if kindergarten %}تعديل روضة{% else %}إضافة روضة جديدة{% endif %}{% endblock %}
+{% block title %}{% if kindergarten %}تعديل روضة{% else %}روضة جديدة{% endif %} — KinJo{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-building icon-inline text-primary"></i>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-building"></i>
+            إدارة الروضات
+        </div>
+        <h1 class="page-header-title">
             {% if kindergarten %}تعديل روضة{% else %}إضافة روضة جديدة{% endif %}
         </h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/kindergartens">الروضات</a></li>
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
+                <li class="breadcrumb-item"><a href="/kindergartens" class="text-decoration-none">الروضات</a></li>
                 <li class="breadcrumb-item active">{% if kindergarten %}تعديل{% else %}إضافة{% endif %}</li>
             </ol>
         </nav>
     </div>
+    <a href="/kindergartens" class="btn btn-ghost">
+        <i class="bi bi-arrow-right me-2"></i>رجوع
+    </a>
 </div>
 {% endblock %}
 
 {% block content %}
-<style>
-    .icon-inline { margin-inline-end: 0.5rem; color: var(--bs-primary); }
-    .field-optional { color: var(--bs-secondary); font-size: 0.9rem; }
-    .invalid-feedback { color: var(--bs-danger); text-align: start; }
-    .form-text { color: var(--bs-secondary); }
-    .form-control, .form-select { direction: rtl; }
-</style>
 <div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-body p-4">
-                <form id="kindergartenForm" class="needs-validation" novalidate>
-                    <!-- Basic Information -->
-                    <h5 class="border-bottom pb-2 mb-3">
-                        <i class="bi bi-info-circle icon-inline"></i>
-                        المعلومات الأساسية
-                    </h5>
+    <div class="col-xl-8 col-lg-9">
 
-                    <div class="row mb-3">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <label for="nameAr" class="form-label required">اسم الروضة (عربي) <span class="text-danger">*</span></label>
+        <form id="kindergartenForm" class="needs-validation" novalidate>
+
+            <!-- Basic Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-info-circle-fill me-2 text-primary"></i>
+                        المعلومات الأساسية
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-600" for="nameAr">اسم الروضة بالعربية <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="nameAr" name="name_ar" data-testid="nameAr"
-                                   value="{{ kindergarten.name_ar if kindergarten else '' }}" required>
-                            <div class="invalid-feedback">يرجى إدخال اسم الروضة بالعربية.</div>
+                                   value="{{ kindergarten.name_ar if kindergarten else '' }}" required
+                                   placeholder="مثال: روضة النجوم">
+                            <div class="invalid-feedback">يرجى إدخال اسم الروضة بالعربية</div>
                         </div>
                         <div class="col-md-6">
-                            <label for="nameEn" class="form-label">اسم الروضة (إنجليزي) <span class="field-optional">(اختياري)</span></label>
+                            <label class="form-label fw-600" for="nameEn">
+                                اسم الروضة بالإنجليزية
+                                <span class="opt-badge">اختياري</span>
+                            </label>
                             <input type="text" class="form-control" id="nameEn" name="name_en" data-testid="nameEn"
-                                   value="{{ kindergarten.name_en if kindergarten else '' }}">
-                            <div class="form-text">اسم الروضة باللغة الإنجليزية للتقارير الرسمية.</div>
+                                   value="{{ kindergarten.name_en if kindergarten else '' }}"
+                                   placeholder="Al-Nujoom Kindergarten">
+                            <div class="form-text">للتقارير الرسمية والمراسلات الخارجية</div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Location -->
-                    <h5 class="border-bottom pb-2 mb-3 mt-4">
-                        <i class="bi bi-geo-alt icon-inline"></i>
-                        الموقع
-                    </h5>
-
-                    <div class="row mb-3">
-                        <div class="col-md-4 mb-3 mb-md-0">
-                            <label for="governorate" class="form-label required">المحافظة <span class="text-danger">*</span></label>
+            <!-- Location -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-geo-alt-fill me-2 text-primary"></i>
+                        الموقع الجغرافي
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-600" for="governorate">المحافظة <span class="text-danger">*</span></label>
                             <select class="form-select" id="governorate" name="governorate" data-testid="governorate" required>
-                                <option value="">اختر...</option>
-                                <option value="عمان">عمان</option>
-                                <option value="إربد">إربد</option>
-                                <option value="الزرقاء">الزرقاء</option>
-                                <option value="العقبة">العقبة</option>
-                                <option value="المفرق">المفرق</option>
-                                <option value="جرش">جرش</option>
-                                <option value="عجلون">عجلون</option>
-                                <option value="الطفيلة">الطفيلة</option>
-                                <option value="الكرك">الكرك</option>
-                                <option value="معان">معان</option>
-                                <option value="السلط">السلط</option>
-                                <option value="مادبا">مادبا</option>
+                                <option value="">اختر المحافظة...</option>
+                                {% for gov in ['عمان','إربد','الزرقاء','العقبة','المفرق','جرش','عجلون','الطفيلة','الكرك','معان','السلط','مادبا'] %}
+                                <option value="{{ gov }}" {% if kindergarten and kindergarten.governorate == gov %}selected{% endif %}>{{ gov }}</option>
+                                {% endfor %}
                             </select>
-                            <div class="invalid-feedback">يرجى اختيار المحافظة.</div>
-                        </div>
-                        <div class="col-md-4 mb-3 mb-md-0">
-                            <label for="city" class="form-label required">المدينة <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="city" name="city" data-testid="city"
-                                   value="{{ kindergarten.city if kindergarten else '' }}" required>
-                            <div class="invalid-feedback">يرجى إدخال المدينة.</div>
+                            <div class="invalid-feedback">يرجى اختيار المحافظة</div>
                         </div>
                         <div class="col-md-4">
-                            <label for="area" class="form-label required">المنطقة <span class="text-danger">*</span></label>
+                            <label class="form-label fw-600" for="city">المدينة <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="city" name="city" data-testid="city"
+                                   value="{{ kindergarten.city if kindergarten else '' }}" required
+                                   placeholder="عمان">
+                            <div class="invalid-feedback">يرجى إدخال المدينة</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600" for="area">المنطقة <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="area" name="area" data-testid="area"
-                                   value="{{ kindergarten.area if kindergarten else '' }}" required>
-                            <div class="invalid-feedback">يرجى إدخال المنطقة.</div>
+                                   value="{{ kindergarten.area if kindergarten else '' }}" required
+                                   placeholder="الأشرفية">
+                            <div class="invalid-feedback">يرجى إدخال المنطقة</div>
                         </div>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="addressLine" class="form-label required">العنوان التفصيلي <span class="text-danger">*</span></label>
+                    <div>
+                        <label class="form-label fw-600" for="addressLine">العنوان التفصيلي <span class="text-danger">*</span></label>
                         <textarea class="form-control" id="addressLine" name="address_line" rows="2" data-testid="addressLine"
-                                  required>{{ kindergarten.address_line if kindergarten else '' }}</textarea>
-                        <div class="invalid-feedback">يرجى إدخال العنوان الكامل.</div>
+                                  required placeholder="الشارع، رقم المبنى، أي معالم قريبة...">{{ kindergarten.address_line if kindergarten else '' }}</textarea>
+                        <div class="invalid-feedback">يرجى إدخال العنوان الكامل</div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Contact Information -->
-                    <h5 class="border-bottom pb-2 mb-3 mt-4">
-                        <i class="bi bi-telephone icon-inline"></i>
+            <!-- Contact -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-telephone-fill me-2 text-primary"></i>
                         معلومات التواصل
-                    </h5>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <label for="contactPhone" class="form-label required">رقم الهاتف <span class="text-danger">*</span></label>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-600" for="contactPhone">رقم الهاتف <span class="text-danger">*</span></label>
                             <input type="tel" class="form-control" id="contactPhone" name="contact_phone" data-testid="contactPhone"
                                    value="{{ kindergarten.contact_phone if kindergarten else '' }}"
-                                   pattern="^(\+962|00962|0)[0-9]{9}$" required>
-                            <div class="invalid-feedback">يجب أن يبدأ الرقم بـ 0 أو +962 ويتكون من 10 أرقام.</div>
+                                   pattern="^(\+962|00962|0)[0-9]{9}$" required
+                                   placeholder="07XXXXXXXX">
+                            <div class="invalid-feedback">يجب أن يبدأ الرقم بـ 0 أو +962 ويتكون من 10 أرقام</div>
                         </div>
-
                         <div class="col-md-6">
-                            <label for="contactEmail" class="form-label">البريد الإلكتروني <span class="field-optional">(اختياري)</span></label>
+                            <label class="form-label fw-600" for="contactEmail">
+                                البريد الإلكتروني
+                                <span class="opt-badge">اختياري</span>
+                            </label>
                             <input type="email" class="form-control" id="contactEmail" name="contact_email" data-testid="contactEmail"
-                                   value="{{ kindergarten.contact_email if kindergarten else '' }}" placeholder="name@example.com">
-                            <div class="form-text">سيتم استخدام البريد الإلكتروني للتواصل والإشعارات الرسمية.</div>
-                            <div class="invalid-feedback">يرجى إدخال بريد إلكتروني صحيح أو تركه فارغاً.</div>
+                                   value="{{ kindergarten.contact_email if kindergarten else '' }}"
+                                   placeholder="info@kindergarten.jo">
+                            <div class="form-text">للتواصل والإشعارات الرسمية</div>
+                            <div class="invalid-feedback">يرجى إدخال بريد إلكتروني صحيح أو تركه فارغاً</div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Operating Hours -->
-                    <h5 class="border-bottom pb-2 mb-3 mt-4">
-                        <i class="bi bi-clock icon-inline"></i>
-                        ساعات العمل
-                    </h5>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <label for="operatingStart" class="form-label">وقت البدء</label>
-                            <input type="time" class="form-control" id="operatingStart" name="operating_hours_start" data-testid="operatingStart"
-                                   value="{{ kindergarten.operating_hours_start if kindergarten else '07:00' }}">
+            <!-- Hours + License -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="card-title-sm mb-0">
+                                <i class="bi bi-clock-fill me-2 text-primary"></i>
+                                ساعات العمل
+                            </h6>
                         </div>
-                        <div class="col-md-6">
-                            <label for="operatingEnd" class="form-label">وقت الانتهاء</label>
-                            <input type="time" class="form-control" id="operatingEnd" name="operating_hours_end" data-testid="operatingEnd"
-                                   value="{{ kindergarten.operating_hours_end if kindergarten else '16:00' }}">
-                        </div>
-                    </div>
-
-                    <!-- License Information -->
-                    <h5 class="border-bottom pb-2 mb-3 mt-4">
-                        <i class="bi bi-card-checklist icon-inline"></i>
-                        بيانات الترخيص
-                    </h5>
-
-                    <div class="p-3 rounded border bg-light mb-4">
-                        <div class="d-flex align-items-start mb-3">
-                            <span class="badge bg-info text-dark me-2"><i class="bi bi-shield-check"></i></span>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-600" for="operatingStart">وقت البدء</label>
+                                <input type="time" class="form-control" id="operatingStart" name="operating_hours_start" data-testid="operatingStart"
+                                       value="{{ kindergarten.operating_hours_start if kindergarten else '07:00' }}">
+                            </div>
                             <div>
-                                <div class="fw-semibold">معلومات الترخيص</div>
-                                <small class="text-muted">معلومات ترخيص وزارة التنمية الاجتماعية والجهات المختصة.</small>
+                                <label class="form-label fw-600" for="operatingEnd">وقت الانتهاء</label>
+                                <input type="time" class="form-control" id="operatingEnd" name="operating_hours_end" data-testid="operatingEnd"
+                                       value="{{ kindergarten.operating_hours_end if kindergarten else '16:00' }}">
                             </div>
                         </div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="licenseNumber" class="form-label">رقم الترخيص</label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="card-title-sm mb-0">
+                                <i class="bi bi-card-checklist me-2 text-primary"></i>
+                                بيانات الترخيص
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="license-info-note mb-3">
+                                <i class="bi bi-shield-check flex-shrink-0"></i>
+                                <small>معلومات الترخيص الصادر من وزارة التنمية الاجتماعية</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-600" for="licenseNumber">رقم الترخيص</label>
                                 <input type="text" class="form-control" id="licenseNumber" name="license_number" data-testid="licenseNumber"
                                        value="{{ kindergarten.license_number if kindergarten else '' }}" placeholder="LIC-12345">
                             </div>
-                            <div class="col-md-6">
-                                <label for="licenseValidUntil" class="form-label">تاريخ انتهاء الترخيص</label>
+                            <div>
+                                <label class="form-label fw-600" for="licenseValidUntil">تاريخ انتهاء الترخيص</label>
                                 <input type="date" class="form-control" id="licenseValidUntil" name="license_valid_until" data-testid="licenseValidUntil"
                                        value="{{ kindergarten.license_valid_until if kindergarten else '' }}">
                             </div>
                         </div>
                     </div>
-
-                    <!-- Form Actions -->
-                    <div class="d-flex justify-content-between border-top pt-4">
-                        <a href="/kindergartens" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle icon-inline"></i>إلغاء
-                        </a>
-                        <button type="submit" class="btn btn-primary" id="submitBtn" data-testid="submitKindergarten">
-                            <span class="btn-text">
-                                <i class="bi bi-check-circle icon-inline"></i>
-                                {% if kindergarten %}حفظ التغييرات{% else %}إضافة الروضة{% endif %}
-                            </span>
-                            <span class="btn-loading d-none">
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                جاري الحفظ...
-                            </span>
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
+
+            <!-- Actions -->
+            <div class="d-flex justify-content-between align-items-center border-top pt-4 mb-5">
+                <a href="/kindergartens" class="btn btn-ghost">
+                    <i class="bi bi-x-lg me-2"></i>إلغاء
+                </a>
+                <button type="submit" class="btn btn-primary px-5" id="submitBtn" data-testid="submitKindergarten">
+                    <span class="btn-text">
+                        <i class="bi bi-check-circle me-2"></i>
+                        {% if kindergarten %}حفظ التغييرات{% else %}إضافة الروضة{% endif %}
+                    </span>
+                    <span class="btn-loading d-none">
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        جاري الحفظ...
+                    </span>
+                </button>
+            </div>
+
+        </form>
     </div>
 </div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.fw-600 { font-weight:600; }
+.opt-badge { display:inline-block;font-size:0.68rem;font-weight:700;padding:0.1rem 0.5rem;border-radius:50px;background:var(--kinjo-surface);border:1px solid var(--kinjo-border);color:var(--kinjo-text-muted);margin-inline-start:0.4rem;vertical-align:middle; }
+.license-info-note { display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0.75rem;border-radius:var(--kinjo-radius-md);background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);font-size:0.82rem; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    const kindergartenId = JSON.parse('{{ (kindergarten.id if kindergarten else None) | tojson }}');
+const kindergartenId = JSON.parse('{{ (kindergarten.id if kindergarten else None) | tojson }}');
 
-    document.getElementById('kindergartenForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
+document.getElementById('kindergartenForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    if (!form.checkValidity()) {
+        form.classList.add('was-validated');
+        return;
+    }
 
-        const form = e.target;
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            return;
+    const btn = document.getElementById('submitBtn');
+    btn.querySelector('.btn-text').classList.add('d-none');
+    btn.querySelector('.btn-loading').classList.remove('d-none');
+    btn.disabled = true;
+
+    try {
+        const data = Object.fromEntries(new FormData(form).entries());
+        normalizeKindergartenPayload(data);
+
+        if (kindergartenId) {
+            await api.updateKindergarten(kindergartenId, data);
+            window.showToast('تم تحديث الروضة بنجاح', 'success');
+        } else {
+            await api.createKindergarten(data);
+            window.showToast('تم إضافة الروضة بنجاح', 'success');
         }
+        setTimeout(() => window.location.href = '/kindergartens', 1500);
 
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.querySelector('.btn-text').classList.add('d-none');
-        submitBtn.querySelector('.btn-loading').classList.remove('d-none');
-        submitBtn.disabled = true;
+    } catch (error) {
+        btn.querySelector('.btn-text').classList.remove('d-none');
+        btn.querySelector('.btn-loading').classList.add('d-none');
+        btn.disabled = false;
+        window.showToast(error?.message || 'حدث خطأ في حفظ البيانات', 'error');
+    }
+});
 
-        try {
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-            normalizeKindergartenPayload(data);
-
-            if (kindergartenId) {
-                await api.updateKindergarten(kindergartenId, data);
-                showToast('تم تحديث الروضة بنجاح', 'success');
-            } else {
-                await api.createKindergarten(data);
-                showToast('تم إضافة الروضة بنجاح', 'success');
-            }
-
-            setTimeout(() => {
-                window.location.href = '/kindergartens';
-            }, 1500);
-
-        } catch (error) {
-            submitBtn.querySelector('.btn-text').classList.remove('d-none');
-            submitBtn.querySelector('.btn-loading').classList.add('d-none');
-            submitBtn.disabled = false;
-
-            if (error && error.message && error.message.includes('روضة بنفس الاسم')) {
-                showToast('يوجد روضة بنفس الاسم أو رقم الهاتف أو البريد الإلكتروني.', 'error');
-                const fields = ['nameAr', 'nameEn', 'contactPhone', 'contactEmail'];
-                for (const f of fields) {
-                    const el = document.getElementById(f);
-                    if (el) { el.focus(); break; }
-                }
-            } else {
-                showToast(error.message || 'حدث خطأ في حفظ البيانات', 'error');
-            }
+function normalizeKindergartenPayload(payload) {
+    ['name_ar','name_en','governorate','city','area','address_line','contact_phone'].forEach(f => {
+        if (payload[f]) payload[f] = payload[f].trim();
+    });
+    ['contact_email','name_en','operating_hours_start','operating_hours_end','license_number','license_valid_until'].forEach(f => {
+        if (f in payload) {
+            const v = typeof payload[f] === 'string' ? payload[f].trim() : payload[f];
+            payload[f] = v === '' ? null : v;
         }
     });
-
-    function normalizeKindergartenPayload(payload) {
-        const trimFields = ['name_ar', 'name_en', 'governorate', 'city', 'area', 'address_line', 'contact_phone'];
-        trimFields.forEach(field => {
-            if (payload[field]) {
-                payload[field] = payload[field].trim();
-            }
-        });
-
-        const optionalFields = ['contact_email', 'name_en', 'operating_hours_start', 'operating_hours_end', 'license_number', 'license_valid_until'];
-        optionalFields.forEach(field => {
-            if (field in payload) {
-                const value = typeof payload[field] === 'string' ? payload[field].trim() : payload[field];
-                payload[field] = value === '' ? null : value;
-            }
-        });
-
-        if (payload.contact_email) {
-            payload.contact_email = payload.contact_email.toLowerCase();
-        }
-
-        return payload;
-    }
+    if (payload.contact_email) payload.contact_email = payload.contact_email.toLowerCase();
+}
 </script>
 {% endblock %}

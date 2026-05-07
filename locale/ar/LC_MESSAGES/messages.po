@@ -112,15 +112,128 @@ msgstr "تعديل"
 
 #: i18n.py:179
 msgid "Parent access only"
-msgstr "الوصول للوالدين فقط"
+msgstr "مخصص لأولياء الأمور فقط"
 
 #: api/children.py:59 i18n.py:180
 msgid "Parent profile not found"
-msgstr "لم يتم العثور على ملف ولي الأمر"
+msgstr "لم يُعثَر على ملف ولي الأمر"
+
+#: templates/dashboard/parent.html
+msgid "Parent Portal"
+msgstr "بوابة ولي الأمر"
+
+#: templates/dashboard/parent.html
+msgid "Register New Child"
+msgstr "تسجيل طفل جديد"
+
+#: templates/dashboard/parent.html
+msgid "Quick Services"
+msgstr "الخدمات السريعة"
+
+#: templates/dashboard/parent.html
+msgid "Register Child"
+msgstr "تسجيل طفل"
+
+#: templates/dashboard/parent.html
+msgid "Add New Child"
+msgstr "إضافة طفل جديد"
+
+#: templates/dashboard/parent.html
+msgid "Daily Reports"
+msgstr "التقارير اليومية"
+
+#: templates/dashboard/parent.html
+msgid "Children's Reports"
+msgstr "تقارير الأطفال"
+
+#: templates/dashboard/parent.html
+msgid "Messages"
+msgstr "الرسائل"
+
+#: templates/dashboard/parent.html
+msgid "Contact the Kindergarten"
+msgstr "تواصل مع الروضة"
+
+#: templates/dashboard/parent.html
+msgid "Settings"
+msgstr "الإعدادات"
+
+#: templates/dashboard/parent.html
+msgid "My Account"
+msgstr "إعدادات الحساب"
+
+#: templates/dashboard/parent.html
+msgid "Latest Daily Reports"
+msgstr "أحدث التقارير اليومية"
+
+#: templates/dashboard/parent.html
+msgid "View All"
+msgstr "عرض الكل"
+
+#: templates/dashboard/parent.html
+msgid "Upcoming Events"
+msgstr "الفعاليات القادمة"
+
+#: templates/dashboard/parent.html
+msgid "No upcoming events"
+msgstr "لا توجد فعاليات قادمة"
+
+#: templates/dashboard/parent.html
+msgid "Need Help?"
+msgstr "هل تحتاج إلى مساعدة؟"
+
+#: templates/dashboard/parent.html
+msgid "Support team is ready to help"
+msgstr "فريق الدعم الفني مستعدٌّ لمساعدتك"
+
+#: templates/dashboard/parent.html
+msgid "Contact Us"
+msgstr "تواصل معنا"
+
+#: templates/dashboard/parent.html
+msgid "Under Review"
+msgstr "قيد المراجعة"
+
+#: templates/dashboard/parent.html
+msgid "Draft"
+msgstr "مسودة"
+
+#: templates/dashboard/parent.html
+msgid "No reports yet"
+msgstr "لا توجد تقارير حالياً"
+
+#: templates/dashboard/parent.html
+msgid "No notes"
+msgstr "لا توجد ملاحظات"
+
+#: templates/dashboard/parent.html
+msgid "children"
+msgstr "أطفال"
+
+#: templates/dashboard/parent.html
+msgid "Present today"
+msgstr "حاضر اليوم"
+
+#: templates/dashboard/parent.html
+msgid "Not arrived yet"
+msgstr "لم يُسجَّل حضوره بعد"
+
+#: templates/dashboard/parent.html
+msgid "Today's report available"
+msgstr "تقرير اليوم متاح"
+
+#: templates/dashboard/parent.html
+msgid "You have not registered any children yet"
+msgstr "لم تقم بتسجيل أي طفل بعد"
+
+#: templates/dashboard/parent.html
+msgid "Start by enrolling your child in a kindergarten"
+msgstr "ابدأ بتسجيل طفلك في إحدى الروضات"
+
 
 #: i18n.py:181
 msgid "Not authorized to view this child's attendance"
-msgstr "غير مصرح لك بعرض حضور هذا الطفل"
+msgstr "لا تملك صلاحية الاطلاع على سجل حضور هذا الطفل"
 
 #: api/children.py:75 api/users.py:130 i18n.py:182
 msgid "Supported languages: ar, en"
@@ -140,7 +253,7 @@ msgstr "حدث خطأ"
 
 #: api/children.py:66
 msgid "Not authorized to update this profile"
-msgstr "غير مصرح لك بتحديث هذا الملف"
+msgstr "لا تملك صلاحية تحديث هذا الملف الشخصي"
 
 #: templates/attendance/absence_requests.html:12
 #: templates/parent/attendance.html:12 templates/parent/children.html:12
@@ -205,11 +318,11 @@ msgstr "اختر الطفل..."
 
 #: templates/attendance/absence_requests.html:96
 msgid "From Date"
-msgstr "من تاريخ"
+msgstr "تاريخ البداية"
 
 #: templates/attendance/absence_requests.html:101
 msgid "To Date"
-msgstr "إلى تاريخ"
+msgstr "تاريخ الانتهاء"
 
 #: templates/attendance/absence_requests.html:108
 msgid "Please state the reason for absence..."
@@ -224,16 +337,16 @@ msgid "Parent Dashboard"
 msgstr "لوحة ولي الأمر"
 
 #: templates/dashboard/parent.html:11
-msgid "Welcome"
-msgstr "مرحباً بك"
+msgid "Welcome,"
+msgstr "مرحباً،"
 
 #: templates/dashboard/parent.html:13
-msgid "Follow your children's news and daily reports"
-msgstr "تابع أخبار أطفالك وتقاريرهم اليومية"
+msgid "Track your children's news and daily reports from one place"
+msgstr "تابع أخبار أطفالك وتقاريرهم اليومية من مكان واحد"
 
 #: templates/dashboard/parent.html:25 templates/parent/children.html:33
 msgid "Loading children data..."
-msgstr "جاري تحميل بيانات أطفالك..."
+msgstr "جارٍ تحميل بيانات أطفالك..."
 
 #: templates/dashboard/parent.html:38 templates/parent/children.html:21
 #: templates/parent/profile.html:294
@@ -255,7 +368,7 @@ msgstr "ملفي الشخصي"
 
 #: templates/dashboard/parent.html:72
 msgid "Latest Daily Reports"
-msgstr "آخر التقارير اليومية"
+msgstr "أحدث التقارير اليومية"
 
 #: templates/dashboard/parent.html:74
 msgid "View All"
@@ -271,7 +384,7 @@ msgstr "لا توجد فعاليات قادمة"
 
 #: templates/dashboard/parent.html:107
 msgid "Need Help?"
-msgstr "تحتاج مساعدة؟"
+msgstr "هل تحتاج إلى مساعدة؟"
 
 #: templates/dashboard/parent.html:108
 msgid "Contact kindergarten management"
@@ -364,7 +477,7 @@ msgstr "الاسم الأول"
 
 #: templates/parent/profile.html:51 templates/parent/profile.html:97
 msgid "Middle Name"
-msgstr "الاسم الثاني"
+msgstr "الاسم الأوسط"
 
 #: templates/parent/profile.html:55 templates/parent/profile.html:101
 msgid "Last Name"
@@ -392,7 +505,7 @@ msgstr "صلة القرابة"
 
 #: templates/parent/profile.html:79
 msgid "National ID"
-msgstr "الرقم الوطني"
+msgstr "رقم الهوية الوطنية"
 
 #: templates/parent/profile.html:83
 msgid "Passport Number"
@@ -456,7 +569,7 @@ msgstr "حفظ العنوان"
 
 #: templates/parent/profile.html:212
 msgid "Emergency Contact"
-msgstr "جهة اتصال الطوارئ"
+msgstr "جهة الاتصال للطوارئ"
 
 #: templates/parent/profile.html:223 templates/parent/profile.html:241
 msgid "Contact Name"
@@ -496,7 +609,7 @@ msgstr "التفضيلات"
 
 #: templates/parent/profile.html:318
 msgid "Receive correspondence"
-msgstr "استلام المراسلات"
+msgstr "تلقّي المراسلات والإشعارات"
 
 #: templates/parent/profile.html:321
 msgid "Language"
@@ -541,6 +654,174 @@ msgstr "عرض التفاصيل"
 #: templates/reports/parent_list.html:87
 msgid "No reports for this date"
 msgstr "لا توجد تقارير لهذا التاريخ"
+
+msgid "Sidebar Navigation"
+msgstr "القائمة الجانبية"
+
+msgid "Online"
+msgstr "متصل"
+
+msgid "System Admin"
+msgstr "مدير النظام"
+
+msgid "Kindergarten Manager"
+msgstr "مدير الروضة"
+
+msgid "Supervisor"
+msgstr "مشرف"
+
+msgid "Parent"
+msgstr "ولي أمر"
+
+msgid "Main Menu"
+msgstr "القائمة الرئيسية"
+
+msgid "Operations"
+msgstr "العمليات"
+
+msgid "Messages"
+msgstr "الرسائل"
+
+msgid "Kindergartens"
+msgstr "الروضات"
+
+msgid "Daily Reports"
+msgstr "التقارير اليومية"
+
+msgid "Safety & Incidents"
+msgstr "السلامة والحوادث"
+
+msgid "Curriculum & Notes"
+msgstr "المنهج والملاحظات"
+
+msgid "My Services"
+msgstr "خدماتي"
+
+msgid "My Children Reports"
+msgstr "تقارير أطفالي"
+
+msgid "Enroll a Child"
+msgstr "تسجيل طفل"
+
+msgid "Management & Reports"
+msgstr "الإدارة والتقارير"
+
+msgid "KPI"
+msgstr "مؤشرات الأداء"
+
+msgid "Tasks"
+msgstr "المهام"
+
+msgid "User Management"
+msgstr "إدارة المستخدمين"
+
+msgid "Analytics & Reports"
+msgstr "التحليلات والتقارير"
+
+msgid "Activity Log"
+msgstr "سجل النشاط"
+
+msgid "Record Attendance"
+msgstr "تسجيل حضور"
+
+msgid "New Daily Report"
+msgstr "تقرير يومي جديد"
+
+msgid "Contact Us"
+msgstr "تواصل معنا"
+
+msgid "Skip to main content"
+msgstr "الانتقال إلى المحتوى الرئيسي"
+
+msgid "Back to top"
+msgstr "العودة إلى الأعلى"
+
+msgid "Operation successful"
+msgstr "تمّت العملية"
+
+msgid "An error occurred"
+msgstr "حدث خطأ"
+
+msgid "Warning"
+msgstr "تنبيه"
+
+msgid "Note"
+msgstr "ملاحظة"
+
+msgid "Notification"
+msgstr "إشعار"
+
+msgid "Close"
+msgstr "إغلاق"
+
+msgid "Main Navigation"
+msgstr "التنقل الرئيسي"
+
+msgid "Toggle Sidebar"
+msgstr "تبديل الشريط الجانبي"
+
+msgid "Open Menu"
+msgstr "فتح القائمة"
+
+msgid "Search for a child, parent, kindergarten..."
+msgstr "البحث عن طفل، ولي أمر، روضة..."
+
+msgid "Global Search"
+msgstr "بحث شامل"
+
+msgid "Search Results"
+msgstr "نتائج البحث"
+
+msgid "Start typing to search..."
+msgstr "ابدأ الكتابة للبحث..."
+
+msgid "Notifications"
+msgstr "الإشعارات"
+
+msgid "Toggle Language"
+msgstr "تغيير اللغة"
+
+msgid "Mark all as read"
+msgstr "تعيين الكل كمقروء"
+
+msgid "View all"
+msgstr "عرض الكل"
+
+msgid "No new notifications"
+msgstr "لا توجد إشعارات جديدة"
+
+msgid "View all notifications"
+msgstr "عرض جميع الإشعارات"
+
+msgid "Profile"
+msgstr "الملف الشخصي"
+
+msgid "Settings"
+msgstr "الإعدادات"
+
+msgid "Logout"
+msgstr "تسجيل الخروج"
+
+msgid "Login"
+msgstr "دخول"
+
+msgid "Create Account"
+msgstr "إنشاء حساب"
+
+msgid "Searching..."
+msgstr "جاري البحث..."
+
+msgid "No results found"
+msgstr "لا توجد نتائج"
+
+msgid "Child"
+msgstr "طفل"
+
+msgid "Kindergarten"
+msgstr "روضة"
+
+msgid "Report"
+msgstr "تقرير"
 
 #~ msgid ""
 #~ "Absence request submitted successfully and "

@@ -20,7 +20,7 @@ ENROLLMENT_STATUS_AR = {
     "SUBMITTED": "مقدّم",
     "PENDING_REVIEW": "قيد المراجعة",
     "PENDING": "قيد الانتظار",
-    "APPROVED": "موافق",
+    "APPROVED": "موافق عليه",
     "ACCEPTED": "مقبول",
     "REJECTED": "مرفوض",
     "WITHDRAWN": "منسحب",

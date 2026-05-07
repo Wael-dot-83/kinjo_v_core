@@ -2,7 +2,7 @@
 Security Middleware and Utilities for KinJo Platform
 =====================================================
 Enterprise-grade security implementation including:
-- Rate limiting
+- Rate limiting (Redis-backed sliding window)
 - Security headers
 - Input sanitization
 - Request logging
@@ -10,103 +10,135 @@ Enterprise-grade security implementation including:
 """
 import re
 import time
-import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
-from typing import Dict, Optional, Callable
-from collections import defaultdict
-from functools import wraps
+from datetime import datetime, timezone
+from typing import Callable
 
-from fastapi import Request, Response, HTTPException, status
+from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 import bleach
+import redis.asyncio as aioredis
+
+from config import settings
 
 
 # ============================================================================
-# Rate Limiting
+# Rate Limiting  (Redis-backed sliding window)
 # ============================================================================
+
+_redis_client: aioredis.Redis = aioredis.from_url(
+    settings.REDIS_URL,
+    encoding="utf-8",
+    decode_responses=True,
+    socket_connect_timeout=2,
+    socket_timeout=2,
+)
+
 
 class RateLimiter:
     """
-    Token bucket rate limiter with sliding window
-    Provides protection against brute force and DoS attacks
+    Redis-backed sliding-window rate limiter.
+    Falls back to allowing the request when Redis is unavailable so a cache
+    outage never takes the API down.
     """
-    
+
     def __init__(
         self,
         requests_per_minute: int = 60,
         requests_per_hour: int = 1000,
-        login_attempts_per_minute: int = 5
+        login_attempts_per_minute: int = 5,
     ):
         self.requests_per_minute = requests_per_minute
         self.requests_per_hour = requests_per_hour
         self.login_attempts_per_minute = login_attempts_per_minute
-        
-        # Storage: {ip: [(timestamp, endpoint), ...]}
-        self._requests: Dict[str, list] = defaultdict(list)
-        self._login_attempts: Dict[str, list] = defaultdict(list)
-        self._blocked_ips: Dict[str, datetime] = {}
-    
-    def _cleanup_old_requests(self, ip: str, storage: dict, window_seconds: int):
-        """Remove requests older than the window"""
-        cutoff = time.time() - window_seconds
-        storage[ip] = [r for r in storage[ip] if r[0] > cutoff]
-    
-    def is_rate_limited(self, ip: str, endpoint: str = None) -> tuple[bool, str]:
+        self._redis = _redis_client
+
+    # ------------------------------------------------------------------
+    # Sliding-window helpers
+    # ------------------------------------------------------------------
+
+    async def _sliding_count(self, key: str, window_seconds: int, now: float) -> int:
+        """Count events in the sliding window and clean stale entries."""
+        cutoff = now - window_seconds
+        pipe = self._redis.pipeline()
+        pipe.zremrangebyscore(key, "-inf", cutoff)
+        pipe.zcard(key)
+        pipe.expire(key, window_seconds + 10)
+        results = await pipe.execute()
+        return results[1]  # zcard result
+
+    async def _record_event(self, key: str, window_seconds: int, now: float) -> None:
+        """Add the current timestamp as an event."""
+        pipe = self._redis.pipeline()
+        pipe.zadd(key, {str(now): now})
+        pipe.expire(key, window_seconds + 10)
+        await pipe.execute()
+
+    # ------------------------------------------------------------------
+    # Public interface (mirrors the original synchronous API)
+    # ------------------------------------------------------------------
+
+    async def is_rate_limited(self, ip: str, endpoint: str = None) -> tuple:
         """
-        Check if request should be rate limited
-        Returns: (is_limited, reason)
+        Check global per-IP rate limits.
+        Returns (is_limited: bool, reason: str).
         """
-        now = time.time()
-        
-        # Check if IP is blocked
-        if ip in self._blocked_ips:
-            if datetime.now() < self._blocked_ips[ip]:
-                return True, "IP temporarily blocked due to suspicious activity"
-            else:
-                del self._blocked_ips[ip]
-        
-        # Cleanup old requests
-        self._cleanup_old_requests(ip, self._requests, 3600)
-        
-        # Check hourly limit
-        hour_requests = len([r for r in self._requests[ip] if r[0] > now - 3600])
-        if hour_requests >= self.requests_per_hour:
-            return True, f"Rate limit exceeded: {self.requests_per_hour} requests per hour"
-        
-        # Check minute limit
-        minute_requests = len([r for r in self._requests[ip] if r[0] > now - 60])
-        if minute_requests >= self.requests_per_minute:
-            return True, f"Rate limit exceeded: {self.requests_per_minute} requests per minute"
-        
-        # Record request
-        self._requests[ip].append((now, endpoint))
-        
-        return False, ""
-    
-    def check_login_attempt(self, ip: str) -> tuple[bool, str]:
+        try:
+            blocked_key = f"rl:blocked:{ip}"
+            if await self._redis.exists(blocked_key):
+                ttl = await self._redis.ttl(blocked_key)
+                return True, f"IP temporarily blocked due to suspicious activity ({ttl}s remaining)"
+
+            now = float(time.time())
+
+            hour_count = await self._sliding_count(f"rl:rph:{ip}", 3600, now)
+            if hour_count >= self.requests_per_hour:
+                return True, f"Rate limit exceeded: {self.requests_per_hour} requests per hour"
+
+            minute_count = await self._sliding_count(f"rl:rpm:{ip}", 60, now)
+            if minute_count >= self.requests_per_minute:
+                return True, f"Rate limit exceeded: {self.requests_per_minute} requests per minute"
+
+            await self._record_event(f"rl:rph:{ip}", 3600, now)
+            await self._record_event(f"rl:rpm:{ip}", 60, now)
+            return False, ""
+        except Exception:
+            # Redis unavailable — fail open
+            return False, ""
+
+    async def check_login_attempt(self, ip: str) -> tuple:
         """
-        Check if login attempt should be rate limited
-        More strict limits for authentication endpoints
+        Check login-specific rate limits (stricter).
+        Returns (is_limited: bool, reason: str).
         """
-        now = time.time()
-        
-        self._cleanup_old_requests(ip, self._login_attempts, 60)
-        
-        attempts = len(self._login_attempts[ip])
-        if attempts >= self.login_attempts_per_minute:
-            # Block IP for increasing duration based on attempts
-            block_duration = min(attempts * 5, 60)  # Max 60 minutes
-            self._blocked_ips[ip] = datetime.now() + timedelta(minutes=block_duration)
-            return True, f"Too many login attempts. Blocked for {block_duration} minutes"
-        
-        self._login_attempts[ip].append((now, "login"))
-        return False, ""
-    
-    def record_failed_login(self, ip: str):
-        """Record a failed login attempt"""
-        self._login_attempts[ip].append((time.time(), "failed"))
+        try:
+            blocked_key = f"rl:blocked:{ip}"
+            if await self._redis.exists(blocked_key):
+                ttl = await self._redis.ttl(blocked_key)
+                return True, f"Too many login attempts. Try again in {ttl}s"
+
+            now = float(time.time())
+            login_key = f"rl:login:{ip}"
+            attempts = await self._sliding_count(login_key, 60, now)
+
+            if attempts >= self.login_attempts_per_minute:
+                block_minutes = min((attempts + 1) * 5, 60)
+                await self._redis.setex(blocked_key, block_minutes * 60, "1")
+                return True, f"Too many login attempts. Blocked for {block_minutes} minutes"
+
+            await self._record_event(login_key, 60, now)
+            return False, ""
+        except Exception:
+            return False, ""
+
+    async def record_failed_login(self, ip: str) -> None:
+        """Record a failed login attempt (increments the login counter)."""
+        try:
+            now = float(time.time())
+            await self._record_event(f"rl:login:{ip}", 60, now)
+        except Exception:
+            pass
 
 
 # Global rate limiter instance
@@ -168,8 +200,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "frame-ancestors 'none';"
             )
         
-        # HSTS (enable in production with HTTPS)
-        # response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        # HSTS (enforced for all environments — enable only behind TLS termination)
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         
         # Permissions Policy (disable unnecessary features)
         response.headers["Permissions-Policy"] = (
@@ -198,14 +230,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         
         # Special handling for login endpoint
         if endpoint == "/token" and request.method == "POST":
-            is_limited, reason = rate_limiter.check_login_attempt(ip)
+            is_limited, reason = await rate_limiter.check_login_attempt(ip)
             if is_limited:
                 return JSONResponse(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     content={"detail": reason}
                 )
         else:
-            is_limited, reason = rate_limiter.is_rate_limited(ip, endpoint)
+            is_limited, reason = await rate_limiter.is_rate_limited(ip, endpoint)
             if is_limited:
                 return JSONResponse(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -216,7 +248,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         
         # Record failed login
         if endpoint == "/token" and response.status_code == 401:
-            rate_limiter.record_failed_login(ip)
+            await rate_limiter.record_failed_login(ip)
         
         return response
     
