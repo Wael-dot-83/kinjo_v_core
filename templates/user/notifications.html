@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Notifications') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
+            <i class="bi bi-bell"></i>
+            {{ _('Notifications') }}
+        </div>
+        <h1 class="page-header-title">{{ _('Notifications') }}</h1>
+        <p class="page-header-sub">{{ _('Your recent notifications') }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-700">
+                <i class="bi bi-bell me-2"></i>{{ _('Recent Notifications') }}
+            </div>
+            <div class="card-body text-center py-5">
+                <i class="bi bi-bell-slash fs-1 text-muted"></i>
+                <p class="mt-3 text-muted">{{ _('No notifications at this time.') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

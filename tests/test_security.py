@@ -90,7 +90,6 @@ class TestAuthenticationSecurity:
 class TestAuthorizationSecurity:
     """Authorization and access control tests"""
 
-    @pytest.mark.skip(reason="Requires /daily-reports endpoint (not yet implemented)")
     def test_horizontal_privilege_escalation_prevention(
         self, client, test_db, parent_user, auth_headers_parent
     ):
@@ -124,12 +123,11 @@ class TestAuthorizationSecurity:
         
         # Try to access other child's data
         response = client.get(
-            f"/daily-reports/child/{other_child.id}",
+            f"/api/daily-reports/child/{other_child.id}",
             headers=auth_headers_parent
         )
         assert response.status_code in [403, 404]
 
-    @pytest.mark.skip(reason="Requires /kpi and /staff endpoints (not yet implemented)")
     def test_vertical_privilege_escalation_prevention(
         self, client, test_db, parent_user, auth_headers_parent,
         sample_kindergarten
@@ -148,7 +146,6 @@ class TestAuthorizationSecurity:
                 response = client.post(endpoint, headers=auth_headers_parent)
             assert response.status_code in [400, 401, 403, 404, 405, 422]
 
-    @pytest.mark.skip(reason="Requires /kpi/attendance-rate endpoint (not yet implemented)")
     def test_kindergarten_scope_isolation(
         self, client, test_db, manager_user, auth_headers_manager,
         sample_kindergarten
@@ -172,7 +169,7 @@ class TestAuthorizationSecurity:
         
         # Try to access KPIs of other kindergarten
         response = client.get(
-            "/kpi/attendance-rate",
+            "/api/kpi/attendance-rate",
             headers=auth_headers_manager,
             params={
                 "kindergarten_id": other_kg.id,
@@ -190,7 +187,6 @@ class TestAuthorizationSecurity:
 class TestInputValidationSecurity:
     """Input sanitization and validation tests"""
 
-    @pytest.mark.skip(reason="Requires /supervisor/observations/record endpoint (not yet implemented)")
     def test_xss_prevention_in_text_fields(
         self, client, test_db, supervisor_user, auth_headers_supervisor,
         sample_class, sample_child, sample_kindergarten
@@ -225,7 +221,7 @@ class TestInputValidationSecurity:
         
         for payload in xss_payloads:
             response = client.post(
-                "/supervisor/observations/record",
+                "/api/supervisor/observations/record",
                 headers=auth_headers_supervisor,
                 json={
                     "child_id": sample_child.id,
@@ -251,13 +247,12 @@ class TestInputValidationSecurity:
         # These would typically be tested against file upload endpoints
         # Documenting expected behavior
 
-    @pytest.mark.skip(reason="Requires /supervisor/observations/record endpoint (not yet implemented)")
     def test_large_payload_handling(self, client, auth_headers_supervisor):
         """Very large payloads should be rejected"""
         large_text = "A" * (10 * 1024 * 1024)  # 10MB
         
         response = client.post(
-            "/supervisor/observations/record",
+            "/api/supervisor/observations/record",
             headers=auth_headers_supervisor,
             json={
                 "child_id": 1,
@@ -459,14 +454,13 @@ class TestAuditCompliance:
         # In production, should prevent updates/deletes
         # Document expected behavior
 
-    @pytest.mark.skip(reason="Requires /safeguarding/create endpoint (not yet implemented)")
     def test_safeguarding_data_access_restricted(
         self, client, test_db, auth_headers_parent, sample_kindergarten
     ):
         """Safeguarding cases should have restricted access"""
         # Parent should not be able to create safeguarding cases
         response = client.post(
-            "/safeguarding/create",
+            "/api/safeguarding/create",
             headers=auth_headers_parent,
             params={
                 "child_id": 1,

@@ -27,3 +27,4 @@ def test_production_validation_requires_smtp(monkeypatch):
 
     with pytest.raises(RuntimeError, match="SMTP_UNCONFIGURED"):
         config.validate_production_settings()
+        

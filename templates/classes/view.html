@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Class') }} {{ class.name }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
+            <i class="bi bi-people"></i>
+            {{ _('Classes') }}
+        </div>
+        <h1 class="page-header-title">{{ class.name }}</h1>
+        <p class="page-header-sub">{{ class.description or '' }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header fw-700">
+                <i class="bi bi-info-circle me-2"></i>{{ _('Class Details') }}
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-600">{{ _('Name') }}</span>
+                    <span>{{ class.name }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-600">{{ _('Age Group') }}</span>
+                    <span>{{ class.age_group or '—' }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-600">{{ _('Capacity') }}</span>
+                    <span>{{ class.capacity or '—' }}</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

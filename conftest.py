@@ -2,9 +2,10 @@
 Pytest configuration and fixtures for integration tests
 """
 import os
+import sqlite3
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from datetime import date, datetime
@@ -17,6 +18,11 @@ from main import app
 from auth import get_password_hash
 import models
 
+
+# Register adapters/converters for date/datetime types to silence Python 3.12+
+# deprecation warnings about implicit datetime adaptation in sqlite3.
+sqlite3.register_adapter(date, lambda v: v.isoformat())
+sqlite3.register_adapter(datetime, lambda v: v.isoformat())
 
 # Create in-memory SQLite database for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"

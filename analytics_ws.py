@@ -2,7 +2,6 @@
 WebSocket endpoint for live analytics dashboard updates (FastAPI)
 """
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
-from fastapi.responses import HTMLResponse
 from typing import List
 import models
 from database import get_db
@@ -20,16 +19,27 @@ class ConnectionManager:
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
 
     async def broadcast(self, message: str):
+        dead: List[WebSocket] = []
         for connection in self.active_connections:
-            await connection.send_text(message)
+            try:
+                await connection.send_text(message)
+            except Exception:
+                dead.append(connection)
+        for conn in dead:
+            self.disconnect(conn)
 
 manager = ConnectionManager()
 
 @router.websocket("/ws/analytics/dashboard")
-async def websocket_dashboard(websocket: WebSocket):
+async def websocket_dashboard(
+    websocket: WebSocket,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Live analytics dashboard WebSocket.  Requires authentication (cookie or Bearer token)."""
     await manager.connect(websocket)
     try:
         while True:

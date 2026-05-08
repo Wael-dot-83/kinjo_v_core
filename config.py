@@ -131,6 +131,14 @@ def validate_production_settings() -> None:
     """
     if settings.ENVIRONMENT.lower() != "production":
         return
+    if settings.DEBUG:
+        raise RuntimeError(
+            "DEBUG_ENABLED: DEBUG must be False in production."
+        )
+    if settings.API_DOCS_ENABLED:
+        raise RuntimeError(
+            "API_DOCS_EXPOSED: API_DOCS_ENABLED must be False in production."
+        )
     if not settings.SMTP_HOST or not settings.SMTP_FROM:
         raise RuntimeError(
             "SMTP_UNCONFIGURED: SMTP_HOST and SMTP_FROM must be set in production."

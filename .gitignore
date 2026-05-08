@@ -75,3 +75,13 @@ static/collected/
 
 # Alembic
 alembic/versions/*.pyc
+
+# Temporary / diagnostic artefacts
+.tmp/
+inspect_out.txt
+pip_audit_installed.json
+*.tar.gz
+
+# SQLite WAL / SHM
+*.db-shm
+*.db-wal

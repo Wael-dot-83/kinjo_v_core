@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Settings') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
+            <i class="bi bi-gear"></i>
+            {{ _('Account') }}
+        </div>
+        <h1 class="page-header-title">{{ _('Settings') }}</h1>
+        <p class="page-header-sub">{{ _('Manage your account preferences') }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-700">
+                <i class="bi bi-person me-2"></i>{{ _('Profile Settings') }}
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-600">{{ _('Full Name') }}</label>
+                    <input type="text" class="form-control" value="{{ current_user.full_name or '' }}" disabled>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-600">{{ _('Email') }}</label>
+                    <input type="email" class="form-control" value="{{ current_user.email or '' }}" disabled>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-600">{{ _('Role') }}</label>
+                    <input type="text" class="form-control" value="{{ current_user.role.value if current_user.role else '' }}" disabled>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    {{ _('To update your profile, please contact your administrator.') }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

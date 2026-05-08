@@ -27,13 +27,25 @@ class UTF8ContentTypeMiddleware(BaseHTTPMiddleware):
             response.headers["content-type"] = "text/html; charset=utf-8"
         return response
 
-import os
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add HTTP security headers to all responses"""
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if settings.ENVIRONMENT == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
 import models
 from database import get_db, init_db
 from auth import authenticate_user, create_access_token, get_password_hash
-from config import settings
+from config import settings, validate_production_settings
 from dependencies import get_current_user, get_current_user_optional, RedirectToLogin
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 import validators
 
 # Safety guard: never allow TESTING bypass in production
@@ -104,6 +116,7 @@ async def expire_waitlist_entries() -> None:
 async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events"""
     # Startup
+    validate_production_settings()
     init_db()
     from ai.insights import generate_daily_insights
     from ai.llm import run_llm_daily_jobs
@@ -128,8 +141,8 @@ app = FastAPI(
     title="KInJo - Kindergarten Management Platform",
     description="Enterprise-grade management system for kindergartens in Jordan",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.API_DOCS_ENABLED else None,
+    redoc_url="/redoc" if settings.API_DOCS_ENABLED else None,
     lifespan=lifespan
 )
 
@@ -143,26 +156,17 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 async def redirect_to_login_handler(request: Request, exc: RedirectToLogin):
     return RedirectResponse(url=exc.redirect_url, status_code=302)
 
-# CORS middleware - restrict origins in production
-ALLOWED_ORIGINS = [
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
-]
-# Add production domain when deployed
-if settings.ENVIRONMENT == "production":
-    ALLOWED_ORIGINS = [
-        "https://kinjo.jo",  # Replace with actual production domain
-        "https://www.kinjo.jo",
-    ]
-
+# CORS middleware - origins controlled via CORS_ALLOWED_ORIGINS in .env
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS if settings.ENVIRONMENT == "production" else ["*"],
+    allow_origins=settings.CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Add security headers to all responses
+app.add_middleware(SecurityHeadersMiddleware)
 # Add UTF-8 Content-Type middleware for proper Arabic text encoding
 app.add_middleware(UTF8ContentTypeMiddleware)
 
@@ -171,6 +175,11 @@ try:
     app.mount("/static", StaticFiles(directory="static"), name="static")
 except:
     pass  # Static folder might not exist
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(status_code=204)
 
 
 # =============================================================================
@@ -289,7 +298,7 @@ async def logout(
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
-    """Logout endpoint - client should clear tokens"""
+    """Logout endpoint - clears the session cookie and invalidates the token"""
     if current_user:
         _log_auth_event(
             db=db,
@@ -299,7 +308,13 @@ async def logout(
             ip_address=_get_request_ip(request),
             sensitivity_level=1
         )
-    return {"message": "Logged out successfully"}
+    response = JSONResponse(content={"message": "Logged out successfully"})
+    response.delete_cookie(
+        key="kinjo_token",
+        path="/",
+        samesite="lax",
+    )
+    return response
 
 
 @app.post("/api/auth/refresh")
@@ -335,7 +350,9 @@ app.include_router(frontend_router)
 
 
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
+@limiter.limit("3/minute")
 async def register(
+    request: Request,
     username: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),

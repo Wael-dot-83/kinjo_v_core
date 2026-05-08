@@ -1120,13 +1120,13 @@ def get_analytics_overview(
             # Add empty entry for governorates with no data
             all_governorates.append(GovernorateMetrics(
                 governorate=gov_name,
-                kindergartens_count=0,
-                capacity_total=0,
+                kindergarten_count=0,
                 children_count=0,
+                capacity=0,
+                enrollment_rate=0.0,
                 attendance_rate=0.0,
                 incident_rate=0.0,
-                ratio_compliance=0.0,
-                governance_avg_score=0.0
+                governance_score=0.0
             ))
 
     return {

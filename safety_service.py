@@ -2,12 +2,13 @@
 Safety and Health Module
 - Incident Reporting
 - Health Alerts
+ - Safeguarding Cases
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pydantic import BaseModel
 
 import models
@@ -44,74 +45,6 @@ class HealthAlertCreate(BaseModel):
 # Incidents
 # -----------------------------------------------------------------------------
 
-@router.post("/incidents", status_code=status.HTTP_201_CREATED)
-def report_incident(
-    incident_data: IncidentCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Report a new incident"""
-    # Supervisors and Managers can report
-    validators.validate_supervisor_role(current_user)
-    
-    # Verify child exists and belongs to user's kindergarten scope
-    child = db.query(models.Child).filter(models.Child.id == incident_data.child_id).first()
-    if not child:
-        raise HTTPException(status_code=404, detail="Child not found")
-        
-    # Check enrollment to map to kindergarten if not obvious (but User has kindergarten_id)
-    # Ideally should check if child is enrolled in current_user.kindergarten_id
-    if current_user.role != models.UserRole.ADMIN:
-        # Check active enrollment in user's KG
-        enrollment = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == child.id,
-            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).first()
-        
-        if not enrollment and current_user.role != models.UserRole.ADMIN:
-             # Fallback: maybe just check if child parent profile is linked? 
-             # Sticking to: Child MUST be enrolled in the reporter's KG to report incident there.
-             raise HTTPException(status_code=400, detail="Child is not currently enrolled in your kindergarten")
-
-    incident = models.Incident(
-        child_id=incident_data.child_id,
-        kindergarten_id=current_user.kindergarten_id,
-        type=models.IncidentType(incident_data.type),
-        severity_level=models.SeverityLevel(incident_data.severity_level),
-        description=incident_data.description,
-        occurred_at=incident_data.occurred_at,
-        notify_parent_at=incident_data.notify_parent_at,
-        followup_required_flag=incident_data.followup_required_flag
-    )
-    
-    db.add(incident)
-    db.commit()
-    db.refresh(incident)
-    return incident
-
-@router.get("/incidents")
-def list_incidents(
-    child_id: Optional[int] = None,
-    unresolved_only: bool = False,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """List incidents for the kindergarten"""
-    validators.validate_supervisor_role(current_user)
-    
-    query = db.query(models.Incident).filter(
-        models.Incident.kindergarten_id == current_user.kindergarten_id
-    )
-    
-    if child_id:
-        query = query.filter(models.Incident.child_id == child_id)
-        
-    if unresolved_only:
-        query = query.filter(models.Incident.closed_at == None)
-        
-    return query.order_by(desc(models.Incident.occurred_at)).all()
-
 @router.put("/incidents/{incident_id}")
 def update_incident(
     incident_id: int,
@@ -145,40 +78,61 @@ def update_incident(
 # Health Alerts
 # -----------------------------------------------------------------------------
 
-@router.post("/children/{child_id}/health-alerts", status_code=status.HTTP_201_CREATED)
-def create_health_alert(
-    child_id: int,
-    alert_data: HealthAlertCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Add a health alert to a child (Allergy, etc.)"""
-    # Parent can add? OR Manager? Let's say Manager/Supervisor + Parent (if they own the child)
-    # For now, implementing for Staff side.
-    validators.validate_supervisor_role(current_user)
-    
-    # Check access to child similar to incident
-    # ... (Simplified check: assuming child exists and user has access)
-    
-    alert = models.HealthAlert(
-        child_id=child_id,
-        alert_type=alert_data.alert_type,
-        description=alert_data.description,
-        severity=alert_data.severity
-    )
-    
-    db.add(alert)
-    db.commit()
-    db.refresh(alert)
-    return alert
+# Health Alerts CRUD is implemented in missing_endpoints.py with full scope validation.
+# Only unique endpoints (not covered by missing_endpoints.py) live here.
 
-@router.get("/children/{child_id}/health-alerts")
-def get_health_alerts(
+# -----------------------------------------------------------------------------
+# Safeguarding Cases
+# -----------------------------------------------------------------------------
+
+class SafeguardingCreate(BaseModel):
+    child_id: int
+    kindergarten_id: int
+    description: str
+
+
+@router.post("/safeguarding/create", status_code=status.HTTP_201_CREATED)
+def create_safeguarding_case(
     child_id: int,
+    kindergarten_id: int,
+    description: str,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get health alerts for a child"""
-    # Should validate user has access to this child
-    
-    return db.query(models.HealthAlert).filter(models.HealthAlert.child_id == child_id).all()
+    """Create a safeguarding case (Manager/Admin only)."""
+    if current_user.role == models.UserRole.PARENT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Parents are not authorised to create safeguarding cases"
+        )
+    if current_user.role == models.UserRole.SUPERVISOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Supervisors must escalate through their manager"
+        )
+    validators.validate_kindergarten_scope(current_user, kindergarten_id)
+
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    now = datetime.utcnow()
+    case = models.SafeguardingCase(
+        child_id=child_id,
+        kindergarten_id=kindergarten_id,
+        case_description=description,
+        status=models.SafeguardingStatus.OPEN,
+        opened_at=now,
+        sla_escalation_deadline=now + timedelta(hours=24),
+        sla_closure_deadline=now + timedelta(days=30),
+    )
+    db.add(case)
+    db.commit()
+    db.refresh(case)
+    return {
+        "id": case.id,
+        "child_id": case.child_id,
+        "kindergarten_id": case.kindergarten_id,
+        "status": case.status.value,
+        "opened_at": case.opened_at.isoformat(),
+    }

@@ -41,7 +41,6 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 import models
-import validators
 from config import settings
 from database import get_db
 from dependencies import get_current_user
