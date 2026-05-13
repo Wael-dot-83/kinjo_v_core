@@ -7,7 +7,7 @@ from datetime import date, datetime
 from typing import Optional, List
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, Float, Date, DateTime,
-    ForeignKey, Enum, CheckConstraint, UniqueConstraint, Index, JSON
+    ForeignKey, Enum, CheckConstraint, UniqueConstraint, Index, JSON, and_
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -108,12 +108,22 @@ class DailyReportStatus(str, enum.Enum):
     SUBMITTED = "SUBMITTED"
     APPROVED = "APPROVED"
     RETURNED = "RETURNED"
+    SENT_TO_PARENT = "SENT_TO_PARENT"
 
 
 class IncidentType(str, enum.Enum):
     INJURY = "INJURY"
     BEHAVIOR = "BEHAVIOR"
     ILLNESS = "ILLNESS"
+    ALLERGY = "ALLERGY"
+    OTHER = "OTHER"
+
+
+class IncidentClassification(str, enum.Enum):
+    ACCIDENT = "ACCIDENT"
+    BEHAVIORAL = "BEHAVIORAL"
+    MEDICAL = "MEDICAL"
+    ENVIRONMENTAL = "ENVIRONMENTAL"
     OTHER = "OTHER"
 
 
@@ -147,6 +157,14 @@ class MessageThreadType(str, enum.Enum):
     DIRECT = "DIRECT"
     CLASS = "CLASS"
     BROADCAST = "BROADCAST"
+    ANNOUNCEMENT = "ANNOUNCEMENT"
+
+
+class MessageType(str, enum.Enum):
+    IMPORTANT = "IMPORTANT"
+    MAJOR = "MAJOR"
+    MINOR = "MINOR"
+    INFO = "INFO"
 
 
 class EventType(str, enum.Enum):
@@ -216,15 +234,46 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(100), unique=True, index=True, nullable=False)
-    email = Column(String(255), unique=True, index=True, nullable=False)
+    email = Column(String(255), unique=True, index=True, nullable=True)
+    login_identifier_type = Column(String(20), nullable=False, default="email", server_default="email")
     hashed_password = Column(String(255), nullable=False)
     role = Column(Enum(UserRole), nullable=False)
     status = Column(Enum(UserStatus), nullable=False, default=UserStatus.ACTIVE)
     kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True)
+    must_change_password = Column(Boolean, nullable=False, default=False, server_default="0")
+    full_name = Column(String(255), nullable=True)
+    phone_number = Column(String(20), nullable=True)
+    address = Column(Text, nullable=True)
+    nationality = Column(String(100), nullable=True)
+    national_id = Column(String(50), nullable=True)
+    passport_number = Column(String(50), nullable=True)
+    failed_login_count = Column(Integer, nullable=False, default=0, server_default="0")
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+    password_changed_at = Column(DateTime(timezone=True), nullable=True)
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
+    preferred_language = Column(String(10), nullable=False, default="ar", server_default="ar")
+    mfa_enabled = Column(Boolean, nullable=False, default=False, server_default="0")
+    mfa_secret = Column(String(255), nullable=True)
+    mfa_enrolled_at = Column(DateTime(timezone=True), nullable=True)
+    mfa_last_verified_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "role != 'MANAGER' OR kindergarten_id IS NOT NULL",
+            name="ck_users_manager_requires_kindergarten",
+        ),
+        Index(
+            "uq_users_one_active_manager_per_kindergarten",
+            "kindergarten_id",
+            unique=True,
+            sqlite_where=and_(role == UserRole.MANAGER, deleted_at.is_(None)),
+            postgresql_where=and_(role == UserRole.MANAGER, deleted_at.is_(None)),
+        ),
+    )
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="users")
@@ -242,9 +291,10 @@ class PasswordResetToken(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    token = Column(String(255), unique=True, nullable=False)
+    token = Column(String(255), unique=True, nullable=False)  # stores SHA-256 hash
     expires_at = Column(DateTime(timezone=True), nullable=False)
     used = Column(Boolean, default=False)
+    used_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -266,17 +316,37 @@ class ParentProfile(Base):
     nationality = Column(String(100), nullable=False)
     national_id = Column(String(50), nullable=True)
     passport_number = Column(String(50), nullable=True)
+    parent_type = Column(String(10), nullable=True)   # 'FATHER' | 'MOTHER' | 'OTHER'
     home_governorate = Column(String(100), nullable=False)
     home_city = Column(String(100), nullable=False)
     home_area = Column(String(100), nullable=False)
     home_address_line = Column(Text, nullable=False)
     work_address = Column(Text, nullable=True)
     correspondence_preference = Column(Boolean, nullable=False, default=True)
+    profile_complete = Column(Boolean, nullable=False, default=False, server_default="0")
+    profile_completed_at = Column(DateTime(timezone=True), nullable=True)
     notification_language = Column(String(10), nullable=False, server_default="ar")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    __table_args__ = (
+        Index(
+            "uq_parent_profiles_phone_number_active",
+            "phone_number",
+            unique=True,
+            sqlite_where=deleted_at.is_(None),
+            postgresql_where=deleted_at.is_(None),
+        ),
+        Index(
+            "uq_parent_profiles_national_id_active",
+            "national_id",
+            unique=True,
+            sqlite_where=and_(deleted_at.is_(None), national_id.isnot(None)),
+            postgresql_where=and_(deleted_at.is_(None), national_id.isnot(None)),
+        ),
+    )
 
     # Relationships
     user = relationship("User", foreign_keys=[user_id], back_populates="parent_profile")
@@ -299,8 +369,15 @@ class Child(Base):
     mother_nationality = Column(String(100), nullable=False)
     mother_national_id = Column(String(50), nullable=True)
     mother_passport_number = Column(String(50), nullable=True)
+    mother_phone = Column(String(20), nullable=True)
+    father_national_id = Column(String(50), nullable=True)
+    father_nationality = Column(String(100), nullable=True)
+    father_phone = Column(String(20), nullable=True)
     media_consent = Column(Boolean, nullable=False, default=False)
     correspondence_flag = Column(Boolean, nullable=False, default=True)
+    corresponding_type = Column(String(20), nullable=True)
+    corresponding_phone = Column(String(20), nullable=True)
+    corresponding_pending_reason = Column(String(50), nullable=True)
     medical_notes = Column(Text, nullable=True)
     allergy_notes = Column(Text, nullable=True)
     special_needs_notes = Column(Text, nullable=True)
@@ -308,6 +385,7 @@ class Child(Base):
     emergency_contact_phone = Column(String(20), nullable=True)
     blood_type = Column(String(5), nullable=True)
     vaccination_up_to_date = Column(Boolean, nullable=True)
+    profile_complete = Column(Boolean, nullable=False, default=False, server_default="0")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     deleted_at = Column(DateTime(timezone=True), nullable=True)
@@ -512,6 +590,11 @@ class Incident(Base):
     closed_at = Column(DateTime(timezone=True), nullable=True)
     reported_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)
+    supervisor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    classification = Column(Enum(IncidentClassification), nullable=True)
+    parent_informed = Column(Boolean, nullable=True)
+    parent_response = Column(Text, nullable=True)
+    parent_not_informed_reason = Column(Text, nullable=True)
     closed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -521,6 +604,7 @@ class Incident(Base):
     # Relationships
     child = relationship("Child", back_populates="incidents")
     kindergarten = relationship("Kindergarten", back_populates="incidents")
+    supervisor = relationship("User", foreign_keys=[supervisor_id])
 
 
 class Observation(Base):
@@ -575,23 +659,61 @@ class Message(Base):
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    thread_type = Column(Enum(MessageThreadType), nullable=False)
+    thread_type = Column(Enum(MessageThreadType), nullable=False, default=MessageThreadType.DIRECT)
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    # Add recipient_id for direct messages
+    # Direct recipient
     recipient_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=True)
     subject = Column(String(255), nullable=True)
     message_body = Column(Text, nullable=False)
+    allow_replies = Column(Boolean, nullable=False, default=True, server_default="1")
     translated_text = Column(Text, nullable=True)
     is_read = Column(Boolean, nullable=False, default=False)
     read_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # ── Parent-Manager messaging extensions ──────────────────────────────────
+    message_type = Column(Enum(MessageType), nullable=True)
+    child_id = Column(Integer, ForeignKey("children.id"), nullable=True)
+    parent_message_id = Column(Integer, ForeignKey("messages.id"), nullable=True)
+    is_reply = Column(Boolean, nullable=False, default=False)
+    is_forwarded = Column(Boolean, nullable=False, default=False)
+    forwarded_to_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    actioned = Column(Boolean, nullable=False, default=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
     # Relationships
     sender = relationship("User", foreign_keys=[sender_id], back_populates="messages_sent")
-    # Add relationship for recipient if needed, or just use foreign key
     recipient = relationship("User", foreign_keys=[recipient_id], back_populates="messages_received")
     kindergarten = relationship("Kindergarten", back_populates="messages")
+    child = relationship("Child", foreign_keys=[child_id])
+    forwarded_to = relationship("User", foreign_keys=[forwarded_to_id])
+    parent_message = relationship(
+        "Message",
+        foreign_keys=[parent_message_id],
+        remote_side="Message.id",
+        back_populates="replies",
+    )
+    replies = relationship(
+        "Message",
+        foreign_keys=[parent_message_id],
+        back_populates="parent_message",
+        order_by="Message.created_at",
+    )
+
+
+class ContactMessage(Base):
+    """Contact form submissions from users."""
+    __tablename__ = "contact_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    email = Column(String(255), nullable=False)
+    phone = Column(String(20), nullable=False)
+    subject = Column(String(200), nullable=False)
+    message = Column(Text, nullable=False)
+    submitted_at = Column(DateTime(timezone=True), server_default=func.now())
+    is_resolved = Column(Boolean, nullable=False, default=False)
 
 
 class Event(Base):

@@ -191,11 +191,13 @@ def parent_user(test_db):
     profile = models.ParentProfile(
         user_id=user.id,
         first_name="Ahmad",
+        second_name="Mohammed",
         last_name="Al-Rashid",
         phone_number="+962791234567",
         gender=models.Gender.MALE,
         nationality="Jordanian",
         national_id="1234567890",
+        parent_type="FATHER",
         home_governorate="Amman",
         home_city="Amman",
         home_area="Abdoun",
@@ -328,3 +330,100 @@ def auth_headers_parent(parent_token):
     Get authentication headers for parent
     """
     return {"Authorization": f"Bearer {parent_token}"}
+
+
+@pytest.fixture
+def sample_enrollment(test_db, sample_child, sample_kindergarten, sample_class):
+    """Active enrollment for sample_child in sample_kindergarten/class"""
+    enrollment = models.EnrollmentApplication(
+        child_id=sample_child.id,
+        kindergarten_id=sample_kindergarten.id,
+        class_id=sample_class.id,
+        status=models.EnrollmentStatus.ACTIVE,
+        source="WEB",
+        created_at=datetime(2026, 1, 10),
+        submitted_at=datetime(2026, 1, 10),
+        enrollment_start_date=date(2026, 1, 15)
+    )
+    test_db.add(enrollment)
+    test_db.commit()
+    test_db.refresh(enrollment)
+    return enrollment
+
+
+@pytest.fixture
+def sample_attendance(test_db, sample_child, sample_kindergarten, sample_enrollment):
+    """Three attendance logs for sample_child in the test period"""
+    logs = []
+    for d in [date(2026, 5, 1), date(2026, 5, 4), date(2026, 5, 5)]:
+        log = models.AttendanceLog(
+            child_id=sample_child.id,
+            class_id=sample_enrollment.class_id,
+            date=d,
+            check_in_at=datetime(2026, d.month, d.day, 8, 0),
+            method=models.AttendanceMethod.MANUAL
+        )
+        test_db.add(log)
+        logs.append(log)
+    test_db.commit()
+    for log in logs:
+        test_db.refresh(log)
+    return logs
+
+
+@pytest.fixture
+def sample_incident(test_db, sample_child, sample_kindergarten, supervisor_user, sample_enrollment):
+    """One safety incident for sample_child"""
+    incident = models.Incident(
+        child_id=sample_child.id,
+        kindergarten_id=sample_kindergarten.id,
+        supervisor_id=supervisor_user.id,
+        type=models.IncidentType.ILLNESS,
+        severity_level=models.SeverityLevel.LOW,
+        description="تعثّر الطفل في الملعب",
+        occurred_at=datetime(2026, 5, 2, 10, 30),
+        reported_by=supervisor_user.id,
+        parent_informed=True,
+        followup_required_flag=False
+    )
+    test_db.add(incident)
+    test_db.commit()
+    test_db.refresh(incident)
+    return incident
+
+
+@pytest.fixture
+def sample_daily_report(test_db, sample_child, supervisor_user, sample_enrollment):
+    """One daily report submitted by supervisor_user"""
+    report = models.DailyReport(
+        child_id=sample_child.id,
+        date=date(2026, 5, 1),
+        status=models.DailyReportStatus.SUBMITTED,
+        submitted_by=supervisor_user.id,
+        submitted_at=datetime(2026, 5, 1, 14, 0),
+        arrival_time="08:00",
+        leave_time="14:00",
+        breakfast=True,
+        snack=True,
+        milk=True,
+        lunch=False
+    )
+    test_db.add(report)
+    test_db.commit()
+    test_db.refresh(report)
+    return report
+
+
+@pytest.fixture
+def sample_supervisor_assignment(test_db, supervisor_user, sample_class):
+    """Supervisor assignment linking supervisor_user to sample_class"""
+    assignment = models.SupervisorAssignment(
+        class_id=sample_class.id,
+        supervisor_id=supervisor_user.id,
+        is_primary=True,
+        start_date=date(2026, 1, 1)
+    )
+    test_db.add(assignment)
+    test_db.commit()
+    test_db.refresh(assignment)
+    return assignment

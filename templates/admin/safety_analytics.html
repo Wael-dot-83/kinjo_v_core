@@ -1,0 +1,446 @@
+{% extends 'base.html' %}
+{% block title %}تحليلات الحوادث — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-danger,#ef4444);">
+            <i class="bi bi-shield-exclamation"></i>
+            تقارير وتحليلات
+        </div>
+        <h1 class="page-header-title">لوحة تحليلات الحوادث</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">الرئيسية</a></li>
+                <li class="breadcrumb-item"><a href="/safety" class="text-decoration-none">الصحة والسلامة</a></li>
+                <li class="breadcrumb-item active">تحليلات الحوادث</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/safety" class="btn btn-ghost">
+            <i class="bi bi-arrow-right me-2"></i>رجوع
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Admin notice -->
+<div class="alert alert-primary d-flex gap-3 align-items-start mb-4" style="border-radius:var(--kinjo-radius-lg);">
+    <i class="bi bi-info-circle-fill flex-shrink-0 fs-5 mt-1"></i>
+    <div style="font-size:0.875rem;">
+        <span class="fw-700">لوحة المراقبة والتحليل — </span>
+        هذه اللوحة مخصصة للمشرف العام لمراجعة إحصائيات الحوادث عبر الروضات.
+        لا يمكن للمشرف العام تسجيل حوادث جديدة.
+    </div>
+</div>
+
+<!-- ── Filters ───────────────────────────────────────────────────────────────── -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="card-title-sm mb-0"><i class="bi bi-funnel-fill me-2 text-primary"></i>فلاتر التقرير</h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="field-label mb-1">الروضة</label>
+                <select class="form-select form-select-sm" id="filterKg">
+                    <option value="">جميع الروضات</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="field-label mb-1">نوع الحادث</label>
+                <select class="form-select form-select-sm" id="filterType">
+                    <option value="">جميع الأنواع</option>
+                    <option value="INJURY">إصابة جسدية</option>
+                    <option value="ILLNESS">مرض</option>
+                    <option value="ALLERGY">حساسية</option>
+                    <option value="BEHAVIOR">سلوكي</option>
+                    <option value="OTHER">أخرى</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="field-label mb-1">تصنيف الحادث</label>
+                <select class="form-select form-select-sm" id="filterClass">
+                    <option value="">جميع التصنيفات</option>
+                    <option value="ACCIDENT">حادث عرضي</option>
+                    <option value="BEHAVIORAL">سلوكي</option>
+                    <option value="MEDICAL">طبي</option>
+                    <option value="ENVIRONMENTAL">بيئي</option>
+                    <option value="OTHER">أخرى</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="field-label mb-1">درجة الخطورة</label>
+                <select class="form-select form-select-sm" id="filterSeverity">
+                    <option value="">جميع الدرجات</option>
+                    <option value="LOW">منخفض</option>
+                    <option value="MEDIUM">متوسط</option>
+                    <option value="HIGH">عالٍ</option>
+                    <option value="CRITICAL">حرج</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="field-label mb-1">إبلاغ ولي الأمر</label>
+                <select class="form-select form-select-sm" id="filterParentInformed">
+                    <option value="">الكل</option>
+                    <option value="true">تم الإبلاغ</option>
+                    <option value="false">لم يتم الإبلاغ</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="field-label mb-1">من تاريخ</label>
+                <input type="date" class="form-control form-control-sm" id="filterFrom">
+            </div>
+            <div class="col-md-3">
+                <label class="field-label mb-1">إلى تاريخ</label>
+                <input type="date" class="form-control form-control-sm" id="filterTo">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-primary btn-sm w-100" onclick="loadAnalytics()">
+                    <i class="bi bi-search me-1"></i>تطبيق الفلاتر
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── KPI Cards ─────────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4 stagger-children" id="kpiRow">
+    <div class="col-6 col-md-2">
+        <div class="stat-card card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">إجمالي الحوادث</div>
+                    <div class="stat-value" id="kpiTotal">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="stat-card warning card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">مفتوحة</div>
+                    <div class="stat-value" id="kpiOpen">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="stat-card success card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">مغلقة</div>
+                    <div class="stat-value" id="kpiClosed">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="stat-card danger card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">تم إبلاغ الأهل</div>
+                    <div class="stat-value" id="kpiInformed">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(79,70,229,0.12);color:var(--kinjo-primary);">
+                    <i class="bi bi-bell-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="stat-card card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">لم يُبلَّغ الأهل</div>
+                    <div class="stat-value" id="kpiNotInformed">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
+                    <i class="bi bi-bell-slash-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="stat-card card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">أطفال متكررون</div>
+                    <div class="stat-value" id="kpiRepeated">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
+                    <i class="bi bi-person-exclamation"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Charts Row ────────────────────────────────────────────────────────────── -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0"><i class="bi bi-bar-chart-fill me-2 text-primary"></i>توزيع الخطورة</h6>
+            </div>
+            <div class="card-body" id="severityChart">
+                <div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0"><i class="bi bi-pie-chart-fill me-2 text-primary"></i>توزيع النوع</h6>
+            </div>
+            <div class="card-body" id="typeChart">
+                <div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0"><i class="bi bi-tags-fill me-2 text-primary"></i>توزيع التصنيف</h6>
+            </div>
+            <div class="card-body" id="classificationChart">
+                <div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- By Kindergarten Table -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-building-fill me-2 text-primary"></i>عدد الحوادث حسب الروضة
+                </h6>
+                <span class="badge bg-danger" id="highRiskBadge" style="display:none;">روضات عالية الخطر</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">الروضة</th>
+                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">عدد الحوادث</th>
+                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">المستوى</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kgTable"><tr><td colspan="3" class="text-center text-muted py-3">جاري التحميل...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Repeated Children Alert -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header" style="background:rgba(239,68,68,0.06);">
+                <h6 class="card-title-sm mb-0" style="color:var(--kinjo-danger);">
+                    <i class="bi bi-person-exclamation me-2"></i>أطفال بحوادث متكررة
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">معرّف الطفل</th>
+                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">عدد الحوادث</th>
+                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">الإجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody id="repeatedTable"><tr><td colspan="3" class="text-center text-muted py-3">جاري التحميل...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-danger,#ef4444);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.field-label { font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block; }
+.fw-700 { font-weight:700; }
+
+/* Mini bar chart */
+.mini-bar-wrap { display:flex;flex-direction:column;gap:0.5rem; }
+.mini-bar-row { display:flex;align-items:center;gap:0.75rem; }
+.mini-bar-label { min-width:80px;font-size:0.78rem;font-weight:600;color:var(--kinjo-text-secondary);text-align:end; }
+.mini-bar-track { flex:1;background:var(--kinjo-border);border-radius:50px;height:10px;overflow:hidden; }
+.mini-bar-fill  { height:100%;border-radius:50px;transition:width 0.4s ease; }
+.mini-bar-count { min-width:24px;font-size:0.78rem;font-weight:700;color:var(--kinjo-text-primary); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    "use strict";
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    const authHeaders = { 'Authorization': `Bearer ${token}` };
+
+    // Load kindergartens for filter
+    async function loadKindergartenOptions() {
+        try {
+            const r = await fetch('/api/kindergartens', { headers: authHeaders });
+            if (!r.ok) return;
+            const data = await r.json();
+            const kg = data.kindergartens || data || [];
+            const sel = document.getElementById('filterKg');
+            kg.forEach(k => {
+                const opt = document.createElement('option');
+                opt.value = k.id;
+                opt.textContent = k.name_ar || k.name_en || `روضة #${k.id}`;
+                sel.appendChild(opt);
+            });
+        } catch {}
+    }
+
+    async function loadAnalytics() {
+        const params = new URLSearchParams();
+        const kg = document.getElementById('filterKg').value;
+        const type = document.getElementById('filterType').value;
+        const cls = document.getElementById('filterClass').value;
+        const sev = document.getElementById('filterSeverity').value;
+        const pi  = document.getElementById('filterParentInformed').value;
+        const from = document.getElementById('filterFrom').value;
+        const to   = document.getElementById('filterTo').value;
+
+        if (kg)   params.set('kindergarten_id', kg);
+        if (type) params.set('incident_type', type);
+        if (cls)  params.set('classification', cls);
+        if (sev)  params.set('severity', sev);
+        if (pi)   params.set('parent_informed', pi);
+        if (from) params.set('date_from', from);
+        if (to)   params.set('date_to', to);
+
+        try {
+            const r = await fetch(`/api/safety/analytics?${params.toString()}`, { headers: authHeaders });
+            if (!r.ok) {
+                console.error('Analytics fetch failed', r.status);
+                return;
+            }
+            const data = await r.json();
+            renderKPIs(data);
+            renderSeverityChart(data.by_severity || {});
+            renderTypeChart(data.by_type || {});
+            renderClassificationChart(data.by_classification || {});
+            renderKgTable(data.by_kindergarten || {}, data.high_risk_kindergartens || {});
+            renderRepeatedTable(data.repeated_children || {});
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function renderKPIs(data) {
+        document.getElementById('kpiTotal').textContent       = data.total ?? '—';
+        document.getElementById('kpiOpen').textContent        = data.open ?? '—';
+        document.getElementById('kpiClosed').textContent      = data.closed ?? '—';
+        document.getElementById('kpiInformed').textContent    = data.parent_informed ?? '—';
+        document.getElementById('kpiNotInformed').textContent = data.parent_not_informed ?? '—';
+        document.getElementById('kpiRepeated').textContent    = Object.keys(data.repeated_children || {}).length;
+    }
+
+    function renderMiniBar(containerId, dataObj, colorMap) {
+        const el = document.getElementById(containerId);
+        const entries = Object.entries(dataObj);
+        if (!entries.length) {
+            el.innerHTML = '<p class="text-muted text-center py-3 mb-0" style="font-size:0.85rem;">لا توجد بيانات</p>';
+            return;
+        }
+        const max = Math.max(...entries.map(([, v]) => v), 1);
+        el.innerHTML = `<div class="mini-bar-wrap">${
+            entries.map(([key, val]) => {
+                const pct = Math.round((val / max) * 100);
+                const color = colorMap[key] || '#6366f1';
+                const label = labelMap[key] || key;
+                return `<div class="mini-bar-row">
+                    <span class="mini-bar-label">${label}</span>
+                    <div class="mini-bar-track">
+                        <div class="mini-bar-fill" style="width:${pct}%;background:${color};"></div>
+                    </div>
+                    <span class="mini-bar-count">${val}</span>
+                </div>`;
+            }).join('')
+        }</div>`;
+    }
+
+    const labelMap = {
+        INJURY:'إصابة', ILLNESS:'مرض', ALLERGY:'حساسية', BEHAVIOR:'سلوكي', OTHER:'أخرى',
+        ACCIDENT:'حادث عرضي', BEHAVIORAL:'سلوكي', MEDICAL:'طبي', ENVIRONMENTAL:'بيئي',
+        LOW:'منخفض', MEDIUM:'متوسط', HIGH:'عالٍ', CRITICAL:'حرج',
+        UNKNOWN: 'غير محدد'
+    };
+
+    const severityColors = { LOW:'#0891b2', MEDIUM:'#d97706', HIGH:'#ef4444', CRITICAL:'#7c3aed', UNKNOWN:'#94a3b8' };
+    const typeColors     = { INJURY:'#ef4444', ILLNESS:'#f59e0b', ALLERGY:'#06b6d4', BEHAVIOR:'#8b5cf6', OTHER:'#64748b' };
+    const clsColors      = { ACCIDENT:'#ef4444', BEHAVIORAL:'#8b5cf6', MEDICAL:'#06b6d4', ENVIRONMENTAL:'#10b981', OTHER:'#64748b' };
+
+    function renderSeverityChart(data)        { renderMiniBar('severityChart', data, severityColors); }
+    function renderTypeChart(data)            { renderMiniBar('typeChart', data, typeColors); }
+    function renderClassificationChart(data)  { renderMiniBar('classificationChart', data, clsColors); }
+
+    function renderKgTable(byKg, highRisk) {
+        const tbody = document.getElementById('kgTable');
+        const badge = document.getElementById('highRiskBadge');
+        const entries = Object.entries(byKg).sort((a, b) => b[1] - a[1]);
+        if (!entries.length) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">لا توجد بيانات</td></tr>';
+            return;
+        }
+        const hrCount = Object.keys(highRisk).length;
+        if (hrCount > 0) { badge.textContent = `${hrCount} روضة عالية الخطر`; badge.style.display = ''; }
+        tbody.innerHTML = entries.map(([kgId, count]) => {
+            const isHigh = highRisk[kgId];
+            return `<tr>
+                <td style="font-size:0.84rem;">روضة #${kgId}</td>
+                <td style="font-size:0.84rem;font-weight:700;">${count}</td>
+                <td>${isHigh
+                    ? '<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--kinjo-danger);font-size:0.72rem;">خطر مرتفع</span>'
+                    : '<span class="badge" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);font-size:0.72rem;">طبيعي</span>'
+                }</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function renderRepeatedTable(repeated) {
+        const tbody = document.getElementById('repeatedTable');
+        const entries = Object.entries(repeated).sort((a, b) => b[1] - a[1]);
+        if (!entries.length) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3 small">لا توجد أطفال بحوادث متكررة</td></tr>';
+            return;
+        }
+        tbody.innerHTML = entries.map(([childId, count]) => `
+            <tr>
+                <td style="font-size:0.84rem;">طفل #${childId}</td>
+                <td style="font-size:0.84rem;font-weight:700;color:var(--kinjo-danger);">${count}</td>
+                <td><a href="/children/${childId}" class="btn btn-ghost btn-sm px-2" style="font-size:0.75rem;">عرض الملف</a></td>
+            </tr>`).join('');
+    }
+
+    // Init
+    loadKindergartenOptions().then(() => loadAnalytics());
+})();
+</script>
+{% endblock %}

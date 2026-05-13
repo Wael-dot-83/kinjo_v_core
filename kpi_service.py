@@ -372,6 +372,34 @@ class KPIService:
             current_date += timedelta(days=1)
 
     @staticmethod
+    def compute_parent_satisfaction(
+        db: Session,
+        kindergarten_id: int,
+        period_start: date,
+        period_end: date
+    ) -> float:
+        """
+        Parent satisfaction score (0-100) derived from NPS survey responses.
+        Calculates average NPS score (0-10 scale) converted to 0-100 percentage.
+        Falls back to 75.0 when no survey data is available for the period.
+        """
+        avg_score = db.query(func.avg(models.SurveyResponse.nps_score)).join(
+            models.Survey,
+            models.SurveyResponse.survey_id == models.Survey.id
+        ).filter(
+            models.Survey.kindergarten_id == kindergarten_id,
+            models.Survey.deleted_at.is_(None),
+            models.SurveyResponse.nps_score.isnot(None),
+            models.Survey.start_date <= period_end,
+            models.Survey.end_date >= period_start
+        ).scalar()
+
+        if avg_score is None:
+            return 75.0  # Neutral default when no survey data
+
+        return round(float(avg_score) * 10.0, 2)
+
+    @staticmethod
     def compute_child_experience_index(
         db: Session,
         kindergarten_id: int,
@@ -383,7 +411,7 @@ class KPIService:
         - Attendance rate
         - Chronic absence (inverted)
         - Serious incidents (inverted)
-        - Parent satisfaction (placeholder)
+        - Parent satisfaction (from NPS surveys)
         """
         weights = {
             'attendance_rate': 0.30,
@@ -404,8 +432,9 @@ class KPIService:
             db, kindergarten_id, period_start, period_end
         )
 
-        # Placeholder
-        parent_satisfaction = 85.0  # Would compute from survey results
+        parent_satisfaction = KPIService.compute_parent_satisfaction(
+            db, kindergarten_id, period_start, period_end
+        )
 
         # CEI calculation (invert negative metrics)
         cei = (
@@ -751,3 +780,75 @@ def get_kpi_summary(
         ratio_compliance=ratio_comp,
         gqi_score=gqi
     )
+
+
+@router.get("/kpi/network-summary")
+def get_kpi_network_summary(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Network-wide KPI aggregate across all active kindergartens (Admin only)"""
+    validators.validate_admin_role(current_user)
+
+    if not start_date or not end_date:
+        today = date.today()
+        start_date = today.replace(day=1)
+        if today.month == 12:
+            end_date = date(today.year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(today.year, today.month + 1, 1) - timedelta(days=1)
+
+    active_kg_ids = [
+        row[0] for row in db.query(models.Kindergarten.id).filter(
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+        ).all()
+    ]
+
+    if not active_kg_ids:
+        return {
+            "period_start": start_date.isoformat(),
+            "period_end": end_date.isoformat(),
+            "kindergarten_count": 0,
+            "avg_attendance_rate": 0.0,
+            "avg_incident_rate": 0.0,
+            "avg_serious_incident_rate": 0.0,
+            "avg_ratio_compliance": 0.0,
+            "avg_gqi_score": 0.0,
+            "per_kindergarten": []
+        }
+
+    per_kg = []
+    for kg_id in active_kg_ids:
+        kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kg_id).first()
+        att = KPIService.compute_attendance_rate(db, kg_id, start_date, end_date)
+        inc = KPIService.compute_incident_rate(db, kg_id, start_date, end_date)
+        ser = KPIService.compute_serious_incident_rate(db, kg_id, start_date, end_date)
+        ratio = KPIService.compute_ratio_compliance(db, kg_id, start_date, end_date)
+        gqi = KPIService.compute_governance_quality_index(db, kg_id, start_date, end_date)
+        _, band = KPIService.compute_governance_score(db, kg_id, start_date, end_date)
+        per_kg.append({
+            "kindergarten_id": kg_id,
+            "kindergarten_name": kg.name_ar if kg else "",
+            "governorate": kg.governorate if kg else "",
+            "attendance_rate": att,
+            "incident_rate": inc,
+            "serious_incident_rate": ser,
+            "ratio_compliance": ratio,
+            "gqi_score": gqi,
+            "governance_band": band
+        })
+
+    n = len(per_kg)
+    return {
+        "period_start": start_date.isoformat(),
+        "period_end": end_date.isoformat(),
+        "kindergarten_count": n,
+        "avg_attendance_rate": round(sum(k["attendance_rate"] for k in per_kg) / n, 2),
+        "avg_incident_rate": round(sum(k["incident_rate"] for k in per_kg) / n, 4),
+        "avg_serious_incident_rate": round(sum(k["serious_incident_rate"] for k in per_kg) / n, 4),
+        "avg_ratio_compliance": round(sum(k["ratio_compliance"] for k in per_kg) / n, 2),
+        "avg_gqi_score": round(sum(k["gqi_score"] for k in per_kg) / n, 2),
+        "per_kindergarten": per_kg
+    }

@@ -130,14 +130,183 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, case, desc, asc
 from pydantic import BaseModel, Field
 from enum import Enum
+import csv
+import io
+import os
+import pathlib
 
 import models
-from database import get_db
+from database import get_db, SessionLocal
 from dependencies import get_current_user
 from kpi_service import KPIService
 import validators
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
+
+# Directory where generated export files are stored
+_EXPORTS_DIR = pathlib.Path(__file__).parent / "exports"
+_EXPORTS_DIR.mkdir(exist_ok=True)
+
+
+def _process_export_job(job_id: int) -> None:
+    """Background task: generate the requested export file and update the job record."""
+    db = SessionLocal()
+    try:
+        job = db.query(models.ExportJob).filter(models.ExportJob.id == job_id).first()
+        if not job:
+            return
+
+        job.status = models.ExportStatus.PROCESSING
+        job.started_at = datetime.utcnow()
+        db.commit()
+
+        filters: dict = job.filters or {}
+        kg_id: int | None = filters.get("kindergarten_id")
+        start_date: date | None = None
+        end_date: date | None = None
+        try:
+            if filters.get("start_date"):
+                start_date = date.fromisoformat(filters["start_date"])
+            if filters.get("end_date"):
+                end_date = date.fromisoformat(filters["end_date"])
+        except (ValueError, TypeError):
+            pass
+
+        rows: list[dict] = []
+        report_type = (job.report_type or "").lower()
+
+        if report_type in ("attendance", "attendance_summary"):
+            q = db.query(
+                models.AttendanceLog.date,
+                models.Child.first_name,
+                models.Child.last_name,
+                models.AttendanceLog.check_in_at,
+                models.AttendanceLog.check_out_at,
+                models.AttendanceLog.method,
+            ).join(models.Child, models.AttendanceLog.child_id == models.Child.id)
+            if kg_id:
+                q = q.join(models.EnrollmentApplication,
+                           models.EnrollmentApplication.child_id == models.Child.id
+                           ).filter(models.EnrollmentApplication.kindergarten_id == kg_id)
+            if start_date:
+                q = q.filter(models.AttendanceLog.date >= start_date)
+            if end_date:
+                q = q.filter(models.AttendanceLog.date <= end_date)
+            for r in q.order_by(models.AttendanceLog.date.desc()).all():
+                rows.append({
+                    "date": str(r.date),
+                    "child_first_name": r.first_name,
+                    "child_last_name": r.last_name,
+                    "check_in_at": str(r.check_in_at) if r.check_in_at else "",
+                    "check_out_at": str(r.check_out_at) if r.check_out_at else "",
+                    "method": r.method.value if r.method else "",
+                })
+
+        elif report_type in ("incidents", "incident_report"):
+            q = db.query(
+                models.Incident.id,
+                models.Incident.type,
+                models.Incident.severity_level,
+                models.Incident.description,
+                models.Incident.occurred_at,
+                models.Incident.closed_at,
+                models.Child.first_name,
+                models.Child.last_name,
+            ).join(models.Child, models.Incident.child_id == models.Child.id)
+            if kg_id:
+                q = q.filter(models.Incident.kindergarten_id == kg_id)
+            if start_date:
+                q = q.filter(func.date(models.Incident.occurred_at) >= start_date)
+            if end_date:
+                q = q.filter(func.date(models.Incident.occurred_at) <= end_date)
+            for r in q.order_by(models.Incident.occurred_at.desc()).all():
+                rows.append({
+                    "incident_id": r.id,
+                    "type": r.type.value if r.type else "",
+                    "severity": r.severity_level.value if r.severity_level else "",
+                    "description": r.description,
+                    "occurred_at": str(r.occurred_at),
+                    "closed_at": str(r.closed_at) if r.closed_at else "",
+                    "child_first_name": r.first_name,
+                    "child_last_name": r.last_name,
+                })
+
+        elif report_type in ("enrollment", "enrollments", "enrollment_report"):
+            q = db.query(
+                models.EnrollmentApplication.id,
+                models.EnrollmentApplication.status,
+                models.EnrollmentApplication.submitted_at,
+                models.EnrollmentApplication.enrollment_start_date,
+                models.Child.first_name,
+                models.Child.last_name,
+            ).join(models.Child, models.EnrollmentApplication.child_id == models.Child.id)
+            if kg_id:
+                q = q.filter(models.EnrollmentApplication.kindergarten_id == kg_id)
+            for r in q.order_by(models.EnrollmentApplication.submitted_at.desc()).all():
+                rows.append({
+                    "enrollment_id": r.id,
+                    "status": r.status.value if r.status else "",
+                    "submitted_at": str(r.submitted_at) if r.submitted_at else "",
+                    "start_date": str(r.enrollment_start_date) if r.enrollment_start_date else "",
+                    "child_first_name": r.first_name,
+                    "child_last_name": r.last_name,
+                })
+
+        else:
+            # Generic overview: enrollment counts by status
+            counts = (
+                db.query(models.EnrollmentApplication.status, func.count(models.EnrollmentApplication.id))
+                .group_by(models.EnrollmentApplication.status)
+                .all()
+            )
+            rows = [{"status": s.value, "count": c} for s, c in counts]
+
+        # --- Write file ---
+        fmt = job.export_format
+        file_stem = f"export_{job_id}_{report_type}"
+
+        if fmt == models.ExportFormat.EXCEL:
+            try:
+                import openpyxl  # type: ignore
+                wb = openpyxl.Workbook()
+                ws = wb.active
+                ws.title = report_type[:31]
+                if rows:
+                    ws.append(list(rows[0].keys()))
+                    for row in rows:
+                        ws.append(list(row.values()))
+                file_name = file_stem + ".xlsx"
+                file_path = _EXPORTS_DIR / file_name
+                wb.save(str(file_path))
+            except ImportError:
+                # Fallback to CSV if openpyxl not installed
+                fmt = models.ExportFormat.CSV
+
+        if fmt in (models.ExportFormat.CSV, models.ExportFormat.PDF):
+            # PDF not supported — generate CSV
+            file_name = file_stem + (".csv" if fmt == models.ExportFormat.CSV else ".csv")
+            file_path = _EXPORTS_DIR / file_name
+            with open(file_path, "w", newline="", encoding="utf-8-sig") as f:
+                if rows:
+                    writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+                    writer.writeheader()
+                    writer.writerows(rows)
+
+        job.file_path = str(file_path)
+        job.file_size = os.path.getsize(str(file_path))
+        job.status = models.ExportStatus.COMPLETED
+        job.completed_at = datetime.utcnow()
+        db.commit()
+
+    except Exception as exc:  # pragma: no cover
+        try:
+            job.status = models.ExportStatus.FAILED
+            job.error_message = str(exc)[:500]
+            db.commit()
+        except Exception:
+            pass
+    finally:
+        db.close()
 
 
 # =============================================================================
@@ -373,22 +542,240 @@ class AnalyticsService:
                 models.HealthAlert.created_at <= period_end
             ).count()
 
-            # Curriculum progress (placeholder: set to None or compute if available)
-            curriculum_progress = None
+            # Curriculum progress: % of children with EXCEEDS mastery observation in period
+            total_children = db.query(func.count(models.EnrollmentApplication.id)).filter(
+                models.EnrollmentApplication.kindergarten_id == kg_id,
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+            ).scalar() or 0
 
-            # Advanced, predictive, and correlation metrics (placeholders)
-            # TODO: Implement real calculations for these metrics
-            parent_satisfaction_nps = None
-            child_development_index = None
+            if total_children > 0:
+                children_with_exceeds = db.query(
+                    func.count(func.distinct(models.Observation.child_id))
+                ).join(
+                    models.EnrollmentApplication,
+                    models.EnrollmentApplication.child_id == models.Observation.child_id
+                ).filter(
+                    models.EnrollmentApplication.kindergarten_id == kg_id,
+                    models.Observation.mastery_level == models.MasteryLevel.EXCEEDS,
+                    func.date(models.Observation.observed_at) >= period_start,
+                    func.date(models.Observation.observed_at) <= period_end
+                ).scalar() or 0
+                curriculum_progress = round((children_with_exceeds / total_children) * 100, 2)
+            else:
+                curriculum_progress = None
+
+            # Parent satisfaction NPS from survey responses
+            avg_nps = db.query(func.avg(models.SurveyResponse.nps_score)).join(
+                models.Survey,
+                models.SurveyResponse.survey_id == models.Survey.id
+            ).filter(
+                models.Survey.kindergarten_id == kg_id,
+                models.Survey.deleted_at.is_(None),
+                models.SurveyResponse.nps_score.isnot(None),
+                models.Survey.start_date <= period_end,
+                models.Survey.end_date >= period_start
+            ).scalar()
+            parent_satisfaction_nps = round(float(avg_nps) * 10.0, 2) if avg_nps is not None else None
+
+            # Regulatory compliance score: license validity (50%) + ratio compliance (50%)
+            kg_obj = db.query(models.Kindergarten).filter(models.Kindergarten.id == kg_id).first()
+            license_score = 100.0
+            if kg_obj and kg_obj.license_valid_until:
+                if kg_obj.license_valid_until < period_end:
+                    license_score = 0.0
+                elif kg_obj.license_valid_until < period_end + timedelta(days=30):
+                    license_score = 50.0
+            regulatory_compliance_score = round(
+                (license_score * 0.5 + (ratio_compliance_rate or 100.0) * 0.5), 2
+            )
+
+            # Attendance trend slope: linear regression over weekly attendance rates
+            from datetime import timedelta as _td
+            weekly_rates = []
+            week_start = period_start
+            while week_start <= period_end:
+                week_end = min(week_start + _td(days=6), period_end)
+                weekly_rate = KPIService.compute_attendance_rate(db, kg_id, week_start, week_end)
+                weekly_rates.append(weekly_rate)
+                week_start += _td(days=7)
+            if len(weekly_rates) >= 2:
+                n = len(weekly_rates)
+                x_mean = (n - 1) / 2.0
+                y_mean = sum(weekly_rates) / n
+                numerator = sum((i - x_mean) * (weekly_rates[i] - y_mean) for i in range(n))
+                denominator = sum((i - x_mean) ** 2 for i in range(n))
+                attendance_trend_slope = round(numerator / denominator, 4) if denominator != 0 else 0.0
+            else:
+                attendance_trend_slope = None
+
+            # Risk score: composite of chronic absence (40%) + incident rate (30%) + ratio non-compliance (30%)
+            if all(v is not None for v in [chronic_absence_rate, incident_rate_per_100, ratio_compliance_rate]):
+                risk_score = round(
+                    (chronic_absence_rate * 0.4) +
+                    (min(incident_rate_per_100, 100.0) * 0.3) +
+                    ((100.0 - ratio_compliance_rate) * 0.3),
+                    2
+                )
+            else:
+                risk_score = None
+
+            # Improvement velocity: requires a previous period's governance score for comparison
+            prev_period_len = (period_end - period_start).days + 1
+            prev_end = period_start - timedelta(days=1)
+            prev_start = prev_end - timedelta(days=prev_period_len - 1)
+            prev_cache = db.query(models.AdvancedAnalyticsCache).filter(
+                models.AdvancedAnalyticsCache.dimension_type == models.AnalyticsDimensionType.KINDERGARTEN,
+                models.AdvancedAnalyticsCache.dimension_id == str(kg_id),
+                models.AdvancedAnalyticsCache.period_start == prev_start,
+                models.AdvancedAnalyticsCache.period_end == prev_end
+            ).first()
+            if prev_cache and prev_cache.attendance_rate is not None and attendance_rate is not None:
+                improvement_velocity = round(attendance_rate - prev_cache.attendance_rate, 2)
+            else:
+                improvement_velocity = None
+
+            # Attendance-incident correlation: Pearson correlation over weekly data
+            if len(weekly_rates) >= 3:
+                week_start = period_start
+                weekly_incidents = []
+                while week_start <= period_end:
+                    week_end = min(week_start + timedelta(days=6), period_end)
+                    inc_count = db.query(func.count(models.Incident.id)).filter(
+                        models.Incident.kindergarten_id == kg_id,
+                        func.date(models.Incident.occurred_at) >= week_start,
+                        func.date(models.Incident.occurred_at) <= week_end
+                    ).scalar() or 0
+                    weekly_incidents.append(float(inc_count))
+                    week_start += timedelta(days=7)
+                n = len(weekly_rates)
+                if n == len(weekly_incidents) and n >= 3:
+                    x_mean = sum(weekly_rates) / n
+                    y_mean = sum(weekly_incidents) / n
+                    cov = sum((weekly_rates[i] - x_mean) * (weekly_incidents[i] - y_mean) for i in range(n))
+                    std_x = (sum((v - x_mean) ** 2 for v in weekly_rates)) ** 0.5
+                    std_y = (sum((v - y_mean) ** 2 for v in weekly_incidents)) ** 0.5
+                    if std_x > 0 and std_y > 0:
+                        attendance_incident_correlation = round(cov / (std_x * std_y), 4)
+                    else:
+                        attendance_incident_correlation = None
+                else:
+                    attendance_incident_correlation = None
+            else:
+                attendance_incident_correlation = None
+
+            # Staffing-quality correlation: ratio compliance vs attendance rate over weeks
+            if len(weekly_rates) >= 3:
+                week_start = period_start
+                weekly_ratio = []
+                while week_start <= period_end:
+                    week_end = min(week_start + timedelta(days=6), period_end)
+                    wr = KPIService.compute_ratio_compliance(db, kg_id, week_start, week_end)
+                    weekly_ratio.append(wr)
+                    week_start += timedelta(days=7)
+                n = len(weekly_rates)
+                if n == len(weekly_ratio) and n >= 3:
+                    x_mean = sum(weekly_ratio) / n
+                    y_mean = sum(weekly_rates) / n
+                    cov = sum((weekly_ratio[i] - x_mean) * (weekly_rates[i] - y_mean) for i in range(n))
+                    std_x = (sum((v - x_mean) ** 2 for v in weekly_ratio)) ** 0.5
+                    std_y = (sum((v - y_mean) ** 2 for v in weekly_rates)) ** 0.5
+                    if std_x > 0 and std_y > 0:
+                        staffing_quality_correlation = round(cov / (std_x * std_y), 4)
+                    else:
+                        staffing_quality_correlation = None
+                else:
+                    staffing_quality_correlation = None
+            else:
+                staffing_quality_correlation = None
+
+            # Child development index: average mastery level across all observations in period
+            # EXCEEDS=3, ON_TRACK=2, NEEDS_SUPPORT=1
+            mastery_map = {
+                models.MasteryLevel.EXCEEDS: 3,
+                models.MasteryLevel.ON_TRACK: 2,
+                models.MasteryLevel.NEEDS_SUPPORT: 1
+            }
+            obs_records = db.query(models.Observation.mastery_level).join(
+                models.EnrollmentApplication,
+                models.EnrollmentApplication.child_id == models.Observation.child_id
+            ).filter(
+                models.EnrollmentApplication.kindergarten_id == kg_id,
+                models.Observation.mastery_level.isnot(None),
+                func.date(models.Observation.observed_at) >= period_start,
+                func.date(models.Observation.observed_at) <= period_end
+            ).all()
+            if obs_records:
+                scores = [mastery_map.get(r.mastery_level, 0) for r in obs_records if r.mastery_level in mastery_map]
+                child_development_index = round((sum(scores) / (len(scores) * 3)) * 100, 2) if scores else None
+            else:
+                child_development_index = None
+
+            # Staff turnover rate: not tracked via dedicated model; set to None
             staff_turnover_rate = None
-            regulatory_compliance_score = None
-            attendance_trend_slope = None
-            risk_score = None
-            improvement_velocity = None
-            attendance_incident_correlation = None
-            staffing_quality_correlation = None
 
-        # TODO: Add logic for other dimension types (NETWORK, GOVERNORATE, etc.)
+        elif dimension_type == models.AnalyticsDimensionType.GOVERNORATE:
+            # Aggregate metrics across all kindergartens in this governorate
+            governorate_name = str(dimension_id)
+            kg_ids = [
+                kg.id for kg in db.query(models.Kindergarten).filter(
+                    models.Kindergarten.governorate == governorate_name,
+                    models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+                ).all()
+            ]
+            if kg_ids:
+                rates = [KPIService.compute_attendance_rate(db, k, period_start, period_end) for k in kg_ids]
+                attendance_rate = round(sum(rates) / len(rates), 2)
+                ca_rates = [KPIService.compute_chronic_absence_rate(db, k, period_start, period_end) for k in kg_ids]
+                chronic_absence_rate = round(sum(ca_rates) / len(ca_rates), 2)
+                ir_rates = [KPIService.compute_incident_rate(db, k, period_start, period_end) for k in kg_ids]
+                incident_rate_per_100 = round(sum(ir_rates) / len(ir_rates), 2)
+                sir_rates = [KPIService.compute_serious_incident_rate(db, k, period_start, period_end) for k in kg_ids]
+                serious_incident_rate = round(sum(sir_rates) / len(sir_rates), 2)
+                rc_rates = [KPIService.compute_ratio_compliance(db, k, period_start, period_end) for k in kg_ids]
+                ratio_compliance_rate = round(sum(rc_rates) / len(rc_rates), 2)
+                risk_score = round(
+                    (chronic_absence_rate * 0.4) +
+                    (min(incident_rate_per_100, 100.0) * 0.3) +
+                    ((100.0 - ratio_compliance_rate) * 0.3), 2
+                )
+            else:
+                attendance_rate = 0.0
+                chronic_absence_rate = 0.0
+                incident_rate_per_100 = 0.0
+                serious_incident_rate = 0.0
+                ratio_compliance_rate = 0.0
+                risk_score = None
+
+        elif dimension_type == models.AnalyticsDimensionType.NETWORK:
+            # Aggregate metrics across all kindergartens (platform-wide network view)
+            all_kg_ids = [
+                kg.id for kg in db.query(models.Kindergarten).filter(
+                    models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+                ).all()
+            ]
+            if all_kg_ids:
+                rates = [KPIService.compute_attendance_rate(db, k, period_start, period_end) for k in all_kg_ids]
+                attendance_rate = round(sum(rates) / len(rates), 2)
+                ca_rates = [KPIService.compute_chronic_absence_rate(db, k, period_start, period_end) for k in all_kg_ids]
+                chronic_absence_rate = round(sum(ca_rates) / len(ca_rates), 2)
+                ir_rates = [KPIService.compute_incident_rate(db, k, period_start, period_end) for k in all_kg_ids]
+                incident_rate_per_100 = round(sum(ir_rates) / len(ir_rates), 2)
+                sir_rates = [KPIService.compute_serious_incident_rate(db, k, period_start, period_end) for k in all_kg_ids]
+                serious_incident_rate = round(sum(sir_rates) / len(sir_rates), 2)
+                rc_rates = [KPIService.compute_ratio_compliance(db, k, period_start, period_end) for k in all_kg_ids]
+                ratio_compliance_rate = round(sum(rc_rates) / len(rc_rates), 2)
+                risk_score = round(
+                    (chronic_absence_rate * 0.4) +
+                    (min(incident_rate_per_100, 100.0) * 0.3) +
+                    ((100.0 - ratio_compliance_rate) * 0.3), 2
+                )
+            else:
+                attendance_rate = 0.0
+                chronic_absence_rate = 0.0
+                incident_rate_per_100 = 0.0
+                serious_incident_rate = 0.0
+                ratio_compliance_rate = 0.0
+                risk_score = None
 
         cache = models.AdvancedAnalyticsCache(
             dimension_type=dimension_type,
@@ -966,11 +1353,11 @@ class AnalyticsService:
         # By type
         type_counts = {}
         for inc_type in models.IncidentType:
-            count = query.filter(models.Incident.incident_type == inc_type).count()
+            count = query.filter(models.Incident.type == inc_type).count()
             type_counts[inc_type.value] = count
 
-        # Resolution rate
-        resolved = query.filter(models.Incident.resolved_at.isnot(None)).count()
+        # Resolution rate (closed_at is the field, not resolved_at)
+        resolved = query.filter(models.Incident.closed_at.isnot(None)).count()
         resolution_rate = (resolved / total_incidents * 100) if total_incidents > 0 else 0
 
         return {
@@ -1063,16 +1450,206 @@ class AnalyticsService:
             count = query.filter(models.DailyReport.status == status).count()
             status_counts[status.value] = count
 
-        # Completion rate
-        sent_count = status_counts.get("SENT", 0)
-        completion_rate = (sent_count / total_reports * 100) if total_reports > 0 else 0
+        # Completion rate — sent to parent is the final completed state
+        sent_count = status_counts.get("SENT_TO_PARENT", 0)
+        approved_count = status_counts.get("APPROVED", 0)
+        completed_count = sent_count + approved_count
+        completion_rate = (completed_count / total_reports * 100) if total_reports > 0 else 0
 
         return {
             "total_reports": total_reports,
             "status_breakdown": status_counts,
             "sent_count": sent_count,
+            "approved_count": approved_count,
+            "completed_count": completed_count,
             "completion_rate": round(completion_rate, 2)
         }
+
+    @staticmethod
+    def get_attendance_by_class(
+        db: Session,
+        kindergarten_id: int,
+        period_start: date,
+        period_end: date
+    ) -> List[Dict[str, Any]]:
+        """Per-class attendance breakdown for a kindergarten"""
+        classes = db.query(models.Class).filter(
+            models.Class.kindergarten_id == kindergarten_id,
+            models.Class.is_active == True
+        ).all()
+
+        days_in_period = (period_end - period_start).days + 1
+        results = []
+        for cls in classes:
+            children_count = db.query(func.count(models.EnrollmentApplication.id)).filter(
+                models.EnrollmentApplication.class_id == cls.id,
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+            ).scalar() or 0
+
+            expected_days = children_count * days_in_period
+
+            attended_days = db.query(func.count(models.AttendanceLog.id)).join(
+                models.Child, models.AttendanceLog.child_id == models.Child.id
+            ).join(
+                models.EnrollmentApplication,
+                models.EnrollmentApplication.child_id == models.Child.id
+            ).filter(
+                models.EnrollmentApplication.class_id == cls.id,
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end
+            ).scalar() or 0
+
+            attendance_rate = round(attended_days / expected_days * 100, 2) if expected_days > 0 else 0.0
+            results.append({
+                "class_id": cls.id,
+                "class_name": cls.name_ar,
+                "children_count": children_count,
+                "attendance_days": attended_days,
+                "expected_days": expected_days,
+                "attendance_rate": attendance_rate
+            })
+
+        results.sort(key=lambda x: x["attendance_rate"])
+        return results
+
+    @staticmethod
+    def get_chronic_absence(
+        db: Session,
+        period_start: date,
+        period_end: date,
+        kindergarten_id: Optional[int] = None,
+        threshold_pct: float = 80.0
+    ) -> List[Dict[str, Any]]:
+        """Return children whose attendance rate falls below threshold_pct (default 80%)"""
+        days_in_period = (period_end - period_start).days + 1
+        enrollment_query = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        )
+        if kindergarten_id:
+            enrollment_query = enrollment_query.filter(
+                models.EnrollmentApplication.kindergarten_id == kindergarten_id
+            )
+
+        results = []
+        for enrollment in enrollment_query.all():
+            child = enrollment.child
+            if not child:
+                continue
+
+            attended = db.query(func.count(models.AttendanceLog.id)).filter(
+                models.AttendanceLog.child_id == child.id,
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end
+            ).scalar() or 0
+
+            rate = round(attended / days_in_period * 100, 2) if days_in_period > 0 else 0.0
+            if rate < threshold_pct:
+                results.append({
+                    "child_id": child.id,
+                    "child_name": f"{child.first_name} {child.last_name}",
+                    "kindergarten_id": enrollment.kindergarten_id,
+                    "class_id": enrollment.class_id,
+                    "attendance_days": attended,
+                    "total_days": days_in_period,
+                    "attendance_rate": rate,
+                    "absent_days": days_in_period - attended
+                })
+
+        results.sort(key=lambda x: x["attendance_rate"])
+        return results
+
+    @staticmethod
+    def get_supervisor_report_performance(
+        db: Session,
+        period_start: date,
+        period_end: date,
+        kindergarten_id: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """Per-supervisor daily report submission and approval rates"""
+        supervisor_query = db.query(models.User).filter(
+            models.User.role == models.UserRole.SUPERVISOR,
+            models.User.status == models.UserStatus.ACTIVE
+        )
+        if kindergarten_id:
+            supervisor_query = supervisor_query.filter(
+                models.User.kindergarten_id == kindergarten_id
+            )
+
+        results = []
+        for supervisor in supervisor_query.all():
+            base_q = db.query(models.DailyReport).filter(
+                models.DailyReport.submitted_by == supervisor.id,
+                models.DailyReport.date >= period_start,
+                models.DailyReport.date <= period_end
+            )
+            total = base_q.count()
+            approved = base_q.filter(
+                models.DailyReport.status.in_([
+                    models.DailyReportStatus.APPROVED,
+                    models.DailyReportStatus.SENT_TO_PARENT
+                ])
+            ).count()
+            completion_rate = round(approved / total * 100, 2) if total > 0 else 0.0
+            results.append({
+                "supervisor_id": supervisor.id,
+                "supervisor_name": supervisor.username,
+                "kindergarten_id": supervisor.kindergarten_id,
+                "total_reports": total,
+                "approved_reports": approved,
+                "completion_rate": completion_rate
+            })
+
+        results.sort(key=lambda x: x["completion_rate"], reverse=True)
+        return results
+
+    @staticmethod
+    def get_enrollment_trends(
+        db: Session,
+        period_start: date,
+        period_end: date,
+        kindergarten_id: Optional[int] = None,
+        granularity: str = "weekly"
+    ) -> List[Dict[str, Any]]:
+        """Weekly or monthly new enrollment application counts with cumulative total"""
+        base_q = db.query(models.EnrollmentApplication)
+        if kindergarten_id:
+            base_q = base_q.filter(
+                models.EnrollmentApplication.kindergarten_id == kindergarten_id
+            )
+
+        results = []
+        cumulative = 0
+        current = period_start
+
+        while current <= period_end:
+            if granularity == "monthly":
+                if current.month == 12:
+                    next_period = date(current.year + 1, 1, 1)
+                else:
+                    next_period = date(current.year, current.month + 1, 1)
+                period_label = current.strftime("%Y-%m")
+            else:
+                next_period = current + timedelta(days=7)
+                period_label = current.isoformat()
+
+            bucket_end = min(next_period - timedelta(days=1), period_end)
+            count = base_q.filter(
+                func.date(models.EnrollmentApplication.created_at) >= current,
+                func.date(models.EnrollmentApplication.created_at) <= bucket_end
+            ).count()
+
+            cumulative += count
+            results.append({
+                "period": period_label,
+                "period_start": current.isoformat(),
+                "period_end": bucket_end.isoformat(),
+                "new_applications": count,
+                "cumulative": cumulative
+            })
+            current = next_period
+
+        return results
 
 
 # =============================================================================
@@ -1487,15 +2064,136 @@ def get_staffing_summary(
     }
 
 
+@router.get("/attendance/by-class")
+def get_attendance_by_class(
+    kindergarten_id: int = Query(..., description="Kindergarten ID to break down by class"),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Per-class attendance breakdown for a kindergarten (Admin only)"""
+    validators.validate_admin_role(current_user)
+    period_start, period_end = get_date_range(start_date, end_date)
+    data = AnalyticsService.get_attendance_by_class(db, kindergarten_id, period_start, period_end)
+    return {
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat(),
+        "kindergarten_id": kindergarten_id,
+        "classes": data
+    }
+
+
+@router.get("/attendance/chronic-absence")
+def get_chronic_absence(
+    kindergarten_id: Optional[int] = Query(None),
+    threshold_pct: float = Query(80.0, description="Attendance rate below this % is flagged (default 80)"),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List children with chronic absence — attendance rate below threshold (Admin only)"""
+    validators.validate_admin_role(current_user)
+    period_start, period_end = get_date_range(start_date, end_date)
+    data = AnalyticsService.get_chronic_absence(db, period_start, period_end, kindergarten_id, threshold_pct)
+    return {
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat(),
+        "threshold_pct": threshold_pct,
+        "kindergarten_id": kindergarten_id,
+        "chronically_absent_children": data,
+        "count": len(data)
+    }
+
+
+@router.get("/attendance/by-governorate")
+def get_attendance_by_governorate(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Attendance rates rolled up by governorate (Admin only)"""
+    validators.validate_admin_role(current_user)
+    period_start, period_end = get_date_range(start_date, end_date)
+    governorates = AnalyticsService.get_governorate_breakdown(db, period_start, period_end)
+    return {
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat(),
+        "governorates": [
+            {
+                "governorate": g.governorate,
+                "kindergarten_count": g.kindergarten_count,
+                "children_count": g.children_count,
+                "attendance_rate": g.attendance_rate,
+                "incident_rate": g.incident_rate,
+                "governance_score": g.governance_score
+            }
+            for g in governorates
+        ]
+    }
+
+
+@router.get("/daily-reports/supervisor-performance")
+def get_supervisor_performance(
+    kindergarten_id: Optional[int] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Per-supervisor daily report submission and completion rates (Admin only)"""
+    validators.validate_admin_role(current_user)
+    period_start, period_end = get_date_range(start_date, end_date)
+    data = AnalyticsService.get_supervisor_report_performance(db, period_start, period_end, kindergarten_id)
+    return {
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat(),
+        "kindergarten_id": kindergarten_id,
+        "supervisors": data
+    }
+
+
+@router.get("/enrollment/trends")
+def get_enrollment_trends(
+    kindergarten_id: Optional[int] = Query(None),
+    granularity: str = Query("weekly", description="Grouping granularity: weekly or monthly"),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Enrollment application trends over time (Admin only)"""
+    validators.validate_admin_role(current_user)
+    if granularity not in ("weekly", "monthly"):
+        raise HTTPException(status_code=422, detail="granularity must be 'weekly' or 'monthly'")
+    period_start, period_end = get_date_range(start_date, end_date)
+    data = AnalyticsService.get_enrollment_trends(db, period_start, period_end, kindergarten_id, granularity)
+    return {
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat(),
+        "kindergarten_id": kindergarten_id,
+        "granularity": granularity,
+        "trends": data
+    }
+
+
 @router.post("/export")
 def request_export(
     request_body: ExportRequest,
-    background_tasks: BackgroundTasks = None,
+    background_tasks: BackgroundTasks,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Request an async export job"""
     validators.validate_admin_role(current_user)
+
+    if request_body.export_format.upper() not in {f.value for f in models.ExportFormat}:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unsupported export format. Choose from: {', '.join(f.value for f in models.ExportFormat)}",
+        )
 
     # Create export job
     job = models.ExportJob(
@@ -1510,8 +2208,8 @@ def request_export(
     db.commit()
     db.refresh(job)
 
-    # In production, this would trigger a background task
-    # For now, we just create the job record
+    # Queue the actual file generation as a background task
+    background_tasks.add_task(_process_export_job, job.id)
 
     return ExportJobResponse(
         job_id=job.id,

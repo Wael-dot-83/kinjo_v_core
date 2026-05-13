@@ -6,17 +6,21 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, text
+from sqlalchemy.exc import IntegrityError
 from datetime import date, datetime, timedelta
 from typing import Any, List, Optional
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator, model_validator
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 import models
 import validators
+import kpi_service as _kpi_svc
 from config import settings
 from database import get_db, engine as _db_engine
 from dependencies import get_current_user
+from auth import get_password_hash, normalize_email, normalize_jordan_phone, jordan_phone_login_variants
+from security import PasswordValidator
 
 
 router = APIRouter()
@@ -57,6 +61,37 @@ DUPLICATE_ERROR_MAP = {
 }
 
 
+def _active_manager_for_kindergarten(
+    db: Session,
+    kindergarten_id: Optional[int],
+    exclude_user_id: Optional[int] = None,
+) -> Optional[models.User]:
+    if not kindergarten_id:
+        return None
+    query = db.query(models.User).filter(
+        models.User.role == models.UserRole.MANAGER,
+        models.User.kindergarten_id == kindergarten_id,
+        models.User.deleted_at.is_(None),
+    )
+    if exclude_user_id is not None:
+        query = query.filter(models.User.id != exclude_user_id)
+    return query.first()
+
+
+def _validate_single_manager_assignment(
+    db: Session,
+    role: models.UserRole,
+    kindergarten_id: Optional[int],
+    exclude_user_id: Optional[int] = None,
+) -> None:
+    if role != models.UserRole.MANAGER:
+        return
+    if not kindergarten_id:
+        raise HTTPException(status_code=400, detail="Manager accounts must be assigned to a kindergarten")
+    if _active_manager_for_kindergarten(db, kindergarten_id, exclude_user_id=exclude_user_id):
+        raise HTTPException(status_code=400, detail="This kindergarten already has a manager")
+
+
 # ============================================================================
 # User Profile Endpoints
 # ============================================================================
@@ -64,7 +99,8 @@ DUPLICATE_ERROR_MAP = {
 class UserResponse(BaseModel):
     id: int
     username: str
-    email: str
+    email: Optional[str] = None
+    login_identifier_type: str = "email"
     role: str
     status: str
     kindergarten_id: Optional[int] = None
@@ -72,7 +108,10 @@ class UserResponse(BaseModel):
     last_name: Optional[str] = None
     phone: Optional[str] = None
     created_at: Optional[datetime] = None
-    
+    parent_type: Optional[str] = None
+    national_id: Optional[str] = None
+    nationality: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -81,6 +120,27 @@ class CurrentUserUpdate(BaseModel):
     last_name: Optional[str] = Field(default=None, max_length=100)
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(default=None, max_length=20)
+    parent_type: Optional[str] = Field(default=None, pattern="^(FATHER|MOTHER|OTHER)$")
+    national_id: Optional[str] = Field(default=None, max_length=50)
+    nationality: Optional[str] = Field(default=None, max_length=100)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def blank_email_to_none(cls, value):
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator("phone")
+    @classmethod
+    def normalize_profile_phone(cls, value):
+        if value is None:
+            return None
+        if not value.strip():
+            return None  # treat blank as "no change" — mirrors blank_email_to_none
+        return normalize_jordan_phone(value)
 
 
 class CurrentPasswordChange(BaseModel):
@@ -101,13 +161,17 @@ def get_current_user_info(
         id=current_user.id,
         username=current_user.username,
         email=current_user.email,
+        login_identifier_type=getattr(current_user, "login_identifier_type", None) or "email",
         role=current_user.role.value,
         status=current_user.status.value,
         kindergarten_id=current_user.kindergarten_id,
         first_name=parent_profile.first_name if parent_profile else current_user.username,
         last_name=parent_profile.last_name if parent_profile else "",
         phone=parent_profile.phone_number if parent_profile else None,
-        created_at=current_user.created_at
+        created_at=current_user.created_at,
+        parent_type=parent_profile.parent_type if parent_profile else None,
+        national_id=parent_profile.national_id if parent_profile else None,
+        nationality=parent_profile.nationality if parent_profile else None,
     )
 
 
@@ -119,13 +183,14 @@ def update_current_user_info(
 ):
     """Update the current user's basic profile fields."""
     if update_data.email and update_data.email != current_user.email:
+        normalized_email = normalize_email(str(update_data.email))
         existing = db.query(models.User).filter(
-            models.User.email == update_data.email,
+            func.lower(models.User.email) == normalized_email,
             models.User.id != current_user.id
         ).first()
         if existing:
             raise HTTPException(status_code=400, detail="Email already used")
-        current_user.email = str(update_data.email)
+        current_user.email = normalized_email
 
     parent_profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id
@@ -136,7 +201,29 @@ def update_current_user_info(
         if update_data.last_name is not None:
             parent_profile.last_name = update_data.last_name.strip()
         if update_data.phone is not None:
-            parent_profile.phone_number = update_data.phone.strip()
+            duplicate_phone = db.query(models.ParentProfile).filter(
+                models.ParentProfile.phone_number.in_(jordan_phone_login_variants(update_data.phone)),
+                models.ParentProfile.user_id != current_user.id,
+                models.ParentProfile.deleted_at.is_(None)
+            ).first()
+            if duplicate_phone:
+                raise HTTPException(status_code=400, detail="Phone number already used")
+            parent_profile.phone_number = update_data.phone
+        if update_data.parent_type is not None:
+            parent_profile.parent_type = update_data.parent_type
+        if update_data.national_id is not None:
+            stripped_nid = update_data.national_id.strip()
+            if stripped_nid:
+                existing_nid = db.query(models.ParentProfile).filter(
+                    models.ParentProfile.national_id == stripped_nid,
+                    models.ParentProfile.user_id != current_user.id,
+                    models.ParentProfile.deleted_at.is_(None)
+                ).first()
+                if existing_nid:
+                    raise HTTPException(status_code=400, detail="الرقم الوطني مستخدم من قِبل مستخدم آخر")
+            parent_profile.national_id = stripped_nid or None
+        if update_data.nationality is not None:
+            parent_profile.nationality = update_data.nationality.strip()
         parent_profile.updated_at = datetime.now()
 
     db.commit()
@@ -157,6 +244,12 @@ def change_current_user_password(
     if not verify_password(password_data.current_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
 
+    is_valid_password, password_error = PasswordValidator.validate(password_data.new_password)
+    if not is_valid_password:
+        raise HTTPException(status_code=400, detail=password_error)
+    if PasswordValidator.check_breached(password_data.new_password):
+        raise HTTPException(status_code=400, detail="This password has appeared in a data breach. Please choose a different password.")
+
     try:
         current_user.hashed_password = get_password_hash(password_data.new_password)
     except ValueError as exc:
@@ -172,6 +265,89 @@ def change_current_user_password(
         sensitivity_level=3
     )
     return {"message": "Password updated successfully"}
+
+
+@router.get("/users/me/parent-info")
+def get_parent_info(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Return parent type, full name, national ID and nationality for JS wizard logic."""
+    profile = db.query(models.ParentProfile).filter(
+        models.ParentProfile.user_id == current_user.id
+    ).first()
+    if not profile:
+        return {"parent_type": None, "full_name": None, "profile_complete": False}
+
+    full_name_parts = [profile.first_name, profile.second_name, profile.last_name]
+    full_name = " ".join(p for p in full_name_parts if p)
+    profile_complete = bool(profile.parent_type and profile.national_id)
+
+    return {
+        "parent_type":      profile.parent_type,
+        "full_name":        full_name,
+        "national_id":      profile.national_id,
+        "nationality":      profile.nationality,
+        "profile_complete": profile_complete,
+    }
+
+
+@router.get("/notifications")
+def list_notifications(
+    limit: int = Query(50, ge=1, le=200),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Return paginated notification list for the current user."""
+    rows = db.execute(
+        text(
+            "SELECT id, notification_type, status, payload, created_at "
+            "FROM notifications "
+            "WHERE user_id = :user_id "
+            "ORDER BY created_at DESC "
+            "LIMIT :limit"
+        ),
+        {"user_id": current_user.id, "limit": limit}
+    ).fetchall()
+
+    import json as _json
+
+    items = []
+    for row in rows:
+        payload = {}
+        if row.payload:
+            try:
+                payload = _json.loads(row.payload) if isinstance(row.payload, str) else row.payload
+            except Exception:
+                pass
+        title = (
+            payload.get("title")
+            or payload.get("subject")
+            or row.notification_type.replace("_", " ").title()
+            if row.notification_type else "إشعار"
+        )
+        message = payload.get("message") or payload.get("body") or ""
+        is_read = (row.status or "SENT") == "READ"
+        created_display = ""
+        if row.created_at:
+            try:
+                from datetime import timezone as _tz
+                dt = row.created_at
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=_tz.utc)
+                created_display = dt.strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                created_display = str(row.created_at)[:16]
+        items.append({
+            "id": row.id,
+            "title": title,
+            "message": message,
+            "is_read": is_read,
+            "notification_type": row.notification_type,
+            "created_at_display": created_display,
+        })
+
+    return {"items": items, "total": len(items)}
 
 
 @router.get("/notifications/unread-count")
@@ -377,11 +553,10 @@ def list_users(
     elif current_user.role == models.UserRole.MANAGER:
         # Manager is restricted to their own kindergarten
         query = query.filter(models.User.kindergarten_id == current_user.kindergarten_id)
-        # If they requested a specific kindergarten_id, it must match theirs (already filtered, but for clarity)
+        # If they requested a specific kindergarten_id that doesn't match theirs, return 403
         if kindergarten_id and kindergarten_id != current_user.kindergarten_id:
-             # Return empty? or just ignore?
-             # Let's stricter:
-             query = query.filter(models.User.kindergarten_id == kindergarten_id) 
+            _log_access_denied(db, current_user, "list_users", "Manager requested foreign kindergarten_id", request)
+            raise HTTPException(status_code=403, detail="Managers can only view users in their own kindergarten")
     else:
         _log_access_denied(db, current_user, "list_users", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -446,6 +621,8 @@ def create_user(
         _log_access_denied(db, current_user, "create_user", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    _validate_single_manager_assignment(db, user_data.role, user_data.kindergarten_id)
+
     # Check if exists
     existing = db.query(models.User).filter(
         or_(models.User.username == user_data.username, models.User.email == user_data.email)
@@ -454,6 +631,11 @@ def create_user(
         raise HTTPException(status_code=400, detail="Username or email already exists")
 
     from auth import get_password_hash
+    is_valid_pw, pw_error = PasswordValidator.validate(user_data.password)
+    if not is_valid_pw:
+        raise HTTPException(status_code=400, detail=pw_error)
+    if PasswordValidator.check_breached(user_data.password):
+        raise HTTPException(status_code=400, detail="This password has appeared in a data breach. Please choose a different password.")
     hashed_password = get_password_hash(user_data.password)
 
     new_user = models.User(
@@ -545,9 +727,26 @@ def update_user(
         
     if user_data.password:
         from auth import get_password_hash
+        is_valid_pw, pw_error = PasswordValidator.validate(user_data.password)
+        if not is_valid_pw:
+            raise HTTPException(status_code=400, detail=pw_error)
+        if PasswordValidator.check_breached(user_data.password):
+            raise HTTPException(status_code=400, detail="This password has appeared in a data breach. Please choose a different password.")
         user.hashed_password = get_password_hash(user_data.password)
         
     if current_user.role == models.UserRole.ADMIN:
+        proposed_role = user_data.role or user.role
+        proposed_kindergarten_id = (
+            user_data.kindergarten_id
+            if user_data.kindergarten_id is not None
+            else user.kindergarten_id
+        )
+        _validate_single_manager_assignment(
+            db,
+            proposed_role,
+            proposed_kindergarten_id,
+            exclude_user_id=user.id,
+        )
         if user_data.role:
             user.role = user_data.role
         if user_data.status:
@@ -594,6 +793,12 @@ def delete_user(
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if user.role == models.UserRole.MANAGER:
+        raise HTTPException(
+            status_code=400,
+            detail="Manager accounts cannot be deleted because each kindergarten must keep exactly one manager",
+        )
         
     # Check dependencies before deleting? typically cascade or strict.
     # We will hard delete for now as per instructions.
@@ -614,11 +819,12 @@ def delete_user(
 
 # Password Reset Endpoints
 class PasswordResetRequest(BaseModel):
-    email: str
+    identifier: str  # email or phone number
 
 class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str
+    confirm_password: str
 
 class AdminPasswordReset(BaseModel):
     new_password: str = Field(..., min_length=8)
@@ -656,6 +862,13 @@ def admin_reset_password(
             sensitivity_level=3
         )
         raise HTTPException(status_code=401, detail="Admin password verification failed")
+
+    is_valid_pw, pw_error = PasswordValidator.validate(reset_data.new_password)
+    if not is_valid_pw:
+        raise HTTPException(status_code=400, detail=pw_error)
+    if PasswordValidator.check_breached(reset_data.new_password):
+        raise HTTPException(status_code=400, detail="This password has appeared in a data breach. Please choose a different password.")
+
     user.hashed_password = get_password_hash(reset_data.new_password)
 
     db.commit()
@@ -674,57 +887,113 @@ def admin_reset_password(
     return {"message": "Password reset successfully"}
 
 @router.post("/users/request-password-reset")
+@limiter.limit("5/hour")
 def request_password_reset(
+    request: Request,
     reset_request: PasswordResetRequest,
     db: Session = Depends(get_db)
 ):
-    """Request password reset token (for self-service)"""
-    user = db.query(models.User).filter(models.User.email == reset_request.email).first()
-    if not user:
-        # Don't reveal if email exists or not for security
-        return {"message": "If the email exists, a reset link has been sent"}
+    """Request password reset token — accepts email or phone. Always returns 200 to prevent enumeration."""
+    import hashlib, logging, os, secrets
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import func, or_
+    from auth import login_identifier_candidates
 
-    # Generate secure token
-    import secrets
-    from datetime import datetime, timedelta
+    _GENERIC_OK = {"message": "If an account exists with that identifier, a reset link will be sent shortly."}
 
-    token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(hours=24)
+    identifier = reset_request.identifier.strip()
+    if not identifier:
+        return _GENERIC_OK
 
-    # Save token
-    reset_token = models.PasswordResetToken(
-        user_id=user.id,
-        token=token,
-        expires_at=expires_at
+    candidates = login_identifier_candidates(identifier)
+    email_candidates = [c.lower() for c in candidates if "@" in c]
+
+    user = (
+        db.query(models.User)
+        .outerjoin(models.ParentProfile, models.ParentProfile.user_id == models.User.id)
+        .filter(
+            or_(
+                models.User.username.in_(candidates),
+                func.lower(models.User.email).in_(email_candidates) if email_candidates else False,
+                models.ParentProfile.phone_number.in_(candidates),
+            )
+        )
+        .filter(models.User.status == models.UserStatus.ACTIVE)
+        .first()
     )
 
-    db.add(reset_token)
+    if not user:
+        return _GENERIC_OK
+
+    # Invalidate previous unused tokens for this user
+    db.query(models.PasswordResetToken).filter(
+        models.PasswordResetToken.user_id == user.id,
+        models.PasswordResetToken.used == False,
+    ).update({"used": True}, synchronize_session=False)
+
+    # Generate token, store only the SHA-256 hash
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+    db.add(models.PasswordResetToken(
+        user_id=user.id,
+        token=token_hash,
+        expires_at=expires_at,
+    ))
     db.commit()
 
-    # TODO: Send email with reset link
-    # For now, just return the token (in production, this would be emailed)
-    return {"message": "If the email exists, a reset link has been sent", "token": token}
+    # Build and log the reset link (dev) — swap for email/SMS in production
+    base_url = os.getenv("RESET_LINK_BASE_URL", "http://localhost:8000")
+    reset_link = f"{base_url}/reset-password?token={token}"
+    logging.getLogger(__name__).info(
+        "[PASSWORD RESET] user_id=%s reset_link=%s", user.id, reset_link
+    )
+
+    return _GENERIC_OK
+
 
 @router.post("/users/reset-password")
+@limiter.limit("10/hour")
 def reset_password(
+    request: Request,
     reset_data: PasswordResetConfirm,
     db: Session = Depends(get_db)
 ):
-    """Reset password using token"""
-    from datetime import datetime
+    """Reset password using a valid, unexpired token."""
+    import hashlib
+    from datetime import datetime, timezone
 
-    token_record = db.query(models.PasswordResetToken).filter(
-        models.PasswordResetToken.token == reset_data.token,
-        models.PasswordResetToken.used == False,
-        models.PasswordResetToken.expires_at > datetime.utcnow()
-    ).first()
+    if not reset_data.new_password:
+        raise HTTPException(status_code=400, detail="New password is required")
+
+    if reset_data.new_password != reset_data.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+
+    if len(reset_data.new_password) < 8:
+        raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
+
+    token_hash = hashlib.sha256(reset_data.token.encode()).hexdigest()
+    now = datetime.now(timezone.utc)
+
+    token_record = (
+        db.query(models.PasswordResetToken)
+        .filter(
+            models.PasswordResetToken.token == token_hash,
+            models.PasswordResetToken.used == False,
+            models.PasswordResetToken.expires_at > now,
+        )
+        .first()
+    )
 
     if not token_record:
-        raise HTTPException(status_code=400, detail="Invalid or expired token")
+        raise HTTPException(status_code=403, detail="Invalid or expired reset token. Please request a new link.")
 
     from auth import get_password_hash
     token_record.user.hashed_password = get_password_hash(reset_data.new_password)
     token_record.used = True
+    if hasattr(token_record, "used_at"):
+        token_record.used_at = now
 
     db.commit()
 
@@ -734,7 +1003,7 @@ def reset_password(
         action="PASSWORD_RESET",
         entity_type="User",
         entity_id=token_record.user.id,
-        sensitivity_level=2
+        sensitivity_level=2,
     )
 
     return {"message": "Password reset successfully"}
@@ -1017,7 +1286,6 @@ def create_kindergarten(
             status_code=400,
             detail=DUPLICATE_ERROR_MAP.get(duplicate_field, {"code": "error_duplicate_entry", "message": "Duplicate record found."})
         )
-        raise HTTPException(status_code=400, detail="روضة بنفس الاسم أو رقم الهاتف أو البريد الإلكتروني موجودة بالفعل")
 
     kindergarten = models.Kindergarten(
         **kindergarten_data.model_dump(),
@@ -1432,6 +1700,54 @@ def delete_kindergarten_service(
     )
     return Response(status_code=204)
 
+
+@router.get("/kindergartens/{kindergarten_id}/kpi-snapshot")
+def get_kindergarten_kpi_snapshot(
+    kindergarten_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Return KPI snapshot (occupancy, governance, parent satisfaction) for the KPI sidebar."""
+    if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if current_user.role == models.UserRole.MANAGER:
+        validators.validate_kindergarten_scope(current_user, kindergarten_id)
+
+    # Occupancy: active enrollments / total class capacity
+    total_capacity = db.query(func.sum(models.Class.capacity_total)).filter(
+        models.Class.kindergarten_id == kindergarten_id,
+        models.Class.is_active.is_(True)
+    ).scalar() or 0
+    active_enrolled = db.query(func.count(models.EnrollmentApplication.id)).filter(
+        models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    ).scalar() or 0
+    occupancy_pct = round((active_enrolled / total_capacity) * 100, 1) if total_capacity > 0 else 0.0
+
+    # Governance and parent satisfaction via KPIService
+    today = date.today()
+    period_start = today.replace(day=1)
+    if today.month == 12:
+        period_end = date(today.year + 1, 1, 1) - timedelta(days=1)
+    else:
+        period_end = date(today.year, today.month + 1, 1) - timedelta(days=1)
+
+    governance_score = _kpi_svc.KPIService.compute_governance_quality_index(
+        db, kindergarten_id, period_start, period_end
+    )
+    satisfaction_score = _kpi_svc.KPIService.compute_parent_satisfaction(
+        db, kindergarten_id, period_start, period_end
+    )
+
+    return {
+        "occupancy_pct": occupancy_pct,
+        "occupancy_enrolled": active_enrolled,
+        "occupancy_capacity": total_capacity,
+        "governance_score": governance_score,
+        "satisfaction_score": satisfaction_score,
+    }
+
+
 class ClassCreate(BaseModel):
     kindergarten_id: int
     name_ar: str
@@ -1591,6 +1907,196 @@ def get_class(
             raise HTTPException(status_code=403, detail="Access denied")
 
     return class_obj
+
+
+@router.get("/classes/{class_id}/children")
+def get_children_in_class(
+    class_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Return children actively enrolled in the given class — used for incident form dropdowns."""
+    cls = db.query(models.Class).filter(models.Class.id == class_id).first()
+    if not cls:
+        raise HTTPException(status_code=404, detail="الصف غير موجود")
+    if current_user.role != models.UserRole.ADMIN:
+        if cls.kindergarten_id != current_user.kindergarten_id:
+            raise HTTPException(status_code=403, detail="غير مصرح")
+
+    enrollments = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.class_id == class_id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.deleted_at.is_(None),
+    ).all()
+
+    children = []
+    for e in enrollments:
+        if e.child and not e.child.deleted_at:
+            c = e.child
+            children.append({
+                "id": c.id,
+                "name": f"{c.first_name} {c.last_name}".strip(),
+                "first_name": c.first_name,
+                "last_name": c.last_name,
+            })
+    return {"children": children}
+
+
+@router.get("/classes/{class_id}/supervisors")
+def get_supervisors_in_class(
+    class_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Return supervisors assigned to the given class — used for incident form dropdowns."""
+    cls = db.query(models.Class).filter(models.Class.id == class_id).first()
+    if not cls:
+        raise HTTPException(status_code=404, detail="الصف غير موجود")
+    if current_user.role != models.UserRole.ADMIN:
+        if cls.kindergarten_id != current_user.kindergarten_id:
+            raise HTTPException(status_code=403, detail="غير مصرح")
+
+    from datetime import date as _date
+    today = _date.today()
+    assignments = db.query(models.SupervisorAssignment).filter(
+        models.SupervisorAssignment.class_id == class_id,
+        models.SupervisorAssignment.start_date <= today,
+        or_(
+            models.SupervisorAssignment.end_date.is_(None),
+            models.SupervisorAssignment.end_date >= today,
+        ),
+        models.SupervisorAssignment.deleted_at.is_(None),
+    ).all()
+
+    supervisors = []
+    seen = set()
+    for a in assignments:
+        if a.supervisor and a.supervisor_id not in seen:
+            seen.add(a.supervisor_id)
+            s = a.supervisor
+            supervisors.append({
+                "id": s.id,
+                "name": s.username,
+                "is_primary": a.is_primary,
+            })
+    return {"supervisors": supervisors}
+
+
+@router.get("/safety/analytics")
+def get_safety_analytics(
+    kindergarten_id: Optional[int] = None,
+    governorate: Optional[str] = None,
+    class_id: Optional[int] = None,
+    supervisor_id: Optional[int] = None,
+    child_id: Optional[int] = None,
+    incident_type: Optional[str] = None,
+    classification: Optional[str] = None,
+    severity: Optional[str] = None,
+    parent_informed: Optional[bool] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Admin-only safety analytics endpoint — aggregate incident statistics."""
+    validators.validate_admin_role(current_user)
+
+    query = db.query(models.Incident).filter(models.Incident.deleted_at.is_(None))
+
+    if kindergarten_id:
+        query = query.filter(models.Incident.kindergarten_id == kindergarten_id)
+    if class_id:
+        query = query.filter(models.Incident.class_id == class_id)
+    if supervisor_id:
+        query = query.filter(models.Incident.supervisor_id == supervisor_id)
+    if child_id:
+        query = query.filter(models.Incident.child_id == child_id)
+    if parent_informed is not None:
+        query = query.filter(models.Incident.parent_informed == parent_informed)
+
+    if incident_type:
+        try:
+            query = query.filter(models.Incident.type == models.IncidentType(incident_type.upper()))
+        except ValueError:
+            pass
+    if classification:
+        try:
+            query = query.filter(models.Incident.classification == models.IncidentClassification(classification.upper()))
+        except ValueError:
+            pass
+    if severity:
+        try:
+            query = query.filter(models.Incident.severity_level == models.SeverityLevel(severity.upper()))
+        except ValueError:
+            pass
+
+    if date_from:
+        try:
+            query = query.filter(models.Incident.occurred_at >= datetime.fromisoformat(date_from))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            query = query.filter(models.Incident.occurred_at <= datetime.fromisoformat(date_to))
+        except ValueError:
+            pass
+
+    # Filter by governorate via Kindergarten join
+    if governorate:
+        query = query.join(models.Kindergarten, models.Incident.kindergarten_id == models.Kindergarten.id)
+        query = query.filter(models.Kindergarten.governorate == governorate)
+
+    incidents = query.all()
+
+    total = len(incidents)
+    open_count = sum(1 for i in incidents if not i.closed_at)
+    closed_count = total - open_count
+
+    by_severity: dict = {}
+    by_type: dict = {}
+    by_classification: dict = {}
+    by_kindergarten: dict = {}
+    by_child: dict = {}
+    parent_informed_count = 0
+    parent_not_informed_count = 0
+
+    for i in incidents:
+        sev = i.severity_level.value if i.severity_level else "UNKNOWN"
+        by_severity[sev] = by_severity.get(sev, 0) + 1
+
+        t = i.type.value if i.type else "UNKNOWN"
+        by_type[t] = by_type.get(t, 0) + 1
+
+        cls_val = i.classification.value if i.classification else "UNKNOWN"
+        by_classification[cls_val] = by_classification.get(cls_val, 0) + 1
+
+        kg = str(i.kindergarten_id)
+        by_kindergarten[kg] = by_kindergarten.get(kg, 0) + 1
+
+        ch = str(i.child_id)
+        by_child[ch] = by_child.get(ch, 0) + 1
+
+        if i.parent_informed is True:
+            parent_informed_count += 1
+        elif i.parent_informed is False:
+            parent_not_informed_count += 1
+
+    repeated_children = {k: v for k, v in by_child.items() if v > 1}
+    high_risk_kg = {k: v for k, v in by_kindergarten.items() if v >= 5}
+
+    return {
+        "total": total,
+        "open": open_count,
+        "closed": closed_count,
+        "parent_informed": parent_informed_count,
+        "parent_not_informed": parent_not_informed_count,
+        "by_severity": by_severity,
+        "by_type": by_type,
+        "by_classification": by_classification,
+        "by_kindergarten": by_kindergarten,
+        "repeated_children": repeated_children,
+        "high_risk_kindergartens": high_risk_kg,
+    }
 
 
 @router.put("/classes/{class_id}", response_model=ClassResponse)
@@ -2068,11 +2574,24 @@ def get_manager_dashboard(
                 "priority": "critical" if days_until_expiry < 0 else "high"
             })
 
+    pending_corresponding = (
+        db.query(func.count(models.Child.id))
+        .join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id)
+        .filter(
+            models.Child.corresponding_type == "PENDING_MANAGER",
+            models.Child.deleted_at.is_(None),
+            models.EnrollmentApplication.kindergarten_id == kindergarten_id
+        )
+        .scalar() or 0
+    )
+    if pending_corresponding > 0:
+        dashboard["alerts"].append({
+            "type": "pending_corresponding",
+            "message": f"{pending_corresponding} طفل بانتظار تعيين جهة اتصال أساسية",
+            "priority": "high"
+        })
+
     return dashboard
-
-
-# ============================================================================
-# Admin Dashboard
 # ============================================================================
 
 @router.get("/admin/dashboard")
@@ -2357,6 +2876,36 @@ def get_parent_dashboard(
 
         children_data.append(child_info)
 
+    # Build notifications from unread messages and recent health alerts
+    notifications = []
+
+    # Unread messages for this parent (up to 10 most recent)
+    unread_msgs = db.query(models.Message).filter(
+        models.Message.recipient_id == current_user.id,
+        models.Message.is_read == False  # noqa: E712
+    ).order_by(models.Message.created_at.desc()).limit(10).all()
+    for msg in unread_msgs:
+        notifications.append({
+            "type": "message",
+            "title": msg.subject or "رسالة جديدة",
+            "created_at": msg.created_at.isoformat() if msg.created_at else None
+        })
+
+    # Recent health alerts for parent's children (up to 5)
+    child_ids_list = [c.id for c in children]
+    if child_ids_list:
+        recent_alerts = db.query(models.HealthAlert).filter(
+            models.HealthAlert.child_id.in_(child_ids_list)
+        ).order_by(models.HealthAlert.created_at.desc()).limit(5).all()
+        child_map = {c.id: c.first_name for c in children}
+        for alert in recent_alerts:
+            child_name = child_map.get(alert.child_id, "")
+            notifications.append({
+                "type": "health_alert",
+                "title": f"تنبيه صحي: {child_name} - {alert.alert_type}",
+                "created_at": alert.created_at.isoformat() if alert.created_at else None
+            })
+
     return {
         "parent": {
             "name": f"{parent_profile.first_name} {parent_profile.last_name}",
@@ -2364,7 +2913,7 @@ def get_parent_dashboard(
         },
         "children": children_data,
         "total_children": len(children),
-        "notifications": []  # Placeholder for notifications
+        "notifications": notifications
     }
 
 
@@ -2373,7 +2922,7 @@ def get_parent_children(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get list of parent's children"""
+    """Get list of parent's children with computed stats"""
     if current_user.role != models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail="Parent access only")
 
@@ -2388,18 +2937,63 @@ def get_parent_children(
         models.Child.parent_id == parent_profile.id
     ).all()
 
-    return {
-        "children": [
-            {
-                "id": c.id,
-                "full_name_ar": f"{c.first_name} {c.last_name}",
-                "name": f"{c.first_name} {c.last_name}",
-                "first_name": c.first_name,
-                "last_name": c.last_name,
-            }
-            for c in children
-        ]
-    }
+    today = date.today()
+    result = []
+    for c in children:
+        # --- Age ---
+        age_str = "—"
+        if c.date_of_birth:
+            total_months = (today.year - c.date_of_birth.year) * 12 + (today.month - c.date_of_birth.month)
+            years, months = divmod(total_months, 12)
+            age_str = f"{years} سنة {months} شهر" if years else f"{months} شهر"
+
+        # --- Class name from active/accepted enrollment ---
+        class_name = "—"
+        active_enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == c.id,
+            models.EnrollmentApplication.status.in_([
+                models.EnrollmentStatus.ACTIVE,
+                models.EnrollmentStatus.ACCEPTED,
+            ])
+        ).order_by(models.EnrollmentApplication.created_at.desc()).first()
+        if active_enrollment and active_enrollment.class_id:
+            cls = db.query(models.Class).filter(models.Class.id == active_enrollment.class_id).first()
+            if cls:
+                class_name = cls.name_ar or cls.name_en or "—"
+
+        # --- Attendance rate for current month ---
+        month_start = today.replace(day=1)
+        present_days = db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.child_id == c.id,
+            models.AttendanceLog.date >= month_start,
+            models.AttendanceLog.date <= today,
+            models.AttendanceLog.deleted_at.is_(None),
+        ).count()
+        # School days = weekdays (Mon–Fri) from month start to today
+        school_days = sum(
+            1 for d in range((today - month_start).days + 1)
+            if date.fromordinal(month_start.toordinal() + d).weekday() < 5  # Mon=0 … Fri=4
+        )
+        attendance_rate = round((present_days / school_days) * 100) if school_days > 0 else 0
+
+        # --- Reports count ---
+        reports_count = db.query(models.DailyReport).filter(
+            models.DailyReport.child_id == c.id
+        ).count()
+
+        result.append({
+            "id": c.id,
+            "full_name_ar": f"{c.first_name} {c.last_name}",
+            "name": f"{c.first_name} {c.last_name}",
+            "first_name": c.first_name,
+            "last_name": c.last_name,
+            "age": age_str,
+            "class_name": class_name,
+            "attendance_rate": attendance_rate,
+            "reports_count": reports_count,
+        })
+
+    return {"children": result}
 
 
 @router.get("/parent/enrollments")
@@ -2884,45 +3478,97 @@ def delete_task(
 # ============================================================================
 
 class ParentRegistrationRequest(BaseModel):
-    first_name: str
-    second_name: Optional[str] = None
-    last_name: str
-    first_name_en: Optional[str] = None
-    last_name_en: Optional[str] = None
-    phone_number: str
+    first_name: str = Field(..., min_length=1, max_length=100)
+    second_name: Optional[str] = Field(default=None, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
+    first_name_en: Optional[str] = Field(default=None, max_length=100)
+    last_name_en: Optional[str] = Field(default=None, max_length=100)
+    phone_number: str = Field(..., max_length=20)
     gender: str
-    nationality: str
-    national_id: Optional[str] = None
-    passport_number: Optional[str] = None
-    home_governorate: str
-    home_city: str
-    home_area: str
-    home_address_line: str
+    nationality: str = Field(..., min_length=1, max_length=100)
+    national_id: Optional[str] = Field(default=None, max_length=50)
+    passport_number: Optional[str] = Field(default=None, max_length=50)
+    home_governorate: str = Field(..., min_length=1, max_length=100)
+    home_city: str = Field(..., min_length=1, max_length=100)
+    home_area: str = Field(..., min_length=1, max_length=100)
+    home_address_line: str = Field(..., min_length=1, max_length=2000)
     correspondence_preference: Optional[bool] = True
-    email: str
-    password: str
+    email: Optional[EmailStr] = None
+    password: str = Field(..., min_length=8, max_length=128)
+    primary_login_method: str = Field(default="email")
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def blank_registration_email_to_none(cls, value):
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator("phone_number")
+    @classmethod
+    def normalize_registration_phone(cls, value):
+        return normalize_jordan_phone(value)
+
+    @field_validator("gender")
+    @classmethod
+    def validate_gender(cls, value):
+        normalized = value.strip().upper()
+        if normalized not in {models.Gender.MALE.value, models.Gender.FEMALE.value}:
+            raise ValueError("Invalid gender")
+        return normalized
+
+    @field_validator("primary_login_method")
+    @classmethod
+    def validate_primary_login_method(cls, value):
+        normalized = value.strip().lower()
+        if normalized not in {"email", "phone"}:
+            raise ValueError("primary_login_method must be email or phone")
+        return normalized
 
     @field_validator("home_governorate")
+    @classmethod
     def validate_home_governorate(cls, value):
         if not validators.validate_jordan_governorate(value):
             raise ValueError(f"Invalid governorate: {value}. Must be one of: {', '.join(settings.JORDAN_GOVERNORATES)}")
         return validators.normalise_jordan_governorate(value)
 
+    @model_validator(mode="after")
+    def validate_primary_identifier(self):
+        if self.primary_login_method == "email" and self.email is None:
+            raise ValueError("Email is required when email is the primary login method.")
+        return self
+
 
 @router.post("/register/parent", status_code=status.HTTP_201_CREATED)
 def register_parent(
     registration_data: ParentRegistrationRequest,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """Register a new parent user with profile"""
-    from auth import get_password_hash
+    normalized_email = normalize_email(str(registration_data.email)) if registration_data.email else None
+    normalized_phone = registration_data.phone_number
+    primary_login_method = registration_data.primary_login_method
+    username = normalized_email if primary_login_method == "email" else normalized_phone
 
-    # Check if email already exists
-    existing_user = db.query(models.User).filter(
-        models.User.email == registration_data.email
-    ).first()
+    user_filters = [models.User.username == username]
+    if normalized_email:
+        user_filters.append(func.lower(models.User.email) == normalized_email)
+    for phone_variant in jordan_phone_login_variants(normalized_phone):
+        user_filters.append(models.User.username == phone_variant)
+
+    existing_user = db.query(models.User).filter(or_(*user_filters)).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="البريد الإلكتروني مسجل مسبقاً")
+        raise HTTPException(status_code=400, detail="Login identifier already registered")
+
+    existing_phone = db.query(models.ParentProfile).filter(
+        models.ParentProfile.phone_number.in_(jordan_phone_login_variants(normalized_phone)),
+        models.ParentProfile.deleted_at.is_(None)
+    ).first()
+    if existing_phone:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
 
     # Validate identification: either national_id or passport_number required
     if not registration_data.national_id and not registration_data.passport_number:
@@ -2931,48 +3577,80 @@ def register_parent(
             detail="يجب إدخال الرقم الوطني أو رقم جواز السفر"
         )
 
-    # Validate password strength (minimum 8 characters)
-    password = registration_data.password
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="كلمة المرور يجب أن تكون 8 أحرف على الأقل")
+    # Validate national_id uniqueness
+    if registration_data.national_id:
+        existing_national_id = db.query(models.ParentProfile).filter(
+            models.ParentProfile.national_id == registration_data.national_id.strip(),
+            models.ParentProfile.deleted_at.is_(None)
+        ).first()
+        if existing_national_id:
+            raise HTTPException(status_code=400, detail="الرقم الوطني مسجل مسبقاً")
 
-    # Create user
+    is_valid_password, password_error = PasswordValidator.validate(registration_data.password)
+    if not is_valid_password:
+        raise HTTPException(status_code=400, detail=password_error)
+    if PasswordValidator.check_breached(registration_data.password):
+        raise HTTPException(status_code=400, detail="This password has appeared in a data breach. Please choose a different password.")
+
     user = models.User(
-        username=registration_data.email,
-        email=registration_data.email,
-        hashed_password=get_password_hash(password),
+        username=username,
+        email=normalized_email,
+        login_identifier_type=primary_login_method,
+        hashed_password=get_password_hash(registration_data.password),
         role=models.UserRole.PARENT,
         status=models.UserStatus.ACTIVE
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    try:
+        db.flush()
 
-    # Create parent profile
-    parent_profile = models.ParentProfile(
-        user_id=user.id,
-        first_name=registration_data.first_name,
-        second_name=registration_data.second_name,
-        last_name=registration_data.last_name,
-        first_name_en=registration_data.first_name_en,
-        last_name_en=registration_data.last_name_en,
-        phone_number=registration_data.phone_number,
-        gender=models.Gender(registration_data.gender.upper()),
-        nationality=registration_data.nationality,
-        national_id=registration_data.national_id,
-        passport_number=registration_data.passport_number,
-        home_governorate=registration_data.home_governorate,
-        home_city=registration_data.home_city,
-        home_area=registration_data.home_area,
-        home_address_line=registration_data.home_address_line,
-        correspondence_preference=registration_data.correspondence_preference or True
-    )
-    db.add(parent_profile)
-    db.commit()
+        parent_profile = models.ParentProfile(
+            user_id=user.id,
+            first_name=validators.sanitize_input(registration_data.first_name.strip()),
+            second_name=validators.sanitize_input(registration_data.second_name.strip()) if registration_data.second_name else None,
+            last_name=validators.sanitize_input(registration_data.last_name.strip()),
+            first_name_en=validators.sanitize_input(registration_data.first_name_en.strip()) if registration_data.first_name_en else None,
+            last_name_en=validators.sanitize_input(registration_data.last_name_en.strip()) if registration_data.last_name_en else None,
+            phone_number=normalized_phone,
+            gender=models.Gender(registration_data.gender),
+            nationality=validators.sanitize_input(registration_data.nationality.strip()),
+            national_id=registration_data.national_id.strip() if registration_data.national_id else None,
+            passport_number=registration_data.passport_number.strip() if registration_data.passport_number else None,
+            home_governorate=registration_data.home_governorate,
+            home_city=validators.sanitize_input(registration_data.home_city.strip()),
+            home_area=validators.sanitize_input(registration_data.home_area.strip()),
+            home_address_line=validators.sanitize_input(registration_data.home_address_line.strip()),
+            correspondence_preference=True if registration_data.correspondence_preference is None else registration_data.correspondence_preference,
+        )
+        db.add(parent_profile)
+        db.commit()
+        db.refresh(user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Login identifier already registered")
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    try:
+        validators.log_audit_action(
+            db=db,
+            user_id=user.id,
+            action="PARENT_REGISTERED",
+            entity_type="User",
+            entity_id=user.id,
+            details=f"login_method={primary_login_method}",
+            ip_address=request.client.host if request.client else None,
+            sensitivity_level=2,
+        )
+    except Exception:
+        pass
 
     return {
         "id": user.id,
         "email": user.email,
+        "username": user.username,
+        "login_identifier_type": user.login_identifier_type,
         "role": user.role.value.lower(),
         "first_name": registration_data.first_name,
         "last_name": registration_data.last_name
@@ -2984,16 +3662,29 @@ def register_parent(
 # ============================================================================
 
 class EnrollmentApplicationRequest(BaseModel):
+    # Child fields
     first_name: str
     last_name: str
     gender: str
-    date_of_birth: str  # ISO format date
-    father_name: str
-    mother_first_name: str
-    mother_last_name: str
-    mother_nationality: str
-    mother_national_id: str
+    date_of_birth: str          # ISO format
     kindergarten_id: int
+
+    # Father fields (required when parent_type == MOTHER or OTHER)
+    father_name: Optional[str] = None
+    father_national_id: Optional[str] = None
+    father_nationality: Optional[str] = None
+    father_phone: Optional[str] = None
+
+    # Mother fields (required when parent_type == FATHER or OTHER)
+    mother_first_name: Optional[str] = None
+    mother_last_name: Optional[str] = None
+    mother_nationality: Optional[str] = None
+    mother_national_id: Optional[str] = None
+    mother_passport_number: Optional[str] = None
+    mother_phone: Optional[str] = None
+
+    # Corresponding guardian selection
+    corresponding_type: Optional[str] = None
 
 
 @router.post("/enrollment/apply", status_code=status.HTTP_201_CREATED)
@@ -3012,25 +3703,99 @@ def create_enrollment_application(
     ).first()
     if not parent_profile:
         raise HTTPException(status_code=400, detail="Parent profile not found")
-    
+
+    # Require parent_type and national_id to be set before enrollment
+    if not parent_profile.parent_type:
+        raise HTTPException(
+            status_code=400,
+            detail="يرجى إكمال بيانات ولي الأمر (نوع ولي الأمر) في الملف الشخصي قبل التسجيل"
+        )
+    if not parent_profile.national_id:
+        raise HTTPException(
+            status_code=400,
+            detail="يرجى إضافة رقمك الوطني في الملف الشخصي قبل التسجيل"
+        )
+
     # Validate kindergarten exists
     kindergarten = db.query(models.Kindergarten).filter(
         models.Kindergarten.id == enrollment_data.kindergarten_id
     ).first()
     if not kindergarten:
         raise HTTPException(status_code=404, detail="Kindergarten not found")
-    
+
     # Validate child age (70 days to 56 months)
     dob = date.fromisoformat(enrollment_data.date_of_birth)
     today = date.today()
     age_days = (today - dob).days
-    age_months = age_days / 30.44  # Average days per month
-    
+    age_months = age_days / 30.44
+
     if age_days < 70:
         raise HTTPException(status_code=400, detail="Child must be at least 70 days old")
     if age_months > 56:
         raise HTTPException(status_code=400, detail="Child must be under 56 months old")
-    
+
+    ptype = parent_profile.parent_type  # 'FATHER' | 'MOTHER' | 'OTHER'
+
+    # Build parent-full-name for pre-filling father_name when FATHER is the account holder
+    parent_full_name = " ".join(
+        p for p in [parent_profile.first_name, parent_profile.second_name, parent_profile.last_name] if p
+    )
+
+    # Determine father_name
+    if ptype == "FATHER":
+        # Father is the account holder — use profile name; ignore client-submitted value
+        father_name = parent_full_name
+    else:
+        # MOTHER or OTHER must supply father name
+        if not enrollment_data.father_name:
+            raise HTTPException(status_code=400, detail="اسم الأب مطلوب")
+        father_name = enrollment_data.father_name
+
+    # Validate conditional required fields
+    if ptype == "FATHER":
+        # Must supply mother details
+        if not enrollment_data.mother_first_name or not enrollment_data.mother_last_name:
+            raise HTTPException(status_code=400, detail="اسم الأم مطلوب")
+        if not enrollment_data.mother_nationality:
+            raise HTTPException(status_code=400, detail="جنسية الأم مطلوبة")
+    elif ptype == "MOTHER":
+        # Must supply father details
+        if not enrollment_data.father_national_id:
+            raise HTTPException(status_code=400, detail="رقم الأب الوطني مطلوب")
+        if not enrollment_data.father_nationality:
+            raise HTTPException(status_code=400, detail="جنسية الأب مطلوبة")
+    else:  # OTHER
+        if not enrollment_data.mother_first_name or not enrollment_data.mother_last_name:
+            raise HTTPException(status_code=400, detail="اسم الأم مطلوب")
+        if not enrollment_data.father_national_id:
+            raise HTTPException(status_code=400, detail="رقم الأب الوطني مطلوب")
+
+    # Validate mother_national_id uniqueness: prevent same mother being used by a different parent
+    if enrollment_data.mother_national_id:
+        existing_mother_nid = db.query(models.Child).filter(
+            models.Child.mother_national_id == enrollment_data.mother_national_id.strip(),
+            models.Child.parent_id != parent_profile.id,
+            models.Child.deleted_at.is_(None)
+        ).first()
+        if existing_mother_nid:
+            raise HTTPException(
+                status_code=400,
+                detail="الرقم الوطني للأم مسجل مسبقاً لدى حساب ولي أمر آخر"
+            )
+
+    # Validate mother_phone uniqueness: prevent same mother phone used by a different parent
+    if enrollment_data.mother_phone:
+        existing_mother_phone = db.query(models.Child).filter(
+            models.Child.mother_phone == enrollment_data.mother_phone.strip(),
+            models.Child.parent_id != parent_profile.id,
+            models.Child.deleted_at.is_(None)
+        ).first()
+        if existing_mother_phone:
+            raise HTTPException(
+                status_code=400,
+                detail="هاتف الأم مسجل مسبقاً لدى حساب ولي أمر آخر"
+            )
+
     # Create child record
     child = models.Child(
         parent_id=parent_profile.id,
@@ -3038,13 +3803,36 @@ def create_enrollment_application(
         last_name=enrollment_data.last_name,
         gender=models.Gender(enrollment_data.gender.upper()),
         date_of_birth=dob,
-        father_name=enrollment_data.father_name,
-        mother_first_name=enrollment_data.mother_first_name,
-        mother_last_name=enrollment_data.mother_last_name,
-        mother_nationality=enrollment_data.mother_nationality,
-        mother_national_id=enrollment_data.mother_national_id
+        father_name=father_name,
+        father_national_id=enrollment_data.father_national_id,
+        father_nationality=enrollment_data.father_nationality,
+        father_phone=enrollment_data.father_phone,
+        mother_first_name=enrollment_data.mother_first_name or "",
+        mother_last_name=enrollment_data.mother_last_name or "",
+        mother_nationality=enrollment_data.mother_nationality or "",
+        mother_national_id=enrollment_data.mother_national_id,
+        mother_passport_number=enrollment_data.mother_passport_number,
+        mother_phone=enrollment_data.mother_phone,
+        profile_complete=False,
     )
     db.add(child)
+
+    # Resolve corresponding (primary guardian) for this child
+    try:
+        from validators import resolve_corresponding
+        corresponding = resolve_corresponding(
+            parent_type=ptype,
+            parent_phone=parent_profile.phone_number or "",
+            father_phone=enrollment_data.father_phone,
+            mother_phone=enrollment_data.mother_phone,
+            requested_corresponding=enrollment_data.corresponding_type
+        )
+    except validators.ValidationError as e:
+        raise HTTPException(status_code=400, detail=e.message)
+    child.corresponding_type = corresponding["type"]
+    child.corresponding_phone = corresponding["phone"]
+    child.corresponding_pending_reason = corresponding["pending_reason"]
+
     db.commit()
     db.refresh(child)
     
@@ -3058,12 +3846,24 @@ def create_enrollment_application(
     db.add(enrollment)
     db.commit()
     db.refresh(enrollment)
-    
+
+    # Audit log if corresponding requires manager assignment
+    if corresponding["type"] == "PENDING_MANAGER":
+        validators.log_audit_action(
+            db=db, user_id=current_user.id,
+            action="CORRESPONDING_PENDING_MANAGER",
+            entity_type="Child", entity_id=child.id,
+            details=f"reason={corresponding['pending_reason']}, kindergarten_id={enrollment_data.kindergarten_id}",
+            sensitivity_level=3
+        )
+
     return {
         "id": enrollment.id,
         "child_id": child.id,
         "kindergarten_id": enrollment.kindergarten_id,
-        "status": enrollment.status.value.lower()
+        "status": enrollment.status.value.lower(),
+        "corresponding_type": child.corresponding_type,
+        "corresponding_pending": child.corresponding_type == "PENDING_MANAGER"
     }
 
 
@@ -3103,6 +3903,103 @@ def submit_enrollment(
         "status": enrollment.status.value.lower(),
         "submitted_at": enrollment.submitted_at.isoformat() if enrollment.submitted_at else None
     }
+
+
+# ── Corresponding guardian assignment (manager) ──────────────────────────────
+
+class CorrespondingAssignRequest(BaseModel):
+    contact_name: str
+    contact_phone: str
+    relationship: str  # ولي أمر / قريب / أخصائي اجتماعي / أخرى
+    note: Optional[str] = None
+
+
+@router.patch("/children/{child_id}/corresponding")
+def assign_corresponding(
+    child_id: int,
+    payload: CorrespondingAssignRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Assign a primary guardian contact for a PENDING_MANAGER child (Manager only)"""
+    validators.validate_manager_role(current_user)
+
+    child = db.query(models.Child).filter(
+        models.Child.id == child_id,
+        models.Child.deleted_at.is_(None)
+    ).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    # Verify child belongs to this manager's kindergarten
+    enrollment = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.child_id == child_id,
+        models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id
+    ).first()
+    if not enrollment:
+        raise HTTPException(status_code=403, detail="Child does not belong to your kindergarten")
+
+    if child.corresponding_type != "PENDING_MANAGER":
+        raise HTTPException(status_code=400, detail="Child does not require a corresponding assignment")
+
+    # Validate phone
+    from auth import normalize_jordan_phone
+    try:
+        norm_phone = normalize_jordan_phone(payload.contact_phone.strip())
+    except Exception:
+        norm_phone = payload.contact_phone.strip()
+    if not validators.validate_jordan_phone(norm_phone):
+        raise HTTPException(status_code=400, detail="رقم الهاتف غير صالح")
+
+    child.corresponding_type = "GUARDIAN"
+    child.corresponding_phone = norm_phone
+    child.corresponding_pending_reason = None
+    db.commit()
+
+    validators.log_audit_action(
+        db=db, user_id=current_user.id,
+        action="CORRESPONDING_ASSIGNED",
+        entity_type="Child", entity_id=child.id,
+        details=f"name={payload.contact_name}, phone={norm_phone}, relationship={payload.relationship}",
+        sensitivity_level=2
+    )
+
+    return {"ok": True, "child_id": child_id, "corresponding_type": "GUARDIAN", "phone": norm_phone}
+
+
+@router.get("/manager/pending-corresponding")
+def get_pending_corresponding(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List children awaiting primary guardian assignment (Manager only)"""
+    validators.validate_manager_role(current_user)
+    kindergarten_id = current_user.kindergarten_id
+
+    rows = (
+        db.query(models.Child, models.EnrollmentApplication)
+        .join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id)
+        .filter(
+            models.Child.corresponding_type == "PENDING_MANAGER",
+            models.Child.deleted_at.is_(None),
+            models.EnrollmentApplication.kindergarten_id == kindergarten_id
+        )
+        .all()
+    )
+
+    children = [
+        {
+            "child_id": child.id,
+            "full_name": f"{child.first_name} {child.last_name}",
+            "father_name": child.father_name,
+            "enrollment_id": enrollment.id,
+            "enrollment_date": enrollment.created_at.isoformat() if enrollment.created_at else None,
+            "pending_reason": child.corresponding_pending_reason,
+        }
+        for child, enrollment in rows
+    ]
+
+    return {"count": len(children), "children": children}
 
 
 @router.post("/enrollment/{enrollment_id}/review")
@@ -3457,6 +4354,23 @@ def create_absence_request(
     enrollment = _active_enrollment_for_child(db, child.id)
     if not enrollment:
         raise HTTPException(status_code=400, detail="Child does not have active enrollment")
+
+    # Check for overlapping pending/approved requests for the same child
+    overlap = db.execute(
+        text(
+            "SELECT id FROM absence_requests "
+            "WHERE child_id = :child_id AND status IN ('PENDING', 'APPROVED') "
+            "AND start_date <= :end_date AND end_date >= :start_date "
+            "LIMIT 1"
+        ),
+        {
+            "child_id": child.id,
+            "start_date": absence_data.from_date,
+            "end_date": absence_data.to_date,
+        }
+    ).fetchone()
+    if overlap:
+        raise HTTPException(status_code=409, detail="يوجد طلب غياب متداخل في نفس الفترة")
 
     result = db.execute(
         text(
@@ -3953,8 +4867,11 @@ def get_child_daily_reports(
     """Get daily reports for a child (parents only see approved reports)"""
     # Parents: enforce that the child belongs to them
     if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
         child = db.query(models.Child).filter(models.Child.id == child_id).first()
-        if not child or child.parent_id != current_user.id:
+        if not child or not parent_profile or child.parent_id != parent_profile.id:
             raise HTTPException(status_code=403, detail="Access denied to this child's reports")
 
     query = db.query(models.DailyReport).filter(models.DailyReport.child_id == child_id)
@@ -3988,30 +4905,50 @@ def get_child_daily_reports(
 class IncidentCreateRequest(BaseModel):
     child_id: int
     kindergarten_id: Optional[int] = None
-    type: str
-    severity_level: str
+    class_id: Optional[int] = None
+    supervisor_id: Optional[int] = None
+    type: str                     # IncidentType enum value
+    classification: Optional[str] = None  # IncidentClassification enum value
+    severity_level: str           # SeverityLevel enum value
     description: str
-    occurred_at: str
+    occurred_at: str              # ISO datetime string
     followup_required_flag: Optional[bool] = False
+    parent_informed: Optional[bool] = None
+    parent_response: Optional[str] = None
+    parent_not_informed_reason: Optional[str] = None
 
 
 @router.post("/incidents", status_code=status.HTTP_201_CREATED)
 def create_incident_json(
     incident_data: IncidentCreateRequest,
+    request: Request,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create incident report with JSON body"""
-    validators.validate_supervisor_role(current_user)
-    
-    # Use user's kindergarten if not provided
+    """Create a safety incident. Admin is blocked — only Manager and Supervisor may submit."""
+    if current_user.role == models.UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="المشرف العام لا يُسجّل الحوادث التشغيلية. هذا الإجراء مخصص للمدير والمشرف."
+        )
+    if current_user.role == models.UserRole.PARENT:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="غير مصرح")
+
     kindergarten_id = incident_data.kindergarten_id or current_user.kindergarten_id
     if not kindergarten_id:
-        raise HTTPException(status_code=400, detail="Kindergarten ID required")
-    
+        raise HTTPException(status_code=400, detail="معرّف الروضة مطلوب")
+
     validators.validate_kindergarten_scope(current_user, kindergarten_id)
 
-    # Verify child belongs to this kindergarten
+    # Validate parent notification logic
+    if incident_data.parent_informed is False:
+        if not incident_data.parent_not_informed_reason or not incident_data.parent_not_informed_reason.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="يجب ذكر سبب عدم إبلاغ ولي الأمر"
+            )
+
+    # Verify child belongs to this kindergarten (active enrollment)
     child_enrollment = db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.child_id == incident_data.child_id,
         models.EnrollmentApplication.kindergarten_id == kindergarten_id,
@@ -4019,38 +4956,86 @@ def create_incident_json(
     ).first()
 
     if not child_enrollment:
-        # Check if child exists at all first to give better error
         child_exists = db.query(models.Child).filter(models.Child.id == incident_data.child_id).first()
         if not child_exists:
-            raise HTTPException(status_code=404, detail="Child not found")
-        raise HTTPException(status_code=403, detail="Child is not enrolled in this kindergarten")
+            raise HTTPException(status_code=404, detail="الطفل غير موجود")
+        raise HTTPException(status_code=403, detail="الطفل غير مسجّل بصورة نشطة في هذه الروضة")
+
+    # Validate class belongs to kindergarten if provided
+    if incident_data.class_id:
+        cls = db.query(models.Class).filter(
+            models.Class.id == incident_data.class_id,
+            models.Class.kindergarten_id == kindergarten_id
+        ).first()
+        if not cls:
+            raise HTTPException(status_code=400, detail="الصف غير موجود أو لا ينتمي لهذه الروضة")
+
+    # Parse enums safely
+    try:
+        incident_type = models.IncidentType(incident_data.type.upper())
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"نوع الحادث غير صحيح: {incident_data.type}")
+
+    try:
+        severity = models.SeverityLevel(incident_data.severity_level.upper())
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"درجة الخطورة غير صحيحة: {incident_data.severity_level}")
+
+    classification = None
+    if incident_data.classification:
+        try:
+            classification = models.IncidentClassification(incident_data.classification.upper())
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"تصنيف الحادث غير صحيح: {incident_data.classification}")
+
+    occurred_at = datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00'))
 
     incident = models.Incident(
         child_id=incident_data.child_id,
         kindergarten_id=kindergarten_id,
-        type=models.IncidentType(incident_data.type.upper()),
-        severity_level=models.SeverityLevel(incident_data.severity_level.upper()),
+        class_id=incident_data.class_id,
+        supervisor_id=incident_data.supervisor_id,
+        type=incident_type,
+        classification=classification,
+        severity_level=severity,
         description=incident_data.description,
-        occurred_at=datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00')),
+        occurred_at=occurred_at,
         followup_required_flag=incident_data.followup_required_flag or False,
-        notify_parent_at=datetime.now()
+        parent_informed=incident_data.parent_informed,
+        parent_response=incident_data.parent_response,
+        parent_not_informed_reason=incident_data.parent_not_informed_reason,
+        reported_by=current_user.id,
+        notify_parent_at=datetime.utcnow() if incident_data.parent_informed else None,
     )
-    
+
     if incident.followup_required_flag:
-        # Set 48 hour SLA
-        incident.followup_sla_deadline = datetime.now() + timedelta(hours=48)
-    
+        incident.followup_sla_deadline = datetime.utcnow() + timedelta(hours=48)
+
     db.add(incident)
+    db.flush()
+
+    import json as _json
+    ip = request.client.host if request.client else None
+    validators.log_audit_action(
+        db, current_user.id, "CREATE_INCIDENT", "Incident", incident.id,
+        _json.dumps({"type": incident_type.value, "severity": severity.value, "child_id": incident_data.child_id}),
+        ip_address=ip, sensitivity_level=3
+    )
+
     db.commit()
     db.refresh(incident)
-    
+
     return {
         "id": incident.id,
         "child_id": incident.child_id,
         "kindergarten_id": incident.kindergarten_id,
+        "class_id": incident.class_id,
+        "supervisor_id": incident.supervisor_id,
         "type": incident.type.value,
+        "classification": incident.classification.value if incident.classification else None,
         "severity_level": incident.severity_level.value,
-        "followup_required_flag": incident.followup_required_flag
+        "parent_informed": incident.parent_informed,
+        "followup_required_flag": incident.followup_required_flag,
     }
 
 
@@ -4058,44 +5043,97 @@ def create_incident_json(
 def list_incidents(
     child_id: Optional[int] = None,
     kindergarten_id: Optional[int] = None,
+    class_id: Optional[int] = None,
+    supervisor_id: Optional[int] = None,
     severity: Optional[str] = None,
+    incident_type: Optional[str] = None,
+    classification: Optional[str] = None,
+    parent_informed: Optional[bool] = None,
+    unresolved_only: Optional[bool] = False,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List incidents with optional filtering"""
-    query = db.query(models.Incident)
-    
-    # Filter by kindergarten for non-admins
+    """List incidents with rich filtering. Admin sees all; others scoped to their kindergarten."""
+    query = db.query(models.Incident).filter(models.Incident.deleted_at.is_(None))
+
     if current_user.role != models.UserRole.ADMIN:
         query = query.filter(models.Incident.kindergarten_id == current_user.kindergarten_id)
     elif kindergarten_id:
         query = query.filter(models.Incident.kindergarten_id == kindergarten_id)
-    
+
     if child_id:
         query = query.filter(models.Incident.child_id == child_id)
-    
+    if class_id:
+        query = query.filter(models.Incident.class_id == class_id)
+    if supervisor_id:
+        query = query.filter(models.Incident.supervisor_id == supervisor_id)
+    if parent_informed is not None:
+        query = query.filter(models.Incident.parent_informed == parent_informed)
+    if unresolved_only:
+        query = query.filter(models.Incident.closed_at.is_(None))
+
     if severity:
         try:
-            severity_enum = models.SeverityLevel(severity.upper())
-            query = query.filter(models.Incident.severity_level == severity_enum)
+            query = query.filter(models.Incident.severity_level == models.SeverityLevel(severity.upper()))
         except ValueError:
             pass
-    
+
+    if incident_type:
+        try:
+            query = query.filter(models.Incident.type == models.IncidentType(incident_type.upper()))
+        except ValueError:
+            pass
+
+    if classification:
+        try:
+            query = query.filter(models.Incident.classification == models.IncidentClassification(classification.upper()))
+        except ValueError:
+            pass
+
+    if date_from:
+        try:
+            query = query.filter(models.Incident.occurred_at >= datetime.fromisoformat(date_from))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            query = query.filter(models.Incident.occurred_at <= datetime.fromisoformat(date_to))
+        except ValueError:
+            pass
+
     incidents = query.order_by(models.Incident.occurred_at.desc()).all()
-    
-    return [
-        {
+
+    result = []
+    for i in incidents:
+        child_name = None
+        if i.child:
+            child_name = f"{i.child.first_name} {i.child.last_name}".strip() or None
+        supervisor_name = None
+        if i.supervisor:
+            supervisor_name = i.supervisor.username
+
+        result.append({
             "id": i.id,
             "child_id": i.child_id,
+            "child_name": child_name,
             "kindergarten_id": i.kindergarten_id,
+            "class_id": i.class_id,
+            "supervisor_id": i.supervisor_id,
+            "supervisor_name": supervisor_name,
             "type": i.type.value,
+            "classification": i.classification.value if i.classification else None,
             "severity_level": i.severity_level.value,
             "description": i.description,
             "occurred_at": i.occurred_at.isoformat() if i.occurred_at else None,
-            "followup_required_flag": i.followup_required_flag
-        }
-        for i in incidents
-    ]
+            "closed_at": i.closed_at.isoformat() if i.closed_at else None,
+            "followup_required_flag": i.followup_required_flag,
+            "parent_informed": i.parent_informed,
+            "parent_response": i.parent_response,
+            "parent_not_informed_reason": i.parent_not_informed_reason,
+        })
+    return result
 
 
 @router.post("/incidents/create", status_code=status.HTTP_201_CREATED)
@@ -4203,149 +5241,6 @@ def get_attendance_rate_kpi(
     }
 
 
-# @router.get("/kpi/summary")  # Moved to kpi_service.py
-# def get_kpi_summary(
-#     kindergarten_id: Optional[int] = None,
-#     period_start: Optional[str] = None,
-#     period_end: Optional[str] = None,
-#     current_user: models.User = Depends(get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-#     """Get comprehensive KPI summary dashboard for all metrics"""
-#     if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
-#         raise HTTPException(status_code=403, detail="Only admin or manager can view KPI summaries")
-#     
-#     # Determine kindergarten scope
-#     if kindergarten_id is None:
-#         if current_user.role == models.UserRole.MANAGER:
-#             kindergarten_id = current_user.kindergarten_id
-#         else:
-#             # Admin without kindergarten_id sees all (return first kindergarten for demo)
-#             first_kg = db.query(models.Kindergarten).first()
-#             kindergarten_id = first_kg.id if first_kg else None
-#     
-#     if not kindergarten_id:
-#         raise HTTPException(status_code=400, detail="No kindergarten available")
-#     
-#     # Set default period to current month if not provided
-#     if not period_start or not period_end:
-#         today = date.today()
-#         period_start = date(today.year, today.month, 1).isoformat()
-#         last_day = date(today.year, today.month + 1, 1) - timedelta(days=1) if today.month < 12 else date(today.year, 12, 31)
-#         period_end = last_day.isoformat()
-#     
-#     # Get active enrollments count
-#     active_enrollments = db.query(func.count(models.EnrollmentApplication.id)).filter(
-#         models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-#         models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-#     ).scalar() or 0
-#     
-#     # Get total capacity across all classes
-#     total_capacity = db.query(func.sum(models.Class.capacity_total)).filter(
-#         models.Class.kindergarten_id == kindergarten_id,
-#         models.Class.is_active == True
-#     ).scalar() or 0
-#     
-#     # Calculate occupancy rate
-#     occupancy_rate = (active_enrollments / total_capacity * 100) if total_capacity > 0 else 0
-#     
-#     # Count attendance records in period
-#     start_date = date.fromisoformat(period_start)
-#     end_date = date.fromisoformat(period_end)
-#     
-#     child_ids = [e.child_id for e in db.query(models.EnrollmentApplication).filter(
-#         models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-#         models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-#     ).all()]
-#     
-#     attendance_count = db.query(func.count(models.AttendanceLog.id)).filter(
-#         models.AttendanceLog.child_id.in_(child_ids) if child_ids else False,
-#         models.AttendanceLog.date >= start_date,
-#         models.AttendanceLog.date <= end_date
-#     ).scalar() or 0
-#     
-#     # Calculate attendance rate
-#     days = (end_date - start_date).days + 1
-#     working_days = max(1, days * 5 // 7)  # Rough estimate
-#     expected_attendance = active_enrollments * working_days
-#     attendance_rate = (attendance_count / expected_attendance * 100) if expected_attendance > 0 else 0
-#     
-#     # Count incidents in period
-#     incident_count = db.query(func.count(models.Incident.id)).filter(
-#         models.Incident.kindergarten_id == kindergarten_id,
-#         func.date(models.Incident.occurred_at) >= start_date,
-#         func.date(models.Incident.occurred_at) <= end_date
-#     ).scalar() or 0
-#     
-#     # Count pending daily reports
-#     pending_reports = db.query(func.count(models.DailyReport.id)).join(
-#         models.Child
-#     ).join(
-#     models.EnrollmentApplication
-#     ).filter(
-#         models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-#         models.DailyReport.status == models.DailyReportStatus.SUBMITTED
-#     ).scalar() or 0
-#     
-#     # Calculate governance score (weighted composite)
-#     safety_score = max(0, 100 - (incident_count * 5))  # Deduct 5 points per incident
-#     reports_score = 100 if pending_reports == 0 else max(50, 100 - (pending_reports * 2))
-#     compliance_score = 85  # Placeholder for license/compliance checks
-#     
-#     governance_score = (
-#         attendance_rate * 0.25 +
-#         safety_score * 0.30 +
-#         reports_score * 0.20 +
-#         compliance_score * 0.25
-#     )
-#     
-#     # Determine governance band
-#     if governance_score >= 80:
-#         governance_band = "GREEN"
-#     elif governance_score >= 60:
-#         governance_band = "AMBER"
-#     else:
-#         governance_band = "RED"
-#     
-#     return {
-#         "kindergarten_id": kindergarten_id,
-#         "period_start": period_start,
-#         "period_end": period_end,
-#         "kpis": {
-#             "occupancy_rate": {
-#                 "value": round(occupancy_rate, 2),
-#                 "unit": "percent",
-#                 "description": "Enrollment vs total capacity",
-#                 "enrolled": active_enrollments,
-#                 "capacity": total_capacity
-#             },
-#             "attendance_rate": {
-#                 "value": round(min(100, attendance_rate), 2),
-#                 "unit": "percent",
-#                 "description": "Daily attendance rate",
-#                 "attendance_count": attendance_count,
-#                 "expected": expected_attendance
-#             },
-#             "governance_score": {
-#                 "value": round(governance_score, 2),
-#                 "unit": "score",
-#                 "band": governance_band,
-#                 "description": "Composite governance score"
-#             },
-#             "incident_count": {
-#                 "value": incident_count,
-#                 "unit": "count",
-#                 "description": "Total incidents reported"
-#             },
-#             "pending_reports": {
-#                 "value": pending_reports,
-#                 "unit": "count",
-#                 "description": "Daily reports pending approval"
-#             }
-#         }
-#     }
-
-
 @router.get("/kpi/governance-score")
 def get_governance_score(
     kindergarten_id: int,
@@ -4361,40 +5256,40 @@ def get_governance_score(
     if current_user.role == models.UserRole.MANAGER:
         validators.validate_kindergarten_scope(current_user, kindergarten_id)
     
-    # Calculate sub-scores (simplified)
-    # In production, these would be calculated from actual data
-    attendance_score = 75.0
-    safety_score = 90.0
-    reports_score = 80.0
-    compliance_score = 85.0
-    
-    # Weighted average
-    final_score = (
-        attendance_score * 0.25 +
-        safety_score * 0.30 +
-        reports_score * 0.20 +
-        compliance_score * 0.25
-    )
-    
-    # Determine band
+    try:
+        ps = date.fromisoformat(period_start)
+        pe = date.fromisoformat(period_end)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="period_start and period_end must be ISO dates (YYYY-MM-DD)")
+
+    KS = _kpi_svc.KPIService
+    ratio_compliance     = KS.compute_ratio_compliance(db, kindergarten_id, ps, pe)
+    checklist_compliance = KS.compute_checklist_compliance(db, kindergarten_id, ps, pe)
+    regulatory_status    = KS.compute_regulatory_status(db, kindergarten_id)
+    training_coverage    = KS.compute_training_coverage(db, kindergarten_id, ps, pe)
+    incident_sla         = KS.compute_incident_followup_sla_compliance(db, kindergarten_id, ps, pe)
+
+    final_score = KS.compute_governance_quality_index(db, kindergarten_id, ps, pe)
+
     if final_score >= 80:
         band = "GREEN"
     elif final_score >= 60:
         band = "AMBER"
     else:
         band = "RED"
-    
+
     return {
         "kindergarten_id": kindergarten_id,
         "period_start": period_start,
         "period_end": period_end,
-        "final_governance_score": round(final_score, 2),
+        "final_governance_score": final_score,
         "band": band,
         "sub_scores": {
-            "attendance": attendance_score,
-            "safety": safety_score,
-            "daily_reports": reports_score,
-            "compliance": compliance_score
+            "ratio_compliance": round(ratio_compliance, 2),
+            "checklist_compliance": round(checklist_compliance, 2),
+            "regulatory_status": round(regulatory_status, 2),
+            "training_coverage": round(training_coverage, 2),
+            "incident_followup_sla": round(incident_sla, 2),
         }
     }
 
