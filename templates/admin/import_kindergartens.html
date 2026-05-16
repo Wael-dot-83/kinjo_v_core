@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Import Kindergartens{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Import Kindergartens from Excel</h3>
+                    <div class="card-tools">
+                        <a href="/admin/imported-kindergartens" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-list"></i> View Imported Kindergartens
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h5>Instructions:</h5>
+                        <ul>
+                            <li>Upload an Excel file (.xlsx) with kindergarten data</li>
+                            <li>The file must contain the following columns with exact Arabic headers:</li>
+                            <ul>
+                                <li>اسم الروضة (عربي) - Required</li>
+                                <li>اسم الروضة (إنجليزي) - Optional</li>
+                                <li>المحافظة - Required</li>
+                                <li>المدينة - Required</li>
+                                <li>المنطقة - Optional</li>
+                                <li>العنوان التفصيلي - Optional</li>
+                                <li>رقم الهاتف - Required</li>
+                            </ul>
+                            <li>Data will be validated and imported with duplicate protection</li>
+                        </ul>
+                    </div>
+
+                    <form id="importForm" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label for="excelFile">Select Excel File:</label>
+                            <input type="file" class="form-control-file" id="excelFile" name="file" accept=".xlsx,.xls"
+                                required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="importBtn">
+                            <i class="fas fa-upload"></i> Import Kindergartens
+                        </button>
+                    </form>
+
+                    <div id="progress" class="mt-3" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                                style="width: 100%"></div>
+                        </div>
+                        <p class="text-center mt-2">Processing import...</p>
+                    </div>
+
+                    <div id="results" class="mt-3" style="display: none;">
+                        <h4>Import Results</h4>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-success" id="importedCount">0</h5>
+                                        <p class="card-text">Imported</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-warning" id="updatedCount">0</h5>
+                                        <p class="card-text">Updated</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-secondary" id="skippedCount">0</h5>
+                                        <p class="card-text">Skipped</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-danger" id="errorCount">0</h5>
+                                        <p class="card-text">Errors</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="importedTable" class="mt-4" style="display: none;">
+                            <h5>Imported/Updated Records</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped" id="resultsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Name (AR)</th>
+                                            <th>Name (EN)</th>
+                                            <th>Governorate</th>
+                                            <th>City</th>
+                                            <th>Area</th>
+                                            <th>Phone</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resultsBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div id="errors" class="mt-4" style="display: none;">
+                            <h5>Errors</h5>
+                            <div class="alert alert-danger">
+                                <ul id="errorList"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('importForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const fileInput = document.getElementById('excelFile');
+        const importBtn = document.getElementById('importBtn');
+        const progress = document.getElementById('progress');
+        const results = document.getElementById('results');
+
+        if (!fileInput.files[0]) {
+            alert('Please select a file');
+            return;
+        }
+
+        // Show progress
+        importBtn.disabled = true;
+        progress.style.display = 'block';
+        results.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        try {
+            const response = await fetch('/api/admin/kindergartens/import', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-Token': '{{ csrf_token }}'
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || 'Import failed');
+            }
+
+            // Hide progress
+            progress.style.display = 'none';
+            results.style.display = 'block';
+
+            // Update counts
+            document.getElementById('importedCount').textContent = data.result.imported_count;
+            document.getElementById('updatedCount').textContent = data.result.updated_count;
+            document.getElementById('skippedCount').textContent = data.result.skipped_count;
+            document.getElementById('errorCount').textContent = data.result.errors.length;
+
+            // Show imported records if any
+            if (data.result.imported_count > 0 || data.result.updated_count > 0) {
+                // Fetch the imported records
+                const recordsResponse = await fetch('/api/admin/kindergartens/imported?page=1&per_page=100');
+                const recordsData = await recordsResponse.json();
+
+                if (recordsData.kindergartens && recordsData.kindergartens.length > 0) {
+                    const tbody = document.getElementById('resultsBody');
+                    tbody.innerHTML = '';
+
+                    recordsData.kindergartens.slice(0, 50).forEach(kg => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                        <td>${kg.name_ar}</td>
+                        <td>${kg.name_en || ''}</td>
+                        <td>${kg.governorate}</td>
+                        <td>${kg.city}</td>
+                        <td>${kg.area || ''}</td>
+                        <td>${kg.phone}</td>
+                        <td><span class="badge badge-success">Imported</span></td>
+                    `;
+                        tbody.appendChild(row);
+                    });
+
+                    document.getElementById('importedTable').style.display = 'block';
+                }
+            }
+
+            // Show errors if any
+            if (data.result.errors && data.result.errors.length > 0) {
+                const errorList = document.getElementById('errorList');
+                errorList.innerHTML = '';
+                data.result.errors.forEach(error => {
+                    const li = document.createElement('li');
+                    li.textContent = `Row ${error.row}: ${error.errors.join(', ')}`;
+                    errorList.appendChild(li);
+                });
+                document.getElementById('errors').style.display = 'block';
+            }
+
+        } catch (error) {
+            progress.style.display = 'none';
+            alert('Import failed: ' + error.message);
+        } finally {
+            importBtn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

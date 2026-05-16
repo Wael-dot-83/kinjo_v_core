@@ -1,10 +1,7 @@
 """
 Celery application for KinJo background task processing.
 
-The app is always created successfully at import time — Celery does not
-connect to the broker until a task is dispatched or a worker starts.
-In TESTING mode (TESTING=True), tasks run eagerly in-process so no
-Redis instance is required.
+Tasks run eagerly in-process when TESTING=True so no Redis is required in CI.
 """
 import logging
 
@@ -16,30 +13,25 @@ logger = logging.getLogger(__name__)
 
 celery_app = Celery(
     "kinjo",
-    broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL,
+    broker=settings.CELERY_BROKER_URL,
+    backend=settings.CELERY_RESULT_BACKEND,
     include=["messaging_tasks"],
 )
 
 celery_app.conf.update(
     task_serializer="json",
-    result_serializer="json",
     accept_content=["json"],
+    result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-    # Run tasks synchronously in-process during tests (no broker needed)
     task_always_eager=settings.TESTING,
     task_eager_propagates=settings.TESTING,
     beat_schedule={
         "dispatch-scheduled-messages": {
             "task": "messaging_tasks.dispatch_scheduled_messages",
-            "schedule": 60.0,  # every minute
+            "schedule": 60.0,
         },
     },
 )
 
-logger.info(
-    "Celery configured — broker=%s testing=%s",
-    settings.REDIS_URL,
-    settings.TESTING,
-)
+__all__ = ["celery_app"]

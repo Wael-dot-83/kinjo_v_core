@@ -1,19 +1,18 @@
-{% extends 'base.html' %}
-{% block title %}أرشيف الحضور — KinJo{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}Attendance History{% else %}سجل الحضور التاريخي{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-clock-history"></i>
-            سجلات الدوام
-        </div>
-        <h1 class="page-header-title">أرشيف الحضور والغياب</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/attendance/daily" class="text-decoration-none">الحضور اليومي</a></li>
-                <li class="breadcrumb-item active">الأرشيف</li>
+        <h1 class="h2">
+            <i class="bi bi-clock-history me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}Attendance Archive{% else %}أرشيف الحضور والغياب{% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Attendance History{% else %}سجل الحضور التاريخي{% endif %}</li>
             </ol>
         </nav>
     </div>
@@ -21,391 +20,321 @@
 {% endblock %}
 
 {% block content %}
-
-<div class="row g-4">
-
-    <!-- Filter Sidebar -->
-    <div class="col-xl-3 col-lg-4">
-        <div class="card sticky-filter">
-            <div class="card-header">
-                <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-funnel-fill me-2 text-primary"></i>
-                    خيارات التقرير
-                </h6>
-            </div>
-            <div class="card-body">
-                <form id="historyFilter">
-
-                    <div class="mb-3">
-                        <label class="filter-label">نوع التقرير</label>
-                        <div class="d-flex gap-2 mt-1">
-                            <input type="radio" class="btn-check" name="reportType" id="typeClass" value="class" checked>
-                            <label class="btn btn-sm btn-ghost flex-fill text-center" for="typeClass">
-                                <i class="bi bi-people-fill d-block mb-1"></i>شعبة
-                            </label>
-                            <input type="radio" class="btn-check" name="reportType" id="typeChild" value="child">
-                            <label class="btn btn-sm btn-ghost flex-fill text-center" for="typeChild">
-                                <i class="bi bi-person-fill d-block mb-1"></i>طفل
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="mb-3" id="classSelectDiv">
-                        <label class="filter-label" for="classSelect">الشعبة الصفية</label>
-                        <select class="form-select form-select-sm" id="classSelect">
-                            <option value="">اختر الشعبة...</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3 d-none" id="childSelectDiv">
-                        <label class="filter-label" for="childSearch">اسم الطفل</label>
-                        <div class="search-box-sm">
-                            <i class="bi bi-search search-icon-sm"></i>
-                            <input type="text" class="form-control form-control-sm ps-4" id="childSearch" placeholder="ابحث بالاسم...">
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="filter-label" for="periodSelect">الفترة الزمنية</label>
-                        <select class="form-select form-select-sm" id="periodSelect">
-                            <option value="week">هذا الأسبوع</option>
-                            <option value="month" selected>هذا الشهر</option>
-                            <option value="quarter">هذا الفصل الدراسي</option>
-                            <option value="custom">مخصص</option>
-                        </select>
-                    </div>
-
-                    <div class="d-none" id="dateRangeDiv">
-                        <div class="mb-2">
-                            <label class="filter-label" for="fromDate">من تاريخ</label>
-                            <input type="date" class="form-control form-control-sm" id="fromDate">
-                        </div>
-                        <div class="mb-3">
-                            <label class="filter-label" for="toDate">إلى تاريخ</label>
-                            <input type="date" class="form-control form-control-sm" id="toDate">
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100 mb-2">
-                        <i class="bi bi-bar-chart-fill me-2"></i>عرض التقرير
-                    </button>
-
-                    <button type="button" class="btn btn-ghost w-100" id="exportBtn">
-                        <i class="bi bi-download me-2"></i>تصدير Excel
-                    </button>
-
-                </form>
-            </div>
-        </div>
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">{% if ui_lang == 'en' %}Filter Options{% else %}خيارات التصفية{% endif %}</h5>
     </div>
+    <div class="card-body">
+        <form id="historyFilters" class="row g-3">
+            {% if is_admin %}
+            <div class="col-md-4 col-lg-3">
+                <label class="form-label" for="kindergartenFilter">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                <select class="form-select" id="kindergartenFilter">
+                    <option id="allKindergartensOption" value="" data-all-kindergartens="true">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                    {% for kg in kindergartens %}
+                    <option value="{{ kg.id }}">{{ kg.name_en if ui_lang == 'en' and kg.name_en else kg.name_ar }}{% if kg.governorate %} - {{ kg.governorate }}{% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <label class="form-label" for="governorateFilter">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                <select class="form-select" id="governorateFilter">
+                    <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
+                    {% for governorate in governorates %}
+                    <option value="{{ governorate }}">{{ governorate }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <label class="form-label" for="kindergartenNameFilter">{% if ui_lang == 'en' %}Search Kindergarten Name{% else %}بحث باسم الروضة{% endif %}</label>
+                <input
+                    type="text"
+                    id="kindergartenNameFilter"
+                    class="form-control"
+                    placeholder="{% if ui_lang == 'en' %}Full or partial name{% else %}أدخل الاسم الكامل أو جزء منه{% endif %}"
+                    autocomplete="off"
+                >
+            </div>
+            {% else %}
+            <div class="col-md-4">
+                <label class="form-label" for="kindergartenReadonly">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                <input
+                    type="text"
+                    id="kindergartenReadonly"
+                    class="form-control"
+                    value="{{ (user_kindergarten.name_en if ui_lang == 'en' and user_kindergarten and user_kindergarten.name_en else user_kindergarten.name_ar) if user_kindergarten else '' }}"
+                    readonly
+                >
+            </div>
+            {% endif %}
 
-    <!-- Results Area -->
-    <div class="col-xl-9 col-lg-8">
+            <div class="{% if is_admin %}col-md-4 col-lg-3{% else %}col-md-4{% endif %}">
+                <label class="form-label" for="childNameFilter">{% if ui_lang == 'en' %}Search Child Name{% else %}بحث باسم الطفل{% endif %}</label>
+                <input
+                    type="text"
+                    id="childNameFilter"
+                    class="form-control"
+                    placeholder="{% if ui_lang == 'en' %}Full or partial name{% else %}الاسم الكامل أو جزء منه{% endif %}"
+                    autocomplete="off"
+                >
+            </div>
 
-        <!-- Summary Stats -->
-        <div class="row g-3 mb-4" id="statsRow">
-            <div class="col-6 col-md-3">
-                <div class="stat-card success card">
-                    <div class="card-body">
-                        <div class="stat-info">
-                            <div class="stat-label">نسبة الحضور</div>
-                            <div class="stat-value" id="statRate">—</div>
-                        </div>
-                        <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
-                            <i class="bi bi-graph-up-arrow"></i>
-                        </div>
-                    </div>
-                </div>
+            <div class="{% if is_admin %}col-md-4 col-lg-2{% else %}col-md-3{% endif %}">
+                <label class="form-label" for="startDate">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %}</label>
+                <input type="date" class="form-control" id="startDate" value="{{ default_start_date }}">
             </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card warning card">
-                    <div class="card-body">
-                        <div class="stat-info">
-                            <div class="stat-label">نسبة التأخير</div>
-                            <div class="stat-value" id="statLate">—</div>
-                        </div>
-                        <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
-                            <i class="bi bi-clock"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card danger card">
-                    <div class="card-body">
-                        <div class="stat-info">
-                            <div class="stat-label">نسبة الغياب</div>
-                            <div class="stat-value" id="statAbsent">—</div>
-                        </div>
-                        <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
-                            <i class="bi bi-person-x-fill"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card card">
-                    <div class="card-body">
-                        <div class="stat-info">
-                            <div class="stat-label">أيام العمل</div>
-                            <div class="stat-value" id="statDays">—</div>
-                        </div>
-                        <div class="stat-icon-wrap" style="background:rgba(99,102,241,0.12);color:var(--kinjo-primary);">
-                            <i class="bi bi-calendar-check-fill"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Results Table -->
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-table me-2 text-primary"></i>
-                    سجل الدوام التفصيلي
-                </h6>
-                <span class="text-muted small" id="recordCount"></span>
+            <div class="{% if is_admin %}col-md-4 col-lg-2{% else %}col-md-3{% endif %}">
+                <label class="form-label" for="endDate">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %}</label>
+                <input type="date" class="form-control" id="endDate" value="{{ default_end_date }}">
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table history-table mb-0">
-                        <thead id="historyThead">
-                            <tr>
-                                <th>التاريخ</th>
-                                <th>اليوم</th>
-                                <th>الحضور</th>
-                                <th>الغياب</th>
-                                <th>التأخير</th>
-                                <th>نسبة الحضور</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyTable">
-                            <tr>
-                                <td colspan="6" class="text-center py-5 text-muted">
-                                    <i class="bi bi-bar-chart-line d-block fs-2 mb-2 opacity-25"></i>
-                                    <small>اختر الفلاتر وانقر «عرض التقرير» لعرض البيانات</small>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
 
+            <div class="{% if is_admin %}col-md-4 col-lg-2{% else %}col-md-2{% endif %} d-grid">
+                <label class="form-label d-none d-md-block">&nbsp;</label>
+                <button type="submit" id="applyHistoryFilters" class="btn btn-primary">
+                    <i class="bi bi-funnel me-1"></i>
+                    {% if ui_lang == 'en' %}Show Records{% else %}عرض السجل{% endif %}
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100 border-success bg-success bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="text-success small">{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}</div>
+                <h3 class="mb-0 fw-bold text-success" id="summaryAttendanceRate">0%</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-primary bg-primary bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="text-primary small">{% if ui_lang == 'en' %}Total Present{% else %}إجمالي الحضور{% endif %}</div>
+                <h3 class="mb-0 fw-bold text-primary" id="summaryPresent">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-danger bg-danger bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="text-danger small">{% if ui_lang == 'en' %}Total Absent{% else %}إجمالي الغياب{% endif %}</div>
+                <h3 class="mb-0 fw-bold text-danger" id="summaryAbsent">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-secondary bg-secondary bg-opacity-10">
+            <div class="card-body text-center">
+                <div class="text-secondary small">{% if ui_lang == 'en' %}Total Records{% else %}إجمالي السجلات{% endif %}</div>
+                <h3 class="mb-0 fw-bold text-secondary" id="summaryTotal">0</h3>
+            </div>
+        </div>
+    </div>
+</div>
 
-.sticky-filter { position:sticky;top:80px; }
-.filter-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;display:block; }
-
-.search-box-sm { position:relative; }
-.search-icon-sm { position:absolute;inset-block-start:50%;transform:translateY(-50%);inset-inline-start:0.6rem;color:var(--kinjo-text-muted);font-size:0.8rem;pointer-events:none; }
-
-/* History table */
-.history-table thead th {
-    font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);
-    text-transform:uppercase;letter-spacing:0.04em;
-    padding:0.75rem 1rem;background:var(--kinjo-surface);
-    border-bottom:1px solid var(--kinjo-border);white-space:nowrap;
-}
-.history-table tbody td { padding:0.875rem 1rem;vertical-align:middle;font-size:0.875rem;border-bottom:1px solid var(--kinjo-border); }
-.history-table tbody tr:last-child td { border-bottom:none; }
-.history-table tbody tr:hover td { background:var(--kinjo-surface); }
-
-/* Attendance rate bar */
-.att-rate-bar { width:80px;height:6px;border-radius:50px;background:var(--kinjo-border);display:inline-block;vertical-align:middle;overflow:hidden;margin-inline-start:0.4rem; }
-.att-rate-fill { height:100%;border-radius:50px;transition:width 0.4s; }
-
-/* Day badge */
-.day-badge { display:inline-block;padding:0.15rem 0.55rem;border-radius:6px;font-size:0.72rem;font-weight:700;background:var(--kinjo-surface);border:1px solid var(--kinjo-border);color:var(--kinjo-text-secondary); }
-</style>
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{% if ui_lang == 'en' %}Daily Attendance Details{% else %}تفاصيل الحضور اليومية{% endif %}</h5>
+        <span id="scopeBadge" class="badge bg-secondary-subtle text-secondary-emphasis">-</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Day{% else %}اليوم{% endif %}</th>
+                        <th class="text-success">{% if ui_lang == 'en' %}Present{% else %}حاضر{% endif %}</th>
+                        <th class="text-danger">{% if ui_lang == 'en' %}Absent{% else %}غائب{% endif %}</th>
+                        <th class="text-warning">{% if ui_lang == 'en' %}Late{% else %}متأخر{% endif %}</th>
+                        <th class="text-info">{% if ui_lang == 'en' %}Excused{% else %}معذور{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">{% if ui_lang == 'en' %}Loading data...{% else %}جارٍ تحميل البيانات...{% endif %}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.querySelectorAll('input[name="reportType"]').forEach(radio => {
-    radio.addEventListener('change', function () {
-        const isClass = this.value === 'class';
-        document.getElementById('classSelectDiv').classList.toggle('d-none', !isClass);
-        document.getElementById('childSelectDiv').classList.toggle('d-none', isClass);
+(() => {
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
 
-        const thead = document.getElementById('historyThead');
-        if (isClass) {
-            thead.innerHTML = `<tr>
-                <th>التاريخ</th><th>اليوم</th><th>الحضور</th><th>الغياب</th><th>التأخير</th><th>نسبة الحضور</th>
-            </tr>`;
+    const isAdmin = {{ "true" if is_admin else "false" }};
+    const fixedKindergartenId = {{ user_kindergarten.id if user_kindergarten else "null" }};
+
+    const filterForm = document.getElementById("historyFilters");
+    const submitButton = document.getElementById("applyHistoryFilters");
+    const kindergartenFilter = document.getElementById("kindergartenFilter");
+    const governorateFilter = document.getElementById("governorateFilter");
+    const kindergartenNameFilter = document.getElementById("kindergartenNameFilter");
+    const childNameFilter = document.getElementById("childNameFilter");
+    const startDateInput = document.getElementById("startDate");
+    const endDateInput = document.getElementById("endDate");
+    const tableBody = document.getElementById("historyTableBody");
+
+    const summaryAttendanceRate = document.getElementById("summaryAttendanceRate");
+    const summaryPresent = document.getElementById("summaryPresent");
+    const summaryAbsent = document.getElementById("summaryAbsent");
+    const summaryTotal = document.getElementById("summaryTotal");
+    const scopeBadge = document.getElementById("scopeBadge");
+
+    const notify = (message, level = "info") => {
+        if (typeof showToast === "function") {
+            showToast(message, level);
+            return;
+        }
+        console.log(`[${level}] ${message}`);
+    };
+
+    const toPercent = (value) => `${Number(value || 0).toFixed(2)}%`;
+
+    const setLoadingState = (isLoading) => {
+        submitButton.disabled = isLoading;
+        if (isLoading) {
+            submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${T('جاري التحميل...', 'Loading...')}`;
         } else {
-            thead.innerHTML = `<tr>
-                <th>التاريخ</th><th>اليوم</th><th>الحالة</th><th>وقت الوصول</th><th>وقت المغادرة</th><th>الملاحظات</th>
-            </tr>`;
+            submitButton.innerHTML = `<i class="bi bi-funnel me-1"></i>${T('عرض السجل', 'Show Records')}`;
         }
-    });
-});
+    };
 
-document.getElementById('periodSelect').addEventListener('change', function () {
-    document.getElementById('dateRangeDiv').classList.toggle('d-none', this.value !== 'custom');
-});
+    const renderTotals = (totals) => {
+        summaryAttendanceRate.textContent = toPercent(totals.attendance_rate);
+        summaryPresent.textContent = totals.present ?? 0;
+        summaryAbsent.textContent = totals.absent ?? 0;
+        summaryTotal.textContent = totals.total ?? 0;
+    };
 
-document.addEventListener('DOMContentLoaded', loadClasses);
-
-async function loadClasses() {
-    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-    try {
-        const r = await fetch('/api/classes', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (!r.ok) return;
-        const data = await r.json();
-        const classes = data.classes || data || [];
-        const sel = document.getElementById('classSelect');
-        if (classes.length) {
-            sel.innerHTML = '<option value="">اختر الشعبة...</option>' +
-                classes.map(c => `<option value="${c.id}">${c.name_ar || c.name_en}</option>`).join('');
+    const renderScope = (scope) => {
+        if (!scope) {
+            scopeBadge.textContent = "-";
+            return;
         }
-    } catch {}
-}
+        const filters = scope.filters || {};
+        const filterParts = [];
+        if (filters.governorate) {
+            filterParts.push(`${T('المحافظة', 'Gov.')}: ${filters.governorate}`);
+        }
+        if (filters.kindergarten_name) {
+            filterParts.push(`${T('الاسم', 'Name')}: ${filters.kindergarten_name}`);
+        }
+        if (filters.child_name) {
+            filterParts.push(`${T('الطفل', 'Child')}: ${filters.child_name}`);
+        }
+        const filterSuffix = filterParts.length ? ` - ${filterParts.join(" | ")}` : "";
 
-document.getElementById('historyFilter').addEventListener('submit', function (e) {
-    e.preventDefault();
+        if (scope.mode === "all_kindergartens") {
+            scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${T('جميع الروضات', 'All Kindergartens')} (${scope.kindergarten_count || 0})${filterSuffix}`;
+            return;
+        }
+        if (scope.mode === "filtered_kindergartens") {
+            scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${scope.kindergarten_count || 0} ${T('روضة', 'kindergartens')}${filterSuffix}`;
+            return;
+        }
+        scopeBadge.textContent = `${T('النطاق', 'Scope')}: ${scope.kindergarten_name || T('روضة محددة', 'Selected kindergarten')}${filterSuffix}`;
+    };
+
+    const renderRows = (rows) => {
+        if (!rows || rows.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">${T('لا توجد بيانات للفترة المحددة.', 'No data for the selected period.')}</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = rows.map((row) => `
+            <tr>
+                <td>${row.date}</td>
+                <td>${row.day_name}</td>
+                <td class="text-success fw-semibold">${row.present}</td>
+                <td class="text-danger fw-semibold">${row.absent}</td>
+                <td class="text-warning fw-semibold">${row.late}</td>
+                <td class="text-info fw-semibold">${row.excused}</td>
+                <td>${toPercent(row.attendance_rate)}</td>
+            </tr>
+        `).join("");
+    };
+
+    const loadHistory = async (event) => {
+        if (event) {
+            event.preventDefault();
+        }
+
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+
+        if (!startDate || !endDate) {
+            notify(T("يرجى تحديد تاريخ البداية وتاريخ النهاية.", "Please select start and end dates."), "warning");
+            return;
+        }
+        if (startDate > endDate) {
+            notify(T("تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية.", "Start date must be before or equal to end date."), "warning");
+            return;
+        }
+
+        const params = new URLSearchParams({
+            start_date: startDate,
+            end_date: endDate
+        });
+
+        if (isAdmin) {
+            const selectedKindergartenId = kindergartenFilter ? kindergartenFilter.value : "";
+            const selectedGovernorate = governorateFilter ? governorateFilter.value.trim() : "";
+            const searchedKindergartenName = kindergartenNameFilter ? kindergartenNameFilter.value.trim() : "";
+            const searchedChildName = childNameFilter ? childNameFilter.value.trim() : "";
+            if (selectedKindergartenId) {
+                params.set("kindergarten_id", selectedKindergartenId);
+                if (searchedChildName) {
+                    params.set("child_name", searchedChildName);
+                }
+            } else {
+                if (selectedGovernorate) {
+                    params.set("governorate", selectedGovernorate);
+                }
+                if (searchedKindergartenName) {
+                    params.set("kindergarten_name", searchedKindergartenName);
+                }
+                if (searchedChildName) {
+                    params.set("child_name", searchedChildName);
+                }
+            }
+        } else if (fixedKindergartenId) {
+            params.set("kindergarten_id", String(fixedKindergartenId));
+            const searchedChildName = childNameFilter ? childNameFilter.value.trim() : "";
+            if (searchedChildName) {
+                params.set("child_name", searchedChildName);
+            }
+        }
+
+        setLoadingState(true);
+        try {
+            const response = await fetchWithAuth(`/api/attendance/history-summary?${params.toString()}`);
+            if (!response) {
+                return;
+            }
+            const payload = await response.json();
+            renderTotals(payload.totals || {});
+            renderScope(payload.meta ? payload.meta.scope : null);
+            renderRows(payload.rows || []);
+        } catch (error) {
+            console.error("Attendance history load failed:", error);
+            notify(T("تعذر تحميل سجل الحضور. يرجى المحاولة مرة أخرى.", "Failed to load attendance history. Please try again."), "error");
+        } finally {
+            setLoadingState(false);
+        }
+    };
+
+    filterForm.addEventListener("submit", loadHistory);
     loadHistory();
-});
-
-async function loadHistory() {
-    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-    const period = document.getElementById('periodSelect').value;
-
-    let from = '', to = '';
-    const today = new Date();
-
-    if (period === 'week') {
-        const day = today.getDay();
-        from = new Date(today.getTime() - day * 86400000).toISOString().slice(0, 10);
-        to = today.toISOString().slice(0, 10);
-    } else if (period === 'month') {
-        from = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
-        to = today.toISOString().slice(0, 10);
-    } else if (period === 'quarter') {
-        const q = Math.floor(today.getMonth() / 3);
-        from = new Date(today.getFullYear(), q * 3, 1).toISOString().slice(0, 10);
-        to = today.toISOString().slice(0, 10);
-    } else {
-        from = document.getElementById('fromDate').value;
-        to = document.getElementById('toDate').value;
-    }
-
-    const isClass = document.querySelector('input[name="reportType"]:checked').value === 'class';
-    const classId = document.getElementById('classSelect').value;
-
-    const tbody = document.getElementById('historyTable');
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted">
-        <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
-        جاري التحميل...
-    </td></tr>`;
-
-    try {
-        let url = `/api/attendance/history?from=${from}&to=${to}`;
-        if (isClass && classId) url += `&class_id=${classId}`;
-
-        const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (!r.ok) throw new Error();
-
-        const data = await r.json();
-        const records = data.records || data || [];
-
-        renderHistory(records, isClass);
-        updateStats(records, isClass);
-
-    } catch {
-        renderFallback();
-    }
-}
-
-function renderFallback() {
-    const sampleClass = [
-        { date: '2026-04-30', day: 'الأربعاء', present: 18, absent: 1, late: 1, rate: 90 },
-        { date: '2026-04-29', day: 'الثلاثاء', present: 20, absent: 0, late: 0, rate: 100 },
-        { date: '2026-04-28', day: 'الاثنين',  present: 19, absent: 1, late: 0, rate: 95 },
-    ];
-    renderHistory(sampleClass, true);
-    updateStats(sampleClass, true);
-}
-
-function renderHistory(records, isClass) {
-    const tbody = document.getElementById('historyTable');
-    const cnt = document.getElementById('recordCount');
-    if (cnt) cnt.textContent = `${records.length} سجل`;
-
-    if (!records.length) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-muted">
-            <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-25"></i>
-            <small>لا توجد سجلات في هذه الفترة</small>
-        </td></tr>`;
-        return;
-    }
-
-    if (isClass) {
-        tbody.innerHTML = records.map(r => {
-            const rate = r.rate ?? (r.total ? Math.round((r.present / r.total) * 100) : 0);
-            const color = rate >= 90 ? 'var(--kinjo-success)' : rate >= 75 ? '#d97706' : 'var(--kinjo-danger)';
-            return `<tr>
-                <td style="font-size:0.82rem;color:var(--kinjo-text-muted);white-space:nowrap;">${r.date}</td>
-                <td><span class="day-badge">${r.day || dayName(r.date)}</span></td>
-                <td><span style="color:var(--kinjo-success);font-weight:700;">${r.present ?? '—'}</span></td>
-                <td><span style="color:var(--kinjo-danger);font-weight:700;">${r.absent ?? '—'}</span></td>
-                <td><span style="color:#d97706;font-weight:700;">${r.late ?? '—'}</span></td>
-                <td>
-                    <span style="font-weight:700;color:${color};">${rate}%</span>
-                    <span class="att-rate-bar"><span class="att-rate-fill" style="width:${rate}%;background:${color};"></span></span>
-                </td>
-            </tr>`;
-        }).join('');
-    } else {
-        const statusMap = { present: 'حاضر', absent: 'غائب', late: 'متأخر', excused: 'غياب بعذر' };
-        const statusColor = { present: 'var(--kinjo-success)', absent: 'var(--kinjo-danger)', late: '#d97706', excused: '#6366f1' };
-        tbody.innerHTML = records.map(r => `<tr>
-            <td style="font-size:0.82rem;color:var(--kinjo-text-muted);white-space:nowrap;">${r.date}</td>
-            <td><span class="day-badge">${r.day || dayName(r.date)}</span></td>
-            <td>
-                <span style="font-weight:700;color:${statusColor[r.status] || 'var(--kinjo-text-primary)'};">
-                    ${statusMap[r.status] || r.status || '—'}
-                </span>
-            </td>
-            <td style="font-size:0.82rem;">${r.arrival_time || '—'}</td>
-            <td style="font-size:0.82rem;">${r.leave_time || '—'}</td>
-            <td style="font-size:0.8rem;color:var(--kinjo-text-muted);">${r.notes || '—'}</td>
-        </tr>`).join('');
-    }
-}
-
-function updateStats(records, isClass) {
-    if (isClass) {
-        const total = records.reduce((s, r) => s + (r.present ?? 0) + (r.absent ?? 0) + (r.late ?? 0), 0);
-        const present = records.reduce((s, r) => s + (r.present ?? 0), 0);
-        const absent  = records.reduce((s, r) => s + (r.absent ?? 0), 0);
-        const late    = records.reduce((s, r) => s + (r.late ?? 0), 0);
-        document.getElementById('statRate').textContent   = total ? Math.round((present / total) * 100) + '%' : '—';
-        document.getElementById('statLate').textContent   = total ? Math.round((late   / total) * 100) + '%' : '—';
-        document.getElementById('statAbsent').textContent = total ? Math.round((absent  / total) * 100) + '%' : '—';
-        document.getElementById('statDays').textContent   = records.length;
-    } else {
-        const present = records.filter(r => r.status === 'present').length;
-        const absent  = records.filter(r => r.status === 'absent').length;
-        const late    = records.filter(r => r.status === 'late').length;
-        const total   = records.length;
-        document.getElementById('statRate').textContent   = total ? Math.round((present / total) * 100) + '%' : '—';
-        document.getElementById('statLate').textContent   = total ? Math.round((late   / total) * 100) + '%' : '—';
-        document.getElementById('statAbsent').textContent = total ? Math.round((absent  / total) * 100) + '%' : '—';
-        document.getElementById('statDays').textContent   = total;
-    }
-}
-
-function dayName(dateStr) {
-    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    return days[new Date(dateStr).getDay()] || '';
-}
+})();
 </script>
 {% endblock %}

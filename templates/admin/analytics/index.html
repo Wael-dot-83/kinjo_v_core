@@ -1,377 +1,297 @@
 {% extends "base.html" %}
-{% block title %}التحليلات والتقارير — KinJo{% endblock %}
+{% from 'components/page-header.html' import page_header %}
+{% from 'components/card-wrapper.html' import metric_card, chart_card, summary_card, loading_spinner_inline,
+analytics_tab_pane %}
+
+{% block title %}{% if ui_lang == 'en' %}Analytics and Reports{% else %}التحليلات والتقارير{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analytics-card {
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s;
+    }
+
+    .analytics-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--primary-color, #0d6efd);
+    }
+
+    .metric-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+
+    .metric-change {
+        font-size: 0.75rem;
+    }
+
+    .metric-change.positive {
+        color: #198754;
+    }
+
+    .metric-change.negative {
+        color: #dc3545;
+    }
+
+    .governorate-bar {
+        height: 24px;
+        border-radius: 4px;
+        transition: width 0.5s ease-out;
+    }
+
+    .ranking-badge {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-weight: 600;
+    }
+
+    .ranking-1 {
+        background: #FFD700;
+        color: #000;
+    }
+
+    .ranking-2 {
+        background: #C0C0C0;
+        color: #000;
+    }
+
+    .ranking-3 {
+        background: #CD7F32;
+        color: #fff;
+    }
+
+    .band-green {
+        background: #198754;
+        color: #fff;
+    }
+
+    .band-amber {
+        background: #ffc107;
+        color: #000;
+    }
+
+    .band-red {
+        background: #dc3545;
+        color: #fff;
+    }
+
+    .drilldown-btn {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .drilldown-btn:hover {
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+
+    .nav-pills .nav-link {
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+    }
+
+    .nav-pills .nav-link.active {
+        background-color: var(--primary-color, #0d6efd);
+    }
+
+    .filter-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+</style>
+{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-graph-up-arrow"></i>
-            الإدارة
-        </div>
-        <h1 class="page-header-title">التحليلات والتقارير</h1>
-        <p class="page-header-sub">نظرة شاملة على أداء الروضات والمؤشرات الرئيسية</p>
-    </div>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-ghost" onclick="Analytics.exportData('CSV')">
-            <i class="bi bi-download me-2"></i>تصدير CSV
-        </button>
-        <button type="button" class="btn btn-ghost" onclick="Analytics.exportData('PDF')">
-            <i class="bi bi-file-pdf me-2"></i>PDF
-        </button>
-    </div>
+{% set export_buttons %}
+<div class="btn-group">
+    <button type="button" class="btn btn-outline-primary" onclick="Analytics.exportData('CSV')">
+        <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
+    </button>
+    <button type="button" class="btn btn-outline-primary" onclick="Analytics.exportData('PDF')">
+        <i class="bi bi-file-pdf me-1"></i>{% if ui_lang == 'en' %}Export PDF{% else %}تصدير PDF{% endif %}
+    </button>
 </div>
+{% endset %}
+{{ page_header(
+title="Analytics & Reports" if ui_lang == 'en' else "التحليلات والتقارير",
+icon="bi-graph-up",
+actions=export_buttons
+) }}
 {% endblock %}
 
 {% block content %}
-
-<!-- Filter Bar -->
-<div class="analytics-filter-bar mb-4">
-    <div class="row g-3 align-items-end">
+<!-- Date Range Filter -->
+<div class="filter-section">
+    <div class="row align-items-end">
         <div class="col-md-3">
-            <label class="filter-label" for="startDate">من تاريخ</label>
-            <input type="date" class="form-control form-control-sm" id="startDate">
+            <label for="startDate" class="form-label">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %}</label>
+            <input type="date" class="form-control" id="startDate">
         </div>
         <div class="col-md-3">
-            <label class="filter-label" for="endDate">إلى تاريخ</label>
-            <input type="date" class="form-control form-control-sm" id="endDate">
+            <label for="endDate" class="form-label">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %}</label>
+            <input type="date" class="form-control" id="endDate">
         </div>
         <div class="col-md-3">
-            <label class="filter-label" for="governorateFilter">المحافظة</label>
-            <select class="form-select form-select-sm" id="governorateFilter">
-                <option value="">جميع المحافظات</option>
+            <label for="governorateFilter" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+            <select class="form-select" id="governorateFilter">
+                <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
             </select>
         </div>
         <div class="col-md-3">
             <button type="button" class="btn btn-primary w-100" onclick="Analytics.applyFilters()">
-                <i class="bi bi-funnel me-2"></i>تطبيق
+                <i class="bi bi-funnel me-1"></i>{% if ui_lang == 'en' %}Apply{% else %}تطبيق{% endif %}
             </button>
         </div>
     </div>
 </div>
 
 <!-- Navigation Tabs -->
-<div class="analytics-tabs-wrap mb-4">
-    <div class="analytics-tabs" id="analyticsTabs" role="tablist">
-        {% set tabs = [
-            ('overview',   'bi-speedometer2',   'نظرة عامة'),
-            ('enrollments','bi-person-plus',    'التسجيل'),
-            ('attendance', 'bi-calendar-check', 'الحضور'),
-            ('reports',    'bi-file-text',      'التقارير'),
-            ('safety',     'bi-shield-check',   'السلامة'),
-            ('staffing',   'bi-people',         'الموظفين'),
-        ] %}
-        {% for id, icon, label in tabs %}
-        <button class="analytics-tab {% if id == 'overview' %}active{% endif %}"
-                id="{{ id }}-tab" data-bs-toggle="pill" data-bs-target="#{{ id }}" type="button" role="tab">
-            <i class="bi {{ icon }} me-1"></i>{{ label }}
+<ul class="nav nav-pills mb-4" id="analyticsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="overview-tab" data-bs-toggle="pill" data-bs-target="#overview" type="button"
+            role="tab">
+            <i class="bi bi-speedometer2 me-1"></i>{% if ui_lang == 'en' %}Overview{% else %}نظرة عامة{% endif %}
         </button>
-        {% endfor %}
-    </div>
-</div>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="enrollments-tab" data-bs-toggle="pill" data-bs-target="#enrollments" type="button"
+            role="tab">
+            <i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}Enrollment{% else %}التسجيل{% endif %}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="attendance-tab" data-bs-toggle="pill" data-bs-target="#attendance" type="button"
+            role="tab">
+            <i class="bi bi-calendar-check me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="reports-tab" data-bs-toggle="pill" data-bs-target="#reports" type="button"
+            role="tab">
+            <i class="bi bi-file-text me-1"></i>{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="safety-tab" data-bs-toggle="pill" data-bs-target="#safety" type="button"
+            role="tab">
+            <i class="bi bi-shield-check me-1"></i>{% if ui_lang == 'en' %}Safety{% else %}السلامة{% endif %}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="staffing-tab" data-bs-toggle="pill" data-bs-target="#staffing" type="button"
+            role="tab">
+            <i class="bi bi-people me-1"></i>{% if ui_lang == 'en' %}Staff{% else %}الموظفين{% endif %}
+        </button>
+    </li>
+</ul>
 
 <!-- Tab Content -->
 <div class="tab-content" id="analyticsTabContent">
-
     <!-- Overview Tab -->
     <div class="tab-pane fade show active" id="overview" role="tabpanel">
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-md-3">
-                <div class="stat-card card">
-                    <div class="card-body">
-                        <div class="stat-info">
-                            <div class="stat-label">الروضات</div>
-                            <div class="stat-value" id="totalKindergartens">—</div>
-                        </div>
-                        <div class="stat-icon-wrap" style="background:rgba(99,102,241,0.12);color:var(--kinjo-primary);">
-                            <i class="bi bi-building"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card card">
-                    <div class="card-body">
-                        <div class="stat-info">
-                            <div class="stat-label">الأطفال المسجلين</div>
-                            <div class="stat-value" id="totalChildren">—</div>
-                        </div>
-                        <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
-                            <i class="bi bi-people-fill"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card success card">
-                    <div class="card-body">
-                        <div class="stat-info">
-                            <div class="stat-label">نسبة الحضور</div>
-                            <div class="stat-value" id="attendanceRate">—</div>
-                        </div>
-                        <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
-                            <i class="bi bi-calendar-check-fill"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card card">
-                    <div class="card-body">
-                        <div class="stat-info">
-                            <div class="stat-label">متوسط الحوكمة</div>
-                            <div class="stat-value" id="governanceScore">—</div>
-                        </div>
-                        <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
-                            <i class="bi bi-star-fill"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        <!-- Summary Cards -->
         <div class="row g-4 mb-4">
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">
-                            <i class="bi bi-geo-alt me-2 text-primary"></i>
-                            أداء المحافظات
-                        </h6>
-                    </div>
-                    <div class="card-body" id="governorateBreakdown">
-                        <div class="text-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="card-title-sm mb-0">
-                            <i class="bi bi-graph-up me-2 text-primary"></i>
-                            الاتجاهات
-                        </h6>
-                        <select class="form-select form-select-sm" id="trendMetric" onchange="Analytics.loadTrendChart()" style="width:auto;">
-                            <option value="attendance_rate">نسبة الحضور</option>
-                            <option value="incident_count">عدد الحوادث</option>
-                            <option value="enrollment_count">التسجيلات</option>
-                        </select>
-                    </div>
-                    <div class="card-body">
-                        <div class="analytics-chart-container">
-                            <canvas id="trendChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div class="col-md-3">{{ metric_card("totalKindergartens", "Kindergarten" if ui_lang == 'en' else "روضة") }}</div>
+            <div class="col-md-3">{{ metric_card("totalChildren", "Enrolled Child" if ui_lang == 'en' else "طفل مسجل") }}</div>
+            <div class="col-md-3">{{ metric_card("attendanceRate", "Attendance Rate" if ui_lang == 'en' else "نسبة الحضور", suffix="%") }}</div>
+            <div class="col-md-3">{{ metric_card("governanceScore", "Governance Average" if ui_lang == 'en' else "متوسط الحوكمة") }}</div>
         </div>
 
         <div class="row g-4">
+            <!-- Governorate Breakdown -->
             <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">
-                            <i class="bi bi-trophy-fill me-2" style="color:#f59e0b;"></i>
-                            أفضل الروضات
-                        </h6>
-                    </div>
-                    <div class="card-body" id="topRankings">
-                        <div class="text-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
+                {{ summary_card("Governorate Performance" if ui_lang == 'en' else "أداء المحافظات", "governorateBreakdown", icon="bi-geo-alt") }}
+            </div>
+
+            <!-- Trend Chart -->
+            <div class="col-lg-6">
+                {% set trend_select %}
+                <select class="form-select form-select-sm w-auto" id="trendMetric"
+                    onchange="Analytics.loadTrendChart()">
+                    <option value="attendance_rate">{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}</option>
+                    <option value="incident_count">{% if ui_lang == 'en' %}Incident Count{% else %}عدد الحوادث{% endif %}</option>
+                    <option value="enrollment_count">{% if ui_lang == 'en' %}New Enrollments{% else %}التسجيلات الجديدة{% endif %}</option>
+                </select>
+                {% endset %}
+                {{ chart_card("Attendance Trend" if ui_lang == 'en' else "اتجاه الحضور", "trendChart", icon="bi-graph-up", header_extra=trend_select) }}
+            </div>
+        </div>
+
+        <!-- Rankings -->
+        <div class="row g-4 mt-2">
+            <div class="col-lg-6">
+                {{ summary_card("Top Kindergartens" if ui_lang == 'en' else "أفضل الروضات", "topRankings", icon="bi-trophy", icon_color="text-warning", h100=False)
+                }}
             </div>
             <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">
-                            <i class="bi bi-exclamation-triangle me-2 text-danger"></i>
-                            تحتاج إلى تحسين
-                        </h6>
-                    </div>
-                    <div class="card-body" id="bottomRankings">
-                        <div class="text-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
+                {{ summary_card("Needs Improvement" if ui_lang == 'en' else "تحتاج إلى تحسين", "bottomRankings", icon="bi-exclamation-triangle",
+                icon_color="text-danger", h100=False) }}
             </div>
         </div>
     </div>
 
     <!-- Enrollments Tab -->
-    <div class="tab-pane fade" id="enrollments" role="tabpanel">
-        <div class="row g-4">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">مسار التسجيل</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="analytics-chart-container">
-                            <canvas id="enrollmentFunnelChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">ملخص التسجيل</h6>
-                    </div>
-                    <div class="card-body" id="enrollmentSummary">
-                        <div class="text-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{ analytics_tab_pane("enrollments", "Enrollment Funnel" if ui_lang == 'en' else "قمع التسجيل", "enrollmentFunnelChart", "Enrollment Summary" if ui_lang == 'en' else "ملخص التسجيل", "enrollmentSummary") }}
 
     <!-- Attendance Tab -->
-    <div class="tab-pane fade" id="attendance" role="tabpanel">
-        <div class="row g-4">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">الحضور حسب أيام الأسبوع</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="analytics-chart-container">
-                            <canvas id="attendanceDayChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">إحصائيات الحضور</h6>
-                    </div>
-                    <div class="card-body" id="attendanceSummary">
-                        <div class="text-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{ analytics_tab_pane("attendance", "Attendance by Weekday" if ui_lang == 'en' else "الحضور حسب أيام الأسبوع", "attendanceDayChart", "Attendance Statistics" if ui_lang == 'en' else "إحصائيات الحضور",
+    "attendanceSummary") }}
 
-    <!-- Reports Tab -->
-    <div class="tab-pane fade" id="reports" role="tabpanel">
-        <div class="row g-4">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">حالة التقارير اليومية</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="analytics-chart-container">
-                            <canvas id="reportsStatusChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">ملخص التقارير</h6>
-                    </div>
-                    <div class="card-body" id="reportsSummary">
-                        <div class="text-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Daily Reports Tab -->
+    {{ analytics_tab_pane("reports", "Daily Reports Status" if ui_lang == 'en' else "حالة التقارير اليومية", "reportsStatusChart", "Reports Summary" if ui_lang == 'en' else "ملخص التقارير", "reportsSummary")
+    }}
 
     <!-- Safety Tab -->
     <div class="tab-pane fade" id="safety" role="tabpanel">
         <div class="row g-4">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">الحوادث حسب الخطورة</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="analytics-chart-container">
-                            <canvas id="incidentSeverityChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">الحوادث حسب النوع</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="analytics-chart-container">
-                            <canvas id="incidentTypeChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">ملخص السلامة</h6>
-                    </div>
-                    <div class="card-body" id="safetySummary">
-                        <div class="text-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div class="col-md-6">{{ chart_card("Incidents by Severity" if ui_lang == 'en' else "الحوادث حسب الخطورة", "incidentSeverityChart") }}</div>
+            <div class="col-md-6">{{ chart_card("Incidents by Type" if ui_lang == 'en' else "الحوادث حسب النوع", "incidentTypeChart") }}</div>
+            <div class="col-12">{{ summary_card("Safety Summary" if ui_lang == 'en' else "ملخص السلامة", "safetySummary", h100=False) }}</div>
         </div>
     </div>
 
     <!-- Staffing Tab -->
-    <div class="tab-pane fade" id="staffing" role="tabpanel">
-        <div class="row g-4">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">الالتزام بنسب الموظفين</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="analytics-chart-container">
-                            <canvas id="ratioComplianceChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h6 class="card-title-sm mb-0">ملخص الموظفين</h6>
-                    </div>
-                    <div class="card-body" id="staffingSummary">
-                        <div class="text-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    {{ analytics_tab_pane("staffing", "Staff Ratio Compliance" if ui_lang == 'en' else "الالتزام بنسب الموظفين", "ratioComplianceChart", "Staff Summary" if ui_lang == 'en' else "ملخص الموظفين",
+    "staffingSummary", chart_col="col-md-6", summary_col="col-md-6") }}
 </div>
 
 <!-- Drilldown Modal -->
-<div class="modal fade" id="drilldownModal" tabindex="-1" aria-labelledby="drilldownModalTitle">
+<div class="modal fade" id="drilldownModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="drilldownModalTitle">تفاصيل</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title" id="drilldownModalTitle">{% if ui_lang == 'en' %}Details{% else %}تفاصيل{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body" id="drilldownModalBody">
                 <div class="text-center py-4">
@@ -381,62 +301,13 @@
         </div>
     </div>
 </div>
-
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
-.filter-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:0.3rem; }
-
-/* Filter bar */
-.analytics-filter-bar { background:var(--kinjo-card-bg);border:1px solid var(--kinjo-border);border-radius:var(--kinjo-radius-xl);padding:1.25rem 1.5rem; }
-
-/* Tabs */
-.analytics-tabs-wrap { background:var(--kinjo-surface);border-radius:var(--kinjo-radius-xl);padding:0.25rem;display:inline-flex;width:100%;overflow-x:auto; }
-.analytics-tabs { display:flex;gap:0.25rem;min-width:max-content; }
-.analytics-tab {
-    display:inline-flex;align-items:center;gap:0.35rem;padding:0.5rem 1rem;border-radius:var(--kinjo-radius-md);
-    font-size:0.83rem;font-weight:600;border:none;background:none;color:var(--kinjo-text-muted);cursor:pointer;
-    transition:all 0.15s;white-space:nowrap;
-}
-.analytics-tab:hover { color:var(--kinjo-text-primary);background:var(--kinjo-card-bg); }
-.analytics-tab.active { background:var(--kinjo-card-bg);color:var(--kinjo-primary);box-shadow:var(--kinjo-shadow-sm);font-weight:700; }
-
-/* Charts */
-.analytics-chart-container { position:relative;height:280px; }
-
-/* Governorate bars */
-.gov-bar-row { display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem; }
-.gov-name { font-size:0.82rem;font-weight:600;min-width:60px;flex-shrink:0; }
-.gov-bar-track { flex:1;height:8px;background:var(--kinjo-border);border-radius:50px;overflow:hidden; }
-.gov-bar-fill { height:100%;border-radius:50px;background:var(--kinjo-gradient-primary);transition:width 0.6s ease-out; }
-.gov-val { font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);min-width:35px;text-align:end; }
-
-/* Rankings */
-.rank-item { display:flex;align-items:center;gap:0.75rem;padding:0.625rem 0;border-bottom:1px solid var(--kinjo-border); }
-.rank-item:last-child { border-bottom:none; }
-.rank-badge { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0; }
-.rank-1 { background:#fbbf24;color:#78350f; }
-.rank-2 { background:#e5e7eb;color:#374151; }
-.rank-3 { background:#d97706;color:#fff; }
-.rank-other { background:var(--kinjo-surface);color:var(--kinjo-text-muted); }
-.rank-name { font-size:0.84rem;font-weight:600;flex:1;color:var(--kinjo-text-primary); }
-.rank-score { font-size:0.78rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:50px;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
-
-/* Summary items */
-.summary-item { display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--kinjo-border);font-size:0.84rem; }
-.summary-item:last-child { border-bottom:none; }
-.summary-lbl { color:var(--kinjo-text-muted); }
-.summary-val { font-weight:700;color:var(--kinjo-text-primary); }
-</style>
 {% endblock %}
 
 {% block extra_js %}
-<script src="/static/js/analytics.js"></script>
+<script src="/static/js/analytics.js" charset="utf-8"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    Analytics.init();
-});
+    document.addEventListener('DOMContentLoaded', function () {
+        Analytics.init();
+    });
 </script>
 {% endblock %}

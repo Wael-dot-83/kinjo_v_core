@@ -1,0 +1,306 @@
+"""
+Backup manager module — provides database snapshot, config, and upload backup handling
+for the KInJo platform admin panel.
+"""
+
+import os
+import json
+import shutil
+import hashlib
+import logging
+import threading
+from datetime import datetime, timedelta, timezone, time
+from typing import Optional, Dict, Any, List
+
+logger = logging.getLogger(__name__)
+
+# Resolve paths relative to this file so it works regardless of cwd
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_BACKUP_DIR = os.path.join(_BASE_DIR, "data", "backups")
+_METADATA_FILE = os.path.join(_BACKUP_DIR, "backup_metadata.json")
+_DB_PATH = os.path.join(_BASE_DIR, "data", "kinjo_fresh.db")
+_UPLOADS_DIR = os.path.join(_BASE_DIR, "uploads")
+_CONFIG_FILES = ["config.py", ".env", "alembic.ini"]
+_RETENTION_DAYS = 30
+
+
+def _ensure_backup_dir():
+    os.makedirs(_BACKUP_DIR, exist_ok=True)
+
+
+def _file_sha256(path: str) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+class BackupManager:
+    """Full-featured backup manager for database, uploads, and config files."""
+
+    def __init__(self):
+        _ensure_backup_dir()
+        self.metadata: Dict[str, Any] = self._load_metadata()
+
+    # ---- metadata persistence ------------------------------------------------
+
+    def _load_metadata(self) -> Dict[str, Any]:
+        if os.path.exists(_METADATA_FILE):
+            try:
+                with open(_METADATA_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (OSError, json.JSONDecodeError):
+                logger.warning("Corrupt backup metadata — starting fresh")
+        return {}
+
+    def _save_metadata(self):
+        _ensure_backup_dir()
+        with open(_METADATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(self.metadata, f, indent=2, default=str)
+
+    # ---- create backups ------------------------------------------------------
+
+    def create_database_backup(self, backup_type: str = "manual") -> Dict[str, Any]:
+        _ensure_backup_dir()
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        name = f"db_{backup_type}_{ts}.sqlite3"
+        dest = os.path.join(_BACKUP_DIR, name)
+
+        if not os.path.exists(_DB_PATH):
+            raise FileNotFoundError(f"Database file not found: {_DB_PATH}")
+
+        shutil.copy2(_DB_PATH, dest)
+        info = {
+            "name": name,
+            "type": "database",
+            "backup_type": backup_type,
+            "backup_path": dest,
+            "size_bytes": os.path.getsize(dest),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "checksum": _file_sha256(dest),
+        }
+        self.metadata[name] = info
+        self._save_metadata()
+        return info
+
+    def create_uploads_backup(self, backup_type: str = "manual") -> Dict[str, Any]:
+        _ensure_backup_dir()
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        name = f"uploads_{backup_type}_{ts}"
+        dest = os.path.join(_BACKUP_DIR, name)
+
+        if os.path.isdir(_UPLOADS_DIR):
+            shutil.make_archive(dest, "zip", _UPLOADS_DIR)
+            archive = dest + ".zip"
+        else:
+            # No uploads directory — create empty placeholder
+            archive = dest + ".zip"
+            import zipfile
+            with zipfile.ZipFile(archive, "w") as zf:
+                zf.writestr("__empty__", "")
+
+        info = {
+            "name": os.path.basename(archive),
+            "type": "uploads",
+            "backup_type": backup_type,
+            "backup_path": archive,
+            "size_bytes": os.path.getsize(archive),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "checksum": _file_sha256(archive),
+        }
+        self.metadata[os.path.basename(archive)] = info
+        self._save_metadata()
+        return info
+
+    def create_config_backup(self, backup_type: str = "manual") -> Dict[str, Any]:
+        _ensure_backup_dir()
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        name = f"config_{backup_type}_{ts}.zip"
+        dest = os.path.join(_BACKUP_DIR, name)
+
+        import zipfile
+        with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as zf:
+            for cfg in _CONFIG_FILES:
+                full = os.path.join(_BASE_DIR, cfg)
+                if os.path.exists(full):
+                    zf.write(full, cfg)
+
+        info = {
+            "name": name,
+            "type": "config",
+            "backup_type": backup_type,
+            "backup_path": dest,
+            "size_bytes": os.path.getsize(dest),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "checksum": _file_sha256(dest),
+        }
+        self.metadata[name] = info
+        self._save_metadata()
+        return info
+
+    # ---- list / info ---------------------------------------------------------
+
+    def list_backups(self, backup_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        backups = list(self.metadata.values())
+        if backup_type:
+            backups = [b for b in backups if b.get("type") == backup_type]
+        backups.sort(key=lambda b: b.get("created_at", ""), reverse=True)
+        return backups
+
+    def get_backup_info(self, backup_name: str) -> Optional[Dict[str, Any]]:
+        return self.metadata.get(backup_name)
+
+    # ---- validate / restore --------------------------------------------------
+
+    def validate_backup(self, backup_name: str) -> bool:
+        info = self.metadata.get(backup_name)
+        if not info:
+            return False
+        path = info.get("backup_path", "")
+        if not os.path.exists(path):
+            return False
+        try:
+            return _file_sha256(path) == info.get("checksum")
+        except OSError:
+            return False
+
+    def restore_database_backup(self, backup_name: str) -> bool:
+        info = self.metadata.get(backup_name)
+        if not info:
+            return False
+        src = info.get("backup_path", "")
+        if not os.path.exists(src):
+            return False
+        try:
+            # Keep a pre-restore snapshot
+            pre = _DB_PATH + ".pre_restore"
+            if os.path.exists(_DB_PATH):
+                shutil.copy2(_DB_PATH, pre)
+            shutil.copy2(src, _DB_PATH)
+            return True
+        except (OSError, shutil.Error) as e:
+            logger.error(f"Restore failed: {e}")
+            return False
+
+    # ---- cleanup -------------------------------------------------------------
+
+    def cleanup_old_backups(self, retention_days: int = _RETENTION_DAYS):
+        cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+        to_delete = []
+        for name, info in list(self.metadata.items()):
+            created = info.get("created_at", "")
+            try:
+                created_dt = datetime.fromisoformat(created)
+            except (TypeError, ValueError):
+                continue
+            # Make offset-naive for comparison if needed
+            if created_dt.tzinfo is None:
+                created_dt = created_dt.replace(tzinfo=timezone.utc)
+            if created_dt < cutoff and info.get("backup_type") != "manual":
+                to_delete.append(name)
+
+        for name in to_delete:
+            path = self.metadata[name].get("backup_path", "")
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+            except OSError:
+                pass
+            del self.metadata[name]
+
+        if to_delete:
+            self._save_metadata()
+            logger.info(f"Cleaned up {len(to_delete)} old backups")
+
+
+class BackupScheduler:
+    """Automatic backup scheduler that runs daily at configured time."""
+
+    def __init__(self, backup_time: time = time(2, 0)):  # 2:00 AM UTC by default
+        """
+        Initialize backup scheduler.
+        
+        Args:
+            backup_time: time of day to run automated backups (default 2:00 AM)
+        """
+        self.backup_time = backup_time
+        self._timers: list[threading.Timer] = []
+        self._running = False
+
+    def start_scheduler(self) -> None:
+        """Start the automatic backup scheduler."""
+        if self._running:
+            logger.warning("BackupScheduler already running")
+            return
+
+        self._running = True
+        self._schedule_next_backup()
+        logger.info(f"BackupScheduler started (runs daily at {self.backup_time.strftime('%H:%M')} UTC)")
+
+    def stop_scheduler(self) -> None:
+        """Stop the automatic backup scheduler."""
+        self._running = False
+        for timer in self._timers:
+            timer.cancel()
+        self._timers.clear()
+        logger.info("BackupScheduler stopped")
+
+    def _schedule_next_backup(self) -> None:
+        """Schedule the next backup to run."""
+        if not self._running:
+            return
+
+        now = datetime.now(timezone.utc)
+        target_dt = datetime.combine(now.date(), self.backup_time, tzinfo=timezone.utc)
+
+        # If scheduled time already passed today, schedule for tomorrow
+        if target_dt <= now:
+            target_dt += timedelta(days=1)
+
+        delay_seconds = (target_dt - now).total_seconds()
+        logger.debug(f"Next backup scheduled in {delay_seconds:.0f} seconds ({target_dt.isoformat()})")
+
+        timer = threading.Timer(delay_seconds, self._run_backup)
+        timer.daemon = True
+        timer.start()
+        self._timers.append(timer)
+
+    def _run_backup(self) -> None:
+        """Execute the automated backup."""
+        logger.info("Running automated database backup")
+        try:
+            # Create database backup
+            db_backup = backup_manager.create_database_backup(backup_type="automated")
+            logger.info(f"Database backup created: {db_backup['name']} ({db_backup['size_bytes']} bytes)")
+
+            # Create uploads backup
+            uploads_backup = backup_manager.create_uploads_backup(backup_type="automated")
+            logger.info(f"Uploads backup created: {uploads_backup['name']} ({uploads_backup['size_bytes']} bytes)")
+
+            # Create config backup
+            config_backup = backup_manager.create_config_backup(backup_type="automated")
+            logger.info(f"Config backup created: {config_backup['name']} ({config_backup['size_bytes']} bytes)")
+
+            # Cleanup old backups
+            backup_manager.cleanup_old_backups(retention_days=30)
+
+            logger.info("Automated backup completed successfully")
+
+        except (OSError, shutil.Error, json.JSONDecodeError, ValueError, TypeError) as e:
+            logger.error(f"Automated backup failed: {e}", exc_info=True)
+
+        finally:
+            # Reschedule for tomorrow
+            self._reschedule()
+
+    def _reschedule(self) -> None:
+        """Clean up finished timers and schedule next backup."""
+        self._timers = [t for t in self._timers if t.is_alive()]
+        if self._running:
+            self._schedule_next_backup()
+
+
+# Global instances
+backup_manager = BackupManager()
+backup_scheduler = BackupScheduler()

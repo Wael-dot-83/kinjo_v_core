@@ -1,155 +1,133 @@
 {% extends 'base.html' %}
-{% block title %}{{ _('Reports') }} — KinJo{% endblock %}
+
+{% block title %}{% if ui_lang == 'en' %}My Children's Reports{% else %}تقارير أطفالي{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
-            <i class="bi bi-file-earmark-text-fill"></i>
-            بوابة ولي الأمر
-        </div>
-        <h1 class="page-header-title">{{ _('Reports') }}</h1>
-        <p class="page-header-sub">تقارير تطور أطفالك ونتائجهم</p>
+        <h1 class="h2">
+            <i class="bi bi-journal-text me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}My Children's Reports{% else %}تقارير أطفالي{% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Reports{% else %}تقارير أطفالي{% endif %}</li>
+            </ol>
+        </nav>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
+<div class="row g-4">
+    <div class="col-lg-12">
+        <!-- Filters -->
+        <div class="d-flex flex-wrap align-items-center mb-4 bg-white p-3 rounded shadow-sm border gap-3">
+            <div class="d-flex align-items-center">
+                <span class="fw-bold me-2">{% if ui_lang == 'en' %}Date:{% else %}التاريخ:{% endif %}</span>
+                <input type="date" class="form-control w-auto" id="dateFilter" value="{{ today }}">
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="fw-bold me-2">{% if ui_lang == 'en' %}Child:{% else %}الطفل:{% endif %}</span>
+                <select class="form-select w-auto" id="childFilter">
+                    <option value="">{% if ui_lang == 'en' %}All Children{% else %}جميع الأطفال{% endif %}</option>
+                </select>
+            </div>
+            <button class="btn btn-outline-primary" onclick="loadReports()">
+                <i class="bi bi-funnel me-1"></i>{% if ui_lang == 'en' %}Filter{% else %}تحديث{% endif %}
+            </button>
+        </div>
 
-<!-- Filter -->
-<div class="card mb-4">
-    <div class="card-body py-3">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="filter-label mb-1">الطفل</label>
-                <select class="form-select form-select-sm" id="childFilter">
-                    <option value="">جميع الأطفال</option>
-                </select>
+        <div id="reportsContainer">
+            {% if reports %}
+            {% for report in reports %}
+            <div class="card mb-3 report-card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <div class="d-flex align-items-center">
+                        <div
+                            class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div>
+                            <strong>{{ report.child_name if report.child_name else ('Child' if ui_lang == 'en' else 'طفل') }}</strong>
+                            <small class="text-muted d-block">{{ report.date }}</small>
+                        </div>
+                    </div>
+                    <span
+                        class="badge {% if report.status.value == 'APPROVED' %}bg-success{% elif report.status.value == 'DRAFT' %}bg-warning{% else %}bg-secondary{% endif %}">
+                        {{ report.status.value }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">{% if ui_lang == 'en' %}Mood{% else %}الحالة المزاجية{% endif %}</h6>
+                            <p>{{ report.mood if report.mood else ('Not specified' if ui_lang == 'en' else 'غير محدد') }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">{% if ui_lang == 'en' %}Notes{% else %}ملاحظات{% endif %}</h6>
+                            <p>{{ report.notes if report.notes else ('No notes' if ui_lang == 'en' else 'لا توجد ملاحظات') }}</p>
+                        </div>
+                    </div>
+                    <a href="/reports/{{ report.id }}" class="btn btn-outline-primary btn-sm mt-3">
+                        <i class="bi bi-eye me-1"></i>{% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %}
+                    </a>
+                </div>
             </div>
-            <div class="col-md-4">
-                <label class="filter-label mb-1">نوع التقرير</label>
-                <select class="form-select form-select-sm" id="typeFilter">
-                    <option value="">جميع الأنواع</option>
-                    <option value="PROGRESS">تقدم دراسي</option>
-                    <option value="BEHAVIOR">سلوك</option>
-                    <option value="ATTENDANCE">حضور</option>
-                    <option value="HEALTH">صحة</option>
-                </select>
+            {% endfor %}
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                {% if ui_lang == 'en' %}No reports for this date{% else %}لا توجد تقارير لهذا التاريخ{% endif %}
             </div>
-            <div class="col-md-4">
-                <button class="btn btn-primary btn-sm w-100" onclick="loadReports()">
-                    <i class="bi bi-funnel-fill me-1"></i>تصفية
-                </button>
-            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<!-- Reports List -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="card-title-sm mb-0">
-            <i class="bi bi-journal-bookmark me-2 text-primary"></i>
-            التقارير المتاحة
-        </h6>
-        <span class="text-muted small" id="reportsCount">—</span>
-    </div>
-    <div class="card-body p-0" id="reportsList">
-        <div class="text-center py-5 text-muted">
-            <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
-            جاري التحميل...
-        </div>
-    </div>
-</div>
-
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
-.filter-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em; }
-
-.report-item { display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--kinjo-border);cursor:pointer;transition:background 0.15s; }
-.report-item:last-child { border-bottom:none; }
-.report-item:hover { background:var(--kinjo-surface); }
-.report-icon { width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0; }
-.report-body { flex:1;min-width:0; }
-.report-title { font-weight:700;font-size:0.9rem;color:var(--kinjo-text-primary); }
-.report-meta { font-size:0.75rem;color:var(--kinjo-text-muted);margin-top:0.15rem; }
-.report-type-badge { display:inline-flex;align-items:center;gap:0.25rem;padding:0.15rem 0.55rem;border-radius:50px;font-size:0.7rem;font-weight:700;background:var(--kinjo-surface);border:1px solid var(--kinjo-border);color:var(--kinjo-text-muted); }
-</style>
-{% endblock %}
-
-{% block extra_js %}
 <script>
-const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
-
-document.addEventListener('DOMContentLoaded', () => {
-    loadChildren();
-    loadReports();
-});
-
-async function loadChildren() {
-    try {
-        const r = await fetch('/api/parent/children', { headers: authHeaders });
-        const data = r.ok ? await r.json() : null;
-        const children = data?.children || data || [];
-        const sel = document.getElementById('childFilter');
-        if (children.length) {
-            sel.innerHTML = '<option value="">جميع الأطفال</option>' +
-                children.map(c => `<option value="${c.id}">${c.full_name_ar||c.name}</option>`).join('');
+    function getHeaders() {
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return { 'Content-Type': 'application/json' };
         }
-    } catch {}
-}
-
-async function loadReports() {
-    const child = document.getElementById('childFilter').value;
-    const type  = document.getElementById('typeFilter').value;
-    let url = '/api/reports?shared_with_parent=true';
-    if (child) url += `&child_id=${child}`;
-    if (type)  url += `&report_type=${type}`;
-    document.getElementById('reportsList').innerHTML =
-        `<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>جاري التحميل...</div>`;
-    try {
-        const r = await fetch(url, { headers: authHeaders });
-        const data = r.ok ? await r.json() : null;
-        render(data?.reports || data || []);
-    } catch { render([]); }
-}
-
-const typeConfig = {
-    PROGRESS:   { icon:'bi-graph-up',      color:'rgba(99,102,241,0.12)',  tcolor:'#6366f1', label:'تقدم دراسي' },
-    BEHAVIOR:   { icon:'bi-heart-fill',    color:'rgba(239,68,68,0.12)',   tcolor:'#ef4444', label:'سلوك' },
-    ATTENDANCE: { icon:'bi-calendar-check',color:'rgba(16,185,129,0.12)',  tcolor:'#10b981', label:'حضور' },
-    HEALTH:     { icon:'bi-activity',      color:'rgba(245,158,11,0.12)',  tcolor:'#f59e0b', label:'صحة' },
-};
-
-function render(reports) {
-    document.getElementById('reportsCount').textContent = reports.length + ' تقرير';
-    const c = document.getElementById('reportsList');
-    if (!reports.length) {
-        c.innerHTML = `<div class="text-center py-5 text-muted">
-            <i class="bi bi-file-earmark-x d-block fs-1 mb-3 opacity-25"></i>
-            <p class="mb-0">لا توجد تقارير متاحة</p>
-        </div>`;
-        return;
+        const token = AuthService.getToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
     }
-    c.innerHTML = reports.map(rep => {
-        const cfg  = typeConfig[rep.report_type] || { icon:'bi-file-text', color:'rgba(100,116,139,0.12)', tcolor:'#64748b', label:rep.report_type||'—' };
-        const date = rep.created_at ? new Date(rep.created_at).toLocaleDateString('ar-SA',{year:'numeric',month:'short',day:'numeric'}) : '—';
-        return `<div class="report-item" onclick="window.location.href='/reports/${rep.id}'">
-            <div class="report-icon" style="background:${cfg.color};color:${cfg.tcolor};">
-                <i class="bi ${cfg.icon}"></i>
-            </div>
-            <div class="report-body">
-                <div class="report-title">${rep.title || rep.child_name || '—'}</div>
-                <div class="report-meta">${rep.child_name || ''} · ${date}</div>
-            </div>
-            <span class="report-type-badge">${cfg.label}</span>
-            <i class="bi bi-chevron-left text-muted" aria-hidden="true"></i>
-        </div>`;
-    }).join('');
-}
+
+    function loadReports() {
+        const date = document.getElementById('dateFilter').value;
+        const childId = document.getElementById('childFilter').value;
+        let url = `/my-reports?date=${date}`;
+        if (childId) url += `&child_id=${childId}`;
+        window.location.href = url;
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        const dateFilter = document.getElementById('dateFilter');
+        if (!dateFilter.value) {
+            dateFilter.value = new Date().toISOString().split('T')[0];
+        }
+
+        // Load children for filter dropdown
+        try {
+            const resp = await fetch('/api/parent/children-list', { headers: getHeaders() });
+            if (resp.ok) {
+                const data = await resp.json();
+                const sel = document.getElementById('childFilter');
+                (data.children || []).forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name;
+                    sel.appendChild(opt);
+                });
+                // Pre-select child from URL
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('child_id')) sel.value = params.get('child_id');
+            }
+        } catch (e) { console.error(e); }
+    });
 </script>
 {% endblock %}

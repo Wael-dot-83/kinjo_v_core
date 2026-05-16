@@ -1,0 +1,36 @@
+name: Time-Neutrality Gate
+
+on:
+  push:
+    paths:
+      - 'ADMIN_PANEL_REVIEW_REPORT.md'
+      - 'tools/scan_time_neutral.py'
+      - '.github/workflows/time-neutral-gate.yml'
+  pull_request:
+    paths:
+      - 'ADMIN_PANEL_REVIEW_REPORT.md'
+      - 'tools/scan_time_neutral.py'
+      - '.github/workflows/time-neutral-gate.yml'
+
+jobs:
+  time-neutral-scan:
+    name: Enforce time-neutral language
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.7'
+
+      # Step 1: Verify scanner integrity (uncommitted-local distribution)
+      - name: Verify scanner SHA-256
+        run: python tools/scan_time_neutral.py ADMIN_PANEL_REVIEW_REPORT.md --verify
+
+      # Step 2: Run the full scan (PASS rewrites Scan Proof; FAIL blocks merge)
+      - name: Run time-neutrality scan
+        run: python tools/scan_time_neutral.py ADMIN_PANEL_REVIEW_REPORT.md
+
+      # Step 3: Drift guard — committed report must already be stamped correctly
+      - name: Ensure no unstaged changes
+        run: git diff --exit-code

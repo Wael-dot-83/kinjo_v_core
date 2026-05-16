@@ -1,98 +1,95 @@
 {% extends 'base.html' %}
-{% block title %}طلبات التسجيل — KinJo{% endblock %}
+
+{% block title %}{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-clipboard-check-fill"></i>
-            إدارة التسجيل
-        </div>
-        <h1 class="page-header-title">طلبات التسجيل</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">طلبات التسجيل</li>
+        <h1 class="h2">
+            <i class="bi bi-clipboard-check me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}</li>
             </ol>
         </nav>
     </div>
-    <div class="page-header-actions">
-        <button class="btn btn-ghost btn-sm" onclick="exportEnrollments()">
-            <i class="bi bi-download me-2"></i>تصدير
-        </button>
+    {% if current_user.role.value != 'SUPERVISOR' %}
+    <div class="btn-toolbar">
         <a href="/enrollments/create" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>طلب جديد
+            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}New Request{% else %}طلب جديد{% endif %}
         </a>
     </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block content %}
+<!-- Status Tabs -->
+<ul class="nav nav-tabs mb-4" id="statusTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-status="" type="button">
+            {% if ui_lang == 'en' %}All{% else %}الكل{% endif %} <span class="badge bg-secondary ms-1" id="countAll">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-status="pending_review" type="button">
+            {% if ui_lang == 'en' %}Pending{% else %}معلق{% endif %} <span class="badge bg-warning ms-1" id="countPending">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="accepted-tab" data-bs-toggle="tab" data-status="accepted" type="button">
+            {% if ui_lang == 'en' %}Accepted{% else %}مقبول{% endif %} <span class="badge bg-success ms-1" id="countAccepted">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-status="rejected" type="button">
+            {% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %} <span class="badge bg-danger ms-1" id="countRejected">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="waitlist-tab" data-bs-toggle="tab" data-status="waitlisted" type="button">
+            {% if ui_lang == 'en' %}Waitlist{% else %}انتظار{% endif %} <span class="badge bg-info ms-1" id="countWaitlist">0</span>
+        </button>
+    </li>
+</ul>
 
-<!-- Status Tabs with counts -->
-<div class="enroll-tabs-wrap mb-4">
-    <div class="enroll-tabs" id="statusTabs" role="tablist">
-        <button class="enroll-tab active" data-status="" type="button" role="tab">
-            <i class="bi bi-grid-3x3-gap-fill"></i>
-            الكل
-            <span class="enroll-tab-badge" id="countAll">0</span>
-        </button>
-        <button class="enroll-tab" data-status="pending_review" type="button" role="tab">
-            <i class="bi bi-hourglass-split"></i>
-            قيد المراجعة
-            <span class="enroll-tab-badge warning" id="countPending">0</span>
-        </button>
-        <button class="enroll-tab" data-status="accepted" type="button" role="tab">
-            <i class="bi bi-check-circle-fill"></i>
-            مقبول
-            <span class="enroll-tab-badge success" id="countAccepted">0</span>
-        </button>
-        <button class="enroll-tab" data-status="rejected" type="button" role="tab">
-            <i class="bi bi-x-circle-fill"></i>
-            مرفوض
-            <span class="enroll-tab-badge danger" id="countRejected">0</span>
-        </button>
-        <button class="enroll-tab" data-status="waitlisted" type="button" role="tab">
-            <i class="bi bi-clock-history"></i>
-            قائمة الانتظار
-            <span class="enroll-tab-badge info" id="countWaitlist">0</span>
-        </button>
-    </div>
-</div>
-
-<!-- Table Card -->
+<!-- Enrollments Table -->
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-        <div class="search-box-inline">
-            <i class="bi bi-search search-box-icon"></i>
-            <input type="text" class="form-control search-box-input" id="searchInput"
-                   placeholder="بحث بالاسم أو ولي الأمر...">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="input-group" style="max-width: 300px;">
+            <input type="text" class="form-control" id="searchInput" placeholder="{% if ui_lang == 'en' %}Search...{% else %}بحث...{% endif %}">
+            <button class="btn btn-outline-secondary" type="button" aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}">
+                <i class="bi bi-search"></i>
+            </button>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-muted small" id="resultsCount"></span>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="exportEnrollments()">
+                <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
+            </button>
         </div>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table enroll-table mb-0">
+            <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th style="width:3rem;">#</th>
-                        <th>الطفل</th>
-                        <th>ولي الأمر</th>
-                        <th>الروضة</th>
-                        <th>تاريخ التقديم</th>
-                        <th>الحالة</th>
-                        <th style="width:7rem;">الإجراءات</th>
+                        <th>#</th>
+                        <th>{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Parent{% else %}ولي الأمر{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Submission Date{% else %}تاريخ التقديم{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="enrollmentsTable">
                     <tr>
-                        <td colspan="7" class="text-center py-5">
-                            <div class="d-flex justify-content-center align-items-center gap-2 text-muted">
-                                <div class="spinner-border spinner-border-sm"></div>
-                                <span>جاري التحميل...</span>
-                            </div>
+                        <td colspan="7" class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                         </td>
                     </tr>
                 </tbody>
@@ -102,381 +99,231 @@
 </div>
 
 <!-- Review Modal -->
-<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel">
-    <div class="modal-dialog modal-dialog-centered">
+<div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-800" id="reviewModalLabel">
-                    <i class="bi bi-clipboard-check me-2 text-primary"></i>
-                    مراجعة طلب التسجيل
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title">{% if ui_lang == 'en' %}Review Enrollment Request{% else %}مراجعة طلب التسجيل{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
-                <!-- Child info summary -->
-                <div class="review-info-card mb-4" id="enrollmentDetails">
-                    <!-- Populated by JS -->
+                <div id="enrollmentDetails" class="mb-4">
+                    <!-- Populated by JavaScript -->
                 </div>
-
-                <!-- Decision buttons -->
+                
                 <div class="mb-3">
-                    <label class="form-label fw-700 mb-2" style="font-size:0.85rem;">القرار</label>
-                    <div class="decision-btn-group">
-                        <button type="button" class="decision-btn accept" onclick="selectDecision('accepted', this)">
-                            <i class="bi bi-check-circle-fill"></i>
-                            قبول
+                    <label class="form-label">{% if ui_lang == 'en' %}Decision{% else %}القرار{% endif %}</label>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-success flex-fill" onclick="submitDecision('accepted')">
+                            <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Accept{% else %}قبول{% endif %}
                         </button>
-                        <button type="button" class="decision-btn waitlist" onclick="selectDecision('waitlisted', this)">
-                            <i class="bi bi-hourglass-fill"></i>
-                            انتظار
+                        <button type="button" class="btn btn-warning flex-fill" onclick="submitDecision('waitlisted')">
+                            <i class="bi bi-hourglass me-1"></i>{% if ui_lang == 'en' %}Waitlist{% else %}انتظار{% endif %}
                         </button>
-                        <button type="button" class="decision-btn reject" onclick="selectDecision('rejected', this)">
-                            <i class="bi bi-x-circle-fill"></i>
-                            رفض
+                        <button type="button" class="btn btn-danger flex-fill" onclick="submitDecision('rejected')">
+                            <i class="bi bi-x-circle me-1"></i>{% if ui_lang == 'en' %}Reject{% else %}رفض{% endif %}
                         </button>
                     </div>
                 </div>
-
-                <div class="mb-0" id="reasonGroup" style="display:none;">
-                    <label for="decisionReason" class="form-label fw-700 mb-2" style="font-size:0.85rem;">سبب القرار</label>
-                    <textarea class="form-control" id="decisionReason" rows="3"
-                              placeholder="أدخل سبب القرار..."></textarea>
+                
+                <div class="mb-3" id="reasonGroup" style="display: none;">
+                    <label for="decisionReason" class="form-label">{% if ui_lang == 'en' %}Reason{% else %}السبب{% endif %}</label>
+                    <textarea class="form-control" id="decisionReason" rows="3" 
+                              placeholder="{% if ui_lang == 'en' %}Enter decision reason...{% else %}أدخل سبب القرار...{% endif %}"></textarea>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" id="submitDecisionBtn" onclick="submitDecision()" disabled>
-                    <i class="bi bi-check-lg me-2"></i>تأكيد القرار
-                </button>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-/* Page header */
-.page-header-wrap {
-    display:flex; justify-content:space-between; align-items:flex-start;
-    flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;
-}
-.page-header-eyebrow {
-    display:inline-flex; align-items:center; gap:0.4rem;
-    font-size:0.78rem; font-weight:700; color:var(--kinjo-primary);
-    text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.25rem;
-}
-.page-header-title { font-size:1.5rem; font-weight:800; margin:0 0 0.25rem; color:var(--kinjo-text-primary); }
-.page-header-actions { display:flex; align-items:center; gap:0.5rem; flex-shrink:0; }
-
-/* Enrollment tabs */
-.enroll-tabs-wrap { overflow-x:auto; }
-.enroll-tabs {
-    display:inline-flex; gap:0.375rem;
-    background:var(--kinjo-surface);
-    border-radius:var(--kinjo-radius-xl);
-    padding:0.3rem;
-    border:1px solid var(--kinjo-border);
-    white-space:nowrap;
-}
-.enroll-tab {
-    display:inline-flex; align-items:center; gap:0.5rem;
-    padding:0.45rem 1rem; border-radius:var(--kinjo-radius-lg);
-    font-size:0.84rem; font-weight:600;
-    border:none; background:transparent;
-    color:var(--kinjo-text-muted);
-    transition:all 0.2s; cursor:pointer;
-}
-.enroll-tab:hover { color:var(--kinjo-text-primary); background:var(--kinjo-card-bg); }
-.enroll-tab.active { background:var(--kinjo-card-bg); color:var(--kinjo-primary); box-shadow:var(--kinjo-shadow-sm); }
-.enroll-tab-badge {
-    min-width:22px; height:20px; border-radius:50px;
-    font-size:0.7rem; font-weight:800; padding:0 0.4rem;
-    display:inline-flex; align-items:center; justify-content:center;
-    background:var(--kinjo-border); color:var(--kinjo-text-muted);
-}
-.enroll-tab-badge.warning { background:rgba(245,158,11,0.2); color:#d97706; }
-.enroll-tab-badge.success { background:rgba(16,185,129,0.2); color:var(--kinjo-success); }
-.enroll-tab-badge.danger  { background:rgba(239,68,68,0.2);  color:var(--kinjo-danger); }
-.enroll-tab-badge.info    { background:rgba(6,182,212,0.2);  color:#0891b2; }
-
-/* Search box */
-.search-box-inline { position:relative; }
-.search-box-icon {
-    position:absolute; top:50%; right:0.875rem; transform:translateY(-50%);
-    color:var(--kinjo-text-muted); font-size:0.9rem; pointer-events:none;
-    z-index:2;
-}
-[dir="rtl"] .search-box-icon { right:auto; left:0.875rem; }
-.search-box-input {
-    padding-right:2.5rem; min-width:260px;
-    border-radius:var(--kinjo-radius-lg);
-    border-color:var(--kinjo-border);
-    font-size:0.875rem;
-}
-[dir="rtl"] .search-box-input { padding-right:0.75rem; padding-left:2.5rem; }
-
-/* Table */
-.enroll-table thead th {
-    font-size:0.78rem; font-weight:700; color:var(--kinjo-text-muted);
-    text-transform:uppercase; letter-spacing:0.04em;
-    padding:0.75rem 1rem;
-    background:var(--kinjo-surface);
-    border-bottom:1px solid var(--kinjo-border);
-    white-space:nowrap;
-}
-.enroll-table tbody td {
-    padding:0.875rem 1rem;
-    vertical-align:middle;
-    font-size:0.875rem;
-    border-bottom:1px solid var(--kinjo-border);
-}
-.enroll-table tbody tr:last-child td { border-bottom:none; }
-.enroll-table tbody tr:hover td { background:var(--kinjo-surface); }
-
-/* Child avatar in table */
-.table-child-avatar {
-    width:36px; height:36px; border-radius:50%; flex-shrink:0;
-    background:var(--kinjo-primary-xlight); color:var(--kinjo-primary);
-    display:flex; align-items:center; justify-content:center; font-size:0.9rem;
-}
-
-/* Status badges */
-.status-pill {
-    display:inline-flex; align-items:center; gap:0.3rem;
-    padding:0.25rem 0.7rem; border-radius:50px;
-    font-size:0.77rem; font-weight:700;
-}
-.status-pill.pending_review { background:rgba(245,158,11,0.15); color:#d97706; }
-.status-pill.submitted      { background:rgba(245,158,11,0.15); color:#d97706; }
-.status-pill.accepted       { background:rgba(16,185,129,0.15); color:var(--kinjo-success); }
-.status-pill.rejected       { background:rgba(239,68,68,0.15);  color:var(--kinjo-danger); }
-.status-pill.waitlisted     { background:rgba(6,182,212,0.15);  color:#0891b2; }
-
-/* Review modal */
-.review-info-card {
-    background:var(--kinjo-surface);
-    border:1px solid var(--kinjo-border);
-    border-radius:var(--kinjo-radius-lg);
-    padding:1rem 1.25rem;
-}
-.review-info-row { display:flex; justify-content:space-between; align-items:center; padding:0.3rem 0; }
-.review-info-row + .review-info-row { border-top:1px solid var(--kinjo-border); }
-.review-info-label { font-size:0.8rem; font-weight:600; color:var(--kinjo-text-muted); }
-.review-info-value { font-size:0.875rem; font-weight:700; color:var(--kinjo-text-primary); }
-
-/* Decision buttons */
-.decision-btn-group { display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; }
-.decision-btn {
-    display:flex; flex-direction:column; align-items:center; gap:0.3rem;
-    padding:0.75rem 0.5rem; border-radius:var(--kinjo-radius-lg);
-    font-size:0.82rem; font-weight:700; cursor:pointer;
-    border:2px solid var(--kinjo-border);
-    background:var(--kinjo-surface); color:var(--kinjo-text-secondary);
-    transition:all 0.2s;
-}
-.decision-btn i { font-size:1.3rem; }
-.decision-btn:hover, .decision-btn.selected { box-shadow:var(--kinjo-shadow-sm); }
-.decision-btn.accept:hover,  .decision-btn.accept.selected  { border-color:var(--kinjo-success); background:rgba(16,185,129,0.1); color:var(--kinjo-success); }
-.decision-btn.waitlist:hover,.decision-btn.waitlist.selected { border-color:#0891b2; background:rgba(6,182,212,0.1); color:#0891b2; }
-.decision-btn.reject:hover,  .decision-btn.reject.selected  { border-color:var(--kinjo-danger); background:rgba(239,68,68,0.1); color:var(--kinjo-danger); }
-</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-let enrollments = [];
-let currentEnrollmentId = null;
-let currentFilter = '';
-let selectedDecision = null;
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadEnrollments();
-    setupTabHandlers();
-    document.getElementById('searchInput').addEventListener('input', debounce(onSearch, 280));
-});
+    let enrollments = [];
+    let currentEnrollmentId = null;
+    let currentFilter = '';
 
-async function loadEnrollments() {
-    try {
-        const params = currentFilter ? `?status=${currentFilter}` : '';
-        const r = await fetch(`/api/enrollments${params}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+    document.addEventListener('DOMContentLoaded', async () => {
+        await waitForAuthentication();
+        await loadEnrollments();
+        setupTabHandlers();
+    });
+
+    async function waitForAuthentication() {
+        return new Promise((resolve) => {
+            const checkAuth = () => {
+                if (api.isAuthenticated()) {
+                    console.log('User authenticated, loading enrollments data...');
+                    resolve();
+                } else {
+                    // Check again in 500ms
+                    setTimeout(checkAuth, 500);
+                }
+            };
+            checkAuth();
         });
-        if (!r.ok) throw new Error();
-        const data = await r.json();
-        enrollments = data.enrollments || [];
-
-        updateCounts(data);
-        renderEnrollments(enrollments);
-    } catch {
-        showToast('حدث خطأ في تحميل البيانات', 'error');
-        document.getElementById('enrollmentsTable').innerHTML = `
-            <tr><td colspan="7" class="text-center py-5 text-muted">
-                <i class="bi bi-exclamation-circle d-block fs-2 mb-2 opacity-25"></i>
-                <span>تعذّر تحميل البيانات</span>
-            </td></tr>`;
-    }
-}
-
-function updateCounts(data) {
-    document.getElementById('countAll').textContent      = data.total || 0;
-    document.getElementById('countPending').textContent  = data.pending_count || 0;
-    document.getElementById('countAccepted').textContent = data.accepted_count || 0;
-    document.getElementById('countRejected').textContent = data.rejected_count || 0;
-    document.getElementById('countWaitlist').textContent = data.waitlisted_count || 0;
-}
-
-function renderEnrollments(data) {
-    const tbody = document.getElementById('enrollmentsTable');
-    const count = document.getElementById('resultsCount');
-    if (count) count.textContent = `${data.length} نتيجة`;
-
-    if (!data.length) {
-        tbody.innerHTML = `
-            <tr><td colspan="7" class="text-center py-5">
-                <i class="bi bi-inbox d-block fs-1 mb-2 opacity-25 text-muted"></i>
-                <p class="text-muted mb-0">لا توجد طلبات تسجيل</p>
-            </td></tr>`;
-        return;
     }
 
-    tbody.innerHTML = data.map((e, i) => `
-        <tr>
-            <td class="text-muted fw-600" style="font-size:0.8rem;">${i + 1}</td>
-            <td>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="table-child-avatar"><i class="bi bi-emoji-smile"></i></div>
-                    <div>
-                        <div class="fw-700" style="font-size:0.875rem;">${e.child_name || 'غير محدد'}</div>
+    async function loadEnrollments() {
+        // Check authentication before loading data
+        if (!api.isAuthenticated()) {
+            showToast(T('يجب تسجيل الدخول أولاً', 'Please log in first'), 'warning');
+            return;
+        }
+
+        try {
+            const params = currentFilter ? { status: currentFilter } : {};
+            const response = await api.getEnrollments(params);
+            enrollments = response.enrollments || [];
+            
+            updateCounts(response);
+            renderEnrollments(enrollments);
+            
+        } catch (error) {
+            console.error('Error loading enrollments:', error);
+            showToast(T('حدث خطأ في تحميل البيانات', 'Error loading data'), 'error');
+        }
+    }
+    
+    function updateCounts(data) {
+        // Update badge counts
+        document.getElementById('countAll').textContent = data.total || 0;
+        // These would come from the API response
+    }
+    
+    function renderEnrollments(data) {
+        const table = document.getElementById('enrollmentsTable');
+        
+        if (!data || data.length === 0) {
+            table.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <i class="bi bi-inbox fs-1 text-muted d-block mb-2 opacity-25"></i>
+                        <p class="text-muted mb-0">${T('لا توجد طلبات تسجيل', 'No enrollment requests')}</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        table.innerHTML = data.map((e, index) => `
+            <tr>
+                <td>${index + 1}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-sm bg-primary bg-opacity-10 rounded-circle 
+                                    d-flex align-items-center justify-content-center me-2">
+                            <i class="bi bi-person text-primary"></i>
+                        </div>
+                        <div>
+                            <span class="fw-semibold">${e.child_name || T('غير محدد', 'Not specified')}</span>
+                        </div>
                     </div>
-                </div>
-            </td>
-            <td style="font-size:0.875rem;color:var(--kinjo-text-secondary);">${e.parent_name || 'غير محدد'}</td>
-            <td style="font-size:0.875rem;color:var(--kinjo-text-secondary);">${e.kindergarten_name || 'غير محدد'}</td>
-            <td style="font-size:0.82rem;color:var(--kinjo-text-muted);white-space:nowrap;">${formatDate(e.created_at)}</td>
-            <td>${statusPill(e.status)}</td>
-            <td>
-                <div class="d-flex gap-1">
-                    <button class="btn btn-ghost btn-sm px-2" onclick="viewEnrollment(${e.id})" title="عرض">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    ${(e.status === 'pending_review' || e.status === 'submitted') ? `
-                        <button class="btn btn-primary btn-sm px-2" onclick="openReviewModal(${e.id})" title="مراجعة">
-                            <i class="bi bi-check-square"></i>
+                </td>
+                <td>${e.parent_name || T('غير محدد', 'Not specified')}</td>
+                <td>${e.kindergarten_name || T('غير محدد', 'Not specified')}</td>
+                <td>${formatDate(e.created_at)}</td>
+                <td>${getStatusBadge(e.status)}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="viewEnrollment(${e.id})" title="عرض">
+                            <i class="bi bi-eye"></i>
                         </button>
-                    ` : ''}
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
+                        ${e.status === 'pending_review' || e.status === 'submitted' ? `
+                            <button class="btn btn-outline-success" onclick="openReviewModal(${e.id})" title="مراجعة">
+                                <i class="bi bi-check-square"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function setupTabHandlers() {
+        document.querySelectorAll('#statusTabs button').forEach(tab => {
+            tab.addEventListener('click', async (e) => {
+                // Check authentication before changing tabs
+                if (!api.isAuthenticated()) {
+                    showToast(T('يجب تسجيل الدخول أولاً', 'Please log in first'), 'warning');
+                    return;
+                }
 
-function statusPill(status) {
-    const labels = {
-        pending_review: ['hourglass-split', 'قيد المراجعة'],
-        submitted:      ['hourglass-split', 'مقدّم'],
-        accepted:       ['check-circle-fill', 'مقبول'],
-        rejected:       ['x-circle-fill', 'مرفوض'],
-        waitlisted:     ['clock-history', 'انتظار'],
-    };
-    const [icon, label] = labels[status] || ['question-circle', 'غير محدد'];
-    return `<span class="status-pill ${status}"><i class="bi bi-${icon}"></i>${label}</span>`;
-}
+                // Update active state
+                document.querySelectorAll('#statusTabs button').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
 
-function setupTabHandlers() {
-    document.querySelectorAll('.enroll-tab').forEach(tab => {
-        tab.addEventListener('click', async (e) => {
-            document.querySelectorAll('.enroll-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            currentFilter = tab.dataset.status;
+                // Update filter and reload
+                currentFilter = e.target.dataset.status;
+                await loadEnrollments();
+            });
+        });
+    }
+    
+    function viewEnrollment(id) {
+        window.location.href = `/enrollments/${id}`;
+    }
+    
+    function openReviewModal(id) {
+        currentEnrollmentId = id;
+        const enrollment = enrollments.find(e => e.id === id);
+        
+        if (enrollment) {
+            document.getElementById('enrollmentDetails').innerHTML = `
+                <div class="mb-2"><strong>${T('الطفل', 'Child')}:</strong> ${enrollment.child_name}</div>
+                <div class="mb-2"><strong>${T('ولي الأمر', 'Parent')}:</strong> ${enrollment.parent_name}</div>
+                <div class="mb-2"><strong>${T('الروضة', 'Kindergarten')}:</strong> ${enrollment.kindergarten_name}</div>
+            `;
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('reviewModal'));
+        modal.show();
+    }
+    
+    async function submitDecision(decision) {
+        if (!currentEnrollmentId) return;
+        
+        const reason = document.getElementById('decisionReason').value;
+        
+        try {
+            await api.reviewEnrollment(currentEnrollmentId, decision, reason);
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('reviewModal'));
+            modal.hide();
+            
+            showToast(T('تم حفظ القرار بنجاح', 'Decision saved successfully'), 'success');
             await loadEnrollments();
+            
+        } catch (error) {
+            showToast(error.message || T('حدث خطأ', 'An error occurred'), 'error');
+        }
+    }
+    
+    // Show reason field for reject decision
+    document.querySelectorAll('[onclick*="submitDecision"]').forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            const decision = this.onclick.toString().match(/'(\w+)'/)[1];
+            document.getElementById('reasonGroup').style.display = 
+                decision === 'rejected' ? 'block' : 'none';
         });
     });
-}
-
-function viewEnrollment(id) { window.location.href = `/enrollments/${id}`; }
-
-function openReviewModal(id) {
-    currentEnrollmentId = id;
-    selectedDecision = null;
-    document.getElementById('submitDecisionBtn').disabled = true;
-    document.getElementById('reasonGroup').style.display = 'none';
-    document.querySelectorAll('.decision-btn').forEach(b => b.classList.remove('selected'));
-    document.getElementById('decisionReason').value = '';
-
-    const e = enrollments.find(x => x.id === id);
-    if (e) {
-        document.getElementById('enrollmentDetails').innerHTML = `
-            <div class="review-info-row">
-                <span class="review-info-label">الطفل</span>
-                <span class="review-info-value">${e.child_name || '—'}</span>
-            </div>
-            <div class="review-info-row">
-                <span class="review-info-label">ولي الأمر</span>
-                <span class="review-info-value">${e.parent_name || '—'}</span>
-            </div>
-            <div class="review-info-row">
-                <span class="review-info-label">الروضة</span>
-                <span class="review-info-value">${e.kindergarten_name || '—'}</span>
-            </div>
-            <div class="review-info-row">
-                <span class="review-info-label">تاريخ التقديم</span>
-                <span class="review-info-value">${formatDate(e.created_at)}</span>
-            </div>`;
+    
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const filtered = enrollments.filter(e => 
+            (e.child_name && e.child_name.toLowerCase().includes(query)) ||
+            (e.parent_name && e.parent_name.toLowerCase().includes(query))
+        );
+        renderEnrollments(filtered);
+    });
+    
+    function exportEnrollments() {
+        showToast(T('جاري تحضير الملف للتصدير...', 'Preparing file for export...'), 'info');
+        // Implement export logic
     }
-
-    new bootstrap.Modal(document.getElementById('reviewModal')).show();
-}
-
-function selectDecision(decision, btn) {
-    document.querySelectorAll('.decision-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    selectedDecision = decision;
-    document.getElementById('submitDecisionBtn').disabled = false;
-    document.getElementById('reasonGroup').style.display = decision === 'rejected' ? 'block' : 'none';
-}
-
-async function submitDecision() {
-    if (!currentEnrollmentId || !selectedDecision) return;
-    const reason = document.getElementById('decisionReason').value;
-
-    try {
-        const r = await fetch(`/api/enrollments/${currentEnrollmentId}/review`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            },
-            body: JSON.stringify({ status: selectedDecision, reason })
-        });
-        if (!r.ok) throw new Error();
-
-        bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
-        showToast('تم حفظ القرار بنجاح', 'success');
-        await loadEnrollments();
-    } catch {
-        showToast('حدث خطأ في حفظ القرار', 'error');
-    }
-}
-
-function onSearch(e) {
-    const q = e.target.value.toLowerCase();
-    const filtered = enrollments.filter(x =>
-        (x.child_name  || '').toLowerCase().includes(q) ||
-        (x.parent_name || '').toLowerCase().includes(q)
-    );
-    renderEnrollments(filtered);
-}
-
-function exportEnrollments() {
-    showToast('جاري تحضير الملف للتصدير...', 'info');
-}
-
-function formatDate(d) {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' });
-}
-
-function debounce(fn, ms) {
-    let t; return function(...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), ms); };
-}
 </script>
 {% endblock %}

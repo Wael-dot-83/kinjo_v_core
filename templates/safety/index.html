@@ -1,145 +1,60 @@
 {% extends 'base.html' %}
-{% block title %}الصحة والسلامة — KinJo{% endblock %}
+
+{% block title %}{% if ui_lang == 'en' %}Health and Safety{% else %}الصحة والسلامة{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
     <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-shield-fill-check"></i>
-            بيئة آمنة
-        </div>
-        <h1 class="page-header-title">الصحة والسلامة</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">الصحة والسلامة</li>
+        <h1 class="h2 mb-1">
+            <i class="bi bi-shield-check me-2 text-danger"></i>
+            {% if ui_lang == 'en' %}Health & Safety{% else %}الصحة والسلامة{% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Health & Safety{% else %}الصحة والسلامة{% endif %}</li>
             </ol>
         </nav>
     </div>
-    <div class="page-header-actions">
-        {% if current_user.role.value != 'ADMIN' %}
+    <div class="btn-toolbar mb-2 mb-md-0">
         <a href="/safety/incidents/new" class="btn btn-danger">
-            <i class="bi bi-plus-lg me-2"></i>تسجيل حادث
+            <i class="bi bi-plus-lg me-1"></i>
+            {% if ui_lang == 'en' %}Report Incident{% else %}تسجيل حادث{% endif %}
         </a>
-        {% else %}
-        <a href="/admin/safety-analytics" class="btn btn-outline-primary">
-            <i class="bi bi-graph-up-arrow me-2"></i>تقارير الحوادث
-        </a>
-        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-
-{% if current_user.role.value == 'ADMIN' %}
-<div class="alert alert-info d-flex align-items-start gap-3 mb-4" role="alert" style="border-radius:var(--kinjo-radius-lg);">
-    <i class="bi bi-info-circle-fill flex-shrink-0 fs-5 mt-1"></i>
-    <div>
-        <div class="fw-700 mb-1">وضع المراقبة والتقارير</div>
-        <div style="font-size:0.875rem;">
-            يعرض هذا القسم سجل الحوادث للمراجعة والتحليل فقط.
-            تسجيل الحوادث التشغيلية مسؤولية المدير والمشرف.
-            <a href="/admin/safety-analytics" class="fw-700 text-decoration-none">عرض لوحة تحليلات الحوادث</a>.
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Summary stats -->
-<div class="row g-3 mb-4 stagger-children">
-    <div class="col-6 col-md-3">
-        <div class="stat-card card">
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-danger"><i class="bi bi-exclamation-triangle me-2"></i>{% if ui_lang == 'en' %}Incident Log{% else %}سجل الحوادث{% endif %}</h5>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="unresolvedOnly" onchange="loadIncidents()">
+                    <label class="form-check-label" for="unresolvedOnly">{% if ui_lang == 'en' %}Unresolved Only{% else %}غير المعالجة فقط{% endif %}</label>
+                </div>
+            </div>
             <div class="card-body">
-                <div class="stat-info">
-                    <div class="stat-label">إجمالي الحوادث</div>
-                    <div class="stat-value" id="statTotal">—</div>
-                </div>
-                <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card warning card">
-            <div class="card-body">
-                <div class="stat-info">
-                    <div class="stat-label">مفتوحة</div>
-                    <div class="stat-value" id="statOpen">—</div>
-                </div>
-                <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
-                    <i class="bi bi-clock-history"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card success card">
-            <div class="card-body">
-                <div class="stat-info">
-                    <div class="stat-label">مغلقة</div>
-                    <div class="stat-value" id="statClosed">—</div>
-                </div>
-                <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
-                    <i class="bi bi-check-circle-fill"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card danger card">
-            <div class="card-body">
-                <div class="stat-info">
-                    <div class="stat-label">خطورة عالية</div>
-                    <div class="stat-value" id="statHigh">—</div>
-                </div>
-                <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
-                    <i class="bi bi-shield-exclamation"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4">
-
-    <!-- Incidents Table -->
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>
-                    سجل الحوادث
-                </h6>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input" type="checkbox" id="unresolvedOnly"
-                               onchange="loadIncidents()" role="switch">
-                        <label class="form-check-label small fw-600" for="unresolvedOnly">
-                            غير المعالجة فقط
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table incidents-table mb-0">
-                        <thead>
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
                             <tr>
-                                <th>التاريخ</th>
-                                <th>الطفل</th>
-                                <th>النوع</th>
-                                <th>الخطورة</th>
-                                <th>الحالة</th>
-                                <th>الإجراءات</th>
+                                <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Description{% else %}الوصف{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                             </tr>
                         </thead>
                         <tbody id="incidentsTableBody">
                             <tr>
-                                <td colspan="6" class="text-center py-5 text-muted">
-                                    <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
-                                    جاري التحميل...
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+                                    {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
                                 </td>
                             </tr>
                         </tbody>
@@ -148,176 +63,85 @@
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Health Alerts Sidebar -->
-    <div class="col-lg-4">
-        <div class="card mb-3">
-            <div class="card-header" style="background:rgba(6,182,212,0.08);border-bottom-color:rgba(6,182,212,0.2);">
-                <h6 class="card-title-sm mb-0" style="color:#0891b2;">
-                    <i class="bi bi-heart-pulse-fill me-2"></i>
-                    تنبيهات صحية
-                </h6>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-info"><i class="bi bi-heart-pulse me-2"></i>{% if ui_lang == 'en' %}Health Alerts{% else %}تنبيهات صحية{% endif %}</h5>
             </div>
             <div class="card-body">
-                <div class="alert alert-info d-flex align-items-start gap-2 mb-0" role="alert">
-                    <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
-                    <div style="font-size:0.85rem;">
-                        يمكن إضافة التنبيهات الصحية (مثل الحساسية) من ملف الطفل مباشرةً.
-                    </div>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    {% if ui_lang == 'en' %}Health alerts (such as allergies) can be added directly from the child's profile.{% else %}يمكن إضافة التنبيهات الصحية (مثل الحساسية) من ملف الطفل مباشرة.{% endif %}
                 </div>
-            </div>
-        </div>
-
-        <!-- Severity guide -->
-        <div class="card">
-            <div class="card-header">
-                <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-info-circle-fill me-2 text-primary"></i>
-                    مستويات الخطورة
-                </h6>
-            </div>
-            <div class="card-body p-0">
-                <div class="severity-guide-row" style="border-color:rgba(6,182,212,0.3);">
-                    <span class="severity-pill LOW">منخفض</span>
-                    <span style="font-size:0.82rem;color:var(--kinjo-text-muted);">إصابات طفيفة، خدوش بسيطة</span>
-                </div>
-                <div class="severity-guide-row" style="border-color:rgba(245,158,11,0.3);">
-                    <span class="severity-pill MEDIUM">متوسط</span>
-                    <span style="font-size:0.82rem;color:var(--kinjo-text-muted);">إصابات تستدعي الرعاية</span>
-                </div>
-                <div class="severity-guide-row" style="border-color:rgba(239,68,68,0.3);">
-                    <span class="severity-pill HIGH">عالي</span>
-                    <span style="font-size:0.82rem;color:var(--kinjo-text-muted);">إصابات تحتاج عناية طبية</span>
-                </div>
-                <div class="severity-guide-row" style="border-bottom:none;border-color:rgba(100,116,139,0.3);">
-                    <span class="severity-pill CRITICAL">حرج</span>
-                    <span style="font-size:0.82rem;color:var(--kinjo-text-muted);">حالة طوارئ طبية</span>
-                </div>
+                <!-- Placeholder for health alerts list if needed -->
             </div>
         </div>
     </div>
-
 </div>
-
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-danger,#ef4444);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
-
-/* Incidents table */
-.incidents-table thead th {
-    font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);
-    text-transform:uppercase;letter-spacing:0.04em;
-    padding:0.75rem 1rem;background:var(--kinjo-surface);
-    border-bottom:1px solid var(--kinjo-border);white-space:nowrap;
-}
-.incidents-table tbody td { padding:0.875rem 1rem;vertical-align:middle;font-size:0.875rem;border-bottom:1px solid var(--kinjo-border); }
-.incidents-table tbody tr:last-child td { border-bottom:none; }
-.incidents-table tbody tr:hover td { background:var(--kinjo-surface); }
-
-/* Severity pills */
-.severity-pill { display:inline-flex;align-items:center;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.72rem;font-weight:800; }
-.severity-pill.LOW      { background:rgba(6,182,212,0.15);color:#0891b2; }
-.severity-pill.MEDIUM   { background:rgba(245,158,11,0.15);color:#d97706; }
-.severity-pill.HIGH     { background:rgba(239,68,68,0.15);color:var(--kinjo-danger); }
-.severity-pill.CRITICAL { background:#1e1b4b;color:#c7d2fe; }
-
-/* Status pills */
-.inc-status { display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.72rem;font-weight:700; }
-.inc-status.open   { background:rgba(245,158,11,0.15);color:#d97706; }
-.inc-status.closed { background:rgba(16,185,129,0.15);color:var(--kinjo-success); }
-
-/* Type pill */
-.inc-type { display:inline-block;padding:0.15rem 0.55rem;border-radius:50px;font-size:0.72rem;font-weight:700;background:var(--kinjo-surface);border:1px solid var(--kinjo-border);color:var(--kinjo-text-secondary); }
-
-/* Severity guide */
-.severity-guide-row { display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
-</style>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', () => loadIncidents());
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
 
-async function loadIncidents() {
-    const unresolved = document.getElementById('unresolvedOnly').checked;
-    const url = `/api/incidents?unresolved_only=${unresolved}`;
-    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    document.addEventListener('DOMContentLoaded', function () {
+        loadIncidents();
+    });
 
-    try {
-        const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (!r.ok) throw new Error();
-        const data = await r.json();
-        const incidents = data.incidents || data || [];
-        renderIncidents(incidents);
-        updateStats(incidents);
-    } catch {
-        document.getElementById('incidentsTableBody').innerHTML = `
-            <tr><td colspan="6" class="text-center py-5 text-muted">
-                <i class="bi bi-exclamation-circle d-block fs-2 mb-2 opacity-25"></i>
-                <span>تعذّر تحميل البيانات</span>
-            </td></tr>`;
-    }
-}
+    function renderIncidents(incidents) {
+        const tbody = document.getElementById('incidentsTableBody');
+        if (incidents.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">${T('لا توجد حوادث مسجلة', 'No incidents recorded')}</td></tr>`;
+            return;
+        }
 
-function updateStats(incidents) {
-    const open   = incidents.filter(i => !i.closed_at).length;
-    const closed = incidents.length - open;
-    const high   = incidents.filter(i => ['HIGH','CRITICAL'].includes(i.severity_level)).length;
-    document.getElementById('statTotal').textContent  = incidents.length;
-    document.getElementById('statOpen').textContent   = open;
-    document.getElementById('statClosed').textContent = closed;
-    document.getElementById('statHigh').textContent   = high;
-}
-
-function renderIncidents(incidents) {
-    const tbody = document.getElementById('incidentsTableBody');
-    if (!incidents.length) {
-        tbody.innerHTML = `
-            <tr><td colspan="6" class="text-center py-5">
-                <i class="bi bi-shield-fill-check d-block fs-1 mb-2" style="color:var(--kinjo-success);opacity:0.4;"></i>
-                <p class="text-muted mb-0">لا توجد حوادث مسجلة</p>
-            </td></tr>`;
-        return;
+        tbody.innerHTML = incidents.map(inc => `
+            <tr>
+                <td>${new Date(inc.occurred_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}</td>
+                <td><a href="/children/${inc.child_id}" class="text-decoration-none fw-bold">${T('الطفل', 'Child')} #${inc.child_id}</a></td>
+                <td><span class="badge bg-secondary">${inc.type}</span></td>
+                <td>
+                    <span class="badge ${getSeverityClass(inc.severity_level)}">
+                        ${inc.severity_level}
+                    </span>
+                </td>
+                <td>${inc.description.substring(0, 50)}...</td>
+                <td>
+                    ${inc.closed_at ? `<span class="badge bg-success">${T('مغلق', 'Closed')}</span>` : `<span class="badge bg-warning text-dark">${T('مفتوح', 'Open')}</span>`}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary">${T('التفاصيل', 'Details')}</button>
+                </td>
+            </tr>
+        `).join('');
     }
 
-    tbody.innerHTML = incidents.map(inc => {
-        const date = new Date(inc.occurred_at).toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' });
-        const isClosed = !!inc.closed_at;
-        const desc = (inc.description || '').length > 45 ? inc.description.substring(0,45) + '...' : (inc.description || '—');
-        return `
-        <tr>
-            <td style="white-space:nowrap;font-size:0.82rem;color:var(--kinjo-text-muted);">${date}</td>
-            <td>
-                <a href="/children/${inc.child_id}" class="fw-700 text-decoration-none" style="color:var(--kinjo-text-primary);">
-                    ${inc.child_name || `طفل #${inc.child_id}`}
-                </a>
-            </td>
-            <td><span class="inc-type">${typeLabel(inc.type)}</span></td>
-            <td><span class="severity-pill ${inc.severity_level}">${severityLabel(inc.severity_level)}</span></td>
-            <td>
-                <span class="inc-status ${isClosed ? 'closed' : 'open'}">
-                    <i class="bi bi-${isClosed ? 'check-circle-fill' : 'clock-history'}"></i>
-                    ${isClosed ? 'مغلق' : 'مفتوح'}
-                </span>
-            </td>
-            <td>
-                <a href="/safety/incidents/${inc.id}" class="btn btn-ghost btn-sm px-2" title="عرض التفاصيل">
-                    <i class="bi bi-eye"></i>
-                </a>
-            </td>
-        </tr>`;
-    }).join('');
-}
+    function getSeverityClass(level) {
+        switch (level) {
+            case 'LOW': return 'bg-info';
+            case 'MEDIUM': return 'bg-warning text-dark';
+            case 'HIGH': return 'bg-danger';
+            case 'CRITICAL': return 'bg-dark';
+            default: return 'bg-secondary';
+        }
+    }
 
-function severityLabel(l) {
-    const m = { LOW:'منخفض', MEDIUM:'متوسط', HIGH:'عالي', CRITICAL:'حرج' };
-    return m[l] || l;
-}
-function typeLabel(t) {
-    const m = { INJURY:'إصابة', ILLNESS:'مرض', ALLERGY:'حساسية', BEHAVIORAL:'سلوكي', OTHER:'أخرى' };
-    return m[t] || t || '—';
-}
+    window.loadIncidents = async function () {
+        const unresolved = document.getElementById('unresolvedOnly').checked;
+        const url = `/api/incidents?unresolved_only=${unresolved}`;
+
+        try {
+            const data = await window.api.get(url);
+            if (!data) return;
+
+            renderIncidents(Array.isArray(data) ? data : (data.incidents || []));
+        } catch (error) {
+            console.error(error);
+        }
+    };
 </script>
 {% endblock %}

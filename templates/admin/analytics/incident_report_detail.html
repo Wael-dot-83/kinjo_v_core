@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{% if ui_lang == 'en' %}Incident Report Details{% else %}تفاصيل تقرير الحوادث{% endif %}{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+title="Incident Report Details" if ui_lang == 'en' else "تفاصيل تقرير الحوادث",
+icon="bi-file-earmark-text",
+breadcrumbs=[
+{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Daily Reports" if ui_lang == 'en' else "التقارير اليومية", "url": "/daily-reports"},
+{"label": "Report Details" if ui_lang == 'en' else "تفاصيل التقرير", "url": None}
+]
+) }}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0" id="reportTitle">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</h5>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm me-2" onclick="exportReport()">
+                        <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="window.history.back()">
+                        <i class="bi bi-arrow-right me-1"></i>{% if ui_lang == 'en' %}Back{% else %}العودة{% endif %}
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Report Info -->
+                <div class="row mb-4" id="reportInfo">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 bg-light">
+                            <h6 class="text-muted mb-2">{% if ui_lang == 'en' %}Report Info{% else %}معلومات التقرير{% endif %}</h6>
+                            <div id="reportDetails"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 bg-light">
+                            <h6 class="text-muted mb-2">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</h6>
+                            <div id="reportScope"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metrics Cards -->
+                <div class="row mb-4" id="metricsCards">
+                    <!-- Cards will be loaded dynamically -->
+                </div>
+
+                <!-- Charts Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">{% if ui_lang == 'en' %}Incidents by Type{% else %}توزيع الحوادث حسب النوع{% endif %}</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="incidentTypeChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">{% if ui_lang == 'en' %}Incidents by Severity{% else %}توزيع الحوادث حسب الشدة{% endif %}</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="incidentSeverityChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="loadingSpinner" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                    </div>
+                    <div class="mt-2">{% if ui_lang == 'en' %}Loading report details...{% else %}جاري تحميل تفاصيل التقرير...{% endif %}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% if ui_lang == 'en' %}Export Report{% else %}تصدير التقرير{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>{% if ui_lang == 'en' %}The report will be exported in CSV format. Do you want to continue?{% else %}سيتم تصدير التقرير بتنسيق CSV. هل تريد المتابعة؟{% endif %}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="confirmExport()">{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+    integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
+    crossorigin="anonymous"></script>
+<script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
+    let reportData = null;
+    const reportId = {{ report_id | tojson }};
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadReportDetails();
+    });
+
+    async function loadReportDetails() {
+        try {
+            const response = await fetch(`/api/admin/reports/incidents/${reportId}`);
+            if (!response.ok) {
+                throw new Error('Failed to load report details');
+            }
+
+            reportData = await response.json();
+            displayReportDetails();
+            createCharts();
+
+        } catch (error) {
+            console.error('Error loading report:', error);
+            document.getElementById('loadingSpinner').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                ${T('فشل في تحميل تفاصيل التقرير. يرجى المحاولة مرة أخرى.', 'Failed to load report details. Please try again.')}
+            </div>
+        `;
+        }
+    }
+
+    function displayReportDetails() {
+        // Update title
+        document.getElementById('reportTitle').textContent = reportData.title || T('تقرير الحوادث', 'Incident Report');
+
+        // Report details
+        const detailsHtml = `
+        <p><strong>${T('تاريخ الإنشاء:', 'Created Date:')}</strong> ${new Date(reportData.created_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-EG')}</p>
+        <p><strong>${T('الفترة الزمنية:', 'Time Period:')}</strong> ${reportData.start_date} - ${reportData.end_date}</p>
+        <p><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong> ${reportData.creator_name || T('غير محدد', 'Unknown')}</p>
+    `;
+        document.getElementById('reportDetails').innerHTML = detailsHtml;
+
+        // Report scope
+        let scopeHtml = `<p><strong>${T('النوع:', 'Type:')}</strong> ${getScopeTypeLabel(reportData.scope_type)}</p>`;
+        if (reportData.scope_type === 'KINDERGARTEN' && reportData.kindergarten_name) {
+            scopeHtml += `<p><strong>${T('الروضة:', 'Kindergarten:')}</strong> ${reportData.kindergarten_name}</p>`;
+        } else if (reportData.scope_type === 'GOVERNORATE' && reportData.governorate) {
+            scopeHtml += `<p><strong>${T('المحافظة:', 'Governorate:')}</strong> ${reportData.governorate}</p>`;
+        }
+        document.getElementById('reportScope').innerHTML = scopeHtml;
+
+        // Metrics cards
+        const metrics = reportData.metrics || {};
+        const cardsHtml = `
+        <div class="col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 text-primary">${metrics.total_incidents || 0}</div>
+                    <div class="card-title">${T('إجمالي الحوادث', 'Total Incidents')}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 text-success">${metrics.open_incidents || 0}</div>
+                    <div class="card-title">${T('حوادث مفتوحة', 'Open Incidents')}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 text-warning">${metrics.closed_incidents || 0}</div>
+                    <div class="card-title">${T('حوادث مغلقة', 'Closed Incidents')}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <div class="display-4 text-danger">${metrics.incidents_by_severity?.HIGH || 0}</div>
+                    <div class="card-title">${T('حوادث عالية الشدة', 'High Severity Incidents')}</div>
+                </div>
+            </div>
+        </div>
+    `;
+        document.getElementById('metricsCards').innerHTML = cardsHtml;
+
+        // Hide loading spinner
+        document.getElementById('loadingSpinner').style.display = 'none';
+    }
+
+    function createCharts() {
+        const metrics = reportData.metrics || {};
+
+        // Incident Type Chart
+        const typeCtx = document.getElementById('incidentTypeChart').getContext('2d');
+        const typeData = metrics.incidents_by_type || {};
+        new Chart(typeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(typeData).map(key => getIncidentTypeLabel(key)),
+                datasets: [{
+                    data: Object.values(typeData),
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
+            }
+        });
+
+        // Incident Severity Chart
+        const severityCtx = document.getElementById('incidentSeverityChart').getContext('2d');
+        const severityData = metrics.incidents_by_severity || {};
+        new Chart(severityCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(severityData).map(key => getSeverityLabel(key)),
+                datasets: [{
+                    label: T('عدد الحوادث', 'Incident Count'),
+                    data: Object.values(severityData),
+                    backgroundColor: '#36A2EB'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function getScopeTypeLabel(scopeType) {
+        const labels = {
+            'ALL': T('جميع الروضات', 'All Kindergartens'),
+            'GOVERNORATE': T('محافظة', 'Governorate'),
+            'KINDERGARTEN': T('روضة معينة', 'Specific Kindergarten')
+        };
+        return labels[scopeType] || scopeType;
+    }
+
+    function getIncidentTypeLabel(type) {
+        const labels = {
+            'INJURY': T('إصابة', 'Injury'),
+            'BEHAVIOR': T('سلوك', 'Behavior'),
+            'ILLNESS': T('مرض', 'Illness'),
+            'ACCIDENT': T('حادث', 'Accident'),
+            'OTHER': T('أخرى', 'Other')
+        };
+        return labels[type] || type;
+    }
+
+    function getSeverityLabel(severity) {
+        const labels = {
+            'LOW': T('منخفضة', 'Low'),
+            'MEDIUM': T('متوسطة', 'Medium'),
+            'HIGH': T('عالية', 'High'),
+            'CRITICAL': T('حرجة', 'Critical')
+        };
+        return labels[severity] || severity;
+    }
+
+    function exportReport() {
+        const modal = new bootstrap.Modal(document.getElementById('exportModal'));
+        modal.show();
+    }
+
+    function confirmExport() {
+        window.location.href = `/api/admin/reports/incidents/${reportId}/export`;
+        const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
+        modal.hide();
+    }
+</script>
+{% endblock %}

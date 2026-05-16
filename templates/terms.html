@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}Terms of Use - KinJo{% else %}شروط الاستخدام - KinJo{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="h3 mb-0">{% if ui_lang == 'en' %}Terms of Use{% else %}شروط الاستخدام{% endif %}</h1>
+                </div>
+                <div class="card-body">
+                    <p>{% if ui_lang == 'en' %}Welcome to the KinJo platform. By using this platform, you agree to comply with these terms and conditions.{% else %}مرحباً بك في منصة KinJo. باستخدامك لهذه المنصة، أنت توافق على الالتزام بهذه الشروط والأحكام.{% endif %}</p>
+
+                    <h4>{% if ui_lang == 'en' %}Use of the Platform{% else %}استخدام المنصة{% endif %}</h4>
+                    <ul>
+                        <li>{% if ui_lang == 'en' %}The platform must be used for lawful purposes only{% else %}يجب استخدام المنصة لأغراض مشروعة فقط{% endif %}</li>
+                        <li>{% if ui_lang == 'en' %}Sharing login credentials with others is prohibited{% else %}يحظر مشاركة معلومات الدخول مع الآخرين{% endif %}</li>
+                        <li>{% if ui_lang == 'en' %}Personal data confidentiality must be maintained{% else %}يجب الحفاظ على سرية البيانات الشخصية{% endif %}</li>
+                    </ul>
+
+                    <h4>{% if ui_lang == 'en' %}User Responsibilities{% else %}مسؤوليات المستخدم{% endif %}</h4>
+                    <ul>
+                        <li>{% if ui_lang == 'en' %}Provide accurate and up-to-date information{% else %}تقديم معلومات دقيقة وحديثة{% endif %}</li>
+                        <li>{% if ui_lang == 'en' %}Notify us of any changes to your information{% else %}إخطارنا بأي تغييرات في البيانات{% endif %}</li>
+                        <li>{% if ui_lang == 'en' %}Comply with privacy policies{% else %}الامتثال لسياسات الخصوصية{% endif %}</li>
+                    </ul>
+
+                    <p>{% if ui_lang == 'en' %}We reserve the right to update these terms at any time. You will be notified of any material changes.{% else %}نحتفظ بالحق في تعديل هذه الشروط في أي وقت. سيتم إشعارك بأي تغييرات جوهرية.{% endif %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if ui_lang == 'en' %}Classification & Benchmarks{% else %}التصنيف والمقارنات{% endif %}{% endblock %}
+
+{% block page_header %}
+<div class="row pt-4 pb-2 mb-3 border-bottom align-items-center">
+    <div class="col-md-8">
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb bg-transparent p-0 mb-2">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Classification & Benchmarks{% else %}التصنيف والمقارنات{% endif %}</li>
+            </ol>
+        </nav>
+        <h1 class="h3 fw-bold mb-1">{% if ui_lang == 'en' %}Classification & Benchmarks{% else %}التصنيف والمقارنات المعيارية{% endif %}</h1>
+        <p class="text-muted small mb-0">{% if ui_lang == 'en' %}Fair comparison between kindergartens, managers, and supervisors within the same segment and geographic scope.{% else %}مقارنة عادلة بين الروضات والمديرين والمشرفين ضمن نفس الشريحة والنطاق الجغرافي.{% endif %}
+        </p>
+    </div>
+    <div class="col-md-4 text-md-end mt-2 mt-md-0">
+        <button id="refreshClassificationBtn" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-clockwise ms-1"></i>
+            {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="classificationRoot" class="mb-4">
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}</label>
+                    <input id="periodStart" type="date" class="form-control">
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}</label>
+                    <input id="periodEnd" type="date" class="form-control">
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">{% if ui_lang == 'en' %}Comparison Level{% else %}مستوى المقارنة{% endif %}</label>
+                    <select id="levelSelect" class="form-select"></select>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">{% if ui_lang == 'en' %}Segment Type{% else %}نوع الشريحة{% endif %}</label>
+                    <select id="sizeModeSelect" class="form-select"></select>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">{% if ui_lang == 'en' %}Segment Size{% else %}حجم الشريحة{% endif %}</label>
+                    <select id="sizeBandSelect" class="form-select"></select>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">{% if ui_lang == 'en' %}Country{% else %}الدولة{% endif %}</label>
+                    <select id="countrySelect" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                    <select id="governorateSelect" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
+                    <select id="citySelect" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</label>
+                    <select id="areaSelect" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">{% if ui_lang == 'en' %}Min Sample Days{% else %}الحد الأدنى للعينة{% endif %}</label>
+                    <input id="minSampleDays" type="number" min="1" max="365" class="form-control" value="30">
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <button id="applyClassificationFiltersBtn" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel ms-1"></i>
+                        {% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}
+                    </button>
+                </div>
+            </div>
+            <div class="alert alert-info mt-3 mb-0 py-2 small">
+                {% if ui_lang == 'en' %}Color legend: Green (80-100) strong performance, Amber (60-79.99) needs follow-up, Red (0-59.99) needs intervention.
+                <br>
+                The arrow shows change compared to the previous period of the same duration.
+                <br>
+                Data coverage represents indicator reliability: higher means more accurate comparison.{% else %}دلالة الألوان: أخضر (80-100) أداء قوي، كهرماني (60-79.99) يحتاج متابعة، أحمر (0-59.99) يحتاج تدخل.
+                <br>
+                السهم يوضح التغير مقارنة بالفترة السابقة بنفس المدة الزمنية.
+                <br>
+                تغطية البيانات تمثل موثوقية المؤشر: كلما ارتفعت زادت دقة المقارنة.{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white">
+            <ul class="nav nav-tabs card-header-tabs" id="classificationTabs">
+                <li class="nav-item">
+                    <button class="nav-link active" data-entity-type="KINDERGARTEN">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-entity-type="MANAGER">{% if ui_lang == 'en' %}Managers{% else %}المديرون{% endif %}</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-entity-type="SUPERVISOR">{% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}</button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div id="classificationLoading" class="d-none alert alert-secondary py-2">{% if ui_lang == 'en' %}Loading classification data...{% else %}جار تحميل بيانات التصنيف...{% endif %}</div>
+            <div id="classificationError" class="d-none alert alert-danger py-2"></div>
+            <div id="classificationEmpty" class="d-none alert alert-warning py-2">{% if ui_lang == 'en' %}Not enough data within the current filters.{% else %}لا توجد بيانات كافية ضمن الفلاتر
+                الحالية.{% endif %}</div>
+
+            <div class="table-responsive">
+                <table class="table table-striped align-middle" id="classificationTable">
+                    <thead>
+                        <tr>
+                            <th>{% if ui_lang == 'en' %}Rank{% else %}الترتيب{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Final Score{% else %}الدرجة النهائية{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Percentile{% else %}النسبة المئوية{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Classification{% else %}التصنيف{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Trend{% else %}الاتجاه{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Data Coverage{% else %}تغطية البيانات{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="classificationTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="classificationDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="classificationDetailTitle">{% if ui_lang == 'en' %}Indicator Details{% else %}تفاصيل المؤشر{% endif %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="classificationDetailSummary" class="mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="fw-bold">{% if ui_lang == 'en' %}Aspect Distribution{% else %}توزيع الجوانب{% endif %}</h6>
+                                    <ul class="list-group list-group-flush" id="classificationAspectsList"></ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="fw-bold">{% if ui_lang == 'en' %}Suggested Actions{% else %}إجراءات مقترحة{% endif %}</h6>
+                                    <ul id="classificationActionsList" class="mb-0"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <h6 class="fw-bold">{% if ui_lang == 'en' %}Score Trend Across Periods{% else %}اتجاه الدرجة عبر الفترات{% endif %}</h6>
+                            <canvas id="classificationTrendChart" height="100"></canvas>
+                            <p class="text-muted small mt-2 mb-0">{% if ui_lang == 'en' %}The chart shows the final score evolution across consecutive periods of the same duration.{% else %}يوضح الرسم تطور الدرجة النهائية خلال فترات متتالية
+                                بنفس الطول الزمني.{% endif %}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/admin_classification.js?v=2" charset="utf-8"></script>
+{% endblock %}

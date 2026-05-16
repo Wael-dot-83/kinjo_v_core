@@ -1,362 +1,195 @@
-<!DOCTYPE html>
-<html lang="{{ ui_lang() }}" dir="{{ ui_dir() }}">
+﻿<!DOCTYPE html>
+{% if ui_lang == 'en' %}
+<html lang="en" dir="{{ ui_dir | default('ltr') }}">
+{% else %}
+<html lang="ar" dir="{{ ui_dir | default('rtl') }}">
+{% endif %}
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="KinJo - منصة إدارة الروضات والحضانات الشاملة">
+    <meta name="csrf-token" content="{{ csrf_token | default('') }}">
+    <meta name="description"
+        content="{% if ui_lang == 'en' %}KinJo - Kindergarten and child care management platform{% else %}KinJo - منصة إدارة الروضات ورعاية الأطفال{% endif %}">
     <meta name="author" content="KinJo">
-    <meta name="theme-color" content="#0A5C8E">
-    <title>{% block title %}KinJo{% endblock %} | منصة إدارة الروضات</title>
+    <meta name="theme-color" content="#2563eb">
+    <meta name="color-scheme" content="light">
+    <title>{% block title %}KinJo{% endblock %} {% if ui_lang == 'en' %}| Kindergarten Management Platform{% else %}| منصة إدارة الروضات{% endif %}</title>
 
-    <!-- Google Fonts - Arabic (Cairo) + Latin (Inter) -->
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="apple-touch-icon" href="/static/favicon.svg">
+
+    <!-- Google Fonts - preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
 
-    <!-- Bootstrap 5.3 CSS (RTL for Arabic, LTR for English) -->
-    {% if ui_dir() == 'rtl' %}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet"
-          integrity="sha384-nU14brUcp6StFntEOOEBvcJm4huWjB0OcIeQ3fltAfSmuZFrkAif0T+UtNGlKKQv" crossorigin="anonymous">
-    {% else %}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
-          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    {% endif %}
+    <!-- Bootstrap 5.3 CSS (direction-aware on initial SSR) -->
+    <link id="bootstrapCss"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/{% if ui_dir == 'ltr' %}bootstrap.min.css{% else %}bootstrap.rtl.min.css{% endif %}"
+        integrity="{% if ui_dir == 'ltr' %}sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN{% else %}sha384-nU14brUcp6StFntEOOEBvcJm4huWjB0OcIeQ3fltAfSmuZFrkAif0T+UtNGlKKQv{% endif %}"
+        data-rtl-href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css"
+        data-ltr-href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+        data-rtl-integrity="sha384-nU14brUcp6StFntEOOEBvcJm4huWjB0OcIeQ3fltAfSmuZFrkAif0T+UtNGlKKQv"
+        data-ltr-integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+        rel="stylesheet" crossorigin="anonymous">
 
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+"
+        crossorigin="anonymous">
 
-    <!-- KinJo Design System -->
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/css/kinjo.css">
+    <script src="/static/js/sanitize.js"></script>
+    <script src="/static/js/page_load_timer.js"></script>
 
-    {% if ui_dir() == 'rtl' %}
-    <!-- RTL layout overrides -->
-    <link rel="stylesheet" href="/static/css/rtl.css">
-    {% endif %}
+    <!-- SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css" rel="stylesheet"
+        integrity="sha384-9zhnRArCpusIVIudEVdI3QmXKH9nCjEGc2rNvdcQ1utx3a3zbLtW3rBOeJ2PvupL"
+        crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"
+        integrity="sha384-YB/DdIkloKoRpclWB8bNcYXWakt57USgtQPDzvnIDHYU0lasD5eWlXVo1S4ODukY"
+        crossorigin="anonymous"></script>
+
+    <style>
+        /* Skeleton Loader Styles */
+        .skeleton-text {
+            background-color: #e2e2e2;
+            border-radius: 4px;
+            display: inline-block;
+            height: 1em;
+            /* Adjust based on font-size */
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        .skeleton-text.w-25 {
+            width: 25%;
+        }
+
+        .skeleton-text.w-50 {
+            width: 50%;
+        }
+
+        .skeleton-text.w-75 {
+            width: 75%;
+        }
+
+        .skeleton-row td .skeleton-text {
+            margin: auto;
+        }
+
+        .skeleton-row {
+            opacity: 0.7;
+        }
+
+        .skeleton-row:nth-child(even) {
+            opacity: 0.5;
+        }
+
+        @keyframes pulse {
+            0% {
+                background-color: #e2e2e2;
+            }
+
+            50% {
+                background-color: #f0f0f0;
+            }
+
+            100% {
+                background-color: #e2e2e2;
+            }
+        }
+    </style>
 
     {% block extra_css %}{% endblock %}
-
-    <!-- Apply dark mode before render to avoid flash of unstyled content -->
-    <script>
-    (function(){
-        var t = localStorage.getItem('kinjo_theme') || 'light';
-        document.documentElement.setAttribute('data-theme', t);
-    })();
-    </script>
 </head>
-<body class="{% block body_class %}{% endblock %}"
-      x-data="{ sidebarOpen: false }"
-      @keydown.escape.window="sidebarOpen = false">
 
-    <!-- Page Loading Progress Bar -->
-    <div id="page-progress"></div>
-
-    <!-- Skip to content (Accessibility) -->
-    <a href="#main-content" class="skip-link">{{ _('Skip to main content') }}</a>
-
+<body class="kinjo-app {% block body_class %}{% endblock %}">
     {% block body %}
-    <!-- Top Navigation -->
+    <a href="#mainContent" class="skip-link">{% if ui_lang == 'en' %}Skip to main content{% else %}تخطي إلى المحتوى الرئيسي{% endif %}</a>
+
+    <!-- Navigation -->
     {% include 'components/navbar.html' %}
-
     {% if current_user %}
-    <!-- Impersonation Banner (shown only when admin is acting as another user) -->
-    {% include 'components/impersonation_banner.html' %}
+    <div id="sidebarBackdrop" class="sidebar-backdrop d-md-none"></div>
+    {% endif %}
 
-    <!-- Sidebar -->
-    {% include 'components/sidebar.html' %}
-
-    <!-- Mobile sidebar backdrop -->
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
-
-    <!-- Main content with sidebar -->
-    <div class="main-content has-sidebar" id="mainContent">
-        <div class="page-wrapper">
-            <!-- Flash Messages (rendered into toast container via JS) -->
-            {% if messages %}
-            <div id="flash-data" class="d-none">
-                {% for category, message in messages %}
-                <div data-category="{{ category }}" data-message="{{ message }}"></div>
-                {% endfor %}
-            </div>
+    <div class="container-fluid">
+        <div class="row app-layout">
+            <!-- Sidebar -->
+            {% if current_user %}
+            {% include 'components/sidebar.html' %}
             {% endif %}
 
-            <!-- Page Header -->
-            {% block page_header %}{% endblock %}
+            <!-- Main Content -->
+            <main id="mainContent"
+                class="app-main {% if current_user %}app-main-with-sidebar col-md-9 col-lg-10 px-md-4{% else %}app-main-full col-12{% endif %}">
+                <!-- Flash Messages -->
+                {% if messages %}
+                <div class="alert-container mt-3">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"
+                            data-i18n-aria="common.close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
 
-            <!-- Page Content -->
-            <div id="main-content">
+                <!-- Page Header -->
+                {% block page_header %}{% endblock %}
+
+                <!-- Page Guide Panel (auto-populated) -->
+                <div id="pageGuidePanel" class="card border-0 shadow-sm mb-4 d-none">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-compass text-primary"></i>
+                            <h6 class="mb-0" id="pageGuideTitle" data-i18n="guide.title">{% if ui_lang == 'en' %}How to use this page{% else %}كيف تستخدم هذه الصفحة{% endif %}</h6>
+                            <span class="badge bg-light text-primary border ms-auto" id="pageGuideBadge"
+                                data-i18n="guide.badge">{% if ui_lang == 'en' %}Quick guide{% else %}دليل سريع{% endif %}</span>
+                        </div>
+                        <div id="pageGuideBody" class="mt-3"></div>
+                    </div>
+                </div>
+
+                <!-- Page Content -->
                 {% block content %}{% endblock %}
-            </div>
-        </div>
-
-        <!-- Footer -->
-        {% include 'components/footer.html' %}
-    </div>
-
-    {% else %}
-    <!-- Full-width layout (guest) -->
-    <div class="main-content" id="mainContent">
-        <!-- Flash Messages -->
-        {% if messages %}
-        <div id="flash-data" class="d-none">
-            {% for category, message in messages %}
-            <div data-category="{{ category }}" data-message="{{ message }}"></div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <div id="main-content">
-            {{ self.content() }}
+            </main>
         </div>
     </div>
-    {% endif %}
+
+    <!-- Footer -->
+    {% include 'components/footer.html' %}
+
+    <!-- Help Express Modal -->
+    {% include 'components/help_modal.html' %}
     {% endblock %}
-
-    <!-- Toast Notification Container -->
-    <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
-
-    <!-- Back to Top Button -->
-    <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="{{ _('Back to top') }}">
-        <i class="bi bi-arrow-up"></i>
-    </button>
-
-    <!-- Alpine.js — lightweight reactive components -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.10/dist/htmx.min.js"></script>
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
-            integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-    <!-- i18n: load translation catalog for current language -->
-    <script>
-    (function(){
-      const lang = document.documentElement.lang || 'ar';
-      fetch('/static/i18n/' + lang + '.json')
-        .then(r => r.ok ? r.json() : {})
-        .then(catalog => { window.i18n = catalog; })
-        .catch(() => { window.i18n = {}; });
-      window.t = function(key){ return (window.i18n && window.i18n[key]) || key; };
-    })();
-    </script>
+    <!-- Chart.js for KPI dashboards -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+        integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
+        crossorigin="anonymous"></script>
 
     <!-- Custom JavaScript -->
-    <script src="/static/js/kinjo-api.js"></script>
-    <script src="/static/js/kinjo-app.js"></script>
-    <script src="/static/js/auth.js"></script>
-
-    <!-- KinJo feature modules -->
-    <script src="/static/js/notifications.js" defer></script>
-
-    <!-- Core UI JavaScript -->
-    <script>
-    (function() {
-        'use strict';
-
-        /* ── Page Progress Bar ── */
-        const progress = document.getElementById('page-progress');
-        if (progress) {
-            progress.classList.add('loading');
-            window.addEventListener('load', () => {
-                progress.classList.remove('loading');
-                progress.classList.add('done');
-                setTimeout(() => progress.style.display = 'none', 700);
-            });
-        }
-
-        /* ── Toast System ── */
-        const TOAST_ICONS = {
-            success: 'bi-check-circle-fill',
-            error:   'bi-x-circle-fill',
-            warning: 'bi-exclamation-triangle-fill',
-            info:    'bi-info-circle-fill',
-            danger:  'bi-x-circle-fill'
-        };
-
-        const TOAST_TITLES = {
-            success: '{{ _("Operation successful") }}',
-            error:   '{{ _("An error occurred") }}',
-            danger:  '{{ _("An error occurred") }}',
-            warning: '{{ _("Warning") }}',
-            info:    '{{ _("Note") }}'
-        };
-
-        window.showToast = function(message, type = 'info', duration = 4500) {
-            const container = document.getElementById('toastContainer');
-            if (!container) return;
-
-            const toastType = type === 'danger' ? 'error' : type;
-            const icon  = TOAST_ICONS[type] || 'bi-info-circle-fill';
-            const title = TOAST_TITLES[type] || '{{ _("Notification") }}';
-
-            const toast = document.createElement('div');
-            toast.className = `toast-notification ${toastType}`;
-            toast.innerHTML = `
-                <div class="toast-icon">
-                    <i class="bi ${icon}"></i>
-                </div>
-                <div class="toast-content">
-                    <div class="toast-title">${title}</div>
-                    <div class="toast-message">${message}</div>
-                </div>
-                <button class="toast-close" onclick="dismissToast(this.closest('.toast-notification'))" aria-label="{{ _('Close') }}">
-                    <i class="bi bi-x"></i>
-                </button>
-            `;
-
-            container.prepend(toast);
-
-            if (duration > 0) {
-                setTimeout(() => dismissToast(toast), duration);
-            }
-
-            return toast;
-        };
-
-        window.dismissToast = function(el) {
-            if (!el || el.classList.contains('hiding')) return;
-            el.classList.add('hiding');
-            setTimeout(() => el.remove(), 300);
-        };
-
-        /* ── Flash messages → Toasts ── */
-        document.addEventListener('DOMContentLoaded', () => {
-            const flashData = document.getElementById('flash-data');
-            if (flashData) {
-                flashData.querySelectorAll('[data-category]').forEach(el => {
-                    const category = el.dataset.category;
-                    const message  = el.dataset.message;
-                    const map = { success: 'success', error: 'error', danger: 'error', warning: 'warning', info: 'info' };
-                    showToast(message, map[category] || 'info');
-                });
-            }
-        });
-
-        /* ── Sidebar Toggle ── */
-        window.toggleSidebar = function() {
-            const sidebar  = document.getElementById('sidebarMenu');
-            const main     = document.getElementById('mainContent');
-            const backdrop = document.getElementById('sidebarBackdrop');
-            const btn      = document.getElementById('sidebarToggleBtn');
-
-            if (!sidebar) return;
-
-            const isMobile = window.innerWidth < 992;
-
-            if (isMobile) {
-                sidebar.classList.toggle('mobile-open');
-                if (backdrop) backdrop.classList.toggle('show');
-            } else {
-                sidebar.classList.toggle('collapsed');
-                if (main) main.classList.toggle('sidebar-collapsed');
-                if (main) main.classList.toggle('has-sidebar', !sidebar.classList.contains('collapsed'));
-                // Persist state
-                localStorage.setItem('kinjo_sidebar_collapsed', sidebar.classList.contains('collapsed'));
-            }
-        };
-
-        window.closeSidebar = function() {
-            const sidebar  = document.getElementById('sidebarMenu');
-            const backdrop = document.getElementById('sidebarBackdrop');
-            if (sidebar) sidebar.classList.remove('mobile-open');
-            if (backdrop) backdrop.classList.remove('show');
-        };
-
-        /* Restore sidebar state on desktop */
-        document.addEventListener('DOMContentLoaded', () => {
-            const sidebar = document.getElementById('sidebarMenu');
-            const main    = document.getElementById('mainContent');
-            if (!sidebar || !main) return;
-
-            const collapsed = localStorage.getItem('kinjo_sidebar_collapsed') === 'true';
-            if (collapsed && window.innerWidth >= 992) {
-                sidebar.classList.add('collapsed');
-                main.classList.remove('has-sidebar');
-                main.classList.add('sidebar-collapsed');
-            }
-        });
-
-        /* Close sidebar when screen resizes to desktop */
-        window.addEventListener('resize', () => {
-            if (window.innerWidth >= 992) {
-                const backdrop = document.getElementById('sidebarBackdrop');
-                const sidebar  = document.getElementById('sidebarMenu');
-                if (backdrop) backdrop.classList.remove('show');
-                if (sidebar)  sidebar.classList.remove('mobile-open');
-            }
-        });
-
-        /* ── Back to Top ── */
-        const backBtn = document.getElementById('backToTop');
-        if (backBtn) {
-            window.addEventListener('scroll', () => {
-                backBtn.classList.toggle('visible', window.scrollY > 400);
-            }, { passive: true });
-        }
-
-        /* ── Language Toggle ── */
-        window.toggleLanguage = function() {
-            const html = document.documentElement;
-            const isRtl = html.dir === 'rtl';
-            const newLang = isRtl ? 'en' : 'ar';
-            // Set the ui_lang cookie so the server renders the correct language on reload
-            document.cookie = 'ui_lang=' + newLang + '; path=/; max-age=31536000; SameSite=Lax';
-            localStorage.setItem('kinjo_lang', newLang);
-            window.location.reload();
-        };
-
-        /* ── Dark Mode ── */
-        window.toggleDarkMode = function() {
-            const current = document.documentElement.getAttribute('data-theme') || 'light';
-            const next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('kinjo_theme', next);
-            document.querySelectorAll('.dark-mode-toggle i').forEach(icon => {
-                icon.className = next === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
-            });
-        };
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const theme = localStorage.getItem('kinjo_theme') || 'light';
-            document.querySelectorAll('.dark-mode-toggle i').forEach(icon => {
-                icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
-            });
-        });
-
-        /* ── Scroll Reveal ── */
-        document.addEventListener('DOMContentLoaded', () => {
-            const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
-            if (!revealEls.length) return;
-            const obs = new IntersectionObserver((entries) => {
-                entries.forEach(e => {
-                    if (e.isIntersecting) {
-                        e.target.classList.add('revealed');
-                        obs.unobserve(e.target);
-                    }
-                });
-            }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-            revealEls.forEach(el => obs.observe(el));
-        });
-
-        /* ── Keyboard Shortcuts ── */
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') closeSidebar();
-        });
-
-        /* ── Tooltip init ── */
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-                new bootstrap.Tooltip(el, { trigger: 'hover' });
-            });
-        });
-
-    })();
-    </script>
+    <script src="/static/js/auth.js?v=2.0"></script>
+    <script src="/static/js/kinjo-api.js?v=2.0"></script>
+    <script src="/static/js/app_i18n.js?v=2.0"></script>
+    <script src="/static/js/kinjo-app.js?v=2.0"></script>
 
     {% block extra_js %}{% endblock %}
+
+    {% block scripts %}{% endblock %}
 </body>
+
 </html>

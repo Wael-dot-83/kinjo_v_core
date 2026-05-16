@@ -2,13 +2,16 @@
 Pytest configuration and fixtures for integration tests
 """
 import os
-import sqlite3
+import shutil
+import uuid
 import pytest
+import secrets
+from pathlib import Path
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 # Set testing environment BEFORE importing app
 os.environ["TESTING"] = "true"
@@ -19,11 +22,6 @@ from auth import get_password_hash
 import models
 
 
-# Register adapters/converters for date/datetime types to silence Python 3.12+
-# deprecation warnings about implicit datetime adaptation in sqlite3.
-sqlite3.register_adapter(date, lambda v: v.isoformat())
-sqlite3.register_adapter(datetime, lambda v: v.isoformat())
-
 # Create in-memory SQLite database for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
@@ -33,6 +31,22 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@pytest.fixture
+def tmp_path():
+    """
+    Provide a workspace-backed temp directory.
+    This avoids host temp-directory permission issues on Windows.
+    """
+    base_dir = Path(__file__).resolve().parent / ".tmp" / "pytest-fixtures"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    temp_dir = base_dir / f"tmp_path_{uuid.uuid4().hex}"
+    temp_dir.mkdir()
+    try:
+        yield temp_dir
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @pytest.fixture(scope="function")
@@ -104,6 +118,8 @@ def sample_class(test_db, sample_kindergarten):
         kindergarten_id=sample_kindergarten.id,
         name_ar="الصف الأول",
         name_en="Class A",
+        class_code="A001",
+        age_group="AGE_1_2",
         capacity_total=20,
         min_age_months=24,
         max_age_months=48,
@@ -191,13 +207,11 @@ def parent_user(test_db):
     profile = models.ParentProfile(
         user_id=user.id,
         first_name="Ahmad",
-        second_name="Mohammed",
         last_name="Al-Rashid",
         phone_number="+962791234567",
         gender=models.Gender.MALE,
         nationality="Jordanian",
         national_id="1234567890",
-        parent_type="FATHER",
         home_governorate="Amman",
         home_city="Amman",
         home_area="Abdoun",
@@ -208,7 +222,9 @@ def parent_user(test_db):
     test_db.commit()
     test_db.refresh(profile)
 
-    user.parent = profile
+    user.parent_profile = profile
+    test_db.commit()
+    test_db.refresh(user)
     return user
 
 
@@ -218,11 +234,11 @@ def sample_child(test_db, parent_user):
     Create a sample child for testing
     """
     child = models.Child(
-        parent_id=parent_user.parent.id,
+        parent_id=parent_user.parent_profile.id,
         first_name="Layla",
         last_name="Al-Rashid",
         gender=models.Gender.FEMALE,
-        date_of_birth=date(2022, 1, 15),  # ~4 years old
+        date_of_birth=date.today() - timedelta(days=365 * 3),
         father_name="Ahmad Al-Rashid",
         mother_first_name="Fatima",
         mother_last_name="Hassan",
@@ -234,6 +250,39 @@ def sample_child(test_db, parent_user):
     test_db.commit()
     test_db.refresh(child)
     return child
+
+
+@pytest.fixture
+def parent_enrollment(test_db, sample_child, sample_kindergarten):
+    """
+    Create an active enrollment for the sample child
+    """
+    enrollment = models.EnrollmentApplication(
+        child_id=sample_child.id,
+        kindergarten_id=sample_kindergarten.id,
+        status=models.EnrollmentStatus.ACCEPTED
+    )
+    test_db.add(enrollment)
+    test_db.commit()
+    test_db.refresh(enrollment)
+    return enrollment
+
+
+@pytest.fixture
+def active_enrollment(test_db, sample_child, sample_kindergarten, sample_class):
+    """
+    Create an ACTIVE enrollment for absence-request tests.
+    """
+    enrollment = models.EnrollmentApplication(
+        child_id=sample_child.id,
+        kindergarten_id=sample_kindergarten.id,
+        class_id=sample_class.id,
+        status=models.EnrollmentStatus.ACTIVE,
+    )
+    test_db.add(enrollment)
+    test_db.commit()
+    test_db.refresh(enrollment)
+    return enrollment
 
 
 @pytest.fixture
@@ -305,7 +354,12 @@ def auth_headers_admin(admin_token):
     """
     Get authentication headers for admin
     """
-    return {"Authorization": f"Bearer {admin_token}"}
+    csrf_token = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {admin_token}",
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"kinjo_csrf_token={csrf_token}"
+    }
 
 
 @pytest.fixture
@@ -313,7 +367,12 @@ def auth_headers_manager(manager_token):
     """
     Get authentication headers for manager
     """
-    return {"Authorization": f"Bearer {manager_token}"}
+    csrf_token = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {manager_token}",
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"kinjo_csrf_token={csrf_token}"
+    }
 
 
 @pytest.fixture
@@ -321,7 +380,12 @@ def auth_headers_supervisor(supervisor_token):
     """
     Get authentication headers for supervisor
     """
-    return {"Authorization": f"Bearer {supervisor_token}"}
+    csrf_token = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {supervisor_token}",
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"kinjo_csrf_token={csrf_token}"
+    }
 
 
 @pytest.fixture
@@ -329,101 +393,9 @@ def auth_headers_parent(parent_token):
     """
     Get authentication headers for parent
     """
-    return {"Authorization": f"Bearer {parent_token}"}
-
-
-@pytest.fixture
-def sample_enrollment(test_db, sample_child, sample_kindergarten, sample_class):
-    """Active enrollment for sample_child in sample_kindergarten/class"""
-    enrollment = models.EnrollmentApplication(
-        child_id=sample_child.id,
-        kindergarten_id=sample_kindergarten.id,
-        class_id=sample_class.id,
-        status=models.EnrollmentStatus.ACTIVE,
-        source="WEB",
-        created_at=datetime(2026, 1, 10),
-        submitted_at=datetime(2026, 1, 10),
-        enrollment_start_date=date(2026, 1, 15)
-    )
-    test_db.add(enrollment)
-    test_db.commit()
-    test_db.refresh(enrollment)
-    return enrollment
-
-
-@pytest.fixture
-def sample_attendance(test_db, sample_child, sample_kindergarten, sample_enrollment):
-    """Three attendance logs for sample_child in the test period"""
-    logs = []
-    for d in [date(2026, 5, 1), date(2026, 5, 4), date(2026, 5, 5)]:
-        log = models.AttendanceLog(
-            child_id=sample_child.id,
-            class_id=sample_enrollment.class_id,
-            date=d,
-            check_in_at=datetime(2026, d.month, d.day, 8, 0),
-            method=models.AttendanceMethod.MANUAL
-        )
-        test_db.add(log)
-        logs.append(log)
-    test_db.commit()
-    for log in logs:
-        test_db.refresh(log)
-    return logs
-
-
-@pytest.fixture
-def sample_incident(test_db, sample_child, sample_kindergarten, supervisor_user, sample_enrollment):
-    """One safety incident for sample_child"""
-    incident = models.Incident(
-        child_id=sample_child.id,
-        kindergarten_id=sample_kindergarten.id,
-        supervisor_id=supervisor_user.id,
-        type=models.IncidentType.ILLNESS,
-        severity_level=models.SeverityLevel.LOW,
-        description="تعثّر الطفل في الملعب",
-        occurred_at=datetime(2026, 5, 2, 10, 30),
-        reported_by=supervisor_user.id,
-        parent_informed=True,
-        followup_required_flag=False
-    )
-    test_db.add(incident)
-    test_db.commit()
-    test_db.refresh(incident)
-    return incident
-
-
-@pytest.fixture
-def sample_daily_report(test_db, sample_child, supervisor_user, sample_enrollment):
-    """One daily report submitted by supervisor_user"""
-    report = models.DailyReport(
-        child_id=sample_child.id,
-        date=date(2026, 5, 1),
-        status=models.DailyReportStatus.SUBMITTED,
-        submitted_by=supervisor_user.id,
-        submitted_at=datetime(2026, 5, 1, 14, 0),
-        arrival_time="08:00",
-        leave_time="14:00",
-        breakfast=True,
-        snack=True,
-        milk=True,
-        lunch=False
-    )
-    test_db.add(report)
-    test_db.commit()
-    test_db.refresh(report)
-    return report
-
-
-@pytest.fixture
-def sample_supervisor_assignment(test_db, supervisor_user, sample_class):
-    """Supervisor assignment linking supervisor_user to sample_class"""
-    assignment = models.SupervisorAssignment(
-        class_id=sample_class.id,
-        supervisor_id=supervisor_user.id,
-        is_primary=True,
-        start_date=date(2026, 1, 1)
-    )
-    test_db.add(assignment)
-    test_db.commit()
-    test_db.refresh(assignment)
-    return assignment
+    csrf_token = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {parent_token}",
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"kinjo_csrf_token={csrf_token}"
+    }

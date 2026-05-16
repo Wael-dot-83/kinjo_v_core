@@ -1,0 +1,75 @@
+============================= test session starts =============================
+collected 983 items
+
+tests\api\test_p0_analytics_kpi.py .....                                 [  0%]
+tests\api\test_p1_analytics_export.py .......                            [  1%]
+tests\api\test_p1_analytics_summary.py ........                          [  2%]
+tests\test_absence_requests.py ....................                      [  4%]
+tests\test_admin_messaging.py ...........                                [  5%]
+tests\test_admin_security.py ........................................... [  9%]
+............                                                             [ 10%]
+tests\test_analytics_domain.py ..                                        [ 10%]
+tests\test_analytics_enhancements.py ........                            [ 11%]
+tests\test_analytics_service.py ......................                   [ 14%]
+tests\test_analytics_ws.py ........................                      [ 16%]
+tests\test_arabic_ui_gate_classification.py ..                           [ 16%]
+tests\test_attendance_summary.py ..........                              [ 17%]
+tests\test_child_age_enforcement.py ...                                  [ 18%]
+tests\test_child_age_policy.py ...                                       [ 18%]
+tests\test_class_setup_and_staffing.py ....                              [ 18%]
+tests\test_classification_api.py .......                                 [ 19%]
+tests\test_communication_complete.py .                                   [ 19%]
+tests\test_core_crud.py ................                                 [ 21%]
+tests\test_daily_report_analytics.py ..........................          [ 23%]
+tests\test_daily_reports_organization_api.py ..........                  [ 24%]
+tests\test_daily_reports_organization_frontend.py ..                     [ 25%]
+tests\test_dashboard_integration.py .                                    [ 25%]
+tests\test_enforcement.py ............................                   [ 27%]
+tests\test_enrollment_create.py ........................                 [ 30%]
+tests\test_enrollment_features.py ............................           [ 33%]
+tests\test_enrollment_rules.py .................................         [ 36%]
+tests\test_frontend.py ................................................. [ 41%]
+.........................................                                [ 45%]
+tests\test_frontend_integration.py .............                         [ 47%]
+tests\test_governance_daily_reports.py ........................          [ 49%]
+tests\test_i18n_english_integrity.py ...                                 [ 49%]
+tests\test_iam_workflow_audit.py ................................        [ 53%]
+tests\test_integration_comprehensive.py ...........................      [ 55%]
+tests\test_kpi_dashboard.py ............                                 [ 57%]
+tests\test_kpi_service.py ...........                                    [ 58%]
+tests\test_language_integrity_enforcement.py .........                   [ 59%]
+tests\test_language_zero_mix_routes.py ................................. [ 62%]
+...............................................                          [ 67%]
+tests\test_manager_module.py ..............                              [ 68%]
+tests\test_manager_scope_requirements.py ....................            [ 70%]
+tests\test_messages_phase1.py ...                                        [ 71%]
+tests\test_messages_phase2.py ....                                       [ 71%]
+tests\test_messages_phase3.py .....                                      [ 71%]
+tests\test_messaging_permissions.py ..................................   [ 75%]
+tests\test_missing_endpoints.py ........................................ [ 79%]
+....                                                                     [ 79%]
+tests\test_new_endpoints.py .............                                [ 81%]
+tests\test_notification_service.py .....................                 [ 83%]
+tests\test_parent_module.py ............................................ [ 87%]
+............                                                             [ 89%]
+tests\test_rate_limiter.py .                                             [ 89%]
+tests\test_rbac_users.py .....                                           [ 89%]
+tests\test_realtime_and_predictive_services.py ...                       [ 89%]
+tests\test_report_service.py ..........                                  [ 90%]
+tests\test_role_based_messaging.py ..................................... [ 94%]
+.....                                                                    [ 95%]
+tests\test_safety.py .                                                   [ 95%]
+tests\test_security.py .........................                         [ 97%]
+tests\test_tasks.py .....................                                [100%]
+
+============================== warnings summary ===============================
+api\users.py:305
+  d:\Final Version\api\users.py:305: DeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+    format: str = Query("csv", regex="^(csv)$"),
+
+api\enrollment.py:296
+  d:\Final Version\api\enrollment.py:296: DeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+    decision: str = Query(..., regex="^(accept|reject)$"),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================ 983 passed, 2 warnings in 1040.41s (0:17:20) =================

@@ -1,88 +1,117 @@
 {% extends 'base.html' %}
-{% block title %}{{ _('Absence Requests') }} — KinJo{% endblock %}
+
+{% block title %}{% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الغياب{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
-            <i class="bi bi-calendar-x-fill"></i>
-            الحضور والغياب
-        </div>
-        <h1 class="page-header-title">{{ _('Absence Requests') }}</h1>
-        <p class="page-header-sub">إدارة طلبات الغياب بعذر</p>
+        <h1 class="h2">
+            <i class="bi bi-calendar-x me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الغياب{% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الغياب{% endif %}</li>
+            </ol>
+        </nav>
     </div>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAbsenceModal">
-        <i class="bi bi-plus-circle me-2"></i>طلب غياب جديد
+        <i class="bi bi-plus-circle me-1"></i> {% if ui_lang == 'en' %}New Absence Request{% else %}طلب غياب جديد{% endif %}
     </button>
 </div>
 {% endblock %}
 
 {% block content %}
 
-<!-- Requests List -->
+<!-- Status Filter Tabs -->
+<ul class="nav nav-pills mb-3" id="statusTabs">
+    <li class="nav-item">
+        <a class="nav-link active" href="#" data-status="all">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#" data-status="SUBMITTED">{% if ui_lang == 'en' %}Under Review{% else %}قيد المراجعة{% endif %}</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#" data-status="APPROVED">{% if ui_lang == 'en' %}Approved{% else %}مقبول{% endif %}</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#" data-status="REJECTED">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</a>
+    </li>
+</ul>
+
+<!-- Requests Table -->
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="card-title-sm mb-0">
-            <i class="bi bi-list-check me-2 text-primary"></i>
-            طلبات الغياب المقدمة
-        </h6>
-        <span class="text-muted small" id="reqCount">—</span>
-    </div>
-    <div class="card-body p-0" id="requestsList">
-        <div class="text-center py-5 text-muted">
-            <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
-            جاري التحميل...
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="requestsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}From{% else %}من{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Reason{% else %}السبب{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Notes{% else %}ملاحظات{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody id="requestsBody">
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<!-- New Absence Modal -->
-<div class="modal fade" id="newAbsenceModal" tabindex="-1" aria-labelledby="newAbsenceModalLabel">
+<!-- New Absence Request Modal -->
+<div class="modal fade" id="newAbsenceModal" tabindex="-1" aria-labelledby="newAbsenceModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-800" id="newAbsenceModalLabel">
-                    <i class="bi bi-calendar-x me-2 text-primary"></i>طلب غياب بعذر
+                <h5 class="modal-title" id="newAbsenceModalLabel">
+                    <i class="bi bi-calendar-x me-2"></i>{% if ui_lang == 'en' %}New Absence Request{% else %}طلب غياب جديد{% endif %}
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
-            <form id="absenceForm" onsubmit="submitAbsence(event)">
+            <form id="absenceForm">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-700" style="font-size:0.85rem;">الطفل</label>
-                        <select class="form-select" id="absenceChild" required>
-                            <option value="">— اختر الطفل —</option>
+                        <label for="childSelect" class="form-label">{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %} <span class="text-danger">*</span></label>
+                        <select class="form-select" id="childSelect" required>
+                            <option value="">{% if ui_lang == 'en' %}Select child...{% else %}اختر الطفل...{% endif %}</option>
+                            {% for child in children %}
+                            <option value="{{ child.id }}">{{ child.first_name }} {{ child.last_name }}</option>
+                            {% endfor %}
                         </select>
                     </div>
-                    <div class="row g-3 mb-3">
+                    <div class="row mb-3">
                         <div class="col-6">
-                            <label class="form-label fw-700" style="font-size:0.85rem;">من تاريخ</label>
-                            <input type="date" class="form-control" id="absenceFrom" required>
+                            <label for="startDate" class="form-label">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %} <span
+                                    class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="startDate" required min="{{ today }}">
                         </div>
                         <div class="col-6">
-                            <label class="form-label fw-700" style="font-size:0.85rem;">إلى تاريخ</label>
-                            <input type="date" class="form-control" id="absenceTo" required>
+                            <label for="endDate" class="form-label">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %} <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="endDate" required min="{{ today }}">
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-700" style="font-size:0.85rem;">سبب الغياب</label>
-                        <select class="form-select" id="absenceReason" required>
-                            <option value="">— اختر السبب —</option>
-                            <option value="sick">مرض</option>
-                            <option value="family">ظروف عائلية</option>
-                            <option value="travel">سفر</option>
-                            <option value="other">أخرى</option>
-                        </select>
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label fw-700" style="font-size:0.85rem;">ملاحظات إضافية</label>
-                        <textarea class="form-control" id="absenceNotes" rows="2" placeholder="تفاصيل إضافية..."></textarea>
+                        <label for="reason" class="form-label">{% if ui_lang == 'en' %}Reason{% else %}سبب الغياب{% endif %} <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="reason" rows="3" required minlength="3" maxlength="500"
+                            placeholder="{% if ui_lang == 'en' %}Please state the reason for absence...{% else %}يرجى ذكر سبب الغياب...{% endif %}"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary" id="absenceSubmitBtn">
-                        <i class="bi bi-send me-2"></i>إرسال الطلب
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="bi bi-send me-1"></i> {% if ui_lang == 'en' %}Submit Request{% else %}إرسال الطلب{% endif %}
                     </button>
                 </div>
             </form>
@@ -90,120 +119,145 @@
     </div>
 </div>
 
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
-
-.req-item { display:flex;align-items:flex-start;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
-.req-item:last-child { border-bottom:none; }
-.req-icon { width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0; }
-.req-body { flex:1;min-width:0; }
-.req-title { font-weight:700;font-size:0.88rem;color:var(--kinjo-text-primary); }
-.req-sub { font-size:0.75rem;color:var(--kinjo-text-muted);margin-top:0.15rem; }
-.req-badge { display:inline-flex;align-items:center;gap:0.25rem;padding:0.2rem 0.6rem;border-radius:50px;font-size:0.7rem;font-weight:800; }
-.req-badge.pending  { background:rgba(245,158,11,0.12);color:#d97706; }
-.req-badge.approved { background:rgba(16,185,129,0.12);color:var(--kinjo-success); }
-.req-badge.rejected { background:rgba(239,68,68,0.12);color:var(--kinjo-danger); }
-</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+    document.addEventListener('DOMContentLoaded', function () {
+        const IS_EN = document.documentElement.lang === 'en';
+        const T = (ar, en) => IS_EN ? en : ar;
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadChildren();
-    loadRequests();
-    document.getElementById('absenceFrom').value = new Date().toISOString().slice(0,10);
-    document.getElementById('absenceTo').value   = new Date().toISOString().slice(0,10);
-});
+        const TOKEN = (window.AuthStorage ? AuthStorage.getToken() : null) || localStorage.getItem('kinjo_token') || '';
+        const HEADERS = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN };
+        let currentFilter = 'all';
 
-async function loadChildren() {
-    try {
-        const r = await fetch('/api/parent/children', { headers: authHeaders });
-        const data = r.ok ? await r.json() : null;
-        const children = data?.children || data || [];
-        const sel = document.getElementById('absenceChild');
-        if (children.length) {
-            sel.innerHTML = '<option value="">— اختر الطفل —</option>' +
-                children.map(c => `<option value="${c.id}">${c.full_name_ar||c.name}</option>`).join('');
+        // ---- helpers ----
+        function statusBadge(s) {
+            const map = {
+                'SUBMITTED': `<span class="badge bg-warning text-dark">${T('قيد المراجعة', 'Under Review')}</span>`,
+                'APPROVED': `<span class="badge bg-success">${T('مقبول', 'Approved')}</span>`,
+                'REJECTED': `<span class="badge bg-danger">${T('مرفوض', 'Rejected')}</span>`,
+                'CANCELLED': `<span class="badge bg-secondary">${T('ملغى', 'Cancelled')}</span>`,
+            };
+            return map[s] || `<span class="badge bg-secondary">${s}</span>`;
         }
-    } catch {}
-}
 
-async function loadRequests() {
-    try {
-        const r = await fetch('/api/attendance/absence-requests', { headers: authHeaders });
-        const data = r.ok ? await r.json() : null;
-        render(data?.requests || data || []);
-    } catch { render([]); }
-}
+        // ---- load requests ----
+        function loadRequests() {
+            let url = '/api/absence-requests';
+            if (currentFilter !== 'all') url += '?status=' + currentFilter;
 
-const reasonLabels = { sick:'مرض', family:'ظروف عائلية', travel:'سفر', other:'أخرى' };
-const statusLabels = { pending:'قيد المراجعة', approved:'مقبول', rejected:'مرفوض' };
+            fetch(url, { headers: HEADERS })
+                .then(r => { if (!r.ok) throw r; return r.json(); })
+                .then(data => renderTable(data))
+                .catch(() => {
+                    document.getElementById('requestsBody').innerHTML =
+                        `<tr><td colspan="8" class="text-center text-danger py-4">${T('حدث خطأ أثناء تحميل البيانات', 'Error loading data')}</td></tr>`;
+                });
+        }
 
-function render(reqs) {
-    document.getElementById('reqCount').textContent = reqs.length + ' طلب';
-    const c = document.getElementById('requestsList');
-    if (!reqs.length) {
-        c.innerHTML = `<div class="text-center py-5 text-muted">
-            <i class="bi bi-calendar-check d-block fs-1 mb-3 opacity-25"></i>
-            <p class="mb-0">لا توجد طلبات غياب مسجلة</p>
-        </div>`;
-        return;
-    }
-    c.innerHTML = reqs.map(req => {
-        const st  = req.status || 'pending';
-        const from = req.from_date ? new Date(req.from_date).toLocaleDateString('ar-SA',{month:'short',day:'numeric'}) : '—';
-        const to   = req.to_date   ? new Date(req.to_date).toLocaleDateString('ar-SA',{month:'short',day:'numeric'}) : '—';
-        const iconBg = st === 'approved' ? 'rgba(16,185,129,0.12)' : st === 'rejected' ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)';
-        const iconColor = st === 'approved' ? '#10b981' : st === 'rejected' ? '#ef4444' : '#f59e0b';
-        return `<div class="req-item">
-            <div class="req-icon" style="background:${iconBg};color:${iconColor};">
-                <i class="bi bi-calendar-x"></i>
-            </div>
-            <div class="req-body">
-                <div class="req-title">${req.child_name || '—'}</div>
-                <div class="req-sub">${from} — ${to} · ${reasonLabels[req.reason]||req.reason||'—'}</div>
-            </div>
-            <span class="req-badge ${st}">${statusLabels[st]||st}</span>
-        </div>`;
-    }).join('');
-}
+        function renderTable(data) {
+            const tbody = document.getElementById('requestsBody');
+            if (!data.length) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">${T('لا توجد طلبات', 'No requests')}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = data.map((r, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td>${childName(r.child_id)}</td>
+                <td>${r.start_date}</td>
+                <td>${r.end_date}</td>
+                <td class="text-truncate" style="max-width:200px">${r.reason}</td>
+                <td>${statusBadge(r.status)}</td>
+                <td>${r.decision_note || '-'}</td>
+                <td>
+                    ${r.status === 'SUBMITTED' ? `<button class="btn btn-sm btn-outline-danger cancel-btn" data-id="${r.id}"><i class="bi bi-x-circle"></i> ${T('إلغاء', 'Cancel')}</button>` : '-'}
+                </td>
+            </tr>
+        `).join('');
 
-async function submitAbsence(e) {
-    e.preventDefault();
-    const btn = document.getElementById('absenceSubmitBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>جاري الإرسال...';
-    try {
-        const r = await fetch('/api/attendance/absence-requests', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...authHeaders },
-            body: JSON.stringify({
-                child_id:  parseInt(document.getElementById('absenceChild').value),
-                from_date: document.getElementById('absenceFrom').value,
-                to_date:   document.getElementById('absenceTo').value,
-                reason:    document.getElementById('absenceReason').value,
-                notes:     document.getElementById('absenceNotes').value,
-            })
+            tbody.querySelectorAll('.cancel-btn').forEach(btn => {
+                btn.addEventListener('click', () => cancelRequest(btn.dataset.id));
+            });
+        }
+
+        // map child_id to name from the select options
+        function childName(cid) {
+            const opt = document.querySelector(`#childSelect option[value="${cid}"]`);
+            return opt ? opt.textContent : `#${cid}`;
+        }
+
+        // ---- cancel ----
+        function cancelRequest(id) {
+            Swal.fire({
+                title: T('تأكيد الإلغاء', 'Confirm Cancellation'),
+                text: T('هل أنت متأكد من إلغاء هذا الطلب؟', 'Are you sure you want to cancel this request?'),
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: T('نعم، إلغاء الطلب', 'Yes, cancel it'),
+                cancelButtonText: T('تراجع', 'Go back'),
+            }).then(result => {
+                if (!result.isConfirmed) return;
+                fetch(`/api/absence-requests/${id}/cancel`, { method: 'POST', headers: HEADERS })
+                    .then(r => { if (!r.ok) throw r; return r.json(); })
+                    .then(() => { Swal.fire(T('تم', 'Done'), T('تم إلغاء الطلب', 'Request cancelled'), 'success'); loadRequests(); })
+                    .catch(() => Swal.fire(T('خطأ', 'Error'), T('فشل في إلغاء الطلب', 'Failed to cancel request'), 'error'));
+            });
+        }
+
+        // ---- submit form ----
+        document.getElementById('absenceForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+
+            const body = {
+                child_id: parseInt(document.getElementById('childSelect').value),
+                start_date: document.getElementById('startDate').value,
+                end_date: document.getElementById('endDate').value,
+                reason: document.getElementById('reason').value,
+            };
+
+            fetch('/api/absence-requests', { method: 'POST', headers: HEADERS, body: JSON.stringify(body) })
+                .then(r => {
+                    if (!r.ok) return r.json().then(d => { throw d; });
+                    return r.json();
+                })
+                .then(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('newAbsenceModal')).hide();
+                    document.getElementById('absenceForm').reset();
+                    Swal.fire(T('تم الإرسال', 'Submitted'), T('تم إرسال طلب الغياب بنجاح وسيتم مراجعته من قبل الإدارة', 'Absence request submitted successfully and will be reviewed by management'), 'success');
+                    loadRequests();
+                })
+                .catch(err => {
+                    const msg = err.detail || T('فشل في إرسال الطلب', 'Failed to submit request');
+                    Swal.fire(T('خطأ', 'Error'), msg, 'error');
+                })
+                .finally(() => { btn.disabled = false; });
         });
-        if (r.ok) {
-            showToast('تم إرسال طلب الغياب', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('newAbsenceModal')).hide();
-            document.getElementById('absenceForm').reset();
-            loadRequests();
-        } else {
-            showToast('فشل إرسال الطلب', 'error');
-        }
-    } catch { showToast('حدث خطأ في الاتصال', 'error'); }
-    finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-send me-2"></i>إرسال الطلب';
-    }
-}
+
+        // ---- filter tabs ----
+        document.querySelectorAll('#statusTabs a').forEach(tab => {
+            tab.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelectorAll('#statusTabs a').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.status;
+                loadRequests();
+            });
+        });
+
+        // ---- date sync ----
+        document.getElementById('startDate').addEventListener('change', function () {
+            document.getElementById('endDate').min = this.value;
+            if (document.getElementById('endDate').value < this.value) {
+                document.getElementById('endDate').value = this.value;
+            }
+        });
+
+        // initial load
+        loadRequests();
+    });
 </script>
 {% endblock %}

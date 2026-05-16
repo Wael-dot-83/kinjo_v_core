@@ -1,418 +1,1197 @@
 {% extends 'base.html' %}
-{% block title %}تسجيل طفل جديد — KinJo{% endblock %}
+{% from 'components/page-header.html' import page_header %}
+{% from 'components/form-controls.html' import gender_select, nationality_with_toggle, date_input %}
+{% from 'components/submit-button.html' import submit_button %}
+
+{% block title %}{% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-person-plus"></i>
-            طلبات التسجيل
-        </div>
-        <h1 class="page-header-title">تسجيل طفل جديد</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
-                <li class="breadcrumb-item"><a href="/enrollments" class="text-decoration-none">التسجيل</a></li>
-                <li class="breadcrumb-item active">طلب جديد</li>
-            </ol>
-        </nav>
-    </div>
-</div>
+{{ page_header(
+title="{% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}",
+icon="bi-person-plus",
+breadcrumbs=[
+{"label": "{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}", "url": "/dashboard"},
+{"label": "{% if ui_lang == 'en' %}Enrollment{% else %}التسجيل{% endif %}", "url": "/enrollments"},
+{"label": "{% if ui_lang == 'en' %}New Request{% else %}طلب جديد{% endif %}", "url": None}
+]
+) }}
 {% endblock %}
-
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-xl-8 col-lg-9">
-
-        <!-- Step Progress -->
-        <div class="step-progress mb-4">
-            <div class="step-track">
-                {% for n, label in [(1,'الروضة'),(2,'الطفل'),(3,'الأم'),(4,'مراجعة')] %}
-                <div class="step-item {% if n == 1 %}active{% endif %}" data-step="{{ n }}">
-                    <div class="step-circle">{{ n }}</div>
-                    <div class="step-label">{{ label }}</div>
+    <div class="col-lg-8">
+        <!-- Progress Indicator -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    {% if not is_manager_supervisor %}
+                    <div class="step-item active" data-step="1">
+                        <div class="step-number">1</div>
+                        <div class="step-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</div>
+                    </div>
+                    <div class="step-line"></div>
+                    {% endif %}
+                    <div class="step-item {% if is_manager_supervisor %}active{% else %}disabled{% endif %}"
+                        data-step="2">
+                        <div class="step-number">{% if is_manager_supervisor %}1{% else %}2{% endif %}</div>
+                        <div class="step-label">{% if ui_lang == 'en' %}Child Info{% else %}بيانات الطفل{% endif %}</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step-item" data-step="3">
+                        <div class="step-number">{% if is_manager_supervisor %}2{% else %}3{% endif %}</div>
+                        <div class="step-label">{% if ui_lang == 'en' %}Mother Info{% else %}بيانات الأم{% endif %}</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step-item" data-step="4">
+                        <div class="step-number">{% if is_manager_supervisor %}3{% else %}4{% endif %}</div>
+                        <div class="step-label">{% if ui_lang == 'en' %}Review{% else %}مراجعة{% endif %}</div>
+                    </div>
                 </div>
-                {% if n < 4 %}<div class="step-line"></div>{% endif %}
-                {% endfor %}
             </div>
         </div>
-
         <form id="enrollmentForm" class="needs-validation" novalidate>
-
-            <!-- Step 1: Kindergarten -->
+            <!-- Hidden input for kindergarten_id (for managers/supervisors) -->
+            {% if is_manager_supervisor %}
+            <input type="hidden" name="kindergarten_id" value="{{ user_kindergarten.id }}">
+            {% endif %}
+            <!-- Step 1: Select Kindergarten (Admin Only) -->
+            {% if not is_manager_supervisor %}
             <div class="enrollment-step" id="step1">
                 <div class="card">
                     <div class="card-header">
-                        <h6 class="card-title-sm mb-0">
-                            <i class="bi bi-building me-2 text-primary"></i>
-                            اختيار الروضة
-                        </h6>
+                        <h5 class="mb-0"><i class="bi bi-building me-2"></i>{% if ui_lang == 'en' %}Register Child in Kindergarten{% else %}تسجيل طفل في روضة{% endif %}</h5>
+                        <small class="text-muted d-block mt-1">{% if ui_lang == 'en' %}Select the governorate then the city or search by kindergarten name{% else %}اختر المحافظة ثم المدينة أو ابحث باسم الروضة{% endif %}</small>
                     </div>
                     <div class="card-body">
-                        <label class="form-label fw-600 mb-2" for="kindergartenId">الروضة <span class="text-danger">*</span></label>
-                        <select class="form-select" id="kindergartenId" name="kindergarten_id" required>
-                            <option value="">اختر الروضة...</option>
-                            {% for kg in kindergartens %}
-                            <option value="{{ kg.id }}" data-area="{{ kg.area }}" data-phone="{{ kg.contact_phone or '' }}">
-                                {{ kg.name_ar }} — {{ kg.city }}، {{ kg.area }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <div class="invalid-feedback">يرجى اختيار الروضة</div>
+                        <!-- Hidden field that stores the selected kindergarten ID -->
+                        <input type="hidden" id="kindergartenId" name="kindergarten_id" required>
 
-                        <div class="kg-info-panel d-none mt-3" id="kgInfoPanel">
-                            <div class="kg-info-row">
-                                <i class="bi bi-geo-alt-fill text-primary"></i>
-                                <span id="kgArea">—</span>
+                        <!-- Selected Kindergarten Card (shown when a KG is selected) -->
+                        <div id="selectedKgCard" class="d-none">
+                            <div class="alert alert-success d-flex align-items-start mb-0">
+                                <i class="bi bi-check-circle-fill fs-4 me-3 mt-1"></i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold fs-6" id="selectedKgName"></div>
+                                    <div class="text-muted small mt-1">
+                                        <i class="bi bi-geo-alt me-1"></i><span id="selectedKgGov"></span>
+                                        <span class="mx-1">&middot;</span>
+                                        <span id="selectedKgArea"></span>
+                                        <span class="mx-2">|</span>
+                                        <i class="bi bi-telephone me-1"></i><span id="selectedKgPhone"></span>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-column gap-1 ms-2">
+                                    <button type="button" class="btn btn-sm btn-outline-info"
+                                        onclick="showKgDetails(document.getElementById('kindergartenId').value)"
+                                        title="{% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %}">
+                                        <i class="bi bi-info-circle"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                        onclick="clearKgSelection()" title="{% if ui_lang == 'en' %}Change Kindergarten{% else %}تغيير الروضة{% endif %}">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="kg-info-row">
-                                <i class="bi bi-telephone-fill text-primary"></i>
-                                <span id="kgPhone">—</span>
+                        </div>
+
+                        <!-- Search & Filter Panel (hidden when a KG is selected) -->
+                        <div id="kgSearchPanel">
+                            <div class="row g-3 mb-3">
+                                <!-- Governorate Filter -->
+                                <div class="col-md-4">
+                                    <label for="govFilter" class="form-label">
+                                        <i class="bi bi-geo-alt me-1"></i>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
+                                    </label>
+                                    <select class="form-select" id="govFilter" aria-label="{% if ui_lang == 'en' %}Select governorate{% else %}اختر المحافظة{% endif %}">
+                                        <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
+                                        {% for gov in governorates %}
+                                        <option value="{{ gov }}">{{ gov }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <!-- City Filter -->
+                                <div class="col-md-4">
+                                    <label for="cityFilter" class="form-label">
+                                        <i class="bi bi-pin-map me-1"></i>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}
+                                    </label>
+                                    <select class="form-select" id="cityFilter" disabled aria-label="{% if ui_lang == 'en' %}Select city{% else %}اختر المدينة{% endif %}">
+                                        <option value="">{% if ui_lang == 'en' %}Select governorate first{% else %}اختر المحافظة أولاً{% endif %}</option>
+                                    </select>
+                                </div>
+                                <!-- Name Search -->
+                                <div class="col-md-4">
+                                    <label for="kgSearchInput" class="form-label">
+                                        <i class="bi bi-search me-1"></i>{% if ui_lang == 'en' %}Search by Name{% else %}بحث بالاسم{% endif %}
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="kgSearchInput"
+                                            placeholder="{% if ui_lang == 'en' %}Type kindergarten name...{% else %}اكتب اسم الروضة...{% endif %}" autocomplete="off"
+                                            aria-label="{% if ui_lang == 'en' %}Search by kindergarten name{% else %}بحث باسم الروضة{% endif %}">
+                                        <span class="input-group-text" id="kgSearchSpinner" style="display:none;">
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                        </span>
+                                        <span class="input-group-text" id="kgSearchIcon">
+                                            <i class="bi bi-search"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Filter actions row -->
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div id="kgResultsCount" class="text-muted small" style="display:none;"></div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="clearFiltersBtn"
+                                    onclick="clearFilters()" style="display:none;">
+                                    <i class="bi bi-x-circle me-1"></i>{% if ui_lang == 'en' %}Clear Filters{% else %}مسح عوامل التصفية{% endif %}
+                                </button>
+                            </div>
+
+                            <!-- Validation message -->
+                            <div class="text-danger small mb-2" id="kgValidationMsg" style="display:none;">
+                                <i class="bi bi-exclamation-circle me-1"></i>{% if ui_lang == 'en' %}Please select a kindergarten from the list{% else %}يرجى اختيار الروضة من القائمة{% endif %}
+                            </div>
+
+                            <!-- Loading skeleton -->
+                            <div id="kgLoadingSkeleton" class="kg-results-list" style="display:none;">
+                                <div class="kg-item">
+                                    <div class="skeleton-line w-50 mb-2"></div>
+                                    <div class="skeleton-line w-75"></div>
+                                </div>
+                                <div class="kg-item">
+                                    <div class="skeleton-line w-40 mb-2"></div>
+                                    <div class="skeleton-line w-65"></div>
+                                </div>
+                                <div class="kg-item">
+                                    <div class="skeleton-line w-55 mb-2"></div>
+                                    <div class="skeleton-line w-70"></div>
+                                </div>
+                            </div>
+
+                            <!-- Results List (always visible, scrollable) -->
+                            <div id="kgResultsList" class="kg-results-list">
+                                <div class="kg-placeholder text-center text-muted py-4">
+                                    <i class="bi bi-building fs-1 d-block mb-2 opacity-50"></i>
+                                    <p class="mb-1">{% if ui_lang == 'en' %}Select a governorate or type a kindergarten name to search{% else %}اختر المحافظة أو اكتب اسم الروضة للبحث{% endif %}</p>
+                                    <small>{% if ui_lang == 'en' %}You can filter results by governorate, city, and name{% else %}يمكنك تصفية النتائج حسب المحافظة والمدينة والاسم{% endif %}</small>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="card-footer d-flex justify-content-end">
                         <button type="button" class="btn btn-primary" onclick="goToStep(2)">
-                            التالي <i class="bi bi-arrow-left ms-2"></i>
+                            {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-arrow-left ms-2"></i>
                         </button>
                     </div>
                 </div>
             </div>
-
-            <!-- Step 2: Child Info -->
-            <div class="enrollment-step d-none" id="step2">
+            {% endif %}
+            <!-- Step 2/1: Child Information -->
+            <div class="enrollment-step {% if is_manager_supervisor %}d-block{% else %}d-none{% endif %}" id="step2">
                 <div class="card">
                     <div class="card-header">
-                        <h6 class="card-title-sm mb-0">
-                            <i class="bi bi-emoji-smile me-2" style="color:#f59e0b;"></i>
-                            بيانات الطفل
-                        </h6>
+                        <h5 class="mb-0"><i class="bi bi-emoji-smile me-2"></i>{% if ui_lang == 'en' %}Child Information{% else %}بيانات الطفل{% endif %}</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-600" for="childFirstName">الاسم الأول <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="childFirstName" name="first_name" required placeholder="أحمد">
-                                <div class="invalid-feedback">يرجى إدخال الاسم الأول</div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="childFirstName" class="form-label required">{% if ui_lang == 'en' %}First Name{% else %}الاسم الأول{% endif %}</label>
+                                <input type="text" class="form-control" id="childFirstName" name="first_name" required>
+                                <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter the first name{% else %}يرجى إدخال الاسم الأول{% endif %}</div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-600" for="childLastName">اسم العائلة <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="childLastName" name="last_name" required placeholder="محمد">
-                                <div class="invalid-feedback">يرجى إدخال اسم العائلة</div>
+                            <div class="col-md-6 mb-3">
+                                <label for="childLastName" class="form-label required">{% if ui_lang == 'en' %}Last Name{% else %}اسم العائلة{% endif %}</label>
+                                <input type="text" class="form-control" id="childLastName" name="last_name" required>
+                                <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter the last name{% else %}يرجى إدخال اسم العائلة{% endif %}</div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-600" for="childGender">الجنس <span class="text-danger">*</span></label>
-                                <div class="gender-selector">
-                                    <input type="radio" class="btn-check" name="gender" id="genderMale" value="male" required>
-                                    <label class="gender-option" for="genderMale">👦 ذكر</label>
-                                    <input type="radio" class="btn-check" name="gender" id="genderFemale" value="female">
-                                    <label class="gender-option" for="genderFemale">👧 أنثى</label>
-                                </div>
-                                <div class="invalid-feedback d-block" id="genderError" style="display:none!important;"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ gender_select(id="childGender") }}
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-600" for="childDob">تاريخ الميلاد <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="childDob" name="date_of_birth" required>
-                                <div class="form-text" id="ageDisplay"></div>
-                                <div class="invalid-feedback">يرجى إدخال تاريخ الميلاد</div>
+                            <div class="col-md-6 mb-3">
+                                {{ date_input(name="date_of_birth", id="childDob", label="{% if ui_lang == 'en' %}Date of Birth{% else %}تاريخ الميلاد{% endif %}",
+                                invalid_feedback="{% if ui_lang == 'en' %}Please enter date of birth{% else %}يرجى إدخال تاريخ الميلاد{% endif %}") }}
+                                <div id="ageDisplay" class="form-text"></div>
                             </div>
-                            <div class="col-12">
-                                <label class="form-label fw-600" for="fatherName">اسم الأب <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="fatherName" name="father_name" required placeholder="محمد أحمد">
-                                <div class="invalid-feedback">يرجى إدخال اسم الأب</div>
-                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="fatherName" class="form-label required">{% if ui_lang == 'en' %}Father's Name{% else %}اسم الأب{% endif %}</label>
+                            <input type="text" class="form-control" id="fatherName" name="father_name" required>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter father's name{% else %}يرجى إدخال اسم الأب{% endif %}</div>
                         </div>
                     </div>
                     <div class="card-footer d-flex justify-content-between">
-                        <button type="button" class="btn btn-ghost" onclick="goToStep(1)">
-                            <i class="bi bi-arrow-right me-2"></i>السابق
+                        {% if not is_manager_supervisor %}
+                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(1)">
+                            <i class="bi bi-arrow-right me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                         </button>
+                        {% endif %}
                         <button type="button" class="btn btn-primary" onclick="goToStep(3)">
-                            التالي <i class="bi bi-arrow-left ms-2"></i>
+                            {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-arrow-left ms-2"></i>
                         </button>
                     </div>
                 </div>
             </div>
-
-            <!-- Step 3: Mother Info -->
+            <!-- Step 3: Mother Information -->
             <div class="enrollment-step d-none" id="step3">
                 <div class="card">
                     <div class="card-header">
-                        <h6 class="card-title-sm mb-0">
-                            <i class="bi bi-person-heart me-2" style="color:#ec4899;"></i>
-                            بيانات الأم
-                        </h6>
+                        <h5 class="mb-0"><i class="bi bi-person-heart me-2"></i>{% if ui_lang == 'en' %}Mother Information{% else %}بيانات الأم{% endif %}</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-600" for="motherFirstName">الاسم الأول <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="motherFirstName" name="mother_first_name" required>
-                                <div class="invalid-feedback">يرجى إدخال الاسم</div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="motherFirstName" class="form-label required">{% if ui_lang == 'en' %}First Name{% else %}الاسم الأول{% endif %}</label>
+                                <input type="text" class="form-control" id="motherFirstName" name="mother_first_name"
+                                    required>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-600" for="motherLastName">اسم العائلة <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="motherLastName" name="mother_last_name" required>
-                                <div class="invalid-feedback">يرجى إدخال اسم العائلة</div>
+                            <div class="col-md-4 mb-3">
+                                <label for="motherSecondName" class="form-label">{% if ui_lang == 'en' %}Middle Name{% else %}الاسم الثاني{% endif %}</label>
+                                <input type="text" class="form-control" id="motherSecondName" name="mother_second_name">
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-600" for="motherNationality">الجنسية <span class="text-danger">*</span></label>
-                                <select class="form-select" id="motherNationality" name="mother_nationality" required>
-                                    <option value="">اختر...</option>
-                                    <option value="Jordanian">أردنية</option>
-                                    <option value="Palestinian">فلسطينية</option>
-                                    <option value="Syrian">سورية</option>
-                                    <option value="Other">أخرى</option>
-                                </select>
-                                <div class="invalid-feedback">يرجى اختيار الجنسية</div>
-                            </div>
-                            <div class="col-md-6" id="motherNationalIdGroup">
-                                <label class="form-label fw-600" for="motherNationalId">الرقم الوطني</label>
-                                <input type="text" class="form-control" id="motherNationalId" name="mother_national_id"
-                                       pattern="^\d{10}$" placeholder="10 أرقام">
-                                <div class="invalid-feedback">رقم وطني صحيح (10 أرقام)</div>
-                            </div>
-                            <div class="col-md-6 d-none" id="motherPassportGroup">
-                                <label class="form-label fw-600" for="motherPassport">رقم جواز السفر</label>
-                                <input type="text" class="form-control" id="motherPassport" name="mother_passport_number">
+                            <div class="col-md-4 mb-3">
+                                <label for="motherLastName" class="form-label required">{% if ui_lang == 'en' %}Last Name{% else %}اسم العائلة{% endif %}</label>
+                                <input type="text" class="form-control" id="motherLastName" name="mother_last_name"
+                                    required>
                             </div>
                         </div>
+                        <div class="row">
+                            {{ nationality_with_toggle(
+                            nationality_name="mother_nationality",
+                            nationality_id="motherNationality",
+                            id_group_id="motherNationalIdGroup",
+                            id_field_id="motherNationalId",
+                            id_field_name="mother_national_id",
+                            passport_group_id="motherPassportGroup",
+                            passport_field_id="motherPassport",
+                            passport_field_name="mother_passport_number"
+                            ) }}
+                        </div>
+                        <!-- Consent & Source Fields -->
+                        <hr class="my-3">
+                        <h6 class="text-muted mb-3"><i class="bi bi-shield-check me-2"></i>{% if ui_lang == 'en' %}Consents & Request Source{% else %}الموافقات ومصدر الطلب{% endif %}</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="correspondenceFlag"
+                                        name="correspondence_flag" checked>
+                                    <label class="form-check-label" for="correspondenceFlag">
+                                        {% if ui_lang == 'en' %}Communication Consent{% else %}الموافقة على المراسلة{% endif %}
+                                        <small class="text-muted d-block">{% if ui_lang == 'en' %}Allow sending notifications and correspondence about the child{% else %}السماح بإرسال إشعارات ومراسلات تتعلق
+                                            بالطفل{% endif %}</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="mediaConsent"
+                                        name="media_consent">
+                                    <label class="form-check-label" for="mediaConsent">
+                                        {% if ui_lang == 'en' %}Media Consent{% else %}الموافقة على الوسائط{% endif %}
+                                        <small class="text-muted d-block">{% if ui_lang == 'en' %}Allow photographing the child during activities{% else %}السماح بتصوير الطفل خلال الأنشطة{% endif %}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {% if is_manager_supervisor %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="enrollmentSource" class="form-label">{% if ui_lang == 'en' %}Request Source{% else %}مصدر الطلب{% endif %}</label>
+                                <select class="form-select" id="enrollmentSource" name="source">
+                                    <option value="walk-in">{% if ui_lang == 'en' %}Walk-in{% else %}حضوري{% endif %}</option>
+                                    <option value="online">{% if ui_lang == 'en' %}Online{% else %}إلكتروني{% endif %}</option>
+                                    <option value="manager">{% if ui_lang == 'en' %}Manager Entry{% else %}تسجيل مدير{% endif %}</option>
+                                </select>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="card-footer d-flex justify-content-between">
-                        <button type="button" class="btn btn-ghost" onclick="goToStep(2)">
-                            <i class="bi bi-arrow-right me-2"></i>السابق
+                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(2)">
+                            <i class="bi bi-arrow-right me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                         </button>
                         <button type="button" class="btn btn-primary" onclick="goToStep(4)">
-                            التالي <i class="bi bi-arrow-left ms-2"></i>
+                            {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-arrow-left ms-2"></i>
                         </button>
                     </div>
                 </div>
             </div>
-
             <!-- Step 4: Review -->
             <div class="enrollment-step d-none" id="step4">
                 <div class="card">
                     <div class="card-header">
-                        <h6 class="card-title-sm mb-0">
-                            <i class="bi bi-clipboard-check me-2 text-primary"></i>
-                            مراجعة البيانات
-                        </h6>
+                        <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>{% if ui_lang == 'en' %}Review Data{% else %}مراجعة البيانات{% endif %}</h5>
                     </div>
                     <div class="card-body">
-                        <div class="review-notice mb-4">
-                            <i class="bi bi-info-circle-fill flex-shrink-0"></i>
-                            <div>يرجى مراجعة جميع البيانات قبل إرسال الطلب. يمكن التعديل بالعودة للخطوات السابقة.</div>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            {% if ui_lang == 'en' %}Please review the data before submitting the request{% else %}يرجى مراجعة البيانات قبل إرسال الطلب{% endif %}
                         </div>
-
-                        <div id="reviewSummary"></div>
-
-                        <div class="confirm-check mt-4 p-3 border rounded" style="border-radius:var(--kinjo-radius-lg)!important;">
-                            <div class="form-check mb-0">
-                                <input class="form-check-input" type="checkbox" id="confirmData" required>
-                                <label class="form-check-label fw-600" for="confirmData">
-                                    أؤكد صحة جميع البيانات المدخلة وأوافق على شروط التسجيل
-                                </label>
-                            </div>
+                        <div id="reviewSummary">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" id="confirmData" required>
+                            <label class="form-check-label" for="confirmData">
+                                {% if ui_lang == 'en' %}I confirm the accuracy of all entered data{% else %}أؤكد صحة جميع البيانات المدخلة{% endif %}
+                            </label>
                         </div>
                     </div>
                     <div class="card-footer d-flex justify-content-between">
-                        <button type="button" class="btn btn-ghost" onclick="goToStep(3)">
-                            <i class="bi bi-arrow-right me-2"></i>السابق
+                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(3)">
+                            <i class="bi bi-arrow-right me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                         </button>
-                        <button type="submit" class="btn btn-success px-5" id="submitBtn">
-                            <span class="btn-text"><i class="bi bi-check-circle me-2"></i>إرسال الطلب</span>
-                            <span class="btn-loading d-none">
-                                <span class="spinner-border spinner-border-sm me-2"></span>جاري الإرسال...
-                            </span>
-                        </button>
+                        {{ submit_button(label="{% if ui_lang == 'en' %}Submit Request{% else %}إرسال الطلب{% endif %}", loading_label="{% if ui_lang == 'en' %}Submitting...{% else %}جاري الإرسال...{% endif %}", btn_class="btn-success
+                        btn-lg") }}
                     </div>
                 </div>
             </div>
-
         </form>
     </div>
 </div>
 
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.fw-600 { font-weight:600; }
-
-/* Step Progress */
-.step-progress { background:var(--kinjo-card-bg);border:1px solid var(--kinjo-border);border-radius:var(--kinjo-radius-xl);padding:1.5rem 2rem; }
-.step-track { display:flex;align-items:flex-start;justify-content:space-between; }
-.step-item { display:flex;flex-direction:column;align-items:center;gap:0.4rem;flex:0 0 auto; }
-.step-circle {
-    width:40px;height:40px;border-radius:50%;border:2px solid var(--kinjo-border);
-    background:var(--kinjo-surface);color:var(--kinjo-text-muted);
-    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;
-    transition:all 0.3s;
-}
-.step-item.active .step-circle  { background:var(--kinjo-primary);border-color:var(--kinjo-primary);color:#fff;box-shadow:0 0 0 4px var(--kinjo-primary-light); }
-.step-item.done .step-circle    { background:var(--kinjo-success);border-color:var(--kinjo-success);color:#fff; }
-.step-item.done .step-circle::before { content:'✓'; }
-.step-item.done .step-num { display:none; }
-.step-label { font-size:0.75rem;font-weight:600;color:var(--kinjo-text-muted);text-align:center; }
-.step-item.active .step-label { color:var(--kinjo-primary);font-weight:700; }
-.step-line { flex:1;height:2px;background:var(--kinjo-border);margin:20px 0.5rem 0;border-radius:50px; }
-
-/* KG Info Panel */
-.kg-info-panel { background:var(--kinjo-primary-xlight);border:1px solid var(--kinjo-primary-light);border-radius:var(--kinjo-radius-lg);padding:0.75rem 1rem;display:flex;flex-direction:column;gap:0.4rem; }
-.kg-info-row { display:flex;align-items:center;gap:0.5rem;font-size:0.84rem;color:var(--kinjo-text-secondary); }
-
-/* Gender selector */
-.gender-selector { display:flex;gap:0.5rem; }
-.gender-option {
-    flex:1;text-align:center;padding:0.6rem 1rem;border-radius:var(--kinjo-radius-lg);
-    border:2px solid var(--kinjo-border);background:var(--kinjo-surface);
-    cursor:pointer;font-weight:700;font-size:0.9rem;transition:all 0.15s;
-}
-.btn-check:checked + .gender-option { border-color:var(--kinjo-primary);background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
-
-/* Review */
-.review-notice { display:flex;align-items:flex-start;gap:0.75rem;padding:0.875rem 1rem;border-radius:var(--kinjo-radius-lg);background:rgba(99,102,241,0.07);border:1px solid var(--kinjo-primary-light);color:var(--kinjo-primary);font-size:0.84rem; }
-.review-notice i { margin-top:0.1rem; }
-.review-section { margin-bottom:1.25rem; }
-.review-section-title { font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--kinjo-text-muted);margin-bottom:0.75rem;display:flex;align-items:center;gap:0.4rem; }
-.review-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem; }
-.review-field { background:var(--kinjo-surface);border-radius:var(--kinjo-radius-md);padding:0.6rem 0.875rem; }
-.review-lbl { font-size:0.7rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase; }
-.review-val { font-size:0.875rem;font-weight:600;color:var(--kinjo-text-primary);margin-top:0.1rem; }
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-let currentStep = 1;
-
-document.getElementById('kindergartenId').addEventListener('change', function () {
-    const opt = this.options[this.selectedIndex];
-    const panel = document.getElementById('kgInfoPanel');
-    if (this.value) {
-        document.getElementById('kgArea').textContent  = opt.dataset.area || '—';
-        document.getElementById('kgPhone').textContent = opt.dataset.phone || '—';
-        panel.classList.remove('d-none');
-    } else {
-        panel.classList.add('d-none');
-    }
-});
-
-document.getElementById('motherNationality').addEventListener('change', function () {
-    const isJordanian = this.value === 'Jordanian';
-    document.getElementById('motherNationalIdGroup').classList.toggle('d-none', !isJordanian);
-    document.getElementById('motherPassportGroup').classList.toggle('d-none', isJordanian);
-    document.getElementById('motherNationalId').required = isJordanian;
-    document.getElementById('motherPassport').required = !isJordanian;
-});
-
-document.getElementById('childDob').addEventListener('change', function () {
-    const dob = new Date(this.value);
-    const today = new Date();
-    const ageDays = Math.floor((today - dob) / 86400000);
-    const ageMonths = (today.getFullYear() - dob.getFullYear()) * 12 + (today.getMonth() - dob.getMonth());
-    const display = document.getElementById('ageDisplay');
-
-    if (ageDays < 70) {
-        display.textContent = `العمر: ${ageDays} يوم — غير مؤهل (الحد الأدنى 70 يوم)`;
-        display.className = 'form-text text-danger';
-    } else if (ageMonths > 56) {
-        display.textContent = `العمر: ${ageMonths} شهر — غير مؤهل (الحد الأقصى 56 شهر)`;
-        display.className = 'form-text text-danger';
-    } else {
-        display.textContent = `العمر: ${ageMonths} شهر — مؤهل للتسجيل ✓`;
-        display.className = 'form-text text-success';
-    }
-});
-
-function goToStep(step) {
-    if (step > currentStep && !validateStep(currentStep)) return;
-    document.querySelectorAll('.enrollment-step').forEach(el => el.classList.add('d-none'));
-    document.getElementById(`step${step}`).classList.remove('d-none');
-    updateStepIndicator(step);
-    currentStep = step;
-    if (step === 4) generateReview();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function updateStepIndicator(activeStep) {
-    document.querySelectorAll('.step-item').forEach(el => {
-        const n = parseInt(el.dataset.step);
-        el.classList.remove('active', 'done');
-        if (n < activeStep) el.classList.add('done');
-        if (n === activeStep) el.classList.add('active');
-    });
-}
-
-function validateStep(step) {
-    const stepEl = document.getElementById(`step${step}`);
-    let valid = true;
-    stepEl.querySelectorAll('[required]').forEach(input => {
-        if (!input.checkValidity()) { input.classList.add('is-invalid'); valid = false; }
-        else input.classList.remove('is-invalid');
-    });
-    if (!valid) window.showToast('يرجى ملء جميع الحقول المطلوبة', 'warning');
-    return valid;
-}
-
-function generateReview() {
-    const fd = new FormData(document.getElementById('enrollmentForm'));
-    const data = Object.fromEntries(fd.entries());
-    const kgSel = document.getElementById('kindergartenId');
-    const kgName = kgSel.options[kgSel.selectedIndex]?.text || '—';
-
-    document.getElementById('reviewSummary').innerHTML = `
-        <div class="review-section">
-            <div class="review-section-title"><i class="bi bi-building text-primary"></i>الروضة</div>
-            <div class="review-grid">
-                <div class="review-field" style="grid-column:1/-1;">
-                    <div class="review-lbl">الروضة المختارة</div>
-                    <div class="review-val">${kgName}</div>
+<!-- Kindergarten Detail Modal -->
+<div class="modal fade" id="kgDetailModal" tabindex="-1" aria-labelledby="kgDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="kgDetailModalLabel"><i class="bi bi-building me-2"></i>{% if ui_lang == 'en' %}Kindergarten Details{% else %}تفاصيل الروضة{% endif %}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+            </div>
+            <div class="modal-body" id="kgDetailBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="review-section">
-            <div class="review-section-title"><i class="bi bi-emoji-smile" style="color:#f59e0b;"></i>بيانات الطفل</div>
-            <div class="review-grid">
-                <div class="review-field"><div class="review-lbl">الاسم</div><div class="review-val">${data.first_name || ''} ${data.last_name || ''}</div></div>
-                <div class="review-field"><div class="review-lbl">الجنس</div><div class="review-val">${data.gender === 'male' ? '👦 ذكر' : '👧 أنثى'}</div></div>
-                <div class="review-field"><div class="review-lbl">تاريخ الميلاد</div><div class="review-val">${data.date_of_birth || '—'}</div></div>
-                <div class="review-field"><div class="review-lbl">اسم الأب</div><div class="review-val">${data.father_name || '—'}</div></div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-arrow-right me-1"></i>{% if ui_lang == 'en' %}Back to List{% else %}رجوع للقائمة{% endif %}
+                </button>
+                <button type="button" class="btn btn-success" id="confirmKgBtn" onclick="confirmKgFromModal()">
+                    <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Confirm Kindergarten Selection{% else %}تأكيد اختيار الروضة{% endif %}
+                </button>
             </div>
         </div>
-        <div class="review-section">
-            <div class="review-section-title"><i class="bi bi-person-heart" style="color:#ec4899;"></i>بيانات الأم</div>
-            <div class="review-grid">
-                <div class="review-field"><div class="review-lbl">الاسم</div><div class="review-val">${data.mother_first_name || ''} ${data.mother_last_name || ''}</div></div>
-                <div class="review-field"><div class="review-lbl">الجنسية</div><div class="review-val">${data.mother_nationality || '—'}</div></div>
+    </div>
+</div>
+
+<style>
+    .step-item {
+        text-align: center;
+        flex: 1;
+    }
+
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #6c757d;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .step-item.active .step-number {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .step-item.completed .step-number {
+        background-color: #198754;
+        color: white;
+    }
+
+    .step-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+
+    .step-line {
+        flex: 1;
+        height: 2px;
+        background-color: #e9ecef;
+        margin: 0 1rem;
+        align-self: flex-start;
+        margin-top: 20px;
+    }
+
+    /* Kindergarten Results List */
+    .kg-results-list {
+        max-height: 350px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        background: #fff;
+    }
+
+    .kg-results-list .kg-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.15s;
+    }
+
+    .kg-results-list .kg-item:last-child {
+        border-bottom: none;
+    }
+
+    .kg-results-list .kg-item:hover {
+        background-color: #e8f0fe;
+    }
+
+    .kg-results-list .kg-item.active {
+        background-color: #d0e2ff;
+    }
+
+    .kg-results-list .kg-item .kg-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #1a1a2e;
+    }
+
+    .kg-results-list .kg-item .kg-meta {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 2px;
+    }
+
+    .kg-results-list .kg-item .kg-meta i {
+        width: 16px;
+        text-align: center;
+    }
+
+    .kg-results-list .kg-no-results {
+        padding: 2rem;
+        text-align: center;
+        color: #999;
+    }
+
+    .kg-results-list .kg-placeholder {
+        color: #adb5bd;
+    }
+
+    .kg-search-highlight {
+        background-color: #fff3cd;
+        border-radius: 2px;
+        padding: 0 1px;
+    }
+
+    /* Loading skeleton */
+    .skeleton-line {
+        height: 14px;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 4px;
+    }
+
+    .w-40 {
+        width: 40% !important;
+    }
+
+    .w-55 {
+        width: 55% !important;
+    }
+
+    .w-65 {
+        width: 65% !important;
+    }
+
+    .w-70 {
+        width: 70% !important;
+    }
+
+    @keyframes skeleton-loading {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
+    }
+
+    /* Enhanced KG item layout */
+    .kg-results-list .kg-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .kg-results-list .kg-item .kg-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .kg-results-list .kg-item .kg-actions {
+        flex-shrink: 0;
+        margin-right: 0.75rem;
+    }
+
+    /* Detail modal rows */
+    .kg-detail-row {
+        display: flex;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .kg-detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .kg-detail-label {
+        font-weight: 600;
+        color: #495057;
+        min-width: 130px;
+        flex-shrink: 0;
+    }
+
+    .kg-detail-value {
+        color: #212529;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 767.98px) {
+        .kg-results-list {
+            max-height: 280px;
+        }
+
+        .kg-results-list .kg-item {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .kg-results-list .kg-item .kg-actions {
+            margin-right: 0;
+            margin-top: 0.5rem;
+            text-align: start;
+        }
+
+        .kg-detail-row {
+            flex-direction: column;
+        }
+
+        .kg-detail-label {
+            min-width: unset;
+            margin-bottom: 0.25rem;
+        }
+    }
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+    const enrollmentText = (key, arText, enText) =>
+        (typeof appText === 'function'
+            ? appText(key, arText, enText)
+            : (document.documentElement.lang === 'en' ? enText : arText));
+    const preferredEnrollmentText = (arText, enText) => {
+        const englishUi = document.documentElement.lang === 'en';
+        if (englishUi) {
+            return enText || arText || '';
+        }
+        return arText || enText || '';
+    };
+
+    let currentStep = {{ '2' if is_manager_supervisor else '1' }};
+    const selectedKindergartenId = {% if is_manager_supervisor and user_kindergarten %}{{ user_kindergarten.id }}{% else %}null{% endif %};
+    const selectedKindergartenNameAr = "{% if is_manager_supervisor and user_kindergarten %}{{ user_kindergarten.name_ar | replace('\"', '\\\\\"') }}{% else %}{% endif %}";
+    const selectedKindergartenNameEn = "{% if is_manager_supervisor and user_kindergarten %}{{ (user_kindergarten.name_en or '') | replace('\"', '\\\\\"') }}{% else %}{% endif %}";
+    const selectedKindergartenName = preferredEnrollmentText(selectedKindergartenNameAr, selectedKindergartenNameEn);
+    const isParent = {{ 'true' if current_user and current_user.role.value == 'PARENT' else 'false' }};
+    const ACTIVE_ENROLLMENT_STATUSES = ['SUBMITTED', 'PENDING_REVIEW', 'ACCEPTED', 'ACTIVE'];
+
+    /* ========== Auth Headers ========== */
+    function getHeaders() {
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return { 'Content-Type': 'application/json' };
+        }
+        const token = AuthService.getToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    }
+
+    /* ========== Nationality ID/Passport Toggle ========== */
+    function toggleIdFields(nationality) {
+        const idGroup = document.getElementById('motherNationalIdGroup');
+        const passportGroup = document.getElementById('motherPassportGroup');
+        if (!idGroup || !passportGroup) return;
+        if (nationality === 'Jordanian') {
+            idGroup.classList.remove('d-none');
+            passportGroup.classList.add('d-none');
+            const idField = idGroup.querySelector('input');
+            const passportField = passportGroup.querySelector('input');
+            if (idField) idField.required = true;
+            if (passportField) { passportField.required = false; passportField.value = ''; }
+        } else {
+            idGroup.classList.add('d-none');
+            passportGroup.classList.remove('d-none');
+            const idField = idGroup.querySelector('input');
+            const passportField = passportGroup.querySelector('input');
+            if (idField) { idField.required = false; idField.value = ''; }
+            if (passportField) passportField.required = true;
+        }
+    }
+
+    /* ========== Kindergarten Searchable Selector ========== */
+    let kgSearchTimer = null;
+    let kgResults = [];
+    let _currentDetailKg = null;
+    const _citiesCache = {};
+
+    function initKgSearch() {
+        const searchInput = document.getElementById('kgSearchInput');
+        const govFilter = document.getElementById('govFilter');
+        const cityFilter = document.getElementById('cityFilter');
+        if (!searchInput) return; // manager/supervisor flow
+
+        // Governorate change → fetch cities, reset city, fetch KGs
+        govFilter.addEventListener('change', function () {
+            clearTimeout(kgSearchTimer);
+            const gov = this.value;
+            if (gov) {
+                fetchCities(gov);
+            } else {
+                cityFilter.innerHTML = '<option value="">' + enrollmentText('common.select_gov_first', 'اختر المحافظة أولاً', 'Select governorate first') + '</option>';
+                cityFilter.disabled = true;
+            }
+            fetchKgResults();
+            updateClearFiltersBtn();
+        });
+
+        // City change → fetch KGs
+        cityFilter.addEventListener('change', function () {
+            clearTimeout(kgSearchTimer);
+            fetchKgResults();
+            updateClearFiltersBtn();
+        });
+
+        // Typing in search input — debounced
+        searchInput.addEventListener('input', function () {
+            clearTimeout(kgSearchTimer);
+            kgSearchTimer = setTimeout(() => {
+                fetchKgResults();
+                updateClearFiltersBtn();
+            }, 300);
+        });
+
+        // Load all on initial page load
+        fetchKgResults();
+    }
+
+    async function fetchKgResults() {
+        const searchInput = document.getElementById('kgSearchInput');
+        const govFilter = document.getElementById('govFilter');
+        const cityFilter = document.getElementById('cityFilter');
+        const spinner = document.getElementById('kgSearchSpinner');
+        const icon = document.getElementById('kgSearchIcon');
+        const skeleton = document.getElementById('kgLoadingSkeleton');
+        const resultsList = document.getElementById('kgResultsList');
+        const query = (searchInput && searchInput.value.trim()) || '';
+        const gov = (govFilter && govFilter.value) || '';
+        const city = (cityFilter && !cityFilter.disabled && cityFilter.value) || '';
+
+        // Show loading state
+        if (spinner) { spinner.style.display = ''; }
+        if (icon) { icon.style.display = 'none'; }
+        if (skeleton) { skeleton.style.display = ''; }
+        if (resultsList) { resultsList.style.display = 'none'; }
+
+        try {
+            const params = { status: 'ACTIVE' };
+            if (query) params.search = query;
+            if (gov) params.governorate = gov;
+            if (city) params.city = city;
+            const data = await api.searchKindergartens(params);
+            kgResults = data.kindergartens || [];
+            renderKgResults(kgResults, query);
+        } catch (err) {
+            console.error('KG search error:', err);
+            kgResults = [];
+            renderKgResults([], query);
+        } finally {
+            if (spinner) { spinner.style.display = 'none'; }
+            if (icon) { icon.style.display = ''; }
+            if (skeleton) { skeleton.style.display = 'none'; }
+            if (resultsList) { resultsList.style.display = ''; }
+        }
+    }
+
+    function renderKgResults(items, query) {
+        const listEl = document.getElementById('kgResultsList');
+        const countEl = document.getElementById('kgResultsCount');
+
+        if (items.length === 0) {
+            listEl.innerHTML = '<div class="kg-no-results"><i class="bi bi-inbox fs-3 d-block mb-2"></i>' + enrollmentText('common.no_matching_results', 'لا توجد نتائج مطابقة', 'No matching results') + '</div>';
+            countEl.style.display = 'none';
+            return;
+        }
+
+        countEl.textContent = `${enrollmentText('common.found', 'تم العثور على', 'Found')} ${items.length} ${enrollmentText('common.kindergarten_single', 'روضة', 'kindergartens')}`;
+        countEl.style.display = 'block';
+
+        listEl.innerHTML = items.map((kg, idx) => {
+            const name = highlightText(preferredEnrollmentText(kg.name_ar || kg.name, kg.name_en || kg.name), query);
+            const gov = preferredEnrollmentText(kg.governorate, kg.governorate_en);
+            const city = preferredEnrollmentText(kg.city, kg.city_en);
+            const area = kg.area || '';
+            const phone = kg.contact_phone || '';
+            const locationParts = [gov, city, area].filter(Boolean);
+            return `<div class="kg-item" data-index="${idx}" onclick="selectKg(kgResults[${idx}])" role="button" tabindex="0" onkeydown="if(event.key==='Enter')selectKg(kgResults[${idx}])">
+                <div class="kg-info">
+                    <div class="kg-name">${name}</div>
+                    <div class="kg-meta">
+                        <i class="bi bi-geo-alt"></i> ${locationParts.join(' \u2013 ')}
+                        ${phone ? '<span class="mx-2">|</span><i class="bi bi-telephone"></i> ' + phone : ''}
+                    </div>
+                </div>
+                <div class="kg-actions">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); showKgDetails(${kg.id})" title="${enrollmentText('common.view_details', 'عرض التفاصيل', 'View details')}">
+                        <i class="bi bi-info-circle me-1"></i>${enrollmentText('common.details', 'التفاصيل', 'Details')}
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function highlightText(text, query) {
+        if (!query || !text) return text;
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return text.replace(new RegExp('(' + escaped + ')', 'gi'), '<span class="kg-search-highlight">$1</span>');
+    }
+
+    function selectKg(kg) {
+        const hiddenInput = document.getElementById('kindergartenId');
+        hiddenInput.value = kg.id;
+        hiddenInput.setCustomValidity('');
+        _currentDetailKg = kg;
+
+        document.getElementById('selectedKgName').textContent = preferredEnrollmentText(kg.name_ar || kg.name, kg.name_en || kg.name);
+        document.getElementById('selectedKgGov').textContent = preferredEnrollmentText(kg.governorate, kg.governorate_en);
+        document.getElementById('selectedKgArea').textContent = [preferredEnrollmentText(kg.city, kg.city_en), kg.area].filter(Boolean).join(' \u2013 ');
+        document.getElementById('selectedKgPhone').textContent = kg.contact_phone || '';
+
+        document.getElementById('selectedKgCard').classList.remove('d-none');
+        document.getElementById('kgSearchPanel').style.display = 'none';
+        document.getElementById('kgValidationMsg').style.display = 'none';
+    }
+
+    function clearKgSelection() {
+        document.getElementById('kindergartenId').value = '';
+        document.getElementById('selectedKgCard').classList.add('d-none');
+        document.getElementById('kgSearchPanel').style.display = '';
+        _currentDetailKg = null;
+        fetchKgResults();
+    }
+
+    /* ========== City Filter ========== */
+    async function fetchCities(governorate) {
+        const cityFilter = document.getElementById('cityFilter');
+        if (!governorate) return;
+
+        if (_citiesCache[governorate]) {
+            populateCityDropdown(_citiesCache[governorate]);
+            return;
+        }
+
+        cityFilter.innerHTML = '<option value="">' + enrollmentText('common.loading', 'جاري التحميل...', 'Loading...') + '</option>';
+        cityFilter.disabled = true;
+
+        try {
+            const data = await api.getCitiesByGovernorate(governorate);
+            const cities = data.cities || [];
+            _citiesCache[governorate] = cities;
+            populateCityDropdown(cities);
+        } catch (err) {
+            console.error('Cities fetch error:', err);
+            cityFilter.innerHTML = '<option value="">' + enrollmentText('common.all_cities', 'جميع المدن', 'All cities') + '</option>';
+            cityFilter.disabled = false;
+        }
+    }
+
+    function populateCityDropdown(cities) {
+        const cityFilter = document.getElementById('cityFilter');
+        cityFilter.innerHTML = '<option value="">' + enrollmentText('common.all_cities', 'جميع المدن', 'All cities') + '</option>';
+        cities.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            cityFilter.appendChild(opt);
+        });
+        cityFilter.disabled = false;
+    }
+
+    /* ========== Clear Filters ========== */
+    function clearFilters() {
+        const govFilter = document.getElementById('govFilter');
+        const cityFilter = document.getElementById('cityFilter');
+        const searchInput = document.getElementById('kgSearchInput');
+        govFilter.value = '';
+        cityFilter.innerHTML = '<option value="">' + enrollmentText('common.select_gov_first', 'اختر المحافظة أولاً', 'Select governorate first') + '</option>';
+        cityFilter.disabled = true;
+        searchInput.value = '';
+        updateClearFiltersBtn();
+        fetchKgResults();
+    }
+
+    function updateClearFiltersBtn() {
+        const btn = document.getElementById('clearFiltersBtn');
+        if (!btn) return;
+        const govFilter = document.getElementById('govFilter');
+        const searchInput = document.getElementById('kgSearchInput');
+        const hasFilters = (govFilter && govFilter.value) || (searchInput && searchInput.value.trim());
+        btn.style.display = hasFilters ? '' : 'none';
+    }
+
+    /* ========== KG Details Modal ========== */
+    async function showKgDetails(kgId) {
+        const modalEl = document.getElementById('kgDetailModal');
+        const modal = new bootstrap.Modal(modalEl);
+        const body = document.getElementById('kgDetailBody');
+
+        body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">' + enrollmentText('common.loading', 'جاري التحميل...', 'Loading...') + '</span></div></div>';
+        modal.show();
+
+        try {
+            const kg = await api.getKindergarten(kgId);
+            _currentDetailKg = kg;
+
+            const rows = [
+                { label: preferredEnrollmentText('\u0627\u0644\u0627\u0633\u0645 \u0628\u0627\u0644\u0639\u0631\u0628\u064a\u0629', 'Arabic name'), value: kg.name_ar || '\u2014' },
+                { label: preferredEnrollmentText('\u0627\u0644\u0627\u0633\u0645 \u0628\u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629', 'English name'), value: kg.name_en || '\u2014' },
+                { label: preferredEnrollmentText('\u0627\u0644\u0645\u062d\u0627\u0641\u0638\u0629', 'Governorate'), value: kg.governorate || '\u2014' },
+                { label: preferredEnrollmentText('\u0627\u0644\u0645\u062f\u064a\u0646\u0629', 'City'), value: kg.city || '\u2014' },
+                { label: preferredEnrollmentText('\u0627\u0644\u0645\u0646\u0637\u0642\u0629', 'Area'), value: kg.area || '\u2014' },
+                { label: preferredEnrollmentText('\u0627\u0644\u0639\u0646\u0648\u0627\u0646', 'Address'), value: kg.address_line || '\u2014' },
+                { label: preferredEnrollmentText('\u0627\u0644\u0647\u0627\u062a\u0641', 'Phone'), value: kg.contact_phone || '\u2014' },
+                { label: preferredEnrollmentText('\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a', 'Email'), value: kg.contact_email || '\u2014' },
+            ];
+
+            if (kg.operating_hours_start && kg.operating_hours_end) {
+                rows.push({ label: preferredEnrollmentText('\u0633\u0627\u0639\u0627\u062a \u0627\u0644\u0639\u0645\u0644', 'Working hours'), value: `${kg.operating_hours_start} \u2013 ${kg.operating_hours_end}` });
+            }
+            if (kg.license_valid_until) {
+                rows.push({ label: preferredEnrollmentText('\u0627\u0644\u062a\u0631\u062e\u064a\u0635 \u0633\u0627\u0631\u064a \u062d\u062a\u0649', 'Licence valid until'), value: kg.license_valid_until });
+            }
+
+            body.innerHTML = `
+                <div class="mb-3">
+                    <h5 class="text-primary mb-1"><i class="bi bi-building me-2"></i>${preferredEnrollmentText(kg.name_ar || '', kg.name_en || '')}</h5>
+                    ${(kg.name_en && kg.name_ar) ? '<p class="text-muted mb-0">' + (englishUi ? (kg.name_ar || '') : (kg.name_en || '')) + '</p>' : ''}
+                </div>
+                <div class="card">
+                    <div class="card-body p-0">
+                        ${rows.map(r => `<div class="kg-detail-row px-3"><span class="kg-detail-label">${r.label}</span><span class="kg-detail-value">${r.value}</span></div>`).join('')}
+                    </div>
+                </div>
+            `;
+        } catch (err) {
+            body.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>' + enrollmentText('common.error_loading_details', 'حدث خطأ في تحميل تفاصيل الروضة', 'Error loading kindergarten details') + '</div>';
+            console.error('KG detail error:', err);
+        }
+    }
+
+    function confirmKgFromModal() {
+        if (!_currentDetailKg) return;
+        selectKg(_currentDetailKg);
+        const modal = bootstrap.Modal.getInstance(document.getElementById('kgDetailModal'));
+        if (modal) modal.hide();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        initKgSearch();
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+        const dobInput = document.getElementById('childDob');
+        if (dobInput && window.ChildAgeValidator) {
+            const range = ChildAgeValidator.getValidDateRange();
+            dobInput.setAttribute('min', range.minDate);
+            dobInput.setAttribute('max', range.maxDate);
+        }
+    });
+
+    // Handle mother nationality change
+    document.getElementById('motherNationality').addEventListener('change', function () {
+        const isJordanian = this.value === 'Jordanian';
+        document.getElementById('motherNationalIdGroup').classList.toggle('d-none', !isJordanian);
+        document.getElementById('motherPassportGroup').classList.toggle('d-none', isJordanian);
+        document.getElementById('motherNationalId').required = isJordanian;
+        document.getElementById('motherPassport').required = !isJordanian;
+    });
+    // Age constraints handled by ChildAgeValidator
+    function calculateChildAge(dobString) {
+        if (!window.ChildAgeValidator) {
+            return { isEligible: false, ageDays: 0, ageMonths: 0, message: '' };
+        }
+        const ageInfo = ChildAgeValidator.calculate(dobString);
+        const englishUi = document.documentElement.lang === 'en';
+        return {
+            isEligible: ageInfo.isEligible,
+            ageDays: ageInfo.ageDays,
+            ageMonths: ageInfo.ageMonths,
+            message: englishUi
+                ? (ageInfo.messageEn || ageInfo.message || ageInfo.messageAr)
+                : (ageInfo.messageAr || ageInfo.message || ageInfo.messageEn),
+        };
+    }
+
+    // Calculate age on DOB change
+    document.getElementById('childDob').addEventListener('change', function () {
+        const ageInfo = calculateChildAge(this.value);
+        const display = document.getElementById('ageDisplay');
+        display.textContent = ageInfo.message;
+        display.classList.toggle('text-danger', !ageInfo.isEligible);
+        display.classList.toggle('text-success', ageInfo.isEligible);
+
+        // Mark the input as invalid if age is not eligible
+        if (!ageInfo.isEligible) {
+            this.setCustomValidity(ageInfo.message);
+            this.classList.add('is-invalid');
+        } else {
+            this.setCustomValidity('');
+            this.classList.remove('is-invalid');
+        }
+    });
+    // Navigation
+    function goToStep(step) {
+        // Validate current step
+        if (step > currentStep && !validateStep(currentStep)) {
+            return;
+        }
+        // Update steps display
+        document.querySelectorAll('.enrollment-step').forEach(el => el.classList.add('d-none'));
+        document.getElementById(`step${step}`).classList.remove('d-none');
+        // Update progress indicator
+        document.querySelectorAll('.step-item').forEach(el => {
+            const stepNum = parseInt(el.dataset.step);
+            el.classList.remove('active', 'completed');
+            if (stepNum < step) el.classList.add('completed');
+            if (stepNum === step) el.classList.add('active');
+        });
+        currentStep = step;
+        // Generate review if on step 4
+        if (step === 4) {
+            generateReview();
+        }
+    }
+    function validateStep(step) {
+        const stepElement = document.getElementById(`step${step}`);
+        let isValid = true;
+
+        // Special validation for Step 1: kindergarten selector
+        if (step === 1) {
+            const kgInput = document.getElementById('kindergartenId');
+            if (!kgInput.value) {
+                document.getElementById('kgValidationMsg').style.display = 'block';
+                showToast(enrollmentText('enrollment.select_kindergarten_required', 'يرجى اختيار الروضة من القائمة', 'Please select a kindergarten from the list'), 'warning');
+                return false;
+            }
+        }
+
+        // Standard required-field validation for other steps
+        const inputs = stepElement.querySelectorAll('[required]');
+        inputs.forEach(input => {
+            // Skip the hidden kindergartenId on step 1 (already handled above)
+            if (input.id === 'kindergartenId') return;
+            if (!input.checkValidity()) {
+                input.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                input.classList.remove('is-invalid');
+            }
+        });
+
+        // Check child age eligibility on child info step
+        if (step === 2) {
+            const dobInput = document.getElementById('childDob');
+            if (dobInput && dobInput.value) {
+                const ageInfo = calculateChildAge(dobInput.value);
+                if (!ageInfo.isEligible) {
+                    dobInput.classList.add('is-invalid');
+                    showToast(`${enrollmentText('enrollment.child_age_not_eligible', 'عمر الطفل غير مؤهل للتسجيل', 'Child age is not eligible for enrollment')}: ${ageInfo.message}`, 'error');
+                    return false;
+                }
+            }
+        }
+
+        if (!isValid) {
+            showToast(enrollmentText('forms.fill_required_fields', 'يرجى ملء جميع الحقول المطلوبة', 'Please fill all required fields'), 'warning');
+        }
+        return isValid;
+    }
+    function generateReview() {
+        const form = document.getElementById('enrollmentForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        // Get KG name from selected card or fallback for manager flow
+        const selectedKgNameEl = document.getElementById('selectedKgName');
+        let kindergartenName = (selectedKgNameEl && selectedKgNameEl.textContent) || selectedKindergartenName || enrollmentText('enrollment.assigned_kindergarten', 'الروضة المخصصة', 'Assigned kindergarten');
+
+        // Map gender & nationality for display
+        const genderDisplay = data.gender === 'MALE'
+            ? enrollmentText('common.gender.male', 'ذكر', 'Male')
+            : (data.gender === 'FEMALE'
+                ? enrollmentText('common.gender.female', 'أنثى', 'Female')
+                : data.gender);
+        const nationalityDisplay = data.mother_nationality === 'Jordanian'
+            ? enrollmentText('common.nationality.jordanian', 'أردني', 'Jordanian')
+            : (data.mother_nationality === 'Other'
+                ? enrollmentText('common.other', 'أخرى', 'Other')
+                : data.mother_nationality);
+        const motherFullName = [data.mother_first_name, data.mother_second_name, data.mother_last_name].filter(Boolean).join(' ');
+        const idDisplay = data.mother_national_id
+            ? `<p><strong>${enrollmentText('common.national_id', 'الرقم الوطني', 'National ID')}:</strong> ${data.mother_national_id}</p>`
+            : data.mother_passport_number
+                ? `<p><strong>${enrollmentText('common.passport_number', 'رقم جواز السفر', 'Passport number')}:</strong> ${data.mother_passport_number}</p>`
+                : '';
+        const correspondenceDisplay = formData.has('correspondence_flag')
+            ? `${enrollmentText('common.yes', 'نعم', 'Yes')} ✓`
+            : `${enrollmentText('common.no', 'لا', 'No')} ✗`;
+        const mediaDisplay = formData.has('media_consent')
+            ? `${enrollmentText('common.yes', 'نعم', 'Yes')} ✓`
+            : `${enrollmentText('common.no', 'لا', 'No')} ✗`;
+
+        // Source row (manager only)
+        let sourceHtml = '';
+        const sourceEl = document.getElementById('enrollmentSource');
+        if (sourceEl) {
+            const sourceLabels = {
+                'walk-in': enrollmentText('enrollment.source.walk_in', 'حضوري', 'Walk-in'),
+                online: enrollmentText('enrollment.source.online', 'إلكتروني', 'Online'),
+                manager: enrollmentText('enrollment.source.manager', 'تسجيل مدير', 'Manager entry'),
+            };
+            sourceHtml = `<p><strong>${enrollmentText('enrollment.source', 'مصدر الطلب', 'Request source')}:</strong> ${sourceLabels[sourceEl.value] || sourceEl.value}</p>`;
+        }
+
+        document.getElementById('reviewSummary').innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-primary"><i class="bi bi-building me-2"></i>${enrollmentText('common.kindergarten', 'الروضة', 'Kindergarten')}</h6>
+                    <p>${kindergartenName}</p>
+                </div>
+                ${sourceHtml ? '<div class="col-md-6">' + sourceHtml + '</div>' : ''}
             </div>
-        </div>
-    `;
-}
-
-document.getElementById('enrollmentForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!document.getElementById('confirmData').checked) {
-        window.showToast('يرجى تأكيد صحة البيانات', 'warning');
-        return;
+            <hr>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-primary"><i class="bi bi-emoji-smile me-2"></i>${enrollmentText('enrollment.child_info', 'بيانات الطفل', 'Child information')}</h6>
+                    <p><strong>${enrollmentText('common.name', 'الاسم', 'Name')}:</strong> ${data.first_name} ${data.last_name}</p>
+                    <p><strong>${enrollmentText('common.gender', 'الجنس', 'Gender')}:</strong> ${genderDisplay}</p>
+                    <p><strong>${enrollmentText('common.date_of_birth', 'تاريخ الميلاد', 'Date of birth')}:</strong> ${data.date_of_birth}</p>
+                    <p><strong>${enrollmentText('enrollment.father_name', 'اسم الأب', 'Father name')}:</strong> ${data.father_name}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-primary"><i class="bi bi-person-heart me-2"></i>${enrollmentText('enrollment.mother_info', 'بيانات الأم', 'Mother information')}</h6>
+                    <p><strong>${enrollmentText('common.name', 'الاسم', 'Name')}:</strong> ${motherFullName}</p>
+                    <p><strong>${enrollmentText('common.nationality', 'الجنسية', 'Nationality')}:</strong> ${nationalityDisplay}</p>
+                    ${idDisplay}
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-primary"><i class="bi bi-shield-check me-2"></i>${enrollmentText('enrollment.consents', 'الموافقات', 'Consents')}</h6>
+                    <p><strong>${enrollmentText('enrollment.consent.communication', 'الموافقة على المراسلة', 'Communication consent')}:</strong> ${correspondenceDisplay}</p>
+                    <p><strong>${enrollmentText('enrollment.consent.media', 'الموافقة على الوسائط', 'Media consent')}:</strong> ${mediaDisplay}</p>
+                </div>
+            </div>
+        `;
     }
 
-    const btn = document.getElementById('submitBtn');
-    btn.querySelector('.btn-text').classList.add('d-none');
-    btn.querySelector('.btn-loading').classList.remove('d-none');
-    btn.disabled = true;
-
-    try {
-        const data = Object.fromEntries(new FormData(e.target).entries());
-        await api.createEnrollment(data);
-        window.showToast('تم إرسال طلب التسجيل بنجاح!', 'success');
-        setTimeout(() => window.location.href = '/enrollments', 2000);
-    } catch (error) {
-        btn.querySelector('.btn-text').classList.remove('d-none');
-        btn.querySelector('.btn-loading').classList.add('d-none');
-        btn.disabled = false;
-        window.showToast(error?.message || 'حدث خطأ في إرسال الطلب', 'error');
+    function normalizeValue(value) {
+        return (value || '').toString().trim().toLowerCase();
     }
-});
+
+    async function checkEnrollmentConflicts(data) {
+        if (!isParent) return null;
+        try {
+            const resp = await fetch('/api/parent/children', { headers: getHeaders() });
+            if (!resp.ok) return null;
+            const payload = await resp.json();
+            const children = payload.children || [];
+            const dob = (data.date_of_birth || '').split('T')[0];
+            const match = children.find(c =>
+                normalizeValue(c.first_name) === normalizeValue(data.first_name) &&
+                normalizeValue(c.last_name) === normalizeValue(data.last_name) &&
+                (c.date_of_birth || '').split('T')[0] === dob
+            );
+            if (!match || !match.enrollments) return null;
+
+            const sameKg = match.enrollments.find(e => String(e.kindergarten_id) === String(data.kindergarten_id));
+            if (sameKg) {
+                return { type: 'duplicate', kindergarten: sameKg.kindergarten_name, status: sameKg.status };
+            }
+
+            const activeOther = match.enrollments.find(e => ACTIVE_ENROLLMENT_STATUSES.includes(e.status));
+            if (activeOther) {
+                return { type: 'active', kindergarten: activeOther.kindergarten_name, status: activeOther.status };
+            }
+            return null;
+        } catch (e) {
+            console.warn('Conflict check failed', e);
+            return null;
+        }
+    }
+
+    // Form submission
+    document.getElementById('enrollmentForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Final age validation check before submit
+        const dobInput = document.getElementById('childDob');
+        if (dobInput && dobInput.value) {
+            const ageInfo = calculateChildAge(dobInput.value);
+            if (!ageInfo.isEligible) {
+                showToast(`${enrollmentText('enrollment.submit_age_not_eligible', 'لا يمكن إرسال الطلب: عمر الطفل غير مؤهل', 'Cannot submit request: child age is not eligible')} (${ageInfo.message})`, 'error');
+                return;
+            }
+        }
+
+        if (!document.getElementById('confirmData').checked) {
+            showToast(enrollmentText('enrollment.confirm_data_required', 'يرجى تأكيد صحة البيانات', 'Please confirm data accuracy'), 'warning');
+            return;
+        }
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        if (!data.kindergarten_id && selectedKindergartenId) {
+            data.kindergarten_id = selectedKindergartenId;
+        }
+
+        // Convert checkbox values to proper booleans for API
+        data.correspondence_flag = formData.has('correspondence_flag');
+        data.media_consent = formData.has('media_consent');
+
+        // Remove empty optional fields to avoid validation issues
+        if (!data.mother_second_name) delete data.mother_second_name;
+        if (!data.source) delete data.source;
+
+        const conflict = await checkEnrollmentConflicts(data);
+        if (conflict) {
+            if (conflict.type === 'duplicate') {
+                showToast(enrollmentText('enrollment.duplicate_request', 'يوجد طلب تسجيل لهذا الطفل في هذه الروضة بالفعل', 'An enrollment request already exists for this child in this kindergarten'), 'warning');
+            } else if (conflict.type === 'active') {
+                showToast(enrollmentText('enrollment.already_enrolled_other_kg', 'هذا الطفل مسجل بالفعل في روضة أخرى ولا يمكن تسجيله في أكثر من روضة بنفس الوقت.', 'This child is already enrolled in another kindergarten and cannot be enrolled in more than one at the same time.'), 'error');
+            }
+            return;
+        }
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+        try {
+            await api.createEnrollment(data);
+            showToast(enrollmentText('enrollment.submit_success', 'تم إرسال طلب التسجيل بنجاح!', 'Enrollment request sent successfully!'), 'success');
+            setTimeout(() => {
+                window.location.href = '/enrollments';
+            }, 2000);
+        } catch (error) {
+            if (submitBtn) submitBtn.disabled = false;
+            showToast(error.message || enrollmentText('enrollment.submit_error', 'حدث خطأ في إرسال الطلب', 'An error occurred while submitting the request'), 'error');
+        }
+    });
 </script>
 {% endblock %}

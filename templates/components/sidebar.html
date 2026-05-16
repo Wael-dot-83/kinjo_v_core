@@ -1,495 +1,248 @@
 <!-- Sidebar Navigation -->
-<nav
-  id="sidebarMenu"
-  class="sidebar"
-  aria-label="{{ _('Sidebar Navigation') }}"
-  role="navigation"
->
-  <div class="sidebar-sticky">
-    <!-- User Info Card -->
-    <a
-      href="/profile"
-      class="sidebar-user-card text-decoration-none"
-      style="display: flex"
-    >
-      <div class="sidebar-user-avatar" style="position: relative">
-        <i class="bi bi-person-fill"></i>
-        <span class="sidebar-user-online" title="{{ _('Online') }}"></span>
-      </div>
-      <div class="sidebar-user-info overflow-hidden">
-        <div class="sidebar-user-name text-truncate">
-          {{ current_user.username }}
+<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar app-sidebar collapse">
+    <div class="position-sticky pt-3">
+        <!-- User Info -->
+        <div class="px-3 pb-3 mb-3 border-bottom sidebar-user-card">
+            <div class="d-flex align-items-center">
+                <div
+                    class="avatar-md bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3">
+                    <i class="bi bi-person text-primary fs-4"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0">{{ current_user.username }}</h6>
+                    <small class="text-muted">
+                        {% if current_user.role.value == 'ADMIN' %}
+                        <span data-i18n="roles.admin">{% if ui_lang == 'en' %}System admin{% else %}مدير النظام{% endif %}</span>
+                        {% elif current_user.role.value == 'MANAGER' %}
+                        <span data-i18n="roles.manager">{% if ui_lang == 'en' %}Kindergarten manager{% else %}مدير الروضة{% endif %}</span>
+                        {% elif current_user.role.value == 'SUPERVISOR' %}
+                        <span data-i18n="roles.supervisor">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</span>
+                        {% else %}
+                        <span data-i18n="roles.parent">{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</span>
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
         </div>
-        <div class="sidebar-user-role">
-          {% if current_user.role.value == 'ADMIN' %}{{ _('System Admin') }} {%
-          elif current_user.role.value == 'MANAGER' %}{{ _('Kindergarten
-          Manager') }} {% elif current_user.role.value == 'SUPERVISOR' %}{{
-          _('Supervisor') }} {% else %}{{ _('Parent') }}{% endif %}
-        </div>
-      </div>
-    </a>
 
-    <!-- Scrollable nav content -->
-    <div class="sidebar-nav-content">
-      <!-- ── Main Navigation (all roles) ── -->
-      <p class="sidebar-heading sidebar-label">{{ _('Main Menu') }}</p>
+        <!-- Main Navigation -->
+        <ul class="nav flex-column gap-1 sidebar-nav">
+            <li class="nav-item mb-2">
+                <a class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}" href="/dashboard">
+                    <i class="bi bi-grid-1x2-fill me-2"></i>
+                    <span data-i18n="sidebar.dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
+                </a>
+            </li>
 
-      <ul class="nav flex-column px-1">
-        <li class="nav-item">
-          <a
-            class="nav-link {% if request.url.path == '/dashboard' or request.url.path == '/' %}active{% endif %}"
-            href="/dashboard"
-            title="{{ _('Dashboard') }}"
-          >
-            <i class="bi bi-grid-1x2-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Dashboard') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/messages' in request.url.path or '/communication' in request.url.path %}active{% endif %}"
-            href="{% if current_user.role.value in ['ADMIN', 'MANAGER'] %}/manager/messages{% elif current_user.role.value == 'SUPERVISOR' %}/supervisor/messages{% else %}/messages{% endif %}"
-            title="{{ _('Messages') }}"
-          >
-            <i class="bi bi-chat-dots-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Messages') }}</span>
-            <span
-              class="badge badge-pill sidebar-badge bg-danger"
-              id="msgBadge"
-              style="display: none"
-              >0</span
-            >
-          </a>
-        </li>
-      </ul>
+            <!-- Daily Operations Section -->
+            <li class="sidebar-divider-item" aria-hidden="true">
+                <div class="sidebar-divider"></div>
+            </li>
+            <li class="sidebar-section-item">
+                <p class="sidebar-section-title px-3 mt-3 mb-2 text-muted small fw-bold" data-i18n="sidebar.section.daily_ops">
+                    {% if ui_lang == 'en' %}Daily Operations{% else %}التشغيل اليومي{% endif %}</p>
+            </li>
 
-      <!-- ── Operations (Manager only) ── -->
-      {% if current_user.role.value == 'MANAGER' %}
-      <p class="sidebar-heading sidebar-label mt-1">{{ _('Operations') }}</p>
-      <ul class="nav flex-column px-1">
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/kindergartens' in request.url.path %}active{% endif %}"
-            href="/kindergartens"
-            title="{{ _('Kindergartens') }}"
-          >
-            <i class="bi bi-building-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Kindergartens') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/attendance' in request.url.path %}active{% endif %}"
-            href="/attendance/daily"
-            title="{{ _('Attendance') }}"
-          >
-            <i class="bi bi-calendar-check-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Attendance') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/enrollments' in request.url.path %}active{% endif %}"
-            href="/enrollments"
-            title="{{ _('Enrollments') }}"
-          >
-            <i class="bi bi-person-plus-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Enrollments') }}</span>
-            <span
-              class="badge sidebar-badge"
-              id="enrollmentBadge"
-              style="display:none;background:rgba(245,158,11,0.18);color:#d97706;"
-              >0</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/manager/daily-reports' in request.url.path or '/daily-reports' in request.url.path or '/reports' in request.url.path %}active{% endif %}"
-            href="/manager/daily-reports"
-            title="{{ _('Daily Reports') }}"
-          >
-            <i class="bi bi-journal-richtext nav-icon"></i>
-            <span class="nav-text">{{ _('Daily Reports') }}</span>
-            <span
-              class="badge sidebar-badge"
-              id="reportsBadge"
-              style="display:none;background:rgba(6,182,212,0.18);color:#0891b2;"
-              >0</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/safety' in request.url.path or '/incidents' in request.url.path %}active{% endif %}"
-            href="/safety"
-            title="{{ _('Safety & Incidents') }}"
-          >
-            <i class="bi bi-shield-fill-check nav-icon"></i>
-            <span class="nav-text">{{ _('Safety & Incidents') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/curriculum' in request.url.path %}active{% endif %}"
-            href="/curriculum"
-            title="{{ _('Curriculum & Notes') }}"
-          >
-            <i class="bi bi-book-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Curriculum & Notes') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/manager/classes' in request.url.path %}active{% endif %}"
-            href="/manager/classes"
-            title="{{ _('Classes') }}"
-          >
-            <i class="bi bi-grid-3x3-gap-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Classes') }}</span>
-          </a>
-        </li>
-      </ul>
-      {% endif %}
-      <!-- ── Kindergartens (Admin only) ── -->
-      {% if current_user.role.value == 'ADMIN' %}
-      <p class="sidebar-heading sidebar-label mt-1">{{ _('Operations') }}</p>
-      <ul class="nav flex-column px-1">
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/kindergartens' in request.url.path %}active{% endif %}"
-            href="/kindergartens"
-            title="{{ _('Kindergartens') }}"
-          >
-            <i class="bi bi-building-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Kindergartens') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/enrollments' in request.url.path %}active{% endif %}"
-            href="/enrollments"
-            title="{{ _('Enrollments') }}"
-          >
-            <i class="bi bi-person-plus-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Enrollments') }}</span>
-          </a>
-        </li>
-      </ul>
-      {% endif %}
+            {% if current_user.role.value in ['MANAGER', 'SUPERVISOR'] %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/attendance' in request.url.path %}active{% endif %}" href="/attendance/daily">
+                    <i class="bi bi-calendar-check me-2"></i>
+                    <span data-i18n="sidebar.attendance_daily">{% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}</span>
+                </a>
+            </li>
+            {% endif %}
 
-      <!-- ── Staff Operations (Supervisor only) ── -->
-      {% if current_user.role.value == 'SUPERVISOR' %}
-      <p class="sidebar-heading sidebar-label mt-1">{{ _('Operations') }}</p>
-      <ul class="nav flex-column px-1">
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/supervisor/attendance' in request.url.path %}active{% endif %}"
-            href="/supervisor/attendance"
-            title="{{ _('Attendance') }}"
-          >
-            <i class="bi bi-calendar-check-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Attendance') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/supervisor/daily-reports' in request.url.path %}active{% endif %}"
-            href="/supervisor/daily-reports"
-            title="{{ _('Daily Reports') }}"
-          >
-            <i class="bi bi-journal-richtext nav-icon"></i>
-            <span class="nav-text">{{ _('Daily Reports') }}</span>
-            <span
-              class="badge sidebar-badge"
-              id="reportsBadgeSup"
-              style="display:none;background:rgba(6,182,212,0.18);color:#0891b2;"
-              >0</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/supervisor/safety' in request.url.path %}active{% endif %}"
-            href="/supervisor/safety"
-            title="{{ _('Safety & Incidents') }}"
-          >
-            <i class="bi bi-shield-fill-check nav-icon"></i>
-            <span class="nav-text">{{ _('Safety & Incidents') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/supervisor/kpi' in request.url.path %}active{% endif %}"
-            href="/supervisor/kpi"
-            title="{{ _('My KPIs') }}"
-          >
-            <i class="bi bi-bar-chart-line-fill nav-icon"></i>
-            <span class="nav-text">{{ _('My KPIs') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/supervisor/observations' in request.url.path or '/curriculum' in request.url.path %}active{% endif %}"
-            href="/supervisor/observations"
-            title="{{ _('Observations') }}"
-          >
-            <i class="bi bi-book-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Observations') }}</span>
-          </a>
-        </li>
-      </ul>
-      {% endif %}
 
-      <!-- ── Parent Section ── -->
-      {% if current_user.role.value == 'PARENT' %}
-      <p class="sidebar-heading sidebar-label mt-1">{{ _('My Services') }}</p>
-      <ul class="nav flex-column px-1">
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/my-reports' in request.url.path %}active{% endif %}"
-            href="/my-reports"
-            title="{{ _('My Children Reports') }}"
-          >
-            <i class="bi bi-journal-richtext nav-icon"></i>
-            <span class="nav-text">{{ _('My Children Reports') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if request.url.path == '/parent/children' %}active{% endif %}"
-            href="/parent/children"
-            title="{{ _('My Children') }}"
-          >
-            <i class="bi bi-people-fill nav-icon"></i>
-            <span class="nav-text">{{ _('My Children') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if request.url.path == '/parent/attendance' %}active{% endif %}"
-            href="/parent/attendance"
-            title="{{ _('Attendance') }}"
-          >
-            <i class="bi bi-calendar-check-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Attendance') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if request.url.path == '/parent/enrollments' %}active{% endif %}"
-            href="/parent/enrollments"
-            title="{{ _('Enrollment Applications') }}"
-          >
-            <i class="bi bi-clipboard-check-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Enrollment Applications') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/enroll' in request.url.path %}active{% endif %}"
-            href="/enroll"
-            title="{{ _('Enroll a Child') }}"
-          >
-            <i class="bi bi-person-plus-fill nav-icon"></i>
-            <span class="nav-text">{{ _('Enroll a Child') }}</span>
-          </a>
-        </li>
-      </ul>
-      {% endif %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/safety' in request.url.path or '/incidents' in request.url.path %}active{% endif %}"
+                    href="/safety">
+                    <i class="bi bi-shield-lock me-2"></i>
+                    <span data-i18n="sidebar.safety_incidents">{% if ui_lang == 'en' %}Safety and Incidents{% else %}السلامة والحوادث{% endif %}</span>
+                </a>
+            </li>
 
-      <!-- ── Admin Management ── -->
-      {% if current_user.role.value == 'ADMIN' %}
-      <p class="sidebar-heading sidebar-label mt-1">
-        {{ _('Management & Reports') }}
-      </p>
-      <ul class="nav flex-column px-1">
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/kpi' in request.url.path %}active{% endif %}"
-            href="/kpi"
-            title="{{ _('KPI') }}"
-          >
-            <i class="bi bi-bar-chart-line-fill nav-icon"></i>
-            <span class="nav-text">{{ _('KPI') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/tasks' in request.url.path %}active{% endif %}"
-            href="/tasks"
-            title="{{ _('Tasks') }}"
-          >
-            <i class="bi bi-check2-square nav-icon"></i>
-            <span class="nav-text">{{ _('Tasks') }}</span>
-            <span
-              class="badge sidebar-badge"
-              id="tasksBadge"
-              style="
-                display: none;
-                background: rgba(79, 70, 229, 0.18);
-                color: var(--kinjo-primary);
-              "
-              >0</span
-            >
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/admin/users' in request.url.path %}active{% endif %}"
-            href="/admin/users"
-            title="{{ _('User Management') }}"
-          >
-            <i class="bi bi-people-fill nav-icon"></i>
-            <span class="nav-text">{{ _('User Management') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/admin/analytics' in request.url.path %}active{% endif %}"
-            href="/admin/analytics"
-            title="{{ _('Analytics & Reports') }}"
-          >
-            <i class="bi bi-graph-up-arrow nav-icon"></i>
-            <span class="nav-text">{{ _('Analytics & Reports') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/admin/safety-analytics' in request.url.path %}active{% endif %}"
-            href="/admin/safety-analytics"
-            title="تحليلات الحوادث"
-          >
-            <i class="bi bi-shield-exclamation nav-icon"></i>
-            <span class="nav-text">تحليلات الحوادث</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/audit-logs' in request.url.path %}active{% endif %}"
-            href="/audit-logs"
-            title="{{ _('Activity Log') }}"
-          >
-            <i class="bi bi-clock-history nav-icon"></i>
-            <span class="nav-text">{{ _('Activity Log') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/admin/contact-messages' in request.url.path %}active{% endif %}"
-            href="/admin/contact-messages"
-            title="رسائل التواصل"
-          >
-            <i class="bi bi-headset nav-icon"></i>
-            <span class="nav-text">رسائل التواصل</span>
-          </a>
-        </li>
-      </ul>
-      {% endif %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/messages' in request.url.path or '/communication' in request.url.path %}active{% endif %}"
+                    href="/messages">
+                    <i class="bi bi-chat-left-dots me-2"></i>
+                    <span data-i18n="sidebar.messages">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</span>
+                </a>
+            </li>
+            {% if current_user.role.value == 'SUPERVISOR' %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/supervisor/performance' in request.url.path %}active{% endif %}"
+                    href="/supervisor/performance">
+                    <i class="bi bi-clipboard-data me-2"></i>
+                    <span data-i18n="sidebar.supervisor_performance">{% if ui_lang == 'en' %}My Professional Performance{% else %}أدائي المهني{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/supervisor/observations' in request.url.path %}active{% endif %}"
+                    href="/supervisor/observations">
+                    <i class="bi bi-eye me-2"></i>
+                    <span data-i18n="sidebar.supervisor_observations">{% if ui_lang == 'en' %}My Educational Observations{% else %}ملاحظاتي التربوية{% endif %}</span>
+                </a>
+            </li>
+            {% endif %}
 
-      <!-- ── Manager Management ── -->
-      {% if current_user.role.value == 'MANAGER' %}
-      <p class="sidebar-heading sidebar-label mt-1">
-        {{ _('Management & Reports') }}
-      </p>
-      <ul class="nav flex-column px-1">
-        <li class="nav-item">
-          <a
-            class="nav-link {% if request.url.path == '/manager/supervisors' %}active{% endif %}"
-            href="/manager/supervisors"
-            title="Supervisors"
-          >
-            <i class="bi bi-person-badge-fill nav-icon"></i>
-            <span class="nav-text">Supervisors</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if request.url.path == '/manager/children' %}active{% endif %}"
-            href="/manager/children"
-            title="Children"
-          >
-            <i class="bi bi-person-hearts nav-icon"></i>
-            <span class="nav-text">Children</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if request.url.path == '/manager/new-message' %}active{% endif %}"
-            href="/manager/new-message"
-            title="New parent message"
-          >
-            <i class="bi bi-send-fill nav-icon"></i>
-            <span class="nav-text">New parent message</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/kpi' in request.url.path %}active{% endif %}"
-            href="/kpi"
-            title="{{ _('KPI') }}"
-          >
-            <i class="bi bi-bar-chart-line-fill nav-icon"></i>
-            <span class="nav-text">{{ _('KPI') }}</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a
-            class="nav-link {% if '/tasks' in request.url.path %}active{% endif %}"
-            href="/tasks"
-            title="{{ _('Tasks') }}"
-          >
-            <i class="bi bi-check2-square nav-icon"></i>
-            <span class="nav-text">{{ _('Tasks') }}</span>
-            <span
-              class="badge sidebar-badge"
-              id="tasksBadgeMgr"
-              style="
-                display: none;
-                background: rgba(79, 70, 229, 0.18);
-                color: var(--kinjo-primary);
-              "
-              >0</span
-            >
-          </a>
-        </li>
-      </ul>
-      {% endif %}
+            <!-- Reports Section -->
+            <li class="sidebar-divider-item" aria-hidden="true"><div class="sidebar-divider"></div></li>
+            <li class="sidebar-section-item">
+                <p class="sidebar-section-title px-3 mt-3 mb-2 text-muted small fw-bold" data-i18n="sidebar.section.reports_requests">
+                    {% if ui_lang == 'en' %}Reports and Requests{% else %}التقارير والطلبات{% endif %}</p>
+            </li>
+
+            {% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/enrollments' in request.url.path %}active{% endif %}" href="/enrollments">
+                    <i class="bi bi-person-plus me-2"></i>
+                    <span data-i18n="sidebar.enrollment_requests">{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}</span>
+                </a>
+            </li>
+            {% endif %}
+            {% if current_user.role.value in ['ADMIN', 'MANAGER', 'SUPERVISOR'] %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/daily-reports' in request.url.path or '/reports' in request.url.path %}active{% endif %}"
+                    href="/daily-reports">
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    <span data-i18n="sidebar.daily_reports">{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}</span>
+                </a>
+            </li>
+            {% endif %}
+
+            {% if current_user.role.value == 'PARENT' %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/parent/profile' in request.url.path %}active{% endif %}" href="/parent/profile">
+                    <i class="bi bi-person-circle me-2"></i>
+                    <span data-i18n="sidebar.parent_profile">{% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/parent/children' in request.url.path %}active{% endif %}" href="/parent/children">
+                    <i class="bi bi-people me-2"></i>
+                    <span data-i18n="sidebar.parent_children">{% if ui_lang == 'en' %}My Children{% else %}أطفالي{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/my-reports' in request.url.path %}active{% endif %}" href="/my-reports">
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    <span data-i18n="sidebar.parent_reports">{% if ui_lang == 'en' %}My Children Reports{% else %}تقارير أطفالي{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/parent/enrollments' in request.url.path %}active{% endif %}"
+                    href="/parent/enrollments">
+                    <i class="bi bi-clipboard-check me-2"></i>
+                    <span data-i18n="sidebar.parent_enrollments">{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/enroll' in request.url.path %}active{% endif %}" href="/enroll">
+                    <i class="bi bi-person-plus me-2"></i>
+                    <span data-i18n="sidebar.parent_new_enrollment">{% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/parent/attendance' in request.url.path %}active{% endif %}" href="/parent/attendance">
+                    <i class="bi bi-calendar-check me-2"></i>
+                    <span data-i18n="sidebar.parent_attendance">{% if ui_lang == 'en' %}Attendance{% else %}سجل الحضور{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/absence-requests' in request.url.path %}active{% endif %}" href="/absence-requests">
+                    <i class="bi bi-calendar-x me-2"></i>
+                    <span data-i18n="sidebar.parent_absence">{% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الغياب{% endif %}</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <!-- Management Section -->
+            {% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
+            <li class="sidebar-divider-item" aria-hidden="true"><div class="sidebar-divider"></div></li>
+            <li class="sidebar-section-item">
+                <p class="sidebar-section-title px-3 mt-3 mb-2 text-muted small fw-bold" data-i18n="sidebar.section.management">{% if ui_lang == 'en' %}Management{% else %}الإدارة{% endif %}
+                </p>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link {% if '/kpi' in request.url.path %}active{% endif %}" href="/kpi">
+                    <i class="bi bi-bar-chart-line me-2"></i>
+                    <span data-i18n="sidebar.kpi">{% if ui_lang == 'en' %}Key Performance Indicators (KPI){% else %}مؤشرات الأداء (KPI){% endif %}</span>
+                </a>
+            </li>
+            {% if current_user.role.value == 'MANAGER' %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/manager/benchmarking' in request.url.path %}active{% endif %}"
+                    href="/manager/benchmarking">
+                    <i class="bi bi-percent me-2"></i>
+                    <span data-i18n="sidebar.manager_benchmarking">{% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %}</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <li class="nav-item">
+                <a class="nav-link {% if '/kindergartens' in request.url.path %}active{% endif %}" href="/kindergartens">
+                    <i class="bi bi-building-gear me-2"></i>
+                    <span data-i18n="sidebar.kindergarten_info">{% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link {% if '/classes' in request.url.path %}active{% endif %}" href="/classes">
+                    <i class="bi bi-people-fill me-2"></i>
+                    <span data-i18n="sidebar.classes">{% if ui_lang == 'en' %}Classes{% else %}الشعب الصفية{% endif %}</span>
+                </a>
+            </li>
+
+            {% if current_user.role.value == 'ADMIN' %}
+            <li class="nav-item">
+                <a class="nav-link {% if '/admin/users' in request.url.path %}active{% endif %}" href="/admin/users">
+                    <i class="bi bi-people me-2"></i>
+                    <span data-i18n="sidebar.admin_users">{% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/admin/analytics' in request.url.path %}active{% endif %}" href="/admin/analytics">
+                    <i class="bi bi-graph-up-arrow me-2"></i>
+                    <span data-i18n="sidebar.admin_analytics">{% if ui_lang == 'en' %}Advanced Analytics{% else %}التحليلات المتقدمة{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/admin/reports/incidents' in request.url.path %}active{% endif %}"
+                    href="/admin/reports/incidents/generate">
+                    <i class="bi bi-file-earmark-plus me-2"></i>
+                    <span data-i18n="sidebar.admin_incident_reports">{% if ui_lang == 'en' %}Generate Incident Reports{% else %}إنشاء تقارير الحوادث{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/admin/governance-reports' in request.url.path %}active{% endif %}"
+                    href="/admin/governance-reports">
+                    <i class="bi bi-clipboard2-data me-2"></i>
+                    <span data-i18n="sidebar.admin_governance_reports">{% if ui_lang == 'en' %}Daily Report Governance{% else %}حوكمة التقارير اليومية{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/admin/classification' in request.url.path %}active{% endif %}"
+                    href="/admin/classification">
+                    <i class="bi bi-trophy me-2"></i>
+                    <span data-i18n="sidebar.admin_classification">{% if ui_lang == 'en' %}Classification and Benchmarking{% else %}التصنيف والمقارنات{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/audit-logs' in request.url.path %}active{% endif %}" href="/audit-logs">
+                    <i class="bi bi-clock-history me-2"></i>
+                    <span data-i18n="sidebar.audit_logs">{% if ui_lang == 'en' %}Task and Activity Log{% else %}سجل المهام والنشاط{% endif %}</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <li class="nav-item">
+                <a class="nav-link {% if '/tasks' in request.url.path %}active{% endif %}" href="/tasks">
+                    <i class="bi bi-check2-square me-2"></i>
+                    <span data-i18n="sidebar.tasks">{% if ui_lang == 'en' %}Task List{% else %}قائمة المهام{% endif %}</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
     </div>
-    <!-- /sidebar-nav-content -->
-
-    <!-- Quick Actions -->
-    <div class="sidebar-actions">
-      {% if current_user.role.value == 'MANAGER' %}
-      <a href="/attendance/check-in" class="btn btn-success btn-sm">
-        <i class="bi bi-box-arrow-in-left"></i>
-        <span>{{ _('Record Attendance') }}</span>
-      </a>
-      <a href="/daily-reports/create" class="btn btn-primary btn-sm">
-        <i class="bi bi-journal-plus"></i>
-        <span>{{ _('New Daily Report') }}</span>
-      </a>
-      {% endif %}
-      {% if current_user.role.value == 'SUPERVISOR' %}
-      <a href="/supervisor/attendance" class="btn btn-success btn-sm">
-        <i class="bi bi-box-arrow-in-left"></i>
-        <span>{{ _('Record Attendance') }}</span>
-      </a>
-      <a href="/supervisor/daily-reports/create" class="btn btn-primary btn-sm">
-        <i class="bi bi-journal-plus"></i>
-        <span>{{ _('New Daily Report') }}</span>
-      </a>
-      {% endif %}
-      {% if current_user.role.value == 'ADMIN' %}
-      <a href="/admin/safety-analytics" class="btn btn-outline-primary btn-sm">
-        <i class="bi bi-graph-up-arrow"></i>
-        <span>تحليلات الحوادث</span>
-      </a>
-      {% endif %}
-      {% if current_user.role.value == 'PARENT' %}
-      <a href="/contact" class="btn btn-ghost btn-sm">
-        <i class="bi bi-headset"></i>
-        <span>{{ _('Contact Us') }}</span>
-      </a>
-      {% endif %}
-    </div>
-  </div>
-  <!-- /sidebar-sticky -->
 </nav>

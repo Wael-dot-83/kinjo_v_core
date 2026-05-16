@@ -157,33 +157,35 @@ class TestEnrollmentWorkflowIntegration:
 
     def test_full_enrollment_workflow(
         self, client, test_db, parent_user, auth_headers_parent,
-        auth_headers_manager, sample_kindergarten
+        auth_headers_manager, sample_kindergarten, manager_user
     ):
         """Happy path: Complete enrollment from application to acceptance"""
         # Step 1: Parent creates enrollment application
         enrollment_data = {
-            "first_name": "أمير",
-            "last_name": "الأحمد",
+            "first_name": "Amir",
+            "last_name": parent_user.parent_profile.last_name,
             "gender": "male",
             "date_of_birth": "2023-06-15",  # ~2.5 years old
-            "father_name": "محمد الأحمد",
-            "mother_first_name": "فاطمة",
-            "mother_last_name": "خليل",
+            "father_name": "Mohammad Al-Ahmad",
+            "mother_first_name": "Fatima",
+            "mother_last_name": "Khalil",
             "mother_nationality": "Jordanian",
             "mother_national_id": "1111111111",
+            "national_id": "2222222222",
             "kindergarten_id": sample_kindergarten.id
         }
-        
+
         response = client.post(
             "/api/enrollment/apply",
             headers=auth_headers_parent,
             json=enrollment_data
         )
-        assert response.status_code == 201
+        assert response.status_code == 201, f"Enrollment apply failed: {response.text}"
         enrollment = response.json()
         enrollment_id = enrollment["id"]
+        child_id = enrollment["child_id"]
         assert enrollment["status"] == "draft"
-        
+
         # Step 2: Submit application
         response = client.post(
             f"/api/enrollment/{enrollment_id}/submit",
@@ -191,7 +193,17 @@ class TestEnrollmentWorkflowIntegration:
         )
         assert response.status_code == 200
         assert response.json()["status"] == "submitted"
-        
+
+        # Add required documents before acceptance
+        import models as m
+        for doc_type in ("birth_certificate", "health_certificate"):
+            test_db.add(m.ChildDocument(
+                child_id=child_id, document_type=doc_type,
+                file_name=f"{doc_type}.pdf",
+                file_path=f"/fake/{doc_type}.pdf", uploaded_by=manager_user.id,
+            ))
+        test_db.commit()
+
         # Step 3: Manager reviews and accepts
         response = client.post(
             f"/api/enrollment/{enrollment_id}/review",
@@ -203,7 +215,6 @@ class TestEnrollmentWorkflowIntegration:
     def test_enrollment_age_validation(
         self, client, auth_headers_parent, sample_kindergarten
     ):
-        """Sad path: Children outside age range rejected"""
         """Sad path: Children outside age range rejected"""
         # Child too young (less than 70 days)
         too_young_data = {
@@ -249,7 +260,7 @@ class TestEnrollmentWorkflowIntegration:
             first_name="Active",
             last_name="Child",
             gender=models.Gender.MALE,
-            date_of_birth=date(2023, 1, 1),
+            date_of_birth=date.today() - timedelta(days=365 * 3),
             father_name="Father",
             mother_first_name="Mother",
             mother_last_name="Last",
@@ -297,18 +308,28 @@ class TestAttendanceIntegration:
 
     def test_complete_attendance_day(
         self, client, test_db, auth_headers_manager,
-        sample_kindergarten, sample_child
+        sample_kindergarten, sample_child, sample_class, manager_user
     ):
         """Happy path: Full day attendance cycle"""
-        # Create active enrollment
+        # Create active enrollment with class assignment
         enrollment = models.EnrollmentApplication(
             child_id=sample_child.id,
             kindergarten_id=sample_kindergarten.id,
+            class_id=sample_class.id,
             status=models.EnrollmentStatus.ACTIVE,
             source="online",
             enrollment_start_date=date.today()
         )
         test_db.add(enrollment)
+        
+        # Manager needs supervisor assignment to the class
+        assignment = models.SupervisorAssignment(
+            class_id=sample_class.id,
+            supervisor_id=manager_user.id,
+            is_primary=True,
+            start_date=date.today()
+        )
+        test_db.add(assignment)
         test_db.commit()
         
         # Check-in at 8:00 AM
@@ -339,18 +360,27 @@ class TestAttendanceIntegration:
 
     def test_prevent_double_checkin(
         self, client, test_db, auth_headers_manager,
-        sample_kindergarten, sample_child
+        sample_kindergarten, sample_child, sample_class, manager_user
     ):
         """Sad path: Cannot check-in same child twice"""
-        # Setup
+        # Setup enrollment with class and supervisor assignment
         enrollment = models.EnrollmentApplication(
             child_id=sample_child.id,
             kindergarten_id=sample_kindergarten.id,
+            class_id=sample_class.id,
             status=models.EnrollmentStatus.ACTIVE,
             source="online",
             enrollment_start_date=date.today()
         )
         test_db.add(enrollment)
+        
+        assignment = models.SupervisorAssignment(
+            class_id=sample_class.id,
+            supervisor_id=manager_user.id,
+            is_primary=True,
+            start_date=date.today()
+        )
+        test_db.add(assignment)
         test_db.commit()
         
         # First check-in
@@ -369,9 +399,30 @@ class TestAttendanceIntegration:
         assert response.status_code == 400
 
     def test_checkout_without_checkin_fails(
-        self, client, test_db, auth_headers_manager, sample_child
+        self, client, test_db, auth_headers_manager, sample_child,
+        sample_kindergarten, sample_class, manager_user
     ):
         """Sad path: Cannot check-out without prior check-in"""
+        # Setup enrollment and class assignment so we get past auth checks
+        enrollment = models.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=sample_kindergarten.id,
+            class_id=sample_class.id,
+            status=models.EnrollmentStatus.ACTIVE,
+            source="online",
+            enrollment_start_date=date.today()
+        )
+        test_db.add(enrollment)
+        
+        assignment = models.SupervisorAssignment(
+            class_id=sample_class.id,
+            supervisor_id=manager_user.id,
+            is_primary=True,
+            start_date=date.today()
+        )
+        test_db.add(assignment)
+        test_db.commit()
+
         response = client.post(
             "/api/attendance/check-out",
             headers=auth_headers_manager,
@@ -413,9 +464,11 @@ class TestDailyReportsIntegration:
         
         attendance = models.AttendanceLog(
             child_id=sample_child.id,
+            class_id=sample_class.id,
             date=date.today(),
             check_in_at=datetime.now(),
-            method=models.AttendanceMethod.PIN
+            status=models.AttendanceStatus.PRESENT,
+            recorded_by=supervisor_user.id
         )
         test_db.add(attendance)
         test_db.commit()
@@ -433,26 +486,34 @@ class TestDailyReportsIntegration:
             "nap_start": "12:00",
             "nap_end": "13:30",
             "activities": "لعب خارجي، قراءة قصة، رسم",
+            "mood": "سعيد",
+            "health_notes": "بصحة جيدة",
             "notes": "يوم رائع! تفاعل بشكل ممتاز مع الأنشطة"
         }
         
-        create_response = client.post(
-            "/api/daily-reports/create",
-            headers=auth_headers_supervisor,
-            json=report_data
-        )
-        assert create_response.status_code == 200
-        report = create_response.json()
-        report_id = report["id"]
-        assert report["status"] == "draft"
-        
-        # Submit report
-        submit_response = client.post(
-            f"/api/daily-reports/{report_id}/submit",
-            headers=auth_headers_supervisor
-        )
-        assert submit_response.status_code == 200
-        assert submit_response.json()["status"] == "submitted"
+        # Mock datetime.now to avoid 4PM submission deadline
+        morning_time = datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)
+        with patch("api.daily_reports_routes.datetime") as mock_dt:
+            mock_dt.now.return_value = morning_time
+            mock_dt.side_effect = lambda *args, **kw: datetime(*args, **kw)
+            
+            create_response = client.post(
+                "/api/daily-reports/create",
+                headers=auth_headers_supervisor,
+                json=report_data
+            )
+            assert create_response.status_code == 201
+            report = create_response.json()
+            report_id = report["id"]
+            assert report["status"] == "draft"
+            
+            # Submit report
+            submit_response = client.post(
+                f"/api/daily-reports/{report_id}/submit",
+                headers=auth_headers_supervisor
+            )
+            assert submit_response.status_code == 200
+            assert submit_response.json()["status"] == "submitted"
         
         # Approve report
         approve_response = client.post(
@@ -470,6 +531,7 @@ class TestDailyReportsIntegration:
         # Create draft report
         draft_report = models.DailyReport(
             child_id=sample_child.id,
+            kindergarten_id=sample_child.enrollments[0].kindergarten_id if sample_child.enrollments else 1,
             date=date.today() - timedelta(days=1),
             status=models.DailyReportStatus.DRAFT,
             submitted_by=1,
@@ -481,6 +543,7 @@ class TestDailyReportsIntegration:
         # Create approved report
         approved_report = models.DailyReport(
             child_id=sample_child.id,
+            kindergarten_id=sample_child.enrollments[0].kindergarten_id if sample_child.enrollments else 1,
             date=date.today(),
             status=models.DailyReportStatus.APPROVED,
             submitted_by=1,
@@ -550,8 +613,8 @@ class TestKPIGovernanceIntegration:
         )
         assert response.status_code == 200
         kpi = response.json()
-        assert kpi["kpi_name"] == "attendance_rate"
-        assert 0 <= kpi["kpi_value"] <= 100
+        assert "attendance_rate" in kpi
+        assert 0 <= kpi["attendance_rate"] <= 100
 
     def test_governance_score_calculation(
         self, client, test_db, auth_headers_admin, sample_kindergarten
@@ -568,9 +631,9 @@ class TestKPIGovernanceIntegration:
         )
         assert response.status_code == 200
         score = response.json()
-        assert "final_governance_score" in score
-        assert "band" in score
-        assert score["band"] in ["RED", "AMBER", "GREEN"]
+        assert "governance_score" in score
+        assert "governance_band" in score
+        assert score["governance_band"] in ["RED", "AMBER", "GREEN"]
 
 
 # ============================================================================
@@ -595,9 +658,54 @@ class TestSupervisorOperationsIntegration:
                 "is_primary": True
             }
         )
-        assert response.status_code == 200
+        assert response.status_code == 201
         assignment = response.json()
         assert assignment["is_primary"] is True
+
+    def test_supervisor_assignment_uniqueness_enforced(
+        self, client, test_db, manager_user, supervisor_user,
+        auth_headers_manager, sample_class, sample_kindergarten
+    ):
+        """Supervisors cannot be assigned to multiple classes (409 conflict)"""
+        other_class = models.Class(
+            kindergarten_id=sample_kindergarten.id,
+            name_ar="Conflict Class",
+            name_en="Conflict Class",
+            class_code="CONF-001",
+            age_group="AGE_2_4",
+            capacity_total=12,
+            min_age_months=30,
+            max_age_months=48,
+            is_active=True
+        )
+        test_db.add(other_class)
+        test_db.commit()
+        test_db.refresh(other_class)
+
+        response = client.post(
+            "/api/supervisor/assign",
+            headers=auth_headers_manager,
+            json={
+                "supervisor_id": supervisor_user.id,
+                "class_id": sample_class.id,
+                "start_date": date.today().isoformat(),
+                "is_primary": True
+            }
+        )
+        assert response.status_code == 201
+
+        conflict = client.post(
+            "/api/supervisor/assign",
+            headers=auth_headers_manager,
+            json={
+                "supervisor_id": supervisor_user.id,
+                "class_id": other_class.id,
+                "start_date": date.today().isoformat(),
+                "is_primary": False
+            }
+        )
+        assert conflict.status_code == 409
+        assert "already assigned" in conflict.json().get("detail", "").lower()
 
     def test_observation_recording(
         self, client, test_db, supervisor_user, auth_headers_supervisor,
@@ -633,7 +741,155 @@ class TestSupervisorOperationsIntegration:
                 "mastery_level": "exceeds"
             }
         )
+        assert response.status_code == 201
+
+    def test_supervisor_children_endpoint_is_class_scoped(
+        self, client, test_db, supervisor_user, auth_headers_supervisor,
+        sample_class, sample_child, sample_kindergarten
+    ):
+        """Supervisor must only receive children from assigned classes."""
+        assignment = models.SupervisorAssignment(
+            class_id=sample_class.id,
+            supervisor_id=supervisor_user.id,
+            is_primary=True,
+            start_date=date.today()
+        )
+        test_db.add(assignment)
+
+        enrollment_allowed = models.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=sample_kindergarten.id,
+            class_id=sample_class.id,
+            status=models.EnrollmentStatus.ACTIVE,
+            source="online"
+        )
+        test_db.add(enrollment_allowed)
+
+        other_class = models.Class(
+            kindergarten_id=sample_kindergarten.id,
+            name_ar="الصف غير المسند",
+            name_en="Unassigned Class",
+            class_code="UNASSIGNED-01",
+            age_group="AGE_2_4",
+            capacity_total=15,
+            min_age_months=24,
+            max_age_months=48,
+            is_active=True
+        )
+        test_db.add(other_class)
+        test_db.flush()
+
+        other_child = models.Child(
+            parent_id=sample_child.parent_id,
+            first_name="سارة",
+            last_name="الخطيب",
+            gender=models.Gender.FEMALE,
+            date_of_birth=date.today() - timedelta(days=365 * 4),
+            father_name="خالد الخطيب",
+            mother_first_name="ريم",
+            mother_last_name="الخطيب",
+            mother_nationality="Jordanian",
+            mother_national_id="1000000001",
+            media_consent=True
+        )
+        test_db.add(other_child)
+        test_db.flush()
+
+        enrollment_blocked = models.EnrollmentApplication(
+            child_id=other_child.id,
+            kindergarten_id=sample_kindergarten.id,
+            class_id=other_class.id,
+            status=models.EnrollmentStatus.ACTIVE,
+            source="online"
+        )
+        test_db.add(enrollment_blocked)
+        test_db.commit()
+
+        response = client.get("/api/supervisor/children", headers=auth_headers_supervisor)
         assert response.status_code == 200
+        ids = {child["id"] for child in response.json().get("children", [])}
+        assert sample_child.id in ids
+        assert other_child.id not in ids
+
+    def test_supervisor_observation_access_blocked_for_unassigned_child(
+        self, client, test_db, supervisor_user, auth_headers_supervisor,
+        sample_class, sample_child, sample_kindergarten
+    ):
+        """Supervisor cannot create/read observations for children outside assigned classes."""
+        assignment = models.SupervisorAssignment(
+            class_id=sample_class.id,
+            supervisor_id=supervisor_user.id,
+            is_primary=True,
+            start_date=date.today()
+        )
+        test_db.add(assignment)
+
+        enrollment_allowed = models.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=sample_kindergarten.id,
+            class_id=sample_class.id,
+            status=models.EnrollmentStatus.ACTIVE,
+            source="online"
+        )
+        test_db.add(enrollment_allowed)
+
+        other_class = models.Class(
+            kindergarten_id=sample_kindergarten.id,
+            name_ar="الصف الخارجي",
+            name_en="External Class",
+            class_code="EXTERNAL-01",
+            age_group="AGE_2_4",
+            capacity_total=15,
+            min_age_months=24,
+            max_age_months=48,
+            is_active=True
+        )
+        test_db.add(other_class)
+        test_db.flush()
+
+        other_child = models.Child(
+            parent_id=sample_child.parent_id,
+            first_name="عمر",
+            last_name="الحسن",
+            gender=models.Gender.MALE,
+            date_of_birth=date.today() - timedelta(days=365 * 4),
+            father_name="محمود الحسن",
+            mother_first_name="هبة",
+            mother_last_name="الحسن",
+            mother_nationality="Jordanian",
+            mother_national_id="1000000002",
+            media_consent=True
+        )
+        test_db.add(other_child)
+        test_db.flush()
+
+        enrollment_blocked = models.EnrollmentApplication(
+            child_id=other_child.id,
+            kindergarten_id=sample_kindergarten.id,
+            class_id=other_class.id,
+            status=models.EnrollmentStatus.ACTIVE,
+            source="online"
+        )
+        test_db.add(enrollment_blocked)
+        test_db.commit()
+
+        create_resp = client.post(
+            "/api/supervisor/observations/record",
+            headers=auth_headers_supervisor,
+            json={
+                "child_id": other_child.id,
+                "domain": "social_emotional",
+                "observation_text": "ملاحظة خارج نطاق الفصل",
+                "mastery_level": "on_track"
+            }
+        )
+        assert create_resp.status_code == 403
+
+        list_resp = client.get(
+            f"/api/children/{other_child.id}/observations",
+            headers=auth_headers_supervisor
+        )
+        assert list_resp.status_code == 403
 
 
 # ============================================================================
@@ -670,6 +926,8 @@ class TestMultiTenancyIsolation:
             kindergarten_id=other_kg.id,
             name_ar="صف آخر",
             name_en="Other Class",
+            class_code="OTH-001",
+            age_group="AGE_2_4",
             capacity_total=20,
             min_age_months=24,
             max_age_months=48,

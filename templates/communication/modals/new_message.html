@@ -1,67 +1,2038 @@
 <!-- New Message Modal -->
 <div class="modal fade" id="newMessageModal" tabindex="-1" aria-labelledby="newMessageModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="newMessageModalLabel">رسالة جديدة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            <!-- Modal Header -->
+            <div class="modal-header bg-primary text-white">
+                <div class="d-flex flex-column">
+                    <h5 class="modal-title mb-1" id="newMessageModalLabel">
+                        <i class="bi bi-envelope-plus me-2"></i>{% if ui_lang == 'en' %}New Message{% else %}رسالة جديدة{% endif %}
+                    </h5>
+                    <small class="text-primary-emphasis">
+                        {% if current_user and current_user.role.value == 'ADMIN' %}
+                        {% if ui_lang == 'en' %}Send a message to kindergarten users or governorate{% else %}أرسل رسالة لمستخدمي الروضات أو للمحافظة{% endif %}
+                        {% else %}
+                        {% if ui_lang == 'en' %}Send a message to your kindergarten users{% else %}أرسل رسالة لمستخدمي روضتك{% endif %}
+                        {% endif %}
+                    </small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
+
+            <!-- Modal Body -->
             <div class="modal-body">
-                <form id="newMessageForm">
-                    <div class="mb-3">
-                        <label for="msgSubject" class="form-label">الموضوع</label>
-                        <input type="text" class="form-control" id="msgSubject" required>
+                <form id="newMessageForm" novalidate>
+                    <!-- تفاصيل عامة Section -->
+                    <div class="card mb-4 border-0 bg-light">
+                        <div class="card-header bg-white border-bottom-0">
+                            <h6 class="mb-0 text-primary">
+                                <i class="bi bi-info-circle me-2"></i>{% if ui_lang == 'en' %}Message Details{% else %}تفاصيل الرسالة{% endif %}
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- Subject -->
+                            <div class="mb-3">
+                                <label for="msgSubject" class="form-label fw-semibold">
+                                    {% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %} <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="msgSubject" required
+                                    placeholder="{% if ui_lang == 'en' %}Enter message subject{% else %}أدخل موضوع الرسالة{% endif %}">
+                                <div class="invalid-feedback">
+                                    {% if ui_lang == 'en' %}This field is required{% else %}هذا الحقل مطلوب{% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Message Type (hidden for Supervisors) -->
+                            <div class="mb-0" id="msgTypeContainer">
+                                <label for="msgType" class="form-label fw-semibold">{% if ui_lang == 'en' %}Message Type{% else %}نوع الرسالة{% endif %}</label>
+                                <select class="form-select" id="msgType">
+                                    <option value="direct">{% if ui_lang == 'en' %}Direct Message (to one person){% else %}رسالة مباشرة (لشخص واحد){% endif %}</option>
+                                    <option value="group">{% if ui_lang == 'en' %}Group Message (to multiple people){% else %}رسالة جماعية (لعدة أشخاص){% endif %}</option>
+                                    {% if current_user and current_user.role.value == 'ADMIN' %}
+                                    <option value="announcement">{% if ui_lang == 'en' %}Announcement (to everyone){% else %}إعلان (للجميع){% endif %}</option>
+                                    {% endif %}
+                                </select>
+                            </div>
+                            <!-- Supervisor Fixed Message Type -->
+                            <div class="mb-0" id="supervisorMsgTypeInfo" style="display:none;">
+                                <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Message Type{% else %}نوع الرسالة{% endif %}</label>
+                                <div class="alert alert-info mb-0 py-2">
+                                    <i class="bi bi-send me-2"></i>
+                                    {% if ui_lang == 'en' %}Direct message to kindergarten manager{% else %}رسالة مباشرة لمدير الروضة{% endif %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="msgType" class="form-label">نوع الرسالة</label>
-                        <select class="form-select" id="msgType">
-                            <option value="broadcast">إعلان عام (للجميع)</option>
-                            <option value="direct">رسالة مباشرة (تتطلب معرِّف المتلقِّي)</option>
-                        </select>
+
+                    <!-- المستلمون Section (hidden for Supervisors) -->
+                    <div class="card mb-4 border-0 bg-light" id="recipientsSection">
+                        <div class="card-header bg-white border-bottom-0" id="recipientsSectionHeader">
+                            <h6 class="mb-0 text-primary">
+                                <i class="bi bi-people me-2"></i>{% if ui_lang == 'en' %}Recipients{% else %}المستلمون{% endif %}
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- Admin Targeting Section (Admin Only) -->
+                            <div class="admin-targeting-section" id="adminTargetingSection" style="display:none;">
+                                <!-- Target Mode Selection -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Recipient Scope:{% else %}نطاق الاستلام:{% endif %}</label>
+                                    <select class="form-select" id="adminTargetMode"
+                                        onchange="updateAdminTargetingUI()">
+                                        <option value="ALL_USERS">📢 {% if ui_lang == 'en' %}All Users (Managers + Supervisors + Parents){% else %}جميع المستخدمين (مدراء + مشرفين + أولياء أمور){% endif %}
+                                        </option>
+                                        <option value="ALL_MANAGERS">👔 {% if ui_lang == 'en' %}All Managers Only{% else %}جميع المدراء فقط{% endif %}</option>
+                                        <option value="ALL_SUPERVISORS">👩‍🏫 {% if ui_lang == 'en' %}All Supervisors Only{% else %}جميع المشرفين فقط{% endif %}</option>
+                                        <option value="ALL_PARENTS">👨‍👩‍👧‍👦 {% if ui_lang == 'en' %}All Parents Only{% else %}جميع أولياء الأمور فقط{% endif %}</option>
+                                        <option value="GOVERNORATE">🏛️ {% if ui_lang == 'en' %}By Governorate{% else %}حسب المحافظة (محافظة واحدة أو أكثر){% endif %}</option>
+                                        <option value="KINDERGARTENS">🏫 {% if ui_lang == 'en' %}Specific Kindergartens{% else %}روضات محددة{% endif %}</option>
+                                    </select>
+                                </div>
+
+                                <!-- Governorate Multi-Select Section (shown for GOVERNORATE mode) -->
+                                <div class="mb-3" id="adminGovernorateSection" style="display:none;">
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Select Governorates:{% else %}اختر المحافظات:{% endif %}</label>
+                                    <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;"
+                                        id="adminGovernorateList">
+                                        {% set governorate_list = (governorates if governorates is defined and
+                                        governorates else ['عمان', 'إربد', 'الزرقاء', 'العقبة', 'المفرق', 'جرش',
+                                        'عجلون', 'الطفيلة', 'الكرك', 'معان', 'البلقاء', 'مادبا']) %}
+                                        {% set governorate_list_en = (governorates_en if governorates_en is defined and
+                                        governorates_en else ['Amman', 'Irbid', 'Zarqa', 'Aqaba', 'Mafraq', 'Jerash',
+                                        'Ajloun', 'Tafilah', 'Karak', 'Ma\'an', 'Balqa', 'Madaba']) %}
+                                        {% for gov in governorate_list %}
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-gov-checkbox" type="checkbox"
+                                                value="{{ gov }}" data-en="{{ governorate_list_en[loop.index0] }}"
+                                                id="adminGov_{{ loop.index }}">
+                                            <label class="form-check-label" for="adminGov_{{ loop.index }}">{{ gov
+                                                }}</label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="mt-1">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="document.querySelectorAll('.admin-gov-checkbox').forEach(c=>c.checked=true);previewRecipients();">{% if ui_lang == 'en' %}Select All{% else %}تحديد
+                                            الكل{% endif %}</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="document.querySelectorAll('.admin-gov-checkbox').forEach(c=>c.checked=false);previewRecipients();">{% if ui_lang == 'en' %}Deselect All{% else %}إلغاء
+                                            الكل{% endif %}</button>
+                                    </div>
+                                </div>
+
+                                <!-- Role Filter for GOVERNORATE mode -->
+                                <div class="mb-3" id="adminGovRolesSection" style="display:none;">
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Target Roles:{% else %}الأدوار المستهدفة:{% endif %}</label>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-gov-role-checkbox" type="checkbox"
+                                                value="MANAGER" id="adminGovRoleManager" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminGovRoleManager">👔 {% if ui_lang == 'en' %}Managers{% else %}مدراء{% endif %}</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-gov-role-checkbox" type="checkbox"
+                                                value="SUPERVISOR" id="adminGovRoleSupervisor" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminGovRoleSupervisor">👩‍🏫
+                                                {% if ui_lang == 'en' %}Supervisors{% else %}مشرفين{% endif %}</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-gov-role-checkbox" type="checkbox"
+                                                value="PARENT" id="adminGovRoleParent" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminGovRoleParent">👨‍👩‍👧‍👦 {% if ui_lang == 'en' %}Parents{% else %}أولياء
+                                                أمور{% endif %}</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Kindergarten Multi-Select Section (shown for KINDERGARTENS mode) -->
+                                <div class="mb-3" id="adminKindergartenSection" style="display:none;">
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Select Kindergartens:{% else %}اختر الروضات:{% endif %}</label>
+                                    <div class="border rounded p-2" style="max-height: 300px; overflow-y: auto;"
+                                        id="adminKindergartenList">
+                                        <div class="text-muted">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
+                                    </div>
+                                    <div class="mt-1">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="document.querySelectorAll('.admin-kg-checkbox').forEach(c=>c.checked=true);previewRecipients();">{% if ui_lang == 'en' %}Select All{% else %}تحديد
+                                            الكل{% endif %}</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            onclick="document.querySelectorAll('.admin-kg-checkbox').forEach(c=>c.checked=false);previewRecipients();">{% if ui_lang == 'en' %}Deselect All{% else %}إلغاء
+                                            الكل{% endif %}</button>
+                                    </div>
+                                </div>
+
+                                <!-- Role Filter for KINDERGARTENS mode -->
+                                <div class="mb-3" id="adminKgRolesSection" style="display:none;">
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Target Roles:{% else %}الأدوار المستهدفة:{% endif %}</label>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-kg-role-checkbox" type="checkbox"
+                                                value="MANAGER" id="adminKgRoleManager" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminKgRoleManager">👔 {% if ui_lang == 'en' %}Managers{% else %}مدراء{% endif %}</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-kg-role-checkbox" type="checkbox"
+                                                value="SUPERVISOR" id="adminKgRoleSupervisor" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminKgRoleSupervisor">👩‍🏫
+                                                {% if ui_lang == 'en' %}Supervisors{% else %}مشرفين{% endif %}</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input admin-kg-role-checkbox" type="checkbox"
+                                                value="PARENT" id="adminKgRoleParent" checked
+                                                onchange="previewRecipients()">
+                                            <label class="form-check-label" for="adminKgRoleParent">👨‍👩‍👧‍👦 {% if ui_lang == 'en' %}Parents{% else %}أولياء
+                                                أمور{% endif %}</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Search Filter -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Search Recipients (optional):{% else %}البحث عن المستلمين (اختياري):{% endif %}</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="adminSearchInput"
+                                            placeholder="{% if ui_lang == 'en' %}Search by name or email…{% else %}ابحث بالاسم أو البريد الإلكتروني…{% endif %}">
+                                        <button class="btn btn-outline-secondary" type="button" id="adminSearchBtn">
+                                            <i class="bi bi-search"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" type="button" id="adminClearBtn"
+                                            onclick="document.getElementById('adminSearchInput').value='';previewRecipients();">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Recipient Preview -->
+                                <div class="alert alert-light border mb-0" id="adminRecipientPreview">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div>
+                                            <i class="bi bi-people-fill"></i>
+                                            <span>{% if ui_lang == 'en' %}Recipient Count:{% else %}عدد المستلمين:{% endif %} <strong id="recipientCount"
+                                                    class="fs-5">-</strong></span>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-info text-white"
+                                            onclick="previewRecipients()">
+                                            <i class="bi bi-eye"></i> {% if ui_lang == 'en' %}Calculate Recipients{% else %}حساب المستلمين{% endif %}
+                                        </button>
+                                    </div>
+                                    <!-- Sample Recipients -->
+                                    <div id="sampleRecipientsContainer" class="mt-2" style="display:none;">
+                                        <hr>
+                                        <small class="text-muted">{% if ui_lang == 'en' %}Sample Recipients:{% else %}عينة من المستلمين:{% endif %}</small>
+                                        <div id="sampleRecipientsList" class="mt-1 small"></div>
+                                    </div>
+                                    <div id="recipientBreakdown" class="small text-muted mt-2" style="display:none;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Supervisor Message Section (Only for Supervisors) -->
+                            <div id="supervisorMessageSection" style="display:none;">
+                                <div class="alert alert-info mb-3">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>{% if ui_lang == 'en' %}Supervisors can only send messages to the kindergarten manager.{% else %}المشرفون يمكنهم إرسال رسائل لمدير الروضة فقط.{% endif %}</strong>
+                                    <br>
+                                    <small class="text-muted">{% if ui_lang == 'en' %}Your message will be automatically sent to your kindergarten manager.{% else %}سيتم إرسال رسالتك تلقائياً إلى مدير روضتك.{% endif %}</small>
+                                </div>
+                            </div>
+
+                            <!-- Direct Message Section -->
+                            <div id="directMessageSection" style="display:none;">
+                                <!-- Role Filter -->
+                                <div class="mb-3">
+                                    <label for="directRoleFilter" class="form-label fw-semibold">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</label>
+                                    <select class="form-select" id="directRoleFilter">
+                                        <option value="">{% if ui_lang == 'en' %}All Roles{% else %}جميع الأدوار{% endif %}</option>
+                                        <option value="SUPERVISOR">👩‍🏫 {% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
+                                        <option value="PARENT">👨‍👩‍👧‍👦 {% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</option>
+                                    </select>
+                                </div>
+
+                                <!-- Search Input -->
+                                <div class="mb-3">
+                                    <label for="directUserSearch" class="form-label fw-semibold">{% if ui_lang == 'en' %}Search for Recipient{% else %}البحث عن
+                                        المستلم{% endif %}</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="directUserSearch"
+                                            placeholder="{% if ui_lang == 'en' %}Search by name or email…{% else %}ابحث بالاسم أو البريد الإلكتروني…{% endif %}">
+                                        <button class="btn btn-outline-secondary" type="button"
+                                            id="directUserSearchBtn">
+                                            <i class="bi bi-search"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" type="button" id="directUserResetBtn">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text">
+                                        {% if ui_lang == 'en' %}You can search by name or email. Sending is within your kindergarten only.{% else %}يمكنك البحث بالاسم أو البريد الإلكتروني. يتم الإرسال داخل روضتك فقط.{% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Recipient Selection -->
+                                <div class="mb-3">
+                                    <label for="directRecipientSelect" class="form-label fw-semibold">
+                                        {% if ui_lang == 'en' %}Select Recipient{% else %}اختر المستلم{% endif %} <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="directRecipientSelect" size="4" required>
+                                        <option value="">{% if ui_lang == 'en' %}-- Select a recipient --{% else %}-- اختر مستلمًا --{% endif %}</option>
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        {% if ui_lang == 'en' %}Please select a message recipient{% else %}يرجى اختيار مستلم للرسالة{% endif %}
+                                    </div>
+                                    <input type="hidden" id="msgRecipient">
+                                </div>
+                            </div>
+
+                            <!-- Group Message Section (Non-Admin) -->
+                            <div id="groupMessageSection" style="display:none;">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">{% if ui_lang == 'en' %}Recipient Roles{% else %}الأدوار المستلمة{% endif %}</label>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="SUPERVISOR"
+                                                    id="roleSupervisors" name="recipientRole">
+                                                <label class="form-check-label" for="roleSupervisors">
+                                                    👩‍🏫 {% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="PARENT"
+                                                    id="roleParents" name="recipientRole">
+                                                <label class="form-check-label" for="roleParents">
+                                                    👨‍👩‍👧‍👦 {% if ui_lang == 'en' %}Parents{% else %}أولياء الأمور{% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="selectAllRoles">
+                                        <label class="form-check-label" for="selectAllRoles">
+                                            ✅ {% if ui_lang == 'en' %}All Roles{% else %}جميع الأدوار{% endif %}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Reply Settings -->
+                            <div class="form-check mt-3">
+                                <input class="form-check-input" type="checkbox" id="allowRepliesToggle">
+                                <label class="form-check-label fw-semibold" for="allowRepliesToggle">
+                                    {% if ui_lang == 'en' %}Allow reply to sender only{% else %}السماح بالرد إلى المرسل فقط{% endif %}
+                                </label>
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-3" id="recipientField" style="display:none;">
-                        <label for="msgRecipient" class="form-label">معرِّف المستخدم المُتلقِّي</label>
-                        <input type="number" class="form-control" id="msgRecipient" placeholder="رقم المستخدم">
+                        <label class="form-label">{% if ui_lang == 'en' %}Recipient{% else %}المستلم{% endif %}</label>
+                        <div id="directRecipientLookup" style="display:none;">
+                            <div class="row g-2">
+                                <div class="col-12 col-md-4">
+                                    <label for="directRoleFilter" class="form-label">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</label>
+                                    <select class="form-select" id="directRoleFilter"></select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label for="directUserGovernorate" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                                    <input type="text" class="form-control" id="directUserGovernorate"
+                                        placeholder="{% if ui_lang == 'en' %}e.g. Damascus{% else %}مثال: دمشق{% endif %}">
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label for="directUserPhone" class="form-label">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</label>
+                                    <input type="text" class="form-control" id="directUserPhone"
+                                        placeholder="{% if ui_lang == 'en' %}Phone number{% else %}رقم الهاتف{% endif %}">
+                                </div>
+                                <div class="col-12 col-md-4" id="directKindergartenFilterWrap" style="display:none;">
+                                    <label for="directKindergartenFilter" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                                    <select class="form-select" id="directKindergartenFilter"></select>
+                                </div>
+                                <div class="col-12 col-md-8">
+                                    <label for="directUserSearch" class="form-label">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</label>
+                                    <input type="text" class="form-control" id="directUserSearch"
+                                        placeholder="{% if ui_lang == 'en' %}Username or email{% else %}اسم المستخدم أو البريد{% endif %}">
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                    id="directUserSearchBtn">{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                    id="directUserResetBtn">{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</button>
+                            </div>
+                            <select class="form-select mt-2" id="directRecipientSelect">
+                                <option value="">{% if ui_lang == 'en' %}-- Select a recipient --{% else %}-- اختر مستلمًا --{% endif %}</option>
+                            </select>
+                            <input type="hidden" id="msgRecipient">
+                            <div class="form-text">{% if ui_lang == 'en' %}You can search by name or email.{% else %}يمكن البحث بالاسم أو البريد الإلكتروني.{% endif %}</div>
+                        </div>
+                        <div id="directManagerWrap" style="display:none;">
+                            <div class="text-muted small" id="directManagerNote">{% if ui_lang == 'en' %}The message will be sent to the kindergarten manager.{% else %}سيتم إرسال الرسالة إلى مدير الروضة.{% endif %}
+                            </div>
+                            <div class="mt-2" id="parentKindergartenWrap" style="display:none;">
+                                <label for="directParentKindergarten" class="form-label">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</label>
+                                <select class="form-select" id="directParentKindergarten"></select>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="msgBody" class="form-label">نص الرسالة</label>
-                        <textarea class="form-control" id="msgBody" rows="4" required></textarea>
+                    <!-- محتوى الرسالة Section -->
+                    <div class="card mb-4 border-0 bg-light">
+                        <div class="card-header bg-white border-bottom-0">
+                            <h6 class="mb-0 text-primary">
+                                <i class="bi bi-pencil-square me-2"></i>{% if ui_lang == 'en' %}Message Content{% else %}محتوى الرسالة{% endif %}
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- Message Body -->
+                            <div class="mb-3">
+                                <label for="msgBody" class="form-label fw-semibold">
+                                    {% if ui_lang == 'en' %}Message Body{% else %}نص الرسالة{% endif %} <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control" id="msgBody" rows="6"
+                                    style="resize: vertical; min-height: 120px;" required
+                                    placeholder="{% if ui_lang == 'en' %}Type your message here...{% else %}اكتب نص الرسالة هنا...{% endif %}"></textarea>
+                                <div class="invalid-feedback">
+                                    {% if ui_lang == 'en' %}This field is required{% else %}هذا الحقل مطلوب{% endif %}
+                                </div>
+                                <div class="d-flex justify-between align-items-center mt-1">
+                                    <small class="form-text text-muted">
+                                        {% if ui_lang == 'en' %}Long messages are supported — text will be displayed correctly to recipients{% else %}رسالة طويلة مدعومة - سيتم عرض النص بشكل صحيح للمستلمين{% endif %}
+                                    </small>
+                                    <small class="form-text text-muted" id="charCounter">{% if ui_lang == 'en' %}0 characters{% else %}0 أحرف{% endif %}</small>
+                                </div>
+                            </div>
+
+                            <!-- Attachments -->
+                            <div class="mb-0">
+                                <label for="msgAttachments" class="form-label fw-semibold">{% if ui_lang == 'en' %}Attachments{% else %}المرفقات{% endif %}</label>
+                                <input type="file" class="form-control" id="msgAttachments" multiple>
+                                <div class="form-text" id="attachmentHint" style="display:none;">
+                                    {% if ui_lang == 'en' %}Attachments are available for admins and managers only.{% else %}المرفقات متاحة للمسؤولين والمديرين فقط.{% endif %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="submitMessage()">إرسال</button>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer bg-light border-top-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+                </button>
+                <button type="button" class="btn btn-primary" id="sendMessageBtn" onclick="submitMessage()" disabled>
+                    <i class="bi bi-send me-2"></i>{% if ui_lang == 'en' %}Send{% else %}إرسال{% endif %}
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    document.getElementById('msgType').addEventListener('change', function() {
-        const recipientDiv = document.getElementById('recipientField');
-        if (this.value === 'direct') {
-            recipientDiv.style.display = 'block';
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
+    let currentUserRole = null;
+    let currentUserKindergartenId = null;
+    if (typeof currentUserId === 'undefined') var currentUserId = null;
+    let parentActiveKindergartens = [];
+    let directKindergartenCache = null;
+    let parentKindergartensLoaded = false;
+    const parentKindergartenNameCache = {};
+    const PARENT_KG_NAME_BULK_THRESHOLD = 10;
+
+    // Form validation and button state management
+    function validateForm() {
+        const form = document.getElementById('newMessageForm');
+        const subject = document.getElementById('msgSubject');
+        const body = document.getElementById('msgBody');
+        const sendBtn = document.getElementById('sendMessageBtn');
+        const msgType = document.getElementById('msgType').value;
+
+        let isValid = true;
+
+        // Validate required fields
+        if (!subject.value.trim()) {
+            subject.classList.add('is-invalid');
+            isValid = false;
         } else {
-            recipientDiv.style.display = 'none';
+            subject.classList.remove('is-invalid');
         }
+
+        if (!body.value.trim()) {
+            body.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            body.classList.remove('is-invalid');
+        }
+
+        // Validate recipient selection for direct messages (except for supervisors - they auto-send to manager)
+        if (msgType === 'direct' && currentUserRole !== 'SUPERVISOR') {
+            const recipient = document.getElementById('directRecipientSelect');
+            if (!recipient.value) {
+                recipient.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                recipient.classList.remove('is-invalid');
+            }
+        }
+
+        // Enable/disable send button
+        sendBtn.disabled = !isValid;
+
+        return isValid;
+    }
+
+    // Character counter for message body
+    function updateCharCounter() {
+        const textarea = document.getElementById('msgBody');
+        const counter = document.getElementById('charCounter');
+        if (textarea && counter) {
+            const count = textarea.value.length;
+            counter.textContent = `${count} ${IS_EN ? 'characters' : 'أحرف'}`;
+            // Change color if approaching limit (optional)
+            if (count > 1000) {
+                counter.className = 'form-text text-warning';
+            } else {
+                counter.className = 'form-text text-muted';
+            }
+        }
+    }
+
+    // Add event listeners for real-time validation
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('newMessageForm');
+        const subject = document.getElementById('msgSubject');
+        const body = document.getElementById('msgBody');
+        const msgType = document.getElementById('msgType');
+
+        // Validate on input/blur
+        subject.addEventListener('input', validateForm);
+        subject.addEventListener('blur', validateForm);
+        body.addEventListener('input', function () {
+            validateForm();
+            updateCharCounter();
+        });
+        body.addEventListener('blur', validateForm);
+        msgType.addEventListener('change', validateForm);
+
+        // Initialize character counter
+        updateCharCounter();
+
+        // Validate recipient selection changes
+        document.getElementById('directRecipientSelect').addEventListener('change', validateForm);
     });
 
+    function notify(message, type = 'info') {
+        if (typeof showToast === 'function') {
+            showToast(message, type);
+        } else {
+            // Enhanced fallback notification with better positioning
+            const toastContainer = document.createElement('div');
+            toastContainer.className = `toast align-items-center text-white bg-${type} border-0 position-fixed`;
+            toastContainer.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toastContainer.setAttribute('role', 'alert');
+            toastContainer.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi ${type === 'success' ? 'bi-check-circle' : type === 'error' ? 'bi-exclamation-triangle' : 'bi-info-circle'} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            document.body.appendChild(toastContainer);
+            const toast = new bootstrap.Toast(toastContainer, { delay: 5000 });
+            toast.show();
+            setTimeout(() => toastContainer.remove(), 5500);
+        }
+    }
+
+    async function initMessageForm() {
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            // No authentication - mark initialized and let ensureScopeReady show error
+            if (typeof window.markScopeInitialized === 'function') {
+                window.markScopeInitialized();
+            }
+            if (typeof window.ensureScopeReady === 'function') {
+                window.ensureScopeReady();
+            }
+            return;
+        }
+
+        const token = AuthService.getToken();
+        if (!token) {
+            // No token - mark initialized and let ensureScopeReady show error
+            if (typeof window.markScopeInitialized === 'function') {
+                window.markScopeInitialized();
+            }
+            if (typeof window.ensureScopeReady === 'function') {
+                window.ensureScopeReady();
+            }
+            return;
+        }
+
+        try {
+            const userResp = await fetch('/api/users/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (userResp.ok) {
+                const user = await userResp.json();
+                currentUserRole = user.role;
+                currentUserKindergartenId = user.kindergarten_id || null;
+                currentUserId = user.id;
+
+                const msgTypeSelect = document.getElementById('msgType');
+                const msgTypeContainer = document.getElementById('msgTypeContainer');
+                const supervisorMsgTypeInfo = document.getElementById('supervisorMsgTypeInfo');
+
+                if (msgTypeSelect) {
+                    if (currentUserRole === 'SUPERVISOR') {
+                        // Hide message type selector for supervisors, show fixed info
+                        if (msgTypeContainer) msgTypeContainer.style.display = 'none';
+                        if (supervisorMsgTypeInfo) supervisorMsgTypeInfo.style.display = 'block';
+                        msgTypeSelect.value = 'direct';
+                    } else if (currentUserRole === 'PARENT') {
+                        const announcementOption = msgTypeSelect.querySelector('option[value="announcement"]');
+                        if (announcementOption) {
+                            announcementOption.disabled = true;
+                        }
+                        msgTypeSelect.value = 'direct';
+                    } else if (currentUserRole === 'MANAGER') {
+                        msgTypeSelect.value = 'direct';
+                        // Managers can send direct AND group messages within their kindergarten
+                        msgTypeSelect.disabled = false;
+                        // Remove announcement option (admin only)
+                        const announcementOpt = msgTypeSelect.querySelector('option[value="announcement"]');
+                        if (announcementOpt) announcementOpt.remove();
+                    }
+                }
+
+                const managersWrap = document.getElementById('audienceManagersWrap');
+                if (currentUserRole === 'MANAGER' && managersWrap) {
+                    managersWrap.style.display = 'none';
+                }
+
+                setAudienceModeOptions();
+
+                const attachmentsInput = document.getElementById('msgAttachments');
+                const attachmentHint = document.getElementById('attachmentHint');
+                if (attachmentsInput && attachmentHint && !['ADMIN', 'MANAGER'].includes(currentUserRole)) {
+                    attachmentsInput.disabled = true;
+                    attachmentHint.style.display = 'block';
+                }
+
+                if (currentUserRole === 'ADMIN') {
+                    await loadKindergartensForCheckboxes();
+                    await loadDirectKindergartens();
+                    await initAdminTargeting();
+                }
+
+                if (typeof window.markScopeInitialized === 'function') {
+                    window.markScopeInitialized();
+                }
+                if (typeof window.ensureScopeReady === 'function') {
+                    window.ensureScopeReady();
+                }
+
+                updateMessageFormVisibility();
+            } else {
+                // API returned error (e.g., 401 unauthorized)
+                if (typeof window.markScopeInitialized === 'function') {
+                    window.markScopeInitialized();
+                }
+                if (typeof window.ensureScopeReady === 'function') {
+                    window.ensureScopeReady();
+                }
+            }
+        } catch (e) {
+            console.error('Error loading user info:', e);
+            // Mark as initialized so ensureScopeReady can show the error
+            if (typeof window.markScopeInitialized === 'function') {
+                window.markScopeInitialized();
+            }
+            if (typeof window.ensureScopeReady === 'function') {
+                window.ensureScopeReady();
+            }
+        }
+    }
+
+    function setAudienceModeOptions() {
+        const select = document.getElementById('audienceMode');
+        if (!select) {
+            console.log('setAudienceModeOptions: select not found');
+            return;
+        }
+        const options = [];
+        console.log('setAudienceModeOptions: currentUserRole =', currentUserRole);
+        if (currentUserRole === 'ADMIN') {
+            options.push({ value: 'all_kindergartens', label: T('كل الروضات', 'All Kindergartens') });
+            options.push({ value: 'by_governorate', label: T('حسب المحافظة', 'By Governorate') });
+            options.push({ value: 'specific_kindergartens', label: T('روضات محددة', 'Specific Kindergartens') });
+        } else if (currentUserRole === 'MANAGER') {
+            options.push({ value: 'all_parents', label: T('كل أولياء الأمور في روضتي', 'All Parents in My KG') });
+            options.push({ value: 'all_supervisors', label: T('كل المشرفين في روضتي', 'All Supervisors in My KG') });
+            options.push({ value: 'all_users', label: T('كل المستخدمين في روضتي', 'All Users in My KG') });
+        }
+        if (!options.length) {
+            options.push({ value: 'all_parents', label: T('كل أولياء الأمور', 'All Parents') });
+        }
+        select.innerHTML = '';
+        options.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option.value;
+            opt.textContent = option.label;
+            select.appendChild(opt);
+        });
+        select.value = options[0].value;
+        console.log('setAudienceModeOptions: set value to', select.value);
+    }
+
+    function applyAudienceMode() {
+        const mode = document.getElementById('audienceMode')?.value;
+        const rolesWrap = document.getElementById('audienceRolesWrap');
+        const kindergartenDiv = document.getElementById('kindergartenField');
+        const governorateDiv = document.getElementById('governorateField');
+        const isAdmin = currentUserRole === 'ADMIN';
+        console.log('applyAudienceMode called:', { mode, currentUserRole, isAdmin, rolesWrap: !!rolesWrap });
+        const showSpecific = mode === 'specific_kindergartens' && isAdmin;
+        const showGovernorate = mode === 'by_governorate' && isAdmin;
+        const showAllKindergartens = mode === 'all_kindergartens' && isAdmin;
+
+        // Always show roles wrap for admin users when creating announcements
+        if (rolesWrap) {
+            const shouldShowRoles = isAdmin && (showSpecific || showGovernorate || showAllKindergartens || mode === 'all_kindergartens' || !mode);
+            rolesWrap.style.display = shouldShowRoles ? 'block' : 'none';
+            console.log('rolesWrap display set to:', rolesWrap.style.display, 'shouldShowRoles:', shouldShowRoles);
+        }
+
+        if (kindergartenDiv) {
+            kindergartenDiv.style.display = showSpecific ? 'block' : 'none';
+        }
+        if (governorateDiv) {
+            governorateDiv.style.display = showGovernorate ? 'block' : 'none';
+        }
+        if (showSpecific || showGovernorate || showAllKindergartens) {
+            syncAllRolesToggle();
+        }
+        if (isAdmin) {
+            ensureAdminRolesSelected();
+        }
+    }
+
+    function collectKindergartenFilters() {
+        const governorate = document.getElementById('kgFilterGovernorate')?.value.trim();
+        const city = document.getElementById('kgFilterCity')?.value.trim();
+        const phone = document.getElementById('kgFilterPhone')?.value.trim();
+        const name = document.getElementById('kgFilterName')?.value.trim();
+        return { governorate, city, phone, name };
+    }
+
+    function populateKindergartenOptions(kindergartens) {
+        const select = document.getElementById('msgKindergartenIds');
+        if (!select) return;
+        const selectedIds = new Set(Array.from(select.selectedOptions).map(opt => opt.value));
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = T('-- اختر الروضات --', '-- Select Kindergartens --');
+        select.appendChild(placeholder);
+        kindergartens.forEach(kg => {
+            const opt = document.createElement('option');
+            opt.value = kg.id;
+            const name = kg.name_ar || kg.name_en || T(`روضة رقم ${kg.id}`, `Kindergarten ${kg.id}`);
+            const locationParts = [kg.governorate, kg.city].filter(Boolean);
+            const location = locationParts.length ? ` (${locationParts.join(' - ')})` : '';
+            opt.textContent = `${name}${location}`;
+            if (selectedIds.has(String(kg.id))) {
+                opt.selected = true;
+            }
+            select.appendChild(opt);
+        });
+    }
+
+    async function loadKindergartensForCheckboxes() {
+        if (currentUserRole !== 'ADMIN') return;
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return;
+        }
+
+        const token = AuthService.getToken();
+        try {
+            const response = await fetch('/api/kindergartens?limit=500&status=active', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                console.error(T('تعذر تحميل الروضات', 'Failed to load kindergartens'));
+                return;
+            }
+            const data = await response.json();
+            const kindergartens = Array.isArray(data) ? data : (data.kindergartens || []);
+            populateKindergartenCheckboxes(kindergartens);
+        } catch (err) {
+            console.error('Error loading kindergartens:', err);
+        }
+    }
+
+    function populateKindergartenCheckboxes(kindergartens) {
+        const container = document.getElementById('kindergartenCheckboxes');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (!kindergartens.length) {
+            container.innerHTML = `<div class="text-muted">${T('لا توجد روضات متاحة', 'No kindergartens available')}</div>`;
+            return;
+        }
+
+        // Group by governorate
+        const grouped = {};
+        kindergartens.forEach(kg => {
+            const gov = kg.governorate || T('غير محدد', 'Unspecified');
+            if (!grouped[gov]) {
+                grouped[gov] = [];
+            }
+            grouped[gov].push(kg);
+        });
+
+        Object.keys(grouped).sort().forEach(gov => {
+            const govDiv = document.createElement('div');
+            govDiv.className = 'mb-3';
+
+            const govHeader = document.createElement('h6');
+            govHeader.className = 'text-primary mb-2';
+            govHeader.textContent = gov;
+            govDiv.appendChild(govHeader);
+
+            grouped[gov].forEach(kg => {
+                const checkboxDiv = document.createElement('div');
+                checkboxDiv.className = 'form-check';
+
+                const checkbox = document.createElement('input');
+                checkbox.className = 'form-check-input';
+                checkbox.type = 'checkbox';
+                checkbox.id = `kg_${kg.id}`;
+                checkbox.name = 'recipientKindergarten';
+                checkbox.value = kg.id;
+
+                const label = document.createElement('label');
+                label.className = 'form-check-label';
+                label.htmlFor = `kg_${kg.id}`;
+                label.textContent = kg.name_ar || kg.name_en || T(`روضة ${kg.id}`, `Kindergarten ${kg.id}`);
+
+                if (kg.city) {
+                    label.textContent += ` (${kg.city})`;
+                }
+
+                checkboxDiv.appendChild(checkbox);
+                checkboxDiv.appendChild(label);
+                govDiv.appendChild(checkboxDiv);
+            });
+
+            container.appendChild(govDiv);
+        });
+    }
+
+    function getSelectedKindergartenIds() {
+        const checkboxes = document.querySelectorAll('input[name="recipientKindergarten"]:checked');
+        return Array.from(checkboxes).map(checkbox => parseInt(checkbox.value, 10));
+    }
+
+    function updateGroupMessageControls() {
+        const scope = document.getElementById('groupScope').value;
+        const governorateSection = document.getElementById('governorateSection');
+        const kindergartenSection = document.getElementById('kindergartenSection');
+
+        // Hide all sections first
+        if (governorateSection) governorateSection.style.display = 'none';
+        if (kindergartenSection) kindergartenSection.style.display = 'none';
+
+        // Show relevant section
+        if (scope === 'governorate') {
+            if (governorateSection) governorateSection.style.display = 'block';
+        } else if (scope === 'kindergarten') {
+            if (kindergartenSection) kindergartenSection.style.display = 'block';
+        }
+    }
+
+    function syncAllRolesToggle() {
+        const roleCheckboxes = document.querySelectorAll('input[name="recipientRole"]:not(#selectAllRoles)');
+        const selectAllCheckbox = document.getElementById('selectAllRoles');
+        if (!selectAllCheckbox) return;
+
+        const checkedCount = Array.from(roleCheckboxes).filter(cb => cb.checked).length;
+        const totalCount = roleCheckboxes.length;
+
+        selectAllCheckbox.checked = checkedCount === totalCount;
+        selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < totalCount;
+    }
+
+    function resetKindergartenFilters() {
+        const ids = ['kgFilterGovernorate', 'kgFilterCity', 'kgFilterPhone', 'kgFilterName'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.value = '';
+            }
+        });
+    }
+
+    function setDirectRecipientControls() {
+        const lookup = document.getElementById('directRecipientLookup');
+        const managerWrap = document.getElementById('directManagerWrap');
+        const parentWrap = document.getElementById('parentKindergartenWrap');
+        if (!lookup || !managerWrap) {
+            return;
+        }
+
+        if (currentUserRole === 'ADMIN' || currentUserRole === 'MANAGER') {
+            lookup.style.display = 'block';
+            managerWrap.style.display = 'none';
+            if (parentWrap) {
+                parentWrap.style.display = 'none';
+            }
+            setDirectRoleFilterOptions();
+            const kgWrap = document.getElementById('directKindergartenFilterWrap');
+            if (kgWrap) {
+                kgWrap.style.display = currentUserRole === 'ADMIN' ? 'block' : 'none';
+            }
+            if (currentUserRole === 'ADMIN') {
+                loadDirectKindergartens();
+            }
+            loadDirectRecipients();
+            return;
+        }
+
+        lookup.style.display = 'none';
+        managerWrap.style.display = 'block';
+        if (currentUserRole === 'PARENT') {
+            loadParentKindergartens();
+        } else {
+            if (parentWrap) {
+                parentWrap.style.display = 'none';
+            }
+        }
+    }
+
+    function setDirectRoleFilterOptions() {
+        const select = document.getElementById('directRoleFilter');
+        if (!select) return;
+        const options = [];
+        if (currentUserRole === 'ADMIN') {
+            options.push({ value: '', label: T('كل الأدوار', 'All Roles') });
+            options.push({ value: 'MANAGER', label: T('المديرون', 'Managers') });
+            options.push({ value: 'SUPERVISOR', label: T('المشرفون', 'Supervisors') });
+            options.push({ value: 'PARENT', label: T('أولياء الأمور', 'Parents') });
+        } else if (currentUserRole === 'MANAGER') {
+            options.push({ value: 'PARENT', label: T('أولياء الأمور', 'Parents') });
+            options.push({ value: 'SUPERVISOR', label: T('المشرفون', 'Supervisors') });
+        }
+        select.innerHTML = '';
+        options.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option.value;
+            opt.textContent = option.label;
+            select.appendChild(opt);
+        });
+        select.value = options[0].value;
+    }
+
+    function populateDirectKindergartenFilter(kindergartens) {
+        const select = document.getElementById('directKindergartenFilter');
+        if (!select) return;
+        select.innerHTML = '';
+        const allOpt = document.createElement('option');
+        allOpt.value = '';
+        allOpt.textContent = T('كل الروضات', 'All Kindergartens');
+        select.appendChild(allOpt);
+        kindergartens.forEach(kg => {
+            const opt = document.createElement('option');
+            opt.value = kg.id;
+            opt.textContent = kg.name_ar || kg.name_en || T(`روضة رقم ${kg.id}`, `Kindergarten ${kg.id}`);
+            select.appendChild(opt);
+        });
+        select.value = '';
+    }
+
+    async function loadDirectKindergartens() {
+        if (currentUserRole !== 'ADMIN') return;
+        if (directKindergartenCache && directKindergartenCache.length) {
+            populateDirectKindergartenFilter(directKindergartenCache);
+            return;
+        }
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return;
+        }
+
+        const token = AuthService.getToken();
+        const params = new URLSearchParams();
+        params.append('limit', '200');
+        try {
+            const response = await fetch(`/api/kindergartens?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                return;
+            }
+            const data = await response.json();
+            const kindergartens = Array.isArray(data) ? data : (data.kindergartens || []);
+            directKindergartenCache = kindergartens;
+            populateDirectKindergartenFilter(kindergartens);
+        } catch (err) {
+            console.error('Error loading direct kindergartens:', err);
+        }
+    }
+
+    function populateDirectRecipients(users) {
+        const select = document.getElementById('directRecipientSelect');
+        const hidden = document.getElementById('msgRecipient');
+        if (!select || !hidden) return;
+        const roleLabels = {
+            MANAGER: T('مدير', 'Manager'),
+            SUPERVISOR: T('مشرف', 'Supervisor'),
+            PARENT: T('ولي أمر', 'Parent')
+        };
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = users.length ? T('-- اختر مستلمًا --', '-- Select a recipient --') : T('لا توجد نتائج', 'No results');
+        select.appendChild(placeholder);
+        users.forEach(user => {
+            if (currentUserId && user.id === currentUserId) {
+                return;
+            }
+            const opt = document.createElement('option');
+            opt.value = user.id;
+            const roleLabel = roleLabels[user.role] || user.role;
+            const email = user.email ? ` - ${user.email}` : '';
+            opt.textContent = `${user.username} (${roleLabel})${email}`;
+            select.appendChild(opt);
+        });
+        hidden.value = '';
+    }
+
+    async function loadDirectRecipients() {
+        if (!(currentUserRole === 'ADMIN' || currentUserRole === 'MANAGER')) return;
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return;
+        }
+
+        const token = AuthService.getToken();
+        const params = new URLSearchParams();
+        const role = document.getElementById('directRoleFilter')?.value;
+        const search = document.getElementById('directUserSearch')?.value.trim();
+        const kgId = document.getElementById('directKindergartenFilter')?.value;
+        const phone = document.getElementById('directUserPhone')?.value.trim();
+        const governorate = document.getElementById('directUserGovernorate')?.value.trim();
+        if (currentUserRole === 'MANAGER' && currentUserKindergartenId) {
+            params.append('kindergarten_id', currentUserKindergartenId);
+        }
+        if (role) {
+            params.append('role', role);
+        }
+        if (search) {
+            params.append('search', search);
+        }
+        if (phone) {
+            params.append('phone', phone);
+        }
+        if (governorate && currentUserRole === 'ADMIN') {
+            params.append('governorate', governorate);
+        }
+        if (kgId && currentUserRole === 'ADMIN') {
+            params.append('kindergarten_id', kgId);
+        }
+        params.append('status', 'ACTIVE');
+        params.append('limit', '200');
+
+        try {
+            const response = await fetch(`/api/users?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                return;
+            }
+            const users = await response.json();
+            populateDirectRecipients(Array.isArray(users) ? users : []);
+        } catch (err) {
+            console.error('Error loading direct recipients:', err);
+        }
+    }
+
+    function getSelectedParentKindergartenId() {
+        const select = document.getElementById('directParentKindergarten');
+        if (!select) return null;
+        const value = select.value;
+        return value ? parseInt(value, 10) : null;
+    }
+
+    async function loadParentKindergartens(forceRefresh = false) {
+        if (parentKindergartensLoaded && !forceRefresh) {
+            return;
+        }
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return;
+        }
+
+        const token = AuthService.getToken();
+        const note = document.getElementById('directManagerNote');
+        const wrap = document.getElementById('parentKindergartenWrap');
+        const select = document.getElementById('directParentKindergarten');
+        if (!note || !wrap || !select) {
+            return;
+        }
+        try {
+            const response = await fetch('/api/parent/dashboard', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                note.textContent = T('تعذر تحميل بيانات الروضات.', 'Failed to load kindergarten data.');
+                return;
+            }
+            const data = await response.json();
+            const children = Array.isArray(data.children) ? data.children : [];
+            const activeIds = [];
+            children.forEach(child => {
+                if (!child.enrollment || !child.enrollment.kindergarten_id) {
+                    return;
+                }
+                const status = String(child.enrollment.status || '').toUpperCase();
+                if (status === 'ACTIVE' || status === 'ACCEPTED') {
+                    activeIds.push(child.enrollment.kindergarten_id);
+                }
+            });
+            parentActiveKindergartens = Array.from(new Set(activeIds));
+            parentKindergartensLoaded = true;
+
+            const nameMap = await fetchKindergartenNames(parentActiveKindergartens);
+
+            if (!parentActiveKindergartens.length) {
+                note.textContent = T('لا توجد روضات نشطة للمراسلة.', 'No active kindergartens for messaging.');
+                wrap.style.display = 'none';
+                return;
+            }
+
+            if (parentActiveKindergartens.length === 1) {
+                const singleId = parentActiveKindergartens[0];
+                const label = nameMap[singleId] || T(`روضة رقم ${singleId}`, `Kindergarten ${singleId}`);
+                note.textContent = T(`سيتم إرسال الرسالة إلى مدير ${label}.`, `The message will be sent to the manager of ${label}.`);
+                wrap.style.display = 'none';
+                return;
+            }
+
+            note.textContent = T('اختر الروضة لإرسال الرسالة إلى مديرها.', 'Select a kindergarten to send the message to its manager.');
+            wrap.style.display = 'block';
+            select.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = T('-- اختر الروضة --', '-- Select Kindergarten --');
+            select.appendChild(placeholder);
+            parentActiveKindergartens.forEach(id => {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = nameMap[id] || T(`روضة رقم ${id}`, `Kindergarten ${id}`);
+                select.appendChild(opt);
+            });
+        } catch (err) {
+            console.error('Error loading parent kindergartens:', err);
+            if (note) {
+                note.textContent = T('تعذر تحميل بيانات الروضات.', 'Failed to load kindergarten data.');
+            }
+        }
+    }
+
+    async function fetchKindergartenNames(kindergartenIds) {
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return {};
+        }
+
+        const token = AuthService.getToken();
+        const result = {};
+        const ids = Array.from(new Set(kindergartenIds || [])).filter(Boolean);
+        if (!ids.length) {
+            return result;
+        }
+
+        if (ids.length >= PARENT_KG_NAME_BULK_THRESHOLD) {
+            const bulkMap = await fetchKindergartenNamesBulk(ids, token);
+            Object.assign(result, bulkMap);
+        }
+
+        await Promise.all(ids.map(async (id) => {
+            if (parentKindergartenNameCache[id]) {
+                result[id] = parentKindergartenNameCache[id];
+                return;
+            }
+            if (result[id]) {
+                parentKindergartenNameCache[id] = result[id];
+                return;
+            }
+            try {
+                const response = await fetch(`/api/kindergartens/${id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) {
+                    return;
+                }
+                const data = await response.json();
+                const label = data.name_ar || data.name_en || T(`روضة رقم ${id}`, `Kindergarten ${id}`);
+                parentKindergartenNameCache[id] = label;
+                result[id] = label;
+            } catch (err) {
+                console.error('Error fetching kindergarten name:', err);
+            }
+        }));
+
+        return result;
+    }
+
+    async function fetchKindergartenNamesBulk(kindergartenIds, token) {
+        const result = {};
+        try {
+            const params = new URLSearchParams();
+            params.append('limit', '200');
+            const response = await fetch(`/api/kindergartens?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                return result;
+            }
+            const data = await response.json();
+            const items = Array.isArray(data) ? data : (data.kindergartens || []);
+            const needed = new Set(kindergartenIds.map(id => Number(id)));
+            items.forEach(kg => {
+                if (!needed.has(Number(kg.id))) {
+                    return;
+                }
+                const label = kg.name_ar || kg.name_en || T(`روضة رقم ${kg.id}`, `Kindergarten ${kg.id}`);
+                result[kg.id] = label;
+                parentKindergartenNameCache[kg.id] = label;
+            });
+        } catch (err) {
+            console.error('Error fetching kindergarten names (bulk):', err);
+        }
+        return result;
+    }
+
+    function updateMessageFormVisibility() {
+        const msgTypeEl = document.getElementById('msgType');
+        let type = msgTypeEl ? msgTypeEl.value : 'direct';
+
+        // Supervisors: force direct messages only (to their manager)
+        if (currentUserRole === 'SUPERVISOR') {
+            type = 'direct';
+            if (msgTypeEl) {
+                msgTypeEl.value = 'direct';
+                msgTypeEl.disabled = true;
+            }
+        }
+        // Parents: force direct messages only (to kindergarten manager)
+        if (currentUserRole === 'PARENT') {
+            type = 'direct';
+            if (msgTypeEl) {
+                msgTypeEl.value = 'direct';
+                msgTypeEl.disabled = true;
+            }
+        }
+        // Managers: can use direct or group (within their kindergarten)
+
+        const directSection = document.getElementById('directMessageSection');
+        const groupSection = document.getElementById('groupMessageSection');
+        const adminSection = document.getElementById('adminTargetingSection');
+        const supervisorSection = document.getElementById('supervisorMessageSection');
+        const recipientsSectionHeader = document.getElementById('recipientsSectionHeader');
+
+        console.log('updateMessageFormVisibility called, type:', type, 'role:', currentUserRole);
+
+        if (type === 'direct') {
+            // For supervisors: show supervisor section, hide direct section and recipients header
+            if (currentUserRole === 'SUPERVISOR') {
+                if (supervisorSection) supervisorSection.style.display = 'block';
+                if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'none';
+                directSection.style.display = 'none';
+            } else {
+                if (supervisorSection) supervisorSection.style.display = 'none';
+                if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'block';
+                directSection.style.display = 'block';
+                updateDirectRecipientControls();
+            }
+            groupSection.style.display = 'none';
+            if (adminSection) {
+                adminSection.style.display = 'none';
+            }
+            return;
+        }
+
+        if (type === 'group') {
+            if (supervisorSection) supervisorSection.style.display = 'none';
+            directSection.style.display = 'none';
+            const isAdmin = currentUserRole === 'ADMIN';
+            if (adminSection) {
+                adminSection.style.display = isAdmin ? 'block' : 'none';
+            }
+            if (groupSection) {
+                groupSection.style.display = isAdmin ? 'none' : 'block';
+            }
+            if (isAdmin) {
+                updateAdminTargetingUI();
+            } else {
+                updateGroupMessageControls();
+            }
+            return;
+        }
+
+        // Default to direct
+        if (currentUserRole === 'SUPERVISOR') {
+            if (supervisorSection) supervisorSection.style.display = 'block';
+            if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'none';
+            directSection.style.display = 'none';
+        } else {
+            if (supervisorSection) supervisorSection.style.display = 'none';
+            if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'block';
+            directSection.style.display = 'block';
+            updateDirectRecipientControls();
+        }
+        groupSection.style.display = 'none';
+    }
+
+    function updateDirectRecipientControls() {
+        // Show/hide controls based on user role
+        const roleFilter = document.getElementById('directRoleFilter');
+        const governorateFilter = document.getElementById('directGovernorateFilter');
+        const kindergartenFilter = document.getElementById('directKindergartenFilter');
+
+        if (currentUserRole === 'ADMIN') {
+            if (roleFilter) roleFilter.style.display = 'block';
+            if (governorateFilter) governorateFilter.style.display = 'block';
+            if (kindergartenFilter) kindergartenFilter.style.display = 'block';
+        } else if (currentUserRole === 'MANAGER') {
+            if (roleFilter) roleFilter.style.display = 'block';
+            if (governorateFilter) governorateFilter.style.display = 'none';
+            if (kindergartenFilter) kindergartenFilter.style.display = 'none';
+            // Restrict manager recipients to non-admin roles
+            const disallowed = ['ADMIN', 'MANAGER'];
+            Array.from(roleFilter?.options || []).forEach(opt => {
+                if (disallowed.includes(opt.value)) {
+                    opt.disabled = true;
+                }
+            });
+        } else {
+            if (roleFilter) roleFilter.style.display = 'none';
+            if (governorateFilter) governorateFilter.style.display = 'none';
+            if (kindergartenFilter) kindergartenFilter.style.display = 'none';
+        }
+    }
+
+    function updateGroupMessageControls() {
+        const scopeType = document.getElementById('scopeType').value;
+        const governorateSelection = document.getElementById('governorateSelection');
+        const kindergartenSelection = document.getElementById('kindergartenSelection');
+
+        if (scopeType === 'global') {
+            governorateSelection.style.display = 'none';
+            kindergartenSelection.style.display = 'none';
+        } else if (scopeType === 'governorate') {
+            governorateSelection.style.display = 'block';
+            kindergartenSelection.style.display = 'none';
+        } else if (scopeType === 'kindergarten') {
+            governorateSelection.style.display = 'none';
+            kindergartenSelection.style.display = 'block';
+        }
+    }
+
+    function toggleAllRoles(checked) {
+        document.querySelectorAll('input[name="audienceRole"]').forEach(input => {
+            input.checked = checked;
+        });
+    }
+
+    function syncAllRolesToggle() {
+        const roles = Array.from(document.querySelectorAll('input[name="audienceRole"]'));
+        const allChecked = roles.length > 0 && roles.every(input => input.checked);
+        const anyChecked = roles.some(input => input.checked);
+        const allToggle = document.getElementById('audienceAllRoles');
+        if (!allToggle) return;
+        allToggle.indeterminate = anyChecked && !allChecked;
+        allToggle.checked = allChecked;
+    }
+
+    function ensureAdminRolesSelected() {
+        if (currentUserRole !== 'ADMIN') {
+            console.log('ensureAdminRolesSelected: not admin, returning');
+            return;
+        }
+        const roles = Array.from(document.querySelectorAll('input[name="audienceRole"]'));
+        console.log('ensureAdminRolesSelected: found roles:', roles.length);
+        if (!roles.length) {
+            console.log('ensureAdminRolesSelected: no roles found, returning');
+            return;
+        }
+        // Always select all roles for admin by default
+        roles.forEach(input => {
+            input.checked = true;
+        });
+        console.log('ensureAdminRolesSelected: all roles checked');
+        syncAllRolesToggle();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initMessageForm();
+        const newMessageModal = document.getElementById('newMessageModal');
+        if (newMessageModal) {
+            newMessageModal.addEventListener('shown.bs.modal', () => {
+                console.log('Modal shown, currentUserRole:', currentUserRole);
+                if (!currentUserRole) {
+                    initMessageForm();
+                } else {
+                    setAudienceModeOptions();
+                    console.log('setAudienceModeOptions called');
+                    if (currentUserRole === 'PARENT') {
+                        for (const key of Object.keys(parentKindergartenNameCache)) {
+                            delete parentKindergartenNameCache[key];
+                        }
+                        loadParentKindergartens(true);
+                    }
+                    updateMessageFormVisibility();
+                    console.log('updateMessageFormVisibility called');
+                    ensureAdminRolesSelected();
+                    console.log('ensureAdminRolesSelected called');
+                }
+            });
+        }
+        // Guard: disable open buttons if scope not ready (e.g., manager without kindergarten)
+        const openButtons = document.querySelectorAll('[data-bs-target="#newMessageModal"]');
+        let scopeInitialized = false;
+        const ensureScopeReady = () => {
+            // Don't show error before initialization completes
+            if (!scopeInitialized) {
+                return;
+            }
+            const ready = (typeof currentUserRole !== 'undefined') && currentUserRole && (currentUserRole !== 'MANAGER' || currentUserKindergartenId);
+            if (!ready) {
+                openButtons.forEach(btn => btn.setAttribute('disabled', 'disabled'));
+                notify(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages window now. Try logging in again.'), 'error');
+            } else {
+                openButtons.forEach(btn => btn.removeAttribute('disabled'));
+            }
+        };
+        window.ensureScopeReady = ensureScopeReady;
+        window.markScopeInitialized = () => { scopeInitialized = true; };
+        // Don't call ensureScopeReady() here - wait for initMessageForm() to complete
+        const msgType = document.getElementById('msgType');
+        if (msgType) msgType.addEventListener('change', updateMessageFormVisibility);
+
+        // Group message controls
+        const scopeType = document.getElementById('scopeType');
+        if (scopeType) {
+            scopeType.addEventListener('change', updateGroupMessageControls);
+        }
+
+        // Role selection
+        const selectAllRolesEl = document.getElementById('selectAllRoles');
+        if (selectAllRolesEl) selectAllRolesEl.addEventListener('change', (event) => {
+            const checked = event.target.checked;
+            document.querySelectorAll('input[name="selectedRoles"]').forEach(input => {
+                input.checked = checked;
+            });
+        });
+
+        document.querySelectorAll('input[name="selectedRoles"]').forEach(input => {
+            input.addEventListener('change', () => {
+                const allRoles = document.querySelectorAll('input[name="selectedRoles"]');
+                const allChecked = allRoles.length > 0 && Array.from(allRoles).every(role => role.checked);
+                const anyChecked = Array.from(allRoles).some(role => role.checked);
+                const selectAllToggle = document.getElementById('selectAllRoles');
+                selectAllToggle.indeterminate = anyChecked && !allChecked;
+                selectAllToggle.checked = allChecked;
+            });
+        });
+
+        // Governorate selection
+        const selectAllGovEl = document.getElementById('selectAllGovernorates');
+        if (selectAllGovEl) selectAllGovEl.addEventListener('change', (event) => {
+            const select = document.getElementById('selectedGovernorates');
+            const options = select.querySelectorAll('option');
+            options.forEach(option => {
+                option.selected = event.target.checked;
+            });
+        });
+
+        // Kindergarten selection
+        const kgFilterSearch = document.getElementById('kgFilterSearch');
+        if (kgFilterSearch) {
+            kgFilterSearch.addEventListener('click', () => loadKindergartensForCheckboxes());
+        }
+        const kgFilterReset = document.getElementById('kgFilterReset');
+        if (kgFilterReset) {
+            kgFilterReset.addEventListener('click', async () => {
+                resetKindergartenFilters();
+                await loadKindergartensForCheckboxes();
+            });
+        }
+        const selectAllKgEl = document.getElementById('selectAllKindergartens');
+        if (selectAllKgEl) selectAllKgEl.addEventListener('change', (event) => {
+            const select = document.getElementById('selectedKindergartens');
+            const options = select.querySelectorAll('option');
+            options.forEach(option => {
+                option.selected = event.target.checked;
+            });
+        });
+
+        // Group scope change
+        const groupScope = document.getElementById('groupScope');
+        if (groupScope) {
+            groupScope.addEventListener('change', () => {
+                updateGroupMessageControls();
+                if (groupScope.value === 'kindergarten') {
+                    loadKindergartensForCheckboxes();
+                }
+            });
+        }
+
+        // Role selection toggles
+        document.querySelectorAll('input[name="recipientRole"]').forEach(checkbox => {
+            checkbox.addEventListener('change', syncAllRolesToggle);
+        });
+
+        // Select all roles toggle
+        const selectAllRoles = document.getElementById('selectAllRoles');
+        if (selectAllRoles) {
+            selectAllRoles.addEventListener('change', (event) => {
+                const checked = event.target.checked;
+                document.querySelectorAll('input[name="recipientRole"]').forEach(checkbox => {
+                    if (checkbox.id !== 'selectAllRoles') {
+                        checkbox.checked = checked;
+                    }
+                });
+            });
+        }
+        const directUserSearchBtn = document.getElementById('directUserSearchBtn');
+        const directUserResetBtn = document.getElementById('directUserResetBtn');
+        const directRecipientSelect = document.getElementById('directRecipientSelect');
+        const directRoleFilter = document.getElementById('directRoleFilter');
+        const directKindergartenFilter = document.getElementById('directKindergartenFilter');
+
+        if (directUserSearchBtn) {
+            directUserSearchBtn.addEventListener('click', () => loadDirectRecipients());
+        }
+        if (directUserResetBtn) {
+            directUserResetBtn.addEventListener('click', () => {
+                const searchInput = document.getElementById('directUserSearch');
+                const phoneInput = document.getElementById('directUserPhone');
+                const governorateInput = document.getElementById('directUserGovernorate');
+                const roleSelect = document.getElementById('directRoleFilter');
+                const kgSelect = document.getElementById('directKindergartenFilter');
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+                if (phoneInput) {
+                    phoneInput.value = '';
+                }
+                if (governorateInput) {
+                    governorateInput.value = '';
+                }
+                if (roleSelect && currentUserRole === 'ADMIN') {
+                    roleSelect.value = '';
+                } else if (roleSelect && currentUserRole === 'MANAGER') {
+                    roleSelect.value = roleSelect.options.length ? roleSelect.options[0].value : '';
+                }
+                if (kgSelect) {
+                    kgSelect.value = '';
+                }
+                loadDirectRecipients();
+            });
+        }
+        if (directRecipientSelect) {
+            directRecipientSelect.addEventListener('change', () => {
+                const hidden = document.getElementById('msgRecipient');
+                if (hidden) {
+                    hidden.value = directRecipientSelect.value;
+                }
+            });
+        }
+        if (directRoleFilter) {
+            directRoleFilter.addEventListener('change', () => loadDirectRecipients());
+        }
+        if (directKindergartenFilter) {
+            directKindergartenFilter.addEventListener('change', () => loadDirectRecipients());
+        }
+        const adminSearchInput = document.getElementById('adminSearchInput');
+        if (adminSearchInput) {
+            adminSearchInput.addEventListener('input', () => previewRecipients());
+        }
+        // Governorate checkbox listeners for live preview
+        document.querySelectorAll('.admin-gov-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => previewRecipients());
+        });
+        // Removed kindergarten-related event listeners since section was removed
+    });
+
+    async function initAdminTargeting() {
+        const section = document.getElementById('adminTargetingSection');
+        if (section) {
+            section.style.display = currentUserRole === 'ADMIN' ? 'block' : 'none';
+        }
+        if (currentUserRole !== 'ADMIN') {
+            return;
+        }
+        // Removed loading of governorates and kindergartens since sections were removed
+        updateAdminTargetingUI();
+        previewRecipients();
+    }
+
+
+
+
+
+    function collectAdminRoles() {
+        return Array.from(document.querySelectorAll('.admin-role-checkbox:checked'))
+            .map(input => input.value);
+    }
+
+    function collectAdminTargetPayload() {
+        const mode = document.getElementById('adminTargetMode')?.value;
+        const target = { mode };
+        const searchTerm = document.getElementById('adminSearchInput')?.value.trim();
+        if (searchTerm) {
+            target.search = searchTerm;
+        }
+        if (mode === 'GOVERNORATE') {
+            const govs = Array.from(document.querySelectorAll('.admin-gov-checkbox:checked')).map(c => c.value);
+            if (govs.length) target.governorates = govs;
+            const roles = Array.from(document.querySelectorAll('.admin-gov-role-checkbox:checked')).map(c => c.value);
+            if (roles.length) target.roles = roles;
+        }
+        if (mode === 'KINDERGARTENS') {
+            const kgIds = Array.from(document.querySelectorAll('.admin-kg-checkbox:checked')).map(c => parseInt(c.value, 10));
+            if (kgIds.length) target.kindergarten_ids = kgIds;
+            const roles = Array.from(document.querySelectorAll('.admin-kg-role-checkbox:checked')).map(c => c.value);
+            if (roles.length) target.roles = roles;
+        }
+        return target;
+    }
+
+    function updateAdminTargetingUI() {
+        const mode = document.getElementById('adminTargetMode')?.value;
+        const govSection = document.getElementById('adminGovernorateSection');
+        const govRolesSection = document.getElementById('adminGovRolesSection');
+        const kgSection = document.getElementById('adminKindergartenSection');
+        const kgRolesSection = document.getElementById('adminKgRolesSection');
+        if (govSection) govSection.style.display = mode === 'GOVERNORATE' ? 'block' : 'none';
+        if (govRolesSection) govRolesSection.style.display = mode === 'GOVERNORATE' ? 'block' : 'none';
+        if (kgSection) kgSection.style.display = mode === 'KINDERGARTENS' ? 'block' : 'none';
+        if (kgRolesSection) kgRolesSection.style.display = mode === 'KINDERGARTENS' ? 'block' : 'none';
+        // Load kindergarten list for KINDERGARTENS mode if not already loaded
+        if (mode === 'KINDERGARTENS') {
+            loadAdminKindergartenCheckboxes();
+        }
+        previewRecipients();
+    }
+
+    async function loadAdminKindergartenCheckboxes() {
+        const container = document.getElementById('adminKindergartenList');
+        if (!container) return;
+        // Skip if already populated with checkboxes
+        if (container.querySelector('.admin-kg-checkbox')) return;
+        if (!window.AuthService || !AuthService.isAuthenticated()) return;
+        const token = AuthService.getToken();
+        try {
+            const response = await fetch('/api/kindergartens?limit=500&status=active', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                container.innerHTML = `<div class="text-danger">${T('تعذر تحميل الروضات', 'Failed to load kindergartens')}</div>`;
+                return;
+            }
+            const data = await response.json();
+            const kindergartens = Array.isArray(data) ? data : (data.kindergartens || []);
+            if (!kindergartens.length) {
+                container.innerHTML = `<div class="text-muted">${T('لا توجد روضات متاحة', 'No kindergartens available')}</div>`;
+                return;
+            }
+            // Group by governorate
+            const grouped = {};
+            kindergartens.forEach(kg => {
+                const gov = kg.governorate || T('غير محدد', 'Unspecified');
+                if (!grouped[gov]) grouped[gov] = [];
+                grouped[gov].push(kg);
+            });
+            container.innerHTML = '';
+            Object.keys(grouped).sort().forEach(gov => {
+                const header = document.createElement('div');
+                header.className = 'fw-semibold text-primary mt-2 mb-1';
+                header.textContent = gov;
+                container.appendChild(header);
+                grouped[gov].forEach(kg => {
+                    const div = document.createElement('div');
+                    div.className = 'form-check';
+                    const id = `adminKg_${kg.id}`;
+                    div.innerHTML = `
+                        <input class="form-check-input admin-kg-checkbox" type="checkbox" value="${kg.id}" id="${id}" onchange="previewRecipients()">
+                        <label class="form-check-label" for="${id}">${kg.name_ar || kg.name_en || T('روضة ', 'Kindergarten ') + kg.id}${kg.city ? ' (' + kg.city + ')' : ''}</label>
+                    `;
+                    container.appendChild(div);
+                });
+            });
+        } catch (err) {
+            console.error('Error loading admin kindergartens:', err);
+            container.innerHTML = `<div class="text-danger">${T('خطأ في تحميل الروضات', 'Error loading kindergartens')}</div>`;
+        }
+    }
+
+    function isAdminTargetingActive() {
+        const section = document.getElementById('adminTargetingSection');
+        return currentUserRole === 'ADMIN' && !!section && section.offsetParent !== null;
+    }
+
+    async function previewRecipients() {
+        if (currentUserRole !== 'ADMIN') {
+            return;
+        }
+        const mode = document.getElementById('adminTargetMode')?.value;
+        if (!mode) {
+            return;
+        }
+        const params = new URLSearchParams();
+        params.append('mode', mode);
+        if (mode === 'GOVERNORATE') {
+            const govs = Array.from(document.querySelectorAll('.admin-gov-checkbox:checked')).map(c => c.value);
+            if (!govs.length) {
+                const countEl = document.getElementById('recipientCount');
+                if (countEl) countEl.textContent = '0';
+                return;
+            }
+            govs.forEach(g => params.append('governorates', g));
+            const roles = Array.from(document.querySelectorAll('.admin-gov-role-checkbox:checked')).map(c => c.value);
+            roles.forEach(r => params.append('roles', r));
+        }
+        if (mode === 'KINDERGARTENS') {
+            const kgIds = Array.from(document.querySelectorAll('.admin-kg-checkbox:checked')).map(c => c.value);
+            if (!kgIds.length) {
+                const countEl = document.getElementById('recipientCount');
+                if (countEl) countEl.textContent = '0';
+                return;
+            }
+            kgIds.forEach(id => params.append('kindergarten_ids', id));
+            const roles = Array.from(document.querySelectorAll('.admin-kg-role-checkbox:checked')).map(c => c.value);
+            roles.forEach(r => params.append('roles', r));
+        }
+        const searchTerm = document.getElementById('adminSearchInput')?.value.trim();
+        if (searchTerm) {
+            params.append('search', searchTerm);
+        }
+        const countEl = document.getElementById('recipientCount');
+        const breakdownEl = document.getElementById('recipientBreakdown');
+        const previewBtn = document.querySelector('#adminRecipientPreview button');
+        if (previewBtn) {
+            previewBtn.disabled = true;
+            previewBtn.innerHTML = `<i class="bi bi-eye"></i> ${T('جاري الحساب...', 'Calculating...')}`;
+        }
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                return;
+            }
+
+            const token = AuthService.getToken();
+            const response = await fetch(`/api/admin/message-recipients/preview?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                throw new Error(T('تعذر معاينة المستلمين', 'Failed to preview recipients'));
+            }
+            const data = await response.json();
+            if (countEl) {
+                countEl.textContent = typeof data.total_count === 'number' ? data.total_count : 0;
+            }
+            updateRecipientBreakdown(data);
+            renderSampleRecipients(data.sample_recipients || []);
+        } catch (err) {
+            console.error('Error previewing recipients:', err);
+            if (countEl) {
+                countEl.textContent = T('خطأ', 'Error');
+            }
+            if (breakdownEl) {
+                breakdownEl.textContent = T('تعذر الحصول على البيانات', 'Failed to get data');
+                breakdownEl.style.display = 'block';
+            }
+        } finally {
+            if (previewBtn) {
+                previewBtn.disabled = false;
+                previewBtn.innerHTML = `<i class="bi bi-eye"></i> ${T('حساب المستلمين', 'Calculate Recipients')}`;
+            }
+        }
+    }
+
+    function renderSampleRecipients(recipients) {
+        const container = document.getElementById('sampleRecipientsContainer');
+        const listEl = document.getElementById('sampleRecipientsList');
+        if (!container || !listEl) {
+            return;
+        }
+        if (!Array.isArray(recipients) || !recipients.length) {
+            container.style.display = 'none';
+            listEl.innerHTML = '';
+            return;
+        }
+        listEl.innerHTML = recipients
+            .map(recipient => {
+                const governoratePart = recipient.governorate ? ` • ${recipient.governorate}` : '';
+                return `<div>${recipient.display_name} (${recipient.role})${governoratePart}</div>`;
+            })
+            .join('');
+        container.style.display = 'block';
+    }
+
+    function updateRecipientBreakdown(data) {
+        const breakdownEl = document.getElementById('recipientBreakdown');
+        if (!breakdownEl) {
+            return;
+        }
+        const segments = [];
+        if (data?.by_role && Object.keys(data.by_role).length) {
+            const roleParts = Object.entries(data.by_role)
+                .map(([role, count]) => `${role} (${count})`);
+            segments.push(`${T('حسب الدور:', 'By Role:')} ${roleParts.join(' · ')}`);
+        }
+        if (data?.by_governorate && Object.keys(data.by_governorate).length) {
+            const govParts = Object.entries(data.by_governorate)
+                .slice(0, 3)
+                .map(([gov, count]) => `${gov} (${count})`);
+            segments.push(`${T('حسب المحافظة:', 'By Governorate:')} ${govParts.join(' · ')}`);
+        }
+        if (data?.by_kindergarten && Object.keys(data.by_kindergarten).length) {
+            const kgParts = Object.entries(data.by_kindergarten)
+                .slice(0, 3)
+                .map(([kgId, count]) => `${T('روضة', 'KG')} ${kgId} (${count})`);
+            segments.push(`${T('حسب الروضة:', 'By Kindergarten:')} ${kgParts.join(' · ')}`);;
+        }
+        if (segments.length) {
+            breakdownEl.textContent = segments.join(' | ');
+            breakdownEl.style.display = 'block';
+        } else {
+            breakdownEl.style.display = 'none';
+            breakdownEl.textContent = '';
+        }
+    }
+
+    async function submitAdminMessage() {
+        const target = collectAdminTargetPayload();
+        const mode = target.mode;
+        // Validate governorate selection
+        if (mode === 'GOVERNORATE' && (!target.governorates || !target.governorates.length)) {
+            notify(T('الرجاء اختيار محافظة واحدة على الأقل.', 'Please select at least one governorate.'), 'error');
+            return;
+        }
+        // Validate kindergarten selection
+        if (mode === 'KINDERGARTENS' && (!target.kindergarten_ids || !target.kindergarten_ids.length)) {
+            notify(T('الرجاء اختيار روضة واحدة على الأقل.', 'Please select at least one kindergarten.'), 'error');
+            return;
+        }
+        const allowRepliesToggle = document.getElementById('allowRepliesToggle');
+        const payload = {
+            subject: document.getElementById('msgSubject').value,
+            message_body: document.getElementById('msgBody').value,
+            target,
+            allow_replies: !!(allowRepliesToggle && allowRepliesToggle.checked)
+        };
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            notify(T('يرجى تسجيل الدخول لإرسال الرسالة', 'Please log in to send message'));
+            return;
+        }
+
+        const token = AuthService.getToken();
+        try {
+            const response = await fetch('/api/admin/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                notify(T('تعذر إرسال الرسالة: ', 'Failed to send message: ') + (err.error?.message || err.detail || response.statusText));
+                return;
+            }
+            const created = await response.json();
+            await onMessageSent(created);
+        } catch (err) {
+            console.error('Error sending admin message:', err);
+            notify(T('خطأ في الشبكة أثناء إرسال الرسالة.', 'Network error while sending message.'));
+        }
+    }
+
+    async function onMessageSent(created) {
+        const attachments = document.getElementById('msgAttachments').files;
+        if (attachments && attachments.length) {
+            await uploadAttachments(created.id, attachments);
+        }
+        const modal = bootstrap.Modal.getInstance(document.getElementById('newMessageModal'));
+        if (modal) {
+            modal.hide();
+        }
+        if (typeof loadMessages === 'function') {
+            loadMessages();
+        }
+        // Success notification is now handled in submitMessage
+        document.getElementById('newMessageForm').reset();
+        updateMessageFormVisibility();
+        syncAllRolesToggle();
+        previewRecipients();
+    }
+
     async function submitMessage() {
-        const type = document.getElementById('msgType').value;
+        // First validate the form
+        if (!validateForm()) {
+            notify(T('يرجى إكمال جميع الحقول المطلوبة قبل الإرسال.', 'Please complete all required fields before sending.'), 'error');
+            return;
+        }
+
+        const messageType = (document.getElementById('msgType')?.value) || (document.getElementById('messageType')?.value) || 'direct';
         const subject = document.getElementById('msgSubject').value;
         const body = document.getElementById('msgBody').value;
-        const recipientId = document.getElementById('msgRecipient').value;
-        const token = localStorage.getItem('access_token');
+
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            notify(T('يرجى تسجيل الدخول لإرسال الرسالة', 'Please log in to send message'), 'error');
+            return;
+        }
+
+        const token = AuthService.getToken();
+        const sendBtn = document.getElementById('sendMessageBtn');
+
+        // Disable button during sending
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = `<i class="bi bi-hourglass-split me-2"></i>${T('جاري الإرسال...', 'Sending...')}`;
 
         const payload = {
             subject: subject,
             message_body: body,
-            thread_type: type === 'broadcast' ? 'broadcast' : 'direct',
-            recipient_id: type === 'direct' ? parseInt(recipientId) : null
+            message_type: messageType
         };
 
         try {
+            if (messageType === 'direct') {
+                // Direct messaging logic
+                if (currentUserRole === 'ADMIN' || currentUserRole === 'MANAGER') {
+                    const recipientId = document.getElementById('msgRecipient').value;
+                    if (!recipientId) {
+                        notify(T('اختر مستلمًا للرسالة المباشرة.', 'Select a recipient for the direct message.'), 'error');
+                        return;
+                    }
+                    payload.recipient_id = parseInt(recipientId, 10);
+                    if (currentUserRole === 'MANAGER') {
+                        payload.kindergarten_id = currentUserKindergartenId;
+                    }
+                } else if (currentUserRole === 'PARENT') {
+                    if (!parentKindergartensLoaded) {
+                        await loadParentKindergartens();
+                    }
+                    if (!parentActiveKindergartens.length) {
+                        notify(T('لا توجد روضات نشطة للمراسلة.', 'No active kindergartens for messaging.'), 'error');
+                        return;
+                    }
+                    const selectedKg = getSelectedParentKindergartenId();
+                    if (parentActiveKindergartens.length > 1 && !selectedKg) {
+                        notify(T('اختر الروضة أولاً.', 'Select a kindergarten first.'), 'error');
+                        return;
+                    }
+                    const targetKg = selectedKg || parentActiveKindergartens[0];
+                    if (targetKg) {
+                        payload.kindergarten_id = targetKg;
+                    }
+                } else if (currentUserRole === 'SUPERVISOR') {
+                    if (!currentUserKindergartenId) {
+                        notify(T('تعذر تحديد الروضة لإرسال الرسالة.', 'Could not determine kindergarten for sending.'), 'error');
+                        return;
+                    }
+                    payload.kindergarten_id = currentUserKindergartenId;
+                } else {
+                    notify(T('لا يمكن إرسال الرسالة لهذا النوع من المستخدمين.', 'Cannot send message for this user type.'), 'error');
+                    return;
+                }
+            } else {
+                if (currentUserRole === 'ADMIN' && isAdminTargetingActive()) {
+                    await submitAdminMessage();
+                    return;
+                }
+
+                // Manager group messaging - send to supervisors/parents in their kindergarten
+                if (currentUserRole === 'MANAGER') {
+                    const selectedRoles = Array.from(document.querySelectorAll('input[name="recipientRole"]:checked'))
+                        .map(checkbox => checkbox.value);
+                    if (!selectedRoles.length) {
+                        notify(T('اختر دورًا واحدًا على الأقل للمستلمين.', 'Select at least one recipient role.'), 'error');
+                        return;
+                    }
+                    // Validate manager can only target SUPERVISOR and PARENT
+                    const invalidRoles = selectedRoles.filter(r => r !== 'SUPERVISOR' && r !== 'PARENT');
+                    if (invalidRoles.length) {
+                        notify(T('المدراء يمكنهم مراسلة المشرفين وأولياء الأمور فقط.', 'Managers can only message supervisors and parents.'), 'error');
+                        return;
+                    }
+                    payload.mode = 'audience';
+                    payload.audience = {
+                        include_roles: selectedRoles,
+                        scope: 'KINDERGARTEN',
+                        kindergarten_ids: [currentUserKindergartenId]
+                    };
+                    payload.message_type = 'announcement';
+                    const allowRepliesToggle = document.getElementById('allowRepliesToggle');
+                    payload.allow_replies = !!(allowRepliesToggle && allowRepliesToggle.checked);
+                } else {
+                    // Group messaging logic with new UI structure (non-admin, non-manager)
+                    const scope = document.getElementById('groupScope')?.value || 'global';
+                    const selectedRoles = Array.from(document.querySelectorAll('input[name="recipientRole"]:checked'))
+                        .map(checkbox => checkbox.value);
+
+                    if (!selectedRoles.length) {
+                        notify(T('اختر دورًا واحدًا على الأقل للمستلمين.', 'Select at least one recipient role.'), 'error');
+                        return;
+                    }
+
+                    payload.audience = {
+                        roles: selectedRoles,
+                        scope: scope
+                    };
+
+                    // Add scope-specific filters
+                    if (scope === 'governorate') {
+                        const governorateId = document.getElementById('scopeGovernorate')?.value;
+                        if (!governorateId) {
+                            notify(T('اختر المحافظة أولاً.', 'Select a governorate first.'), 'error');
+                            return;
+                        }
+                        payload.audience.governorate_id = parseInt(governorateId, 10);
+                    } else if (scope === 'kindergarten') {
+                        const kindergartenIds = Array.from(document.querySelectorAll('input[name="recipientKindergarten"]:checked'))
+                            .map(checkbox => parseInt(checkbox.value, 10));
+                        if (!kindergartenIds.length) {
+                            notify(T('اختر روضة واحدة على الأقل.', 'Select at least one kindergarten.'), 'error');
+                            return;
+                        }
+                        payload.audience.kindergarten_ids = kindergartenIds;
+                    }
+
+                    // Add allow replies setting
+                    const allowRepliesToggle = document.getElementById('allowRepliesToggle');
+                    payload.allow_replies = !!(allowRepliesToggle && allowRepliesToggle.checked);
+                }
+            }
+
             const response = await fetch('/comm/messages', {
                 method: 'POST',
                 headers: {
@@ -72,23 +2043,68 @@
             });
 
             if (response.ok) {
-                // Close modal and refresh
-                const modal = bootstrap.Modal.getInstance(document.getElementById('newMessageModal'));
-                modal.hide();
-                // If on messages page, refresh
-                if (typeof loadMessages === 'function') {
-                    loadMessages();
-                }
-                alert('تم الإرسال بنجاح');
-                // Reset form
-                document.getElementById('newMessageForm').reset();
+                const created = await response.json();
+                await onMessageSent(created);
+                notify(T('تم إرسال الرسالة بنجاح!', 'Message sent successfully!'), 'success');
             } else {
                 const err = await response.json();
-                alert('فشل الإرسال: ' + (err.detail || response.statusText));
+                notify(T('تعذر إرسال الرسالة: ', 'Failed to send message: ') + (err.error?.message || err.detail || response.statusText), 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('حدث خطأ أثناء الإرسال');
+            notify(T('خطأ في الشبكة أثناء إرسال الرسالة.', 'Network error while sending message.'), 'error');
+        } finally {
+            // Re-enable button and reset text
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = `<i class="bi bi-send me-2"></i>${T('إرسال', 'Send')}`;
         }
     }
+
+    async function uploadAttachments(messageId, files) {
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            notify(T('يرجى تسجيل الدخول لرفع المرفقات', 'Please log in to upload attachments'));
+            return;
+        }
+
+        const token = AuthService.getToken();
+        for (const file of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch(`/comm/messages/${messageId}/attachments`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                notify(err.error?.message || err.detail || T('تعذر رفع المرفق', 'Failed to upload attachment'));
+                return;
+            }
+        }
+    }
+
+    // Language switching for governorates
+    function updateGovernorateLabels() {
+        const isEnglish = document.documentElement.lang === 'en';
+        document.querySelectorAll('.admin-gov-checkbox').forEach(checkbox => {
+            const label = checkbox.nextElementSibling;
+            const arabicText = checkbox.value;
+            const englishText = checkbox.getAttribute('data-en');
+            label.textContent = isEnglish ? englishText : arabicText;
+        });
+    }
+
+    // Update governorate labels on language change
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'lang') {
+                updateGovernorateLabels();
+            }
+        });
+    });
+    observer.observe(document.documentElement, { attributes: true });
+
+    // Initial update
+    updateGovernorateLabels();
 </script>

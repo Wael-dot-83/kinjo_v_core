@@ -2,20 +2,27 @@
 KInJo - Kindergarten Management Platform
 Main FastAPI Application
 """
-from datetime import timedelta
+import asyncio
+import gzip
+import os
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Optional
-from fastapi import FastAPI, Depends, HTTPException, status, Request, Response, Form
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Response, Form, APIRouter, WebSocket
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
+from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.concurrency import iterate_in_threadpool
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
-from sqlalchemy import text
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from sqlalchemy.exc import SQLAlchemyError
 from slowapi.errors import RateLimitExceeded
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 class UTF8ContentTypeMiddleware(BaseHTTPMiddleware):
@@ -28,89 +35,149 @@ class UTF8ContentTypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Add HTTP security headers to all responses"""
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        if settings.ENVIRONMENT == "production":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+class UTF8StaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if isinstance(response, FileResponse):
+            normalized_path = path.lower()
+            if normalized_path.endswith(".js"):
+                response.headers["Content-Type"] = "application/javascript; charset=utf-8"
+
+            if "cache-control" not in response.headers:
+                static_asset_suffixes = (
+                    ".js", ".css", ".json", ".svg", ".png", ".jpg", ".jpeg",
+                    ".webp", ".ico", ".woff", ".woff2", ".ttf", ".eot", ".map"
+                )
+                if normalized_path.endswith(static_asset_suffixes):
+                    response.headers["Cache-Control"] = "public, max-age=86400"
+                elif normalized_path.endswith(".html"):
+                    response.headers["Cache-Control"] = "no-cache"
         return response
+
+
+import logging
+logger = logging.getLogger(__name__)
 
 import models
 from database import get_db, init_db
 from auth import authenticate_user, create_access_token, get_password_hash
-from config import settings, validate_production_settings
+from config import settings
 from dependencies import get_current_user, get_current_user_optional, RedirectToLogin
-from fastapi.responses import RedirectResponse, JSONResponse
+from middleware.auth import (
+    build_generic_auth_exception,
+    classify_login_identifier,
+    is_privileged_role,
+    sanitize_response_payload,
+)
+from middleware.csrf import csrf_protection_middleware
+from middleware.security import (
+    audit_state_changes_middleware,
+    request_timeout_middleware,
+    sanitize_json_response_middleware,
+    security_headers_middleware,
+)
+from mfa_service import (
+    decrypt_secret,
+    encrypt_secret,
+    generate_totp_secret,
+    provisioning_uri,
+    qr_code_data_url,
+    verify_code,
+)
 import validators
+from admin_security import CorrelationIdMiddleware, APIError, api_error_handler
+from rate_limiter import limiter, rate_limit_exceeded_handler
+from performance_monitor import PerformanceMiddleware, setup_database_monitoring, start_system_monitoring
+from backup_manager import backup_scheduler
+from daily_report_scheduler import daily_report_scheduler
+from monitoring_service import performance_monitor, health_checker, auto_scaler
+from predictive_analytics import predictive_analytics
+from language_integrity import enforce_english_html_integrity
+
 
 # Safety guard: never allow TESTING bypass in production
 def ensure_not_testing_in_production() -> None:
     if settings.ENVIRONMENT.lower() == "production" and settings.TESTING:
         raise RuntimeError("Refusing to start with TESTING=true in production environment.")
 
+
+def ensure_secure_production_config() -> None:
+    """Fail fast on obviously unsafe production configuration."""
+    if settings.ENVIRONMENT.lower() != "production":
+        return
+
+    secret_key = (settings.SECRET_KEY or "").strip().lower()
+    weak_markers = {"changeme", "change-me", "development-only", "test-secret-key", "your-secret-key"}
+    if len(settings.SECRET_KEY or "") < 32 or any(marker in secret_key for marker in weak_markers):
+        raise RuntimeError("Refusing to start with an insecure SECRET_KEY in production.")
+
+    if not settings.CORS_ALLOWED_ORIGINS:
+        raise RuntimeError("Refusing to start without explicit CORS_ALLOWED_ORIGINS in production.")
+
+
 ensure_not_testing_in_production()
+ensure_secure_production_config()
 
-# Rate limiter setup — use Redis backend when REDIS_URL is set and reachable;
-# falls back to in-memory storage so the app starts cleanly without Redis.
-def _build_limiter() -> Limiter:
-    try:
-        import redis as _redis
-        _redis.from_url(settings.REDIS_URL).ping()
-        lim = Limiter(key_func=get_remote_address, storage_uri=settings.REDIS_URL)
-    except Exception:
-        lim = Limiter(key_func=get_remote_address)
-    return lim
+# Logging configuration (best practice)
+def configure_logging():
+    log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+    handlers = [logging.StreamHandler()]
+    if settings.ENVIRONMENT.lower() == "production":
+        handlers.append(logging.FileHandler(settings.LOG_FILE))
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        handlers=handlers
+    )
 
-limiter = _build_limiter()
-# Disable rate limiting during automated tests to avoid flakiness
-if settings.TESTING:
-    limiter.enabled = False
+configure_logging()
+
+# Suppress noisy WinError 10054 connection reset errors on Windows asyncio
+def _ignore_connection_reset(loop, context):
+    exc = context.get("exception")
+    if isinstance(exc, ConnectionResetError):
+        logging.getLogger("uvicorn.error").debug("Client disconnected")
+        return
+    loop.default_exception_handler(context)
 
 # Import routers
 from missing_endpoints import router as api_router
 from frontend import router as frontend_router
 from communication_service import router as communication_router
 from safety_service import router as safety_router
-from curriculum_service import router as curriculum_router
 from kpi_service import router as kpi_router
 from analytics_service import router as analytics_router
 from analytics_ws import router as analytics_ws_router
-from government_api import router as government_router
-from routers.ai import router as ai_router
-from routers.supervisor import router as supervisor_router
-from routers.manager import router as manager_router
+from dashboard_api import router as dashboard_router
+from decision_support_api import router as decision_support_router
+from filter_api import router as filter_router
+from export_api import router as export_router
+# from realtime_service import websocket_endpoint
+import audit_service
+from admin_endpoints import router as admin_router
+from daily_report_analytics import router as dr_analytics_router, frontend_router as dr_analytics_frontend
+from monitoring_endpoints import router as monitoring_router
+from manager_analytics_endpoints import router as manager_analytics_router
+from classification_service import router as classification_router
+from daily_reports_organization_api import router as daily_reports_organization_router
+from api.parent import router as parent_router
+from api.kindergartens import router as kindergartens_router
+from api.enrollment import router as enrollment_router
+from api.daily_reports_routes import router as daily_reports_api_router
+from api.children import router as children_router
+from api.classes import router as classes_router
+from api.attendance_routes import router as attendance_api_router
+from api.registration import router as registration_router
+from api.absence_requests import router as absence_requests_router
+from api.users import router as users_router
+from api.tasks import router as tasks_router
+from api.manager import router as manager_router
+from api.supervisor import router as supervisor_router
+from api.portfolio import router as portfolio_router
+from routers.supervisor import router as supervisor_scoped_router
+from routers.manager import router as manager_scoped_router
 from routers.admin_impersonation import router as admin_impersonation_router
 from routers.messaging import router as messaging_router
-
-# =============================================================================
-# Scheduled Jobs
-# =============================================================================
-
-async def expire_waitlist_entries() -> None:
-    """Mark waitlist offers as EXPIRED when their offer_expiry_at has passed."""
-    from database import SessionLocal
-    db = SessionLocal()
-    try:
-        db.execute(
-            text(
-                "UPDATE waitlist_entries "
-                "SET status = 'EXPIRED' "
-                "WHERE status = 'OFFERED' "
-                "  AND offer_expiry_at IS NOT NULL "
-                "  AND offer_expiry_at < NOW()"
-            )
-        )
-        db.commit()
-    except Exception:
-        db.rollback()
-    finally:
-        db.close()
-
 
 # =============================================================================
 # Lifespan Event Handler
@@ -120,39 +187,61 @@ async def expire_waitlist_entries() -> None:
 async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events"""
     # Startup
-    validate_production_settings()
     init_db()
-    from ai.insights import generate_daily_insights
-    from ai.llm import run_llm_daily_jobs
-    from ai.ml import run_ml_daily_jobs
-    from ai.embeddings import run_embedding_daily_jobs
-    from government_api import refresh_development_dashboard
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(expire_waitlist_entries,    "interval", minutes=15, id="expire_waitlist")
-    scheduler.add_job(generate_daily_insights,    "cron", hour=2, minute=0,  id="ai_daily_insights")
-    scheduler.add_job(refresh_development_dashboard, "cron", hour=3, minute=0, id="refresh_dev_dashboard")
-    scheduler.add_job(run_llm_daily_jobs,         "cron", hour=3, minute=30, id="llm_daily_jobs")
-    scheduler.add_job(run_ml_daily_jobs,          "cron", hour=4, minute=0,  id="ml_daily_jobs")
-    scheduler.add_job(run_embedding_daily_jobs,   "cron", hour=5, minute=0,  id="embedding_daily_jobs")
-    scheduler.start()
+    if os.name == "nt":
+        try:
+            loop = asyncio.get_running_loop()
+            loop.set_exception_handler(_ignore_connection_reset)
+        except RuntimeError:
+            pass
+
+    # Setup performance monitoring (skip in test mode to avoid thread delays)
+    if not settings.TESTING:
+        from database import engine
+        setup_database_monitoring(engine)
+        start_system_monitoring()
+
+        # Start daily report scheduler
+        daily_report_scheduler.start_scheduler()
+
+        # Start monitoring services
+        performance_monitor.start_monitoring()
+        auto_scaler.start_auto_scaling()
+
+        # Start WebSocket periodic updates for real-time dashboards
+        try:
+            from realtime_service import periodic_kpi_updates
+            asyncio.create_task(periodic_kpi_updates())
+            logger.info("WebSocket real-time KPI updates enabled")
+        except ImportError as e:
+            logger.warning(f"Failed to enable WebSocket real-time updates: {e}")
+
     yield
     # Shutdown
-    scheduler.shutdown(wait=False)
+    if not settings.TESTING:
+        performance_monitor.stop_monitoring()
+
+        # Stop schedulers
+        backup_scheduler.stop_scheduler()
+        daily_report_scheduler.stop_scheduler()
+
+        auto_scaler.stop_auto_scaling()
 
 
 # Create FastAPI application
+api_docs_enabled = settings.API_DOCS_ENABLED and settings.ENVIRONMENT.lower() != "production"
 app = FastAPI(
     title="KInJo - Kindergarten Management Platform",
     description="Enterprise-grade management system for kindergartens in Jordan",
-    version="1.0.0",
-    docs_url="/docs" if settings.API_DOCS_ENABLED else None,
-    redoc_url="/redoc" if settings.API_DOCS_ENABLED else None,
+    version="2.0.0",
+    docs_url="/docs" if api_docs_enabled else None,
+    redoc_url="/redoc" if api_docs_enabled else None,
     lifespan=lifespan
 )
 
 # Add rate limiter to app state
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 
 # Handle redirect to login for unauthenticated frontend requests
@@ -160,37 +249,245 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 async def redirect_to_login_handler(request: Request, exc: RedirectToLogin):
     return RedirectResponse(url=exc.redirect_url, status_code=302)
 
-# CORS middleware - origins controlled via CORS_ALLOWED_ORIGINS in .env
+
+@app.exception_handler(validators.ValidationError)
+async def validation_error_handler(request: Request, exc: validators.ValidationError):
+    return JSONResponse(status_code=400, content={"detail": exc.message})
+
+# Trusted host middleware
+trusted_hosts = settings.TRUSTED_HOSTS or ["127.0.0.1", "localhost", "testserver"]
+if settings.ENVIRONMENT.lower() != "production":
+    trusted_hosts = list(dict.fromkeys([*trusted_hosts, "127.0.0.1", "localhost", "testserver"]))
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts)
+
+# CORS middleware
+allowed_origins = settings.CORS_ALLOWED_ORIGINS or ["http://127.0.0.1:8000", "http://localhost:8000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ALLOWED_ORIGINS,
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "Accept", "Accept-Language"],
 )
 
-# Add security headers to all responses
-app.add_middleware(SecurityHeadersMiddleware)
+# Compression middleware for faster API/template responses over network.
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
+
+# Request timeout middleware
+@app.middleware("http")
+async def enforce_request_timeout(request: Request, call_next):
+    return await request_timeout_middleware(request, call_next)
+
+# Security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    return await security_headers_middleware(request, call_next)
+
+
+def _likely_contains_arabic_utf8(payload: bytes) -> bool:
+    """Fast heuristic to skip expensive HTML translation on ASCII-only pages."""
+    if not payload:
+        return False
+    return b"\xd8" in payload or b"\xd9" in payload
+
+
+def _restore_response_body(response: Response, body: bytes) -> None:
+    if getattr(response, "body_iterator", None) is not None:
+        response.body_iterator = iterate_in_threadpool([body])
+    else:
+        response.body = body
+    response.headers["content-length"] = str(len(body))
+
+
+@app.middleware("http")
+async def enforce_english_language_integrity(request: Request, call_next):
+    """
+    Enforce single-language English output for HTML pages.
+    This prevents mixed Arabic/English UI when the selected language is English.
+    """
+    response = await call_next(request)
+
+    if request.method != "GET":
+        return response
+    if request.url.path.startswith("/api") or request.url.path.startswith("/static"):
+        return response
+
+    requested_lang = _normalize_ui_language(request.cookies.get("kinjo_lang"))
+    if requested_lang != "en":
+        return response
+
+    content_type = response.headers.get("content-type", "").lower()
+    if "text/html" not in content_type:
+        return response
+
+    body = b""
+    try:
+        if getattr(response, "body_iterator", None) is not None:
+            body = b""
+            async for chunk in response.body_iterator:
+                body += chunk
+        else:
+            body = getattr(response, "body", b"") or b""
+
+        if not body:
+            return response
+
+        content_encoding = response.headers.get("content-encoding", "").lower()
+        is_gzip = "gzip" in content_encoding
+
+        plain_body = body
+        if is_gzip:
+            try:
+                plain_body = gzip.decompress(body)
+            except OSError:
+                _restore_response_body(response, body)
+                return response
+
+        if not _likely_contains_arabic_utf8(plain_body):
+            _restore_response_body(response, body)
+            return response
+
+        html = plain_body.decode("utf-8", errors="ignore")
+        translated_html = enforce_english_html_integrity(html)
+        if translated_html == html:
+            _restore_response_body(response, body)
+            return response
+
+        translated_plain = translated_html.encode("utf-8")
+        translated_bytes = gzip.compress(translated_plain) if is_gzip else translated_plain
+
+        _restore_response_body(response, translated_bytes)
+        if is_gzip:
+            response.headers["content-encoding"] = "gzip"
+            response.headers["vary"] = "Accept-Encoding"
+    except (RuntimeError, TypeError, UnicodeDecodeError, OSError):
+        if body:
+            _restore_response_body(response, body)
+        # Do not block responses if translation enforcement fails.
+        return response
+
+    return response
+
+
+# CSRF protection — validate Origin/Referer on state-changing requests
+# Cookie uses SameSite=Lax (set in auth.js), this is defense-in-depth.
+_CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+_CSRF_DOUBLE_SUBMIT_EXEMPT_PATHS = {"/token", "/api/auth/login", "/api/auth/register"}
+_CSRF_ALLOWED_HOSTS = {
+    origin.split("://", 1)[-1].rstrip("/")
+    for origin in (settings.CORS_ALLOWED_ORIGINS or ["http://127.0.0.1:8000", "http://localhost:8000"])
+}
+
+
+def _loopback_netloc_aliases(netloc: str) -> set[str]:
+    """Return localhost/loopback aliases for the same port."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(f"http://{netloc}")
+    host = (parsed.hostname or "").lower()
+    port = parsed.port
+    if host not in {"localhost", "127.0.0.1", "::1"}:
+        return set()
+
+    if port is None:
+        return {"localhost", "127.0.0.1", "[::1]"}
+    return {f"localhost:{port}", f"127.0.0.1:{port}", f"[::1]:{port}"}
+
+
+@app.middleware("http")
+async def csrf_origin_check(request: Request, call_next):
+    if request.method not in _CSRF_SAFE_METHODS:
+        # Skip CSRF check for API calls with Bearer token (inherently CSRF-safe)
+        auth_header = request.headers.get("authorization", "")
+        if not auth_header.lower().startswith("bearer "):
+            # Cookie-based auth — verify Origin or Referer
+            origin = request.headers.get("origin", "")
+            referer = request.headers.get("referer", "")
+            request_netloc = (request.url.netloc or "").lower()
+            session_cookie = request.cookies.get(settings.SESSION_COOKIE_NAME) or request.cookies.get("kinjo_token")
+            csrf_cookie = request.cookies.get(settings.CSRF_COOKIE_NAME)
+            csrf_header = request.headers.get("x-csrf-token", "")
+            allowed_hosts = {host.lower() for host in _CSRF_ALLOWED_HOSTS}
+            if request_netloc:
+                allowed_hosts.add(request_netloc)
+                allowed_hosts.update(_loopback_netloc_aliases(request_netloc))
+            if origin:
+                from urllib.parse import urlparse
+                parsed = urlparse(origin)
+                origin_netloc = (parsed.netloc or "").lower()
+                if origin_netloc not in allowed_hosts:
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "CSRF check failed: origin not allowed"}
+                    )
+            elif referer:
+                from urllib.parse import urlparse
+                parsed = urlparse(referer)
+                referer_netloc = (parsed.netloc or "").lower()
+                if referer_netloc not in allowed_hosts:
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "CSRF check failed: referer not allowed"}
+                    )
+            if session_cookie and request.url.path not in _CSRF_DOUBLE_SUBMIT_EXEMPT_PATHS:
+                if not csrf_cookie or not csrf_header:
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "CSRF check failed: missing CSRF token"}
+                    )
+                if not secrets.compare_digest(csrf_cookie, csrf_header):
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "CSRF check failed: invalid CSRF token"}
+                    )
+            # If neither header is present, allow (browser forms on same origin
+            # may omit both in some privacy configs; SameSite=Lax handles this).
+    return await call_next(request)
+
+@app.middleware("http")
+async def strict_csrf_protection(request: Request, call_next):
+    return await csrf_protection_middleware(request, call_next)
+
+
+@app.middleware("http")
+async def audit_state_changes(request: Request, call_next):
+    return await audit_state_changes_middleware(request, call_next)
+
+
+@app.middleware("http")
+async def sanitize_json_responses(request: Request, call_next):
+    return await sanitize_json_response_middleware(request, call_next)
+
 # Add UTF-8 Content-Type middleware for proper Arabic text encoding
 app.add_middleware(UTF8ContentTypeMiddleware)
 
+# Add Correlation ID middleware for request tracking
+app.add_middleware(CorrelationIdMiddleware)
+
+# Add Performance Monitoring middleware
+app.add_middleware(PerformanceMiddleware)
+
+# Register custom exception handler for APIError
+app.add_exception_handler(APIError, api_error_handler)
+
 # Mount static files
 try:
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-except:
-    pass  # Static folder might not exist
-
-
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    return Response(status_code=204)
-
+    app.mount("/static", UTF8StaticFiles(directory="static"), name="static")
+    logger.info("Static files mounted successfully from 'static' directory")
+except FileNotFoundError as e:
+    logger.warning("Static files directory not found: %s - serving without static files", str(e))
+except (OSError, RuntimeError) as e:
+    logger.error("Failed to mount static files: %s", str(e), exc_info=False)
 
 # =============================================================================
 # Authentication Endpoints (defined BEFORE routers to take precedence)
 # =============================================================================
 
 def _get_request_ip(request: Request) -> Optional[str]:
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
     client = request.client
     return client.host if client else None
 
@@ -214,32 +511,194 @@ def _log_auth_event(
             ip_address=ip_address,
             sensitivity_level=sensitivity_level
         )
-    except Exception:
-        # Avoid blocking auth flows if audit logging fails.
+    except SQLAlchemyError as e:
+        logger.error("Failed to log audit action (database error): %s", str(e), exc_info=False)
+        # Avoid blocking auth flows if audit logging fails
+    except (RuntimeError, TypeError, ValueError, AttributeError) as e:
+        logger.error("Unexpected error logging audit action: %s", str(e), exc_info=True)
+        # Avoid blocking auth flows if audit logging fails
+
+
+def _normalize_ui_language(value: Optional[str]) -> str:
+    normalized = str(value or "ar").strip().lower()
+    return normalized if normalized in {"ar", "en"} else "ar"
+
+
+def _resolve_user_language(db: Session, user_id: int) -> str:
+    try:
+        pref = (
+            db.query(models.UserFilterPreference)
+            .filter(models.UserFilterPreference.user_id == user_id)
+            .first()
+        )
+        if pref and isinstance(pref.filter_config, dict):
+            return _normalize_ui_language(pref.filter_config.get("user_lang"))
+    except (SQLAlchemyError, AttributeError, TypeError):
         pass
+    return "ar"
+
+
+def _set_ui_language_cookie(response: Response, language: str) -> None:
+    response.set_cookie(
+        key="kinjo_lang",
+        value=_normalize_ui_language(language),
+        max_age=31536000,  # 1 year
+        path="/",
+        samesite=settings.SESSION_COOKIE_SAMESITE,
+        secure=settings.ENVIRONMENT.lower() == "production",
+        httponly=False,
+        domain=settings.COOKIE_DOMAIN or None,
+    )
+
+
+def _set_no_store_headers(response: Response) -> None:
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+
+
+def _set_authenticated_session(
+    response: Response,
+    *,
+    access_token: str,
+    remember_me: bool,
+) -> None:
+    max_age = (
+        settings.ACCESS_TOKEN_EXPIRE_MINUTES_REMEMBER
+        if remember_me
+        else settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    ) * 60
+    csrf_token = secrets.token_hex(32)
+
+    response.set_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        value=access_token,
+        max_age=max_age,
+        path="/",
+        samesite=settings.SESSION_COOKIE_SAMESITE,
+        secure=settings.ENVIRONMENT.lower() == "production",
+        httponly=True,
+        domain=settings.COOKIE_DOMAIN or None,
+    )
+    response.set_cookie(
+        key=settings.CSRF_COOKIE_NAME,
+        value=csrf_token,
+        max_age=max_age,
+        path="/",
+        samesite="strict",
+        secure=settings.ENVIRONMENT.lower() == "production",
+        httponly=False,
+        domain=settings.COOKIE_DOMAIN or None,
+    )
+    _set_no_store_headers(response)
+
+
+def _clear_authenticated_session(response: Response) -> None:
+    for cookie_name in (settings.SESSION_COOKIE_NAME, settings.CSRF_COOKIE_NAME, "kinjo_token"):
+        response.delete_cookie(
+            key=cookie_name,
+            path="/",
+            domain=settings.COOKIE_DOMAIN or None,
+        )
+    _set_no_store_headers(response)
 
 
 async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: Session):
-    """Internal login logic"""
+    """Internal login logic with server-side identifier validation and MFA."""
+    from sqlalchemy import or_
+
     ip_address = _get_request_ip(request)
     form = await request.form()
     remember_raw = form.get("remember_me")
     remember_me = str(remember_raw).lower() in {"1", "true", "on", "yes"}
-    user = authenticate_user(db, form_data.username, form_data.password)
+    raw_username = form_data.username.strip()
+
+    try:
+        identifier_type, normalized_identifier = classify_login_identifier(raw_username)
+    except ValueError:
+        raise build_generic_auth_exception()
+
+    filters = []
+    if identifier_type == "phone":
+        filters.append(models.User.phone_number == normalized_identifier)
+    elif identifier_type == "email":
+        filters.append(models.User.email == normalized_identifier)
+    else:
+        filters.extend(
+            [
+                models.User.username == normalized_identifier,
+                models.User.email == normalized_identifier.lower(),
+            ]
+        )
+
+    target_user = db.query(models.User).filter(or_(*filters)).first()
+    now_utc = datetime.now(timezone.utc)
+    if target_user and target_user.locked_until:
+        locked_until = target_user.locked_until
+        if locked_until.tzinfo is None:
+            locked_until = locked_until.replace(tzinfo=timezone.utc)
+        if locked_until > now_utc:
+            _log_auth_event(
+                db=db,
+                user_id=target_user.id,
+                action="LOGIN_LOCKED",
+                details="Account lockout enforced",
+                ip_address=ip_address,
+                sensitivity_level=3,
+            )
+            raise build_generic_auth_exception(status_code=status.HTTP_423_LOCKED)
+
+    user = authenticate_user(db, normalized_identifier, form_data.password)
     if not user:
         _log_auth_event(
             db=db,
-            user_id=None,
+            user_id=target_user.id if target_user else None,
             action="LOGIN_FAILED",
-            details=f"username={form_data.username}",
+            details="Credential validation failed",
             ip_address=ip_address,
-            sensitivity_level=3
+            sensitivity_level=3,
         )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+        raise build_generic_auth_exception()
+
+    user_lang = _resolve_user_language(db, user.id)
+    base_payload = {
+        "user_lang": user_lang,
+        "remember_me": remember_me,
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role.value,
+            "must_change_password": user.must_change_password,
+            "mfa_enabled": bool(getattr(user, "mfa_enabled", False)),
+        },
+    }
+
+    if not settings.TESTING and is_privileged_role(user.role):
+        purpose = "mfa_challenge" if user.mfa_enabled else "mfa_setup"
+        mfa_ticket = create_access_token(
+            data={
+                "sub": user.username,
+                "role": user.role.value,
+                "purpose": purpose,
+                "remember_me": remember_me,
+            },
+            expires_delta=timedelta(minutes=settings.MFA_TICKET_EXPIRE_MINUTES),
         )
+        _log_auth_event(
+            db=db,
+            user_id=user.id,
+            action="MFA_REQUIRED",
+            details=f"purpose={purpose}",
+            ip_address=ip_address,
+            sensitivity_level=2,
+        )
+        return {
+            **base_payload,
+            "mfa_required": True,
+            "mfa_setup_required": purpose == "mfa_setup",
+            "mfa_ticket": mfa_ticket,
+            "mfa_redirect": "/mfa/setup?mode=setup" if purpose == "mfa_setup" else "/mfa/setup?mode=challenge",
+        }
 
     access_token_expires = timedelta(
         minutes=(
@@ -250,7 +709,7 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
     )
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role.value},
-        expires_delta=access_token_expires
+        expires_delta=access_token_expires,
     )
 
     _log_auth_event(
@@ -259,19 +718,55 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
         action="LOGIN_SUCCESS",
         details=f"Login successful (remember_me={remember_me})",
         ip_address=ip_address,
-        sensitivity_level=2
+        sensitivity_level=2,
     )
 
     return {
+        **base_payload,
         "access_token": access_token,
         "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "role": user.role.value
-        }
+        "mfa_required": False,
     }
+
+
+def _issue_auth_response(payload: dict, *, status_code: int = 200) -> JSONResponse:
+    response_payload = sanitize_response_payload(dict(payload))
+    response_payload.pop("remember_me", None)
+    response = JSONResponse(content=response_payload, status_code=status_code)
+    if payload.get("access_token"):
+        _set_authenticated_session(
+            response,
+            access_token=payload["access_token"],
+            remember_me=bool(payload.get("remember_me")),
+        )
+    else:
+        _set_no_store_headers(response)
+    _set_ui_language_cookie(response, payload.get("user_lang", "ar"))
+    return response
+
+
+def _decode_mfa_ticket(token: str, db: Session, *, expected_purposes: set[str]) -> tuple[models.User, str, bool]:
+    from jose import JWTError, jwt as _jwt
+
+    try:
+        payload = _jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except JWTError as exc:
+        raise HTTPException(status_code=401, detail="MFA session expired.") from exc
+
+    username = payload.get("sub")
+    purpose = payload.get("purpose")
+    if not username or purpose not in expected_purposes:
+        raise HTTPException(status_code=401, detail="MFA session expired.")
+
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user or user.status != models.UserStatus.ACTIVE:
+        raise HTTPException(status_code=401, detail="MFA session expired.")
+
+    return user, purpose, bool(payload.get("remember_me"))
+
+
+class MFACodeRequest(BaseModel):
+    code: str
 
 
 @app.post("/token")
@@ -282,7 +777,8 @@ async def token_login(
     db: Session = Depends(get_db)
 ):
     """OAuth2 token endpoint (for frontend)"""
-    return await _do_login(request, form_data, db)
+    payload = await _do_login(request, form_data, db)
+    return _issue_auth_response(payload, status_code=202 if payload.get("mfa_required") else 200)
 
 
 @app.post("/api/auth/login")
@@ -293,7 +789,8 @@ async def api_login(
     db: Session = Depends(get_db)
 ):
     """API login endpoint"""
-    return await _do_login(request, form_data, db)
+    payload = await _do_login(request, form_data, db)
+    return _issue_auth_response(payload, status_code=202 if payload.get("mfa_required") else 200)
 
 
 @app.post("/api/auth/logout")
@@ -302,7 +799,7 @@ async def logout(
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
-    """Logout endpoint - clears the session cookie and invalidates the token"""
+    """Logout endpoint - client should clear tokens"""
     if current_user:
         _log_auth_event(
             db=db,
@@ -313,17 +810,138 @@ async def logout(
             sensitivity_level=1
         )
     response = JSONResponse(content={"message": "Logged out successfully"})
-    response.delete_cookie(
-        key="kinjo_token",
-        path="/",
-        samesite="lax",
-    )
+    _clear_authenticated_session(response)
     return response
 
 
+@app.post("/api/auth/mfa/setup")
+async def mfa_setup(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Generate or return the TOTP setup payload for a privileged user."""
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="MFA session expired.")
+
+    user, purpose, _remember_me = _decode_mfa_ticket(
+        auth_header[7:].strip(),
+        db,
+        expected_purposes={"mfa_setup"},
+    )
+    if settings.TESTING or not is_privileged_role(user.role):
+        raise HTTPException(status_code=400, detail="MFA setup is not required.")
+
+    if user.mfa_enabled:
+        raise HTTPException(status_code=409, detail="MFA is already configured.")
+
+    secret = decrypt_secret(user.mfa_secret)
+    if not secret:
+        secret = generate_totp_secret()
+        user.mfa_secret = encrypt_secret(secret)
+        db.commit()
+        db.refresh(user)
+
+    otpauth_uri = provisioning_uri(secret, user.email or user.username)
+    return {
+        "mode": purpose,
+        "username": user.username,
+        "issuer": settings.MFA_TOTP_ISSUER,
+        "manual_key": secret,
+        "otpauth_uri": otpauth_uri,
+        "qr_code_data_url": qr_code_data_url(otpauth_uri),
+    }
+
+
+@app.post("/api/auth/mfa/verify")
+async def mfa_verify(
+    request: Request,
+    payload: MFACodeRequest,
+    db: Session = Depends(get_db),
+):
+    """Complete privileged MFA setup or challenge and issue the real session."""
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="MFA session expired.")
+
+    user, purpose, remember_me = _decode_mfa_ticket(
+        auth_header[7:].strip(),
+        db,
+        expected_purposes={"mfa_setup", "mfa_challenge"},
+    )
+
+    secret = decrypt_secret(user.mfa_secret)
+    if not secret:
+        raise HTTPException(status_code=400, detail="MFA setup has not started.")
+    if not verify_code(secret, payload.code):
+        _log_auth_event(
+            db=db,
+            user_id=user.id,
+            action="MFA_FAILED",
+            details=f"purpose={purpose}",
+            ip_address=_get_request_ip(request),
+            sensitivity_level=3,
+        )
+        raise HTTPException(status_code=401, detail="Invalid verification code.")
+
+    now_utc = datetime.now(timezone.utc)
+    if purpose == "mfa_setup":
+        # Validate MFA secret is properly set before enabling MFA
+        if not user.mfa_secret:
+            raise HTTPException(
+                status_code=500,
+                detail="MFA secret not properly initialized. Please contact support."
+            )
+        user.mfa_enabled = True
+        user.mfa_enrolled_at = now_utc
+    user.mfa_last_verified_at = now_utc
+    db.commit()
+    db.refresh(user)
+
+    access_token_expires = timedelta(
+        minutes=(
+            settings.ACCESS_TOKEN_EXPIRE_MINUTES_REMEMBER
+            if remember_me
+            else settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+    )
+    access_token = create_access_token(
+        data={"sub": user.username, "role": user.role.value},
+        expires_delta=access_token_expires,
+    )
+    _log_auth_event(
+        db=db,
+        user_id=user.id,
+        action="MFA_VERIFIED",
+        details=f"purpose={purpose}",
+        ip_address=_get_request_ip(request),
+        sensitivity_level=2,
+    )
+
+    auth_payload = {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_lang": _resolve_user_language(db, user.id),
+        "remember_me": remember_me,
+        "mfa_required": False,
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role.value,
+            "must_change_password": user.must_change_password,
+            "mfa_enabled": bool(user.mfa_enabled),
+        },
+    }
+    return _issue_auth_response(auth_payload)
+
+
 @app.post("/api/auth/refresh")
+@limiter.limit("30/minute")
 async def refresh_token(
-    current_user: models.User = Depends(get_current_user)
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Refresh access token"""
     from auth import create_access_token
@@ -333,32 +951,109 @@ async def refresh_token(
         data={"sub": current_user.username, "role": current_user.role.value},
         expires_delta=access_token_expires
     )
-    
-    return {
+
+    response = JSONResponse(content={
         "access_token": access_token,
         "token_type": "bearer"
-    }
+    })
+    _set_authenticated_session(
+        response,
+        access_token=access_token,
+        remember_me=False,
+    )
+    _log_auth_event(
+        db=db,
+        user_id=current_user.id,
+        action="TOKEN_REFRESH",
+        details="Access token refreshed",
+        ip_address=_get_request_ip(request),
+        sensitivity_level=1,
+    )
+    return response
 
 
 # Include routers AFTER auth endpoints
+app.include_router(admin_router, prefix="/api", tags=["Admin"])
 app.include_router(api_router, prefix="/api", tags=["API"])
 app.include_router(communication_router, prefix="/comm", tags=["Communication"])
 app.include_router(safety_router, prefix="/api", tags=["Safety"])
-app.include_router(curriculum_router, prefix="/api", tags=["Curriculum"])
 app.include_router(kpi_router, prefix="/api", tags=["KPI"])
+app.include_router(monitoring_router, tags=["Monitoring"])
 app.include_router(analytics_router, prefix="/api", tags=["Analytics"])
+app.include_router(manager_analytics_router, prefix="/api", tags=["Manager Analytics"])
+app.include_router(classification_router, prefix="/api", tags=["Classification"])
+app.include_router(dashboard_router)
+app.include_router(decision_support_router)
+app.include_router(filter_router)
+app.include_router(export_router)
+app.include_router(audit_service.router, prefix="/api", tags=["Audit"])
 app.include_router(analytics_ws_router)
-app.include_router(government_router, prefix="/api", tags=["Government"])
-app.include_router(ai_router, prefix="/api", tags=["AI"])
-app.include_router(supervisor_router)   # prefix already contains /api/supervisor
-app.include_router(manager_router)      # prefix already contains /api/manager
+app.include_router(dr_analytics_router, prefix="/api", tags=["Daily Report Analytics"])
+app.include_router(dr_analytics_frontend)
+app.include_router(daily_reports_organization_router, prefix="/api", tags=["Daily Reports Organization"])
+app.include_router(frontend_router)
+app.include_router(parent_router, prefix="/api", tags=["Parent"])
+app.include_router(kindergartens_router, prefix="/api", tags=["Kindergartens"])
+app.include_router(enrollment_router, prefix="/api", tags=["Enrollment"])
+app.include_router(daily_reports_api_router, prefix="/api", tags=["Daily Reports API"])
+app.include_router(children_router, prefix="/api", tags=["Children"])
+app.include_router(classes_router, prefix="/api", tags=["Classes"])
+app.include_router(attendance_api_router, prefix="/api", tags=["Attendance API"])
+app.include_router(registration_router, prefix="/api", tags=["Registration"])
+app.include_router(absence_requests_router, prefix="/api", tags=["Absence Requests"])
+app.include_router(users_router, prefix="/api", tags=["Users"])
+app.include_router(tasks_router, prefix="/api", tags=["Tasks"])
+app.include_router(manager_router, prefix="/api", tags=["Manager"])
+app.include_router(supervisor_router, prefix="/api", tags=["Supervisor"])
+app.include_router(supervisor_scoped_router)        # prefix /api/supervisor already in router
+app.include_router(manager_scoped_router)           # prefix /api/manager already in router
 app.include_router(admin_impersonation_router, prefix="/api", tags=["Admin"])
 app.include_router(messaging_router, prefix="/api", tags=["Messaging"])
-app.include_router(frontend_router)
+app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
+
+# WebSocket endpoint for real-time dashboard updates
+from dependencies import get_current_user_optional
+from realtime_service import websocket_endpoint as realtime_ws_endpoint
+
+@app.websocket("/ws/dashboard")
+async def dashboard_websocket(websocket: WebSocket):
+    """Real-time dashboard WebSocket endpoint with JWT authentication"""
+    from jose import JWTError, jwt as _jwt
+
+    # Extract token from query parameter or first message
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=4001, reason="Missing authentication token")
+        return
+
+    try:
+        payload = _jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username = payload.get("sub")
+        role = payload.get("role", "")
+        if not username:
+            await websocket.close(code=4001, reason="Invalid token")
+            return
+    except JWTError:
+        await websocket.close(code=4001, reason="Invalid or expired token")
+        return
+
+    # Verify user still exists and is active
+    db = next(get_db())
+    try:
+        user = db.query(models.User).filter(models.User.username == username).first()
+        if not user or user.status != models.UserStatus.ACTIVE:
+            await websocket.close(code=4003, reason="User not found or inactive")
+            return
+        user_id = str(user.id)
+        role = user.role.value.lower()
+    finally:
+        db.close()
+
+    await realtime_ws_endpoint(websocket, user_id, role)
 
 
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
-@limiter.limit("3/minute")
+@limiter.limit("10/hour")
 async def register(
     request: Request,
     username: str = Form(...),
@@ -367,6 +1062,33 @@ async def register(
     db: Session = Depends(get_db)
 ):
     """Register a new parent user"""
+    from email_validator import EmailNotValidError, validate_email as validate_email_address
+
+    username = username.strip()
+    email = email.strip().lower()
+    if not username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username is required"
+        )
+
+    try:
+        email = validate_email_address(email, check_deliverability=False).normalized
+    except EmailNotValidError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid email format: {exc}"
+        )
+
+    # Validate password complexity
+    from auth import validate_password_complexity
+    password_errors = validate_password_complexity(password)
+    if password_errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="; ".join(password_errors)
+        )
+
     # Check if user already exists
     existing = db.query(models.User).filter(
         (models.User.username == username) | (models.User.email == email)
@@ -374,7 +1096,7 @@ async def register(
 
     if existing:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail="Username or email already registered"
         )
 
@@ -390,6 +1112,14 @@ async def register(
     db.add(user)
     db.commit()
     db.refresh(user)
+    _log_auth_event(
+        db=db,
+        user_id=user.id,
+        action="REGISTER_SUCCESS",
+        details=f"Parent registration via {request.url.path}",
+        ip_address=_get_request_ip(request),
+        sensitivity_level=2,
+    )
 
     return {"message": "User registered successfully", "user_id": user.id}
 
@@ -399,33 +1129,389 @@ async def register(
 # =============================================================================
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "app": settings.APP_NAME, "version": "1.0.0"}
+async def health_check(db: Session = Depends(get_db)):
+    """Basic health check endpoint with DB connectivity verification"""
+    try:
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
+        return {"status": "healthy", "app": settings.APP_NAME, "version": "1.0.0"}
+    except (SQLAlchemyError, RuntimeError):
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unhealthy", "app": settings.APP_NAME, "version": "1.0.0"},
+        )
 
 
 @app.get("/api/health")
-async def api_health_check(db: Session = Depends(get_db)):
-    """API health check with database connection test"""
+async def api_health_check(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Comprehensive health check with all system components (admin only)"""
+    if current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    health_results = {}
+    system_health_score = performance_monitor.get_system_health_score()
+    overall_status = "healthy"
+    db_status = "unknown"
     try:
+        # Run all health checks
+        health_results = await health_checker.run_health_checks()
+
+        # Get system health score
+        system_health_score = performance_monitor.get_system_health_score()
+
+        # Get overall status
+        overall_status = health_checker.get_overall_health_status()
+
         # Test database connection
         from sqlalchemy import text
         db.execute(text("SELECT 1"))
         db_status = "connected"
-    except Exception as e:
+    except (SQLAlchemyError, RuntimeError, AttributeError) as e:
         db_status = f"error: {str(e)}"
+        overall_status = "unhealthy"
 
-    return {
-        "status": "healthy",
+    # Prepare response
+    response = {
+        "status": overall_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "system_health_score": system_health_score,
         "database": db_status,
         "app": settings.APP_NAME,
-        "environment": settings.ENVIRONMENT
+        "environment": settings.ENVIRONMENT,
+        "services": {}
     }
+
+    # Add service health details
+    for service_name, health_check in health_results.items():
+        response["services"][service_name] = {
+            "status": health_check.status,
+            "response_time": round(health_check.response_time, 3),
+            "message": health_check.message,
+            "timestamp": health_check.timestamp.isoformat(),
+            "details": health_check.details
+        }
+
+    # Add SMTP health (non-blocking — failure degrades but doesn't mark service unhealthy)
+    from email_service import check_smtp_health
+    smtp_health = check_smtp_health()
+    response["services"]["smtp"] = smtp_health
+    if smtp_health.get("status") not in ("ok", "unconfigured"):
+        overall_status = "degraded"
+
+    # Set HTTP status code based on overall health
+    status_code = 200
+    if overall_status == "unhealthy":
+        status_code = 503  # Service Unavailable
+    elif overall_status == "degraded":
+        status_code = 200  # Still OK but with warnings
+
+    return response
+
+
+@app.get("/api/metrics")
+async def get_system_metrics(
+    minutes: int = 60,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Get system performance metrics (admin only)"""
+    if current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    try:
+        recent_metrics = performance_monitor.get_recent_metrics(minutes)
+
+        if not recent_metrics:
+            return {"error": "No metrics available", "minutes_requested": minutes}
+
+        # Convert metrics to dict format
+        metrics_data = []
+        for metric in recent_metrics:
+            metrics_data.append({
+                "timestamp": metric.timestamp.isoformat(),
+                "cpu_percent": metric.cpu_percent,
+                "memory_percent": metric.memory_percent,
+                "memory_used_mb": round(metric.memory_used_mb, 2),
+                "memory_available_mb": round(metric.memory_available_mb, 2),
+                "disk_usage_percent": metric.disk_usage_percent,
+                "disk_free_gb": round(metric.disk_free_gb, 2),
+                "network_connections": metric.network_connections,
+                "active_threads": metric.active_threads,
+                "active_coroutines": metric.active_coroutines,
+                "db_connections": metric.db_connections,
+                "cache_hit_rate": round(metric.cache_hit_rate, 3),
+                "response_time_avg": round(metric.response_time_avg, 3),
+                "error_rate": round(metric.error_rate, 4)
+            })
+
+        # Calculate averages
+        if metrics_data:
+            avg_metrics = {
+                "cpu_percent": round(sum(m["cpu_percent"] for m in metrics_data) / len(metrics_data), 2),
+                "memory_percent": round(sum(m["memory_percent"] for m in metrics_data) / len(metrics_data), 2),
+                "response_time_avg": round(sum(m["response_time_avg"] for m in metrics_data) / len(metrics_data), 3),
+                "error_rate": round(sum(m["error_rate"] for m in metrics_data) / len(metrics_data), 4),
+                "cache_hit_rate": round(sum(m["cache_hit_rate"] for m in metrics_data) / len(metrics_data), 3)
+            }
+        else:
+            avg_metrics = {}
+
+        return {
+            "metrics": metrics_data,
+            "averages": avg_metrics,
+            "count": len(metrics_data),
+            "time_range_minutes": minutes,
+            "system_health_score": performance_monitor.get_system_health_score()
+        }
+
+    except (RuntimeError, AttributeError, TypeError) as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/scaling/history")
+async def get_scaling_history(
+    hours: int = 24,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Get auto-scaling history (admin only)"""
+    if current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    try:
+        history = auto_scaler.get_scaling_history(hours)
+
+        scaling_data = []
+        for rec in history:
+            scaling_data.append({
+                "timestamp": rec.timestamp.isoformat(),
+                "service": rec.service,
+                "action": rec.action,
+                "reason": rec.reason,
+                "confidence": rec.confidence,
+                "metrics": rec.metrics
+            })
+
+        return {
+            "scaling_history": scaling_data,
+            "count": len(scaling_data),
+            "time_range_hours": hours
+        }
+
+    except (RuntimeError, AttributeError, TypeError) as e:
+        return {"error": str(e)}
+
+
+# Predictive Analytics Endpoints
+# =============================================================================
+
+@app.get("/api/analytics/predict/attendance")
+async def predict_attendance_rate(
+    kindergarten_id: int,
+    days_ahead: int = 7,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Predict attendance rate for the next N days"""
+    try:
+        # Check permissions
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
+            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+
+        prediction = await predictive_analytics.predict_attendance_rate(db, kindergarten_id, days_ahead)
+
+        return {
+            "prediction": {
+                "type": prediction.prediction_type.value,
+                "predicted_value": round(prediction.predicted_value, 2),
+                "confidence_interval": [round(prediction.confidence_interval[0], 2), round(prediction.confidence_interval[1], 2)],
+                "confidence_level": round(prediction.confidence_level, 3),
+                "model_used": prediction.model_used.value,
+                "accuracy_score": round(prediction.accuracy_score, 3),
+                "historical_data_points": prediction.historical_data_points,
+                "prediction_date": prediction.prediction_date.isoformat(),
+                "forecast_period_days": prediction.forecast_period_days
+            },
+            "kindergarten_id": kindergarten_id,
+            "generated_at": datetime.now(timezone.utc).isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, AttributeError, TypeError):
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/api/analytics/predict/incidents")
+async def predict_incident_trend(
+    kindergarten_id: int,
+    days_ahead: int = 30,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Predict incident trends for risk assessment"""
+    try:
+        # Check permissions
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
+            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+
+        prediction = await predictive_analytics.predict_incident_trend(db, kindergarten_id, days_ahead)
+
+        return {
+            "prediction": {
+                "type": prediction.prediction_type.value,
+                "predicted_value": round(prediction.predicted_value, 2),
+                "confidence_interval": [round(prediction.confidence_interval[0], 2), round(prediction.confidence_interval[1], 2)],
+                "confidence_level": round(prediction.confidence_level, 3),
+                "model_used": prediction.model_used.value,
+                "accuracy_score": round(prediction.accuracy_score, 3),
+                "historical_data_points": prediction.historical_data_points,
+                "prediction_date": prediction.prediction_date.isoformat(),
+                "forecast_period_days": prediction.forecast_period_days
+            },
+            "kindergarten_id": kindergarten_id,
+            "generated_at": datetime.now(timezone.utc).isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, AttributeError, TypeError):
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/api/analytics/predict/capacity")
+async def predict_capacity_utilization(
+    kindergarten_id: int,
+    days_ahead: int = 90,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Predict capacity utilization trends"""
+    try:
+        # Check permissions
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
+            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+
+        prediction = await predictive_analytics.predict_capacity_utilization(db, kindergarten_id, days_ahead)
+
+        return {
+            "prediction": {
+                "type": prediction.prediction_type.value,
+                "predicted_value": round(prediction.predicted_value, 2),
+                "confidence_interval": [round(prediction.confidence_interval[0], 2), round(prediction.confidence_interval[1], 2)],
+                "confidence_level": round(prediction.confidence_level, 3),
+                "model_used": prediction.model_used.value,
+                "accuracy_score": round(prediction.accuracy_score, 3),
+                "historical_data_points": prediction.historical_data_points,
+                "prediction_date": prediction.prediction_date.isoformat(),
+                "forecast_period_days": prediction.forecast_period_days
+            },
+            "kindergarten_id": kindergarten_id,
+            "generated_at": datetime.now(timezone.utc).isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, AttributeError, TypeError):
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/api/analytics/trends/{metric_type}")
+async def analyze_trends(
+    kindergarten_id: int,
+    metric_type: str,
+    days: int = 365,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Perform comprehensive trend analysis"""
+    try:
+        # Check permissions
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
+            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+
+        # Validate metric type
+        valid_metrics = ["attendance", "incidents", "capacity"]
+        if metric_type not in valid_metrics:
+            raise HTTPException(status_code=400, detail=f"Invalid metric type. Must be one of: {', '.join(valid_metrics)}")
+
+        trend_analysis = await predictive_analytics.analyze_trends(db, kindergarten_id, metric_type, days)
+
+        return {
+            "trend_analysis": {
+                "trend_direction": trend_analysis.trend_direction,
+                "trend_strength": round(trend_analysis.trend_strength, 3),
+                "seasonality_detected": trend_analysis.seasonality_detected,
+                "change_points": [cp.isoformat() for cp in trend_analysis.change_points],
+                "forecast_values": [round(v, 2) for v in trend_analysis.forecast_values],
+                "forecast_dates": [d.isoformat() for d in trend_analysis.forecast_dates],
+                "r_squared": round(trend_analysis.r_squared, 3),
+                "mean_absolute_error": round(trend_analysis.mean_absolute_error, 3)
+            },
+            "kindergarten_id": kindergarten_id,
+            "metric_type": metric_type,
+            "analysis_period_days": days,
+            "generated_at": datetime.now(timezone.utc).isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, AttributeError, TypeError):
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/api/analytics/insights")
+async def get_predictive_insights(
+    kindergarten_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate comprehensive predictive insights"""
+    try:
+        # Check permissions
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
+            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+
+        insights = await predictive_analytics.get_predictive_insights(db, kindergarten_id)
+
+        return {
+            "insights": insights,
+            "kindergarten_id": kindergarten_id,
+            "generated_at": datetime.now(timezone.utc).isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, AttributeError, TypeError):
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Note: When running with `python -m uvicorn main:app`, don't use the code below
 # The if __name__ == "__main__" block is only for running with `python main.py`
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
 

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if ui_lang == 'en' %}Message Management{% else %}إدارة الرسائل{% endif %}{% endblock %}
+
+{% block page_header %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">
+            <i class="bi bi-envelope me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}Message Management{% else %}إدارة الرسائل{% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/admin/messages/compose" class="btn btn-primary">
+            <i class="bi bi-plus me-1"></i>{% if ui_lang == 'en' %}New Message{% else %}إنشاء رسالة جديدة{% endif %}
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="messages-list">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Sent Messages{% else %}الرسائل المرسلة{% endif %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Recipients{% else %}المستلمون{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for message in messages %}
+                                <tr>
+                                    <td>{{ message.subject }}</td>
+                                    <td>{{ message.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ message.recipient_count }}</td>
+                                    <td><span class="badge bg-success">{% if ui_lang == 'en' %}Sent{% else %}مرسلة{% endif %}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-envelope-x fs-1 text-muted mb-3"></i>
+                        <h5 class="text-muted">{% if ui_lang == 'en' %}No sent messages{% else %}لا توجد رسائل مرسلة{% endif %}</h5>
+                        <p class="text-muted">{% if ui_lang == 'en' %}Start by composing a new message to users.{% else %}ابدأ بإنشاء رسالة جديدة للمستخدمين.{% endif %}</p>
+                        <a href="/admin/messages/compose" class="btn btn-primary">
+                            <i class="bi bi-plus me-1"></i>{% if ui_lang == 'en' %}Create First Message{% else %}إنشاء أول رسالة{% endif %}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

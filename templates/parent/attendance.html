@@ -1,164 +1,235 @@
 {% extends 'base.html' %}
-{% block title %}{{ _('Attendance') }} — KinJo{% endblock %}
+
+{% block title %}{% if ui_lang == 'en' %}Attendance Record{% else %}سجل الحضور{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <div class="page-header-eyebrow" style="color:var(--kinjo-success);">
-            <i class="bi bi-calendar-check-fill"></i>
-            بوابة ولي الأمر
-        </div>
-        <h1 class="page-header-title">{{ _('Attendance') }}</h1>
-        <p class="page-header-sub">سجل حضور أطفالك اليومي</p>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="/parent/children" class="btn btn-ghost">
-            <i class="bi bi-people me-2"></i>أطفالي
-        </a>
-        <button class="btn btn-primary" onclick="requestAbsence()">
-            <i class="bi bi-calendar-x me-2"></i>طلب غياب
-        </button>
+        <h1 class="h2">
+            <i class="bi bi-calendar-check me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}Attendance Record{% else %}سجل الحضور{% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Attendance{% else %}سجل الحضور{% endif %}</li>
+            </ol>
+        </nav>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-
-<!-- Stats -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="att-stat present">
-            <i class="bi bi-check-circle-fill"></i>
-            <div class="att-stat-num" id="statPresent">—</div>
-            <div class="att-stat-lbl">حاضر</div>
-        </div>
+<!-- Filters -->
+<div class="d-flex flex-wrap align-items-center mb-4 bg-white p-3 rounded shadow-sm border gap-3">
+    <div class="d-flex align-items-center">
+        <span class="fw-bold me-2">{% if ui_lang == 'en' %}Child:{% else %}الطفل:{% endif %}</span>
+        <select class="form-select w-auto" id="childFilter">
+            <option value="">{% if ui_lang == 'en' %}All Children{% else %}جميع الأطفال{% endif %}</option>
+        </select>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="att-stat absent">
-            <i class="bi bi-x-circle-fill"></i>
-            <div class="att-stat-num" id="statAbsent">—</div>
-            <div class="att-stat-lbl">غائب</div>
-        </div>
+    <div class="d-flex align-items-center">
+        <span class="fw-bold me-2">{% if ui_lang == 'en' %}Date:{% else %}التاريخ:{% endif %}</span>
+        <input type="date" class="form-control w-auto" id="dateFilter">
     </div>
-    <div class="col-6 col-md-3">
-        <div class="att-stat excused">
-            <i class="bi bi-calendar-minus-fill"></i>
-            <div class="att-stat-num" id="statExcused">—</div>
-            <div class="att-stat-lbl">غياب بعذر</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="att-stat rate">
-            <i class="bi bi-graph-up-arrow"></i>
-            <div class="att-stat-num" id="statRate">—</div>
-            <div class="att-stat-lbl">نسبة الحضور</div>
-        </div>
-    </div>
+    <button class="btn btn-outline-primary" onclick="loadAttendance()">
+        <i class="bi bi-funnel me-1"></i>{% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}
+    </button>
 </div>
 
-<!-- Attendance Table -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="card-title-sm mb-0">
-            <i class="bi bi-list-check me-2 text-success"></i>
-            سجل الحضور الشهري
-        </h6>
-        <div class="d-flex gap-2 align-items-center">
-            <button class="btn btn-ghost btn-sm" onclick="prevMonth()" aria-label="الشهر السابق"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
-            <span class="fw-700 small" id="monthLabel">—</span>
-            <button class="btn btn-ghost btn-sm" onclick="nextMonth()" aria-label="الشهر التالي"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+<!-- Summary Cards -->
+<div class="row g-3 mb-4" id="attendanceSummary">
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-primary" id="countTotal">0</h3>
+                <small class="text-muted">{% if ui_lang == 'en' %}Total Records{% else %}إجمالي السجلات{% endif %}</small>
+            </div>
         </div>
     </div>
-    <div class="card-body p-0">
-        <div id="attendanceList">
-            <div class="text-center py-4 text-muted">
-                <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
-                جاري التحميل...
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-success" id="countPresent">0</h3>
+                <small class="text-muted">{% if ui_lang == 'en' %}Present{% else %}حاضر{% endif %}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-danger" id="countAbsent">0</h3>
+                <small class="text-muted">{% if ui_lang == 'en' %}Absent{% else %}غائب{% endif %}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-warning" id="countLate">0</h3>
+                <small class="text-muted">{% if ui_lang == 'en' %}Late{% else %}متأخر{% endif %}</small>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
-
-.att-stat { background:var(--kinjo-card-bg);border:1px solid var(--kinjo-border);border-radius:var(--kinjo-radius-xl);padding:1rem;text-align:center; }
-.att-stat i { font-size:1.4rem;margin-bottom:0.4rem; }
-.att-stat-num { font-size:1.6rem;font-weight:800;color:var(--kinjo-text-primary);line-height:1; }
-.att-stat-lbl { font-size:0.7rem;color:var(--kinjo-text-muted);margin-top:0.2rem; }
-.att-stat.present i { color:var(--kinjo-success); }
-.att-stat.absent  i { color:var(--kinjo-danger); }
-.att-stat.excused i { color:#f59e0b; }
-.att-stat.rate    i { color:var(--kinjo-primary); }
-
-.att-row { display:flex;align-items:center;gap:1rem;padding:0.75rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
-.att-row:last-child { border-bottom:none; }
-.att-date { font-size:0.8rem;font-weight:700;color:var(--kinjo-text-primary);min-width:90px; }
-.att-badge { display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.72rem;font-weight:800; }
-.att-badge.present { background:rgba(16,185,129,0.12);color:var(--kinjo-success); }
-.att-badge.absent  { background:rgba(239,68,68,0.12);color:var(--kinjo-danger); }
-.att-badge.excused { background:rgba(245,158,11,0.12);color:#d97706; }
-.att-notes { font-size:0.75rem;color:var(--kinjo-text-muted);margin-inline-start:auto; }
-</style>
+<!-- Attendance Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Check-in{% else %}وقت الحضور{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Check-out{% else %}وقت الانصراف{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Notes{% else %}ملاحظات{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
-let viewDate = new Date();
+    const IS_EN = '{{ ui_lang }}' === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
 
-document.addEventListener('DOMContentLoaded', loadAttendance);
+    const STATUS_LABEL = {
+        'PRESENT': T('حاضر', 'Present'), 'ABSENT': T('غائب', 'Absent'),
+        'LATE': T('متأخر', 'Late'), 'EXCUSED': T('غياب بعذر', 'Excused'),
+        'SICK': T('مريض', 'Sick')
+    };
 
-function prevMonth() { viewDate.setMonth(viewDate.getMonth() - 1); loadAttendance(); }
-function nextMonth() { viewDate.setMonth(viewDate.getMonth() + 1); loadAttendance(); }
+    const STATUS_CLASS = {
+        'PRESENT': 'bg-success', 'ABSENT': 'bg-danger',
+        'LATE': 'bg-warning text-dark', 'EXCUSED': 'bg-info',
+        'SICK': 'bg-secondary'
+    };
 
-async function loadAttendance() {
-    const y = viewDate.getFullYear(), m = viewDate.getMonth() + 1;
-    document.getElementById('monthLabel').textContent =
-        viewDate.toLocaleDateString('ar-SA', { year:'numeric', month:'long' });
-    document.getElementById('attendanceList').innerHTML =
-        `<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>جاري التحميل...</div>`;
-    try {
-        const r = await fetch(`/api/parent/attendance?year=${y}&month=${m}`, { headers: authHeaders });
-        const data = r.ok ? await r.json() : null;
-        renderAttendance(data?.records || data || []);
-    } catch { renderAttendance([]); }
-}
-
-function renderAttendance(records) {
-    const statuses = { present:0, absent:0, excused:0 };
-    records.forEach(r => { if (statuses[r.status] !== undefined) statuses[r.status]++; });
-    const total = statuses.present + statuses.absent + statuses.excused;
-    const rate  = total ? Math.round(statuses.present / total * 100) : 0;
-
-    document.getElementById('statPresent').textContent = statuses.present;
-    document.getElementById('statAbsent').textContent  = statuses.absent;
-    document.getElementById('statExcused').textContent = statuses.excused;
-    document.getElementById('statRate').textContent    = rate + '%';
-
-    const c = document.getElementById('attendanceList');
-    if (!records.length) {
-        c.innerHTML = `<div class="text-center py-5 text-muted"><i class="bi bi-calendar3 d-block fs-1 mb-2 opacity-25"></i><p>لا توجد بيانات لهذا الشهر</p></div>`;
-        return;
+    function getHeaders() {
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return { 'Content-Type': 'application/json' };
+        }
+        const token = AuthService.getToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
     }
-    const labels = { present:'حاضر', absent:'غائب', excused:'بعذر' };
-    c.innerHTML = records.map(r => {
-        const d    = new Date(r.date).toLocaleDateString('ar-SA', { weekday:'short', month:'short', day:'numeric' });
-        const cls  = r.status || 'absent';
-        return `<div class="att-row">
-            <span class="att-date">${d}</span>
-            <span class="att-badge ${cls}">${labels[cls] || cls}</span>
-            ${r.notes ? `<span class="att-notes">${r.notes}</span>` : ''}
-        </div>`;
-    }).join('');
-}
 
-function requestAbsence() {
-    window.location.href = '/attendance/absence-requests';
-}
+    function formatDate(dateStr) {
+        if (!dateStr) return '—';
+        return new Date(dateStr).toLocaleDateString(IS_EN ? 'en-US' : 'ar-SA');
+    }
+
+    function formatTime(timeStr) {
+        if (!timeStr) return '—';
+        try {
+            const d = new Date(timeStr);
+            return d.toLocaleTimeString(IS_EN ? 'en-US' : 'ar-SA', { hour: '2-digit', minute: '2-digit' });
+        } catch { return timeStr; }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Load children dropdown
+        try {
+            const resp = await fetch('/api/parent/children-list', { headers: getHeaders() });
+            if (resp.ok) {
+                const data = await resp.json();
+                const sel = document.getElementById('childFilter');
+                (data.children || []).forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name;
+                    sel.appendChild(opt);
+                });
+                // Pre-select from URL
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('child_id')) sel.value = params.get('child_id');
+            }
+        } catch (e) { console.error(e); }
+
+        await loadAttendance();
+    });
+
+    async function loadAttendance() {
+        const tbody = document.getElementById('attendanceTableBody');
+        const childId = document.getElementById('childFilter').value;
+        const date = document.getElementById('dateFilter').value;
+
+        let url = '/api/parent/attendance';
+        const params = new URLSearchParams();
+        if (childId) params.set('child_id', childId);
+        if (date) params.set('date', date);
+        if (params.toString()) url += '?' + params.toString();
+
+        try {
+            const resp = await fetch(url, { headers: getHeaders() });
+            if (!resp.ok) throw new Error('Failed');
+
+            const data = await resp.json();
+            const records = data.attendance || [];
+
+            // Update summary
+            document.getElementById('countTotal').textContent = records.length;
+            document.getElementById('countPresent').textContent =
+                records.filter(r => r.status === 'PRESENT').length;
+            document.getElementById('countAbsent').textContent =
+                records.filter(r => r.status === 'ABSENT').length;
+            document.getElementById('countLate').textContent =
+                records.filter(r => r.status === 'LATE').length;
+
+            if (records.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="bi bi-calendar-x fs-1 text-muted d-block mb-3"></i>
+                            <p class="text-muted">${T('لا توجد سجلات حضور', 'No attendance records found')}</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = records.map((r, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td class="fw-semibold">${r.child_name || '—'}</td>
+                    <td>${formatDate(r.date)}</td>
+                    <td>
+                        <span class="badge ${STATUS_CLASS[r.status] || 'bg-secondary'}">
+                            ${STATUS_LABEL[r.status] || r.status}
+                        </span>
+                    </td>
+                    <td>${formatTime(r.check_in_at)}</td>
+                    <td>${formatTime(r.check_out_at)}</td>
+                    <td>${r.notes || '—'}</td>
+                </tr>
+            `).join('');
+
+        } catch (error) {
+            console.error('Error loading attendance:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center text-danger py-4">
+                        <i class="bi bi-exclamation-triangle me-2"></i>${T('خطأ في تحميل البيانات', 'Error loading data')}
+                    </td>
+                </tr>
+            `;
+        }
+    }
 </script>
 {% endblock %}

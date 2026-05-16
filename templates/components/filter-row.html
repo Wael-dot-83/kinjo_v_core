@@ -1,0 +1,51 @@
+{% macro filter_row(fields, search_placeholder=None, search_id="searchInput", clear_text=None,
+apply_text=None) %}
+{% set _search_placeholder = search_placeholder or ('البحث...' if ui_lang != 'en' else 'Search...') %}
+{% set _clear_text = clear_text or ('مسح' if ui_lang != 'en' else 'Clear') %}
+{% set _apply_text = apply_text or ('تطبيق' if ui_lang != 'en' else 'Apply') %}
+<div class="row mb-3 g-3">
+    <div class="col-md-4">
+        <input type="text" class="form-control" id="{{ search_id }}" placeholder="{{ _search_placeholder }}">
+    </div>
+    {% for field in fields %}
+    <div class="col-md-2">
+        <select class="form-select" id="{{ field.id }}">
+            <option value="">{{ field.label }}</option>
+            {% for option in field.options %}
+            <option value="{{ option.value }}">{{ option.label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endfor %}
+    <div class="col-md-2">
+        <button type="button" class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+            <i class="bi bi-x-lg me-1"></i>{{ _clear_text }}
+        </button>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro filter_row_labeled(fields, search_placeholder=None, search_id="searchInput") %}
+{% set _search_placeholder = search_placeholder or ('البحث...' if ui_lang != 'en' else 'Search...') %}
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label for="{{ search_id }}" class="form-label">{% if ui_lang == 'en' %}Search{% else %}البحث{% endif %}</label>
+                <input type="text" class="form-control" id="{{ search_id }}" placeholder="{{ _search_placeholder }}">
+            </div>
+            {% for field in fields %}
+            <div class="col-md-3">
+                <label for="{{ field.id }}" class="form-label">{{ field.label }}</label>
+                <select class="form-select" id="{{ field.id }}">
+                    <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    {% for option in field.options %}
+                    <option value="{{ option.value }}">{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endmacro %}

@@ -1,367 +1,181 @@
 {% extends 'base.html' %}
-{% block title %}سجلات التدقيق — KinJo{% endblock %}
+{% from 'components/page-header.html' import page_header %}
+{% from 'components/filter-row.html' import filter_row_labeled %}
+{% from 'components/data-table.html' import loading_state, pagination %}
+
+{% block title %}{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-clock-history"></i>
-            الشفافية والأمان
-        </div>
-        <h1 class="page-header-title">سجلات التدقيق</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">سجلات التدقيق</li>
-            </ol>
-        </nav>
+{% set toolbar_actions %}
+<button class="btn btn-outline-primary" onclick="exportAuditLogs()">
+    <i class="bi bi-download me-2"></i>
+    {% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
+</button>
+<button class="btn btn-outline-secondary ms-2" onclick="refreshAuditLogs()">
+    <i class="bi bi-arrow-clockwise me-2"></i>
+    {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+</button>
+{% endset %}
+{{ page_header(
+title="Audit Logs" if ui_lang == 'en' else "سجلات التدقيق",
+icon="bi-journal-text",
+breadcrumbs=[
+{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Audit Logs" if ui_lang == 'en' else "سجلات التدقيق", "url": None}
+],
+actions=toolbar_actions
+) }}
+
+<!-- Page Help Content -->
+<div id="pageHelpContent" class="d-none" data-help-title="{% if ui_lang == 'en' %}Audit Logs Guide{% else %}دليل سجلات التدقيق{% endif %}">
+    <div class="mb-4">
+        <h6 class="fw-bold text-primary"><i class="bi bi-journal-text me-2"></i>{% if ui_lang == 'en' %}Activity Monitoring{% else %}مراقبة النشاط{% endif %}</h6>
+        <p>{% if ui_lang == 'en' %}This page allows you to track all activities and operations performed in the system to ensure security and transparency.{% else %}تسمح لك هذه الصفحة بمتابعة جميع الأنشطة والعمليات التي تتم في النظام لضمان الأمان والشفافية.{% endif %}</p>
     </div>
-    <div class="page-header-actions">
-        <button class="btn btn-ghost" onclick="refreshAuditLogs()">
-            <i class="bi bi-arrow-clockwise me-2"></i>تحديث
-        </button>
-        <button class="btn btn-primary" onclick="exportAuditLogs()">
-            <i class="bi bi-download me-2"></i>تصدير
-        </button>
+
+    <div class="mb-4">
+        <h6 class="fw-bold text-primary"><i class="bi bi-funnel me-2"></i>{% if ui_lang == 'en' %}Filter Options{% else %}خيارات التصفية{% endif %}</h6>
+        <ul class="list-unstyled">
+            <li class="mb-2"><strong>{% if ui_lang == 'en' %}Action Type:{% else %}نوع الإجراء:{% endif %}</strong> {% if ui_lang == 'en' %}Filter by operation type (create, update, delete, login).{% else %}تصفية حسب نوع العملية (إنشاء، تحديث، حذف، دخول).{% endif %}</li>
+            <li class="mb-2"><strong>{% if ui_lang == 'en' %}Entity:{% else %}الكيان:{% endif %}</strong> {% if ui_lang == 'en' %}Focus on changes made to a specific entity such as "Children" or "Users".{% else %}التركيز على التغييرات التي طرأت على كيان معين مثل "الأطفال" أو
+                "المستخدمين".{% endif %}</li>
+            <li class="mb-2"><strong>{% if ui_lang == 'en' %}User:{% else %}المستخدم:{% endif %}</strong> {% if ui_lang == 'en' %}Search for a specific user's activity by username.{% else %}البحث عن نشاط مستخدم محدد باسم المستخدم.{% endif %}</li>
+        </ul>
+    </div>
+
+    <div class="mb-4">
+        <h6 class="fw-bold text-primary"><i class="bi bi-shield-lock me-2"></i>{% if ui_lang == 'en' %}Severity Levels{% else %}مستويات الأهمية{% endif %}</h6>
+        <ul class="list-unstyled">
+            <li class="mb-2"><span class="badge bg-danger">{% if ui_lang == 'en' %}High{% else %}عالي{% endif %}</span>: {% if ui_lang == 'en' %}Sensitive operations such as deletion or permission changes.{% else %}عمليات حساسة مثل الحذف أو تغيير الصلاحيات.{% endif %}</li>
+            <li class="mb-2"><span class="badge bg-warning">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</span>: {% if ui_lang == 'en' %}Modifying important data.{% else %}تعديل البيانات المهمة.{% endif %}</li>
+            <li class="mb-2"><span class="badge bg-info text-dark">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</span>: {% if ui_lang == 'en' %}Monitoring and daily activity operations.{% else %}عمليات المتابعة والنشاط اليومي.{% endif %}</li>
+        </ul>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-
-<!-- Filter Card -->
-<div class="card mb-4">
-    <div class="card-body py-3">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-2">
-                <label class="filter-label">الإجراء</label>
-                <select class="form-select form-select-sm" id="actionFilter">
-                    <option value="">جميع الإجراءات</option>
-                    <option value="CREATE">إنشاء</option>
-                    <option value="UPDATE">تحديث</option>
-                    <option value="DELETE">حذف</option>
-                    <option value="LOGIN">تسجيل دخول</option>
-                    <option value="LOGOUT">تسجيل خروج</option>
-                    <option value="VIEW">عرض</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="filter-label">نوع الكيان</label>
-                <select class="form-select form-select-sm" id="entityFilter">
-                    <option value="">جميع الأنواع</option>
-                    <option value="USER">مستخدم</option>
-                    <option value="CHILD">طفل</option>
-                    <option value="KINDERGARTEN">روضة</option>
-                    <option value="ENROLLMENT">تسجيل</option>
-                    <option value="ATTENDANCE">حضور</option>
-                    <option value="REPORT">تقرير</option>
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <!-- Filters -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <label for="actionFilter" class="form-label">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</label>
+                <select class="form-select" id="actionFilter">
+                    <option value="">{% if ui_lang == 'en' %}All Actions{% else %}جميع الإجراءات{% endif %}</option>
+                    <option value="CREATE">{% if ui_lang == 'en' %}Create{% else %}إنشاء{% endif %}</option>
+                    <option value="UPDATE">{% if ui_lang == 'en' %}Update{% else %}تحديث{% endif %}</option>
+                    <option value="DELETE">{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}</option>
+                    <option value="LOGIN">{% if ui_lang == 'en' %}Login{% else %}تسجيل دخول{% endif %}</option>
+                    <option value="LOGOUT">{% if ui_lang == 'en' %}Logout{% else %}تسجيل خروج{% endif %}</option>
+                    <option value="VIEW">{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="filter-label">المستخدم</label>
-                <input type="text" class="form-control form-control-sm" id="userFilter"
-                       placeholder="اسم المستخدم...">
+                <label for="entityFilter" class="form-label">{% if ui_lang == 'en' %}Entity Type{% else %}نوع الكيان{% endif %}</label>
+                <select class="form-select" id="entityFilter">
+                    <option value="">{% if ui_lang == 'en' %}All Types{% else %}جميع الأنواع{% endif %}</option>
+                    <option value="USER">{% if ui_lang == 'en' %}User{% else %}مستخدم{% endif %}</option>
+                    <option value="CHILD">{% if ui_lang == 'en' %}Child{% else %}طفل{% endif %}</option>
+                    <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Kindergarten{% else %}روضة{% endif %}</option>
+                    <option value="ENROLLMENT">{% if ui_lang == 'en' %}Enrollment{% else %}تسجيل{% endif %}</option>
+                    <option value="ATTENDANCE">{% if ui_lang == 'en' %}Attendance{% else %}حضور{% endif %}</option>
+                    <option value="REPORT">{% if ui_lang == 'en' %}Report{% else %}تقرير{% endif %}</option>
+                </select>
             </div>
-            <div class="col-md-2">
-                <label class="filter-label">التاريخ</label>
-                <input type="date" class="form-control form-control-sm" id="dateFilter">
+            <div class="col-md-3">
+                <label for="userFilter" class="form-label">{% if ui_lang == 'en' %}User{% else %}المستخدم{% endif %}</label>
+                <input type="text" class="form-control" id="userFilter" placeholder="{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}">
             </div>
-            <div class="col-md-3 d-flex gap-2">
-                <button class="btn btn-primary btn-sm flex-grow-1" onclick="applyFilters()">
-                    <i class="bi bi-funnel-fill me-1"></i>تصفية
-                </button>
-                <button class="btn btn-ghost btn-sm" onclick="clearFilters()">
-                    <i class="bi bi-arrow-counterclockwise"></i>
-                </button>
+            <div class="col-md-3">
+                <label for="dateFilter" class="form-label">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</label>
+                <input type="date" class="form-control" id="dateFilter">
             </div>
+        </div>
+
+        <!-- Apply Filters Button -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <button class="btn btn-primary" onclick="applyFilters()" aria-label="{% if ui_lang == 'en' %}Apply selected filters{% else %}تطبيق الفلاتر المحددة{% endif %}">
+                <i class="bi bi-funnel me-2"></i>
+                {% if ui_lang == 'en' %}Apply Filter{% else %}تطبيق التصفية{% endif %}
+            </button>
+            <div class="text-muted" id="resultsCount">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
         </div>
     </div>
 </div>
 
 <!-- Audit Logs Table -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="card-title-sm mb-0">
-            <i class="bi bi-list-columns-reverse me-2 text-primary"></i>
-            سجل النشاط
-        </h6>
-        <span class="text-muted small" id="resultsCount">جاري التحميل...</span>
-    </div>
-    <div class="card-body p-0">
+<div class="card shadow-sm">
+    <div class="card-body">
         <div class="table-responsive">
-            <table class="table audit-table mb-0" id="auditLogsTable">
-                <thead>
+            <table class="table table-hover" id="auditLogsTable">
+                <thead class="table-light">
                     <tr>
-                        <th>التاريخ والوقت</th>
-                        <th>المستخدم</th>
-                        <th>الإجراء</th>
-                        <th>نوع الكيان</th>
-                        <th>المعرّف</th>
-                        <th>التفاصيل</th>
-                        <th>عنوان IP</th>
+                        <th>{% if ui_lang == 'en' %}Date & Time{% else %}التاريخ والوقت{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}User{% else %}المستخدم{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Entity Type{% else %}نوع الكيان{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Entity ID{% else %}معرف الكيان{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Details{% else %}التفاصيل{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}IP Address{% else %}عنوان بروتوكول الإنترنت (IP){% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="auditLogsBody">
                     <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">
-                            <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
-                            جاري التحميل...
+                        <td colspan="7" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-    </div>
-    <div class="card-footer bg-transparent">
-        <nav aria-label="تنقل السجلات">
-            <ul class="pagination pagination-sm justify-content-center mb-0" id="pagination"></ul>
+
+        <!-- Pagination (JS-managed) -->
+        <nav aria-label="{% if ui_lang == 'en' %}Audit log pagination{% else %}ترقيم صفحات سجل التدقيق{% endif %}" class="mt-4">
+            <ul class="pagination justify-content-center" id="pagination"></ul>
         </nav>
     </div>
 </div>
 
 <!-- Export Modal -->
-<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel">
-    <div class="modal-dialog modal-dialog-centered">
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-800" id="exportModalLabel">
-                    <i class="bi bi-download me-2 text-primary"></i>تصدير السجلات
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <h5 class="modal-title">{% if ui_lang == 'en' %}Export Audit Logs{% else %}تصدير سجلات التدقيق{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label fw-700" style="font-size:0.85rem;">تنسيق الملف</label>
-                    <div class="d-flex gap-2">
-                        <label class="export-format-option flex-fill">
-                            <input type="radio" name="exportFormat" value="csv" checked class="visually-hidden">
-                            <div class="export-format-card">
-                                <i class="bi bi-file-earmark-spreadsheet"></i>
-                                <span>CSV</span>
-                            </div>
-                        </label>
-                        <label class="export-format-option flex-fill">
-                            <input type="radio" name="exportFormat" value="json" class="visually-hidden">
-                            <div class="export-format-card">
-                                <i class="bi bi-filetype-json"></i>
-                                <span>JSON</span>
-                            </div>
-                        </label>
-                        <label class="export-format-option flex-fill">
-                            <input type="radio" name="exportFormat" value="pdf" class="visually-hidden">
-                            <div class="export-format-card">
-                                <i class="bi bi-file-earmark-pdf"></i>
-                                <span>PDF</span>
-                            </div>
-                        </label>
-                    </div>
+                    <label class="form-label" for="exportFormat">{% if ui_lang == 'en' %}File Format{% else %}تنسيق الملف{% endif %}</label>
+                    <select class="form-select" id="exportFormat">
+                        <option value="csv">{% if ui_lang == 'en' %}CSV (Spreadsheet){% else %}CSV (ملف جدولي){% endif %}</option>
+                        <option value="json">{% if ui_lang == 'en' %}JSON (Data format){% else %}JSON (صيغة بيانات){% endif %}</option>
+                        <option value="pdf">{% if ui_lang == 'en' %}PDF (Document){% else %}PDF (ملف){% endif %}</option>
+                    </select>
                 </div>
-                <div class="mb-0">
-                    <label for="exportPeriod" class="form-label fw-700" style="font-size:0.85rem;">الفترة الزمنية</label>
+                <div class="mb-3">
+                    <label class="form-label" for="exportPeriod">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
                     <select class="form-select" id="exportPeriod">
-                        <option value="7">آخر 7 أيام</option>
-                        <option value="30" selected>آخر 30 يومًا</option>
-                        <option value="90">آخر 3 أشهر</option>
-                        <option value="365">آخر سنة</option>
-                        <option value="all">جميع السجلات</option>
+                        <option value="7">{% if ui_lang == 'en' %}Last 7 days{% else %}آخر 7 أيام{% endif %}</option>
+                        <option value="30">{% if ui_lang == 'en' %}Last 30 days{% else %}آخر 30 يوم{% endif %}</option>
+                        <option value="90">{% if ui_lang == 'en' %}Last 3 months{% else %}آخر 3 أشهر{% endif %}</option>
+                        <option value="365">{% if ui_lang == 'en' %}Last year{% else %}آخر سنة{% endif %}</option>
+                        <option value="all">{% if ui_lang == 'en' %}All records{% else %}جميع السجلات{% endif %}</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="doExport()">
-                    <i class="bi bi-download me-2"></i>تصدير
-                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="doExport()">{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}</button>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
-.filter-label { font-size:0.8rem;font-weight:700;color:var(--kinjo-text-muted);display:block;margin-bottom:0.35rem; }
-
-/* Audit table */
-.audit-table thead th {
-    font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);
-    text-transform:uppercase;letter-spacing:0.04em;
-    padding:0.75rem 1rem;background:var(--kinjo-surface);
-    border-bottom:1px solid var(--kinjo-border);white-space:nowrap;
-}
-.audit-table tbody td {
-    padding:0.75rem 1rem;vertical-align:middle;
-    font-size:0.82rem;border-bottom:1px solid var(--kinjo-border);
-}
-.audit-table tbody tr:last-child td { border-bottom:none; }
-.audit-table tbody tr:hover td { background:var(--kinjo-surface); }
-
-/* Action badge */
-.action-badge { display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.72rem;font-weight:800; }
-.action-CREATE  { background:rgba(16,185,129,0.15);color:var(--kinjo-success); }
-.action-UPDATE  { background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
-.action-DELETE  { background:rgba(239,68,68,0.15);color:var(--kinjo-danger); }
-.action-LOGIN   { background:rgba(6,182,212,0.15);color:#0891b2; }
-.action-LOGOUT  { background:rgba(100,116,139,0.12);color:#64748b; }
-.action-VIEW    { background:rgba(245,158,11,0.12);color:#d97706; }
-
-/* Entity badge */
-.entity-badge { display:inline-block;padding:0.15rem 0.55rem;border-radius:50px;font-size:0.72rem;font-weight:700;background:var(--kinjo-surface);border:1px solid var(--kinjo-border);color:var(--kinjo-text-secondary); }
-
-/* User cell */
-.audit-user { display:flex;align-items:center;gap:0.5rem; }
-.audit-user-av {
-    width:30px;height:30px;border-radius:50%;
-    background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
-    display:flex;align-items:center;justify-content:center;
-    font-size:0.75rem;font-weight:800;flex-shrink:0;
-}
-
-/* Export format selector */
-.export-format-option { cursor:pointer; }
-.export-format-card {
-    display:flex;flex-direction:column;align-items:center;gap:0.3rem;
-    padding:0.75rem 0.5rem;border-radius:var(--kinjo-radius-lg);
-    border:2px solid var(--kinjo-border);background:var(--kinjo-surface);
-    font-size:0.8rem;font-weight:700;color:var(--kinjo-text-secondary);
-    transition:all 0.2s;
-}
-.export-format-card i { font-size:1.5rem; }
-.export-format-option input:checked + .export-format-card {
-    border-color:var(--kinjo-primary);background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
-}
-</style>
 {% endblock %}
 
-{% block scripts %}
-<script>
-let auditLogs = [];
-let currentPage = 1;
-const perPage = 25;
-
-document.addEventListener('DOMContentLoaded', () => {
-    loadAuditLogs();
-    // Style radio cards on change
-    document.querySelectorAll('input[name="exportFormat"]').forEach(r => {
-        r.addEventListener('change', () => {
-            document.querySelectorAll('.export-format-card').forEach(c => c.classList.remove('selected'));
-        });
-    });
-});
-
-async function loadAuditLogs() {
-    try {
-        const params = buildParams();
-        const token = localStorage.getItem('access_token');
-        const r = await fetch(`/api/audit-logs?${new URLSearchParams(params)}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!r.ok) throw new Error();
-        const data = await r.json();
-        auditLogs = data.logs || data || [];
-        renderLogs(auditLogs);
-    } catch {
-        document.getElementById('auditLogsBody').innerHTML = `
-            <tr><td colspan="7" class="text-center py-5 text-muted">
-                <i class="bi bi-exclamation-circle d-block fs-2 mb-2 opacity-25"></i>
-                <span>تعذّر تحميل السجلات</span>
-            </td></tr>`;
-        document.getElementById('resultsCount').textContent = '';
-    }
-}
-
-function buildParams() {
-    const p = {};
-    const action = document.getElementById('actionFilter').value;
-    const entity = document.getElementById('entityFilter').value;
-    const user   = document.getElementById('userFilter').value;
-    const date   = document.getElementById('dateFilter').value;
-    if (action) p.action = action;
-    if (entity) p.entity_type = entity;
-    if (user)   p.username = user;
-    if (date)   p.date = date;
-    p.skip  = (currentPage - 1) * perPage;
-    p.limit = perPage;
-    return p;
-}
-
-function renderLogs(logs) {
-    const tbody = document.getElementById('auditLogsBody');
-    const cnt = document.getElementById('resultsCount');
-    if (cnt) cnt.textContent = `${logs.length} سجل`;
-
-    if (!logs.length) {
-        tbody.innerHTML = `
-            <tr><td colspan="7" class="text-center py-5">
-                <i class="bi bi-journal-x d-block fs-1 mb-2 opacity-25 text-muted"></i>
-                <p class="text-muted mb-0">لا توجد سجلات مطابقة</p>
-            </td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = logs.map(log => {
-        const dt = new Date(log.created_at || log.timestamp);
-        const dateStr = dt.toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' });
-        const timeStr = dt.toLocaleTimeString('ar-SA', { hour:'2-digit', minute:'2-digit' });
-        const uname = (log.username || log.user_id || '—').toString();
-        const init = uname.charAt(0).toUpperCase();
-
-        return `
-        <tr>
-            <td style="white-space:nowrap;">
-                <div style="font-size:0.82rem;font-weight:600;color:var(--kinjo-text-primary);">${dateStr}</div>
-                <div style="font-size:0.75rem;color:var(--kinjo-text-muted);">${timeStr}</div>
-            </td>
-            <td>
-                <div class="audit-user">
-                    <div class="audit-user-av">${init}</div>
-                    <span style="font-weight:600;">${uname}</span>
-                </div>
-            </td>
-            <td><span class="action-badge action-${log.action}">${actionLabel(log.action)}</span></td>
-            <td><span class="entity-badge">${entityLabel(log.entity_type)}</span></td>
-            <td style="font-size:0.8rem;color:var(--kinjo-text-muted);">${log.entity_id || '—'}</td>
-            <td style="max-width:200px;">
-                <span class="text-truncate d-block" style="font-size:0.8rem;color:var(--kinjo-text-secondary);"
-                      title="${(log.details || '').replace(/"/g,'&quot;')}">
-                    ${log.details || '—'}
-                </span>
-            </td>
-            <td>
-                <code style="font-size:0.75rem;background:var(--kinjo-surface);padding:0.15rem 0.4rem;border-radius:6px;color:var(--kinjo-text-muted);">
-                    ${log.ip_address || '—'}
-                </code>
-            </td>
-        </tr>`;
-    }).join('');
-}
-
-function actionLabel(a) {
-    const m = { CREATE:'إنشاء', UPDATE:'تحديث', DELETE:'حذف', LOGIN:'دخول', LOGOUT:'خروج', VIEW:'عرض' };
-    return m[a] || a || '—';
-}
-function entityLabel(e) {
-    const m = { USER:'مستخدم', CHILD:'طفل', KINDERGARTEN:'روضة', ENROLLMENT:'تسجيل', ATTENDANCE:'حضور', REPORT:'تقرير' };
-    return m[e] || e || '—';
-}
-
-function applyFilters() { currentPage = 1; loadAuditLogs(); }
-function clearFilters() {
-    ['actionFilter','entityFilter','userFilter','dateFilter'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-    applyFilters();
-}
-function refreshAuditLogs() { loadAuditLogs(); showToast('تم تحديث السجلات','info'); }
-function exportAuditLogs() { new bootstrap.Modal(document.getElementById('exportModal')).show(); }
-function doExport() {
-    const fmt = document.querySelector('input[name="exportFormat"]:checked')?.value || 'csv';
-    const period = document.getElementById('exportPeriod').value;
-    showToast(`جاري تحضير ملف ${fmt.toUpperCase()} للتصدير...`, 'info');
-    bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
-}
-</script>
+{% block extra_js %}
+<script src="/static/js/audit-logs.js" charset="utf-8"></script>
 {% endblock %}

@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
+{% from 'components/form-controls.html' import gender_select, nationality_with_toggle, phone_input, email_input, password_input, address_group %}
+{% from 'components/step-indicator.html' import step_indicator %}
+{% from 'components/submit-button.html' import submit_button %}
 
-{% block title %}إنشاء حساب جديد{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Create Account{% else %}إنشاء حساب جديد{% endif %}{% endblock %}
 {% block body_class %}auth-page bg-light{% endblock %}
 
 {% block body %}
@@ -14,34 +17,24 @@
                         <i class="bi bi-building text-white fs-1"></i>
                     </div>
                     <h2 class="text-primary fw-bold mb-1">KinJo</h2>
-                    <p class="text-muted small">منصة إدارة الروضات</p>
+                    <p class="text-muted small">{% if ui_lang == 'en' %}Kindergarten management platform{% else %}منصة إدارة الروضات{% endif %}</p>
                 </a>
             </div>
             
             <!-- Registration Card -->
             <div class="card shadow-lg border-0">
                 <div class="card-body p-4 p-lg-5">
-                    <h4 class="card-title text-center mb-4">تسجيل ولي أمر جديد</h4>
+                    <h4 class="card-title text-center mb-4">{% if ui_lang == 'en' %}Parent Registration{% else %}تسجيل ولي أمر جديد{% endif %}</h4>
                     
                     <!-- Progress Steps -->
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="text-center flex-fill">
-                                <div class="step-circle active" id="step1Circle">1</div>
-                                <small class="d-block mt-1">البيانات الشخصية</small>
-                            </div>
-                            <div class="flex-fill border-top mx-2"></div>
-                            <div class="text-center flex-fill">
-                                <div class="step-circle" id="step2Circle">2</div>
-                                <small class="d-block mt-1">العنوان</small>
-                            </div>
-                            <div class="flex-fill border-top mx-2"></div>
-                            <div class="text-center flex-fill">
-                                <div class="step-circle" id="step3Circle">3</div>
-                                <small class="d-block mt-1">الحساب</small>
-                            </div>
-                        </div>
-                    </div>
+                    {{ step_indicator(
+                        steps=[
+                            {"number": 1, "label": "Personal information" if ui_lang == 'en' else "البيانات الشخصية"},
+                            {"number": 2, "label": "Address" if ui_lang == 'en' else "العنوان"},
+                            {"number": 3, "label": "Account" if ui_lang == 'en' else "الحساب"}
+                        ],
+                        current_step=1
+                    ) }}
                     
                     <!-- Error Alert -->
                     <div id="registerError" class="alert alert-danger d-none" role="alert">
@@ -53,207 +46,110 @@
                     <form id="registerForm" class="needs-validation" novalidate>
                         <!-- Step 1: Personal Information -->
                         <div id="step1" class="registration-step">
-                            <h6 class="text-muted mb-3">البيانات الشخصية</h6>
+                            <h6 class="text-muted mb-3">{% if ui_lang == 'en' %}Personal information{% else %}البيانات الشخصية{% endif %}</h6>
                             
                             <div class="row">
                                 <div class="col-md-4 mb-3">
-                                    <label for="firstName" class="form-label required">الاسم الأول</label>
+                                    <label for="firstName" class="form-label required">{% if ui_lang == 'en' %}First name{% else %}الاسم الأول{% endif %}</label>
                                     <input type="text" class="form-control" id="firstName" name="first_name" 
-                                           placeholder="الاسم الأول" required>
-                                    <div class="invalid-feedback">يرجى إدخال الاسم الأول</div>
+                                           placeholder="{% if ui_lang == 'en' %}First name{% else %}الاسم الأول{% endif %}" required>
+                                    <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter first name{% else %}يرجى إدخال الاسم الأول{% endif %}</div>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="secondName" class="form-label">اسم الأب</label>
+                                    <label for="secondName" class="form-label">{% if ui_lang == 'en' %}Father&apos;s name{% else %}اسم الأب{% endif %}</label>
                                     <input type="text" class="form-control" id="secondName" name="second_name" 
-                                           placeholder="اسم الأب">
+                                           placeholder="{% if ui_lang == 'en' %}Father&apos;s name{% else %}اسم الأب{% endif %}">
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label for="lastName" class="form-label required">اسم العائلة</label>
+                                    <label for="lastName" class="form-label required">{% if ui_lang == 'en' %}Last name{% else %}اسم العائلة{% endif %}</label>
                                     <input type="text" class="form-control" id="lastName" name="last_name" 
-                                           placeholder="اسم العائلة" required>
-                                    <div class="invalid-feedback">يرجى إدخال اسم العائلة</div>
+                                           placeholder="{% if ui_lang == 'en' %}Last name{% else %}اسم العائلة{% endif %}" required>
+                                    <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter last name{% else %}يرجى إدخال اسم العائلة{% endif %}</div>
                                 </div>
                             </div>
                             
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label for="gender" class="form-label required">الجنس</label>
-                                    <select class="form-select" id="gender" name="gender" required>
-                                        <option value="">اختر...</option>
-                                        <option value="male">ذكر</option>
-                                        <option value="female">أنثى</option>
-                                    </select>
-                                    <div class="invalid-feedback">يرجى اختيار الجنس</div>
+                                    {{ gender_select() }}
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label for="phoneNumber" class="form-label required">رقم الهاتف</label>
-                                    <input type="tel" class="form-control" id="phoneNumber" name="phone_number" 
-                                           placeholder="07XXXXXXXX" required pattern="^(\+962|00962|0)[0-9]{9}$">
-                                    <div class="invalid-feedback">يرجى إدخال رقم هاتف صحيح</div>
+                                    {{ phone_input() }}
                                 </div>
                             </div>
                             
                             <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="nationality" class="form-label required">الجنسية</label>
-                                    <select class="form-select" id="nationality" name="nationality" required>
-                                        <option value="">اختر...</option>
-                                        <option value="Jordanian">أردني</option>
-                                        <option value="Palestinian">فلسطيني</option>
-                                        <option value="Syrian">سوري</option>
-                                        <option value="Iraqi">عراقي</option>
-                                        <option value="Egyptian">مصري</option>
-                                        <option value="Other">أخرى</option>
-                                    </select>
-                                    <div class="invalid-feedback">يرجى اختيار الجنسية</div>
-                                </div>
-                                <div class="col-md-6 mb-3" id="nationalIdGroup">
-                                    <label for="nationalId" class="form-label required">الرقم الوطني</label>
-                                    <input type="text" class="form-control" id="nationalId" name="national_id" 
-                                           placeholder="10 أرقام" pattern="^\d{10}$">
-                                    <div class="invalid-feedback">يرجى إدخال رقم وطني صحيح (10 أرقام)</div>
-                                </div>
-                                <div class="col-md-6 mb-3 d-none" id="passportGroup">
-                                    <label for="passportNumber" class="form-label required">رقم جواز السفر</label>
-                                    <input type="text" class="form-control" id="passportNumber" name="passport_number" 
-                                           placeholder="رقم جواز السفر">
-                                    <div class="invalid-feedback">يرجى إدخال رقم جواز السفر</div>
-                                </div>
+                                {{ nationality_with_toggle() }}
                             </div>
                             
                             <div class="d-flex justify-content-end mt-3">
                                 <button type="button" class="btn btn-primary" onclick="nextStep(2)">
-                                    التالي <i class="bi bi-arrow-left ms-2"></i>
+                                    {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-{% if ui_lang == 'en' %}arrow-right{% else %}arrow-left{% endif %} ms-2"></i>
                                 </button>
                             </div>
                         </div>
                         
                         <!-- Step 2: Address -->
                         <div id="step2" class="registration-step d-none">
-                            <h6 class="text-muted mb-3">عنوان السكن</h6>
-                            
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label for="homeGovernorate" class="form-label required">المحافظة</label>
-                                    <select class="form-select" id="homeGovernorate" name="home_governorate" required>
-                                        <option value="">اختر...</option>
-                                        <option value="عمان">عمان</option>
-                                        <option value="إربد">إربد</option>
-                                        <option value="الزرقاء">الزرقاء</option>
-                                        <option value="العقبة">العقبة</option>
-                                        <option value="السلط">السلط</option>
-                                        <option value="الكرك">الكرك</option>
-                                        <option value="جرش">جرش</option>
-                                        <option value="عجلون">عجلون</option>
-                                        <option value="مادبا">مادبا</option>
-                                        <option value="المفرق">المفرق</option>
-                                        <option value="معان">معان</option>
-                                        <option value="الطفيلة">الطفيلة</option>
-                                    </select>
-                                    <div class="invalid-feedback">يرجى اختيار المحافظة</div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="homeCity" class="form-label required">المدينة</label>
-                                    <input type="text" class="form-control" id="homeCity" name="home_city" 
-                                           placeholder="المدينة" required>
-                                    <div class="invalid-feedback">يرجى إدخال المدينة</div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="homeArea" class="form-label required">المنطقة</label>
-                                    <input type="text" class="form-control" id="homeArea" name="home_area" 
-                                           placeholder="المنطقة" required>
-                                    <div class="invalid-feedback">يرجى إدخال المنطقة</div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="homeAddressLine" class="form-label required">العنوان التفصيلي</label>
-                                <textarea class="form-control" id="homeAddressLine" name="home_address_line" 
-                                          rows="2" placeholder="الشارع، رقم البناية، الطابق..." required></textarea>
-                                <div class="invalid-feedback">يرجى إدخال العنوان التفصيلي</div>
-                            </div>
+                            <h6 class="text-muted mb-3">{% if ui_lang == 'en' %}Address details{% else %}عنوان السكن{% endif %}</h6>
+
+                            {{ address_group(prefix="home") }}
                             
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="correspondencePreference" 
                                        name="correspondence_preference" checked>
                                 <label class="form-check-label" for="correspondencePreference">
-                                    أوافق على تلقي الإشعارات والرسائل عبر البريد الإلكتروني
+                                    {% if ui_lang == 'en' %}I agree to receive notifications and email messages{% else %}أوافق على تلقي الإشعارات والرسائل عبر البريد الإلكتروني{% endif %}
                                 </label>
                             </div>
                             
                             <div class="d-flex justify-content-between mt-3">
                                 <button type="button" class="btn btn-outline-secondary" onclick="prevStep(1)">
-                                    <i class="bi bi-arrow-right me-2"></i> السابق
+                                    <i class="bi bi-{% if ui_lang == 'en' %}arrow-left{% else %}arrow-right{% endif %} me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                                 </button>
                                 <button type="button" class="btn btn-primary" onclick="nextStep(3)">
-                                    التالي <i class="bi bi-arrow-left ms-2"></i>
+                                    {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %} <i class="bi bi-{% if ui_lang == 'en' %}arrow-right{% else %}arrow-left{% endif %} ms-2"></i>
                                 </button>
                             </div>
                         </div>
                         
                         <!-- Step 3: Account -->
                         <div id="step3" class="registration-step d-none">
-                            <h6 class="text-muted mb-3">بيانات الحساب</h6>
+                            <h6 class="text-muted mb-3">{% if ui_lang == 'en' %}Account details{% else %}بيانات الحساب{% endif %}</h6>
                             
                             <div class="mb-3">
-                                <label for="email" class="form-label required">البريد الإلكتروني</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                                    <input type="email" class="form-control" id="email" name="email" 
-                                           placeholder="example@email.com" required>
-                                    <div class="invalid-feedback">يرجى إدخال بريد إلكتروني صحيح</div>
-                                </div>
+                                {{ email_input(with_icon=True) }}
                             </div>
                             
                             <div class="mb-3">
-                                <label for="password" class="form-label required">كلمة المرور</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                                    <input type="password" class="form-control" id="password" name="password" 
-                                           placeholder="8 أحرف على الأقل" required minlength="8">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('password')" aria-label="إظهار/إخفاء كلمة المرور">
-                                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
-                                    </button>
-                                    <div class="invalid-feedback">كلمة المرور يجب أن تكون 8 أحرف على الأقل</div>
-                                </div>
-                                <div class="form-text">
-                                    يجب أن تحتوي على 8 أحرف على الأقل
+                                {{ password_input(help_text="Must contain at least 8 characters" if ui_lang == 'en' else "يجب أن تحتوي على 8 أحرف على الأقل") }}
+                                <!-- Password strength indicator -->
+                                <div id="passwordStrengthWrapper" class="mt-2 d-none">
+                                    <div class="progress" style="height:6px;">
+                                        <div id="passwordStrengthBar" class="progress-bar" role="progressbar" style="width:0%"
+                                            aria-label="{% if ui_lang == 'en' %}Password strength{% else %}قوة كلمة المرور{% endif %}"
+                                            aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <small id="passwordStrengthLabel" class="form-text mt-1"></small>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
-                                <label for="confirmPassword" class="form-label required">تأكيد كلمة المرور</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                                    <input type="password" class="form-control" id="confirmPassword" 
-                                           placeholder="أعد إدخال كلمة المرور" required>
-                                    <div class="invalid-feedback">كلمات المرور غير متطابقة</div>
-                                </div>
+                                {{ password_input(name="confirm_password", id="confirmPassword", label="Confirm password" if ui_lang == 'en' else "تأكيد كلمة المرور") }}
                             </div>
                             
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="agreeTerms" required>
                                 <label class="form-check-label" for="agreeTerms">
-                                    أوافق على <a href="/terms" target="_blank">الشروط والأحكام</a> و
-                                    <a href="/privacy" target="_blank">سياسة الخصوصية</a>
+                                    {% if ui_lang == 'en' %}I agree to the <a href="/terms" target="_blank">Terms and Conditions</a> and <a href="/privacy" target="_blank">Privacy Policy</a>{% else %}أوافق على <a href="/terms" target="_blank">الشروط والأحكام</a> و <a href="/privacy" target="_blank">سياسة الخصوصية</a>{% endif %}
                                 </label>
-                                <div class="invalid-feedback">يجب الموافقة على الشروط والأحكام</div>
+                                <div class="invalid-feedback">{% if ui_lang == 'en' %}You must agree to the terms{% else %}يجب الموافقة على الشروط والأحكام{% endif %}</div>
                             </div>
                             
                             <div class="d-flex justify-content-between mt-4">
                                 <button type="button" class="btn btn-outline-secondary" onclick="prevStep(2)">
-                                    <i class="bi bi-arrow-right me-2"></i> السابق
+                                    <i class="bi bi-{% if ui_lang == 'en' %}arrow-left{% else %}arrow-right{% endif %} me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
                                 </button>
-                                <button type="submit" class="btn btn-success btn-lg" id="registerBtn">
-                                    <span class="btn-text">
-                                        <i class="bi bi-check-circle me-2"></i>
-                                        إنشاء الحساب
-                                    </span>
-                                    <span class="btn-loading d-none">
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                        جاري الإنشاء...
-                                    </span>
-                                </button>
+                                {{ submit_button(id="registerBtn", label="Create account" if ui_lang == 'en' else "إنشاء الحساب", loading_label="Creating..." if ui_lang == 'en' else "جاري الإنشاء...", btn_class="btn-success btn-lg") }}
                             </div>
                         </div>
                     </form>
@@ -262,8 +158,8 @@
                     
                     <div class="text-center">
                         <p class="mb-0 small text-muted">
-                            لديك حساب بالفعل؟ 
-                            <a href="/login" class="text-decoration-none fw-semibold">تسجيل الدخول</a>
+                            {% if ui_lang == 'en' %}Already have an account?{% else %}لديك حساب بالفعل؟{% endif %} 
+                            <a href="/login" class="text-decoration-none fw-semibold">{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}</a>
                         </p>
                     </div>
                 </div>
@@ -272,31 +168,12 @@
     </div>
 </div>
 
-<style>
-    .step-circle {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background-color: #e9ecef;
-        color: #6c757d;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-    }
-    .step-circle.active {
-        background-color: #0d6efd;
-        color: white;
-    }
-    .step-circle.completed {
-        background-color: #198754;
-        color: white;
-    }
-</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    const isEnglishUi = (document.documentElement.lang || "").toLowerCase() === "en";
+    const uiText = (arText, enText) => (isEnglishUi ? enText : arText);
     let currentStep = 1;
     
     // Handle nationality change
@@ -372,8 +249,8 @@
     // Toggle password visibility
     function togglePassword(inputId) {
         const input = document.getElementById(inputId);
-        const icon = document.getElementById('togglePasswordIcon');
-        
+        const icon = document.getElementById(inputId + 'ToggleIcon');
+
         if (input.type === 'password') {
             input.type = 'text';
             icon.classList.replace('bi-eye', 'bi-eye-slash');
@@ -383,11 +260,52 @@
         }
     }
     
+    // Password strength indicator
+    (function() {
+        const passwordInput = document.getElementById('password');
+        const wrapper = document.getElementById('passwordStrengthWrapper');
+        const bar = document.getElementById('passwordStrengthBar');
+        const label = document.getElementById('passwordStrengthLabel');
+        if (!passwordInput || !wrapper || !bar || !label) return;
+
+        const levels = [
+            { min: 0,  pct: 10, cls: 'bg-danger',  ar: 'ضعيفة جداً',  en: 'Very weak'  },
+            { min: 1,  pct: 30, cls: 'bg-danger',  ar: 'ضعيفة',       en: 'Weak'       },
+            { min: 2,  pct: 55, cls: 'bg-warning',  ar: 'متوسطة',      en: 'Fair'       },
+            { min: 3,  pct: 78, cls: 'bg-info',     ar: 'جيدة',        en: 'Good'       },
+            { min: 4,  pct: 100, cls: 'bg-success', ar: 'قوية',        en: 'Strong'     },
+        ];
+
+        function scorePassword(pw) {
+            let score = 0;
+            if (pw.length >= 8)  score++;
+            if (/[A-Z]/.test(pw)) score++;
+            if (/[a-z]/.test(pw)) score++;
+            if (/\d/.test(pw))    score++;
+            if (/[^A-Za-z0-9]/.test(pw)) score++;
+            return score;
+        }
+
+        passwordInput.addEventListener('input', function() {
+            const pw = this.value;
+            if (!pw) { wrapper.classList.add('d-none'); return; }
+            wrapper.classList.remove('d-none');
+            const score = Math.min(scorePassword(pw), 4);
+            const lvl = levels[score];
+            bar.style.width = lvl.pct + '%';
+            bar.setAttribute('aria-valuenow', lvl.pct);
+            bar.className = 'progress-bar ' + lvl.cls;
+            const isAr = document.documentElement.dir === 'rtl';
+            label.textContent = isAr ? lvl.ar : lvl.en;
+            label.className = 'form-text mt-1 ' + lvl.cls.replace('bg-', 'text-');
+        });
+    })();
+
     // Password confirmation validation
     document.getElementById('confirmPassword').addEventListener('input', function() {
         const password = document.getElementById('password').value;
         if (this.value !== password) {
-            this.setCustomValidity('كلمات المرور غير متطابقة');
+            this.setCustomValidity(uiText('كلمات المرور غير متطابقة', 'Passwords do not match'));
         } else {
             this.setCustomValidity('');
         }
@@ -425,14 +343,14 @@
             
             await api.registerParent(data);
             
-            showToast('تم إنشاء الحساب بنجاح! جاري تحويلك لتسجيل الدخول...', 'success');
+            showToast(uiText('تم إنشاء الحساب بنجاح! جاري تحويلك لتسجيل الدخول...', 'Account created successfully. Redirecting to sign-in...'), 'success');
             
             setTimeout(() => {
                 window.location.href = '/login';
             }, 2000);
             
         } catch (error) {
-            errorMessage.textContent = error.message || 'حدث خطأ في إنشاء الحساب';
+            errorMessage.textContent = error.message || uiText('حدث خطأ في إنشاء الحساب', 'An error occurred while creating the account');
             errorAlert.classList.remove('d-none');
             
             registerBtn.querySelector('.btn-text').classList.remove('d-none');

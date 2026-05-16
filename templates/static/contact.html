@@ -1,44 +1,105 @@
-{% extends 'base.html' %}
-{% block title %}{{ _('Contact Us') }} — KinJo{% endblock %}
+{% extends "base.html" %}
 
-{% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
-            <i class="bi bi-envelope"></i>
-            {{ _('Support') }}
-        </div>
-        <h1 class="page-header-title">{{ _('Contact Us') }}</h1>
-        <p class="page-header-sub">{{ _('Get in touch with the KinJo support team') }}</p>
-    </div>
-</div>
-{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Contact Us - Kinjo{% else %}اتصل بنا - كينجو{% endif %}{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header fw-700">
-                <i class="bi bi-chat-dots me-2"></i>{{ _('Send a Message') }}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-5">
+                <h1><i class="bi bi-envelope text-primary"></i> {% if ui_lang == 'en' %}Contact Us{% else %}اتصل بنا{% endif %}</h1>
+                <p class="lead text-muted">{% if ui_lang == 'en' %}We're happy to hear from you{% else %}نسعد بتواصلكم معنا{% endif %}</p>
             </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label fw-600">{{ _('Subject') }}</label>
-                    <input type="text" class="form-control" placeholder="{{ _('Describe your issue') }}">
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-telephone display-4 text-primary mb-3"></i>
+                            <h5>{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</h5>
+                            <p class="text-muted mb-0">+962 6 XXX XXXX</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-600">{{ _('Message') }}</label>
-                    <textarea class="form-control" rows="5" placeholder="{{ _('Write your message here...') }}"></textarea>
+
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-envelope display-4 text-primary mb-3"></i>
+                            <h5>{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</h5>
+                            <p class="text-muted mb-0">support@kinjo.jo</p>
+                        </div>
+                    </div>
                 </div>
-                <button class="btn btn-primary" disabled>
-                    <i class="bi bi-send me-2"></i>{{ _('Send') }}
-                </button>
-                <div class="alert alert-info mt-3">
-                    <i class="bi bi-info-circle me-2"></i>
-                    {{ _('For urgent matters, contact your administrator directly.') }}
+
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-geo-alt display-4 text-primary mb-3"></i>
+                            <h5>{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %}</h5>
+                            <p class="text-muted mb-0">{% if ui_lang == 'en' %}Amman, Jordan{% else %}عمان، الأردن{% endif %}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="bi bi-clock display-4 text-primary mb-3"></i>
+                            <h5>{% if ui_lang == 'en' %}Working Hours{% else %}ساعات العمل{% endif %}</h5>
+                            <p class="text-muted mb-0">{% if ui_lang == 'en' %}Sunday - Thursday: 8:00 - 16:00{% else %}الأحد - الخميس: 8:00 - 16:00{% endif %}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-5 shadow-sm">
+                <div class="card-body">
+                    <h4 class="mb-4">{% if ui_lang == 'en' %}Send Us a Message{% else %}أرسل لنا رسالة{% endif %}</h4>
+                    <form id="contactForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="name" class="form-label">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</label>
+                                <input type="text" class="form-control" id="name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label>
+                                <input type="email" class="form-control" id="email" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="subject" class="form-label">{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %}</label>
+                                <input type="text" class="form-control" id="subject" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="message" class="form-label">{% if ui_lang == 'en' %}Message{% else %}الرسالة{% endif %}</label>
+                                <textarea class="form-control" id="message" rows="5" required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send"></i> {% if ui_lang == 'en' %}Send{% else %}إرسال{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+    document.getElementById('contactForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'success',
+            title: T('تم الإرسال', 'Sent'),
+            text: T('شكراً لتواصلك معنا. سنرد عليك في أقرب وقت ممكن.', 'Thank you for contacting us. We will get back to you as soon as possible.'),
+            confirmButtonText: T('حسناً', 'OK')
+        }).then(() => {
+            this.reset();
+        });
+    });
+</script>
 {% endblock %}

@@ -1,0 +1,477 @@
+{% extends "base.html" %}
+{% block title %}{% if ui_lang == 'en' %}Daily Reports Analytics{% else %}تحليلات التقارير اليومية{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1"><i class="bi bi-graph-up-arrow text-primary"></i> {% if ui_lang == 'en' %}Daily Reports Analytics{% else %}تحليلات التقارير اليومية{% endif %}</h2>
+            <p class="text-muted mb-0">{% if ui_lang == 'en' %}Comprehensive analytics dashboard for children's daily reports{% else %}لوحة تحليلات شاملة للتقارير اليومية للأطفال{% endif %}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-success" onclick="exportData('csv')">
+                <i class="bi bi-file-earmark-spreadsheet"></i> {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
+            </button>
+            <button class="btn btn-outline-primary" onclick="exportData('json')">
+                <i class="bi bi-filetype-json"></i> {% if ui_lang == 'en' %}Export JSON{% else %}تصدير JSON{% endif %}
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form id="filterForm" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %}</label>
+                    <input type="date" id="dateFrom" class="form-control" value="{{ default_date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %}</label>
+                    <input type="date" id="dateTo" class="form-control" value="{{ default_date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                    <select id="kindergartenFilter" class="form-select">
+                        <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
+                        {% for kg in kindergartens %}
+                        <option value="{{ kg.id }}">{{ kg.name_ar }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> {% if ui_lang == 'en' %}Analyze{% else %}تحليل{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="text-center py-5 d-none">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+        <p class="mt-3 text-muted">{% if ui_lang == 'en' %}Loading data...{% else %}جارٍ تحميل البيانات...{% endif %}</p>
+    </div>
+
+    <!-- KPI Cards -->
+    <div id="kpiCards" class="row g-3 mb-4 d-none">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-right: 4px solid #0d6efd !important;">
+                <div class="card-body text-center">
+                    <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Total Reports{% else %}إجمالي التقارير{% endif %}</div>
+                    <h2 class="mb-0 text-primary" id="kpiTotal">0</h2>
+                    <div class="text-muted small mt-1">
+                        <i class="bi bi-clock"></i> {% if ui_lang == 'en' %}Arrival{% else %}وصول{% endif %}: <span id="kpiAvgArrival">--:--</span>
+                        | {% if ui_lang == 'en' %}Leave{% else %}خروج{% endif %}: <span id="kpiAvgLeave">--:--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-right: 4px solid #198754 !important;">
+                <div class="card-body text-center">
+                    <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Meal Rate{% else %}نسبة الوجبات{% endif %}</div>
+                    <h2 class="mb-0 text-success" id="kpiMealRate">0%</h2>
+                    <div class="text-muted small mt-1">
+                        {% if ui_lang == 'en' %}Breakfast{% else %}فطور{% endif %} <span id="kpiBf">0</span>% |
+                        {% if ui_lang == 'en' %}Lunch{% else %}غداء{% endif %} <span id="kpiLunch">0</span>%
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-right: 4px solid #6f42c1 !important;">
+                <div class="card-body text-center">
+                    <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Average Nap{% else %}متوسط القيلولة{% endif %}</div>
+                    <h2 class="mb-0" style="color: #6f42c1;" id="kpiNapAvg">0</h2>
+                    <div class="text-muted small mt-1">
+                        {% if ui_lang == 'en' %}min | Sleep rate{% else %}دقيقة | نسبة النوم{% endif %} <span id="kpiNapRate">0</span>%
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-right: 4px solid #dc3545 !important;">
+                <div class="card-body text-center">
+                    <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Health Cases{% else %}حالات صحية{% endif %}</div>
+                    <h2 class="mb-0 text-danger" id="kpiSickCount">0</h2>
+                    <div class="text-muted small mt-1">
+                        {% if ui_lang == 'en' %}Sick rate{% else %}نسبة المرض{% endif %} <span id="kpiSickRate">0</span>% |
+                        {% if ui_lang == 'en' %}Rejected{% else %}رفض{% endif %} <span id="kpiRejRate">0</span>%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    <div id="alertsSection" class="d-none mb-4">
+        <div class="card border-warning shadow-sm">
+            <div class="card-header bg-warning text-dark fw-bold">
+                <i class="bi bi-exclamation-triangle-fill"></i> {% if ui_lang == 'en' %}Alerts & Notes{% else %}تنبيهات وملاحظات{% endif %}
+            </div>
+            <div class="card-body" id="alertsList"></div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1: Attendance + Status Funnel -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div id="chart_attendance_line" style="height: 350px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div id="chart_status_funnel" style="height: 350px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2: Mood Pie + Mood Line -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div id="chart_mood_pie" style="height: 350px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div id="chart_mood_line" style="height: 350px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 3: Meals Bar + Meals Trend -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div id="chart_meal_bar" style="height: 350px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div id="chart_meal_trend" style="height: 350px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 4: Nap + Diaper -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div id="chart_nap_histogram" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div id="chart_diaper_trend" style="height: 350px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 5: Rejections -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div id="chart_rejection_bar" style="height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-light fw-bold">
+                    <i class="bi bi-speedometer2"></i> {% if ui_lang == 'en' %}Workflow Metrics{% else %}مقاييس سير العمل{% endif %}
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-hover" id="workflowTable">
+                        <tbody>
+                            <tr>
+                                <td>{% if ui_lang == 'en' %}Avg. Approval Time{% else %}متوسط وقت الموافقة{% endif %}</td>
+                                <td class="fw-bold text-end" id="wfApproval">-</td>
+                            </tr>
+                            <tr>
+                                <td>{% if ui_lang == 'en' %}Rejection Rate{% else %}نسبة الرفض{% endif %}</td>
+                                <td class="fw-bold text-end" id="wfRejRate">-</td>
+                            </tr>
+                            <tr>
+                                <td>{% if ui_lang == 'en' %}Draft → Submitted{% else %}تحويل مسودة ← مقدم{% endif %}</td>
+                                <td class="fw-bold text-end" id="wfDraftSub">-</td>
+                            </tr>
+                            <tr>
+                                <td>{% if ui_lang == 'en' %}Submitted → Approved{% else %}تحويل مقدم ← معتمد{% endif %}</td>
+                                <td class="fw-bold text-end" id="wfSubAppr">-</td>
+                            </tr>
+                            <tr>
+                                <td>{% if ui_lang == 'en' %}Approved → Sent{% else %}تحويل معتمد ← مرسل{% endif %}</td>
+                                <td class="fw-bold text-end" id="wfApprSent">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sample Data Table -->
+    <div class="card shadow-sm mb-4 d-none" id="sampleDataSection">
+        <div class="card-header bg-light fw-bold">
+            <i class="bi bi-table"></i> {% if ui_lang == 'en' %}Sample Data (first 10 rows){% else %}عينة من البيانات (أول 10 صفوف){% endif %}
+        </div>
+        <div class="card-body table-responsive">
+            <table class="table table-sm table-striped table-hover" id="sampleTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Arrival{% else %}الوصول{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Leave{% else %}الخروج{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Mood{% else %}المزاج{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Breakfast{% else %}فطور{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Lunch{% else %}غداء{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Nap (min){% else %}قيلولة (د){% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody id="sampleTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- No Data Message -->
+    <div id="noDataMessage" class="text-center py-5 d-none">
+        <i class="bi bi-inbox display-1 text-muted"></i>
+        <h4 class="text-muted mt-3">{% if ui_lang == 'en' %}No data for the selected period{% else %}لا توجد بيانات للفترة المحددة{% endif %}</h4>
+        <p class="text-muted">{% if ui_lang == 'en' %}Please adjust filters and try again{% else %}يرجى تعديل الفلاتر والمحاولة مرة أخرى{% endif %}</p>
+    </div>
+</div>
+
+<!-- Plotly JS -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<script>
+    const csrfToken = '{{ csrf_token }}';
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
+    document.getElementById('filterForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        loadDashboard();
+    });
+
+    // Auto-load on page ready
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+
+    async function loadDashboard() {
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        const kgId = document.getElementById('kindergartenFilter').value;
+
+        if (!dateFrom || !dateTo) {
+            Swal.fire(T('تنبيه','Alert'), T('يرجى تحديد نطاق التواريخ','Please select a date range'), 'warning');
+            return;
+        }
+
+        // Show loading
+        showEl('loadingSpinner');
+        hideEl('kpiCards');
+        hideEl('alertsSection');
+        hideEl('sampleDataSection');
+        hideEl('noDataMessage');
+
+        try {
+            let params = `date_from=${dateFrom}&date_to=${dateTo}`;
+            if (kgId) params += `&kindergarten_id=${kgId}`;
+
+            // Parallel fetch: summary + charts + sample data
+            const [summaryRes, chartsRes, sampleRes] = await Promise.all([
+                fetch(`/api/reports-analytics/summary?${params}`, { headers: { 'X-CSRF-Token': csrfToken } }),
+                fetch(`/api/reports-analytics/charts?${params}`, { headers: { 'X-CSRF-Token': csrfToken } }),
+                fetch(`/api/reports-analytics/sample-data?${params}&limit=10`, { headers: { 'X-CSRF-Token': csrfToken } }),
+            ]);
+
+            if (!summaryRes.ok) throw new Error('Failed to load summary');
+
+            const summary = await summaryRes.json();
+            const chartsData = await chartsRes.json();
+            const sampleData = await sampleRes.json();
+
+            hideEl('loadingSpinner');
+
+            if (summary.total_reports === 0) {
+                showEl('noDataMessage');
+                return;
+            }
+
+            // Populate KPI cards
+            populateKPIs(summary);
+
+            // Render charts
+            renderCharts(chartsData.charts || {});
+
+            // Populate workflow metrics
+            populateWorkflow(summary);
+
+            // Populate alerts
+            populateAlerts(summary.anomalies || []);
+
+            // Populate sample table
+            populateSampleTable(sampleData.rows || []);
+
+            showEl('kpiCards');
+            showEl('sampleDataSection');
+
+        } catch (err) {
+            hideEl('loadingSpinner');
+            console.error(err);
+            Swal.fire(T('خطأ','Error'), T('فشل تحميل البيانات','Failed to load data') + ': ' + err.message, 'error');
+        }
+    }
+
+    function populateKPIs(s) {
+        setText('kpiTotal', s.total_reports);
+        setText('kpiAvgArrival', s.attendance.avg_arrival);
+        setText('kpiAvgLeave', s.attendance.avg_leave);
+
+        const mealAvg = Math.round(
+            (s.meal_completion.breakfast + s.meal_completion.lunch +
+                s.meal_completion.snack + s.meal_completion.milk) / 4
+        );
+        setText('kpiMealRate', mealAvg + '%');
+        setText('kpiBf', s.meal_completion.breakfast);
+        setText('kpiLunch', s.meal_completion.lunch);
+
+        setText('kpiNapAvg', s.nap_analytics.avg_duration);
+        setText('kpiNapRate', s.nap_analytics.nap_rate);
+        setText('kpiSickCount', s.health_flags.sick_count);
+        setText('kpiSickRate', s.health_flags.sick_rate);
+        setText('kpiRejRate', s.workflow_metrics.rejection_rate);
+    }
+
+    function populateWorkflow(s) {
+        const wf = s.workflow_metrics;
+        const conv = s.status_funnel.conversion_rates;
+        setText('wfApproval', wf.avg_approval_hours + T(' ساعة',' hrs'));
+        setText('wfRejRate', wf.rejection_rate + '%');
+        setText('wfDraftSub', conv.draft_to_submitted + '%');
+        setText('wfSubAppr', conv.submitted_to_approved + '%');
+        setText('wfApprSent', conv.approved_to_sent + '%');
+    }
+
+    function renderCharts(charts) {
+        const plotlyConfig = { responsive: true, displaylogo: false, locale: IS_EN ? 'en' : 'ar' };
+        const chartMap = {
+            'chart_attendance_line': 'attendance_line',
+            'chart_status_funnel': 'status_funnel',
+            'chart_mood_pie': 'mood_pie',
+            'chart_mood_line': 'mood_line',
+            'chart_meal_bar': 'meal_bar',
+            'chart_meal_trend': 'meal_trend',
+            'chart_nap_histogram': 'nap_histogram',
+            'chart_diaper_trend': 'diaper_trend',
+            'chart_rejection_bar': 'rejection_bar',
+        };
+
+        for (const [divId, key] of Object.entries(chartMap)) {
+            const el = document.getElementById(divId);
+            if (charts[key] && charts[key].data) {
+                Plotly.newPlot(el, charts[key].data, charts[key].layout || {}, plotlyConfig);
+            } else {
+                el.innerHTML = `<p class="text-muted text-center mt-5">${T('لا توجد بيانات','No data')}</p>`;
+            }
+        }
+    }
+
+    function populateAlerts(anomalies) {
+        const container = document.getElementById('alertsList');
+        if (!anomalies.length) {
+            hideEl('alertsSection');
+            return;
+        }
+
+        const severityIcon = {
+            high: `<span class="badge bg-danger"><i class="bi bi-exclamation-octagon-fill"></i> ${T('عالي','High')}</span>`,
+            medium: `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill"></i> ${T('متوسط','Medium')}</span>`,
+            low: `<span class="badge bg-info"><i class="bi bi-info-circle-fill"></i> ${T('منخفض','Low')}</span>`,
+        };
+
+        let html = '';
+        anomalies.forEach(a => {
+            html += `
+        <div class="alert alert-${a.severity === 'high' ? 'danger' : 'warning'} d-flex align-items-center py-2 mb-2">
+            ${severityIcon[a.severity] || ''}
+            <span class="me-2 ms-2">${a.message}</span>
+        </div>`;
+        });
+        container.innerHTML = html;
+        showEl('alertsSection');
+    }
+
+    function populateSampleTable(rows) {
+        const tbody = document.getElementById('sampleTableBody');
+        const statusAr = {
+            'DRAFT': `<span class="badge bg-secondary">${T('مسودة','Draft')}</span>`,
+            'SUBMITTED': `<span class="badge bg-primary">${T('مقدم','Submitted')}</span>`,
+            'APPROVED': `<span class="badge bg-success">${T('معتمد','Approved')}</span>`,
+            'SENT_TO_PARENT': `<span class="badge bg-info">${T('مرسل','Sent')}</span>`,
+            'REJECTED': `<span class="badge bg-danger">${T('مرفوض','Rejected')}</span>`,
+            'RETURNED': `<span class="badge bg-warning">${T('معاد','Returned')}</span>`,
+        };
+        const moodAr = {
+            'happy': `😊 ${T('سعيد','Happy')}`, 'normal': `😐 ${T('عادي','Normal')}`, 'sad': `😢 ${T('حزين','Sad')}`,
+            'tired': `😴 ${T('متعب','Tired')}`, 'sick': `🤒 ${T('مريض','Sick')}`,
+        };
+
+        let html = '';
+        rows.forEach((r, i) => {
+            html += `<tr>
+            <td>${i + 1}</td>
+            <td>${r.child_name || ''}</td>
+            <td>${(r.date || '').substring(0, 10)}</td>
+            <td>${statusAr[r.status] || r.status}</td>
+            <td>${r.arrival_time || ''}</td>
+            <td>${r.leave_time || ''}</td>
+            <td>${moodAr[r.mood] || r.mood || '-'}</td>
+            <td>${r.breakfast ? '✅' : '❌'}</td>
+            <td>${r.lunch ? '✅' : '❌'}</td>
+            <td>${r.nap_duration_minutes || '-'}</td>
+        </tr>`;
+        });
+        tbody.innerHTML = html;
+    }
+
+    async function exportData(format) {
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        const kgId = document.getElementById('kindergartenFilter').value;
+        let url = `/api/reports-analytics/export?date_from=${dateFrom}&date_to=${dateTo}&format=${format}`;
+        if (kgId) url += `&kindergarten_id=${kgId}`;
+        window.open(url, '_blank');
+    }
+
+    // Utility
+    function showEl(id) { document.getElementById(id).classList.remove('d-none'); }
+    function hideEl(id) { document.getElementById(id).classList.add('d-none'); }
+    function setText(id, val) { document.getElementById(id).textContent = val; }
+</script>
+{% endblock %}

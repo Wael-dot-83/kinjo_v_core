@@ -1,0 +1,329 @@
+﻿{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{% if class_obj %}{% if ui_lang == 'en' %}Edit Class{% else %}تعديل الشعبة{% endif %}{% else %}{% if ui_lang == 'en' %}Create Class{% else %}إنشاء شعبة{% endif %}{% endif %}{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+title="{% if ui_lang == 'en' %}" ~ ("Edit Class" if class_obj else "Create Class") ~ "{% else %}" ~ ("تعديل الشعبة" if class_obj else "إنشاء شعبة") ~ "{% endif %}",
+icon="bi-people-fill",
+breadcrumbs=[
+{"label": "{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}", "url": "/dashboard"},
+{"label": "{% if ui_lang == 'en' %}Classes{% else %}الشعب الصفية{% endif %}", "url": "/classes"},
+{"label": "{% if ui_lang == 'en' %}" ~ ("Edit" if class_obj else "Create") ~ "{% else %}" ~ ("تعديل" if class_obj else "إنشاء") ~ "{% endif %}"}
+]
+) }}
+{% endblock %}
+
+{% block content %}
+<style>
+    .icon-inline {
+        margin-inline-end: 0.5rem;
+        color: var(--bs-primary);
+    }
+
+    .field-optional {
+        color: var(--bs-secondary);
+        font-size: 0.9rem;
+    }
+
+    .invalid-feedback {
+        color: var(--bs-danger);
+        text-align: start;
+    }
+
+    .form-text {
+        color: var(--bs-secondary);
+    }
+
+    .form-control,
+    .form-select {
+        direction: {{ 'ltr' if ui_lang == 'en' else 'rtl' }};
+        text-align: start;
+    }
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <form id="classForm" class="needs-validation" novalidate>
+                    <h5 class="border-bottom pb-2 mb-3">
+                        <i class="bi bi-info-circle icon-inline"></i>
+                        {% if ui_lang == 'en' %}Basic Information{% else %}المعلومات الأساسية{% endif %}
+                    </h5>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="nameAr" class="form-label">{% if ui_lang == 'en' %}Class Name (Arabic){% else %}اسم الشعبة (عربي){% endif %} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nameAr" name="name_ar"
+                                value="{{ class_obj.name_ar if class_obj else '' }}" required>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Arabic class name is required.{% else %}اسم الشعبة بالعربية مطلوب.{% endif %}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="nameEn" class="form-label">{% if ui_lang == 'en' %}Class Name (English){% else %}اسم الشعبة (إنجليزي){% endif %} <span class="field-optional">({% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %})</span></label>
+                            <input type="text" class="form-control" id="nameEn" name="name_en"
+                                value="{{ class_obj.name_en if class_obj else '' }}">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label for="kindergartenId" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %} <span class="text-danger">*</span></label>
+                            {% if current_user.role.value == 'ADMIN' %}
+                            <select class="form-select" id="kindergartenId" name="kindergarten_id" required>
+                                <option value="">{% if ui_lang == 'en' %}Select kindergarten...{% else %}اختر الروضة...{% endif %}</option>
+                                {% for kg in kindergartens %}
+                                <option value="{{ kg.id }}" {% if class_obj and class_obj.kindergarten_id==kg.id %}selected{% endif %}>
+                                    {{ kg.name_ar }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Kindergarten is required.{% else %}الروضة مطلوبة.{% endif %}</div>
+                            {% else %}
+                            <input type="text" class="form-control"
+                                value="{{ kindergartens[0].name_ar if kindergartens else '' }}" readonly>
+                            <input type="hidden" id="kindergartenId" name="kindergarten_id"
+                                value="{{ kindergartens[0].id if kindergartens else '' }}">
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="classCode" class="form-label">{% if ui_lang == 'en' %}Class Code{% else %}رمز الشعبة{% endif %} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="classCode" name="class_code" maxlength="32"
+                                value="{{ class_obj.class_code if class_obj else '' }}" required>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Class code is required.{% else %}رمز الشعبة مطلوب.{% endif %}</div>
+                        </div>
+                    </div>
+
+                    <h5 class="border-bottom pb-2 mb-3 mt-4">
+                        <i class="bi bi-people icon-inline"></i>
+                        {% if ui_lang == 'en' %}Capacity and Staffing{% else %}السعة والكادر{% endif %}
+                    </h5>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label for="ageGroup" class="form-label">{% if ui_lang == 'en' %}Age Group{% else %}الفئة العمرية{% endif %} <span class="text-danger">*</span></label>
+                            <select class="form-select" id="ageGroup" name="age_group" required>
+                                <option value="">{% if ui_lang == 'en' %}Select age group...{% else %}اختر الفئة العمرية...{% endif %}</option>
+                                <option value="AGE_0_1" {% if class_obj and class_obj.age_group=='AGE_0_1' %}selected{% endif %}>{% if ui_lang == 'en' %}0-1 years{% else %}0-1 سنة{% endif %}</option>
+                                <option value="AGE_1_2" {% if class_obj and class_obj.age_group=='AGE_1_2' %}selected{% endif %}>{% if ui_lang == 'en' %}1-2 years{% else %}1-2 سنة{% endif %}</option>
+                                <option value="AGE_2_4" {% if class_obj and class_obj.age_group=='AGE_2_4' %}selected{% endif %}>{% if ui_lang == 'en' %}2-4 years{% else %}2-4 سنة{% endif %}</option>
+                            </select>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Age group is required.{% else %}الفئة العمرية مطلوبة.{% endif %}</div>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label for="capacityTotal" class="form-label">{% if ui_lang == 'en' %}Total Capacity{% else %}السعة الكلية{% endif %} <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="capacityTotal" name="capacity_total" min="1"
+                                max="100" value="{{ class_obj.capacity_total if class_obj else '' }}" required>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Capacity must be between 1 and 100.{% else %}السعة يجب أن تكون بين 1 و 100.{% endif %}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="enrolledChildrenCount" class="form-label">{% if ui_lang == 'en' %}Enrolled Children{% else %}الأطفال المسجلين{% endif %} <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="enrolledChildrenCount" name="enrolled_children_count"
+                                min="0" max="40" value="{{ class_obj.enrolled_children_count if class_obj else 0 }}" required>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Enrolled children must be between 0 and 40.{% else %}عدد الأطفال يجب أن يكون بين 0 و 40.{% endif %}</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label for="minAgeMonths" class="form-label">{% if ui_lang == 'en' %}Min Age (Months){% else %}العمر الأدنى (شهور){% endif %} <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="minAgeMonths" name="min_age_months" min="0"
+                                max="56" value="{{ class_obj.min_age_months if class_obj else '' }}" required>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Minimum age is required.{% else %}العمر الأدنى مطلوب.{% endif %}</div>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label for="maxAgeMonths" class="form-label">{% if ui_lang == 'en' %}Max Age (Months){% else %}العمر الأقصى (شهور){% endif %} <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="maxAgeMonths" name="max_age_months" min="1"
+                                max="56" value="{{ class_obj.max_age_months if class_obj else '' }}" required>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Maximum age is required.{% else %}العمر الأقصى مطلوب.{% endif %}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="supervisorId" class="form-label">{% if ui_lang == 'en' %}Primary Supervisor{% else %}المشرف الرئيسي{% endif %} <span class="text-danger">*</span></label>
+                            <select class="form-select" id="supervisorId" name="supervisor_id" required>
+                                <option value="">{% if ui_lang == 'en' %}Loading supervisors...{% else %}جاري تحميل المشرفين...{% endif %}</option>
+                            </select>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Primary supervisor is required.{% else %}المشرف الرئيسي مطلوب.{% endif %}</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{% if ui_lang == 'en' %}Required Supervisor Count{% else %}عدد المشرفين المطلوب{% endif %}</label>
+                        <div id="requiredSupervisorsHint" class="form-control bg-light">-</div>
+                    </div>
+
+                    <div id="ageError" class="text-danger small d-none mb-2">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        {% if ui_lang == 'en' %}Maximum age must be greater than minimum age.{% else %}العمر الأقصى يجب أن يكون أكبر من العمر الأدنى.{% endif %}
+                    </div>
+                    <div id="capacityError" class="text-danger small d-none mb-3">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        {% if ui_lang == 'en' %}Enrolled children must be less than total capacity.{% else %}عدد الأطفال يجب أن يكون أقل من السعة الكلية.{% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                        <a href="/classes" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-right me-1"></i>{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="bi bi-check-lg me-1"></i>
+                            {% if class_obj %}{% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}{% else %}{% if ui_lang == 'en' %}Create Class{% else %}إنشاء شعبة{% endif %}{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const api = new KinJoAPI();
+    const classId = {{ class_obj.id if class_obj else 'null' }};
+    const isEdit = classId !== null;
+    const initialSupervisorId = {{ class_obj.supervisor_id if class_obj and class_obj.supervisor_id else 'null' }};
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
+    function intOrNull(value) {
+        const parsed = parseInt(value, 10);
+        return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    function getKindergartenId() {
+        return intOrNull(document.getElementById('kindergartenId')?.value);
+    }
+
+    async function loadEligibleSupervisors() {
+        const supervisorSelect = document.getElementById('supervisorId');
+        const kindergartenId = getKindergartenId();
+        if (!kindergartenId) {
+            supervisorSelect.innerHTML = `<option value="">${T('اختر الروضة أولاً...', 'Select kindergarten first...')}</option>`;
+            return;
+        }
+
+        try {
+            const payload = await api.getEligibleSupervisors(kindergartenId, classId);
+            const supervisors = payload.supervisors || [];
+
+            supervisorSelect.innerHTML = `<option value="">${T('اختر المشرف...', 'Select supervisor...')}</option>`;
+            supervisors.forEach((sup) => {
+                const option = document.createElement('option');
+                option.value = String(sup.id);
+                option.textContent = sup.full_name || sup.username;
+                supervisorSelect.appendChild(option);
+            });
+
+            if (initialSupervisorId) {
+                supervisorSelect.value = String(initialSupervisorId);
+            }
+        } catch (err) {
+            supervisorSelect.innerHTML = `<option value="">${T('تعذر تحميل المشرفين', 'Unable to load supervisors')}</option>`;
+        }
+    }
+
+    async function refreshRequiredSupervisorHint() {
+        const ageGroup = document.getElementById('ageGroup').value;
+        const childrenCount = intOrNull(document.getElementById('enrolledChildrenCount').value);
+        const hint = document.getElementById('requiredSupervisorsHint');
+
+        if (!ageGroup || childrenCount === null) {
+            hint.textContent = '-';
+            return;
+        }
+
+        try {
+            const data = await api.getClassRequiredSupervisors(ageGroup, childrenCount);
+            hint.textContent = String(data.required_supervisors ?? '-');
+        } catch (err) {
+            hint.textContent = '-';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('kindergartenId')?.addEventListener('change', loadEligibleSupervisors);
+        document.getElementById('ageGroup').addEventListener('change', refreshRequiredSupervisorHint);
+        document.getElementById('enrolledChildrenCount').addEventListener('input', refreshRequiredSupervisorHint);
+
+        await loadEligibleSupervisors();
+        await refreshRequiredSupervisorHint();
+    });
+
+    document.getElementById('classForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const minAge = intOrNull(document.getElementById('minAgeMonths').value) ?? 0;
+        const maxAge = intOrNull(document.getElementById('maxAgeMonths').value) ?? 0;
+        const capacity = intOrNull(document.getElementById('capacityTotal').value) ?? 0;
+        const enrolled = intOrNull(document.getElementById('enrolledChildrenCount').value) ?? 0;
+        const ageError = document.getElementById('ageError');
+        const capacityError = document.getElementById('capacityError');
+
+        let hasClientValidationError = false;
+
+        if (maxAge <= minAge) {
+            ageError.classList.remove('d-none');
+            hasClientValidationError = true;
+        } else {
+            ageError.classList.add('d-none');
+        }
+
+        if (enrolled >= capacity) {
+            capacityError.classList.remove('d-none');
+            hasClientValidationError = true;
+        } else {
+            capacityError.classList.add('d-none');
+        }
+
+        if (hasClientValidationError || !this.checkValidity()) {
+            this.classList.add('was-validated');
+            return;
+        }
+
+        const submitBtn = document.getElementById('submitBtn');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${T('جاري الحفظ...', 'Saving...')}`;
+
+        try {
+            const data = {
+                name_ar: document.getElementById('nameAr').value.trim(),
+                name_en: document.getElementById('nameEn').value.trim() || null,
+                kindergarten_id: getKindergartenId(),
+                class_code: document.getElementById('classCode').value.trim(),
+                age_group: document.getElementById('ageGroup').value,
+                enrolled_children_count: enrolled,
+                capacity_total: capacity,
+                min_age_months: minAge,
+                max_age_months: maxAge,
+                supervisor_id: intOrNull(document.getElementById('supervisorId').value),
+            };
+
+            if (isEdit) {
+                await api.updateClass(classId, data);
+            } else {
+                await api.createClass(data);
+            }
+
+            await Swal.fire({
+                icon: 'success',
+                title: isEdit ? T('تم التحديث', 'Updated') : T('تم الإنشاء', 'Created'),
+                text: isEdit ? T('تم تحديث الشعبة بنجاح.', 'Class updated successfully.') : T('تم إنشاء الشعبة بنجاح.', 'Class created successfully.'),
+                timer: 1500,
+                showConfirmButton: false,
+            });
+
+            window.location.href = '/classes';
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: T('خطأ', 'Error'),
+                text: err.message || T('تعذر حفظ الشعبة.', 'Unable to save class.'),
+            });
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+        }
+    });
+</script>
+{% endblock %}

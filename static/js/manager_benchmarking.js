@@ -1,0 +1,144 @@
+(function () {
+  function tokenValue() {
+    return localStorage.getItem("kinjo_token") || sessionStorage.getItem("kinjo_token") || "";
+  }
+
+  async function apiRequest(url) {
+    const headers = { "Content-Type": "application/json" };
+    const token = tokenValue();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    let response = null;
+    if (typeof window.fetchWithAuth === "function") {
+      response = await window.fetchWithAuth(url, { headers });
+      if (!response) {
+        throw new Error("يتطلب تسجيل الدخول");
+      }
+    } else {
+      response = await fetch(url, { headers });
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || "تعذر تحميل البيانات");
+    }
+    return response.json();
+  }
+
+  function formatNumber(value, digits = 2) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+      return "--";
+    }
+    return Number(value).toFixed(digits);
+  }
+
+  function formatDateValue(dateObj) {
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function defaultPeriod() {
+    const endInput = document.getElementById("managerPeriodEnd");
+    const startInput = document.getElementById("managerPeriodStart");
+    if (!endInput || !startInput) {
+      return;
+    }
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 29);
+    endInput.value = formatDateValue(endDate);
+    startInput.value = formatDateValue(startDate);
+  }
+
+  function showError(message) {
+    const box = document.getElementById("managerBenchmarkError");
+    if (!box) {
+      return;
+    }
+    if (message) {
+      box.textContent = message;
+      box.classList.remove("d-none");
+    } else {
+      box.textContent = "";
+      box.classList.add("d-none");
+    }
+  }
+
+  function requestParams() {
+    const params = new URLSearchParams();
+    const periodStart = document.getElementById("managerPeriodStart")?.value;
+    const periodEnd = document.getElementById("managerPeriodEnd")?.value;
+    const sizeMode = document.getElementById("managerSizeMode")?.value;
+    if (periodStart) params.set("period_start", periodStart);
+    if (periodEnd) params.set("period_end", periodEnd);
+    if (sizeMode) params.set("size_mode", sizeMode);
+    return params;
+  }
+
+  function renderSummary(data) {
+    const finalScoreEl = document.getElementById("managerFinalScore");
+    const percentileEl = document.getElementById("managerPercentile");
+    const bandEl = document.getElementById("managerBand");
+    const peerSizeEl = document.getElementById("managerPeerSize");
+    const tableBody = document.getElementById("managerPeersTableBody");
+    if (!finalScoreEl || !percentileEl || !bandEl || !peerSizeEl || !tableBody) {
+      return;
+    }
+
+    finalScoreEl.textContent =
+      data.final_score === null ? "غير متاح" : formatNumber(data.final_score);
+    percentileEl.textContent =
+      data.percentile === null ? "--" : `${formatNumber(data.percentile)}%`;
+    bandEl.textContent = data.band_label || "غير مصنف";
+    peerSizeEl.textContent = String(data.peer_group_size ?? 0);
+
+    const peers = data.anonymized_peers || [];
+    if (peers.length === 0) {
+      tableBody.innerHTML =
+        '<tr><td colspan="5" class="text-center text-muted">لا توجد بيانات ندية كافية</td></tr>';
+      return;
+    }
+    tableBody.innerHTML = peers
+      .map(
+        (peer) => `
+      <tr>
+        <td>${escapeHtml(peer.peer_code)}</td>
+        <td>${peer.rank ?? "--"}</td>
+        <td>${peer.percentile === null ? "--" : `${formatNumber(peer.percentile)}%`}</td>
+        <td>${escapeHtml(peer.band_label || "غير مصنف")}</td>
+        <td>${peer.final_score === null ? "--" : formatNumber(peer.final_score)}</td>
+      </tr>
+    `
+      )
+      .join("");
+  }
+
+  async function loadSummary() {
+    showError("");
+    try {
+      const params = requestParams();
+      const data = await apiRequest(`/api/manager/benchmarking/summary?${params.toString()}`);
+      renderSummary(data);
+      if (data.insufficient_data && data.insufficient_reason) {
+        showError(`البيانات غير كافية للمقارنة: ${data.insufficient_reason}`);
+      }
+    } catch (error) {
+      showError("تعذر تحميل المقارنة المعيارية حالياً.");
+    }
+  }
+
+  function init() {
+    if (!document.getElementById("managerBenchmarkRoot")) {
+      return;
+    }
+    defaultPeriod();
+    document.getElementById("managerBenchmarkLoadBtn")?.addEventListener("click", loadSummary);
+    loadSummary();
+  }
+
+  init();
+})();

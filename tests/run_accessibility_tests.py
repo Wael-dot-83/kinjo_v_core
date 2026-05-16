@@ -72,7 +72,7 @@ def login(driver, username="admin", password="admin123"):
         )
         print(f"  Logged in as {username}")
         return True
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
         print(f"  Login failed: {e}")
         return False
 
@@ -216,15 +216,16 @@ def main():
 
     # Exit code based on critical/serious issues
     if total_critical > 0:
-        print("\n❌ FAILED: Critical accessibility issues found")
+        print("\nâŒ FAILED: Critical accessibility issues found")
         return 1
     elif total_serious > 0:
-        print("\n⚠️  WARNING: Serious accessibility issues found")
+        print("\nâš ï¸  WARNING: Serious accessibility issues found")
         return 0
     else:
-        print("\n✅ PASSED: No critical or serious accessibility issues")
+        print("\nâœ… PASSED: No critical or serious accessibility issues")
         return 0
 
 
 if __name__ == "__main__":
     sys.exit(main())
+

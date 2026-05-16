@@ -1,0 +1,146 @@
+{% macro gender_select(id="gender", name="gender", required=true, label=None) %}
+{% set lang = ui_lang | default('ar') %}
+{% set computed_label = label if label is not none else ('Gender' if lang == 'en' else 'الجنس') %}
+{% set placeholder = 'Select gender...' if lang == 'en' else 'اختر الجنس...' %}
+{% set male_label = 'Male' if lang == 'en' else 'ذكر' %}
+{% set female_label = 'Female' if lang == 'en' else 'أنثى' %}
+{% set invalid_feedback = 'Please select gender' if lang == 'en' else 'يرجى اختيار الجنس' %}
+<div class="mb-3">
+    <label for="{{ id }}" class="form-label{% if required %} required{% endif %}">{{ computed_label }}</label>
+    <select class="form-select{% if required %} required{% endif %}" id="{{ id }}" name="{{ name }}" {% if required %}
+        required{% endif %}>
+        <option value="" selected disabled>{{ placeholder }}</option>
+        <option value="MALE">{{ male_label }}</option>
+        <option value="FEMALE">{{ female_label }}</option>
+    </select>
+    <div class="invalid-feedback">{{ invalid_feedback }}</div>
+</div>
+{% endmacro %}
+
+{% macro date_input(name, id, label, required=false, invalid_feedback=None) %}
+{% set lang = ui_lang | default('ar') %}
+{% set feedback = invalid_feedback if invalid_feedback is not none else ('Please enter a valid date' if lang == 'en' else 'يرجى إدخال تاريخ صحيح') %}
+<div class="mb-3">
+    <label for="{{ id }}" class="form-label{% if required %} required{% endif %}">{{ label }}</label>
+    <input type="date" class="form-control{% if required %} required{% endif %}" id="{{ id }}" name="{{ name }}" {% if
+        required %} required{% endif %}>
+    <div class="invalid-feedback">{{ feedback }}</div>
+</div>
+{% endmacro %}
+
+{% macro nationality_with_toggle(
+    nationality_name='nationality',
+    nationality_id='nationality',
+    id_group_id='nationalIdGroup',
+    id_field_id='nationalId',
+    id_field_name='national_id',
+    passport_group_id='passportGroup',
+    passport_field_id='passportNumber',
+    passport_field_name='passport_number'
+) %}
+{% set lang = ui_lang | default('ar') %}
+<div class="col-md-6 mb-3">
+    <label class="form-label required">{{ 'Nationality' if lang == 'en' else 'الجنسية' }}</label>
+    <select class="form-select required" id="{{ nationality_id }}" name="{{ nationality_name }}" required
+        onchange="toggleIdFields(this.value)">
+        <option value="" selected disabled>{{ 'Select nationality...' if lang == 'en' else 'اختر الجنسية...' }}</option>
+        <option value="Jordanian">{{ 'Jordanian' if lang == 'en' else 'أردني' }}</option>
+        <option value="Other">{{ 'Other' if lang == 'en' else 'أخرى' }}</option>
+    </select>
+    <div class="invalid-feedback">{{ 'Please select nationality' if lang == 'en' else 'يرجى اختيار الجنسية' }}</div>
+</div>
+<div class="col-md-6 mb-3">
+    <div id="{{ id_group_id }}" class="d-none">
+        <label for="{{ id_field_id }}" class="form-label required">{{ 'National ID' if lang == 'en' else 'الرقم الوطني' }}</label>
+        <input type="text" class="form-control required" id="{{ id_field_id }}" name="{{ id_field_name }}"
+            pattern="[0-9]{10}" maxlength="10">
+        <div class="invalid-feedback">{{ 'Please enter a valid national ID (10 digits)' if lang == 'en' else 'يرجى إدخال رقم وطني صحيح (10 أرقام)' }}</div>
+    </div>
+    <div id="{{ passport_group_id }}">
+        <label for="{{ passport_field_id }}" class="form-label required">{{ 'Passport number' if lang == 'en' else 'رقم جواز السفر' }}</label>
+        <input type="text" class="form-control required" id="{{ passport_field_id }}" name="{{ passport_field_name }}">
+        <div class="invalid-feedback">{{ 'Please enter passport number' if lang == 'en' else 'يرجى إدخال رقم الجواز' }}</div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro phone_input(name="phone", id="phone", label=None, required=false, with_icon=false) %}
+{% set lang = ui_lang | default('ar') %}
+{% set computed_label = label if label is not none else ('Phone number' if lang == 'en' else 'رقم الهاتف') %}
+<div class="mb-3">
+    <label for="{{ id }}" class="form-label{% if required %} required{% endif %}">{{ computed_label }}</label>
+    <div class="input-group{% if with_icon %} has-validation{% endif %}">
+        {% if with_icon %}
+        <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+        {% endif %}
+        <input type="tel" class="form-control{% if required %} required{% endif %}" id="{{ id }}" name="{{ name }}" {%
+            if required %} required{% endif %}>
+        <div class="invalid-feedback">{{ 'Please enter a valid phone number' if lang == 'en' else 'يرجى إدخال رقم هاتف صحيح' }}</div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro email_input(name="email", id="email", label=None, required=false, with_icon=false) %}
+{% set lang = ui_lang | default('ar') %}
+{% set computed_label = label if label is not none else ('Email address' if lang == 'en' else 'البريد الإلكتروني') %}
+<div class="mb-3">
+    <label for="{{ id }}" class="form-label{% if required %} required{% endif %}">{{ computed_label }}</label>
+    <div class="input-group{% if with_icon %} has-validation{% endif %}">
+        {% if with_icon %}
+        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+        {% endif %}
+        <input type="email" class="form-control{% if required %} required{% endif %}" id="{{ id }}" name="{{ name }}" {%
+            if required %} required{% endif %}>
+        <div class="invalid-feedback">{{ 'Please enter a valid email address' if lang == 'en' else 'يرجى إدخال بريد إلكتروني صحيح' }}</div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro password_input(name="password", id="password", label=None, required=false, help_text=None) %}
+{% set lang = ui_lang | default('ar') %}
+{% set computed_label = label if label is not none else ('Password' if lang == 'en' else 'كلمة المرور') %}
+<div class="mb-3">
+    <label for="{{ id }}" class="form-label{% if required %} required{% endif %}">{{ computed_label }}</label>
+    <input type="password" class="form-control{% if required %} required{% endif %}" id="{{ id }}" name="{{ name }}" {%
+        if required %} required{% endif %}>
+    <div class="invalid-feedback">{{ 'Please enter a password' if lang == 'en' else 'يرجى إدخال كلمة مرور' }}</div>
+    {% if help_text %}
+    <div class="form-text">{{ help_text }}</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro address_group(prefix="home", street_name=None, street_id=None, city_name=None, city_id=None,
+district_name=None, district_id=None, postal_name=None, postal_id=None) %}
+{% set lang = ui_lang | default('ar') %}
+{% set street_name = street_name or prefix + "_street" %}
+{% set street_id = street_id or prefix + "Street" %}
+{% set city_name = city_name or prefix + "_city" %}
+{% set city_id = city_id or prefix + "City" %}
+{% set district_name = district_name or prefix + "_district" %}
+{% set district_id = district_id or prefix + "District" %}
+{% set postal_name = postal_name or prefix + "_postal_code" %}
+{% set postal_id = postal_id or prefix + "PostalCode" %}
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label for="{{ street_id }}" class="form-label required">{{ 'Street' if lang == 'en' else 'الشارع' }}</label>
+        <input type="text" class="form-control required" id="{{ street_id }}" name="{{ street_name }}" required>
+        <div class="invalid-feedback">{{ 'Please enter street' if lang == 'en' else 'يرجى إدخال الشارع' }}</div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label for="{{ city_id }}" class="form-label required">{{ 'City' if lang == 'en' else 'المدينة' }}</label>
+        <input type="text" class="form-control required" id="{{ city_id }}" name="{{ city_name }}" required>
+        <div class="invalid-feedback">{{ 'Please enter city' if lang == 'en' else 'يرجى إدخال المدينة' }}</div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label for="{{ district_id }}" class="form-label">{{ 'District' if lang == 'en' else 'الحي' }}</label>
+        <input type="text" class="form-control" id="{{ district_id }}" name="{{ district_name }}">
+    </div>
+    <div class="col-md-6 mb-3">
+        <label for="{{ postal_id }}" class="form-label">{{ 'Postal code' if lang == 'en' else 'الرمز البريدي' }}</label>
+        <input type="text" class="form-control" id="{{ postal_id }}" name="{{ postal_name }}">
+    </div>
+</div>
+{% endmacro %}

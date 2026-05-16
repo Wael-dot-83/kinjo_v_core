@@ -1,320 +1,381 @@
 {% extends 'base.html' %}
-{% block title %}إدارة الروضات — KinJo{% endblock %}
+
+{% block title %}
+{% if current_user.role.value == 'ADMIN' %}
+{% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الروضات{% endif %}
+{% else %}
+{% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}
+{% endif %}
+{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-building-fill"></i>
-            إدارة المنشآت
-        </div>
-        <h1 class="page-header-title">الروضات والحضانات</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">لوحة التحكم</a></li>
-                <li class="breadcrumb-item active">الروضات</li>
+        <h1 class="h2">
+            <i class="bi bi-building me-2 text-primary"></i>
+            {% if current_user.role.value == 'ADMIN' %}
+            {% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الروضات{% endif %}
+            {% else %}
+            {% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}
+            {% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">
+                    {% if current_user.role.value == 'ADMIN' %}
+                    {% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الروضات{% endif %}
+                    {% else %}
+                    {% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}
+                    {% endif %}
+                </li>
             </ol>
         </nav>
     </div>
-    <div class="page-header-actions">
-        {% if current_user.role.value == 'ADMIN' %}
+    {% if current_user.role.value == 'ADMIN' %}
+    <div class="btn-toolbar">
         <a href="/kindergartens/create" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>إضافة روضة جديدة
+            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة روضة جديدة{% endif %}
         </a>
-        {% endif %}
     </div>
+    {% elif current_user.role.value == 'MANAGER' and kindergartens %}
+    <div class="btn-toolbar">
+        <a href="/kindergartens/{{ kindergartens[0].id }}/edit" class="btn btn-primary">
+            <i class="bi bi-pencil-square me-2"></i>{% if ui_lang == 'en' %}Edit Information{% else %}تعديل المعلومات{% endif %}
+        </a>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block content %}
+{% if current_user.role.value == 'ADMIN' %}
+<!-- Admin View: List all kindergartens with search and filters -->
+<div class="row">
+    <div class="col-12">
+        <!-- Search and Filter Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-search me-2"></i>{% if ui_lang == 'en' %}Search & Filter{% else %}البحث والتصفية{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="name" class="form-label">{% if ui_lang == 'en' %}Kindergarten Name{% else %}اسم الروضة{% endif %}</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ filters.name or '' }}"
+                            placeholder="{% if ui_lang == 'en' %}Search by name...{% else %}البحث بالاسم...{% endif %}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="governorate" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                        <select class="form-select" id="governorate" name="governorate">
+                            <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                            {% for gov in governorates %}
+                            <option value="{{ gov }}" {% if filters.governorate==gov %}selected{% endif %}>{{ gov }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="city" class="form-label">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
+                        <input type="text" class="form-control" id="city" name="city" value="{{ filters.city or '' }}"
+                            placeholder="{% if ui_lang == 'en' %}Search by city...{% else %}البحث بالمدينة...{% endif %}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="status" class="form-label">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                            <option value="ACTIVE" {% if filters.status=='ACTIVE' %}selected{% endif %}>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+                            <option value="DRAFT" {% if filters.status=='DRAFT' %}selected{% endif %}>{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</option>
+                            <option value="INACTIVE" {% if filters.status=='INACTIVE' %}selected{% endif %}>{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
+                            </button>
+                            <a href="/kindergartens" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-1"></i>{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
 
-<!-- Filter Card -->
-<div class="card mb-4">
-    <div class="card-body py-3">
-        <form id="filterForm" class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label class="filter-label">اسم الروضة أو منطقة البحث</label>
-                <div class="search-box-inline">
-                    <i class="bi bi-search search-box-icon"></i>
-                    <input type="text" class="form-control search-box-input" id="searchQuery"
-                           placeholder="ابحث بالاسم أو المنطقة...">
+        <!-- Results Summary -->
+        <div class="mb-3">
+            <p class="text-muted">
+                {% if ui_lang == 'en' %}Showing {{ skip + 1 }} - {{ [skip + limit, total]|min }} of {{ total }} kindergartens{% else %}عرض {{ skip + 1 }} - {{ [skip + limit, total]|min }} من أصل {{ total }} روضة{% endif %}
+            </p>
+        </div>
+
+        <!-- Kindergartens Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-ul me-2"></i>{% if ui_lang == 'en' %}Kindergartens List{% else %}قائمة الروضات{% endif %}
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if kindergartens %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">#</th>
+                                <th class="border-0">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</th>
+                                <th class="border-0">{% if ui_lang == 'en' %}Location{% else %}الموقع{% endif %}</th>
+                                <th class="border-0">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
+                                <th class="border-0">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                <th class="border-0">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for kg in kindergartens %}
+                            <tr>
+                                <td>{{ kg.id }}</td>
+                                <td>
+                                    <div>
+                                        <strong>{{ kg.name_en if ui_lang == 'en' and kg.name_en else kg.name_ar }}</strong>
+                                        {% if kg.name_en %}
+                                        <br><small class="text-muted">{{ kg.name_ar if ui_lang == 'en' else kg.name_en }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        {{ kg.governorate }}, {{ kg.city }}
+                                        {% if kg.area %}
+                                        <br><small class="text-muted">{{ kg.area }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>{{ kg.contact_phone or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</td>
+                                <td>
+                                    {% if kg.status.value == 'ACTIVE' %}
+                                    <span class="badge bg-success">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
+                                    {% elif kg.status.value == 'DRAFT' %}
+                                    <span class="badge bg-warning">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/kindergartens/{{ kg.id }}" class="btn btn-outline-info btn-sm"
+                                            title="{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="/kindergartens/{{ kg.id }}/edit" class="btn btn-outline-primary btn-sm"
+                                            title="{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
+
+                <!-- Pagination -->
+                {% if total > limit %}
+                <div class="card-footer">
+                    <nav aria-label="{% if ui_lang == 'en' %}Kindergartens pages{% else %}صفحات الروضات{% endif %}">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% set total_pages = (total / limit)|round(0, 'ceil')|int %}
+                            {% set current_page = (skip / limit)|int + 1 %}
+                            {% set start_page = current_page - 2 %}
+                            {% if start_page < 1 %}
+                            {% set start_page = 1 %}
+                            {% endif %}
+                            {% set end_page = current_page + 2 %}
+                            {% if end_page > total_pages %}
+                            {% set end_page = total_pages %}
+                            {% endif %}
+
+                            {% if current_page > 1 %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                    href="?{% for k,v in request.query_params.items() if k != 'skip' %}{{ k }}={{ v }}&{% endfor %}skip={{ (current_page - 2) * limit }}">
+                                    ‏{% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for page in range(start_page, end_page + 1) %}
+                            <li class="page-item {% if page == current_page %}active{% endif %}">
+                                <a class="page-link"
+                                    href="?{% for k,v in request.query_params.items() if k != 'skip' %}{{ k }}={{ v }}&{% endfor %}skip={{ (page - 1) * limit }}">
+                                    {{ page }}
+                                </a>
+                            </li>
+                            {% endfor %}
+
+                            {% if current_page < total_pages %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                    href="?{% for k,v in request.query_params.items() if k != 'skip' %}{{ k }}={{ v }}&{% endfor %}skip={{ current_page * limit }}">
+                                    {% if ui_lang == 'en' %}Next{% else %}التالي{% endif %}
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-search fs-1 text-muted mb-3"></i>
+                    <h5 class="text-muted">{% if ui_lang == 'en' %}No Kindergartens Found{% else %}لا توجد روضات{% endif %}</h5>
+                    <p class="text-muted">{% if ui_lang == 'en' %}No kindergartens match your search criteria{% else %}لم يتم العثور على أي روضات تطابق معايير البحث{% endif %}</p>
+                    <a href="/kindergartens" class="btn btn-primary">{% if ui_lang == 'en' %}Show All{% else %}عرض الكل{% endif %}</a>
+                </div>
+                {% endif %}
             </div>
-            <div class="col-md-2">
-                <label class="filter-label">المحافظة</label>
-                <select class="form-select form-select-sm" id="filterGovernorate" name="governorate">
-                    <option value="">جميع المحافظات</option>
-                    <option value="عمان">عمان</option>
-                    <option value="إربد">إربد</option>
-                    <option value="الزرقاء">الزرقاء</option>
-                    <option value="العقبة">العقبة</option>
-                    <option value="المفرق">المفرق</option>
-                    <option value="جرش">جرش</option>
-                    <option value="عجلون">عجلون</option>
-                    <option value="الطفيلة">الطفيلة</option>
-                    <option value="الكرك">الكرك</option>
-                    <option value="معان">معان</option>
-                    <option value="السلط">السلط</option>
-                    <option value="مادبا">مادبا</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="filter-label">الحالة</label>
-                <select class="form-select form-select-sm" id="filterStatus" name="status">
-                    <option value="">جميع الحالات</option>
-                    <option value="active">نشط</option>
-                    <option value="draft">مسودة</option>
-                    <option value="inactive">غير نشط</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary btn-sm w-100">
-                    <i class="bi bi-funnel-fill me-1"></i>تصفية
-                </button>
-            </div>
-            <div class="col-md-auto">
-                <span class="text-muted small" id="kgCount"></span>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
-<!-- Kindergartens Grid -->
-<div class="row g-4" id="kindergartensGrid">
-    <!-- Skeleton loaders -->
-    {% for i in range(6) %}
-    <div class="col-md-6 col-lg-4 kg-skeleton-col">
-        <div class="card h-100">
-            <div class="card-header" style="background:var(--kinjo-surface);">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="skeleton" style="width:55%;height:16px;border-radius:6px;"></div>
-                    <div class="skeleton" style="width:20%;height:20px;border-radius:50px;"></div>
-                </div>
+{% else %}
+<!-- Manager/Other Roles View: Single kindergarten details -->
+{% if not kindergartens or kindergartens|length == 0 or not kindergartens[0] %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-exclamation-triangle fs-1 text-warning mb-3"></i>
+                <h5 class="text-muted">{% if ui_lang == 'en' %}Unauthorized Access{% else %}غير مصرح لك بالوصول{% endif %}</h5>
+                <p class="text-muted">{% if ui_lang == 'en' %}You cannot access the kindergarten information page{% else %}لا يمكنك الوصول إلى صفحة معلومات الروضة{% endif %}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+{% set kg = kindergartens[0] %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Kindergarten Information Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    {{ kg.name_en if ui_lang == 'en' and kg.name_en else kg.name_ar }}
+                </h5>
             </div>
             <div class="card-body">
-                <div class="skeleton mb-2" style="width:70%;height:12px;border-radius:5px;"></div>
-                <div class="skeleton mb-2" style="width:60%;height:12px;border-radius:5px;"></div>
-                <div class="skeleton mb-3" style="width:50%;height:12px;border-radius:5px;"></div>
-            </div>
-            <div class="card-footer bg-transparent">
-                <div class="d-flex gap-2">
-                    <div class="skeleton flex-fill" style="height:36px;border-radius:10px;"></div>
-                    <div class="skeleton flex-fill" style="height:36px;border-radius:10px;"></div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-translate me-1"></i>{% if ui_lang == 'en' %}English Name{% else %}الاسم بالإنجليزية{% endif %}
+                            </h6>
+                            <p class="mb-0">{{ kg.name_en or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-geo-alt me-1"></i>{% if ui_lang == 'en' %}Location{% else %}الموقع{% endif %}
+                            </h6>
+                            <p class="mb-0">{{ kg.governorate }}, {{ kg.city }}, {{ kg.area }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-house me-1"></i>{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %}
+                            </h6>
+                            <p class="mb-0">{{ kg.address_line }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-telephone me-1"></i>{% if ui_lang == 'en' %}Phone Number{% else %}رقم الهاتف{% endif %}
+                            </h6>
+                            <p class="mb-0">{{ kg.contact_phone or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-envelope me-1"></i>{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}
+                            </h6>
+                            <p class="mb-0">{{ kg.contact_email or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-clock me-1"></i>{% if ui_lang == 'en' %}Operating Hours{% else %}ساعات العمل{% endif %}
+                            </h6>
+                            <p class="mb-0">
+                                <span data-i18n="common.from">{% if ui_lang == 'en' %}From{% else %}من{% endif %}</span> {{ kg.operating_hours_start or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}
+                                <span data-i18n="common.to">{% if ui_lang == 'en' %}To{% else %}إلى{% endif %}</span> {{ kg.operating_hours_end or ("Not specified" if ui_lang == 'en' else 'غير
+                                محدد') }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <h6 class="text-muted mb-2">
+                                <i class="bi bi-card-text me-1"></i>{% if ui_lang == 'en' %}License Number{% else %}رقم الترخيص{% endif %}
+                            </h6>
+                            <p class="mb-0">{{ kg.license_number or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endfor %}
-</div>
 
-<!-- Pagination -->
-<nav class="mt-4 d-none" id="paginationNav" aria-label="تنقل الصفحات">
-    <ul class="pagination justify-content-center" id="paginationList"></ul>
-</nav>
-
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
-.filter-label { font-size:0.8rem;font-weight:700;color:var(--kinjo-text-muted);display:block;margin-bottom:0.35rem; }
-
-.search-box-inline { position:relative; }
-.search-box-icon { position:absolute;top:50%;right:0.875rem;transform:translateY(-50%);color:var(--kinjo-text-muted);font-size:0.9rem;pointer-events:none;z-index:2; }
-[dir="rtl"] .search-box-icon { right:auto;left:0.875rem; }
-.search-box-input { padding-right:2.5rem;border-radius:var(--kinjo-radius-lg);border-color:var(--kinjo-border);font-size:0.875rem; }
-[dir="rtl"] .search-box-input { padding-right:0.75rem;padding-left:2.5rem; }
-
-/* KG Card */
-.kg-card {
-    border:1px solid var(--kinjo-border);
-    border-radius:var(--kinjo-radius-xl);
-    background:var(--kinjo-card-bg);
-    transition:all 0.25s;
-    overflow:hidden;
-}
-.kg-card:hover { transform:translateY(-3px);box-shadow:var(--kinjo-shadow-lg);border-color:var(--kinjo-primary-light); }
-.kg-card-header {
-    background:var(--kinjo-primary-xlight);
-    padding:1rem 1.25rem;
-    border-bottom:1px solid rgba(79,70,229,0.12);
-    display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;
-}
-.kg-card-name { font-size:0.95rem;font-weight:800;color:var(--kinjo-primary);flex:1;min-width:0; }
-.kg-card-icon {
-    width:40px;height:40px;border-radius:12px;flex-shrink:0;
-    background:var(--kinjo-primary);color:#fff;
-    display:flex;align-items:center;justify-content:center;font-size:1.1rem;
-}
-.kg-info-row { display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;font-size:0.84rem;color:var(--kinjo-text-secondary); }
-.kg-info-row i { color:var(--kinjo-primary-light);font-size:0.9rem;flex-shrink:0; }
-.kg-info-row a { color:var(--kinjo-primary);text-decoration:none; }
-.kg-info-row a:hover { text-decoration:underline; }
-
-/* Status pills */
-.kg-status { display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.72rem;font-weight:700; }
-.kg-status.ACTIVE   { background:rgba(16,185,129,0.15);color:var(--kinjo-success); }
-.kg-status.inactive { background:rgba(100,116,139,0.12);color:#64748b; }
-.kg-status.draft    { background:rgba(245,158,11,0.15);color:#d97706; }
-
-/* Skeleton */
-.skeleton { background:var(--kinjo-skeleton-base,#e2e8f0);animation:shimmer 1.5s infinite; }
-@keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.5} }
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-let kindergartens = [];
-
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadKindergartens();
-    document.getElementById('filterForm').addEventListener('submit', async e => { e.preventDefault(); await loadKindergartens(); });
-    let searchT;
-    document.getElementById('searchQuery').addEventListener('input', e => {
-        clearTimeout(searchT);
-        searchT = setTimeout(() => {
-            const q = e.target.value.toLowerCase();
-            const filtered = kindergartens.filter(kg =>
-                (kg.name_ar||'').toLowerCase().includes(q) ||
-                (kg.name_en||'').toLowerCase().includes(q) ||
-                (kg.area||'').toLowerCase().includes(q)
-            );
-            renderKindergartens(filtered);
-        }, 280);
-    });
-});
-
-async function loadKindergartens() {
-    try {
-        const params = Object.fromEntries(new FormData(document.getElementById('filterForm')));
-        const response = await api.getKindergartens(params);
-        kindergartens = response.kindergartens || [];
-        document.querySelectorAll('.kg-skeleton-col').forEach(el => el.remove());
-        renderKindergartens(kindergartens);
-    } catch {
-        document.querySelectorAll('.kg-skeleton-col').forEach(el => el.remove());
-        showToast('حدث خطأ في تحميل البيانات', 'error');
-        document.getElementById('kindergartensGrid').innerHTML = `
-            <div class="col-12 text-center py-5 text-muted">
-                <i class="bi bi-exclamation-circle d-block fs-2 mb-2 opacity-25"></i>
-                <p>تعذّر تحميل الروضات</p>
-                <button class="btn btn-ghost btn-sm" onclick="loadKindergartens()">إعادة المحاولة</button>
-            </div>`;
-    }
-}
-
-function renderKindergartens(data) {
-    const grid = document.getElementById('kindergartensGrid');
-    const cnt = document.getElementById('kgCount');
-    if (cnt) cnt.textContent = `${data.length} روضة`;
-
-    if (!data.length) {
-        grid.innerHTML = `
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body text-center py-5">
-                        <i class="bi bi-building d-block fs-1 mb-3 opacity-25 text-muted"></i>
-                        <h6 class="fw-700 mb-2">لا توجد روضات مسجلة</h6>
-                        <p class="text-muted small mb-3">جرّب تغيير معايير البحث أو أضف روضة جديدة</p>
-                        {% if current_user.role.value == 'ADMIN' %}
-                        <a href="/kindergartens/create" class="btn btn-primary">
-                            <i class="bi bi-plus-circle me-2"></i>إضافة روضة
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>`;
-        return;
-    }
-
-    grid.innerHTML = data.map(kg => {
-        const status = (kg.status || 'draft').toLowerCase();
-        const statusLabel = { active:'نشط', inactive:'غير نشط', draft:'مسودة' }[status] || status;
-        return `
-        <div class="col-md-6 col-lg-4">
-            <div class="card kg-card h-100">
-                <div class="kg-card-header">
-                    <div>
-                        <div class="kg-card-name">${kg.name_ar}</div>
-                        ${kg.name_en ? `<div style="font-size:0.75rem;color:var(--kinjo-primary-light);margin-top:0.15rem;">${kg.name_en}</div>` : ''}
-                    </div>
-                    <div class="d-flex align-items-start gap-2 flex-shrink-0">
-                        <span class="kg-status ${kg.status || 'draft'}">${statusLabel}</span>
-                        <div class="kg-card-icon"><i class="bi bi-building-fill"></i></div>
-                    </div>
-                </div>
-                <div class="card-body py-3 px-4">
-                    <div class="kg-info-row">
-                        <i class="bi bi-geo-alt-fill"></i>
-                        <span>${kg.governorate}، ${kg.city}، ${kg.area}</span>
-                    </div>
-                    <div class="kg-info-row">
-                        <i class="bi bi-telephone-fill"></i>
-                        <a href="tel:${kg.contact_phone}">${kg.contact_phone}</a>
-                    </div>
-                    ${kg.contact_email ? `
-                    <div class="kg-info-row">
-                        <i class="bi bi-envelope-fill"></i>
-                        <a href="mailto:${kg.contact_email}">${kg.contact_email}</a>
-                    </div>` : ''}
-                    ${kg.operating_hours_start && kg.operating_hours_end ? `
-                    <div class="kg-info-row">
-                        <i class="bi bi-clock-fill"></i>
-                        <span>${kg.operating_hours_start} — ${kg.operating_hours_end}</span>
-                    </div>` : ''}
-                    ${kg.license_number ? `
-                    <div class="kg-info-row">
-                        <i class="bi bi-card-checklist"></i>
-                        <span>رخصة: ${kg.license_number}</span>
-                    </div>` : ''}
-                </div>
-                <div class="card-footer bg-transparent" style="padding:0.875rem 1.25rem;">
-                    <div class="d-flex gap-2">
-                        <a href="/kindergartens/${kg.id}" class="btn btn-primary btn-sm flex-fill">
-                            <i class="bi bi-eye me-1"></i>عرض
-                        </a>
-                        <a href="/kindergartens/${kg.id}/edit" class="btn btn-ghost btn-sm flex-fill">
-                            <i class="bi bi-pencil me-1"></i>تعديل
-                        </a>
-                        ${kg.status === 'ACTIVE' ?
-                            `<button onclick="confirmArchive(${kg.id}, '${kg.name_ar.replace(/'/g,"\\'")}'')" class="btn btn-ghost btn-sm" style="color:#d97706;" title="أرشفة">
-                                <i class="bi bi-archive"></i>
-                            </button>` :
-                            `<button onclick="confirmRestore(${kg.id}, '${kg.name_ar.replace(/'/g,"\\'")}'')" class="btn btn-ghost btn-sm" style="color:var(--kinjo-success);" title="استعادة">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </button>`
-                        }
-                    </div>
+    <div class="col-lg-4">
+        <!-- Status Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-flag me-2"></i>{% if ui_lang == 'en' %}Kindergarten Status{% else %}حالة الروضة{% endif %}
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    {% if kg.status.value == 'ACTIVE' %}
+                    <span class="badge bg-success fs-6">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
+                    {% elif kg.status.value == 'DRAFT' %}
+                    <span class="badge bg-warning fs-6">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
+                    {% else %}
+                    <span class="badge bg-secondary fs-6">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
+                    {% endif %}
                 </div>
             </div>
-        </div>`;
-    }).join('');
-}
+        </div>
 
-function authHeaders() {
-    const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token') || localStorage.getItem('access_token');
-    return { 'Content-Type':'application/json', 'Authorization': `Bearer ${t}` };
-}
-
-window.confirmArchive = async (id, name) => {
-    if (!confirm(`هل أنت متأكد من أرشفة روضة "${name}"؟`)) return;
-    try {
-        const r = await fetch(`/api/kindergartens/${id}/archive`, { method:'POST', headers: authHeaders() });
-        const res = await r.json();
-        if (r.ok) { showToast(res.message || 'تمت الأرشفة', 'success'); loadKindergartens(); }
-        else showToast(res.detail || 'فشلت الأرشفة', 'error');
-    } catch { showToast('خطأ في الأرشفة', 'error'); }
-};
-
-window.confirmRestore = async (id, name) => {
-    if (!confirm(`هل أنت متأكد من استعادة روضة "${name}"؟`)) return;
-    try {
-        const r = await fetch(`/api/kindergartens/${id}/restore`, { method:'POST', headers: authHeaders() });
-        const res = await r.json();
-        if (r.ok) { showToast(res.message || 'تمت الاستعادة', 'success'); loadKindergartens(); }
-        else showToast(res.detail || 'فشلت الاستعادة', 'error');
-    } catch { showToast('خطأ في الاستعادة', 'error'); }
-};
-</script>
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-gear me-2"></i>{% if ui_lang == 'en' %}Quick Actions{% else %}إجراءات سريعة{% endif %}
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/kindergartens/{{ kg.id }}/edit" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil-square me-2"></i>{% if ui_lang == 'en' %}Edit Information{% else %}تعديل المعلومات{% endif %}
+                    </a>
+                    <a href="/kindergartens/{{ kg.id }}" class="btn btn-outline-info">
+                        <i class="bi bi-eye me-2"></i>{% if ui_lang == 'en' %}View Full Details{% else %}عرض التفاصيل الكاملة{% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %} {# manager/supervisor content block #}
+{% endif %} {# admin/non-admin page branch #}
 {% endblock %}

@@ -1,0 +1,375 @@
+/* Dashboard Pro Styles */
+
+/* Fade-in animation */
+.fade-in-up {
+    animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Shimmer / skeleton loading */
+.shimmer,
+.shimmer-kpi .shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+}
+
+@keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Skeleton helpers */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+.skeleton-text {
+    height: 1em;
+    display: block;
+}
+
+.skeleton-rect {
+    display: block;
+}
+
+/* Status widget cards */
+.status-widget {
+    border-radius: 20px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid rgba(13, 110, 253, 0.05);
+    background: linear-gradient(180deg, #ffffff 0%, #fbfbfd 100%);
+}
+
+.status-widget:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* KPI Status Bar */
+.kpi-status-container {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.kpi-status-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    flex: 1;
+    min-width: 160px;
+}
+
+.kpi-status-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.kpi-status-item.status-green {
+    background-color: rgba(25, 135, 84, 0.08);
+    border: 1px solid rgba(25, 135, 84, 0.2);
+}
+
+.kpi-status-item.status-green .kpi-status-icon {
+    color: #198754;
+}
+
+.kpi-status-item.status-amber {
+    background-color: rgba(255, 193, 7, 0.08);
+    border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.kpi-status-item.status-amber .kpi-status-icon {
+    color: #ffc107;
+}
+
+.kpi-status-item.status-red {
+    background-color: rgba(220, 53, 69, 0.08);
+    border: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+.kpi-status-item.status-red .kpi-status-icon {
+    color: #dc3545;
+}
+
+.kpi-status-item.status-info {
+    background-color: rgba(13, 110, 253, 0.08);
+    border: 1px solid rgba(13, 110, 253, 0.2);
+}
+
+.kpi-status-item.status-info .kpi-status-icon {
+    color: #0d6efd;
+}
+
+.kpi-status-icon {
+    font-size: 1.25rem;
+}
+
+.kpi-status-content .label {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.kpi-status-content .count {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+/* Action cards */
+.action-card {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.action-icon {
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .kpi-status-container {
+        flex-direction: column;
+    }
+
+    .kpi-status-item {
+        min-width: unset;
+    }
+}
+
+/* Dashboard header polish */
+.dashboard-header {
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.06), rgba(13, 110, 253, 0));
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+}
+
+.dashboard-header .breadcrumb a {
+    text-decoration: none;
+}
+
+/* Quick actions bar */
+.quick-actions-bar {
+    background: linear-gradient(180deg, rgba(248, 249, 250, 0.8), rgba(248, 249, 250, 0));
+    border-radius: 14px;
+}
+
+/* Card headers */
+.card-header h5,
+.card-header h4 {
+    letter-spacing: 0.2px;
+}
+
+/* Tables */
+.table thead th {
+    font-weight: 600;
+}
+
+/* KPI cards */
+.kpi-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 1rem;
+    border: 1px solid rgba(13, 110, 253, 0.06);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+/* Manager strip */
+.manager-overview-strip .manager-stat-card {
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.manager-overview-strip .manager-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08) !important;
+}
+
+.manager-stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.manager-dashboard-shell {
+    position: relative;
+}
+
+.manager-section-card {
+    border-radius: 18px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05) !important;
+}
+
+.manager-section-card .card-header {
+    background: linear-gradient(180deg, rgba(13, 110, 253, 0.05) 0%, rgba(13, 110, 253, 0.01) 100%);
+    border-bottom: 1px solid rgba(13, 110, 253, 0.08);
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.manager-section-subtitle {
+    color: #6c757d;
+    font-size: 0.83rem;
+}
+
+.manager-account-actions .btn {
+    border-radius: 999px;
+    padding-inline: 0.85rem;
+}
+
+.manager-tabs {
+    border-bottom: none;
+    gap: 0.5rem;
+}
+
+.manager-tabs .nav-link {
+    border: 1px solid rgba(13, 110, 253, 0.16);
+    border-radius: 999px;
+    color: #0d6efd;
+    font-weight: 600;
+    padding: 0.45rem 1rem;
+}
+
+.manager-tabs .nav-link.active {
+    background: #0d6efd;
+    color: #ffffff;
+    border-color: #0d6efd;
+}
+
+.manager-table thead th {
+    font-size: 0.85rem;
+    color: #495057;
+    background: rgba(248, 249, 250, 0.75);
+    border-bottom-width: 1px;
+}
+
+.manager-table tbody tr {
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.manager-table tbody tr:hover {
+    transform: translateX(-2px);
+    background-color: rgba(13, 110, 253, 0.03);
+}
+
+.manager-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.manager-user-badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(13, 110, 253, 0.12);
+    color: #0d6efd;
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+.manager-capacity-cell {
+    min-width: 130px;
+}
+
+.manager-capacity-meta {
+    font-size: 0.75rem;
+    color: #6c757d;
+    display: flex;
+    justify-content: space-between;
+}
+
+.manager-capacity-cell .progress {
+    height: 6px;
+    border-radius: 999px;
+}
+
+.manager-report-priority {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    margin-top: 0.25rem;
+}
+
+.manager-report-priority.level-high {
+    color: #dc3545;
+}
+
+.manager-report-priority.level-medium {
+    color: #fd7e14;
+}
+
+.manager-report-priority.level-low {
+    color: #198754;
+}
+
+.manager-stats-grid .card {
+    border-radius: 14px;
+}
+
+.manager-stats-progress {
+    height: 7px;
+    border-radius: 999px;
+}
+
+@media (max-width: 992px) {
+    .manager-account-actions {
+        margin-top: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .manager-tabs .nav-link {
+        font-size: 0.82rem;
+        padding-inline: 0.8rem;
+    }
+
+    .manager-section-subtitle {
+        font-size: 0.78rem;
+    }
+}

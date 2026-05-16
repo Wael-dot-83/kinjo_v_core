@@ -1,40 +1,79 @@
 {% extends 'base.html' %}
-{% block title %}{{ _('Class') }} {{ class.name }} — KinJo{% endblock %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{% if ui_lang == 'en' %}{{ class.name_en or class.name_ar }}{% else %}{{ class.name_ar }}{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
-            <i class="bi bi-people"></i>
-            {{ _('Classes') }}
-        </div>
-        <h1 class="page-header-title">{{ class.name }}</h1>
-        <p class="page-header-sub">{{ class.description or '' }}</p>
-    </div>
-</div>
+{{ page_header(
+title="{% if ui_lang == 'en' %}" ~ (class.name_en or class.name_ar) ~ "{% else %}" ~ class.name_ar ~ "{% endif %}",
+icon="bi-people-fill",
+breadcrumbs=[
+{"label": "{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}", "url": "/dashboard"},
+{"label": "{% if ui_lang == 'en' %}Classrooms{% else %}الشعب الصفية{% endif %}", "url": "/classes"},
+{"label": "{% if ui_lang == 'en' %}" ~ (class.name_en or class.name_ar) ~ "{% else %}" ~ class.name_ar ~ "{% endif %}"}
+]
+) }}
 {% endblock %}
 
 {% block content %}
-<div class="row g-4">
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>{% if ui_lang == 'en' %}Class Information{% else %}معلومات الصف{% endif %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">{% if ui_lang == 'en' %}Name (Arabic){% else %}الاسم بالعربية{% endif %}</dt>
+                            <dd class="col-sm-7">{{ class.name_ar }}</dd>
+
+                            <dt class="col-sm-5">{% if ui_lang == 'en' %}Name (English){% else %}الاسم بالإنجليزية{% endif %}</dt>
+                            <dd class="col-sm-7">{{ class.name_en or '-' }}</dd>
+
+                            <dt class="col-sm-5">{% if ui_lang == 'en' %}Total Capacity{% else %}السعة الكلية{% endif %}</dt>
+                            <dd class="col-sm-7">{{ class.capacity_total or '-' }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">{% if ui_lang == 'en' %}Min Age (months){% else %}العمر الأدنى (شهور){% endif %}</dt>
+                            <dd class="col-sm-7">{{ class.min_age_months or '-' }}</dd>
+
+                            <dt class="col-sm-5">{% if ui_lang == 'en' %}Max Age (months){% else %}العمر الأقصى (شهور){% endif %}</dt>
+                            <dd class="col-sm-7">{{ class.max_age_months or '-' }}</dd>
+
+                            <dt class="col-sm-5">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</dt>
+                            <dd class="col-sm-7">
+                                {% if class.is_active %}
+                                <span class="badge bg-success">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="col-lg-4">
         <div class="card">
-            <div class="card-header fw-700">
-                <i class="bi bi-info-circle me-2"></i>{{ _('Class Details') }}
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</h5>
             </div>
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-600">{{ _('Name') }}</span>
-                    <span>{{ class.name }}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-600">{{ _('Age Group') }}</span>
-                    <span>{{ class.age_group or '—' }}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-600">{{ _('Capacity') }}</span>
-                    <span>{{ class.capacity or '—' }}</span>
-                </li>
-            </ul>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/classes/{{ class.id }}/edit" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-2"></i>{% if ui_lang == 'en' %}Edit Details{% else %}تعديل البيانات{% endif %}
+                    </a>
+                    <a href="/attendance?class_id={{ class.id }}" class="btn btn-outline-success">
+                        <i class="bi bi-calendar-check me-2"></i>{% if ui_lang == 'en' %}Attendance Record{% else %}سجل الحضور{% endif %}
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 </div>

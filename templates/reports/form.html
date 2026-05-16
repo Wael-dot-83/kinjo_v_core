@@ -1,388 +1,512 @@
 {% extends 'base.html' %}
-{% block title %}تقرير يومي جديد — KinJo{% endblock %}
+
+{% block title %}{% if ui_lang == 'en' %}New Daily Report{% else %}تقرير يومي جديد{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-pencil-square"></i>
-            إعداد التقرير
-        </div>
-        <h1 class="page-header-title">تقرير يومي جديد</h1>
-        <p class="page-header-sub">سجّل نشاط الطفل اليومي وأرسله لولي الأمر</p>
+        <h1 class="h2">
+            <i class="bi bi-pencil-square me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}New Daily Report{% else %}تقرير يومي جديد{% endif %}
+        </h1>
     </div>
-    <a href="/reports" class="btn btn-ghost">
-        <i class="bi bi-arrow-right me-2"></i>العودة للقائمة
-    </a>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-xl-8 col-lg-9">
-        <form id="reportForm" novalidate>
-
-            <!-- Child + Date -->
+    <div class="col-lg-8">
+        <form id="reportForm">
+            <!-- Child Selection -->
             <div class="card mb-4">
-                <div class="card-header">
-                    <h6 class="card-title-sm mb-0">
-                        <i class="bi bi-person-fill me-2 text-primary"></i>
-                        الطفل والتاريخ
-                    </h6>
-                </div>
                 <div class="card-body">
-                    <div class="row g-3">
+                    <div class="row">
                         <div class="col-md-6">
-                            <label class="form-label fw-600">الطفل <span class="text-danger">*</span></label>
-                            <select class="form-select" name="child_id" id="childSelect" required>
-                                <option value="">اختر الطفل...</option>
+                            <label class="form-label required" for="child_id">{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</label>
+                            <select class="form-select" id="child_id" name="child_id" required>
+                                <option value="">{% if ui_lang == 'en' %}Select child...{% else %}اختر الطفل...{% endif %}</option>
+                                <!-- Children will be loaded dynamically -->
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-600">تاريخ التقرير</label>
-                            <input type="date" class="form-control" name="report_date" value="{{ today }}">
+                            <label class="form-label" for="report_date">{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</label>
+                            <input type="date" class="form-control" id="report_date" name="report_date"
+                                value="{{ today }}" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Filtering Options for Managers -->
+                    {% if current_user.role.value == 'MANAGER' %}
+                    <div class="row mt-3" id="filterOptions">
+                        <div class="col-md-4">
+                            <label class="form-label" for="class_filter">{% if ui_lang == 'en' %}Class{% else %}الصف{% endif %}</label>
+                            <select class="form-select" id="class_filter" onchange="filterChildren()">
+                                <option value="">{% if ui_lang == 'en' %}All Classes{% else %}جميع الصفوف{% endif %}</option>
+                                <!-- Classes will be loaded dynamically -->
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="age_filter">{% if ui_lang == 'en' %}Age{% else %}العمر{% endif %}</label>
+                            <select class="form-select" id="age_filter" onchange="filterChildren()">
+                                <option value="">{% if ui_lang == 'en' %}All Ages (70 days - 56 months){% else %}جميع الأعمار (70 يوم - 56 شهر){% endif %}</option>
+                                <option value="0-12">{% if ui_lang == 'en' %}0-12 months (Infant){% else %}0-12 شهر (رضع){% endif %}</option>
+                                <option value="12-24">{% if ui_lang == 'en' %}12-24 months (1-2 years){% else %}12-24 شهر (1-2 سنة){% endif %}</option>
+                                <option value="24-36">{% if ui_lang == 'en' %}24-36 months (2-3 years){% else %}24-36 شهر (2-3 سنة){% endif %}</option>
+                                <option value="36-48">{% if ui_lang == 'en' %}36-48 months (3-4 years){% else %}36-48 شهر (3-4 سنة){% endif %}</option>
+                                <option value="48-56">{% if ui_lang == 'en' %}48-56 months (4+ years){% else %}48-56 شهر (4+ سنة){% endif %}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-secondary" onclick="filterChildren()">
+                                <i class="bi bi-funnel me-1"></i>{% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label class="form-label required" for="arrival_time">{% if ui_lang == 'en' %}Arrival Time{% else %}وقت الحضور{% endif %}</label>
+                            <input type="time" class="form-control" id="arrival_time" name="arrival_time" value="08:00"
+                                required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-600">وقت الحضور <span class="text-danger">*</span></label>
-                            <input type="time" class="form-control" name="arrival_time" value="08:00" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-600">وقت الانصراف <span class="text-danger">*</span></label>
-                            <input type="time" class="form-control" name="leave_time" value="13:00" required>
+                            <label class="form-label required" for="leave_time">{% if ui_lang == 'en' %}Leave Time{% else %}وقت الانصراف{% endif %}</label>
+                            <input type="time" class="form-control" id="leave_time" name="leave_time" value="13:00"
+                                required>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Mood -->
+            <!-- Mood & Health -->
             <div class="card mb-4">
-                <div class="card-header">
-                    <h6 class="card-title-sm mb-0">
-                        <i class="bi bi-emoji-smile me-2" style="color:#f59e0b;"></i>
-                        المزاج والصحة
-                    </h6>
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-emoji-smile me-2"></i>{% if ui_lang == 'en' %}Mood & Health{% else %}المزاج والصحة{% endif %}</h5>
                 </div>
                 <div class="card-body">
-                    <label class="filter-label mb-3">المزاج العام اليوم</label>
-                    <div class="mood-selector-grid">
-                        {% set moods = [('happy','😊','سعيد'),('normal','😐','عادي'),('sad','😢','حزين'),('tired','😴','نعسان'),('sick','🤒','مريض')] %}
-                        {% for val, emoji, label in moods %}
-                        <input type="radio" class="btn-check" name="mood" id="mood-{{ val }}" value="{{ val }}" {% if val == 'happy' %}checked{% endif %}>
-                        <label class="mood-option" for="mood-{{ val }}">
-                            <div class="mood-emoji">{{ emoji }}</div>
-                            <div class="mood-label">{{ label }}</div>
-                        </label>
-                        {% endfor %}
+                    <div class="mb-3">
+                        <label class="form-label d-block mb-3">{% if ui_lang == 'en' %}General Mood{% else %}المزاج العام{% endif %}</label>
+                        <div class="d-flex justify-content-around mood-selector">
+                            <input type="radio" class="btn-check" name="mood" id="mood-happy" value="happy" checked>
+                            <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm"
+                                for="mood-happy">
+                                <div class="fs-1">😊</div>
+                                <div class="small">{% if ui_lang == 'en' %}Happy{% else %}سعيد{% endif %}</div>
+                            </label>
+
+                            <input type="radio" class="btn-check" name="mood" id="mood-normal" value="normal">
+                            <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm"
+                                for="mood-normal">
+                                <div class="fs-1">😐</div>
+                                <div class="small">{% if ui_lang == 'en' %}Normal{% else %}عادي{% endif %}</div>
+                            </label>
+
+                            <input type="radio" class="btn-check" name="mood" id="mood-sad" value="sad">
+                            <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm" for="mood-sad">
+                                <div class="fs-1">😢</div>
+                                <div class="small">{% if ui_lang == 'en' %}Sad{% else %}حزين{% endif %}</div>
+                            </label>
+
+                            <input type="radio" class="btn-check" name="mood" id="mood-tired" value="tired">
+                            <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm"
+                                for="mood-tired">
+                                <div class="fs-1">😴</div>
+                                <div class="small">{% if ui_lang == 'en' %}Sleepy{% else %}نعسان{% endif %}</div>
+                            </label>
+
+                            <input type="radio" class="btn-check" name="mood" id="mood-sick" value="sick">
+                            <label class="btn btn-outline-light text-dark border p-3 rounded shadow-sm" for="mood-sick">
+                                <div class="fs-1">🤒</div>
+                                <div class="small">{% if ui_lang == 'en' %}Sick{% else %}مريض{% endif %}</div>
+                            </label>
+                        </div>
                     </div>
 
-                    <div class="mt-4">
-                        <label class="form-label fw-600">ملاحظات صحية</label>
-                        <textarea class="form-control" name="health_notes" rows="2"
-                                  placeholder="أي أعراض أو ملاحظات صحية مهمة..."></textarea>
+                    <div class="mb-3">
+                        <label class="form-label" for="health_notes">{% if ui_lang == 'en' %}Health Notes{% else %}ملاحظات صحية{% endif %}</label>
+                        <textarea class="form-control" id="health_notes" name="health_notes" rows="2"
+                            placeholder="{% if ui_lang == 'en' %}Any symptoms or health notes...{% else %}أي أعراض أو ملاحظات صحية...{% endif %}"></textarea>
                     </div>
                 </div>
             </div>
 
             <!-- Meals -->
             <div class="card mb-4">
-                <div class="card-header">
-                    <h6 class="card-title-sm mb-0">
-                        <i class="bi bi-egg-fried me-2" style="color:#10b981;"></i>
-                        الوجبات
-                    </h6>
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-egg-fried me-2"></i>{% if ui_lang == 'en' %}Meals{% else %}الوجبات{% endif %}</h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        {% for name, label in [('breakfast','الفطور'),('lunch','الغداء'),('snack','الوجبة الخفيفة')] %}
                         <div class="col-md-4">
-                            <label class="filter-label mb-2">{{ label }}</label>
-                            <div class="meal-selector">
-                                {% for val, icon, txt in [('all','✅','أكل الكل'),('most','👍','أكل المعظم'),('some','🫤','أكل القليل'),('none','❌','لم يأكل')] %}
-                                <input type="radio" class="btn-check" name="{{ name }}" id="{{ name }}-{{ val }}" value="{{ val }}" {% if val == 'all' %}checked{% endif %}>
-                                <label class="meal-option" for="{{ name }}-{{ val }}" title="{{ txt }}">{{ icon }}</label>
-                                {% endfor %}
-                            </div>
+                            <label class="form-label" for="breakfast">{% if ui_lang == 'en' %}Breakfast{% else %}الفطور{% endif %}</label>
+                            <select class="form-select" id="breakfast" name="breakfast">
+                                <option value="all">{% if ui_lang == 'en' %}Ate everything{% else %}أكل كل شيء{% endif %}</option>
+                                <option value="most">{% if ui_lang == 'en' %}Ate most{% else %}أكل المعظم{% endif %}</option>
+                                <option value="some">{% if ui_lang == 'en' %}Ate a little{% else %}أكل القليل{% endif %}</option>
+                                <option value="none">{% if ui_lang == 'en' %}Did not eat{% else %}لم يأكل{% endif %}</option>
+                            </select>
                         </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sleep & Bathroom -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h6 class="card-title-sm mb-0">
-                        <i class="bi bi-moon-stars me-2" style="color:#6366f1;"></i>
-                        النوم والنظافة
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row g-4 align-items-end">
                         <div class="col-md-4">
-                            <label class="filter-label mb-2">مدة النوم</label>
-                            <div class="sleep-selector">
-                                <div class="sleep-display" id="sleepDisplay">0 دق</div>
-                                <input type="range" class="form-range" name="sleep_duration" id="sleepSlider"
-                                       min="0" max="120" step="15" value="0"
-                                       oninput="updateSleepDisplay(this.value)">
-                                <div class="d-flex justify-content-between" style="font-size:0.7rem;color:var(--kinjo-text-muted);">
-                                    <span>0</span><span>60 دق</span><span>120 دق</span>
-                                </div>
-                            </div>
+                            <label class="form-label" for="lunch">{% if ui_lang == 'en' %}Lunch{% else %}الغداء{% endif %}</label>
+                            <select class="form-select" id="lunch" name="lunch" selected>
+                                <option value="all">{% if ui_lang == 'en' %}Ate everything{% else %}أكل كل شيء{% endif %}</option>
+                                <option value="most">{% if ui_lang == 'en' %}Ate most{% else %}أكل المعظم{% endif %}</option>
+                                <option value="some">{% if ui_lang == 'en' %}Ate a little{% else %}أكل القليل{% endif %}</option>
+                                <option value="none">{% if ui_lang == 'en' %}Did not eat{% else %}لم يأكل{% endif %}</option>
+                            </select>
                         </div>
-
                         <div class="col-md-4">
-                            <label class="filter-label mb-2">مرات الحمام</label>
-                            <div class="counter-control">
-                                <button type="button" class="counter-btn minus" onclick="changeCount('bathroom_count', -1)">
-                                    <i class="bi bi-dash"></i>
-                                </button>
-                                <input type="number" class="counter-input" id="bathroom_count" name="bathroom_count" value="0" readonly>
-                                <button type="button" class="counter-btn plus" onclick="changeCount('bathroom_count', 1)">
-                                    <i class="bi bi-plus"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="filter-label mb-2">تغيير الحفاظ</label>
-                            <div class="d-flex flex-column gap-2">
-                                <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input" type="checkbox" name="diaper_change_wet" value="1" id="diaperWet">
-                                    <label class="form-check-label small" for="diaperWet">مبلل</label>
-                                </div>
-                                <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input" type="checkbox" name="diaper_change_soiled" value="1" id="diaperSoiled">
-                                    <label class="form-check-label small" for="diaperSoiled">متسخ</label>
-                                </div>
-                            </div>
+                            <label class="form-label" for="snack">{% if ui_lang == 'en' %}Snack{% else %}سناك{% endif %}</label>
+                            <select class="form-select" id="snack" name="snack">
+                                <option value="all">{% if ui_lang == 'en' %}Ate everything{% else %}أكل كل شيء{% endif %}</option>
+                                <option value="most">{% if ui_lang == 'en' %}Ate most{% else %}أكل المعظم{% endif %}</option>
+                                <option value="some">{% if ui_lang == 'en' %}Ate a little{% else %}أكل القليل{% endif %}</option>
+                                <option value="none">{% if ui_lang == 'en' %}Did not eat{% else %}لم يأكل{% endif %}</option>
+                            </select>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Activities & Notes -->
+            <!-- Sleep & Potty -->
             <div class="card mb-4">
-                <div class="card-header">
-                    <h6 class="card-title-sm mb-0">
-                        <i class="bi bi-stars me-2" style="color:#f59e0b;"></i>
-                        الأنشطة والملاحظات
-                    </h6>
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-moon-stars me-2"></i>{% if ui_lang == 'en' %}Sleep & Potty{% else %}النوم والحمام{% endif %}</h5>
                 </div>
                 <div class="card-body">
-                    <label class="filter-label mb-3">أنشطة اليوم</label>
-                    <div class="activities-grid mb-4">
-                        {% for id, icon, label in [
-                            ('art','🎨','رسم وفنون'),
-                            ('music','🎵','موسيقى'),
-                            ('sport','⚽','رياضة'),
-                            ('story','📖','قصص'),
-                            ('outdoor','🌳','نشاط خارجي'),
-                            ('science','🔬','علوم')
-                        ] %}
-                        <input type="checkbox" class="activity-check" id="act_{{ id }}" value="{{ label }}">
-                        <label class="activity-chip" for="act_{{ id }}">
-                            <span class="activity-icon">{{ icon }}</span>
-                            <span>{{ label }}</span>
-                        </label>
-                        {% endfor %}
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label" for="sleep_duration">{% if ui_lang == 'en' %}Sleep Duration (minutes){% else %}مدة النوم (دقائق){% endif %}</label>
+                            <input type="number" class="form-control" id="sleep_duration" name="sleep_duration"
+                                value="0" step="15">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="bathroom_count">{% if ui_lang == 'en' %}Bathroom Visits{% else %}مرات الحمام{% endif %}</label>
+                            <div class="input-group">
+                                <button class="btn btn-outline-secondary" type="button"
+                                    onclick="changeCount('bathroom_count', -1)">-</button>
+                                <input type="number" class="form-control text-center" id="bathroom_count"
+                                    name="bathroom_count" value="0" readonly>
+                                <button class="btn btn-outline-secondary" type="button"
+                                    onclick="changeCount('bathroom_count', 1)">+</button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-600">ملاحظات لولي الأمر</label>
-                        <textarea class="form-control" name="general_notes" rows="3"
-                                  placeholder="أي ملاحظات تودّ إيصالها لولي الأمر..."></textarea>
-                    </div>
-
-                    <div class="mb-1">
-                        <label class="form-label fw-600">صور من اليوم <span class="text-muted fw-400">(اختياري)</span></label>
-                        <input type="file" class="form-control" name="photos" multiple accept="image/*">
+                        <label class="form-label" id="diaper_label">{% if ui_lang == 'en' %}Diaper Change{% else %}تغيير الحفاظ{% endif %}</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="diaper_change_wet"
+                                name="diaper_change_wet" value="1">
+                            <label class="form-check-label" for="diaper_change_wet">{% if ui_lang == 'en' %}Wet{% else %}مبلل{% endif %}</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="diaper_change_soiled"
+                                name="diaper_change_soiled" value="1">
+                            <label class="form-check-label" for="diaper_change_soiled">{% if ui_lang == 'en' %}Soiled{% else %}متسخ{% endif %}</label>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Submit -->
-            <div class="d-flex justify-content-end gap-2 mb-5">
-                <a href="/reports" class="btn btn-ghost">إلغاء</a>
-                <button type="submit" class="btn btn-primary px-5" id="submitBtn">
-                    <span class="btn-text"><i class="bi bi-send me-2"></i>إرسال التقرير</span>
-                    <span class="btn-loading d-none">
-                        <span class="spinner-border spinner-border-sm me-2"></span>جاري الإرسال...
-                    </span>
-                </button>
+            <!-- Activities -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-puzzle me-2"></i>{% if ui_lang == 'en' %}Activities & Skills{% else %}الأنشطة والمهارات{% endif %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">{% if ui_lang == 'en' %}Today's Activities{% else %}أنشطة اليوم{% endif %}</label>
+                        <div class="row g-2">
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="act_art">
+                                    <label class="form-check-label" for="act_art">{% if ui_lang == 'en' %}Art & Drawing{% else %}رسم وفنون{% endif %}</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="act_music">
+                                    <label class="form-check-label" for="act_music">{% if ui_lang == 'en' %}Music{% else %}موسيقى{% endif %}</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="act_sport">
+                                    <label class="form-check-label" for="act_sport">{% if ui_lang == 'en' %}Sports{% else %}رياضة{% endif %}</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="act_story">
+                                    <label class="form-check-label" for="act_story">{% if ui_lang == 'en' %}Stories{% else %}قصص{% endif %}</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="general_notes">{% if ui_lang == 'en' %}General Notes for Parent{% else %}ملاحظات عامة لولي الأمر{% endif %}</label>
+                        <textarea class="form-control" id="general_notes" name="general_notes" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="photos">{% if ui_lang == 'en' %}Photos (optional){% else %}الصور (اختياري){% endif %}</label>
+                        <input type="file" class="form-control" id="photos" name="photos" multiple accept="image/*">
+                    </div>
+                </div>
             </div>
 
+            <!-- Actions -->
+            <div class="d-flex justify-content-end gap-2 mb-5">
+                <a href="/reports" class="btn btn-outline-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-send me-2"></i>{% if ui_lang == 'en' %}Submit Report{% else %}إرسال التقرير{% endif %}
+                </button>
+            </div>
         </form>
     </div>
 </div>
-
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
-.fw-600 { font-weight:600; }
-.filter-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em; }
-
-/* Mood selector */
-.mood-selector-grid { display:flex;gap:0.75rem;flex-wrap:wrap; }
-.mood-option {
-    display:flex;flex-direction:column;align-items:center;gap:0.3rem;
-    padding:0.75rem 1rem;border-radius:var(--kinjo-radius-lg);border:2px solid var(--kinjo-border);
-    cursor:pointer;transition:all 0.2s;background:var(--kinjo-surface);
-    min-width:80px;
-}
-.mood-option:hover { border-color:var(--kinjo-primary-light);transform:translateY(-2px); }
-.btn-check:checked + .mood-option { border-color:var(--kinjo-primary);background:var(--kinjo-primary-xlight);box-shadow:0 0 0 3px var(--kinjo-primary-light); }
-.mood-emoji { font-size:2rem;line-height:1; }
-.mood-label { font-size:0.75rem;font-weight:700;color:var(--kinjo-text-secondary); }
-
-/* Meal selector */
-.meal-selector { display:flex;gap:0.4rem; }
-.meal-option {
-    display:flex;align-items:center;justify-content:center;
-    width:44px;height:44px;border-radius:10px;border:2px solid var(--kinjo-border);
-    cursor:pointer;font-size:1.3rem;transition:all 0.15s;background:var(--kinjo-surface);
-}
-.meal-option:hover { border-color:var(--kinjo-primary-light);transform:scale(1.1); }
-.btn-check:checked + .meal-option { border-color:var(--kinjo-primary);background:var(--kinjo-primary-xlight);box-shadow:0 0 0 3px var(--kinjo-primary-light); }
-
-/* Sleep slider */
-.sleep-selector { text-align:center; }
-.sleep-display { font-size:1.5rem;font-weight:800;color:var(--kinjo-primary);margin-bottom:0.5rem; }
-.form-range::-webkit-slider-thumb { background:var(--kinjo-primary); }
-.form-range::-webkit-slider-track { background:var(--kinjo-primary-light); }
-
-/* Counter */
-.counter-control { display:inline-flex;align-items:center;border:1px solid var(--kinjo-border);border-radius:var(--kinjo-radius-md);overflow:hidden;background:var(--kinjo-card-bg); }
-.counter-btn { border:none;background:none;width:40px;height:40px;cursor:pointer;color:var(--kinjo-text-primary);font-size:1rem;transition:background 0.15s;display:flex;align-items:center;justify-content:center; }
-.counter-btn:hover { background:var(--kinjo-surface); }
-.counter-input { border:none;outline:none;width:50px;text-align:center;font-weight:800;font-size:1rem;background:transparent;color:var(--kinjo-text-primary); }
-
-/* Activities */
-.activities-grid { display:flex;flex-wrap:wrap;gap:0.5rem; }
-.activity-check { display:none; }
-.activity-chip {
-    display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.85rem;
-    border-radius:50px;border:2px solid var(--kinjo-border);background:var(--kinjo-surface);
-    cursor:pointer;font-size:0.83rem;font-weight:600;color:var(--kinjo-text-secondary);
-    transition:all 0.15s;
-}
-.activity-chip:hover { border-color:var(--kinjo-primary-light);color:var(--kinjo-primary); }
-.activity-check:checked + .activity-chip { border-color:var(--kinjo-primary);background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
-.activity-icon { font-size:1rem; }
-</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function getHeaders() {
-    const token = localStorage.getItem('access_token');
-    return { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
-}
+    // Auth helper
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
 
-function changeCount(id, delta) {
-    const input = document.getElementById(id);
-    input.value = Math.max(0, (parseInt(input.value) || 0) + delta);
-}
-
-function updateSleepDisplay(val) {
-    document.getElementById('sleepDisplay').textContent = val > 0 ? `${val} دق` : 'لا نوم';
-}
-
-document.addEventListener('DOMContentLoaded', loadChildren);
-
-async function loadChildren() {
-    try {
-        const res = await fetch('/api/supervisor/children', { headers: getHeaders() });
-        if (!res.ok) return;
-        const data = await res.json();
-        const select = document.getElementById('childSelect');
-        const children = data.children || data || [];
-        if (children.length) {
-            select.innerHTML = '<option value="">اختر الطفل...</option>' +
-                children.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-        } else {
-            select.innerHTML = '<option value="">لا يوجد أطفال مسجلين</option>';
+    function getHeaders() {
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return { 'Content-Type': 'application/json' };
         }
-        const urlParams = new URLSearchParams(window.location.search);
-        const childId = urlParams.get('child_id');
-        if (childId) select.value = childId;
-    } catch {}
-}
 
-document.getElementById('reportForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const fd = new FormData(form);
+        const token = AuthService.getToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
+    }
 
-    const btn = document.getElementById('submitBtn');
-    btn.querySelector('.btn-text').classList.add('d-none');
-    btn.querySelector('.btn-loading').classList.remove('d-none');
-    btn.disabled = true;
+    function changeCount(id, delta) {
+        const input = document.getElementById(id);
+        const val = parseInt(input.value) || 0;
+        input.value = Math.max(0, val + delta);
+    }
 
-    let extraNotes = [];
-    const mood = fd.get('mood');
-    const moodMap = { happy:'سعيد', normal:'عادي', sad:'حزين', tired:'نعسان', sick:'مريض' };
-    if (mood) extraNotes.push(`المزاج: ${moodMap[mood] || mood}`);
-    if (fd.get('health_notes')) extraNotes.push(`صحة: ${fd.get('health_notes')}`);
-    const sleep = fd.get('sleep_duration');
-    if (sleep && parseInt(sleep) > 0) extraNotes.push(`نوم: ${sleep} دقيقة`);
-    const bathroom = fd.get('bathroom_count');
-    if (bathroom && parseInt(bathroom) > 0) extraNotes.push(`حمام: ${bathroom} مرات`);
-    if (fd.get('diaper_change_wet'))    extraNotes.push('حفاظ مبلل');
-    if (fd.get('diaper_change_soiled')) extraNotes.push('حفاظ متسخ');
-
-    const mealMap = { all:'أكل الكل', most:'أكل المعظم', some:'أكل القليل', none:'لم يأكل' };
-    ['breakfast','lunch','snack'].forEach(m => {
-        const val = fd.get(m);
-        if (val && val !== 'all') {
-            const labels = { breakfast:'فطور', lunch:'غداء', snack:'وجبة خفيفة' };
-            extraNotes.push(`${labels[m]}: ${mealMap[val]}`);
-        }
+    document.addEventListener('DOMContentLoaded', () => {
+        loadChildren();
+        loadClasses();
     });
 
-    const activities = [...document.querySelectorAll('.activity-check:checked')].map(c => c.value);
-    if (activities.length) extraNotes.push(`أنشطة: ${activities.join('، ')}`);
+    async function loadChildren(classId = null, ageRange = null) {
+        try {
+            const userRole = '{{ current_user.role.value }}';
+            const normalizedRole = String(userRole || '').toUpperCase();
+            let url = '/api/supervisor/children';
 
-    const generalNotes = fd.get('general_notes') || '';
-    const combinedNotes = [extraNotes.join(' | '), generalNotes].filter(Boolean).join('\n');
+            if (normalizedRole === 'MANAGER' || normalizedRole === 'ADMIN') {
+                url = '/api/children';
+            }
 
-    const payload = {
-        child_id: parseInt(fd.get('child_id')),
-        date: fd.get('report_date'),
-        arrival_time: fd.get('arrival_time'),
-        leave_time: fd.get('leave_time'),
-        breakfast: fd.get('breakfast') !== 'none',
-        lunch: fd.get('lunch') !== 'none',
-        snack: fd.get('snack') !== 'none',
-        milk: false,
-        activities: activities.join(', '),
-        notes: combinedNotes
-    };
+            const params = new URLSearchParams();
+            if (classId) params.append('class_id', classId);
 
-    try {
-        const response = await fetch('/api/daily-reports/create', {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify(payload)
-        });
-        if (response.ok) {
-            window.showToast('تم إرسال التقرير بنجاح', 'success');
-            setTimeout(() => window.location.href = '/reports', 1500);
-        } else {
-            const err = await response.json();
-            window.showToast('خطأ: ' + (err.detail || 'فشل الإرسال'), 'error');
-            btn.disabled = false;
-            btn.querySelector('.btn-text').classList.remove('d-none');
-            btn.querySelector('.btn-loading').classList.add('d-none');
+            const res = await fetch(`${url}?${params}`, { headers: getHeaders() });
+            if (!res.ok) return;
+
+            const data = await res.json();
+            let children = data.children || data;
+
+            // Enforce global child age policy client-side as a safety net
+            if (window.ChildAgeValidator) {
+                children = children.filter(child => child.date_of_birth && ChildAgeValidator.isEligible(child.date_of_birth));
+            }
+
+            // Filter by age range if specified (using month-based ranges)
+            if (ageRange) {
+                children = children.filter(child => {
+                    if (!child.date_of_birth) return false;
+                    const ageInfo = window.ChildAgeValidator
+                        ? ChildAgeValidator.calculate(child.date_of_birth)
+                        : null;
+                    const ageMonths = ageInfo ? ageInfo.ageMonths : 0;
+
+                    // Parse range like "0-12", "12-24", etc.
+                    const [minMonths, maxMonths] = ageRange.split('-').map(Number);
+                    return ageMonths >= minMonths && ageMonths < maxMonths;
+                });
+            }
+
+            const select = document.querySelector('select[name="child_id"]');
+
+            if (children && children.length > 0) {
+                select.innerHTML = `<option value="">${T('اختر الطفل...', 'Select child...')}</option>` +
+                    children.map(c => {
+                        const name = c.first_name_ar && c.last_name_ar ?
+                            `${c.first_name_ar} ${c.last_name_ar}` :
+                            `${c.first_name} ${c.last_name}`;
+                        const classInfo = c.class_name ? ` (${c.class_name})` : '';
+                        return `<option value="${c.id}">${name}${classInfo}</option>`;
+                    }).join('');
+            } else {
+                select.innerHTML = `<option value="">${T('لا توجد أطفال متاحة', 'No children available')}</option>`;
+            }
+        } catch (error) {
+            console.error('Error loading children:', error);
         }
-    } catch {
-        window.showToast('حدث خطأ في الاتصال', 'error');
-        btn.disabled = false;
-        btn.querySelector('.btn-text').classList.remove('d-none');
-        btn.querySelector('.btn-loading').classList.add('d-none');
     }
-});
+
+    async function loadClasses() {
+        try {
+            const userRole = '{{ current_user.role.value }}';
+            const normalizedRole = String(userRole || '').toUpperCase();
+            let url = '/api/supervisor/my-classes';
+
+            if (normalizedRole === 'MANAGER' || normalizedRole === 'ADMIN') {
+                url = '/api/manager/classes';
+            }
+
+            const res = await fetch(url, { headers: getHeaders() });
+            if (!res.ok) return;
+
+            const data = await res.json();
+            const classes = Array.isArray(data) ? data : (Array.isArray(data.classes) ? data.classes : []);
+            const select = document.getElementById('class_filter');
+
+            if (select && classes.length > 0) {
+                select.innerHTML = `<option value="">${T('جميع الصفوف', 'All Classes')}</option>` +
+                    classes.map(c => {
+                        const className = c.name || c.name_ar || c.name_en || `${T('صف', 'Class')} #${c.id}`;
+                        return `<option value="${c.id}">${className}</option>`;
+                    }).join('');
+            }
+        } catch (error) {
+            console.error('Error loading classes:', error);
+        }
+    }
+
+    function filterChildren() {
+        const classId = document.getElementById('class_filter')?.value;
+        const ageRange = document.getElementById('age_filter')?.value;
+        loadChildren(classId, ageRange);
+    }
+
+    document.getElementById('reportForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const form = e.target;
+        const fd = new FormData(form);
+
+        // Construct detailed notes from UI fields that are not in API schema
+        let extraNotes = [];
+
+        // Mood
+        const mood = fd.get('mood');
+        const moodMap = { happy: T('سعيد','Happy'), normal: T('عادي','Normal'), sad: T('حزين','Sad'), tired: T('متعب','Tired'), sick: T('مريض','Sick') };
+        if (mood) extraNotes.push(`${T('المزاج','Mood')}: ${moodMap[mood] || mood}`);
+
+        if (fd.get('health_notes')) extraNotes.push(`${T('ملاحظات صحية','Health notes')}: ${fd.get('health_notes')}`);
+
+        // Sleep & Potty
+        const sleep = fd.get('sleep_duration');
+        if (sleep && parseInt(sleep) > 0) extraNotes.push(`${T('نوم','Sleep')}: ${sleep} ${T('دقيقة','min')}`);
+
+        const bathroom = fd.get('bathroom_count');
+        if (bathroom && parseInt(bathroom) > 0) extraNotes.push(`${T('حمام','Bathroom')}: ${bathroom} ${T('مرات','times')}`);
+
+        const diaperWet = fd.get('diaper_change_wet') ? T('مبلل','Wet') : '';
+        const diaperSoiled = fd.get('diaper_change_soiled') ? T('متسخ','Soiled') : '';
+        if (diaperWet || diaperSoiled) extraNotes.push(`${T('حفاظ','Diaper')}: ${[diaperWet, diaperSoiled].filter(Boolean).join(', ')}`);
+
+        // Meals Details (Since API only takes boolean)
+        const meals = ['breakfast', 'lunch', 'snack'];
+        const mealMap = { all: T('أكل كل شيء','Ate everything'), most: T('أكل المعظم','Ate most'), some: T('أكل القليل','Ate a little'), none: T('لم يأكل','Did not eat') };
+        meals.forEach(m => {
+            const val = fd.get(m); // Form value
+            if (val && val !== 'none') {
+                extraNotes.push(`${m === 'breakfast' ? T('فطور','Breakfast') : m === 'lunch' ? T('غداء','Lunch') : T('سناك','Snack')}: ${mealMap[val]}`);
+            }
+        });
+
+        // Activities
+        let activitiesList = [];
+        if (document.getElementById('act_art').checked) activitiesList.push(T('رسم وفنون','Art & Drawing'));
+        if (document.getElementById('act_music').checked) activitiesList.push(T('موسيقى','Music'));
+        if (document.getElementById('act_sport').checked) activitiesList.push(T('رياضة','Sports'));
+        if (document.getElementById('act_story').checked) activitiesList.push(T('قصص','Stories'));
+
+        const generalNotes = fd.get('general_notes');
+        const combinedNotes = (extraNotes.join(' | ') + '\n' + (generalNotes || '')).trim();
+
+        const userRole = '{{ current_user.role.value }}';
+        const normalizedRole = String(userRole || '').toUpperCase();
+        let payload;
+
+        if (normalizedRole === 'MANAGER' || normalizedRole === 'ADMIN') {
+            // Manager endpoint expects different structure
+            payload = {
+                child_id: parseInt(fd.get('child_id')),
+                arrival_time: fd.get('arrival_time'),
+                leave_time: fd.get('leave_time'),
+                mood: fd.get('mood') || null,
+                health_notes: fd.get('health_notes') || null,
+                breakfast: fd.get('breakfast') !== 'none',
+                lunch: fd.get('lunch') !== 'none',
+                snack: fd.get('snack') !== 'none',
+                milk: false, // Not in UI
+                nap_start: fd.get('nap_start') || null,
+                nap_end: fd.get('nap_end') || null,
+                nap_duration_minutes: fd.get('sleep_duration') ? parseInt(fd.get('sleep_duration')) : null,
+                bathroom_count: fd.get('bathroom_count') ? parseInt(fd.get('bathroom_count')) : null,
+                diaper_wet: fd.get('diaper_change_wet') === 'on',
+                diaper_soiled: fd.get('diaper_change_soiled') === 'on',
+                activities: activitiesList.join(', '),
+                notes: combinedNotes || null
+            };
+        } else {
+            // Supervisor endpoint
+            payload = {
+                child_id: parseInt(fd.get('child_id')),
+                date: fd.get('report_date'),
+                arrival_time: fd.get('arrival_time'),
+                leave_time: fd.get('leave_time'),
+                breakfast: fd.get('breakfast') !== 'none',
+                lunch: fd.get('lunch') !== 'none',
+                snack: fd.get('snack') !== 'none',
+                milk: false, // Not in UI
+                nap_start: fd.get('nap_start') || null,
+                nap_end: fd.get('nap_end') || null,
+                activities: activitiesList.join(', '),
+                notes: combinedNotes
+            };
+        }
+
+        try {
+            let url = '/api/daily-reports/create';
+
+            if (normalizedRole === 'MANAGER' || normalizedRole === 'ADMIN') {
+                url = '/api/daily-reports/manager/create-and-send';
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                // If using a toast library: showToast('تم الحفظ', 'success');
+                alert(T('تم إرسال التقرير بنجاح','Report submitted successfully'));
+                window.location.href = '/reports'; // Or similar redirect
+            } else {
+                const err = await response.json();
+                alert(T('خطأ','Error') + ': ' + (err.detail || T('فشل الإرسال','Submission failed')));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert(T('حدث خطأ في الاتصال','Connection error'));
+        }
+    });
 </script>
 {% endblock %}

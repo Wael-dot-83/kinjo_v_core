@@ -1,315 +1,139 @@
 {% extends 'base.html' %}
-{% block title %}الفعاليات والتقويم — KinJo{% endblock %}
+
+{% block title %}{% if ui_lang == 'en' %}Events & Calendar{% else %}الفعاليات والتقويم{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
     <div>
-        <div class="page-header-eyebrow" style="color:var(--kinjo-success);">
-            <i class="bi bi-calendar-event-fill"></i>
-            التواصل المجتمعي
-        </div>
-        <h1 class="page-header-title">الفعاليات والتقويم</h1>
-        <p class="page-header-sub">إدارة التقويم المدرسي ودعوة أولياء الأمور</p>
+        <h1 class="h2 mb-1">
+            <i class="bi bi-calendar-event me-2 text-success"></i>
+            {% if ui_lang == 'en' %}Events & Calendar{% else %}الفعاليات والتقويم{% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}الرئيسية{% endif %}</a></li>
+                <li class="breadcrumb-item"><a href="/communication">{% if ui_lang == 'en' %}Communication{% else %}التواصل{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Events{% else %}الفعاليات{% endif %}</li>
+            </ol>
+        </nav>
     </div>
-    <div class="d-flex gap-2 flex-wrap">
-        <a href="/communication" class="btn btn-ghost">
-            <i class="bi bi-arrow-right me-2"></i>مركز التواصل
-        </a>
+    <div class="btn-toolbar mb-2 mb-md-0">
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newEventModal">
-            <i class="bi bi-plus-circle me-2"></i>فعالية جديدة
+            <i class="bi bi-plus-lg me-1"></i> {% if ui_lang == 'en' %}New Event{% else %}فعالية جديدة{% endif %}
         </button>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-
-<!-- Stats Row -->
-<div class="row g-3 mb-4" id="statsRow">
-    <div class="col-6 col-md-3">
-        <div class="evt-stat-card">
-            <div class="evt-stat-icon" style="background:rgba(16,185,129,0.12);color:#10b981;">
-                <i class="bi bi-calendar-check"></i>
-            </div>
-            <div class="evt-stat-val" id="statTotal">—</div>
-            <div class="evt-stat-label">إجمالي الفعاليات</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="evt-stat-card">
-            <div class="evt-stat-icon" style="background:rgba(99,102,241,0.12);color:#6366f1;">
-                <i class="bi bi-clock-history"></i>
-            </div>
-            <div class="evt-stat-val" id="statUpcoming">—</div>
-            <div class="evt-stat-label">قادمة هذا الشهر</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="evt-stat-card">
-            <div class="evt-stat-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
-                <i class="bi bi-exclamation-triangle"></i>
-            </div>
-            <div class="evt-stat-val" id="statConsent">—</div>
-            <div class="evt-stat-label">تتطلب موافقة</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="evt-stat-card">
-            <div class="evt-stat-icon" style="background:rgba(239,68,68,0.12);color:#ef4444;">
-                <i class="bi bi-calendar-x"></i>
-            </div>
-            <div class="evt-stat-val" id="statPast">—</div>
-            <div class="evt-stat-label">منتهية</div>
-        </div>
-    </div>
-</div>
-
-<!-- Filter Bar -->
-<div class="card mb-4">
-    <div class="card-body py-3">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="filter-label mb-1">نوع الفعالية</label>
-                <select class="form-select form-select-sm" id="typeFilter">
-                    <option value="">جميع الأنواع</option>
-                    <option value="TRIP">رحلة</option>
-                    <option value="CEREMONY">حفل</option>
-                    <option value="MEETING">اجتماع</option>
-                    <option value="HOLIDAY">إجازة</option>
-                    <option value="OTHER">أخرى</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="filter-label mb-1">الفترة</label>
-                <select class="form-select form-select-sm" id="periodFilter">
-                    <option value="upcoming">القادمة</option>
-                    <option value="all">جميع الفعاليات</option>
-                    <option value="past">المنتهية</option>
-                </select>
-            </div>
-            <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-primary btn-sm flex-grow-1" onclick="loadEvents()">
-                    <i class="bi bi-funnel-fill me-1"></i>تصفية
-                </button>
-                <div class="btn-group btn-group-sm" role="group" aria-label="طريقة العرض">
-                    <button class="btn btn-ghost" id="viewGrid" onclick="setView('grid')" title="شبكة">
-                        <i class="bi bi-grid-3x3-gap-fill"></i>
-                    </button>
-                    <button class="btn btn-ghost" id="viewList" onclick="setView('list')" title="قائمة">
-                        <i class="bi bi-list-ul"></i>
-                    </button>
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4">{% if ui_lang == 'en' %}Upcoming Events{% else %}الأحداث القادمة{% endif %}</h5>
+                <div id="eventsContainer" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    <!-- Loaded via JS -->
+                    <div class="col-12 text-center py-5">
+                        <div class="spinner-border text-success" role="status"></div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
-
-<!-- Events Container -->
-<div id="eventsContainer">
-    <div class="text-center py-5 text-muted">
-        <div class="spinner-border spinner-border-sm me-2 text-success" role="status" aria-hidden="true"></div>
-        جاري تحميل الفعاليات...
     </div>
 </div>
 
 {% include 'communication/modals/new_event.html' %}
-
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
-.filter-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em; }
-
-/* Stat cards */
-.evt-stat-card { background:var(--kinjo-card-bg);border:1px solid var(--kinjo-border);border-radius:var(--kinjo-radius-xl);padding:1.1rem 1rem;text-align:center; }
-.evt-stat-icon { width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin:0 auto 0.5rem; }
-.evt-stat-val { font-size:1.8rem;font-weight:800;color:var(--kinjo-text-primary);line-height:1; }
-.evt-stat-label { font-size:0.72rem;color:var(--kinjo-text-muted);margin-top:0.2rem; }
-
-/* Event card - grid view */
-.evt-card {
-    background:var(--kinjo-card-bg);border:1px solid var(--kinjo-border);
-    border-radius:var(--kinjo-radius-xl);overflow:hidden;
-    transition:box-shadow 0.2s,transform 0.2s;height:100%;
-}
-.evt-card:hover { box-shadow:var(--kinjo-shadow-lg);transform:translateY(-2px); }
-.evt-card-accent { height:4px; }
-.evt-card-body { padding:1.25rem; }
-.evt-type-badge {
-    display:inline-flex;align-items:center;gap:0.3rem;
-    padding:0.15rem 0.6rem;border-radius:50px;font-size:0.68rem;font-weight:800;
-    background:var(--kinjo-surface);border:1px solid var(--kinjo-border);
-    color:var(--kinjo-text-secondary);margin-bottom:0.75rem;
-}
-.evt-title { font-size:1rem;font-weight:800;color:var(--kinjo-text-primary);margin:0 0 0.3rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
-.evt-desc { font-size:0.8rem;color:var(--kinjo-text-secondary);margin:0 0 0.75rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
-.evt-meta { display:flex;flex-direction:column;gap:0.25rem; }
-.evt-meta-row { display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--kinjo-text-muted); }
-.evt-consent-badge { display:inline-flex;align-items:center;gap:0.3rem;padding:0.15rem 0.55rem;border-radius:50px;font-size:0.68rem;font-weight:700;background:rgba(245,158,11,0.12);color:#d97706;margin-top:0.5rem; }
-
-/* List view */
-.evt-list-item {
-    display:flex;align-items:flex-start;gap:1rem;padding:1rem 1.25rem;
-    border-bottom:1px solid var(--kinjo-border);
-}
-.evt-list-item:last-child { border-bottom:none; }
-.evt-list-item:hover { background:var(--kinjo-surface); }
-.evt-list-dot { width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:0.3rem; }
-.evt-list-body { flex:1;min-width:0; }
-.evt-list-title { font-weight:700;font-size:0.9rem;color:var(--kinjo-text-primary);margin-bottom:0.15rem; }
-.evt-list-date { font-size:0.75rem;color:var(--kinjo-text-muted); }
-</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
-let allEvents = [];
-let currentView = 'grid';
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
 
-document.addEventListener('DOMContentLoaded', loadEvents);
+    document.addEventListener('DOMContentLoaded', loadEvents);
 
-async function loadEvents() {
-    document.getElementById('eventsContainer').innerHTML = `
-        <div class="text-center py-5 text-muted">
-            <div class="spinner-border spinner-border-sm me-2 text-success" role="status" aria-hidden="true"></div>
-            جاري تحميل الفعاليات...
-        </div>`;
-    try {
-        const r = await fetch('/comm/events', { headers: authHeaders });
-        if (r.ok) {
-            allEvents = await r.json();
-        } else {
-            allEvents = getSampleEvents();
+    async function loadEvents() {
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">${T('يرجى تسجيل الدخول لعرض الفعاليات', 'Please log in to view events')}</div>`;
+                return;
+            }
+
+            const token = AuthService.getToken();
+            const response = await fetch('/comm/events', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const events = await response.json();
+                renderEvents(events);
+            } else {
+                document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">${T('فشل تحميل الفعاليات', 'Failed to load events')}</div>`;
+            }
+        } catch (error) {
+            console.error(error);
+            document.getElementById('eventsContainer').innerHTML = `<div class="alert alert-danger w-100">${T('خطأ في الاتصال', 'Connection error')}</div>`;
         }
-    } catch {
-        allEvents = getSampleEvents();
     }
-    updateStats(allEvents);
-    renderEvents(applyFilters(allEvents));
-}
 
-function applyFilters(events) {
-    const type   = document.getElementById('typeFilter').value;
-    const period = document.getElementById('periodFilter').value;
-    const now    = new Date();
-    let filtered = events;
-    if (type) filtered = filtered.filter(e => e.type === type);
-    if (period === 'upcoming') filtered = filtered.filter(e => new Date(e.start_at) >= now);
-    if (period === 'past')     filtered = filtered.filter(e => new Date(e.end_at || e.start_at) < now);
-    filtered.sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
-    return filtered;
-}
+    function renderEvents(events) {
+        const container = document.getElementById('eventsContainer');
+        container.innerHTML = '';
 
-function updateStats(events) {
-    const now   = new Date();
-    const month = now.getMonth();
-    const year  = now.getFullYear();
-    document.getElementById('statTotal').textContent    = events.length;
-    document.getElementById('statUpcoming').textContent = events.filter(e => {
-        const d = new Date(e.start_at);
-        return d >= now && d.getMonth() === month && d.getFullYear() === year;
-    }).length;
-    document.getElementById('statConsent').textContent  = events.filter(e => e.requires_consent_flag).length;
-    document.getElementById('statPast').textContent     = events.filter(e => new Date(e.end_at || e.start_at) < now).length;
-}
-
-const typeColors = {
-    TRIP:     '#10b981', CEREMONY: '#6366f1',
-    MEETING:  '#f59e0b', HOLIDAY:  '#ef4444', OTHER: '#64748b'
-};
-const typeLabels = {
-    TRIP:'رحلة', CEREMONY:'حفل', MEETING:'اجتماع', HOLIDAY:'إجازة', OTHER:'أخرى'
-};
-
-function renderEvents(events) {
-    const c = document.getElementById('eventsContainer');
-    if (!events.length) {
-        c.innerHTML = `
-            <div class="card"><div class="card-body text-center py-5 text-muted">
-                <i class="bi bi-calendar-x d-block fs-1 mb-3 opacity-25"></i>
-                <p class="mb-3">لا توجد فعاليات مطابقة</p>
-                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#newEventModal">
-                    <i class="bi bi-plus-lg me-1"></i>أضف فعالية
-                </button>
-            </div></div>`;
-        return;
-    }
-    if (currentView === 'grid') renderGrid(events, c);
-    else renderList(events, c);
-}
-
-function renderGrid(events, c) {
-    c.innerHTML = `<div class="row g-4">${events.map(evt => {
-        const color = typeColors[evt.type] || '#64748b';
-        const range = formatRange(evt.start_at, evt.end_at);
-        const consent = evt.requires_consent_flag
-            ? `<div class="evt-consent-badge"><i class="bi bi-exclamation-triangle-fill"></i>يتطلب موافقة ولي الأمر</div>` : '';
-        return `<div class="col-sm-6 col-xl-4">
-            <div class="evt-card">
-                <div class="evt-card-accent" style="background:${color};"></div>
-                <div class="evt-card-body">
-                    <div class="evt-type-badge">${typeLabels[evt.type] || evt.type || 'أخرى'}</div>
-                    <div class="evt-title">${evt.title || '—'}</div>
-                    <div class="evt-desc">${evt.description || ''}</div>
-                    <div class="evt-meta">
-                        <div class="evt-meta-row"><i class="bi bi-clock"></i>${range}</div>
-                        ${evt.location ? `<div class="evt-meta-row"><i class="bi bi-geo-alt"></i>${evt.location}</div>` : ''}
-                    </div>
-                    ${consent}
+        if (events.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center py-5 text-muted">
+                    <i class="bi bi-calendar-x fs-1 mb-2 d-block"></i>
+                    ${T('لا توجد فعاليات قادمة', 'No upcoming events')}
                 </div>
-            </div>
-        </div>`;
-    }).join('')}</div>`;
-}
+            `;
+            return;
+        }
 
-function renderList(events, c) {
-    c.innerHTML = `<div class="card"><div class="card-body p-0">${events.map(evt => {
-        const color = typeColors[evt.type] || '#64748b';
-        const range = formatRange(evt.start_at, evt.end_at);
-        return `<div class="evt-list-item">
-            <div class="evt-list-dot" style="background:${color};"></div>
-            <div class="evt-list-body">
-                <div class="evt-list-title">${evt.title || '—'}</div>
-                <div class="evt-list-date"><i class="bi bi-clock me-1"></i>${range}</div>
-            </div>
-            <span style="font-size:0.72rem;font-weight:700;color:${color};">${typeLabels[evt.type]||evt.type||''}</span>
-        </div>`;
-    }).join('')}</div></div>`;
-}
+        // Sort by date (nearest first)
+        events.sort((a, b) => new Date(a.start_at) - new Date(b.start_at));
 
-function setView(v) {
-    currentView = v;
-    document.getElementById('viewGrid').classList.toggle('btn-primary', v === 'grid');
-    document.getElementById('viewGrid').classList.toggle('btn-ghost',   v !== 'grid');
-    document.getElementById('viewList').classList.toggle('btn-primary', v === 'list');
-    document.getElementById('viewList').classList.toggle('btn-ghost',   v !== 'list');
-    renderEvents(applyFilters(allEvents));
-}
+        events.forEach(evt => {
+            const range = formatEventDate(evt.start_at, evt.end_at);
+            const consentBadge = evt.requires_consent_flag
+                ? `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> ${T('يتطلب موافقة', 'Requires consent')}</span>`
+                : '';
 
-function formatRange(start, end) {
-    const s = new Date(start);
-    const dateOpt = { year:'numeric', month:'short', day:'numeric' };
-    const timeOpt = { hour:'2-digit', minute:'2-digit' };
-    if (!end) return s.toLocaleDateString('ar-SA', dateOpt);
-    const e = new Date(end);
-    if (s.toDateString() === e.toDateString()) {
-        return `${s.toLocaleDateString('ar-SA', dateOpt)} (${s.toLocaleTimeString('ar-SA', timeOpt)} – ${e.toLocaleTimeString('ar-SA', timeOpt)})`;
+            const card = document.createElement('div');
+            card.className = 'col';
+            card.innerHTML = `
+                <div class="card h-100 border-start border-4 border-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">${evt.title}</h5>
+                            <span class="badge bg-light text-dark border">${evt.type}</span>
+                        </div>
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="bi bi-clock me-1"></i> ${range}
+                        </h6>
+                        <p class="card-text text-secondary mb-3">${evt.description || T('لا يوجد وصف', 'No description')}</p>
+                        ${consentBadge}
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
     }
-    return `${s.toLocaleDateString('ar-SA', dateOpt)} – ${e.toLocaleDateString('ar-SA', dateOpt)}`;
-}
 
-function getSampleEvents() {
-    return [
-        { id:1, title:'رحلة إلى حديقة الحيوان', type:'TRIP',     description:'رحلة ترفيهية للأطفال',   start_at:'2026-05-15T09:00', end_at:'2026-05-15T15:00', requires_consent_flag:true },
-        { id:2, title:'حفل نهاية العام',        type:'CEREMONY', description:'احتفال بإنجازات الأطفال', start_at:'2026-06-01T10:00', end_at:'2026-06-01T12:00', requires_consent_flag:false },
-        { id:3, title:'اجتماع أولياء الأمور',   type:'MEETING',  description:'مناقشة التقدم الدراسي',   start_at:'2026-05-20T18:00', end_at:'2026-05-20T20:00', requires_consent_flag:false },
-    ];
-}
+    function formatEventDate(start, end) {
+        const s = new Date(start);
+        const e = new Date(end);
 
-// Initialize view buttons
-setView('grid');
+        const dateOpt = { year: 'numeric', month: 'short', day: 'numeric' };
+        const timeOpt = { hour: '2-digit', minute: '2-digit' };
+        const locale = IS_EN ? 'en-US' : 'ar-JO';
+
+        // Same day?
+        if (s.toDateString() === e.toDateString()) {
+            return `${s.toLocaleDateString(locale, dateOpt)} (${s.toLocaleTimeString(locale, timeOpt)} - ${e.toLocaleTimeString(locale, timeOpt)})`;
+        }
+        return `${s.toLocaleDateString(locale)} - ${e.toLocaleDateString(locale)}`;
+    }
 </script>
 {% endblock %}

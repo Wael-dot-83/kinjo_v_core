@@ -1,91 +1,189 @@
 {% extends 'base.html' %}
-{% block title %}{{ _('Enrollments') }} — KinJo{% endblock %}
+
+{% block title %}{% if ui_lang == 'en' %}Enrollment Applications{% else %}طلبات التسجيل{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
-        <div class="page-header-eyebrow" style="color:var(--kinjo-primary);">
-            <i class="bi bi-clipboard-check-fill"></i>
-            بوابة ولي الأمر
-        </div>
-        <h1 class="page-header-title">{{ _('Enrollments') }}</h1>
-        <p class="page-header-sub">حالة طلبات التسجيل المقدمة</p>
+        <h1 class="h2">
+            <i class="bi bi-clipboard-check me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}Enrollment Applications{% else %}طلبات التسجيل{% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Enrollments{% else %}طلبات التسجيل{% endif %}</li>
+            </ol>
+        </nav>
     </div>
-    <a href="/enrollments/create" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-2"></i>طلب تسجيل جديد
-    </a>
+    <div class="btn-toolbar">
+        <a href="/enroll" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}New Application{% else %}طلب جديد{% endif %}
+        </a>
+    </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<div id="enrollmentsList">
-    <div class="text-center py-5 text-muted">
-        <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
-        جاري التحميل...
+<!-- Status Summary Cards -->
+<div class="row g-3 mb-4" id="statusSummary">
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-primary" id="countTotal">0</h3>
+                <small class="text-muted">{% if ui_lang == 'en' %}Total{% else %}الإجمالي{% endif %}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-success" id="countActive">0</h3>
+                <small class="text-muted">{% if ui_lang == 'en' %}Active / Accepted{% else %}نشط / مقبول{% endif %}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-warning" id="countPending">0</h3>
+                <small class="text-muted">{% if ui_lang == 'en' %}Under Review{% else %}قيد المراجعة{% endif %}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0 text-danger" id="countRejected">0</h3>
+                <small class="text-muted">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</small>
+            </div>
+        </div>
     </div>
 </div>
 
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-sub { font-size:0.875rem;color:var(--kinjo-text-muted);margin:0; }
-
-.enroll-item { display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
-.enroll-item:last-child { border-bottom:none; }
-.enroll-item:hover { background:var(--kinjo-surface); }
-.enroll-icon { width:44px;height:44px;border-radius:12px;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0; }
-.enroll-body { flex:1;min-width:0; }
-.enroll-name { font-weight:700;font-size:0.9rem;color:var(--kinjo-text-primary); }
-.enroll-meta { font-size:0.75rem;color:var(--kinjo-text-muted); }
-.enroll-badge { display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.72rem;font-weight:800; }
-.enroll-badge.pending  { background:rgba(245,158,11,0.12);color:#d97706; }
-.enroll-badge.approved { background:rgba(16,185,129,0.12);color:var(--kinjo-success); }
-.enroll-badge.rejected { background:rgba(239,68,68,0.12);color:var(--kinjo-danger); }
-.enroll-badge.active   { background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
-</style>
+<!-- Enrollments List -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Submitted{% else %}تاريخ التقديم{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody id="enrollmentsTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const IS_EN = '{{ ui_lang }}' === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        const r = await fetch('/api/parent/enrollments', { headers: authHeaders });
-        const data = r.ok ? await r.json() : null;
-        render(data?.enrollments || data || []);
-    } catch { render([]); }
-});
+    const STATUS_LABEL = {
+        'DRAFT': T('مسودة', 'Draft'), 'SUBMITTED': T('مقدّم', 'Submitted'), 'PENDING_REVIEW': T('قيد المراجعة', 'Under Review'),
+        'ACCEPTED': T('مقبول', 'Accepted'), 'REJECTED': T('مرفوض', 'Rejected'), 'WITHDRAWN': T('منسحب', 'Withdrawn'),
+        'WAITLISTED': T('قائمة الانتظار', 'Waitlisted'), 'ACTIVE': T('نشط', 'Active')
+    };
 
-const statusLabels = { pending:'قيد المراجعة', approved:'مقبول', rejected:'مرفوض', active:'نشط' };
+    const STATUS_CLASS = {
+        'DRAFT': 'bg-secondary', 'SUBMITTED': 'bg-info', 'PENDING_REVIEW': 'bg-warning text-dark',
+        'ACCEPTED': 'bg-success', 'REJECTED': 'bg-danger', 'WITHDRAWN': 'bg-dark',
+        'WAITLISTED': 'bg-info', 'ACTIVE': 'bg-success'
+    };
 
-function render(items) {
-    const c = document.getElementById('enrollmentsList');
-    if (!items.length) {
-        c.innerHTML = `<div class="card"><div class="card-body text-center py-5 text-muted">
-            <i class="bi bi-clipboard-x d-block fs-1 mb-3 opacity-25"></i>
-            <p class="mb-3">لا توجد طلبات تسجيل</p>
-            <a href="/enrollments/create" class="btn btn-primary btn-sm">
-                <i class="bi bi-plus-lg me-1"></i>قدّم طلباً الآن
-            </a>
-        </div></div>`;
-        return;
+    function getHeaders() {
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            return { 'Content-Type': 'application/json' };
+        }
+        const token = AuthService.getToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return headers;
     }
-    c.innerHTML = `<div class="card"><div class="card-body p-0">${items.map(e => {
-        const st  = e.status || 'pending';
-        const dt  = e.created_at ? new Date(e.created_at).toLocaleDateString('ar-SA',{year:'numeric',month:'short',day:'numeric'}) : '—';
-        return `<div class="enroll-item">
-            <div class="enroll-icon"><i class="bi bi-clipboard-check"></i></div>
-            <div class="enroll-body">
-                <div class="enroll-name">${e.child_name || e.child_id || '—'}</div>
-                <div class="enroll-meta">${e.kindergarten_name || '—'} · ${dt}</div>
-            </div>
-            <span class="enroll-badge ${st}">${statusLabels[st] || st}</span>
-            <a href="/enrollments/${e.id}" class="btn btn-ghost btn-sm">عرض</a>
-        </div>`;
-    }).join('')}</div></div>`;
-}
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '—';
+        return new Date(dateStr).toLocaleDateString(IS_EN ? 'en-US' : 'ar-SA');
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadEnrollments();
+    });
+
+    async function loadEnrollments() {
+        const tbody = document.getElementById('enrollmentsTableBody');
+        try {
+            const resp = await fetch('/api/parent/enrollments', { headers: getHeaders() });
+            if (!resp.ok) throw new Error('Failed to load enrollments');
+
+            const data = await resp.json();
+            const enrollments = data.enrollments || [];
+
+            // Update counts
+            document.getElementById('countTotal').textContent = enrollments.length;
+            document.getElementById('countActive').textContent =
+                enrollments.filter(e => e.status === 'ACTIVE' || e.status === 'ACCEPTED').length;
+            document.getElementById('countPending').textContent =
+                enrollments.filter(e => e.status === 'PENDING_REVIEW' || e.status === 'SUBMITTED').length;
+            document.getElementById('countRejected').textContent =
+                enrollments.filter(e => e.status === 'REJECTED').length;
+
+            if (enrollments.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
+                            <p class="text-muted">${T('لا توجد طلبات تسجيل', 'No enrollment applications')}</p>
+                            <a href="/enroll" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-2"></i>${T('تقديم طلب جديد', 'Submit New Application')}
+                            </a>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = enrollments.map((e, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>
+                        <div class="fw-semibold">${e.child_name}</div>
+                    </td>
+                    <td>${e.kindergarten_name}</td>
+                    <td>
+                        <span class="badge ${STATUS_CLASS[e.status] || 'bg-secondary'}">
+                            ${STATUS_LABEL[e.status] || e.status}
+                        </span>
+                    </td>
+                    <td>${formatDate(e.submitted_at || e.created_at)}</td>
+                </tr>
+            `).join('');
+
+        } catch (error) {
+            console.error('Error loading enrollments:', error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-danger py-4">
+                        <i class="bi bi-exclamation-triangle me-2"></i>${T('خطأ في تحميل البيانات', 'Error loading data')}
+                    </td>
+                </tr>
+            `;
+        }
+    }
 </script>
 {% endblock %}

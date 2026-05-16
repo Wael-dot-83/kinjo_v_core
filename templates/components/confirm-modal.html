@@ -1,0 +1,8 @@
+{% macro modal_footer(confirm_text=None, cancel_text=None, confirm_color="primary", cancel_color="secondary") %}
+{% set confirm_label = confirm_text or ('تأكيد' if ui_lang != 'en' else 'Confirm') %}
+{% set cancel_label = cancel_text or ('إلغاء' if ui_lang != 'en' else 'Cancel') %}
+<div class="modal-footer">
+    <button type="button" class="btn btn-{{ cancel_color }}" data-bs-dismiss="modal">{{ cancel_label }}</button>
+    <button type="button" class="btn btn-{{ confirm_color }}" onclick="confirmAction()">{{ confirm_label }}</button>
+</div>
+{% endmacro %}

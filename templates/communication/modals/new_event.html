@@ -1,58 +1,68 @@
+{% from 'components/confirm-modal.html' import modal_footer %}
 <!-- New Event Modal -->
 <div class="modal fade" id="newEventModal" tabindex="-1" aria-labelledby="newEventModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="newEventModalLabel">إضافة فعالية جديدة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button></button>
+                <h5 class="modal-title" id="newEventModalLabel">{% if ui_lang == 'en' %}Add New Event{% else %}إضافة فعالية جديدة{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <form id="newEventForm">
                     <div class="mb-3">
-                        <label for="eventTitle" class="form-label">عنوان الفعالية</label>
+                        <label for="eventTitle" class="form-label">{% if ui_lang == 'en' %}Event Title{% else %}عنوان الفعالية{% endif %}</label>
                         <input type="text" class="form-control" id="eventTitle" required>
                     </div>
                     <div class="mb-3">
-                        <label for="eventType" class="form-label">نوع الفعالية</label>
+                        <label for="eventType" class="form-label">{% if ui_lang == 'en' %}Event Type{% else %}نوع الفعالية{% endif %}</label>
                         <select class="form-select" id="eventType">
-                            <option value="meeting">اجتماع</option>
-                            <option value="holiday">عطلة</option>
-                            <option value="activity">نشاط</option>
-                            <option value="other">أخرى</option>
+                            <option value="meeting">{% if ui_lang == 'en' %}Meeting{% else %}اجتماع{% endif %}</option>
+                            <option value="holiday">{% if ui_lang == 'en' %}Holiday{% else %}عطلة{% endif %}</option>
+                            <option value="activity">{% if ui_lang == 'en' %}Activity{% else %}نشاط{% endif %}</option>
+                            <option value="other">{% if ui_lang == 'en' %}Other{% else %}أخرى{% endif %}</option>
                         </select>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="eventStart" class="form-label">البداية</label>
+                            <label for="eventStart" class="form-label">{% if ui_lang == 'en' %}Start{% else %}البداية{% endif %}</label>
                             <input type="datetime-local" class="form-control" id="eventStart" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="eventEnd" class="form-label">النهاية</label>
+                            <label for="eventEnd" class="form-label">{% if ui_lang == 'en' %}End{% else %}النهاية{% endif %}</label>
                             <input type="datetime-local" class="form-control" id="eventEnd" required>
                         </div>
                     </div>
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="eventConsent">
-                        <label class="form-check-label" for="eventConsent">يتطلب موافقة ولي الأمر</label>
+                        <label class="form-check-label" for="eventConsent">{% if ui_lang == 'en' %}Requires parent consent{% else %}يتطلب موافقة ولي الأمر{% endif %}</label>
                     </div>
                     <div class="mb-3">
-                        <label for="eventDescription" class="form-label">الوصف</label>
+                        <label for="eventDescription" class="form-label">{% if ui_lang == 'en' %}Description{% else %}الوصف{% endif %}</label>
                         <textarea class="form-control" id="eventDescription" rows="3"></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="submitEvent()">حفظ</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="submitEvent()">{% if ui_lang == 'en' %}Save{% else %}حفظ{% endif %}</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
+
     async function submitEvent() {
-        const token = localStorage.getItem('access_token');
-        
+        // Use centralized auth system
+        if (!window.AuthService || !AuthService.isAuthenticated()) {
+            alert(T('يرجى تسجيل الدخول لإنشاء حدث', 'Please log in to create an event'));
+            return;
+        }
+
+        const token = AuthService.getToken();
+
         const payload = {
             title: document.getElementById('eventTitle').value,
             type: document.getElementById('eventType').value,
@@ -61,10 +71,10 @@
             description: document.getElementById('eventDescription').value,
             requires_consent_flag: document.getElementById('eventConsent') ? document.getElementById('eventConsent').checked : false
         };
-        
+
         // Basic validation
         if (!payload.title || !payload.start_at || !payload.end_at) {
-            alert('يرجى تعبئة جميع الحقول المطلوبة');
+            alert(T('يرجى تعبئة جميع الحقول المطلوبة', 'Please fill in all required fields'));
             return;
         }
 
@@ -84,15 +94,15 @@
                 if (typeof loadEvents === 'function') {
                     loadEvents();
                 }
-                alert('تم حفظ الفعالية');
+                alert(T('تم حفظ الفعالية', 'Event saved'));
                 document.getElementById('newEventForm').reset();
             } else {
                 const err = await response.json();
-                alert('فشل الحفظ: ' + (err.detail || 'Error'));
+                alert(T('فشل الحفظ', 'Save failed') + ': ' + (err.detail || 'Error'));
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('حدث خطأ في الاتصال');
+            alert(T('حدث خطأ في الاتصال', 'Connection error'));
         }
     }
 </script>

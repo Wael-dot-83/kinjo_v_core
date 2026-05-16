@@ -1,199 +1,436 @@
 {% extends 'base.html' %}
 
-{% block title %}لوحة التحكم{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header">
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-start gap-3">
+<div class="dashboard-header">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
         <div>
-            <h1 class="page-header-title">
-                <div class="title-icon">
-                    <i class="bi bi-grid-1x2-fill"></i>
-                </div>
-                لوحة التحكم
+            <h1 class="h2 mb-1">
+                <i class="bi bi-speedometer2 me-2 text-primary"></i>
+                {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
             </h1>
-            <nav aria-label="breadcrumb">
+            <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item">
-                        <a href="/"><i class="bi bi-house me-1"></i>الرئيسية</a>
-                    </li>
-                    <li class="breadcrumb-item active">لوحة التحكم</li>
+                    <li class="breadcrumb-item"><a href="/">{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</a></li>
+                    <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</li>
                 </ol>
             </nav>
+            <!-- Real-time Validation Status Indicator -->
+            <div id="validationStatusIndicator" class="validation-status-indicator status-unknown mt-2"
+                onclick="showValidationDetails()" style="cursor: pointer;" role="button" tabindex="0"
+                aria-label="{% if ui_lang == 'en' %}View data validation details{% else %}عرض تفاصيل التحقق من البيانات{% endif %}">
+                <i class="bi bi-question-circle-fill me-1"></i>
+                <span>{% if ui_lang == 'en' %}Validating...{% else %}جاري التحقق...{% endif %}</span>
+            </div>
         </div>
-
-        <!-- Toolbar -->
-        <div class="d-flex align-items-center gap-2 flex-shrink-0">
-            <div class="dropdown">
-                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
-                        data-bs-toggle="dropdown" id="dateRangeBtn">
-                    <i class="bi bi-calendar3"></i>
-                    <span id="dateRangeLabel">هذا الشهر</span>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()"
+                    aria-label="{% if ui_lang == 'en' %}Print dashboard{% else %}طباعة لوحة التحكم{% endif %}">
+                    <i class="bi bi-printer me-1"></i>{% if ui_lang == 'en' %}Print{% else %}طباعة{% endif %}
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#" onclick="setDateRange('today')"><i class="bi bi-sun me-2"></i>اليوم</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="setDateRange('week')"><i class="bi bi-calendar-week me-2"></i>هذا الأسبوع</a></li>
-                    <li><a class="dropdown-item active" href="#" onclick="setDateRange('month')"><i class="bi bi-calendar-month me-2"></i>هذا الشهر</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="setDateRange('quarter')"><i class="bi bi-calendar3 me-2"></i>هذا الربع</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="#" onclick="showCustomDateRange()"><i class="bi bi-calendar-range me-2"></i>تاريخ مخصص</a></li>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportDashboard()"
+                    aria-label="{% if ui_lang == 'en' %}Export dashboard{% else %}تصدير لوحة التحكم{% endif %}">
+                    <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard(event)"
+                    aria-label="{% if ui_lang == 'en' %}Refresh data{% else %}تحديث بيانات لوحة التحكم{% endif %}">
+                    <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+                </button>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                    id="dateRangeBtn" aria-label="{% if ui_lang == 'en' %}Select date range{% else %}اختيار نطاق التاريخ{% endif %}">
+                    <i class="bi bi-calendar3 me-1"></i>
+                    {% if ui_lang == 'en' %}This Month{% else %}هذا الشهر{% endif %}
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="setDateRange('today')">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="setDateRange('week')">{% if ui_lang == 'en' %}This Week{% else %}هذا الأسبوع{% endif %}</a></li>
+                    <li><a class="dropdown-item active" href="#" onclick="setDateRange('month')">{% if ui_lang == 'en' %}This Month{% else %}هذا الشهر{% endif %}</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="setDateRange('quarter')">{% if ui_lang == 'en' %}This Quarter{% else %}هذا الربع{% endif %}</a></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item" href="#" onclick="showCustomDateRange()">{% if ui_lang == 'en' %}Custom Date{% else %}تاريخ مخصص{% endif %}</a></li>
                 </ul>
             </div>
-            <button type="button" class="btn btn-outline-secondary btn-sm"
-                    onclick="refreshDashboard()" id="refreshBtn" aria-label="تحديث البيانات">
-                <i class="bi bi-arrow-clockwise" id="refreshIcon"></i>
-            </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm"
-                    onclick="window.print()" aria-label="طباعة">
-                <i class="bi bi-printer"></i>
-            </button>
-            <button type="button" class="btn btn-primary btn-sm"
-                    onclick="exportDashboard()" aria-label="تصدير">
-                <i class="bi bi-download"></i>
-                تصدير
-            </button>
         </div>
     </div>
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/dashboard-pro.css">
+<style>
+    /* Value update animation */
+    .value-updated {
+        animation: valueUpdate 1s ease-in-out;
+    }
+
+    @keyframes valueUpdate {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.1);
+            color: var(--bs-primary);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    /* Validation Status Indicator */
+    .validation-status-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: 1px solid;
+    }
+
+    .validation-status-indicator.status-valid {
+        background-color: rgba(25, 135, 84, 0.1);
+        border-color: #198754;
+        color: #198754;
+    }
+
+    .validation-status-indicator.status-warning {
+        background-color: rgba(255, 193, 7, 0.1);
+        border-color: #ffc107;
+        color: #ffc107;
+    }
+
+    .validation-status-indicator.status-error {
+        background-color: rgba(220, 53, 69, 0.1);
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+
+    .validation-status-indicator.status-unknown {
+        background-color: rgba(108, 117, 125, 0.1);
+        border-color: #6c757d;
+        color: #6c757d;
+    }
+
+    /* Validation error highlighting */
+    .validation-error {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    }
+
+    .validation-report h6 {
+        color: var(--bs-primary);
+        border-bottom: 1px solid var(--bs-border-color);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .validation-report ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .validation-report li {
+        padding: 0.25rem 0;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<!-- ══════════════════════════════════════════
-     KPI Stat Cards
-     ══════════════════════════════════════════ -->
-<div id="kpi-board">
-<div class="row g-3 mb-4 stagger-children">
-
-    <!-- Total Children -->
-    <div class="col-12 col-sm-6 col-xl-3 reveal reveal-delay-1">
-        <div class="card stat-card h-100" role="region" aria-label="إجمالي الأطفال">
-            <div class="card-body">
-                <div class="stat-card-content">
-                    <div class="stat-label">إجمالي الأطفال</div>
-                    <div class="stat-value" id="totalChildrenValue">
-                        <span class="skeleton skeleton-text d-inline-block" style="width:70px;"></span>
-                    </div>
-                    <div class="stat-trend up" id="totalChildrenTrend">
-                        <i class="bi bi-arrow-up-short"></i> +5% من الشهر الماضي
-                    </div>
-                </div>
-                <div class="stat-icon-wrap">
-                    <i class="bi bi-emoji-smile stat-icon"></i>
-                </div>
+<div class="fade-in-up container-fluid px-0">
+    <!-- Top Quick Actions Bar -->
+    <div class="row g-3 mb-4 mt-1 border-bottom pb-4 px-2 quick-actions-bar">
+        <div class="col-12">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold me-2"><i class="bi bi-star-fill text-warning me-1"></i> {% if ui_lang == 'en' %}Quick access:{% else %}وصول
+                    سريع:{% endif %}</span>
+                {% if current_user.role.value in ['ADMIN', 'MANAGER', 'SUPERVISOR'] %}
+                {% if current_user.role.value in ['MANAGER', 'SUPERVISOR'] %}
+                <a href="/attendance/daily" class="btn btn-white shadow-sm border rounded-pill px-3 py-2">
+                    <i class="bi bi-calendar-check text-success me-1"></i> {% if ui_lang == 'en' %}Today's Attendance{% else %}تسجيل حضور اليوم{% endif %}
+                </a>
+                {% endif %}
+                <a href="/daily-reports" class="btn btn-white shadow-sm border rounded-pill px-3 py-2">
+                    <i class="bi bi-journal-text text-primary me-1"></i> {% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}
+                </a>
+                {% if current_user.role.value != 'ADMIN' %}
+                <a href="/daily-reports/create" class="btn btn-white shadow-sm border rounded-pill px-3 py-2">
+                    <i class="bi bi-journal-plus text-primary me-1"></i> {% if ui_lang == 'en' %}New Daily Report{% else %}تقرير يومي جديد{% endif %}
+                </a>
+                {% endif %}
+                {% if current_user.role.value == 'ADMIN' %}
+                <a href="/incidents" class="btn btn-white shadow-sm border rounded-pill px-3 py-2">
+                    <i class="bi bi-exclamation-triangle text-warning me-1"></i> {% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}
+                </a>
+                {% endif %}
+                <a href="/enrollments" class="btn btn-white shadow-sm border rounded-pill px-3 py-2">
+                    <i class="bi bi-person-plus text-info me-1"></i> {% if ui_lang == 'en' %}Review Enrollment Requests{% else %}مراجعة طلبات التسجيل{% endif %}
+                </a>
+                <a href="/safety" class="btn btn-white shadow-sm border rounded-pill px-3 py-2">
+                    <i class="bi bi-shield-exclamation text-danger me-1"></i> {% if ui_lang == 'en' %}Report Incident{% else %}إبلاغ عن حادث{% endif %}
+                </a>
+                {% endif %}
+                <button class="btn btn-primary rounded-pill px-4 py-2 ms-auto" onclick="location.reload()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> {% if ui_lang == 'en' %}Refresh Data{% else %}تحديث البيانات{% endif %}
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Attendance Today -->
-    <div class="col-12 col-sm-6 col-xl-3 reveal reveal-delay-2">
-        <div class="card stat-card success h-100" role="region" aria-label="الحضور اليوم">
-            <div class="card-body">
-                <div class="stat-card-content">
-                    <div class="stat-label">الحضور اليوم</div>
-                    <div class="stat-value" id="presentTodayValue">
-                        <span class="skeleton skeleton-text d-inline-block" style="width:60px;"></span>
-                    </div>
-                    <div class="stat-trend up" id="attendanceRateTrend">
-                        <i class="bi bi-arrow-up-short"></i>
-                        <span id="attendanceRateValue">--</span>% نسبة الحضور
+    <!-- Main 2-Column Dashboard Layout -->
+    <div class="row g-4">
+        <!-- Right Column: KPIs and Insights (Main Content) -->
+        <div class="col-12 col-lg-8 order-lg-1">
+            <!-- Unified KPI Dashboard Block -->
+            {% if current_user.role.value not in ['ADMIN', 'MANAGER'] %}
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
+                <div
+                    class="card-header bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
+                    <h4 class="fw-bold mb-0">{% if ui_lang == 'en' %}Key Performance Indicators{% else %}لوحة مؤشرات الأداء الرئيسية{% endif %}</h4>
+                    <div class="btn-group btn-group-sm rounded-pill shadow-sm overflow-hidden">
+                        <button class="btn btn-light px-3 active" id="viewCardsBtn" onclick="toggleKPIView('cards')"
+                            aria-label="{% if ui_lang == 'en' %}Cards view{% else %}عرض البطاقات{% endif %}">
+                            <i class="bi bi-grid-fill"></i>
+                        </button>
+                        <button class="btn btn-light px-3" id="viewTableBtn" onclick="toggleKPIView('table')"
+                            aria-label="{% if ui_lang == 'en' %}Table view{% else %}عرض الجدول{% endif %}">
+                            <i class="bi bi-list-ul"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="stat-icon-wrap">
-                    <i class="bi bi-check-circle-fill stat-icon"></i>
+                <div class="card-body p-4">
+                    <!-- KPI Cards View -->
+                    <div id="kpiCardsView">
+                        <div class="row g-3" id="kpiCardsContainer">
+                            <!-- Populated via JS -->
+                            <div class="col-12 text-center py-5 shimmer-kpi">
+                                <div class="shimmer" style="height: 150px; width: 100%; border-radius: 12px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KPI Table View (Hidden by default) -->
+                    <div id="kpiTableView" style="display: none;">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>{% if ui_lang == 'en' %}Indicator{% else %}المؤشر{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Current Value{% else %}القيمة الحالية{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Rating{% else %}التقييم{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Trend{% else %}التوجه{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kpiTableBody">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Proposed Actions Section -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
+                <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                    <h5 class="fw-bold mb-0">{% if ui_lang == 'en' %}Suggested Improvement Actions{% else %}إجراءات مقترحة للتحسين{% endif %}</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3" id="nextActionsContainer">
+                        <!-- Populated via JS or Template -->
+                        <div class="col-md-6">
+                            <div class="action-card d-flex align-items-start p-3 border rounded-4 bg-light bg-opacity-10"
+                                onclick="quickAction('reviewEnrollments')">
+                                <div class="action-icon me-3 bg-primary text-white p-2 rounded-3">
+                                    <i class="bi bi-plus-circle"></i>
+                                </div>
+                                <div>
+                                    <p class="mb-1 fw-bold">{% if ui_lang == 'en' %}Speed Up Enrollment Review{% else %}تسريع مراجعة التسجيلات{% endif %}</p>
+                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}There are 5 requests pending review for over 2 days.{% else %}هناك 5 طلبات تنتظر المراجعة منذ أكثر من
+                                        يومين.{% endif %}</small>
+                                    <span class="text-primary small fw-bold">{% if ui_lang == 'en' %}Review requests now{% else %}راجع الطلبات الآن{% endif %} <i
+                                            class="bi bi-arrow-left ms-1"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="action-card d-flex align-items-start p-3 border rounded-4 bg-light bg-opacity-10"
+                                onclick="quickAction('checkAttendance')">
+                                <div class="action-icon me-3 bg-success text-white p-2 rounded-3">
+                                    <i class="bi bi-calendar-check"></i>
+                                </div>
+                                <div>
+                                    <p class="mb-1 fw-bold">{% if ui_lang == 'en' %}Follow Up on Repeated Absences{% else %}متابعة الغياب المتكرر{% endif %}</p>
+                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}A 4% decrease in children's attendance was detected this week.{% else %}تم رصد تراجع في حضور الأطفال هذا الأسبوع
+                                        بنسبة 4%.{% endif %}</small>
+                                    <span class="text-success small fw-bold">{% if ui_lang == 'en' %}Check attendance report{% else %}افحص تقرير الحضور{% endif %} <i
+                                            class="bi bi-arrow-left ms-1"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Table -->
+            <div class="card border-0 shadow-sm" style="border-radius: 20px;">
+                <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                    <h5 class="fw-bold mb-0">{% if ui_lang == 'en' %}Class Overview{% else %}نظرة عامة على الفصول{% endif %}</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="table-responsive">
+                        <table class="table table-borderless align-middle mb-0">
+                            <thead class="text-muted small text-uppercase">
+                                <tr>
+                                    <th>{% if ui_lang == 'en' %}Class Name{% else %}اسم الفصل{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Level{% else %}المستوى{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Est. Status{% else %}الحالة التقديرية{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="classOverviewTable">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Pending Enrollments -->
-    <div class="col-12 col-sm-6 col-xl-3 reveal reveal-delay-3">
-        <div class="card stat-card warning h-100" role="region" aria-label="طلبات التسجيل المعلقة">
-            <div class="card-body">
-                <div class="stat-card-content">
-                    <div class="stat-label">طلبات معلقة</div>
-                    <div class="stat-value" id="pendingEnrollmentsValue">
-                        <span class="skeleton skeleton-text d-inline-block" style="width:50px;"></span>
-                    </div>
-                    <div class="stat-trend neutral">
-                        <i class="bi bi-clock"></i> تتطلب مراجعة
-                    </div>
-                </div>
-                <div class="stat-icon-wrap">
-                    <i class="bi bi-hourglass-split stat-icon"></i>
-                </div>
-            </div>
-        </div>
-    </div>
+        <!-- Left Column: Status Widgets (Secondary Content) -->
+        <div class="col-12 col-lg-4 order-lg-2">
+            <h5 class="fw-bold mb-3 px-2">{% if ui_lang == 'en' %}Current Status{% else %}الحالة الآن{% endif %}</h5>
 
-    <!-- Pending Reports -->
-    <div class="col-12 col-sm-6 col-xl-3 reveal reveal-delay-4">
-        <div class="card stat-card info h-100" role="region" aria-label="التقارير اليومية المعلقة">
-            <div class="card-body">
-                <div class="stat-card-content">
-                    <div class="stat-label">التقارير اليومية</div>
-                    <div class="stat-value" id="pendingReportsValue">
-                        <span class="skeleton skeleton-text d-inline-block" style="width:50px;"></span>
-                    </div>
-                    <div class="stat-trend neutral">
-                        <i class="bi bi-journal-text"></i> تقرير متبقٍ
+            <div class="row g-3">
+                <!-- Attendance Card -->
+                <div class="col-12">
+                    <div class="card h-100 border-0 shadow-sm status-widget overflow-hidden" id="attendanceCard">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge bg-success-subtle text-success rounded-pill px-3">{% if ui_lang == 'en' %}Positive{% else %}مؤشر إيجابي{% endif %}</span>
+                                <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
+                            </div>
+                            <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}</p>
+                            <h2 class="display-5 fw-bold mb-3" id="presentTodayValue">--</h2>
+                            <div class="mb-4">
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: 85%"
+                                        aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"
+                                        aria-label="{% if ui_lang == 'en' %}Attendance rate{% else %}نسبة الحضور{% endif %}"></div>
+                                </div>
+                                <small class="text-muted mt-1 d-block">{% if ui_lang == 'en' %}85% of total children{% else %}85% من إجمالي الأطفال{% endif %}</small>
+                            </div>
+                            <a href="/attendance" class="btn btn-success w-100 rounded-pill py-2 fw-bold">
+                                {% if ui_lang == 'en' %}Manage Attendance{% else %}إدارة الحضور{% endif %} <i class="bi bi-arrow-left ms-1"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
-                <div class="stat-icon-wrap">
-                    <i class="bi bi-file-earmark-text-fill stat-icon"></i>
+
+                <!-- Pending Enrollments Card -->
+                <div class="col-12">
+                    <div class="card h-100 border-0 shadow-sm status-widget" id="pendingEnrollmentsCard">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge bg-warning-subtle text-warning rounded-pill px-3"
+                                    id="pendingEnrollmentsBadge">{% if ui_lang == 'en' %}Needs Action{% else %}يحتاج إجراء{% endif %}</span>
+                                <small class="text-muted">{% if ui_lang == 'en' %}This Month{% else %}هذا الشهر{% endif %}</small>
+                            </div>
+                            <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Pending Enrollment Requests{% else %}طلبات تسجيل معلقة{% endif %}</p>
+                            <h2 class="display-5 fw-bold mb-4" id="pendingEnrollmentsValue">--</h2>
+                            <a href="/enrollments" class="btn btn-warning w-100 rounded-pill py-2 fw-bold">
+                                {% if ui_lang == 'en' %}Review Requests{% else %}مراجعة الطلبات{% endif %} <i class="bi bi-arrow-left ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pending Reports Card -->
+                <div class="col-12">
+                    <div class="card h-100 border-0 shadow-sm status-widget" id="pendingReportsCard">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge bg-info-subtle text-info rounded-pill px-3"
+                                    id="pendingReportsBadge">{% if ui_lang == 'en' %}Under Review{% else %}قيد المراجعة{% endif %}</span>
+                                <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
+                            </div>
+                            <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Pending Daily Reports{% else %}التقارير اليومية المعلقة{% endif %}</p>
+                            <h2 class="display-5 fw-bold mb-4" id="pendingReportsValue">--</h2>
+                            <a href="/daily-reports" class="btn btn-info text-white w-100 rounded-pill py-2 fw-bold">
+                                {% if ui_lang == 'en' %}Review Reports{% else %}مراجعة التقارير{% endif %} <i class="bi bi-arrow-left ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Incidents Card -->
+                <div class="col-12">
+                    <div class="card h-100 border-0 shadow-sm status-widget" id="incidentsCard">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge bg-danger-subtle text-danger rounded-pill px-3"
+                                    id="incidentsBadge">{% if ui_lang == 'en' %}Critical Alert{% else %}تنبيه حرج{% endif %}</span>
+                                <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
+                            </div>
+                            <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Reported Incidents{% else %}الحوادث المبلغ عنها{% endif %}</p>
+                            <h2 class="display-5 fw-bold mb-4" id="incidentsTodayValue">--</h2>
+                            <a href="/safety" class="btn btn-danger w-100 rounded-pill py-2 fw-bold">
+                                {% if ui_lang == 'en' %}Safety Management{% else %}إدارة السلامة{% endif %} <i class="bi bi-arrow-left ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-</div><!-- /#kpi-board -->
 
-<!-- ══════════════════════════════════════════
-     Admin System Overview
-     ══════════════════════════════════════════ -->
+<!-- Admin System Overview (Admin Only) -->
 {% if current_user.role.value == 'ADMIN' %}
 <div class="row g-3 mb-4">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <i class="bi bi-server"></i>
-                <span class="card-title">نظرة عامة على النظام</span>
-                <span class="ms-auto badge bg-soft-success" style="color:var(--kinjo-success); border-radius:20px; font-size:0.72rem; padding:0.3rem 0.7rem;">
-                    <span class="status-dot active pulse me-1" style="width:5px; height:5px; display:inline-block;"></span>
-                    مباشر
-                </span>
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart-line me-2"></i>
+                    {% if ui_lang == 'en' %}System Overview{% else %}نظرة عامة على النظام{% endif %}
+                </h5>
             </div>
             <div class="card-body">
-                <div class="row g-0">
-                    <div class="col-6 col-md-3 text-center" style="padding:1rem; border-inline-end:1px solid var(--kinjo-border-light);">
+                <div class="row text-center g-4">
+                    <div class="col-6 col-md-3">
                         <div class="system-stat">
-                            <span class="system-value text-primary" id="totalKindergartens">
-                                <span class="skeleton skeleton-text" style="width:50px; height:2.25rem; display:inline-block;"></span>
-                            </span>
-                            <div class="system-label">إجمالي الروضات</div>
+                            <div class="system-value text-primary" id="totalKindergartens">--</div>
+                            <div class="system-label">{% if ui_lang == 'en' %}Total Kindergartens{% else %}إجمالي الروضات{% endif %}</div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3 text-center" style="padding:1rem; border-inline-end:1px solid var(--kinjo-border-light);">
+                    <div class="col-6 col-md-3">
                         <div class="system-stat">
-                            <span class="system-value text-success" id="activeKindergartens">
-                                <span class="skeleton skeleton-text" style="width:50px; height:2.25rem; display:inline-block;"></span>
-                            </span>
-                            <div class="system-label">الروضات النشطة</div>
+                            <div class="system-value text-success" id="activeKindergartens">--</div>
+                            <div class="system-label">{% if ui_lang == 'en' %}Active Kindergartens{% else %}الروضات النشطة{% endif %}</div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3 text-center" style="padding:1rem; border-inline-end:1px solid var(--kinjo-border-light);">
+                    <div class="col-6 col-md-3">
                         <div class="system-stat">
-                            <span class="system-value text-info" id="totalUsers">
-                                <span class="skeleton skeleton-text" style="width:50px; height:2.25rem; display:inline-block;"></span>
-                            </span>
-                            <div class="system-label">إجمالي المستخدمين</div>
+                            <div class="system-value text-info" id="totalUsers">--</div>
+                            <div class="system-label">{% if ui_lang == 'en' %}Total Users{% else %}إجمالي المستخدمين{% endif %}</div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3 text-center" style="padding:1rem;">
+                    <div class="col-6 col-md-3">
                         <div class="system-stat">
-                            <span class="system-value" id="systemHealth">
-                                <span class="skeleton skeleton-text" style="width:60px; height:2.25rem; display:inline-block;"></span>
-                            </span>
-                            <div class="system-label">حالة النظام</div>
+                            <div class="system-value text-warning" id="systemHealth">--</div>
+                            <div class="system-label">{% if ui_lang == 'en' %}System Health{% else %}حالة النظام{% endif %}</div>
                         </div>
                     </div>
                 </div>
@@ -203,307 +440,330 @@
 </div>
 {% endif %}
 
-<!-- ══════════════════════════════════════════
-     Admin Extended Stats & Alerts
-     ══════════════════════════════════════════ -->
-{% if current_user.role.value == 'ADMIN' %}
-<div class="row g-3 mb-3 stagger-children">
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100" style="border-radius:var(--kinjo-radius);">
-            <div class="card-body text-center py-3">
-                <i class="bi bi-emoji-smile fs-4 text-primary mb-1 d-block"></i>
-                <div class="fw-bold fs-5" id="adminTotalChildren">--</div>
-                <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">إجمالي الأطفال</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100" style="border-radius:var(--kinjo-radius);">
-            <div class="card-body text-center py-3">
-                <i class="bi bi-briefcase fs-4 text-success mb-1 d-block"></i>
-                <div class="fw-bold fs-5" id="adminManagersCount">--</div>
-                <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">مديرو الروضات</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100" style="border-radius:var(--kinjo-radius);">
-            <div class="card-body text-center py-3">
-                <i class="bi bi-person-badge fs-4 text-info mb-1 d-block"></i>
-                <div class="fw-bold fs-5" id="adminSupervisorsCount">--</div>
-                <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">المشرفون</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100" style="border-radius:var(--kinjo-radius);">
-            <div class="card-body text-center py-3">
-                <i class="bi bi-people fs-4 text-warning mb-1 d-block"></i>
-                <div class="fw-bold fs-5" id="adminParentsCount">--</div>
-                <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">أولياء الأمور</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100" style="border-radius:var(--kinjo-radius);">
-            <div class="card-body text-center py-3">
-                <i class="bi bi-journal-check fs-4 text-success mb-1 d-block"></i>
-                <div class="fw-bold fs-5" id="adminEnrollmentsActive">--</div>
-                <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">تسجيلات نشطة</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100" style="border-radius:var(--kinjo-radius);">
-            <div class="card-body text-center py-3">
-                <i class="bi bi-shield-exclamation fs-4 text-danger mb-1 d-block"></i>
-                <div class="fw-bold fs-5" id="adminIncidentsRecent">--</div>
-                <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">حوادث (7 أيام)</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Admin Alerts Panel (shown only when alerts exist) -->
-<div class="row g-3 mb-4" id="alertsRow" style="display:none;">
-    <div class="col-12">
-        <div class="card" style="border-radius:var(--kinjo-radius); border:1px solid rgba(245,158,11,0.35);">
-            <div class="card-header" style="background:rgba(245,158,11,0.06); border-bottom:1px solid rgba(245,158,11,0.15);">
-                <i class="bi bi-bell-fill text-warning"></i>
-                <span class="card-title">تنبيهات النظام</span>
-                <span class="badge bg-warning ms-2" id="alertsCountBadge" style="border-radius:20px; font-size:0.72rem;">0</span>
-                <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="toggleAlerts()"
-                        id="alertsToggleBtn" aria-label="طي/توسيع التنبيهات" aria-expanded="true">
-                    <i class="bi bi-chevron-up" id="alertsToggleIcon"></i>
-                </button>
-            </div>
-            <div class="card-body p-3" id="alertsBody">
-                <div id="alertsList"></div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- ══════════════════════════════════════════
-     Charts Row
-     ══════════════════════════════════════════ -->
+<!-- Charts Row -->
 <div class="row g-3 mb-4">
-
     <!-- Attendance Chart -->
     <div class="col-12 col-lg-8">
         <div class="card h-100">
-            <div class="card-header">
-                <i class="bi bi-graph-up"></i>
-                <span class="card-title">نسبة الحضور الأسبوعية</span>
-                <div class="ms-auto btn-group btn-group-sm" role="group" aria-label="نوع الرسم البياني">
-                    <button class="btn btn-outline-secondary active"
-                            data-chart-type="line"
-                            onclick="switchChartType('line', this)">خطي</button>
-                    <button class="btn btn-outline-secondary"
-                            data-chart-type="bar"
-                            onclick="switchChartType('bar', this)">أعمدة</button>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    {% if ui_lang == 'en' %}Weekly Attendance Rate{% else %}نسبة الحضور الأسبوعية{% endif %}
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary active" data-chart-type="line"
+                        aria-label="{% if ui_lang == 'en' %}Line chart{% else %}عرض الرسم البياني كخط{% endif %}">{% if ui_lang == 'en' %}Line{% else %}خطي{% endif %}</button>
+                    <button class="btn btn-outline-secondary" data-chart-type="bar"
+                        aria-label="{% if ui_lang == 'en' %}Bar chart{% else %}عرض الرسم البياني كأعمدة{% endif %}">{% if ui_lang == 'en' %}Bar{% else %}أعمدة{% endif %}</button>
                 </div>
             </div>
             <div class="card-body">
                 <div class="chart-container">
-                    <canvas id="attendanceChart" aria-label="رسم بياني للحضور الأسبوعي"></canvas>
+                    <canvas id="attendanceChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Enrollment Pie -->
+    <!-- Enrollment Status Pie -->
     <div class="col-12 col-lg-4">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-pie-chart-fill"></i>
-                <span class="card-title">حالات التسجيل</span>
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>
+                    {% if ui_lang == 'en' %}Enrollment Status{% else %}حالات التسجيل{% endif %}
+                </h5>
             </div>
             <div class="card-body">
-                <div class="chart-container" style="height:240px;">
-                    <canvas id="enrollmentPieChart" aria-label="رسم دائري لحالات التسجيل"></canvas>
+                <div class="chart-container">
+                    <canvas id="enrollmentPieChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     Admin: Users by Role + Safety + Tools
-     ══════════════════════════════════════════ -->
-{% if current_user.role.value == 'ADMIN' %}
+<!-- Enhanced KPI Dashboard Section (Admin/Manager Only) -->
+{% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
+<!-- Enhanced KPI Dashboard -->
 <div class="row g-3 mb-4">
-    <!-- Users by Role Donut -->
-    <div class="col-12 col-lg-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <i class="bi bi-people-fill"></i>
-                <span class="card-title">توزيع المستخدمين</span>
-                <a href="/admin/users" class="btn btn-sm btn-outline-primary ms-auto">
-                    إدارة <i class="bi bi-arrow-left ms-1"></i>
-                </a>
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-speedometer2 me-2 text-primary"></i>
+                    {% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}
+                </h5>
+                <div class="btn-group btn-group-sm mt-2" role="group">
+                    <button type="button" class="btn btn-outline-primary active" onclick="toggleKPIView('cards')"
+                        id="viewCardsBtn" title="{% if ui_lang == 'en' %}Cards view{% else %}عرض البطاقات{% endif %}">
+                        <i class="bi bi-columns-gap"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="toggleKPIView('table')"
+                        id="viewTableBtn" title="{% if ui_lang == 'en' %}Table view{% else %}عرض الجدول{% endif %}">
+                        <i class="bi bi-table"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="openKPIExplanations()"
+                        title="{% if ui_lang == 'en' %}Explain indicators{% else %}شرح المؤشرات{% endif %}">
+                        <i class="bi bi-question-circle me-1"></i>{% if ui_lang == 'en' %}Definitions{% else %}التعريفات{% endif %}
+                    </button>
+                </div>
             </div>
             <div class="card-body">
-                <div class="chart-container" style="height:220px;">
-                    <canvas id="usersRoleChart" aria-label="رسم دائري لتوزيع المستخدمين"></canvas>
+                <!-- KPI Status Bar -->
+                <div class="kpi-status-container mb-4">
+                    <div class="kpi-status-item status-green" onclick="filterKPIsByStatus('green')">
+                        <div class="kpi-status-icon">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                        <div class="kpi-status-content">
+                            <div class="label">{% if ui_lang == 'en' %}Excellent{% else %}مؤشرات ممتازة{% endif %}</div>
+                            <div class="count" id="excellentCount">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-status-item status-amber" onclick="filterKPIsByStatus('amber')">
+                        <div class="kpi-status-icon">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </div>
+                        <div class="kpi-status-content">
+                            <div class="label">{% if ui_lang == 'en' %}Needs Improvement{% else %}يحتاج تحسين{% endif %}</div>
+                            <div class="count" id="cautionCount">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-status-item status-red" onclick="filterKPIsByStatus('red')">
+                        <div class="kpi-status-icon">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                        </div>
+                        <div class="kpi-status-content">
+                            <div class="label">{% if ui_lang == 'en' %}Critical{% else %}مؤشرات حرجة{% endif %}</div>
+                            <div class="count" id="criticalCount">0</div>
+                        </div>
+                    </div>
+                    <div class="kpi-status-item status-info" onclick="showAllAlerts()">
+                        <div class="kpi-status-icon">
+                            <i class="bi bi-bell-fill"></i>
+                        </div>
+                        <div class="kpi-status-content">
+                            <div class="label">{% if ui_lang == 'en' %}Alerts{% else %}التنبيهات{% endif %}</div>
+                            <div class="count" id="alertCount">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced KPI Cards View -->
+                <div id="kpiCardsView">
+                    <div class="row g-3" id="kpiCardsContainer">
+                        <!-- KPI cards will be loaded here -->
+                        <div class="col-12 py-3" id="loadingSkeleton">
+                            <div class="row g-3">
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between mb-3">
+                                                <div class="skeleton skeleton-text" style="width: 60%"></div>
+                                                <div class="skeleton skeleton-text" style="width: 20%"></div>
+                                            </div>
+                                            <div class="skeleton skeleton-rect mb-3" style="height: 40px; width: 50%">
+                                            </div>
+                                            <div class="skeleton skeleton-text" style="width: 100%"></div>
+                                            <div class="skeleton skeleton-rect mt-3" style="height: 32px; width: 100%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between mb-3">
+                                                <div class="skeleton skeleton-text" style="width: 60%"></div>
+                                                <div class="skeleton skeleton-text" style="width: 20%"></div>
+                                            </div>
+                                            <div class="skeleton skeleton-rect mb-3" style="height: 40px; width: 50%">
+                                            </div>
+                                            <div class="skeleton skeleton-text" style="width: 100%"></div>
+                                            <div class="skeleton skeleton-rect mt-3" style="height: 32px; width: 100%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between mb-3">
+                                                <div class="skeleton skeleton-text" style="width: 60%"></div>
+                                                <div class="skeleton skeleton-text" style="width: 20%"></div>
+                                            </div>
+                                            <div class="skeleton skeleton-rect mb-3" style="height: 40px; width: 50%">
+                                            </div>
+                                            <div class="skeleton skeleton-text" style="width: 100%"></div>
+                                            <div class="skeleton skeleton-rect mt-3" style="height: 32px; width: 100%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI Table View -->
+                <div id="kpiTableView" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="kpiTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>{% if ui_lang == 'en' %}Indicator{% else %}المؤشر{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Value{% else %}القيمة{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Trend{% else %}الاتجاه{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kpiTableBody">
+                                <!-- Table rows will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Safety & Incidents Summary -->
-    <div class="col-12 col-lg-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <i class="bi bi-shield-check text-success"></i>
-                <span class="card-title">السلامة والحوادث</span>
-                <a href="/safety" class="btn btn-sm btn-outline-primary ms-auto">
-                    التفاصيل <i class="bi bi-arrow-left ms-1"></i>
-                </a>
+<!-- Smart Alerts Section -->
+<div class="row g-3 mb-4" id="alertsSection" style="display: none;" aria-live="polite" aria-atomic="true">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-4 px-4">
+                <h5 class="card-title mb-0 d-flex align-items-center">
+                    <span class="p-2 bg-danger-subtle rounded-circle me-3">
+                        <i class="bi bi-bell-fill text-danger"></i>
+                    </span>
+                    {% if ui_lang == 'en' %}Smart Alerts{% else %}التنبيهات الذكية{% endif %}
+                </h5>
             </div>
-            <div class="card-body">
-                <div class="row g-0 mb-3">
-                    <div class="col-6 text-center p-3" style="border-inline-end:1px solid var(--kinjo-border-light);">
-                        <div class="fw-bold fs-3 text-danger" id="safetyIncidentsCount">--</div>
-                        <div style="font-size:0.78rem; color:var(--kinjo-text-muted);">حوادث هذا الأسبوع</div>
-                    </div>
-                    <div class="col-6 text-center p-3">
-                        <div class="fw-bold fs-3 text-success" id="safetyKgsOk">--</div>
-                        <div style="font-size:0.78rem; color:var(--kinjo-text-muted);">روضات نشطة</div>
-                    </div>
+            <div class="card-body p-4">
+                <div id="alertsContainer" class="d-flex flex-column gap-3">
+                    <!-- Alerts will be loaded here -->
                 </div>
-                <a href="/safety" class="btn btn-sm btn-outline-secondary w-100">
-                    <i class="bi bi-shield-plus me-1"></i> إدارة سجلات السلامة
-                </a>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Admin Management Tools -->
-    <div class="col-12 col-lg-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <i class="bi bi-tools"></i>
-                <span class="card-title">أدوات الإدارة</span>
+<!-- KPI Explanations Modal -->
+<div class="modal fade" id="kpiExplanationsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% if ui_lang == 'en' %}KPI Explanations{% else %}شرح مؤشرات الأداء الرئيسية{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
-            <div class="card-body py-2">
-                <a href="/admin/users" class="quick-action-item">
-                    <div class="quick-action-icon bg-soft-primary">
-                        <i class="bi bi-people-fill" style="color:var(--kinjo-primary);"></i>
-                    </div>
-                    <div>
-                        <div class="quick-action-label">إدارة المستخدمين</div>
-                        <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">إضافة وتعديل الحسابات</div>
-                    </div>
-                </a>
-                <a href="/admin/analytics" class="quick-action-item">
-                    <div class="quick-action-icon bg-soft-info">
-                        <i class="bi bi-graph-up-arrow" style="color:var(--kinjo-info);"></i>
-                    </div>
-                    <div>
-                        <div class="quick-action-label">التحليلات والتقارير</div>
-                        <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">تقارير شاملة للمنصة</div>
-                    </div>
-                </a>
-                <a href="/audit-logs" class="quick-action-item">
-                    <div class="quick-action-icon bg-soft-secondary">
-                        <i class="bi bi-journal-text" style="color:var(--kinjo-secondary);"></i>
-                    </div>
-                    <div>
-                        <div class="quick-action-label">سجلات التدقيق</div>
-                        <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">مراقبة نشاط النظام</div>
-                    </div>
-                </a>
-                <a href="/kpi/dashboard" class="quick-action-item">
-                    <div class="quick-action-icon bg-soft-success">
-                        <i class="bi bi-bar-chart-fill" style="color:var(--kinjo-success);"></i>
-                    </div>
-                    <div>
-                        <div class="quick-action-label">لوحة مؤشرات الأداء</div>
-                        <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">KPIs والحوكمة</div>
-                    </div>
-                </a>
+            <div class="modal-body">
+                <div id="explanationsContainer">
+                    <!-- Explanations will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="printExplanations()">
+                    <i class="bi bi-printer me-1"></i>{% if ui_lang == 'en' %}Print{% else %}طباعة{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Action Items Modal -->
+<div class="modal fade" id="kpiActionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="actionModalTitle">{% if ui_lang == 'en' %}Improvement Actions{% else %}إجراءات التحسين{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+            </div>
+            <div class="modal-body">
+                <div id="actionItemsContainer">
+                    <!-- Action items will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="exportActionPlan()">
+                    <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export Action Plan{% else %}تصدير خطة العمل{% endif %}
+                </button>
             </div>
         </div>
     </div>
 </div>
 {% endif %}
 
-<!-- ══════════════════════════════════════════
-     Quick Actions + Pending Reports + Activity
-     ══════════════════════════════════════════ -->
-<div class="row g-3 mb-4">
+<!-- Validation Details Modal -->
+<div class="modal fade" id="validationDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% if ui_lang == 'en' %}Data Validation Details{% else %}تفاصيل التحقق من البيانات{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="validation-report">
+                    <!-- Validation details will be loaded here by JavaScript -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <span class="ms-2">{% if ui_lang == 'en' %}Loading validation details...{% else %}جاري تحميل تفاصيل التحقق...{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="exportValidationReport()">
+                    <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export Report{% else %}تصدير التقرير{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- Quick Actions and Recent Activity -->
+<div class="row g-3 mb-4">
     <!-- Quick Actions -->
     <div class="col-12 col-md-4">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-lightning-charge-fill"></i>
-                <span class="card-title">إجراءات سريعة</span>
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>
+                    {% if ui_lang == 'en' %}Quick Actions{% else %}إجراءات سريعة{% endif %}
+                </h5>
             </div>
-            <div class="card-body py-2">
-
-                <a href="/attendance/check-in" class="quick-action-item">
-                    <div class="quick-action-icon bg-soft-success">
-                        <i class="bi bi-box-arrow-in-left" style="color:var(--kinjo-success);"></i>
-                    </div>
-                    <div>
-                        <div class="quick-action-label">تسجيل حضور</div>
-                        <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">تسجيل دخول الأطفال</div>
-                    </div>
+            <div class="card-body quick-actions">
+                <a href="/attendance/check-in" class="btn btn-outline-success w-100 mb-2 text-start">
+                    <i class="bi bi-box-arrow-in-left me-2"></i>
+                    {% if ui_lang == 'en' %}Record Attendance{% else %}تسجيل حضور{% endif %}
                 </a>
-
-                <a href="/daily-reports/create" class="quick-action-item">
-                    <div class="quick-action-icon bg-soft-primary">
-                        <i class="bi bi-journal-plus" style="color:var(--kinjo-primary);"></i>
-                    </div>
-                    <div>
-                        <div class="quick-action-label">تقرير يومي جديد</div>
-                        <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">توثيق يوم الطفل</div>
-                    </div>
-                </a>
-
-                <a href="/enrollments/new" class="quick-action-item">
-                    <div class="quick-action-icon bg-soft-info">
-                        <i class="bi bi-person-plus" style="color:var(--kinjo-info);"></i>
-                    </div>
-                    <div>
-                        <div class="quick-action-label">طلب تسجيل جديد</div>
-                        <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">إضافة طفل جديد</div>
-                    </div>
-                </a>
-
-                {% if current_user.role.value == 'ADMIN' %}
-                <a href="/kindergartens/create" class="quick-action-item">
-                    <div class="quick-action-icon bg-soft-success">
-                        <i class="bi bi-building-add" style="color:var(--kinjo-success);"></i>
-                    </div>
-                    <div>
-                        <div class="quick-action-label">إضافة روضة جديدة</div>
-                        <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">تسجيل روضة في النظام</div>
-                    </div>
+                {% if current_user.role.value != 'ADMIN' %}
+                <a href="/daily-reports/create" class="btn btn-outline-primary w-100 mb-2 text-start">
+                    <i class="bi bi-journal-plus me-2"></i>
+                    {% if ui_lang == 'en' %}Create Daily Report{% else %}إنشاء تقرير يومي{% endif %}
                 </a>
                 {% endif %}
-
-                <a href="/incidents/create" class="quick-action-item">
-                    <div class="quick-action-icon bg-soft-warning">
-                        <i class="bi bi-exclamation-triangle" style="color:var(--kinjo-warning);"></i>
-                    </div>
-                    <div>
-                        <div class="quick-action-label">إبلاغ عن حادث</div>
-                        <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">توثيق حادث السلامة</div>
-                    </div>
+                <a href="/enrollments/new" class="btn btn-outline-info w-100 mb-2 text-start">
+                    <i class="bi bi-person-plus me-2"></i>
+                    {% if ui_lang == 'en' %}New Enrollment Request{% else %}طلب تسجيل جديد{% endif %}
                 </a>
-
-                <a href="/messages/new" class="quick-action-item">
-                    <div class="quick-action-icon" style="background:rgba(100,116,139,0.1);">
-                        <i class="bi bi-envelope" style="color:var(--kinjo-secondary);"></i>
-                    </div>
-                    <div>
-                        <div class="quick-action-label">إرسال رسالة</div>
-                        <div style="font-size:0.75rem; color:var(--kinjo-text-muted);">تواصل مع المعنيين</div>
-                    </div>
+                {% if current_user.role.value == 'ADMIN' %}
+                <a href="/kindergartens/create" class="btn btn-outline-success w-100 mb-2 text-start">
+                    <i class="bi bi-building-add me-2"></i>
+                    {% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة روضة جديدة{% endif %}
+                </a>
+                {% endif %}
+                <a href="/incidents/create" class="btn btn-outline-warning w-100 mb-2 text-start">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    {% if ui_lang == 'en' %}Report Incident{% else %}إبلاغ عن حادث{% endif %}
+                </a>
+                <a href="/messages/new" class="btn btn-outline-secondary w-100 text-start">
+                    <i class="bi bi-envelope me-2"></i>
+                    {% if ui_lang == 'en' %}Send Message{% else %}إرسال رسالة{% endif %}
                 </a>
             </div>
         </div>
@@ -512,29 +772,25 @@
     <!-- Pending Reports -->
     <div class="col-12 col-md-4">
         <div class="card h-100">
-            <div class="card-header">
-                <i class="bi bi-clock-history"></i>
-                <span class="card-title">تقارير معلقة</span>
-                <span class="badge bg-warning ms-auto" id="pendingReportsBadge"
-                      style="border-radius:20px; font-size:0.72rem;">0</span>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    {% if ui_lang == 'en' %}Pending Reports{% else %}تقارير معلقة{% endif %}
+                </h5>
+                <span class="badge bg-warning" id="pendingReportsListBadge">0</span>
             </div>
             <div class="card-body p-0">
-                <div id="pendingReportsList">
-                    <div class="empty-state" style="padding:2rem 1rem;">
-                        <div class="empty-state-icon" style="width:52px; height:52px; border-radius:14px; font-size:1.5rem;">
-                            <i class="bi bi-check-circle text-success"></i>
-                        </div>
-                        <h5 style="font-size:0.9rem;">لا توجد تقارير معلقة</h5>
-                        <p style="font-size:0.8rem;">جميع التقارير مكتملة</p>
+                <div class="list-group list-group-flush" id="pendingReportsList">
+                    <!-- Populated by JavaScript -->
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-check-circle fs-1 d-block mb-2 opacity-25"></i>
+                        <span>{% if ui_lang == 'en' %}No pending reports{% else %}لا توجد تقارير معلقة{% endif %}</span>
                     </div>
                 </div>
             </div>
-            <div class="card-footer">
-                <a href="/daily-reports"
-                   class="text-decoration-none d-flex align-items-center justify-content-between"
-                   style="font-size:0.825rem; color:var(--kinjo-primary); font-weight:600;">
-                    عرض جميع التقارير
-                    <i class="bi bi-arrow-left"></i>
+            <div class="card-footer bg-transparent">
+                <a href="/daily-reports" class="small text-decoration-none" aria-label="{% if ui_lang == 'en' %}View all daily reports{% else %}عرض جميع التقارير اليومية{% endif %}">
+                    {% if ui_lang == 'en' %}View All Reports{% else %}عرض جميع التقارير{% endif %} <i class="bi bi-arrow-left"></i>
                 </a>
             </div>
         </div>
@@ -544,94 +800,111 @@
     <div class="col-12 col-md-4">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-activity"></i>
-                <span class="card-title">النشاط الأخير</span>
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-activity me-2"></i>
+                    {% if ui_lang == 'en' %}Recent Activity{% else %}النشاط الأخير{% endif %}
+                </h5>
             </div>
             <div class="card-body p-0">
-                <div id="recentActivityList">
-                    <!-- Skeleton -->
-                    <div class="activity-item">
-                        <span class="skeleton skeleton-avatar" style="border-radius:10px;"></span>
-                        <div style="flex:1;">
-                            <span class="skeleton skeleton-text d-block mb-1" style="width:80%;"></span>
-                            <span class="skeleton skeleton-text-sm d-block" style="width:50%;"></span>
+                <div class="list-group list-group-flush" id="recentActivityList">
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <span class="badge bg-success rounded-pill p-2">
+                                    <i class="bi bi-check"></i>
+                                </span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="mb-1 small">{% if ui_lang == 'en' %}Enrollment request accepted{% else %}تم قبول طلب تسجيل{% endif %}</p>
+                                <small class="text-muted">{% if ui_lang == 'en' %}Ahmed Mohammed - 5 min ago{% else %}أحمد محمد - منذ 5 دقائق{% endif %}</small>
+                            </div>
                         </div>
-                    </div>
-                    <div class="activity-item">
-                        <span class="skeleton skeleton-avatar" style="border-radius:10px;"></span>
-                        <div style="flex:1;">
-                            <span class="skeleton skeleton-text d-block mb-1" style="width:70%;"></span>
-                            <span class="skeleton skeleton-text-sm d-block" style="width:45%;"></span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <span class="badge bg-primary rounded-pill p-2">
+                                    <i class="bi bi-journal"></i>
+                                </span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="mb-1 small">{% if ui_lang == 'en' %}New daily report{% else %}تقرير يومي جديد{% endif %}</p>
+                                <small class="text-muted">{% if ui_lang == 'en' %}Sara Ahmed - 15 min ago{% else %}سارة أحمد - منذ 15 دقيقة{% endif %}</small>
+                            </div>
                         </div>
-                    </div>
-                    <div class="activity-item">
-                        <span class="skeleton skeleton-avatar" style="border-radius:10px;"></span>
-                        <div style="flex:1;">
-                            <span class="skeleton skeleton-text d-block mb-1" style="width:75%;"></span>
-                            <span class="skeleton skeleton-text-sm d-block" style="width:40%;"></span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <span class="badge bg-info rounded-pill p-2">
+                                    <i class="bi bi-box-arrow-in-left"></i>
+                                </span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="mb-1 small">{% if ui_lang == 'en' %}Attendance recorded{% else %}تسجيل حضور{% endif %}</p>
+                                <small class="text-muted">{% if ui_lang == 'en' %}15 children - 30 min ago{% else %}15 طفل - منذ 30 دقيقة{% endif %}</small>
+                            </div>
                         </div>
-                    </div>
+                    </a>
                 </div>
             </div>
-            <div class="card-footer">
-                <a href="/audit-logs"
-                   class="text-decoration-none d-flex align-items-center justify-content-between"
-                   style="font-size:0.825rem; color:var(--kinjo-primary); font-weight:600;">
-                    عرض السجل الكامل
-                    <i class="bi bi-arrow-left"></i>
+            <div class="card-footer bg-transparent">
+                <a href="/audit-logs" class="small text-decoration-none" aria-label="{% if ui_lang == 'en' %}View full activity log{% else %}عرض السجل الكامل للنشاط{% endif %}">
+                    {% if ui_lang == 'en' %}View Full Log{% else %}عرض السجل الكامل{% endif %} <i class="bi bi-arrow-left"></i>
                 </a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     KPI Summary (Admin/Manager)
-     ══════════════════════════════════════════ -->
+<!-- KPI Summary Row (Admin/Manager Only) -->
 {% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
 <div class="row g-3 mb-4">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
-                <i class="bi bi-bar-chart-fill"></i>
-                <span class="card-title">مؤشرات الأداء الرئيسية</span>
-                <a href="/kpi"
-                   class="btn btn-sm btn-outline-primary ms-auto">
-                    عرض التفاصيل <i class="bi bi-arrow-left ms-1"></i>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>
+                    {% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}
+                </h5>
+                <a href="/kpi" class="btn btn-sm btn-outline-primary" aria-label="{% if ui_lang == 'en' %}View KPI details{% else %}عرض تفاصيل مؤشرات الأداء الرئيسية{% endif %}">
+                    {% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %} <i class="bi bi-arrow-left ms-1"></i>
                 </a>
             </div>
             <div class="card-body">
-                <div class="row g-0 text-center">
-                    <div class="col-6 col-md-3" style="padding:1rem; border-inline-end:1px solid var(--kinjo-border-light);">
+                <div class="row text-center g-4">
+                    <div class="col-6 col-md-3">
                         <div class="kpi-card">
                             <div class="kpi-value text-success" id="kpiAttendance">--</div>
-                            <div class="kpi-label">نسبة الحضور</div>
-                            <span class="kpi-trend up"><i class="bi bi-arrow-up-short"></i> 2.5%</span>
+                            <div class="kpi-label">{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}</div>
+                            <div class="kpi-trend up">
+                                <i class="bi bi-arrow-up"></i> 2.5%
+                            </div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3" style="padding:1rem; border-inline-end:1px solid var(--kinjo-border-light);">
+                    <div class="col-6 col-md-3">
                         <div class="kpi-card">
                             <div class="kpi-value text-info" id="kpiRatioCompliance">--</div>
-                            <div class="kpi-label">امتثال النسبة</div>
-                            <span class="kpi-trend up"><i class="bi bi-arrow-up-short"></i> 1.2%</span>
+                            <div class="kpi-label">{% if ui_lang == 'en' %}Ratio Compliance{% else %}امتثال النسبة{% endif %}</div>
+                            <div class="kpi-trend up">
+                                <i class="bi bi-arrow-up"></i> 1.2%
+                            </div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3" style="padding:1rem; border-inline-end:1px solid var(--kinjo-border-light);">
+                    <div class="col-6 col-md-3">
                         <div class="kpi-card">
                             <div class="kpi-value text-warning" id="kpiIncidentRate">--</div>
-                            <div class="kpi-label">معدل الحوادث</div>
-                            <span class="kpi-trend down"><i class="bi bi-arrow-down-short"></i> 0.5%</span>
+                            <div class="kpi-label">{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}</div>
+                            <div class="kpi-trend down">
+                                <i class="bi bi-arrow-down"></i> 0.5%
+                            </div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3" style="padding:1rem;">
+                    <div class="col-6 col-md-3">
                         <div class="kpi-card">
-                            <div class="kpi-value">
-                                <span id="governanceBand" class="badge fs-5 px-3 py-2"
-                                      style="border-radius:var(--kinjo-radius);">--</span>
-                            </div>
-                            <div class="kpi-label mt-2">تقييم الحوكمة</div>
-                            <div class="mt-1" id="governanceScore"
-                                 style="font-size:0.75rem; color:var(--kinjo-text-muted);">--</div>
+                            <div id="governanceBand" class="badge fs-4 px-4 py-2">--</div>
+                            <div class="kpi-label mt-2">{% if ui_lang == 'en' %}Governance Rating{% else %}تقييم الحوكمة{% endif %}</div>
+                            <div class="kpi-trend" id="governanceScore">--</div>
                         </div>
                     </div>
                 </div>
@@ -641,67 +914,98 @@
 </div>
 {% endif %}
 
-<!-- ══════════════════════════════════════════
-     Today's Overview Table
-     ══════════════════════════════════════════ -->
-<div class="row g-3">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-calendar-day-fill"></i>
-                <span class="card-title">
-                    {% if current_user.role.value == 'ADMIN' %}
-                    نظرة عامة على الروضات
-                    {% else %}
-                    نظرة عامة على اليوم
-                    {% endif %}
-                    <span class="badge bg-soft-primary ms-2"
-                          style="color:var(--kinjo-primary); border-radius:20px; font-size:0.72rem; padding:0.25rem 0.6rem; font-weight:600;">
-                        {{ today }}
-                    </span>
+<!-- Manager Dashboard Sections -->
+{% if current_user.role.value == 'MANAGER' %}
+<section class="manager-dashboard-shell">
+<!-- Manager Overview Strip -->
+<div class="row g-3 mb-4 manager-overview-strip">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 manager-stat-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="manager-stat-icon text-primary bg-primary-subtle">
+                    <i class="bi bi-house-door"></i>
                 </span>
+                <div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Total Classes{% else %}إجمالي الفصول{% endif %}</div>
+                    <div class="h4 mb-0 fw-bold" id="managerSummaryClasses">--</div>
+                </div>
             </div>
-            <div class="card-body p-0">
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 manager-stat-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="manager-stat-icon text-warning bg-warning-subtle">
+                    <i class="bi bi-journal-text"></i>
+                </span>
+                <div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Reports Pending Review{% else %}تقارير بانتظار المراجعة{% endif %}</div>
+                    <div class="h4 mb-0 fw-bold" id="managerSummaryPendingReports">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 manager-stat-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="manager-stat-icon text-success bg-success-subtle">
+                    <i class="bi bi-person-badge"></i>
+                </span>
+                <div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Active Supervisors{% else %}المشرفون النشطون{% endif %}</div>
+                    <div class="h4 mb-0 fw-bold" id="managerSummarySupervisors">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 manager-stat-card">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="manager-stat-icon text-info bg-info-subtle">
+                    <i class="bi bi-people"></i>
+                </span>
+                <div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Parents{% else %}أولياء الأمور{% endif %}</div>
+                    <div class="h4 mb-0 fw-bold" id="managerSummaryParents">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 1: Daily Reports Management -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card manager-section-card border-0 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-1">
+                        <i class="bi bi-journal-text me-2"></i>
+                        {% if ui_lang == 'en' %}Daily Reports Management{% else %}إدارة التقارير اليومية{% endif %}
+                    </h5>
+                    <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Track unapproved reports with prioritization{% else %}متابعة التقارير غير المعتمدة مع تحديد الأولوية{% endif %}</p>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadSubmittedReports()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+                </button>
+            </div>
+            <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0" aria-label="نظرة عامة اليوم">
-                        {% if current_user.role.value == 'ADMIN' %}
+                    <table class="table table-hover align-middle manager-table">
                         <thead>
                             <tr>
-                                <th class="sortable">الروضة</th>
-                                <th>الحالة</th>
-                                <th class="sortable">المسجلون</th>
-                                <th class="sortable">الحضور اليوم</th>
-                                <th>التقارير المعلقة</th>
-                                <th>نسبة الإشغال</th>
-                                <th>الترخيص</th>
-                                <th class="table-actions">الإجراءات</th>
+                                <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Supervisor{% else %}المشرف{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                             </tr>
                         </thead>
-                        <tbody id="kindergartensOverviewTable">
-                        {% else %}
-                        <thead>
+                        <tbody id="reportsTable">
                             <tr>
-                                <th class="sortable">الفصل</th>
-                                <th>السعة</th>
-                                <th class="sortable">الحاضرون</th>
-                                <th>الغائبون</th>
-                                <th>التقارير</th>
-                                <th>الحالة</th>
-                                <th class="table-actions">الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="classOverviewTable">
-                        {% endif %}
-                            <tr>
-                                <td colspan="{% if current_user.role.value == 'ADMIN' %}8{% else %}7{% endif %}"
-                                    class="text-center py-5">
-                                    <div class="d-flex align-items-center justify-content-center gap-2"
-                                         style="color:var(--kinjo-text-muted);">
-                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                            <span class="visually-hidden">جاري التحميل</span>
-                                        </div>
-                                        <span style="font-size:0.875rem;">جاري تحميل البيانات...</span>
-                                    </div>
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2">{% if ui_lang == 'en' %}Loading reports...{% else %}جاري تحميل التقارير...{% endif %}</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -711,824 +1015,719 @@
         </div>
     </div>
 </div>
+
+<!-- Section 2: Supervisor Statistics -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card manager-section-card border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-1">
+                    <i class="bi bi-bar-chart me-2"></i>
+                    {% if ui_lang == 'en' %}Supervisor Statistics{% else %}إحصائيات المشرفين{% endif %}
+                </h5>
+                <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Quick read on supervisor activity and activation rate{% else %}قراءة سريعة لنشاط المشرفين ومعدل التفعيل{% endif %}</p>
+            </div>
+            <div class="card-body">
+                <div id="supervisorStatsContainer">
+                    <div class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <span class="ms-2">{% if ui_lang == 'en' %}Loading statistics...{% else %}جاري تحميل الإحصائيات...{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 3: Class Management -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card manager-section-card border-0 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-1">
+                        <i class="bi bi-house-door me-2"></i>
+                        {% if ui_lang == 'en' %}Class Management{% else %}إدارة الفصول{% endif %}
+                    </h5>
+                    <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Track capacity and enrollment per class in real-time{% else %}متابعة السعة والاستيعاب لكل فصل في الوقت الفعلي{% endif %}</p>
+                </div>
+                <button class="btn btn-sm btn-primary" onclick="showCreateClassModal()">
+                    <i class="bi bi-plus-circle me-1"></i>{% if ui_lang == 'en' %}New Class{% else %}فصل جديد{% endif %}
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle manager-table">
+                        <thead>
+                            <tr>
+                                <th>{% if ui_lang == 'en' %}Class Name{% else %}اسم الفصل{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Supervisor{% else %}المشرف{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Enrolled Children{% else %}الأطفال المسجلون{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Waitlist{% else %}الانتظار{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classesTable">
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2">{% if ui_lang == 'en' %}Loading classes...{% else %}جاري تحميل الفصول...{% endif %}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 4: Account Management -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card manager-section-card border-0 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-1">
+                        <i class="bi bi-people me-2"></i>
+                        {% if ui_lang == 'en' %}Account Management{% else %}إدارة الحسابات{% endif %}
+                    </h5>
+                    <p class="manager-section-subtitle mb-0">{% if ui_lang == 'en' %}Manage supervisors and parents with quick messaging access{% else %}إدارة المشرفين وأولياء الأمور مع وصول سريع للمراسلة{% endif %}</p>
+                </div>
+                <div class="btn-group manager-account-actions" role="group">
+                    <button class="btn btn-sm btn-success" onclick="showCreateUserModal('SUPERVISOR')">
+                        <i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}New Supervisor{% else %}مشرف جديد{% endif %}
+                    </button>
+                    <button class="btn btn-sm btn-info" onclick="showCreateUserModal('PARENT')">
+                        <i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}New Parent{% else %}والد جديد{% endif %}
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs manager-tabs" id="accountsTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="supervisors-tab" data-bs-toggle="tab"
+                            data-bs-target="#supervisors" type="button" role="tab">
+                            {% if ui_lang == 'en' %}Supervisors{% else %}المشرفون{% endif %}
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="parents-tab" data-bs-toggle="tab" data-bs-target="#parents"
+                            type="button" role="tab">
+                            {% if ui_lang == 'en' %}Parents{% else %}الآباء{% endif %}
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content mt-3" id="accountsTabContent">
+                    <div class="tab-pane fade show active" id="supervisors" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle manager-table">
+                                <thead>
+                                    <tr>
+                                        <th>{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Created{% else %}تاريخ الإنشاء{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="supervisorsTable">
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4">
+                                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="parents" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle manager-table">
+                                <thead>
+                                    <tr>
+                                        <th>{% if ui_lang == 'en' %}Parent Name{% else %}اسم الوالد{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Children{% else %}عدد الأطفال{% endif %}</th>
+                                        <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="parentsTable">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4">
+                                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</section>
+{% endif %}
+
+<!-- Today's Overview -->
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-calendar-day me-2"></i>
+                    {% if current_user.role.value == 'ADMIN' %}
+                    {% if ui_lang == 'en' %}Kindergarten Overview - {{ today }}{% else %}نظرة عامة على الروضات - {{ today }}{% endif %}
+                    {% else %}
+                    {% if ui_lang == 'en' %}Today's Overview - {{ today }}{% else %}نظرة عامة على اليوم - {{ today }}{% endif %}
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        {% if current_user.role.value == 'ADMIN' %}
+                        <thead>
+                            <tr>
+                                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Enrolled{% else %}المسجلون{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Attendance Today{% else %}الحضور اليوم{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Pending Reports{% else %}التقارير المعلقة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Capacity Usage{% else %}استغلال السعة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}License{% else %}الترخيص{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kindergartensOverviewTable">
+                            {% else %}
+                            <thead>
+                                <tr>
+                                    <th>{% if ui_lang == 'en' %}Class{% else %}الفصل{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Present{% else %}الحاضرون{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Absent{% else %}الغائبون{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                    <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                                </tr>
+                            </thead>
+                        <tbody id="classOverviewTable">
+                            {% endif %}
+                            <tr>
+                                <td colspan="{% if current_user.role.value == 'ADMIN' %}8{% else %}7{% endif %}"
+                                    class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- Decision Support Section (Admin/Manager Only)                          -->
+<!-- ====================================================================== -->
+{% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
+<div id="decisionSupportSection">
+
+<!-- Network Summary Strip -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary bg-gradient text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-diagram-3 me-2"></i>
+                    {% if ui_lang == 'en' %}Network Summary{% else %}ملخص الشبكة{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="dsNetworkSummary" class="row row-cols-2 row-cols-md-5 g-3">
+                    <div class="col text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Predictions Row -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up-arrow me-2 text-info"></i>
+                    {% if ui_lang == 'en' %}Predictions &amp; Forecasts{% else %}التنبؤات والتوقعات{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="dsPredictions" class="row g-3">
+                    <div class="col text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Geographic Distribution + Classification Row -->
+<div class="row g-3 mb-4">
+    <!-- Geographic Distribution -->
+    <div class="col-12 col-xl-7">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-geo-alt me-2 text-primary"></i>
+                    {% if ui_lang == 'en' %}Geographic Distribution{% else %}التوزيع الجغرافي{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 280px; position: relative;">
+                    <canvas id="dsGeoChart"></canvas>
+                </div>
+                <div class="table-responsive mt-3" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}KGs{% else %}الروضات{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Capacity{% else %}السعة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Enrolled{% else %}المسجلون{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Util%{% else %}الاستغلال%{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Att%{% else %}الحضور%{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dsGeoTable">
+                            <tr><td colspan="8" class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Classification -->
+    <div class="col-12 col-xl-5">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-award me-2 text-success"></i>
+                    {% if ui_lang == 'en' %}Performance Classification{% else %}تصنيف الأداء{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 240px; position: relative;">
+                    <canvas id="dsClassificationChart"></canvas>
+                </div>
+                <div id="dsClassificationDetail" class="row g-2 mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Capacity + Enrollment Funnel + Age Group Row -->
+<div class="row g-3 mb-4">
+    <!-- Capacity Tiers -->
+    <div class="col-12 col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart-steps me-2 text-warning"></i>
+                    {% if ui_lang == 'en' %}Capacity Overview{% else %}نظرة على السعة{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 260px; position: relative;">
+                    <canvas id="dsCapacityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrollment Funnel -->
+    <div class="col-12 col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-funnel me-2 text-primary"></i>
+                    {% if ui_lang == 'en' %}Enrollment Pipeline{% else %}مسار التسجيل{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 260px; position: relative;">
+                    <canvas id="dsFunnelChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Age Group Distribution -->
+    <div class="col-12 col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-people me-2 text-info"></i>
+                    {% if ui_lang == 'en' %}Age Group Distribution{% else %}توزيع الفئات العمرية{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 260px; position: relative;">
+                    <canvas id="dsAgeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Risk Assessment -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-danger bg-gradient text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shield-exclamation me-2"></i>
+                    {% if ui_lang == 'en' %}Risk Assessment{% else %}تقييم المخاطر{% endif %}
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Risk Score{% else %}درجة المخاطر{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Risk Factors{% else %}عوامل الخطر{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dsRiskTable">
+                            <tr><td colspan="4" class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div><!-- /decisionSupportSection -->
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
-(function() {
-    'use strict';
+    // Pass server-side context to client-side
+    window.currentUserRole = '{{ current_user.role.value }}';
+    const dashboardInlineText = (key, arText, enText) =>
+        (typeof appText === 'function'
+            ? appText(key, arText, enText)
+            : (document.documentElement.lang === 'en' ? enText : arText));
 
-    /* ── Chart color palette aligned with design tokens ── */
-    const COLORS = {
-        primary:   '#0A5C8E',
-        success:   '#2A9D8F',
-        warning:   '#F59E0B',
-        danger:    '#E76F51',
-        info:      '#06B6D4',
-        secondary: '#F4A261',
-        chart: ['#0A5C8E','#2A9D8F','#F59E0B','#E76F51','#06B6D4','#F4A261','#3A9BC8']
-    };
+    // KPI View Toggle
+    function toggleKPIView(view) {
+        const cardsView = document.getElementById('kpiCardsView');
+        const tableView = document.getElementById('kpiTableView');
+        const cardsBtn = document.getElementById('viewCardsBtn');
+        const tableBtn = document.getElementById('viewTableBtn');
 
-    /* ── Chart instances ── */
-    let attendanceChart = null;
-    let enrollmentChart = null;
-    let usersChart      = null;
-    let currentChartType = 'line';
+        if (!cardsView || !tableView) return;
 
-    /* ── Init ── */
-    document.addEventListener('DOMContentLoaded', async () => {
-        initCharts();
-        await loadDashboardData();
+        if (view === 'cards') {
+            cardsView.style.display = 'block';
+            tableView.style.display = 'none';
+            if (cardsBtn) cardsBtn.classList.add('active');
+            if (tableBtn) tableBtn.classList.remove('active');
+        } else {
+            cardsView.style.display = 'none';
+            tableView.style.display = 'block';
+            if (cardsBtn) cardsBtn.classList.remove('active');
+            if (tableBtn) tableBtn.classList.add('active');
+        }
+    }
+
+    // Filter KPIs by status
+    function filterKPIsByStatus(status) {
+        const cards = document.querySelectorAll('#kpiCardsContainer .kpi-card');
+        cards.forEach(card => {
+            const cardStatus = card.dataset.status;
+            if (status === 'all' || cardStatus === status) {
+                card.closest('.col-md-6, .col-lg-4')?.style.setProperty('display', '');
+            } else {
+                card.closest('.col-md-6, .col-lg-4')?.style.setProperty('display', 'none');
+            }
+        });
+    }
+
+    // Show all alerts
+    function showAllAlerts() {
+        const alertsModal = document.getElementById('alertsModal');
+        if (alertsModal) {
+            const modal = new bootstrap.Modal(alertsModal);
+            modal.show();
+        } else {
+            const alertsSection = document.getElementById('alertsSection');
+            if (alertsSection) {
+                alertsSection.style.display = 'block';
+                alertsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    }
+
+    // Open KPI explanations modal
+    function openKPIExplanations() {
+        const modal = document.getElementById('kpiExplanationsModal');
+        if (modal) {
+            new bootstrap.Modal(modal).show();
+        } else {
+            console.log(dashboardInlineText('dashboard.explanations.in_development', 'شرح المؤشرات: الميزة قيد التطوير', 'Indicator explanation: feature under development'));
+        }
+    }
+
+    // Quick action handler for suggested actions
+    function quickAction(action) {
+        const routes = {
+            'reviewEnrollments': '/enrollments',
+            'checkAttendance': '/attendance/history',
+        };
+        const url = routes[action];
+        if (url) {
+            window.location.href = url;
+        } else {
+            console.log(dashboardInlineText('dashboard.quick_action.unknown', 'إجراء سريع غير معرّف', 'Unknown quick action') + ':', action);
+        }
+    }
+
+    // Date range filter
+    function setDateRange(range) {
+        const today = new Date();
+        const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        let start = new Date(end);
+        let label = dashboardInlineText('dashboard.range.month', 'هذا الشهر', 'This month');
+
+        if (range === 'today') {
+            start = new Date(end);
+            label = dashboardInlineText('dashboard.range.today', 'اليوم', 'Today');
+        } else if (range === 'week') {
+            start.setDate(end.getDate() - 6);
+            label = dashboardInlineText('dashboard.range.week', 'هذا الأسبوع', 'This week');
+        } else if (range === 'month') {
+            start = new Date(end.getFullYear(), end.getMonth(), 1);
+            label = dashboardInlineText('dashboard.range.month', 'هذا الشهر', 'This month');
+        } else if (range === 'quarter') {
+            const quarter = Math.floor(end.getMonth() / 3);
+            start = new Date(end.getFullYear(), quarter * 3, 1);
+            label = dashboardInlineText('dashboard.range.quarter', 'هذا الربع', 'This quarter');
+        }
+
+        const toIso = (date) => date.toISOString().slice(0, 10);
+        window.dashboardDateRange = {
+            range,
+            start: toIso(start),
+            end: toIso(end),
+        };
+
+        const dateRangeBtn = document.getElementById('dateRangeBtn');
+        if (dateRangeBtn) {
+            dateRangeBtn.innerHTML = `<i class="bi bi-calendar3 me-1"></i>${label}`;
+        }
+
+        document.querySelectorAll('.dropdown-item[onclick^="setDateRange"]').forEach(el => {
+            el.classList.remove('active');
+        });
+        const clicked = document.querySelector(`.dropdown-item[onclick="setDateRange('${range}')"]`);
+        if (clicked) clicked.classList.add('active');
+
+        if (typeof loadDashboard === 'function') {
+            loadDashboard();
+        }
+    }
+
+    // Custom date range picker (placeholder)
+    function showCustomDateRange() {
+        const html = `<div class="p-3 text-start">
+            <div class="mb-3"><label class="form-label">${dashboardInlineText('common.from_date', 'من تاريخ', 'From date')}</label><input type="date" class="form-control" id="customDateFrom"></div>
+            <div class="mb-3"><label class="form-label">${dashboardInlineText('common.to_date', 'إلى تاريخ', 'To date')}</label><input type="date" class="form-control" id="customDateTo"></div>
+        </div>`;
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: dashboardInlineText('dashboard.range.custom', 'تاريخ مخصص', 'Custom date range'),
+                html: html,
+                showCancelButton: true,
+                confirmButtonText: dashboardInlineText('common.apply', 'تطبيق', 'Apply'),
+                cancelButtonText: dashboardInlineText('common.cancel', 'إلغاء', 'Cancel'),
+                preConfirm: () => {
+                    const from = document.getElementById('customDateFrom')?.value;
+                    const to = document.getElementById('customDateTo')?.value;
+                    if (!from || !to) {
+                        Swal.showValidationMessage(dashboardInlineText('dashboard.range.select_start_end', 'يرجى تحديد تاريخ البداية والنهاية.', 'Please select start and end dates.'));
+                        return false;
+                    }
+                    if (new Date(from) > new Date(to)) {
+                        Swal.showValidationMessage(dashboardInlineText('dashboard.range.start_before_end', 'تاريخ البداية يجب أن يكون قبل تاريخ النهاية.', 'Start date must be before end date.'));
+                        return false;
+                    }
+                    return { from, to };
+                }
+            }).then((result) => {
+                if (!result.isConfirmed || !result.value) return;
+                window.dashboardDateRange = {
+                    range: 'custom',
+                    start: result.value.from,
+                    end: result.value.to,
+                };
+                const dateRangeBtn = document.getElementById('dateRangeBtn');
+                if (dateRangeBtn) {
+                    dateRangeBtn.innerHTML = `<i class="bi bi-calendar3 me-1"></i>${dashboardInlineText('dashboard.range.custom', 'تاريخ مخصص', 'Custom date range')}`;
+                }
+                if (typeof loadDashboard === 'function') {
+                    loadDashboard();
+                }
+            });
+        } else {
+            alert(dashboardInlineText('dashboard.range.custom_in_development', 'ميزة التاريخ المخصص قيد التطوير', 'Custom date range is under development'));
+        }
+    }
+
+    // Validation details modal
+    function showValidationDetails() {
+        if (typeof renderValidationDetails === 'function') {
+            renderValidationDetails();
+        }
+        const modal = document.getElementById('validationDetailsModal');
+        if (modal) {
+            new bootstrap.Modal(modal).show();
+        } else {
+            console.log(dashboardInlineText('dashboard.validation.modal_not_found', 'تعذر العثور على نافذة تفاصيل التحقق', 'Validation details modal was not found'));
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const indicator = document.getElementById('validationStatusIndicator');
+        if (indicator) {
+            indicator.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    showValidationDetails();
+                }
+            });
+        }
     });
 
-    /* ── Chart setup ── */
-    function getChartDefaults() {
-        return {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#1E293B',
-                    titleColor: 'rgba(255,255,255,0.9)',
-                    bodyColor: 'rgba(255,255,255,0.7)',
-                    padding: 12,
-                    borderRadius: 10,
-                    titleFont: { family: 'Cairo', weight: '700', size: 13 },
-                    bodyFont:  { family: 'Cairo', size: 12 }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false },
-                    border: { display: false },
-                    ticks: { color: '#94A3B8', font: { family: 'Cairo', size: 11 } }
-                },
-                y: {
-                    grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
-                    border: { display: false },
-                    ticks: { color: '#94A3B8', font: { family: 'Cairo', size: 11 } },
-                    beginAtZero: true
-                }
-            }
-        };
+    // Export validation report
+    function exportValidationReport() {
+        window.print();
     }
 
-    function initCharts() {
-        /* Attendance Chart */
-        const attCtx = document.getElementById('attendanceChart');
-        if (attCtx) {
-            attendanceChart = new Chart(attCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'نسبة الحضور %',
-                        data: [],
-                        borderColor: COLORS.primary,
-                        backgroundColor: 'rgba(79,70,229,0.08)',
-                        fill: true,
-                        tension: 0.45,
-                        pointBackgroundColor: COLORS.primary,
-                        pointBorderColor: 'white',
-                        pointBorderWidth: 2,
-                        pointRadius: 5,
-                        pointHoverRadius: 7
-                    }]
-                },
-                options: {
-                    ...getChartDefaults(),
-                    plugins: {
-                        ...getChartDefaults().plugins,
-                        legend: { display: true, labels: { color: '#64748B', font: { family: 'Cairo', size: 12 }, boxWidth: 12, borderRadius: 4 } }
-                    }
-                }
-            });
-        }
-
-        /* Enrollment Doughnut */
-        const pieCtx = document.getElementById('enrollmentPieChart');
-        if (pieCtx) {
-            enrollmentChart = new Chart(pieCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['نشط', 'قيد المراجعة', 'مقبول', 'منتظر', 'مرفوض'],
-                    datasets: [{
-                        data: [0, 0, 0, 0, 0],
-                        backgroundColor: [COLORS.success, COLORS.warning, COLORS.primary, COLORS.info, COLORS.danger],
-                        borderWidth: 3,
-                        borderColor: 'white',
-                        hoverOffset: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '65%',
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                color: '#64748B',
-                                font: { family: 'Cairo', size: 11 },
-                                padding: 12,
-                                boxWidth: 10,
-                                borderRadius: 3
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: '#1E293B',
-                            titleColor: 'rgba(255,255,255,0.9)',
-                            bodyColor:  'rgba(255,255,255,0.7)',
-                            padding: 10,
-                            borderRadius: 8,
-                            titleFont: { family: 'Cairo', weight: '700', size: 12 },
-                            bodyFont:  { family: 'Cairo', size: 11 }
-                        }
-                    }
-                }
-            });
-        }
-
-        /* Users by Role Donut (Admin only) */
-        const usersCtx = document.getElementById('usersRoleChart');
-        if (usersCtx) {
-            usersChart = new Chart(usersCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['مديرون', 'مشرفون', 'أولياء أمور', 'إداريون'],
-                    datasets: [{
-                        data: [0, 0, 0, 0],
-                        backgroundColor: [COLORS.success, COLORS.info, COLORS.warning, COLORS.primary],
-                        borderWidth: 3,
-                        borderColor: 'white',
-                        hoverOffset: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '60%',
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { color: '#64748B', font: { family: 'Cairo', size: 11 }, padding: 10, boxWidth: 10 }
-                        },
-                        tooltip: {
-                            backgroundColor: '#1E293B',
-                            titleColor: 'rgba(255,255,255,0.9)',
-                            bodyColor: 'rgba(255,255,255,0.7)',
-                            padding: 10,
-                            borderRadius: 8,
-                            titleFont: { family: 'Cairo', weight: '700', size: 12 },
-                            bodyFont:  { family: 'Cairo', size: 11 }
-                        }
-                    }
-                }
-            });
-        }
+    // Create class modal (redirect to classes page)
+    function showCreateClassModal() {
+        window.location.href = '/classes/create';
     }
 
-    /* ── Switch chart type ── */
-    window.switchChartType = function(type, btn) {
-        if (!attendanceChart || type === currentChartType) return;
-        currentChartType = type;
+    // Create user modal (redirect to user creation page)
+    function showCreateUserModal(role) {
+        window.location.href = `/admin/users/create?role=${role}`;
+    }
 
-        /* Update button styles */
-        btn.closest('.btn-group').querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+    // Refresh dashboard data
+    async function refreshDashboard(event) {
+        const trigger = event?.currentTarget;
+        const icon = trigger?.querySelector('i');
+        if (trigger) trigger.disabled = true;
+        if (icon) icon.classList.add('spin');
 
-        attendanceChart.config.type = type;
-        if (type === 'bar') {
-            attendanceChart.data.datasets[0].borderRadius = 6;
-            attendanceChart.data.datasets[0].fill = false;
-        } else {
-            attendanceChart.data.datasets[0].fill = true;
-        }
-        attendanceChart.update();
-    };
-
-    /* ── Load dashboard data ── */
-    async function loadDashboardData() {
         try {
-            const user = await api.getCurrentUser();
-            if (user.role === 'SUPERVISOR') {
-                const data = await api.getSupervisorDashboard();
-                updateStats({ totalChildren: data.total_children, present: data.attendance?.present, pendingEnrollments: 0, pendingReports: data.pending_reports?.length });
-                updateAttendanceRate(data.total_children, data.attendance?.present);
-                renderPendingReports(data.pending_reports || []);
-                renderDefaultActivity();
-            } else if (user.role === 'PARENT') {
-                window.location.href = '/parent/dashboard';
+            if (typeof loadDashboard === 'function') {
+                await loadDashboard();
             } else {
-                await loadAdminManagerDashboard(user.role);
+                location.reload();
             }
-        } catch (err) {
-            console.error('Dashboard load error:', err);
-            showToast('حدث خطأ في تحميل البيانات', 'error');
+            if (typeof loadDecisionSupport === 'function') {
+                await loadDecisionSupport();
+            }
+        } finally {
+            if (icon) icon.classList.remove('spin');
+            if (trigger) trigger.disabled = false;
         }
     }
 
-    /* ── Admin/Manager dashboard ── */
-    async function loadAdminManagerDashboard(role, retry = 0) {
-        const MAX = 3;
-        try {
-            const fn = role === 'ADMIN' ? api.getAdminDashboard : api.getManagerDashboard;
-            const data = await Promise.race([
-                fn.call(api),
-                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 30000))
-            ]);
-
-            /* Stats */
-            const summary  = data.summary || {};
-            const overview = data.system_overview || {};
-
-            updateStats({
-                totalChildren:      role === 'ADMIN' ? (overview.total_children || overview.total_enrollments || 0) : summary.active_enrollments,
-                present:            summary.attendance_today,
-                pendingEnrollments: summary.pending_applications,
-                pendingReports:     summary.pending_daily_reports
-            });
-            updateAttendanceRate(
-                role === 'ADMIN' ? overview.total_enrollments : summary.active_enrollments,
-                summary.attendance_today
-            );
-
-            /* Admin-specific system overview */
-            if (role === 'ADMIN') {
-                setText('totalKindergartens', overview.total_kindergartens ?? 0);
-                setText('activeKindergartens', overview.active_kindergartens ?? 0);
-                setText('totalUsers',          overview.total_users ?? 0);
-                renderSystemHealth(data.alerts || []);
-            }
-
-            /* Charts */
-            if (data.charts) updateCharts(data.charts);
-
-            /* Tables */
-            if (role === 'ADMIN' && data.kindergartens) renderKgTable(data.kindergartens);
-            else if (data.classes) renderClassTable(data.classes);
-
-            /* Pending reports + activity */
-            if (role !== 'ADMIN') {
-                renderPendingReports(data.pending_reports || []);
-                renderActivity(data.recent_activity || []);
-            }
-
-            /* KPI */
-            const rate = calcRate(
-                role === 'ADMIN' ? overview.total_enrollments : summary.active_enrollments,
-                summary.attendance_today
-            );
-            setText('kpiAttendance',     rate + '%');
-            setText('kpiRatioCompliance','92%');
-            setText('kpiIncidentRate',   summary.recent_incidents ?? 0);
-            renderGovernanceBand('green', 85);
-
-            /* Admin-only extended panels */
-            if (role === 'ADMIN') {
-                renderAlerts(data.alerts || []);
-                renderSecondaryStats(overview, summary);
-                updateUsersChart(overview.users_by_role || {});
-                setText('safetyIncidentsCount', summary.recent_incidents ?? 0);
-                setText('safetyKgsOk',          overview.active_kindergartens ?? 0);
-                fetchAndRenderActivity();
-                fetchAdminPendingReports(summary.pending_daily_reports || 0);
-            }
-
-        } catch (err) {
-            if (retry < MAX && !String(err.message).includes('401')) {
-                setTimeout(() => loadAdminManagerDashboard(role, retry + 1), Math.pow(2, retry) * 1000);
-                return;
-            }
-            showDashboardError(err);
-        }
+    // Export dashboard (print-friendly)
+    function exportDashboard() {
+        window.print();
     }
 
-    /* ── Helpers ── */
-    function setText(id, val) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val;
-    }
-
-    /** Escape HTML special characters to prevent XSS when injecting into innerHTML */
-    function esc(str) {
-        if (str == null) return '';
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#x27;');
-    }
-
-    function calcRate(total, present) {
-        return total > 0 ? Math.round(((present || 0) / total) * 100) : 0;
-    }
-
-    function updateStats({ totalChildren, present, pendingEnrollments, pendingReports }) {
-        animateCount('totalChildrenValue',    totalChildren    ?? 0);
-        animateCount('presentTodayValue',     present          ?? 0);
-        animateCount('pendingEnrollmentsValue', pendingEnrollments ?? 0);
-        animateCount('pendingReportsValue',   pendingReports   ?? 0);
-    }
-
-    function updateAttendanceRate(total, present) {
-        const rate = calcRate(total, present);
-        const el = document.getElementById('attendanceRateValue');
-        if (el) el.textContent = rate;
-    }
-
-    function animateCount(id, target) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        /* Remove skeleton */
-        el.innerHTML = '';
-        const num = parseInt(target) || 0;
-        if (num === 0) { el.textContent = '0'; return; }
-        let current = 0;
-        const step  = Math.max(1, Math.floor(num / 40));
-        const timer = setInterval(() => {
-            current = Math.min(current + step, num);
-            el.textContent = current.toLocaleString('ar-EG');
-            if (current >= num) clearInterval(timer);
-        }, 25);
-    }
-
-    function renderSystemHealth(alerts) {
-        const el  = document.getElementById('systemHealth');
-        if (!el) return;
-        const crit = alerts.filter(a => a.priority === 'critical').length;
-        const high = alerts.filter(a => a.priority === 'high').length;
-        if (crit > 0) {
-            el.innerHTML = '<span class="text-danger fw-bold">حرج</span>';
-        } else if (high > 0) {
-            el.innerHTML = '<span class="text-warning fw-bold">تحذير</span>';
-        } else {
-            el.innerHTML = '<span class="text-success fw-bold">جيد</span>';
-        }
-    }
-
-    function renderGovernanceBand(band, score) {
-        const el = document.getElementById('governanceBand');
-        const sc = document.getElementById('governanceScore');
-        if (!el) return;
-        const map = {
-            green: { label: 'أخضر', cls: 'band-green' },
-            amber: { label: 'أصفر', cls: 'band-amber' },
-            red:   { label: 'أحمر', cls: 'band-red' }
-        };
-        const b = map[band] || map.green;
-        el.textContent = b.label;
-        el.className   = `badge fs-5 px-3 py-2 ${b.cls}`;
-        if (sc) sc.textContent = score + ' نقطة';
-    }
-
-    function updateCharts(charts) {
-        if (attendanceChart && charts.attendance) {
-            const days = charts.attendance.map(d => new Date(d.date).toLocaleDateString('ar-SA', { weekday: 'short' }));
-            attendanceChart.data.labels = days;
-            attendanceChart.data.datasets[0].data = charts.attendance.map(d => d.count);
-            attendanceChart.update('active');
-        }
-
-        if (enrollmentChart && charts.enrollment) {
-            const statusMap = {
-                ACTIVE: 'نشط', PENDING_REVIEW: 'قيد المراجعة', SUBMITTED: 'مقدَّم',
-                ACCEPTED: 'مقبول', WAITLISTED: 'انتظار', REJECTED: 'مرفوض',
-                DRAFT: 'مسودة', GRADUATED: 'متخرج', WITHDRAWN: 'منسحب'
-            };
-            const labels = Object.keys(charts.enrollment).map(k => statusMap[k] || k);
-            const data   = Object.values(charts.enrollment);
-            enrollmentChart.data.labels = labels;
-            enrollmentChart.data.datasets[0].data = data;
-            enrollmentChart.data.datasets[0].backgroundColor = COLORS.chart.slice(0, data.length);
-            enrollmentChart.update('active');
-        }
-    }
-
-    function renderPendingReports(reports) {
-        const list  = document.getElementById('pendingReportsList');
-        const badge = document.getElementById('pendingReportsBadge');
-        if (!list) return;
-        if (badge) badge.textContent = reports.length;
-
-        if (!reports.length) {
-            list.innerHTML = `
-                <div class="empty-state" style="padding:2rem 1rem;">
-                    <div class="empty-state-icon" style="width:52px; height:52px; border-radius:14px; font-size:1.5rem;">
-                        <i class="bi bi-check-circle text-success"></i>
-                    </div>
-                    <h5 style="font-size:0.9rem;">لا توجد تقارير معلقة</h5>
-                    <p style="font-size:0.8rem; margin-bottom:0;">جميع التقارير مكتملة</p>
-                </div>
-            `;
+    // Print KPI explanations modal content
+    function printExplanations() {
+        const content = document.getElementById('explanationsContainer');
+        if (!content || !content.innerText.trim()) {
+            window.print();
             return;
         }
 
-        list.innerHTML = reports.slice(0, 5).map(child => `
-            <a href="/daily-reports/create?child_id=${child.child_id}"
-               class="activity-item text-decoration-none">
-                <div class="activity-icon-wrap bg-soft-warning">
-                    <i class="bi bi-person" style="color:var(--kinjo-warning);"></i>
-                </div>
-                <div style="flex:1; min-width:0;">
-                    <div class="activity-text text-truncate">${esc(child.first_name)} ${esc(child.last_name)}</div>
-                    <div class="activity-time">
-                        <span class="badge bg-soft-warning" style="color:var(--kinjo-warning-dark); border-radius:20px; font-size:0.68rem;">
-                            يتطلب تقريراً
-                        </span>
-                    </div>
-                </div>
-                <i class="bi bi-chevron-left" style="font-size:0.75rem; color:var(--kinjo-text-muted);"></i>
-            </a>
-        `).join('');
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>${dashboardInlineText('dashboard.kpi_explanations_title', 'شرح مؤشرات الأداء الرئيسية', 'KPI explanations')}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 24px; line-height: 1.6; }
+                        h1 { margin-top: 0; }
+                        .item { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #ddd; }
+                    </style>
+                </head>
+                <body>
+                    <h1>${dashboardInlineText('dashboard.kpi_explanations_title', 'شرح مؤشرات الأداء الرئيسية', 'KPI explanations')}</h1>
+                    ${content.innerHTML}
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
     }
 
-    function renderActivity(activities) {
-        const list = document.getElementById('recentActivityList');
-        if (!list) return;
+    // Export action plan from modal as text file
+    function exportActionPlan() {
+        const container = document.getElementById('actionItemsContainer');
+        if (!container || !container.innerText.trim()) return;
 
-        if (!activities.length) {
-            renderDefaultActivity();
-            return;
-        }
-
-        const iconMap = {
-            attendance: { icon: 'bi-calendar-check-fill', color: 'var(--kinjo-success)', bg: 'bg-soft-success' },
-            report:     { icon: 'bi-journal-text',        color: 'var(--kinjo-primary)', bg: 'bg-soft-primary' },
-            enrollment: { icon: 'bi-person-plus-fill',    color: 'var(--kinjo-info)',    bg: 'bg-soft-info' },
-            incident:   { icon: 'bi-exclamation-triangle',color: 'var(--kinjo-warning)', bg: 'bg-soft-warning' }
-        };
-
-        list.innerHTML = activities.slice(0, 5).map(a => {
-            const m = iconMap[a.type] || iconMap.report;
-            return `
-                <a href="${a.url || '#'}" class="activity-item text-decoration-none">
-                    <div class="activity-icon-wrap ${m.bg}">
-                        <i class="bi ${m.icon}" style="color:${m.color};"></i>
-                    </div>
-                    <div style="flex:1; min-width:0;">
-                        <div class="activity-text text-truncate">${a.title || a.description}</div>
-                        <div class="activity-time">${a.time || a.created_at}</div>
-                    </div>
-                </a>
-            `;
-        }).join('');
+        const text = container.innerText.trim();
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${dashboardInlineText('dashboard.action_plan_filename', 'action-plan', 'action-plan')}-${new Date().toISOString().slice(0, 10)}.txt`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
     }
-
-    function renderDefaultActivity() {
-        const list = document.getElementById('recentActivityList');
-        if (!list) return;
-        list.innerHTML = `
-            <a href="#" class="activity-item text-decoration-none">
-                <div class="activity-icon-wrap bg-soft-success">
-                    <i class="bi bi-check-circle-fill" style="color:var(--kinjo-success);"></i>
-                </div>
-                <div><div class="activity-text">تم قبول طلب تسجيل</div><div class="activity-time">منذ 5 دقائق</div></div>
-            </a>
-            <a href="#" class="activity-item text-decoration-none">
-                <div class="activity-icon-wrap bg-soft-primary">
-                    <i class="bi bi-journal-text" style="color:var(--kinjo-primary);"></i>
-                </div>
-                <div><div class="activity-text">تقرير يومي جديد</div><div class="activity-time">منذ 15 دقيقة</div></div>
-            </a>
-            <a href="#" class="activity-item text-decoration-none">
-                <div class="activity-icon-wrap bg-soft-info">
-                    <i class="bi bi-calendar-check-fill" style="color:var(--kinjo-info);"></i>
-                </div>
-                <div><div class="activity-text">تسجيل حضور 15 طفلاً</div><div class="activity-time">منذ 30 دقيقة</div></div>
-            </a>
-        `;
-    }
-
-    /* ── Table renderers ── */
-    function renderClassTable(classes) {
-        const tbody = document.getElementById('classOverviewTable');
-        if (!tbody) return;
-        if (!classes?.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted">لا توجد شعب صفية نشطة</td></tr>';
-            return;
-        }
-        tbody.innerHTML = classes.map(cls => {
-            const pct = Math.round((cls.enrolled / cls.capacity) * 100);
-            const badgeColor = pct >= 90 ? 'danger' : pct >= 70 ? 'warning' : 'success';
-            return `
-                <tr>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="avatar avatar-sm" style="background:var(--kinjo-primary-xlight); color:var(--kinjo-primary);">
-                                <i class="bi bi-door-open" style="font-size:0.85rem;"></i>
-                            </div>
-                            <span class="fw-semibold">${esc(cls.name)}</span>
-                        </div>
-                    </td>
-                    <td>${cls.capacity}</td>
-                    <td><span class="badge bg-${badgeColor} badge-pill">${cls.enrolled}</span></td>
-                    <td><span class="badge bg-soft-secondary" style="color:var(--kinjo-secondary); border-radius:20px;">${cls.capacity - cls.enrolled}</span></td>
-                    <td><span class="badge bg-soft-info" style="color:var(--kinjo-info); border-radius:20px;">${cls.present ?? 0} حضور</span></td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2" style="min-width:80px;">
-                            <div class="progress flex-grow-1 progress-sm">
-                                <div class="progress-bar progress-bar-${badgeColor}" style="width:${pct}%"></div>
-                            </div>
-                            <span style="font-size:0.75rem; font-weight:600; color:var(--kinjo-text-secondary);">${pct}%</span>
-                        </div>
-                    </td>
-                    <td>
-                        <a href="/classes/${cls.id}"
-                           class="btn btn-sm btn-outline-primary"
-                           aria-label="عرض الفصل ${esc(cls.name)}">
-                            عرض
-                        </a>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    function renderKgTable(kgs) {
-        const tbody = document.getElementById('kindergartensOverviewTable');
-        if (!tbody) return;
-        if (!kgs?.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted">لا توجد روضات مسجلة</td></tr>';
-            return;
-        }
-        const KG_LIMIT = 15;
-        tbody.innerHTML = kgs.slice(0, KG_LIMIT).map(kg => {
-            const statusOk   = kg.status === 'active';
-            const licenseMap = { expired: ['danger','منتهي'], expiring_soon: ['warning','ينتهي قريباً'], valid: ['success','صالح'] };
-            const [licBadge, licText] = licenseMap[kg.license_status] || licenseMap.valid;
-            const pct  = parseInt(kg.capacity_utilization) || 0;
-            const progColor = pct >= 90 ? 'danger' : pct >= 70 ? 'warning' : 'success';
-            return `
-                <tr>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="avatar avatar-sm" style="background:var(--kinjo-primary-xlight); color:var(--kinjo-primary);">
-                                <i class="bi bi-building" style="font-size:0.85rem;"></i>
-                            </div>
-                            <span class="fw-semibold">${esc(kg.name_ar || kg.name_en || '')}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="badge-status bg-${statusOk ? 'soft-success' : 'soft-secondary'}"
-                              style="color:${statusOk ? 'var(--kinjo-success)' : 'var(--kinjo-secondary)'}; border-radius:20px; font-size:0.72rem; padding:0.3rem 0.7rem; font-weight:600;">
-                            <span class="status-dot ${statusOk ? 'active' : 'inactive'} me-1"></span>
-                            ${statusOk ? 'نشط' : 'غير نشط'}
-                        </span>
-                    </td>
-                    <td><span class="fw-semibold">${kg.enrollments}</span></td>
-                    <td>${kg.attendance_today}</td>
-                    <td>
-                        <span class="badge bg-soft-warning"
-                              style="color:var(--kinjo-warning-dark); border-radius:20px; font-size:0.72rem; padding:0.3rem 0.65rem; font-weight:700;">
-                            ${kg.pending_reports}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2" style="min-width:90px;">
-                            <div class="progress flex-grow-1 progress-sm">
-                                <div class="progress-bar progress-bar-${progColor}" style="width:${pct}%"></div>
-                            </div>
-                            <span style="font-size:0.75rem; font-weight:600; color:var(--kinjo-text-secondary); white-space:nowrap;">${pct}%</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="badge bg-${licBadge}" style="border-radius:20px; font-size:0.72rem; padding:0.3rem 0.65rem;">
-                            ${licText}
-                        </span>
-                    </td>
-                    <td>
-                        <a href="/kindergartens/${kg.id}"
-                           class="btn btn-sm btn-outline-primary"
-                           aria-label="عرض الروضة ${esc(kg.name_ar || '')}">
-                            عرض
-                        </a>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-        if (kgs.length > KG_LIMIT) {
-            tbody.innerHTML += `<tr><td colspan="8" class="text-center py-3 border-0"><a href="/kindergartens" class="btn btn-sm btn-outline-primary"><i class="bi bi-grid me-1"></i>عرض جميع الروضات (${kgs.length})</a></td></tr>`;
-        }
-    }
-
-    function showDashboardError(err) {
-        const ids = ['kindergartensOverviewTable', 'classOverviewTable'];
-        const errMsg = err.message?.includes('timeout')
-            ? 'انتهت مهلة التحميل (30 ثانية). تحقق من الاتصال.'
-            : 'فشل في تحميل البيانات. تحقق من الشبكة وحاول مرة أخرى.';
-
-        ids.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerHTML = `
-                <tr>
-                    <td colspan="8" class="text-center py-5">
-                        <div class="empty-state" style="padding:1.5rem;">
-                            <div class="empty-state-icon" style="width:52px; height:52px; border-radius:14px; font-size:1.5rem; background:var(--kinjo-danger-light); color:var(--kinjo-danger);">
-                                <i class="bi bi-wifi-off"></i>
-                            </div>
-                            <h5>${errMsg}</h5>
-                            <button class="btn btn-sm btn-outline-danger" onclick="location.reload()">
-                                <i class="bi bi-arrow-clockwise me-1"></i>إعادة المحاولة
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        });
-        showToast(errMsg, 'error');
-    }
-
-    /* ── Toolbar actions ── */
-    window.setDateRange = function(range) {
-        const labels = { today: 'اليوم', week: 'هذا الأسبوع', month: 'هذا الشهر', quarter: 'هذا الربع' };
-        const el = document.getElementById('dateRangeLabel');
-        if (el) el.textContent = labels[range] || range;
-        loadDashboardData();
-    };
-
-    window.refreshDashboard = function() {
-        const icon = document.getElementById('refreshIcon');
-        const btn  = document.getElementById('refreshBtn');
-        if (btn)  btn.disabled = true;
-        if (icon) icon.className = 'bi bi-arrow-clockwise spin';
-
-        loadDashboardData().finally(() => {
-            if (btn)  btn.disabled = false;
-            if (icon) icon.className = 'bi bi-arrow-clockwise';
-        });
-    };
-
-    window.showCustomDateRange = function() {
-        showToast('اختيار التاريخ المخصص قريباً', 'info');
-    };
-
-    window.exportDashboard = function() {
-        showToast('جاري تحضير التقرير للتصدير...', 'info');
-    };
-
-    /* Spin animation for refresh */
-    const style = document.createElement('style');
-    style.textContent = '.spin { animation: spin 0.8s linear infinite; }';
-    document.head.appendChild(style);
-
-    /* ══════════════════════════════════════════
-       Admin Extended Panel Functions
-       ══════════════════════════════════════════ */
-
-    /* ── Render secondary stats row ── */
-    function renderSecondaryStats(overview, summary) {
-        const byRole = overview.users_by_role || {};
-        setText('adminTotalChildren',     overview.total_children ?? 0);
-        setText('adminManagersCount',     byRole.MANAGER ?? 0);
-        setText('adminSupervisorsCount',  byRole.SUPERVISOR ?? 0);
-        setText('adminParentsCount',      byRole.PARENT ?? 0);
-        setText('adminEnrollmentsActive', overview.total_enrollments ?? 0);
-        setText('adminIncidentsRecent',   summary.recent_incidents ?? 0);
-    }
-
-    /* ── Render system alerts panel ── */
-    function renderAlerts(alerts) {
-        const row   = document.getElementById('alertsRow');
-        const list  = document.getElementById('alertsList');
-        const badge = document.getElementById('alertsCountBadge');
-        if (!row || !list) return;
-        if (!alerts.length) { row.style.display = 'none'; return; }
-        row.style.display = '';
-        if (badge) badge.textContent = alerts.length;
-        const priorityMap = {
-            critical: { cls: 'danger',  icon: 'bi-x-circle-fill',            label: 'حرج' },
-            high:     { cls: 'warning', icon: 'bi-exclamation-triangle-fill', label: 'مهم' },
-            medium:   { cls: 'info',    icon: 'bi-info-circle-fill',          label: 'متوسط' }
-        };
-        const typeLabels = {
-            license_expiry:            'انتهاء ترخيص',
-            high_pending_applications: 'طلبات معلقة',
-            low_attendance:            'حضور منخفض',
-            high_incidents:            'حوادث متكررة',
-            pending_applications:      'طلبات تسجيل',
-            pending_reports:           'تقارير معلقة'
-        };
-        list.innerHTML = alerts.map(a => {
-            const p    = priorityMap[a.priority] || priorityMap.medium;
-            const tlbl = typeLabels[a.type] || a.type;
-            return `
-                <div class="alert alert-${p.cls} d-flex align-items-center gap-2 mb-2 py-2"
-                     style="border-radius:var(--kinjo-radius);">
-                    <i class="bi ${p.icon} flex-shrink-0"></i>
-                    <div class="flex-grow-1">
-                        <span class="badge bg-${p.cls} me-2" style="border-radius:20px; font-size:0.68rem;">${p.label}</span>
-                        <span style="font-size:0.85rem;">${esc(a.message)}</span>
-                        <small class="badge bg-light text-secondary ms-2" style="border-radius:20px;">${tlbl}</small>
-                    </div>
-                    ${a.kindergarten_id ? `<a href="/kindergartens/${a.kindergarten_id}" class="btn btn-sm btn-outline-${p.cls} flex-shrink-0">عرض</a>` : ''}
-                </div>`;
-        }).join('');
-    }
-
-    window.toggleAlerts = function() {
-        const body = document.getElementById('alertsBody');
-        const icon = document.getElementById('alertsToggleIcon');
-        const btn  = document.getElementById('alertsToggleBtn');
-        if (!body) return;
-        const isHidden = body.style.display === 'none';
-        body.style.display = isHidden ? '' : 'none';
-        if (icon) icon.className = isHidden ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
-        if (btn)  btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-    };
-
-    /* ── Update users-by-role donut chart ── */
-    function updateUsersChart(byRole) {
-        if (!usersChart) return;
-        const data = [byRole.MANAGER || 0, byRole.SUPERVISOR || 0, byRole.PARENT || 0, byRole.ADMIN || 0];
-        usersChart.data.datasets[0].data = data;
-        usersChart.update('active');
-    }
-
-    /* ── Fetch recent audit logs as activity feed ── */
-    async function fetchAndRenderActivity() {
-        const list = document.getElementById('recentActivityList');
-        if (!list) return;
-        try {
-            const res  = await api.get('/api/audit-logs', { limit: 5, page: 1 });
-            const logs = res.logs || [];
-            if (!logs.length) {
-                list.innerHTML = `
-                    <div class="activity-item" style="justify-content:center; padding:2rem 1rem; flex-direction:column; gap:0.5rem; text-align:center;">
-                        <i class="bi bi-journal-x fs-4" style="color:var(--kinjo-text-muted);"></i>
-                        <div class="activity-text" style="color:var(--kinjo-text-muted);">لا توجد سجلات نشاط حديثة</div>
-                    </div>`;
-                return;
-            }
-            const actionMap = {
-                LOGIN:   { icon: 'bi-box-arrow-in-right', color: 'var(--kinjo-primary)',  bg: 'bg-soft-primary'  },
-                CREATE:  { icon: 'bi-plus-circle-fill',   color: 'var(--kinjo-success)',  bg: 'bg-soft-success'  },
-                UPDATE:  { icon: 'bi-pencil-fill',        color: 'var(--kinjo-info)',     bg: 'bg-soft-info'     },
-                DELETE:  { icon: 'bi-trash-fill',         color: 'var(--kinjo-danger)',   bg: 'bg-soft-danger'   },
-                APPROVE: { icon: 'bi-check-circle-fill',  color: 'var(--kinjo-success)',  bg: 'bg-soft-success'  },
-                SUBMIT:  { icon: 'bi-send-fill',          color: 'var(--kinjo-warning)',  bg: 'bg-soft-warning'  }
-            };
-            list.innerHTML = logs.map(log => {
-                const act  = actionMap[log.action] || { icon: 'bi-activity', color: 'var(--kinjo-secondary)', bg: 'bg-soft-secondary' };
-                const when = log.created_at
-                    ? new Date(log.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })
-                    : '';
-                const label = [log.action, log.entity_type, log.entity_id ? '#' + log.entity_id : ''].filter(Boolean).join(' ');
-                return `
-                    <a href="/audit-logs" class="activity-item text-decoration-none">
-                        <div class="activity-icon-wrap ${act.bg}">
-                            <i class="bi ${act.icon}" style="color:${act.color};"></i>
-                        </div>
-                        <div style="flex:1; min-width:0;">
-                            <div class="activity-text text-truncate">${esc(label)}</div>
-                            <div class="activity-time">${esc(log.user_name || 'مجهول')} — ${when}</div>
-                        </div>
-                    </a>`;
-            }).join('');
-        } catch(e) {
-            list.innerHTML = `
-                <div class="activity-item" style="justify-content:center; padding:2rem 1rem; flex-direction:column; gap:0.5rem; text-align:center;">
-                    <i class="bi bi-wifi-off fs-4" style="color:var(--kinjo-text-muted);"></i>
-                    <div class="activity-text" style="color:var(--kinjo-text-muted);">تعذّر تحميل سجلات النشاط</div>
-                </div>`;
-        }
-    }
-
-    /* ── Show pending reports count with link to reports page ── */
-    function fetchAdminPendingReports(pendingCount) {
-        const list  = document.getElementById('pendingReportsList');
-        const badge = document.getElementById('pendingReportsBadge');
-        if (!list) return;
-        if (badge) badge.textContent = pendingCount;
-        if (!pendingCount) {
-            list.innerHTML = `
-                <div class="empty-state" style="padding:2rem 1rem;">
-                    <div class="empty-state-icon" style="width:52px; height:52px; border-radius:14px; font-size:1.5rem;">
-                        <i class="bi bi-check-circle text-success"></i>
-                    </div>
-                    <h5 style="font-size:0.9rem;">لا توجد تقارير معلقة</h5>
-                    <p style="font-size:0.8rem; margin-bottom:0;">جميع التقارير مكتملة</p>
-                </div>`;
-            return;
-        }
-        list.innerHTML = `
-            <a href="/daily-reports" class="activity-item text-decoration-none">
-                <div class="activity-icon-wrap bg-soft-warning">
-                    <i class="bi bi-journal-text" style="color:var(--kinjo-warning);"></i>
-                </div>
-                <div style="flex:1; min-width:0;">
-                    <div class="activity-text fw-semibold">${pendingCount} تقرير يومي معلق</div>
-                    <div class="activity-time">
-                        <span class="badge bg-soft-warning" style="color:var(--kinjo-warning-dark); border-radius:20px; font-size:0.68rem;">تتطلب مراجعة وموافقة</span>
-                    </div>
-                </div>
-                <i class="bi bi-chevron-left" style="font-size:0.75rem; color:var(--kinjo-text-muted);"></i>
-            </a>`;
-    }
-
-})();
 </script>
-<script src="/static/js/dashboard.js" defer></script>
+<!-- Dashboard Logic -->
+<script src="/static/js/dashboard.js"></script>
+<script src="/static/js/decision_support.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof loadDecisionSupport === 'function') {
+            loadDecisionSupport();
+        }
+    });
+</script>
 {% endblock %}

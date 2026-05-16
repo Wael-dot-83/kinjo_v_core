@@ -1,225 +1,812 @@
 {% extends 'base.html' %}
-{% block title %}صندوق الرسائل — KinJo{% endblock %}
+
+{% block title %}{% if ui_lang == 'en' %}Messages Inbox{% else %}صندوق الرسائل{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="page-header-wrap">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
     <div>
-        <div class="page-header-eyebrow">
-            <i class="bi bi-chat-square-dots-fill"></i>
-            التواصل المجتمعي
-        </div>
-        <h1 class="page-header-title">صندوق الرسائل</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">الرئيسية</a></li>
-                <li class="breadcrumb-item"><a href="/communication" class="text-decoration-none">التواصل</a></li>
-                <li class="breadcrumb-item active">الرسائل</li>
+        <h1 class="h2 mb-1">
+            <i class="bi bi-envelope me-2 text-primary"></i>
+            {% if ui_lang == 'en' %}Messages Inbox{% else %}صندوق الرسائل{% endif %}
+            <span id="unreadCountBadge" class="badge bg-primary ms-2 d-none">0</span>
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}الرئيسية{% endif %}</a></li>
+                <li class="breadcrumb-item"><a href="/communication">{% if ui_lang == 'en' %}Communication{% else %}التواصل{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</li>
             </ol>
         </nav>
     </div>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
-        <i class="bi bi-plus-lg me-2"></i>رسالة جديدة
-    </button>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
+            <i class="bi bi-plus-lg me-1"></i> {% if ui_lang == 'en' %}New Message{% else %}رسالة جديدة{% endif %}
+        </button>
+    </div>
 </div>
 {% endblock %}
 
 {% block content %}
-
-<!-- Filter + Search Bar -->
-<div class="msg-filter-bar mb-3">
-    <div class="msg-tabs">
-        <button class="msg-tab active" data-filter="all" onclick="filterMsgs('all', this)">
-            <i class="bi bi-inbox me-1"></i>الكل
-            <span class="msg-tab-count" id="countAll">—</span>
-        </button>
-        <button class="msg-tab" data-filter="DIRECT" onclick="filterMsgs('DIRECT', this)">
-            <i class="bi bi-chat-dots me-1"></i>مباشر
-            <span class="msg-tab-count" id="countDirect">—</span>
-        </button>
-        <button class="msg-tab" data-filter="BROADCAST" onclick="filterMsgs('BROADCAST', this)">
-            <i class="bi bi-megaphone me-1"></i>تعميم
-            <span class="msg-tab-count" id="countBroadcast">—</span>
-        </button>
-        <button class="msg-tab" data-filter="CLASS" onclick="filterMsgs('CLASS', this)">
-            <i class="bi bi-people me-1"></i>شعبة
-            <span class="msg-tab-count" id="countClass">—</span>
-        </button>
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="msgSearch" placeholder="{% if ui_lang == 'en' %}Search messages...{% else %}ابحث في الرسائل...{% endif %}">
+                    <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn">{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</button>
+                </div>
+            </div>
+            <div class="col-md-8 text-md-end mt-2 mt-md-0">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary active"
+                        onclick="filterMsgs('all', this)">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</button>
+                    <button type="button" class="btn btn-outline-secondary"
+                        onclick="filterMsgs('direct', this)">{% if ui_lang == 'en' %}Direct{% else %}مباشرة{% endif %}</button>
+                    <button type="button" class="btn btn-outline-secondary"
+                        onclick="filterMsgs('announcement', this)">{% if ui_lang == 'en' %}Announcements{% else %}الإعلانات{% endif %}</button>
+                </div>
+                <div class="form-check form-switch d-inline-block ms-3 align-middle">
+                    <input class="form-check-input" type="checkbox" id="unreadOnlyToggle">
+                    <label class="form-check-label" for="unreadOnlyToggle">{% if ui_lang == 'en' %}Unread only{% else %}غير المقروء فقط{% endif %}</label>
+                </div>
+                <div class="form-check form-switch d-inline-block ms-3 align-middle">
+                    <input class="form-check-input" type="checkbox" id="archivedOnlyToggle">
+                    <label class="form-check-label" for="archivedOnlyToggle">{% if ui_lang == 'en' %}Archived{% else %}مؤرشف{% endif %}</label>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm ms-3" id="refreshMessagesBtn">
+                    <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+                </button>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <div class="form-check me-2">
+                    <input class="form-check-input" type="checkbox" id="selectAllMessages">
+                    <label class="form-check-label" for="selectAllMessages">{% if ui_lang == 'en' %}Select all{% else %}تحديد الكل{% endif %}</label>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkReadBtn">{% if ui_lang == 'en' %}Mark as read{% else %}تحديد كمقروء{% endif %}</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkArchiveBtn">{% if ui_lang == 'en' %}Archive{% else %}أرشفة{% endif %}</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkUnarchiveBtn">{% if ui_lang == 'en' %}Unarchive{% else %}إلغاء
+                    الأرشفة{% endif %}</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="bulkDeleteBtn">{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}</button>
+            </div>
+            <small class="text-muted" id="bulkSelectedCount">0 محدد</small>
+        </div>
     </div>
-    <div class="search-box-inline" style="max-width:260px;">
-        <i class="bi bi-search search-box-icon"></i>
-        <input type="text" class="form-control" id="msgSearch" placeholder="بحث في الرسائل...">
+    <div class="list-group list-group-flush" id="messagesList">
+        <!-- Loading State -->
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="prevPageBtn">{% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}</button>
+        <small id="paginationInfo" class="text-muted"></small>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="nextPageBtn">{% if ui_lang == 'en' %}Next{% else %}التالي{% endif %}</button>
     </div>
 </div>
 
-<!-- Messages List -->
-<div class="card">
-    <div class="card-body p-0">
-        <div id="messagesList">
-            <div class="text-center py-5 text-muted">
-                <div class="spinner-border spinner-border-sm me-2 text-primary" role="status" aria-hidden="true"></div>
-                جاري تحميل الرسائل...
+<!-- Reuse the New Message Modal -->
+{% include 'communication/modals/new_message.html' %}
+
+<!-- Message Detail Modal -->
+<div class="modal fade" id="messageDetailModal" tabindex="-1" aria-labelledby="messageDetailModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageDetailModalLabel">{% if ui_lang == 'en' %}Message{% else %}الرسالة{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 id="messageDetailSubject" class="mb-0"></h5>
+                    <small id="messageDetailTimestamp" class="text-muted"></small>
+                </div>
+                <div id="messageDetailMeta" class="text-muted small mb-3"></div>
+                <div id="messageDetailBody" class="text-break"></div>
+                <div id="messageAttachments" class="mt-3"></div>
+                <div id="messageReplies" class="mt-3"></div>
+                <div id="replySection" class="mt-4">
+                    <label for="messageReplyBody" class="form-label">{% if ui_lang == 'en' %}Reply{% else %}الرد{% endif %}</label>
+                    <textarea class="form-control" id="messageReplyBody" rows="3" placeholder="{% if ui_lang == 'en' %}Write your reply...{% else %}اكتب الرد...{% endif %}"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" id="deleteMessageBtn">{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}</button>
+                <button type="button" class="btn btn-outline-secondary" id="archiveMessageBtn">{% if ui_lang == 'en' %}Archive{% else %}أرشفة{% endif %}</button>
+                <button type="button" class="btn btn-primary" id="sendReplyBtn">{% if ui_lang == 'en' %}Send Reply{% else %}إرسال الرد{% endif %}</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- New Message Modal -->
-{% include 'communication/modals/new_message.html' %}
-
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-
-/* Filter bar */
-.msg-filter-bar { display:flex;align-items:center;gap:1rem;flex-wrap:wrap;justify-content:space-between; }
-.msg-tabs { display:flex;gap:0.25rem;background:var(--kinjo-surface);border-radius:var(--kinjo-radius-lg);padding:0.25rem; }
-.msg-tab {
-    display:inline-flex;align-items:center;gap:0.35rem;padding:0.4rem 0.9rem;border-radius:var(--kinjo-radius-md);
-    font-size:0.82rem;font-weight:600;border:none;background:none;color:var(--kinjo-text-muted);cursor:pointer;
-    transition:all 0.15s;white-space:nowrap;
-}
-.msg-tab:hover { color:var(--kinjo-text-primary);background:var(--kinjo-card-bg); }
-.msg-tab.active { background:var(--kinjo-card-bg);color:var(--kinjo-primary);box-shadow:var(--kinjo-shadow-sm); }
-.msg-tab-count { font-size:0.7rem;background:var(--kinjo-border);border-radius:50px;padding:0.05rem 0.45rem;font-weight:700; }
-.msg-tab.active .msg-tab-count { background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
-
-.search-box-inline { position:relative; }
-.search-box-icon { position:absolute;inset-block-start:50%;transform:translateY(-50%);inset-inline-start:0.75rem;color:var(--kinjo-text-muted);pointer-events:none; }
-[dir="rtl"] .search-box-icon { inset-inline-start:auto;inset-inline-end:0.75rem; }
-.search-box-inline .form-control { padding-inline-start:2.25rem; }
-
-/* Message items */
-.msg-item {
-    display:flex;align-items:flex-start;gap:1rem;padding:1rem 1.25rem;
-    border-bottom:1px solid var(--kinjo-border);cursor:pointer;
-    transition:background 0.15s;text-decoration:none;color:inherit;
-}
-.msg-item:last-child { border-bottom:none; }
-.msg-item:hover { background:var(--kinjo-surface); }
-.msg-item.unread { background:var(--kinjo-primary-xlight); }
-.msg-item.unread:hover { background:rgba(99,102,241,0.07); }
-
-.msg-avatar {
-    width:44px;height:44px;border-radius:14px;flex-shrink:0;
-    display:flex;align-items:center;justify-content:center;font-size:1.1rem;
-}
-.msg-avatar.direct    { background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
-.msg-avatar.broadcast { background:rgba(245,158,11,0.12);color:#d97706; }
-.msg-avatar.class     { background:rgba(16,185,129,0.12);color:var(--kinjo-success); }
-
-.msg-body { flex:1;min-width:0; }
-.msg-top { display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.2rem; }
-.msg-subject { font-weight:700;font-size:0.9rem;color:var(--kinjo-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.msg-time { font-size:0.72rem;color:var(--kinjo-text-muted);flex-shrink:0; }
-.msg-preview { font-size:0.8rem;color:var(--kinjo-text-muted);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden; }
-.msg-footer { display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem; }
-.msg-type-badge {
-    display:inline-flex;align-items:center;gap:0.25rem;padding:0.1rem 0.55rem;
-    border-radius:50px;font-size:0.68rem;font-weight:700;
-}
-.msg-type-badge.direct    { background:var(--kinjo-primary-xlight);color:var(--kinjo-primary); }
-.msg-type-badge.broadcast { background:rgba(245,158,11,0.12);color:#d97706; }
-.msg-type-badge.class     { background:rgba(16,185,129,0.12);color:var(--kinjo-success); }
-.msg-unread-dot { width:8px;height:8px;border-radius:50%;background:var(--kinjo-primary);flex-shrink:0; }
-</style>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
-let allMessages = [];
+    const IS_EN = document.documentElement.lang === 'en';
+    const T = (ar, en) => IS_EN ? en : ar;
 
-document.addEventListener('DOMContentLoaded', loadMessages);
+    let allMessages = [];
+    let refreshTimer = null;
+    let authExpiredHandled = false;
+    let currentPage = 1;
+    const pageSize = 25;
+    var currentUserId = {{ current_user.id }};
+    let currentFilter = 'all';
+    let currentSearch = '';
+    let unreadOnly = false;
+    let totalPages = 1;
+    let archivedOnly = false;
+    let selectedMessageIds = new Set();
 
-async function loadMessages() {
-    const token = localStorage.getItem('access_token');
-    try {
-        const r = await fetch('/comm/messages', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (r.ok) {
-            allMessages = await r.json();
-        } else {
-            allMessages = [];
+    function stopMessagesAutoRefresh() {
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+            refreshTimer = null;
         }
-    } catch {
-        allMessages = [];
-    }
-    renderMessages(allMessages);
-    updateCounts();
-}
-
-function updateCounts() {
-    document.getElementById('countAll').textContent      = allMessages.length;
-    document.getElementById('countDirect').textContent   = allMessages.filter(m => m.thread_type === 'DIRECT').length;
-    document.getElementById('countBroadcast').textContent = allMessages.filter(m => m.thread_type === 'BROADCAST').length;
-    document.getElementById('countClass').textContent    = allMessages.filter(m => m.thread_type === 'CLASS').length;
-}
-
-function renderMessages(messages) {
-    const container = document.getElementById('messagesList');
-
-    if (!messages.length) {
-        container.innerHTML = `
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-inbox d-block fs-1 mb-3 opacity-25"></i>
-                <p class="mb-0">لا توجد رسائل في هذا القسم</p>
-            </div>`;
-        return;
     }
 
-    const typeMap = { DIRECT:'مباشر', BROADCAST:'تعميم', CLASS:'شعبة' };
-    const typeIcon = { DIRECT:'bi-chat-dots-fill', BROADCAST:'bi-megaphone-fill', CLASS:'bi-people-fill' };
-    const typeClass = { DIRECT:'direct', BROADCAST:'broadcast', CLASS:'class' };
+    function handleUnauthorizedResponse(response) {
+        if (!response || ![401, 403].includes(response.status)) {
+            return false;
+        }
+        stopMessagesAutoRefresh();
+        if (authExpiredHandled) {
+            return true;
+        }
+        authExpiredHandled = true;
+        if (window.AuthStorage && typeof AuthStorage.clearAll === 'function') {
+            AuthStorage.clearAll();
+        }
+        if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login?expired=true';
+        }
+        return true;
+    }
 
-    container.innerHTML = [...messages].reverse().map(msg => {
-        const tc = typeClass[msg.thread_type] || 'direct';
-        const tl = typeMap[msg.thread_type] || msg.thread_type;
-        const ic = typeIcon[msg.thread_type] || 'bi-envelope-fill';
-        const preview = (msg.message_body || '').replace(/<[^>]*>/g, '').substring(0, 80);
-        const isUnread = !msg.read_at;
-        const time = msg.created_at ? new Date(msg.created_at).toLocaleDateString('ar-SA',{month:'short',day:'numeric'}) : '';
+    document.addEventListener('DOMContentLoaded', () => {
+        loadMessages();
+        refreshTimer = setInterval(loadMessages, 30000);
+        document.getElementById('refreshMessagesBtn').addEventListener('click', () => loadMessages());
+        document.getElementById('clearSearchBtn').addEventListener('click', clearSearch);
+        document.getElementById('selectAllMessages').addEventListener('change', toggleSelectAll);
+        document.getElementById('unreadOnlyToggle').addEventListener('change', (e) => {
+            unreadOnly = e.target.checked;
+            currentPage = 1;
+            loadMessages();
+        });
+        document.getElementById('archivedOnlyToggle').addEventListener('change', (e) => {
+            archivedOnly = e.target.checked;
+            currentPage = 1;
+            loadMessages();
+        });
+        document.getElementById('prevPageBtn').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage -= 1;
+                loadMessages();
+            }
+        });
+        document.getElementById('nextPageBtn').addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage += 1;
+                loadMessages();
+            }
+        });
+        document.getElementById('sendReplyBtn').addEventListener('click', sendReply);
+        document.getElementById('deleteMessageBtn').addEventListener('click', deleteMessage);
+        document.getElementById('archiveMessageBtn').addEventListener('click', toggleArchive);
+        document.getElementById('bulkReadBtn').addEventListener('click', () => bulkAction('read'));
+        document.getElementById('bulkArchiveBtn').addEventListener('click', () => bulkAction('archive'));
+        document.getElementById('bulkUnarchiveBtn').addEventListener('click', () => bulkAction('unarchive'));
+        document.getElementById('bulkDeleteBtn').addEventListener('click', () => bulkAction('delete'));
+    });
 
-        return `<div class="msg-item${isUnread ? ' unread' : ''}" onclick="openMessage(${msg.id})">
-            <div class="msg-avatar ${tc}">
-                <i class="bi ${ic}"></i>
-            </div>
-            <div class="msg-body">
-                <div class="msg-top">
-                    <span class="msg-subject">${msg.subject || 'بدون عنوان'}</span>
-                    <span class="msg-time">${time}</span>
+    window.addEventListener('beforeunload', stopMessagesAutoRefresh);
+
+    async function loadMessages() {
+        try {
+            // Use centralized auth system instead of direct localStorage access
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">${T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.')}</div>`;
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-warning m-3">${T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.')}</div>`;
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.set('page', currentPage);
+            params.set('page_size', pageSize);
+            if (currentFilter !== 'all') {
+                params.set('thread_type', currentFilter);
+            }
+            if (currentSearch) {
+                params.set('search', currentSearch);
+            }
+            if (unreadOnly) {
+                params.set('unread_only', 'true');
+            }
+            if (archivedOnly) {
+                params.set('archived_only', 'true');
+            }
+
+            const response = await fetch(`/comm/messages?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (handleUnauthorizedResponse(response)) {
+                return;
+            }
+
+            if (response.ok) {
+                const data = await response.json();
+                const items = data.items || data;
+                allMessages = items;
+                selectedMessageIds = new Set();
+                renderMessages(allMessages);
+                updatePagination(data.pagination);
+                updateUnreadCount();
+                updateBulkSelection();
+            } else {
+                document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">${T('تعذر تحميل الرسائل', 'Failed to load messages')}</div>`;
+            }
+        } catch (error) {
+            console.error(error);
+            document.getElementById('messagesList').innerHTML = `<div class="alert alert-danger m-3">${T('خطأ في الشبكة', 'Network error')}</div>`;
+        }
+    }
+
+
+    function formatThreadLabel(threadType) {
+        if (!threadType) {
+            return T('رسالة', 'Message');
+        }
+        if (threadType === 'ANNOUNCEMENT') {
+            return T('إعلان', 'Announcement');
+        }
+        if (threadType === 'DIRECT') {
+            return T('مباشر', 'Direct');
+        }
+        return T('رسالة', 'Message');
+    }
+
+    function toggleSelectAll(event) {
+        const shouldSelect = event.target.checked;
+        selectedMessageIds = new Set();
+        if (shouldSelect) {
+            allMessages.forEach(msg => selectedMessageIds.add(msg.id));
+        }
+        renderMessages(allMessages);
+        updateBulkSelection();
+    }
+
+    function updateSelectAllControl() {
+        const selectAll = document.getElementById('selectAllMessages');
+        if (!selectAll) {
+            return;
+        }
+        if (!allMessages.length) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+            return;
+        }
+        const selectedCount = selectedMessageIds.size;
+        selectAll.checked = selectedCount > 0 && selectedCount === allMessages.length;
+        selectAll.indeterminate = selectedCount > 0 && selectedCount < allMessages.length;
+    }
+
+    function renderMessages(messages) {
+        const container = document.getElementById('messagesList');
+        container.innerHTML = '';
+
+        if (messages.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox fs-1 mb-2 d-block"></i>
+                    ${T('لا توجد رسائل', 'No messages')}
                 </div>
-                <div class="msg-preview">${preview || 'لا يوجد محتوى'}</div>
-                <div class="msg-footer">
-                    <span class="msg-type-badge ${tc}">
-                        <i class="bi ${ic}"></i>${tl}
-                    </span>
-                    ${isUnread ? '<span class="msg-unread-dot"></span>' : ''}
+            `;
+            return;
+        }
+
+        const sorted = [...messages];
+
+        sorted.forEach(msg => {
+            let icon = 'bi-envelope';
+            let badgeClass = 'bg-secondary';
+            let badgeText = T('رسالة', 'Message');
+
+            const unreadBadge = msg.is_read ? '' : `<span class="badge bg-primary ms-2">${T('غير مقروءة', 'Unread')}</span>`;
+            const archivedBadge = msg.archived_at ? `<span class="badge bg-light text-dark border ms-2">${T('مؤرشفة', 'Archived')}</span>` : '';
+
+            if (msg.thread_type === 'ANNOUNCEMENT') {
+                icon = 'bi-megaphone';
+                badgeClass = 'bg-warning text-dark';
+                badgeText = T('إعلان', 'Announcement');
+            } else if (msg.thread_type === 'DIRECT') {
+                badgeText = T('مباشر', 'Direct');
+            }
+
+            const isSelected = selectedMessageIds.has(msg.id);
+            const isOutgoing = msg.sender_id === currentUserId;
+            const directionLabel = isOutgoing ? T('إلى', 'To') : T('من', 'From');
+            const counterpart = isOutgoing ? (msg.recipient_id ? `#${msg.recipient_id}` : formatThreadLabel(msg.thread_type)) : `#${msg.sender_id}`;
+            const metaLine = `${directionLabel}: ${counterpart} | ${formatThreadLabel(msg.thread_type)} | #${msg.id}`;
+            const timestamp = msg.created_at ? new Date(msg.created_at).toLocaleString() : '';
+
+            const item = document.createElement('a');
+            item.className = `list-group-item list-group-item-action py-3 ${msg.is_read ? '' : 'fw-semibold'} ${isSelected ? 'list-group-item-secondary' : ''}`;
+            item.href = '#';
+            item.innerHTML = `
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div class="d-flex align-items-start">
+                        <div class="form-check me-2">
+                            <input class="form-check-input message-select" type="checkbox" data-id="${msg.id}">
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center flex-wrap">
+                                <h5 class="mb-1 me-2">
+                                    <i class="bi ${icon} me-2 text-muted"></i>
+                                    ${msg.subject || T('بدون عنوان', 'No subject')}
+                                </h5>
+                                ${unreadBadge}
+                                ${archivedBadge}
+                            </div>
+                            <div class="text-muted small">${metaLine}</div>
+                        </div>
+                    </div>
+                    <small class="text-muted">${timestamp}</small>
                 </div>
-            </div>
-        </div>`;
-    }).join('');
-}
+                <div class="mb-1 text-break text-muted" style="max-height: 80px; overflow: hidden; text-overflow: ellipsis;">
+                    ${msg.message_body}
+                </div>
+                <div class="mt-2">
+                    <span class="badge ${badgeClass}">${badgeText}</span>
+                </div>
+            `;
+            const checkbox = item.querySelector('.message-select');
+            checkbox.checked = selectedMessageIds.has(msg.id);
+            checkbox.addEventListener('click', (event) => event.stopPropagation());
+            checkbox.addEventListener('change', (event) => {
+                if (event.target.checked) {
+                    selectedMessageIds.add(msg.id);
+                    item.classList.add('list-group-item-secondary');
+                } else {
+                    selectedMessageIds.delete(msg.id);
+                    item.classList.remove('list-group-item-secondary');
+                }
+                updateBulkSelection();
+            });
+            item.addEventListener('click', (event) => {
+                event.preventDefault();
+                openMessage(msg.id);
+            });
+            container.appendChild(item);
+        });
+    }
 
-function filterMsgs(type, btn) {
-    document.querySelectorAll('.msg-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const filtered = type === 'all' ? allMessages : allMessages.filter(m => m.thread_type === type);
-    renderMessages(filtered);
-}
+    function filterMsgs(type, button) {
+        document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+        if (button) {
+            button.classList.add('active');
+        }
+        currentFilter = type;
+        currentPage = 1;
+        loadMessages();
+    }
+    // Expose to global scope for inline onclick handlers
+    window.filterMsgs = filterMsgs;
 
-document.getElementById('msgSearch').addEventListener('input', function () {
-    const term = this.value.toLowerCase();
-    const filtered = allMessages.filter(m =>
-        (m.subject || '').toLowerCase().includes(term) ||
-        (m.message_body || '').toLowerCase().includes(term)
-    );
-    renderMessages(filtered);
-});
+    function clearSearch() {
+        const input = document.getElementById('msgSearch');
+        if (input) {
+            input.value = '';
+        }
+        currentSearch = '';
+        currentPage = 1;
+        loadMessages();
+    }
 
-function openMessage(id) {
-    // Open inline or navigate to message detail
-    window.location.href = `/communication/messages/${id}`;
-}
+    let searchTimer = null;
+    document.getElementById('msgSearch').addEventListener('input', (e) => {
+        currentSearch = e.target.value.trim();
+        currentPage = 1;
+        if (searchTimer) {
+            clearTimeout(searchTimer);
+        }
+        searchTimer = setTimeout(() => loadMessages(), 300);
+    });
+
+    let currentOpenMessageId = null;
+    let currentOpenThreadType = null;
+    let currentOpenAllowReplies = false;
+    let currentOpenArchived = false;
+
+    async function openMessage(messageId) {
+        try {
+            currentOpenMessageId = messageId;
+
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                return;
+            }
+
+            const response = await fetch(`/comm/messages/${messageId}/replies`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                alert(err.error?.message || err.detail || T('تعذر تحميل الرسالة', 'Failed to load message'));
+                return;
+            }
+
+            const thread = await response.json();
+            const msg = thread.root;
+            currentOpenThreadType = msg.thread_type;
+            currentOpenAllowReplies = !!msg.allow_replies;
+            currentOpenArchived = !!msg.archived_at;
+            document.getElementById('archiveMessageBtn').textContent = currentOpenArchived ? T('إلغاء الأرشفة', 'Unarchive') : T('أرشفة', 'Archive');
+
+            document.getElementById('messageDetailSubject').textContent = msg.subject || T('بدون عنوان', 'No subject');
+            document.getElementById('messageDetailBody').textContent = msg.message_body || '';
+            document.getElementById('messageDetailTimestamp').textContent = msg.created_at ? new Date(msg.created_at).toLocaleString() : '';
+            const isOutgoing = msg.sender_id === currentUserId;
+            const directionLabel = isOutgoing ? T('إلى', 'To') : T('من', 'From');
+            const counterpart = isOutgoing
+                ? (msg.recipient ? msg.recipient.username : (msg.recipient_id ? `${T('المستخدم', 'User')} #${msg.recipient_id}` : formatThreadLabel(msg.thread_type)))
+                : (msg.sender ? msg.sender.username : `${T('المستخدم', 'User')} #${msg.sender_id}`);
+            const metaParts = [`${directionLabel}: ${counterpart}`, formatThreadLabel(msg.thread_type)];
+            if (msg.archived_at) {
+                metaParts.push(T('مؤرشف', 'Archived'));
+            }
+            document.getElementById('messageDetailMeta').textContent = metaParts.join(' | ');
+            document.getElementById('messageReplyBody').value = '';
+            renderAttachments(msg.attachments || []);
+            renderReplies(thread.replies || []);
+
+            const replySection = document.getElementById('replySection');
+            const canReply = currentOpenThreadType === 'DIRECT'
+                || (currentOpenThreadType === 'ANNOUNCEMENT' && currentOpenAllowReplies);
+            replySection.classList.toggle('d-none', !canReply);
+
+            const modal = new bootstrap.Modal(document.getElementById('messageDetailModal'));
+            modal.show();
+
+            if (!msg.is_read) {
+                await markMessageRead(messageId);
+            }
+        } catch (error) {
+            console.error(error);
+            alert(T('فشل في فتح الرسالة', 'Failed to open message'));
+        }
+    }
+
+    function renderAttachments(attachments) {
+        const container = document.getElementById('messageAttachments');
+        if (!attachments || attachments.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        const items = attachments.map(att => {
+            const sizeKb = att.file_size ? (att.file_size / 1024).toFixed(1) : '';
+            return `
+                <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                    <a href="${att.url}" target="_blank" rel="noopener">${att.file_name}</a>
+                    <small class="text-muted">${sizeKb} KB</small>
+                </div>
+            `;
+        }).join('');
+        container.innerHTML = `<h6 class="mt-3">${T('المرفقات', 'Attachments')}</h6>${items}`;
+    }
+
+    function renderReplies(replies) {
+        const container = document.getElementById('messageReplies');
+        if (!replies || replies.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        const items = replies.map(reply => {
+            const sender = reply.sender ? reply.sender.username : `${T('المستخدم', 'User')} #${reply.sender_id}`;
+            const timestamp = reply.created_at ? new Date(reply.created_at).toLocaleString() : '';
+            return `
+                <div class="border-top pt-2 mt-2">
+                    <div class="small text-muted">${sender} ${T('في', 'at')} ${timestamp}</div>
+                    <div class="text-break">${reply.message_body || ''}</div>
+                </div>
+            `;
+        }).join('');
+        container.innerHTML = `<h6 class="mt-3">${T('الردود', 'Replies')}</h6>${items}`;
+    }
+
+    function updatePagination(pagination) {
+        const info = document.getElementById('paginationInfo');
+        const prevBtn = document.getElementById('prevPageBtn');
+        const nextBtn = document.getElementById('nextPageBtn');
+        if (!pagination) {
+            info.textContent = '';
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            totalPages = 1;
+            return;
+        }
+        totalPages = pagination.total_pages || 1;
+        info.textContent = `${T('الصفحة', 'Page')} ${pagination.page} ${T('من', 'of')} ${pagination.total_pages}`;
+        prevBtn.disabled = !pagination.has_prev;
+        nextBtn.disabled = !pagination.has_next;
+    }
+
+    function updateBulkSelection() {
+        const count = selectedMessageIds.size;
+        document.getElementById('bulkSelectedCount').textContent = `${count} ${T('محدد', 'selected')}`;
+        const disabled = count === 0;
+        ['bulkReadBtn', 'bulkArchiveBtn', 'bulkUnarchiveBtn', 'bulkDeleteBtn'].forEach((id) => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.disabled = disabled;
+            }
+        });
+        updateSelectAllControl();
+    }
+
+    async function updateUnreadCount() {
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                return;
+            }
+
+            const response = await fetch('/comm/messages/unread/count', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (handleUnauthorizedResponse(response)) {
+                return;
+            }
+            if (!response.ok) {
+                return;
+            }
+            const data = await response.json();
+            const badge = document.getElementById('unreadCountBadge');
+            badge.textContent = data.unread_count;
+            badge.classList.toggle('d-none', data.unread_count === 0);
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function sendReply() {
+        if (!currentOpenMessageId) {
+            return;
+        }
+        if (currentOpenThreadType !== 'DIRECT' && !(currentOpenThreadType === 'ANNOUNCEMENT' && currentOpenAllowReplies)) {
+            return;
+        }
+        const body = document.getElementById('messageReplyBody').value.trim();
+        if (!body) {
+            alert(T('لا يمكن أن يكون الرد فارغًا', 'Reply cannot be empty'));
+            return;
+        }
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                return;
+            }
+
+            const response = await fetch(`/comm/messages/${currentOpenMessageId}/replies`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ message_body: body })
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                alert(err.error?.message || err.detail || T('فشل في إرسال الرد', 'Failed to send reply'));
+                return;
+            }
+            const created = await response.json();
+            document.getElementById('messageReplyBody').value = '';
+            if (currentOpenThreadType === 'ANNOUNCEMENT') {
+                await openMessage(created.id);
+            } else {
+                await openMessage(currentOpenMessageId);
+            }
+            loadMessages();
+        } catch (error) {
+            console.error(error);
+            alert(T('فشل في إرسال الرد', 'Failed to send reply'));
+        }
+    }
+
+    async function toggleArchive() {
+        if (!currentOpenMessageId) {
+            return;
+        }
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                return;
+            }
+
+            const action = currentOpenArchived ? 'unarchive' : 'archive';
+            const response = await fetch(`/comm/messages/${currentOpenMessageId}/${action}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                alert(err.error?.message || err.detail || T('فشل في تحديث حالة الأرشفة', 'Failed to update archive status'));
+                return;
+            }
+
+            currentOpenArchived = !currentOpenArchived;
+            document.getElementById('archiveMessageBtn').textContent = currentOpenArchived ? T('إلغاء الأرشفة', 'Unarchive') : T('أرشفة', 'Archive');
+            loadMessages();
+        } catch (error) {
+            console.error(error);
+            alert(T('فشل في تحديث حالة الأرشفة', 'Failed to update archive status'));
+        }
+    }
+
+    async function bulkAction(action) {
+        if (selectedMessageIds.size === 0) {
+            alert(T('يرجى تحديد رسالة واحدة على الأقل', 'Please select at least one message'));
+            return;
+        }
+        if (action === 'delete' && !confirm(T('هل أنت متأكد من حذف الرسائل المحددة؟', 'Are you sure you want to delete the selected messages?'))) {
+            return;
+        }
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                return;
+            }
+
+            const response = await fetch('/comm/messages/bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    message_ids: Array.from(selectedMessageIds),
+                    action: action
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                alert(err.error?.message || err.detail || T('فشل تنفيذ العملية الجماعية', 'Bulk operation failed'));
+                return;
+            }
+
+            selectedMessageIds = new Set();
+            updateBulkSelection();
+            loadMessages();
+        } catch (error) {
+            console.error(error);
+            alert(T('فشل تنفيذ العملية الجماعية', 'Bulk operation failed'));
+        }
+    }
+
+    async function deleteMessage() {
+        if (!currentOpenMessageId) {
+            return;
+        }
+        if (!confirm(T('هل أنت متأكد من حذف هذه الرسالة؟', 'Are you sure you want to delete this message?'))) {
+            return;
+        }
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                alert(T('تعذر فتح نافذة الرسائل الآن. حاول إعادة تسجيل الدخول.', 'Cannot open messages now. Please try logging in again.'));
+                return;
+            }
+
+            const response = await fetch(`/comm/messages/${currentOpenMessageId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                alert(err.error?.message || err.detail || T('فشل في حذف الرسالة', 'Failed to delete message'));
+                return;
+            }
+
+            const modalEl = document.getElementById('messageDetailModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+            loadMessages();
+        } catch (error) {
+            console.error(error);
+            alert(T('فشل في حذف الرسالة', 'Failed to delete message'));
+        }
+    }
+
+    async function markMessageRead(messageId) {
+        try {
+            // Use centralized auth system
+            if (!window.AuthService || !AuthService.isAuthenticated()) {
+                return;
+            }
+
+            const token = AuthService.getToken();
+            if (!token) {
+                return;
+            }
+
+            const response = await fetch(`/comm/messages/${messageId}/read`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const index = allMessages.findIndex(m => m.id === messageId);
+            if (index >= 0) {
+                allMessages[index].is_read = true;
+            }
+            renderMessages(allMessages);
+            updateUnreadCount();
+            updateBulkSelection();
+        } catch (error) {
+            console.error(error);
+        }
+    }
 </script>
 {% endblock %}
