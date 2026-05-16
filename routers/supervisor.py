@@ -29,6 +29,7 @@ from models import (
     IncidentType,
     SeverityLevel,
     Message,
+    MessageRecipient,
     MessageThreadType,
     SupervisorAssignment,
     User,
@@ -626,6 +627,21 @@ def get_safety_incidents(
 
 
 def _message_list(messages, current_user_id: int, db: Session):
+    # Batch-fetch read receipts for all messages in this list
+    msg_ids = [m.id for m in messages]
+    read_set = set()
+    if msg_ids:
+        read_rows = (
+            db.query(MessageRecipient.message_id)
+            .filter(
+                MessageRecipient.message_id.in_(msg_ids),
+                MessageRecipient.recipient_user_id == current_user_id,
+                MessageRecipient.read_at.isnot(None),
+            )
+            .all()
+        )
+        read_set = {r.message_id for r in read_rows}
+
     result = []
     for m in messages:
         sender = db.query(User).filter(User.id == m.sender_id).first()
@@ -636,7 +652,7 @@ def _message_list(messages, current_user_id: int, db: Session):
             "body": m.message_body or "",
             "preview": (m.message_body or "")[:100],
             "sender_name": sender.full_name or sender.username if sender else "",
-            "is_read": m.is_read,
+            "is_read": m.id in read_set or m.sender_id == current_user_id,
             "attachment_url": None,
             "created_at": m.created_at.isoformat() if m.created_at else None,
         })
@@ -673,7 +689,20 @@ def mark_message_read(
     msg = db.query(Message).filter(Message.id == message_id, Message.recipient_id == current_user.id).first()
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found.")
-    msg.is_read = True
+    now = datetime.now(timezone.utc)
+    recipient_row = db.query(MessageRecipient).filter(
+        MessageRecipient.message_id == message_id,
+        MessageRecipient.recipient_user_id == current_user.id,
+    ).first()
+    if recipient_row:
+        if recipient_row.read_at is None:
+            recipient_row.read_at = now
+    else:
+        db.add(MessageRecipient(
+            message_id=message_id,
+            recipient_user_id=current_user.id,
+            read_at=now,
+        ))
     db.commit()
     return {"status": "ok"}
 

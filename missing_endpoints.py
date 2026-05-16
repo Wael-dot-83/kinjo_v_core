@@ -462,12 +462,16 @@ def get_communication_stats(
         event_query = event_query.filter(models.Event.kindergarten_id == current_user.kindergarten_id)
         survey_query = survey_query.filter(models.Survey.kindergarten_id == current_user.kindergarten_id)
 
+    _unread_msg_ids = (
+        db.query(models.MessageRecipient.message_id)
+        .filter(
+            models.MessageRecipient.recipient_user_id == current_user.id,
+            models.MessageRecipient.read_at.is_(None),
+        )
+        .scalar_subquery()
+    )
     unread_messages = message_query.filter(
-        or_(
-            models.Message.recipient_id == current_user.id,
-            models.Message.thread_type == models.MessageThreadType.BROADCAST
-        ),
-        models.Message.is_read == False
+        models.Message.id.in_(_unread_msg_ids),
     ).count()
 
     now = datetime.now()
@@ -2895,9 +2899,16 @@ def get_parent_dashboard(
     notifications = []
 
     # Unread messages for this parent (up to 10 most recent)
+    _parent_unread_ids = (
+        db.query(models.MessageRecipient.message_id)
+        .filter(
+            models.MessageRecipient.recipient_user_id == current_user.id,
+            models.MessageRecipient.read_at.is_(None),
+        )
+        .scalar_subquery()
+    )
     unread_msgs = db.query(models.Message).filter(
-        models.Message.recipient_id == current_user.id,
-        models.Message.is_read == False  # noqa: E712
+        models.Message.id.in_(_parent_unread_ids),
     ).order_by(models.Message.created_at.desc()).limit(10).all()
     for msg in unread_msgs:
         notifications.append({
@@ -2982,7 +2993,6 @@ def get_parent_children(
             models.AttendanceLog.child_id == c.id,
             models.AttendanceLog.date >= month_start,
             models.AttendanceLog.date <= today,
-            models.AttendanceLog.deleted_at.is_(None),
         ).count()
         # School days = weekdays (Mon–Fri) from month start to today
         school_days = sum(
