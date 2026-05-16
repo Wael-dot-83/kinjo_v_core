@@ -81,7 +81,21 @@ alembic/versions/*.pyc
 inspect_out.txt
 pip_audit_installed.json
 *.tar.gz
+pytest_out.txt
+test_results.txt
+seed_output.txt
 
 # SQLite WAL / SHM
 *.db-shm
 *.db-wal
+
+# Runtime data (attachments, uploaded imports)
+data/attachments/
+static/imports/
+
+# Root-level diagnostic/stray test scripts (use scripts/manual-diagnostics/ instead)
+diag_*.py
+inspect_dataset.py
+test_advanced_analytics_cache*.py
+test_api_advanced_cache*.py
+test_cache_invalidation.py
