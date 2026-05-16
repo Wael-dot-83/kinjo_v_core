@@ -1,0 +1,416 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('انتحال الهوية') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-danger,#ef4444);">
+            <i class="bi bi-person-fill-lock"></i>
+            {{ _('المشرف العام') }}
+        </div>
+        <h1 class="page-header-title">{{ _('انتحال هوية مدير') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('انتحال الهوية') }}</li>
+            </ol>
+        </nav>
+    </div>
+    <a href="/dashboard" class="btn btn-ghost">
+        <i class="bi bi-arrow-right me-2"></i>{{ _('رجوع') }}
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4 justify-content-center">
+    <div class="col-xl-7 col-lg-9">
+
+        <!-- Warning Banner -->
+        <div class="impersonate-warning mb-4">
+            <div class="d-flex align-items-start gap-3">
+                <i class="bi bi-exclamation-triangle-fill fs-4 flex-shrink-0 mt-1"></i>
+                <div>
+                    <div class="fw-800 mb-1">{{ _('تحذير: هذا الإجراء مُسجَّل في سجل المراجعة') }}</div>
+                    <div style="font-size:0.85rem;opacity:0.9;">
+                        {{ _('سيتم تسجيل بيانات هذه الجلسة (من — إلى — السبب — الوقت) في سجل المراجعة الأمنية بشكل دائم.') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validation -->
+        <div id="validationAlert" class="alert alert-danger d-none mb-4" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            <span id="validationMsg"></span>
+        </div>
+
+        <!-- Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-person-fill-gear me-2 text-primary"></i>
+                    {{ _('اختر المدير') }}
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="impersonateForm" novalidate autocomplete="off">
+
+                    <div class="mb-3">
+                        <label class="field-label" for="managerSearch">{{ _('بحث وتصفية المديرين') }}</label>
+                        <input type="search" class="form-control" id="managerSearch"
+                               placeholder="{{ _('ابحث باسم المدير أو الروضة...') }}"
+                               aria-label="{{ _('بحث في قائمة المديرين') }}"
+                               oninput="filterManagers(this.value)">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="field-label mb-2" for="managerSelect">{{ _('المدير') }} <span class="text-danger">*</span></label>
+                        <div id="managerListLoading" class="text-center py-3 text-muted">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            {{ _('جاري تحميل المديرين...') }}
+                        </div>
+                        <div id="managerListWrap" class="manager-list d-none" role="listbox" aria-label="{{ _('قائمة المديرين') }}">
+                            <!-- Items rendered by JS -->
+                        </div>
+                        <div id="managerListEmpty" class="text-muted small text-center py-3 d-none">
+                            {{ _('لا يوجد مديرون يطابقون البحث') }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="field-label" for="impersonateReason">{{ _('سبب انتحال الهوية') }}</label>
+                        <textarea class="form-control" id="impersonateReason" rows="3" maxlength="500"
+                                  placeholder="{{ _('مثال: مراجعة مشكلة تقنية بلّغ عنها المدير...') }}"
+                                  aria-label="{{ _('سبب انتحال الهوية') }}"></textarea>
+                        <div class="form-text">{{ _('يُوصى بذكر السبب لتسهيل المراجعة لاحقاً') }}</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-danger w-100 py-2" id="startImpersonateBtn">
+                        <span class="btn-text">
+                            <i class="bi bi-person-fill-lock me-2"></i>{{ _('بدء انتحال الهوية') }}
+                        </span>
+                        <span class="btn-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}
+                        </span>
+                    </button>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- Recent Impersonation Events -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-clock-history me-2 text-muted"></i>
+                    {{ _('آخر عمليات انتحال الهوية') }}
+                </h6>
+                <span class="badge bg-light text-muted border small" id="auditCount"></span>
+            </div>
+
+            <div id="auditLoading" class="card-body text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>{{ _('جاري التحميل...') }}
+            </div>
+
+            <div id="auditEmpty" class="card-body text-center py-4 text-muted d-none">
+                <i class="bi bi-shield-check d-block fs-2 mb-2 opacity-25"></i>
+                <small>{{ _('لا توجد عمليات سابقة') }}</small>
+            </div>
+
+            <div id="auditList" class="d-none">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-700 text-danger" id="confirmModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    {{ _('تأكيد انتحال الهوية') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
+            </div>
+            <div class="modal-body">
+                <p>{{ _('أنت على وشك انتحال هوية:') }}</p>
+                <div class="p-3 bg-light rounded mb-3">
+                    <div class="fw-700" id="confirmManagerName"></div>
+                    <div class="small text-muted" id="confirmManagerKG"></div>
+                </div>
+                <div class="alert alert-warning py-2 small mb-0">
+                    <i class="bi bi-shield-exclamation me-2"></i>
+                    {{ _('سيتم تسجيل هذه العملية في سجل المراجعة الأمني.') }}
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                <button type="button" class="btn btn-danger" id="confirmImpBtn" onclick="executeImpersonation()">
+                    <span class="btn-text"><i class="bi bi-person-fill-lock me-2"></i>{{ _('تأكيد وبدء') }}</span>
+                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+.field-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:0.35rem; }
+.fw-700 { font-weight:700; }
+.fw-800 { font-weight:800; }
+
+.impersonate-warning {
+    display:flex;padding:1.1rem 1.25rem;
+    border-radius:var(--kinjo-radius-lg);
+    background:linear-gradient(135deg,#fef2f2,#fee2e2);
+    border:1.5px solid rgba(239,68,68,0.3);
+    color:#b91c1c;
+}
+.impersonate-warning i { color:#dc2626; }
+
+/* Manager list */
+.manager-list {
+    border:1.5px solid var(--kinjo-border);
+    border-radius:var(--kinjo-radius-lg);
+    max-height:320px;overflow-y:auto;
+}
+.manager-item {
+    display:flex;align-items:center;gap:0.875rem;
+    padding:0.75rem 1rem;
+    border-bottom:1px solid var(--kinjo-border);
+    cursor:pointer;transition:background 0.15s;
+    user-select:none;
+}
+.manager-item:last-child { border-bottom:none; }
+.manager-item:hover { background:var(--kinjo-surface); }
+.manager-item.selected {
+    background:var(--kinjo-primary-xlight);
+    border-color:var(--kinjo-primary-light);
+}
+.manager-avatar {
+    width:40px;height:40px;border-radius:50%;flex-shrink:0;
+    background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
+    display:flex;align-items:center;justify-content:center;font-size:1rem;
+}
+.manager-item.selected .manager-avatar { background:var(--kinjo-primary);color:#fff; }
+.manager-name { font-size:0.875rem;font-weight:700;color:var(--kinjo-text-primary); }
+.manager-kg   { font-size:0.75rem;color:var(--kinjo-text-muted); }
+
+/* Audit log */
+.audit-item {
+    display:flex;align-items:flex-start;gap:0.875rem;
+    padding:0.75rem 1.25rem;
+    border-bottom:1px solid var(--kinjo-border);
+}
+.audit-item:last-child { border-bottom:none; }
+.audit-dot {
+    width:8px;height:8px;border-radius:50%;
+    background:var(--kinjo-danger);margin-top:0.45rem;flex-shrink:0;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    let confirmModal  = null;
+    let allManagers   = [];
+    let selectedMgrId = null;
+    let pendingPayload = null;
+
+    function getHeaders() {
+        const t = localStorage.getItem('access_token');
+        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        loadManagers();
+        loadAuditLog();
+        document.getElementById('impersonateForm').addEventListener('submit', handleFormSubmit);
+    });
+
+    async function loadManagers() {
+        try {
+            const r = await fetch('/api/admin/managers', { headers: getHeaders() });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+            allManagers = data.managers || [];
+            document.getElementById('managerListLoading').classList.add('d-none');
+            renderManagerList(allManagers);
+        } catch {
+            document.getElementById('managerListLoading').textContent = '{{ _("تعذّر تحميل المديرين") }}';
+        }
+    }
+
+    function renderManagerList(managers) {
+        const wrap  = document.getElementById('managerListWrap');
+        const empty = document.getElementById('managerListEmpty');
+        if (!managers.length) {
+            wrap.classList.add('d-none');
+            empty.classList.remove('d-none');
+            return;
+        }
+        empty.classList.add('d-none');
+        wrap.innerHTML = managers.map(m => `
+            <div class="manager-item ${selectedMgrId === m.id ? 'selected' : ''}"
+                 role="option" aria-selected="${selectedMgrId === m.id}"
+                 onclick="selectManager(${m.id},'${escHtml(m.name || m.username)}','${escHtml(m.kindergarten_name || '')}')"
+                 id="mgr-${m.id}">
+                <div class="manager-avatar"><i class="bi bi-person-badge-fill"></i></div>
+                <div>
+                    <div class="manager-name">${escHtml(m.name || m.username)}</div>
+                    <div class="manager-kg">
+                        <i class="bi bi-building me-1"></i>${escHtml(m.kindergarten_name || '{{ _("بدون روضة") }}')}
+                    </div>
+                </div>
+                ${selectedMgrId === m.id ? '<i class="bi bi-check-circle-fill text-primary ms-auto"></i>' : ''}
+            </div>`).join('');
+        wrap.classList.remove('d-none');
+    }
+
+    window.selectManager = function (id, name, kg) {
+        selectedMgrId = id;
+        renderManagerList(allManagers.filter(m => {
+            const q = document.getElementById('managerSearch').value.toLowerCase();
+            return !q || (m.name || m.username || '').toLowerCase().includes(q) ||
+                   (m.kindergarten_name || '').toLowerCase().includes(q);
+        }));
+    };
+
+    window.filterManagers = function (query) {
+        const q = query.toLowerCase();
+        const filtered = allManagers.filter(m =>
+            (m.name || m.username || '').toLowerCase().includes(q) ||
+            (m.kindergarten_name || '').toLowerCase().includes(q)
+        );
+        renderManagerList(filtered);
+    };
+
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        hideValidation();
+
+        if (!selectedMgrId) {
+            showValidation('{{ _("يجب اختيار مدير من القائمة") }}');
+            return;
+        }
+
+        const mgr = allManagers.find(m => m.id === selectedMgrId);
+        document.getElementById('confirmManagerName').textContent = mgr ? (mgr.name || mgr.username) : '';
+        document.getElementById('confirmManagerKG').textContent   = mgr ? (mgr.kindergarten_name || '{{ _("بدون روضة") }}') : '';
+
+        pendingPayload = {
+            target_user_id: selectedMgrId,
+            reason: document.getElementById('impersonateReason').value.trim() || null
+        };
+
+        confirmModal.show();
+    }
+
+    window.executeImpersonation = async function () {
+        if (!pendingPayload) return;
+        const btn = document.getElementById('confirmImpBtn');
+        setLoading(btn, true);
+        try {
+            const r = await fetch('/api/admin/impersonate', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(pendingPayload)
+            });
+            if (!r.ok) {
+                const err = await r.json().catch(() => ({}));
+                confirmModal.hide();
+                showValidation(err.detail || '{{ _("فشل انتحال الهوية") }}');
+                setLoading(btn, false);
+                return;
+            }
+            showToast('{{ _("تم بدء انتحال الهوية — جاري التحويل...") }}', 'success');
+            setTimeout(() => { window.location.href = '/dashboard'; }, 1200);
+        } catch {
+            confirmModal.hide();
+            showValidation('{{ _("حدث خطأ في الاتصال بالخادم") }}');
+            setLoading(btn, false);
+        }
+    };
+
+    async function loadAuditLog() {
+        try {
+            const r = await fetch('/api/admin/impersonate/audit?limit=10', { headers: getHeaders() });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+            const events = data.events || [];
+
+            document.getElementById('auditLoading').classList.add('d-none');
+
+            const cnt = document.getElementById('auditCount');
+            if (cnt) cnt.textContent = events.length ? `${events.length} {{ _("عملية") }}` : '';
+
+            if (!events.length) {
+                document.getElementById('auditEmpty').classList.remove('d-none');
+                return;
+            }
+
+            const list = document.getElementById('auditList');
+            list.innerHTML = events.map(ev => {
+                const date = ev.created_at
+                    ? new Date(ev.created_at).toLocaleString('ar-SA', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+                    : '—';
+                return `
+                <div class="audit-item">
+                    <div class="audit-dot"></div>
+                    <div class="flex-grow-1">
+                        <div style="font-size:0.875rem;font-weight:700;">
+                            {{ _('انتحال هوية') }} ${escHtml(ev.target_name || ev.target_user_id)}
+                        </div>
+                        <div class="small text-muted">
+                            ${escHtml(ev.reason || '{{ _("بدون سبب") }}')}
+                        </div>
+                        <div class="small text-muted mt-1">
+                            <i class="bi bi-clock me-1"></i>${date}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+            list.classList.remove('d-none');
+
+        } catch {
+            document.getElementById('auditLoading').classList.add('d-none');
+            document.getElementById('auditEmpty').classList.remove('d-none');
+        }
+    }
+
+    function setLoading(btn, on) {
+        btn.querySelector('.btn-text').classList.toggle('d-none', on);
+        btn.querySelector('.btn-loading').classList.toggle('d-none', !on);
+        btn.disabled = on;
+    }
+
+    function showValidation(msg) {
+        const el = document.getElementById('validationAlert');
+        document.getElementById('validationMsg').textContent = msg;
+        el.classList.remove('d-none');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hideValidation() {
+        document.getElementById('validationAlert').classList.add('d-none');
+    }
+
+    function escHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+})();
+</script>
+{% endblock %}

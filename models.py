@@ -167,6 +167,15 @@ class MessageType(str, enum.Enum):
     INFO = "INFO"
 
 
+class MessageQueueStatus(str, enum.Enum):
+    DRAFT = "DRAFT"
+    QUEUED = "QUEUED"
+    SCHEDULED = "SCHEDULED"
+    SENT = "SENT"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
 class EventType(str, enum.Enum):
     TRIP = "TRIP"
     MEETING = "MEETING"
@@ -680,6 +689,8 @@ class Message(Base):
     is_forwarded = Column(Boolean, nullable=False, default=False)
     forwarded_to_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     actioned = Column(Boolean, nullable=False, default=False)
+    scheduled_at = Column(DateTime(timezone=True), nullable=True)
+    queue_status = Column(Enum(MessageQueueStatus), nullable=True, default=MessageQueueStatus.SENT)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
@@ -700,6 +711,28 @@ class Message(Base):
         back_populates="parent_message",
         order_by="Message.created_at",
     )
+    message_recipients = relationship("MessageRecipient", back_populates="message", cascade="all, delete-orphan")
+
+
+class MessageRecipient(Base):
+    """Tracks per-recipient delivery and read status for broadcast/group messages."""
+    __tablename__ = "message_recipients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id", ondelete="CASCADE"), nullable=False)
+    recipient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    delivered_at = Column(DateTime(timezone=True), nullable=True)
+    read_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("message_id", "recipient_id", name="uq_message_recipient"),
+        Index("ix_message_recipients_message", "message_id"),
+        Index("ix_message_recipients_recipient", "recipient_id"),
+    )
+
+    message = relationship("Message", back_populates="message_recipients")
+    recipient = relationship("User", foreign_keys=[recipient_id])
 
 
 class ContactMessage(Base):
@@ -788,6 +821,8 @@ class AuditLog(Base):
     request_id = Column(String(36), nullable=True)
     ip_address = Column(String(50), nullable=True)
     sensitivity_level = Column(Integer, nullable=True)
+    impersonated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    impersonation_reason = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

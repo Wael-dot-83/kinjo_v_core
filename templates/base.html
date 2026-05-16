@@ -59,6 +59,9 @@
     {% include 'components/navbar.html' %}
 
     {% if current_user %}
+    <!-- Impersonation Banner (shown only when admin is acting as another user) -->
+    {% include 'components/impersonation_banner.html' %}
+
     <!-- Sidebar -->
     {% include 'components/sidebar.html' %}
 
@@ -128,6 +131,18 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- i18n: load translation catalog for current language -->
+    <script>
+    (function(){
+      const lang = document.documentElement.lang || 'ar';
+      fetch('/static/i18n/' + lang + '.json')
+        .then(r => r.ok ? r.json() : {})
+        .then(catalog => { window.i18n = catalog; })
+        .catch(() => { window.i18n = {}; });
+      window.t = function(key){ return (window.i18n && window.i18n[key]) || key; };
+    })();
+    </script>
 
     <!-- Custom JavaScript -->
     <script src="/static/js/kinjo-api.js"></script>

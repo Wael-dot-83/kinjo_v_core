@@ -218,7 +218,7 @@ def sample_child(test_db, parent_user):
     Create a sample child for testing
     """
     child = models.Child(
-        parent_id=parent_user.id,
+        parent_id=parent_user.parent.id,
         first_name="Layla",
         last_name="Al-Rashid",
         gender=models.Gender.FEMALE,

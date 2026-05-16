@@ -4692,7 +4692,7 @@ def list_daily_reports(
             return {"reports": [], "summary": {"total": 0, "sent": 0, "attendance_rate": 0, "eating_rate": 0}}
         query = query.filter(
             models.Child.parent_id == parent_profile.id,
-            models.DailyReport.status == models.DailyReportStatus.APPROVED
+            models.DailyReport.status == models.DailyReportStatus.SENT_TO_PARENT
         )
     elif current_user.role in [models.UserRole.MANAGER, models.UserRole.SUPERVISOR]:
         if not current_user.kindergarten_id:
@@ -4749,7 +4749,7 @@ def create_daily_report(
     db: Session = Depends(get_db)
 ):
     """Create a new daily report (Supervisor only)"""
-    if current_user.role not in [models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN]:
+    if current_user.role != models.UserRole.SUPERVISOR:
         raise HTTPException(status_code=403, detail="Only supervisors can create daily reports")
     
     # Verify child exists
@@ -4807,12 +4807,18 @@ def submit_daily_report(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Submit daily report for approval"""
+    """Submit daily report for manager review — Supervisor only."""
+    if current_user.role != models.UserRole.SUPERVISOR:
+        raise HTTPException(status_code=403, detail="Only supervisors can submit daily reports")
+
     report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()
-    
+
     if not report:
         raise HTTPException(status_code=404, detail="Daily report not found")
-    
+
+    if report.submitted_by != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only submit your own reports")
+
     if report.status != models.DailyReportStatus.DRAFT:
         raise HTTPException(status_code=400, detail="Only draft reports can be submitted")
     

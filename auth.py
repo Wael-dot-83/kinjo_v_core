@@ -68,6 +68,42 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[mod
     return user
 
 
+def normalize_email(email: str) -> str:
+    """Lowercase and strip an email address."""
+    return email.strip().lower()
+
+
+def normalize_jordan_phone(phone: str) -> str:
+    """
+    Normalize a Jordanian phone number to the 07XXXXXXXX (10-digit) form.
+    Accepts +9627XXXXXXXX, 009627XXXXXXXX, 07XXXXXXXX, 7XXXXXXXX.
+    Returns the number unchanged if it doesn't match a known format.
+    """
+    phone = phone.strip().replace(" ", "").replace("-", "")
+    if phone.startswith("+962"):
+        phone = "0" + phone[4:]
+    elif phone.startswith("00962"):
+        phone = "0" + phone[5:]
+    elif phone.startswith("7") and len(phone) == 9:
+        phone = "0" + phone
+    return phone
+
+
+def jordan_phone_login_variants(phone: str) -> list[str]:
+    """
+    Return all common representation variants of a Jordanian phone so that
+    a single query can match whichever format was stored.
+    """
+    normalized = normalize_jordan_phone(phone)
+    variants: list[str] = [normalized]
+    if normalized.startswith("07"):
+        local_no_zero = normalized[1:]         # 7XXXXXXXX
+        intl           = "+962" + local_no_zero  # +9627XXXXXXXX
+        intl_zero      = "00962" + local_no_zero # 009627XXXXXXXX
+        variants += [local_no_zero, intl, intl_zero]
+    return list(dict.fromkeys(variants))  # deduplicate, preserve order
+
+
 def create_user(db: Session, username: str, email: str, password: str,
                 role: models.UserRole, kindergarten_id: Optional[int] = None) -> models.User:
     """Create a new user account"""

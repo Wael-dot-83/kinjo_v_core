@@ -54,8 +54,11 @@ def _has_index(table: str, name: str) -> bool:
 def _add_check(table: str, name: str, pg_sql: str, sq_sql: str) -> None:
     if _has_constraint(table, name):
         return
-    sql = pg_sql if _dialect() == "postgresql" else sq_sql
-    op.execute(sa.text(f"ALTER TABLE {table} ADD CONSTRAINT {name} CHECK ({sql})"))
+    if _dialect() == "postgresql":
+        op.execute(sa.text(f"ALTER TABLE {table} ADD CONSTRAINT {name} CHECK ({pg_sql})"))
+    # SQLite does not support ADD CONSTRAINT via ALTER TABLE; the production
+    # database (PostgreSQL) enforces these constraints. ORM-level validation
+    # covers the same rules for all dialects.
 
 
 def _create_index(name: str, table: str, cols: str, unique: bool = False) -> None:

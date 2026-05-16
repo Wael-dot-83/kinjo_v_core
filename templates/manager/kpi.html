@@ -1,0 +1,484 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('لوحة مؤشرات الأداء') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-graph-up-arrow"></i>
+            {{ _('المدير') }}
+        </div>
+        <h1 class="page-header-title">{{ _('لوحة مؤشرات الأداء') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('مؤشرات الأداء') }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="page-header-actions">
+        <a href="#" id="exportBtn" class="btn btn-ghost" aria-label="{{ _('تصدير PDF') }}">
+            <i class="bi bi-file-earmark-pdf me-2"></i>{{ _('تصدير PDF') }}
+        </a>
+        <button class="btn btn-ghost" onclick="loadKPI()">
+            <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Date Range Picker -->
+<div class="card mb-4">
+    <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
+        <span class="fw-700 small text-nowrap">{{ _('الفترة:') }}</span>
+        <input type="date" id="dateFrom" class="form-control form-control-sm" style="width:auto;"
+               aria-label="{{ _('من تاريخ') }}">
+        <span class="text-muted small">{{ _('إلى') }}</span>
+        <input type="date" id="dateTo" class="form-control form-control-sm" style="width:auto;"
+               aria-label="{{ _('إلى تاريخ') }}">
+        <button class="btn btn-primary btn-sm" onclick="loadKPI()">
+            <i class="bi bi-bar-chart me-1"></i>{{ _('عرض') }}
+        </button>
+        <div class="d-flex gap-1">
+            <button class="btn btn-ghost btn-sm" onclick="setRange(7)">{{ _('7 أيام') }}</button>
+            <button class="btn btn-ghost btn-sm" onclick="setRange(30)">{{ _('30 يوم') }}</button>
+            <button class="btn btn-ghost btn-sm" onclick="setRange(90)">{{ _('90 يوم') }}</button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading -->
+<div id="kpiLoading" class="text-center py-5 text-muted">
+    <div class="spinner-border mb-3" role="status" aria-label="{{ _('جاري التحميل') }}"></div>
+    <div>{{ _('جاري تحميل المؤشرات...') }}</div>
+</div>
+
+<!-- Error -->
+<div id="kpiError" class="card d-none mb-4">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-exclamation-circle d-block fs-1 mb-3 text-danger opacity-50"></i>
+        <p class="text-muted">{{ _('تعذّر تحميل البيانات') }}</p>
+        <button class="btn btn-ghost btn-sm" onclick="loadKPI()">
+            <i class="bi bi-arrow-clockwise me-1"></i>{{ _('إعادة المحاولة') }}
+        </button>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div id="kpiContent" class="d-none">
+
+    <!-- Section 1: Children -->
+    <div class="section-title mb-3">
+        <i class="bi bi-people-fill me-2" style="color:var(--kinjo-primary);"></i>
+        {{ _('الأطفال') }}
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('إجمالي الأطفال') }}</div>
+                        <div class="stat-value" id="kpiChildrenTotal">—</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card success card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('مُلتحقون') }}</div>
+                        <div class="stat-value" id="kpiChildrenEnrolled">—</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                        <i class="bi bi-person-check-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('نشطون') }}</div>
+                        <div class="stat-value" id="kpiChildrenActive">—</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:rgba(6,182,212,0.12);color:#0891b2;">
+                        <i class="bi bi-activity"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card h-100">
+                <div class="card-body d-flex align-items-center justify-content-center p-2">
+                    <canvas id="childrenDoughnut" style="max-height:120px;" aria-label="{{ _('توزيع الأطفال') }}"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Supervisors -->
+    <div class="section-title mb-3">
+        <i class="bi bi-person-badge-fill me-2" style="color:#d97706;"></i>
+        {{ _('المشرفون') }}
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('عدد المشرفين') }}</div>
+                        <div class="stat-value" id="kpiSupCount">—</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
+                        <i class="bi bi-person-badge-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">{{ _('معدل إكمال التقارير لكل مشرف') }}</h6>
+                </div>
+                <div class="card-body">
+                    <div id="supChartLoading" class="text-center py-3 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>{{ _('جاري التحميل...') }}
+                    </div>
+                    <canvas id="supBarChart" style="max-height:180px;display:none;" aria-label="{{ _('معدل إكمال التقارير لكل مشرف') }}"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Operational -->
+    <div class="section-title mb-3">
+        <i class="bi bi-gear-wide-connected me-2" style="color:var(--kinjo-success);"></i>
+        {{ _('التشغيل') }}
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4">
+            <div class="stat-card success card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('معدل الحضور') }}</div>
+                        <div class="stat-value" id="kpiAttRate">—%</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                        <i class="bi bi-calendar-check-fill"></i>
+                    </div>
+                </div>
+                <div class="progress mt-2" style="height:4px;border-radius:0;margin:-1px -1px 0;">
+                    <div class="progress-bar bg-success" id="kpiAttBar" style="width:0%;transition:width 1s;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="stat-card card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('معدل إكمال التقارير') }}</div>
+                        <div class="stat-value" id="kpiReportRate">—%</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
+                        <i class="bi bi-journal-check"></i>
+                    </div>
+                </div>
+                <div class="progress mt-2" style="height:4px;border-radius:0;margin:-1px -1px 0;">
+                    <div class="progress-bar" id="kpiReportBar" style="width:0%;background:var(--kinjo-primary);transition:width 1s;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="stat-card danger card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('تكرار الحوادث') }}</div>
+                        <div class="stat-value" id="kpiIncidentRate">—</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
+                        <i class="bi bi-shield-exclamation"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">{{ _('اتجاهات التشغيل') }}</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="opLineChart" style="max-height:220px;" aria-label="{{ _('مخطط الاتجاهات التشغيلية') }}"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 4: Messaging -->
+    <div class="section-title mb-3">
+        <i class="bi bi-chat-dots-fill me-2" style="color:#0891b2;"></i>
+        {{ _('التواصل') }}
+    </div>
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('رسائل مُرسَلة') }}</div>
+                        <div class="stat-value" id="kpiMsgSent">—</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:rgba(6,182,212,0.12);color:#0891b2;">
+                        <i class="bi bi-send-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card success card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('معدل القراءة') }}</div>
+                        <div class="stat-value" id="kpiMsgReadRate">—%</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                        <i class="bi bi-envelope-open-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body d-flex align-items-center justify-content-center p-2">
+                    <canvas id="msgPieChart" style="max-height:120px;" aria-label="{{ _('نسبة قراءة الرسائل') }}"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /kpiContent -->
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-actions { display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap; }
+.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+.fw-700 { font-weight:700; }
+
+.section-title {
+    font-size:0.88rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--kinjo-text-muted);display:flex;align-items:center;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    let childDoughnut = null;
+    let supBarInst    = null;
+    let opLineInst    = null;
+    let msgPieInst    = null;
+
+    function getHeaders() {
+        const t = localStorage.getItem('access_token');
+        return { 'Authorization': `Bearer ${t}` };
+    }
+
+    window.setRange = function (days) {
+        const to   = new Date();
+        const from = new Date();
+        from.setDate(from.getDate() - (days - 1));
+        document.getElementById('dateFrom').value = from.toISOString().slice(0, 10);
+        document.getElementById('dateTo').value   = to.toISOString().slice(0, 10);
+        loadKPI();
+    };
+
+    document.addEventListener('DOMContentLoaded', () => setRange(30));
+
+    window.loadKPI = async function () {
+        const from = document.getElementById('dateFrom').value;
+        const to   = document.getElementById('dateTo').value;
+
+        document.getElementById('kpiLoading').classList.remove('d-none');
+        document.getElementById('kpiError').classList.add('d-none');
+        document.getElementById('kpiContent').classList.add('d-none');
+
+        // Update export link
+        document.getElementById('exportBtn').href = `/api/manager/kpi/export?from=${from}&to=${to}`;
+
+        try {
+            const r = await fetch(`/api/manager/kpi?from=${from}&to=${to}`, { headers: getHeaders() });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+
+            document.getElementById('kpiLoading').classList.add('d-none');
+
+            updateChildren(data.children || {});
+            updateSupervisors(data.supervisors || {});
+            updateOperational(data.operational || {});
+            updateMessaging(data.messaging || {});
+
+            document.getElementById('kpiContent').classList.remove('d-none');
+
+        } catch {
+            document.getElementById('kpiLoading').classList.add('d-none');
+            document.getElementById('kpiError').classList.remove('d-none');
+        }
+    };
+
+    function updateChildren(c) {
+        document.getElementById('kpiChildrenTotal').textContent   = c.total    ?? '—';
+        document.getElementById('kpiChildrenEnrolled').textContent = c.enrolled ?? '—';
+        document.getElementById('kpiChildrenActive').textContent  = c.active   ?? '—';
+
+        const ctx = document.getElementById('childrenDoughnut').getContext('2d');
+        if (childDoughnut) childDoughnut.destroy();
+        childDoughnut = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['{{ _("نشط") }}', '{{ _("غير نشط") }}'],
+                datasets: [{
+                    data: [c.active || 0, (c.total || 0) - (c.active || 0)],
+                    backgroundColor: ['#10b981', '#e2e8f0'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '65%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { family: 'Cairo', size: 11 }, padding: 8 } },
+                    tooltip: { rtl: true, titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
+                }
+            }
+        });
+    }
+
+    function updateSupervisors(s) {
+        document.getElementById('kpiSupCount').textContent = s.count ?? '—';
+
+        const supervisors = s.completion_rates || [];
+        const supCanvas = document.getElementById('supBarChart');
+        document.getElementById('supChartLoading').classList.add('d-none');
+        supCanvas.style.display = 'block';
+
+        if (supBarInst) supBarInst.destroy();
+        supBarInst = new Chart(supCanvas, {
+            type: 'bar',
+            data: {
+                labels: supervisors.map(x => x.name),
+                datasets: [{
+                    label: '{{ _("معدل الإكمال %") }}',
+                    data: supervisors.map(x => x.rate || 0),
+                    backgroundColor: 'rgba(10,92,142,0.75)',
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { rtl: true, titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
+                },
+                scales: {
+                    x: { beginAtZero: true, max: 100, ticks: { font: { family: 'Cairo' } } },
+                    y: { ticks: { font: { family: 'Cairo', size: 11 } } }
+                }
+            }
+        });
+    }
+
+    function updateOperational(op) {
+        const att    = Math.round(op.attendance_rate    || 0);
+        const report = Math.round(op.report_completion  || 0);
+        document.getElementById('kpiAttRate').textContent    = att + '%';
+        document.getElementById('kpiReportRate').textContent = report + '%';
+        document.getElementById('kpiIncidentRate').textContent = op.incident_frequency ?? '—';
+        document.getElementById('kpiAttBar').style.width    = att + '%';
+        document.getElementById('kpiReportBar').style.width = report + '%';
+
+        const trend = op.trend || [];
+        const opCtx = document.getElementById('opLineChart').getContext('2d');
+        if (opLineInst) opLineInst.destroy();
+        opLineInst = new Chart(opCtx, {
+            type: 'line',
+            data: {
+                labels: trend.map(d => new Date(d.date).toLocaleDateString('ar-SA', {month:'short',day:'numeric'})),
+                datasets: [
+                    {
+                        label: '{{ _("الحضور %") }}',
+                        data: trend.map(d => d.attendance_rate || 0),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16,185,129,0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                    },
+                    {
+                        label: '{{ _("إكمال التقارير %") }}',
+                        data: trend.map(d => d.report_completion || 0),
+                        borderColor: '#0A5C8E',
+                        backgroundColor: 'rgba(10,92,142,0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { family: 'Cairo' }, padding: 12 } },
+                    tooltip: { rtl: true, titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
+                },
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { font: { family: 'Cairo' } } },
+                    x: { ticks: { font: { family: 'Cairo', size: 11 } } }
+                }
+            }
+        });
+    }
+
+    function updateMessaging(m) {
+        const sent     = m.sent       || 0;
+        const readRate = Math.round(m.read_rate || 0);
+        document.getElementById('kpiMsgSent').textContent    = sent;
+        document.getElementById('kpiMsgReadRate').textContent = readRate + '%';
+
+        const msgCtx = document.getElementById('msgPieChart').getContext('2d');
+        if (msgPieInst) msgPieInst.destroy();
+        msgPieInst = new Chart(msgCtx, {
+            type: 'pie',
+            data: {
+                labels: ['{{ _("مقروءة") }}', '{{ _("غير مقروءة") }}'],
+                datasets: [{
+                    data: [readRate, 100 - readRate],
+                    backgroundColor: ['#10b981', '#e2e8f0'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { family: 'Cairo', size: 11 }, padding: 8 } },
+                    tooltip: { rtl: true, titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
+                }
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

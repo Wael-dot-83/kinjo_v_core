@@ -62,16 +62,13 @@ class SupervisorService:
 
         class_ids = [c.id for c in classes]
 
-        # Get active enrollments for these classes
-        # Note: In full implementation, EnrollmentApplication would have class_id
-        # For now, get all children in the kindergarten
-        kindergarten_id = supervisor_user.kindergarten_id
-
+        # Scope to children enrolled in the supervisor's assigned classes only
         children = db.query(models.Child).join(
-            models.EnrollmentApplication
+            models.EnrollmentApplication,
+            models.EnrollmentApplication.child_id == models.Child.id,
         ).filter(
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+            models.EnrollmentApplication.class_id.in_(class_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
         ).all()
 
         return children

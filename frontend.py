@@ -48,9 +48,20 @@ def _jinja_ui_dir(ctx: dict) -> str:
     return "rtl" if lang == "ar" else "ltr"
 
 
+@pass_context
+def _jinja_impersonation(ctx: dict) -> typing.Optional[dict]:
+    """Returns impersonation session data or None, available as impersonation() in templates."""
+    req = ctx.get("request")
+    if not req:
+        return None
+    from rbac import get_impersonation_context
+    return get_impersonation_context(req)
+
+
 templates.env.globals["_"] = _jinja_gettext
 templates.env.globals["ui_lang"] = _jinja_ui_lang
 templates.env.globals["ui_dir"] = _jinja_ui_dir
+templates.env.globals["get_impersonation"] = _jinja_impersonation
 
 router = APIRouter(include_in_schema=False)
 
@@ -105,7 +116,7 @@ async def supervisor_dashboard(request: Request, current_user: User = Depends(ge
     """Dedicated supervisor dashboard route"""
     if current_user.role != UserRole.SUPERVISOR:
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="dashboard/supervisor.html", context={"current_user": current_user})
+    return templates.TemplateResponse(request=request, name="dashboard/supervisor.html", context={"current_user": current_user, "today": date.today()})
 
 
 @router.get("/parent/dashboard", response_class=HTMLResponse)
@@ -182,6 +193,8 @@ async def list_enrollments(request: Request, current_user: User = Depends(get_cu
     from fastapi.responses import RedirectResponse
     if current_user.role == UserRole.PARENT:
         return RedirectResponse(url="/parent/enrollments", status_code=302)
+    if current_user.role == UserRole.SUPERVISOR:
+        return RedirectResponse(url="/supervisor/dashboard", status_code=302)
     return templates.TemplateResponse(request=request, name="enrollment/list.html", context={"current_user": current_user})
 
 @router.get("/enrollments/create", response_class=HTMLResponse)
@@ -284,14 +297,20 @@ async def view_enrollment(request: Request, app_id: int, db: Session = Depends(g
 
 @router.get("/attendance/daily", response_class=HTMLResponse)
 async def attendance_daily(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role == UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins do not access classroom pages directly.")
     return templates.TemplateResponse(request=request, name="attendance/daily.html", context={"current_user": current_user, "today": date.today()})
 
 @router.get("/attendance/history", response_class=HTMLResponse)
 async def attendance_history(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role == UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins do not access classroom pages directly.")
     return templates.TemplateResponse(request=request, name="attendance/history.html", context={"current_user": current_user})
 
 @router.get("/attendance/absence-requests", response_class=HTMLResponse)
 async def attendance_absence_requests(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role == UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins do not access classroom pages directly.")
     return templates.TemplateResponse(request=request, name="attendance/absence_requests.html", context={"current_user": current_user})
 
 # -----------------------------------------------------------------------------
@@ -474,6 +493,10 @@ async def view_incident(
 
 @router.get("/curriculum", response_class=HTMLResponse)
 async def curriculum_dashboard(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    # Supervisors use /supervisor/observations instead of the general curriculum page.
+    # Admins and parents have no curriculum access at all.
+    if current_user.role in (UserRole.ADMIN, UserRole.PARENT, UserRole.SUPERVISOR):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
     return templates.TemplateResponse(request=request, name="curriculum/index.html", context={"current_user": current_user})
 
 @router.get("/curriculum/observations/new", response_class=HTMLResponse)
@@ -764,7 +787,109 @@ async def contact_submit(
 @router.get("/supervisor/observations", response_class=HTMLResponse)
 async def supervisor_observations(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Supervisor observations list"""
+    if current_user.role != UserRole.SUPERVISOR:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     return templates.TemplateResponse(request=request, name="curriculum/index.html", context={"current_user": current_user})
+
+
+# ---------------------------------------------------------------------------
+# Supervisor — scoped pages (SUPERVISOR only)
+# ---------------------------------------------------------------------------
+
+@router.get("/supervisor/attendance", response_class=HTMLResponse)
+async def supervisor_attendance_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.SUPERVISOR:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return templates.TemplateResponse(
+        request=request, name="supervisor/attendance.html",
+        context={"current_user": current_user, "today": date.today()}
+    )
+
+
+@router.get("/supervisor/daily-reports", response_class=HTMLResponse)
+async def supervisor_daily_reports_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.SUPERVISOR:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return templates.TemplateResponse(
+        request=request, name="supervisor/daily_reports.html",
+        context={"current_user": current_user, "today": date.today()}
+    )
+
+
+@router.get("/supervisor/daily-reports/create", response_class=HTMLResponse)
+async def supervisor_daily_report_create_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.SUPERVISOR:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return templates.TemplateResponse(
+        request=request, name="supervisor/daily_report_create.html",
+        context={"current_user": current_user, "today": date.today()}
+    )
+
+
+@router.get("/supervisor/safety", response_class=HTMLResponse)
+async def supervisor_safety_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.SUPERVISOR:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return templates.TemplateResponse(
+        request=request, name="supervisor/safety.html",
+        context={"current_user": current_user}
+    )
+
+
+@router.get("/supervisor/messages", response_class=HTMLResponse)
+async def supervisor_messages_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.SUPERVISOR:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return templates.TemplateResponse(
+        request=request, name="supervisor/messages.html",
+        context={"current_user": current_user}
+    )
+
+
+@router.get("/supervisor/kpi", response_class=HTMLResponse)
+async def supervisor_kpi_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.SUPERVISOR:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return templates.TemplateResponse(
+        request=request, name="supervisor/kpi.html",
+        context={"current_user": current_user, "today": date.today()}
+    )
+
+
+@router.get("/supervisor/profile", response_class=HTMLResponse)
+async def supervisor_profile_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.SUPERVISOR:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return templates.TemplateResponse(
+        request=request, name="supervisor/profile.html",
+        context={"current_user": current_user}
+    )
+
+
+@router.get("/supervisor/settings", response_class=HTMLResponse)
+async def supervisor_settings_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role != UserRole.SUPERVISOR:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return templates.TemplateResponse(
+        request=request, name="supervisor/settings.html",
+        context={"current_user": current_user}
+    )
+
+
+# ---------------------------------------------------------------------------
+# Classroom-only pages — block ADMIN (403)
+# ---------------------------------------------------------------------------
+
+_CLASSROOM_ROLES = {UserRole.MANAGER, UserRole.SUPERVISOR, UserRole.PARENT}
+
+
+def _require_not_admin(current_user: User = Depends(get_current_user_or_redirect)):
+    if current_user.role == UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admins do not access classroom pages directly.",
+        )
+    return current_user
 
 
 @router.get("/audit-logs", response_class=HTMLResponse)
@@ -892,6 +1017,20 @@ async def manager_children_page(
     )
 
 
+@router.get("/manager/messages", response_class=HTMLResponse)
+async def manager_messages_page(
+    request: Request,
+    current_user: User = Depends(get_current_user_or_redirect),
+):
+    if current_user.role not in (UserRole.MANAGER, UserRole.ADMIN):
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="manager/messages.html",
+        context={"current_user": current_user},
+    )
+
+
 @router.get("/manager/new-message", response_class=HTMLResponse)
 async def manager_new_message_page(
     request: Request,
@@ -903,6 +1042,131 @@ async def manager_new_message_page(
         request=request,
         name="manager/new_message.html",
         context={"current_user": current_user},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Manager — Classes management
+# ---------------------------------------------------------------------------
+
+@router.get("/manager/classes", response_class=HTMLResponse)
+async def manager_classes_page(
+    request: Request,
+    current_user: User = Depends(get_current_user_or_redirect),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != UserRole.MANAGER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    from models import Class
+    classes = (
+        db.query(Class)
+        .filter(Class.kindergarten_id == current_user.kindergarten_id, Class.deleted_at.is_(None))
+        .order_by(Class.name_ar)
+        .all()
+    )
+    return templates.TemplateResponse(
+        request=request,
+        name="manager/classes.html",
+        context={"current_user": current_user, "classes": classes},
+    )
+
+
+@router.get("/manager/classes/create", response_class=HTMLResponse)
+async def manager_class_create_page(
+    request: Request,
+    current_user: User = Depends(get_current_user_or_redirect),
+):
+    if current_user.role != UserRole.MANAGER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return templates.TemplateResponse(
+        request=request,
+        name="manager/class_form.html",
+        context={"current_user": current_user, "class_obj": None},
+    )
+
+
+@router.get("/manager/classes/{class_id}/edit", response_class=HTMLResponse)
+async def manager_class_edit_page(
+    request: Request,
+    class_id: int,
+    current_user: User = Depends(get_current_user_or_redirect),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != UserRole.MANAGER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    from models import Class
+    class_obj = db.query(Class).filter(
+        Class.id == class_id,
+        Class.kindergarten_id == current_user.kindergarten_id,
+        Class.deleted_at.is_(None),
+    ).first()
+    if not class_obj:
+        return templates.TemplateResponse(request=request, name="404.html", status_code=404)
+    return templates.TemplateResponse(
+        request=request,
+        name="manager/class_form.html",
+        context={"current_user": current_user, "class_obj": class_obj},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Manager — Daily reports review
+# ---------------------------------------------------------------------------
+
+@router.get("/manager/daily-reports", response_class=HTMLResponse)
+async def manager_daily_reports_review_page(
+    request: Request,
+    current_user: User = Depends(get_current_user_or_redirect),
+):
+    if current_user.role != UserRole.MANAGER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return templates.TemplateResponse(
+        request=request,
+        name="manager/daily_reports_review.html",
+        context={"current_user": current_user, "today": date.today()},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Manager — KPI dashboard
+# ---------------------------------------------------------------------------
+
+@router.get("/manager/kpi", response_class=HTMLResponse)
+async def manager_kpi_page(
+    request: Request,
+    current_user: User = Depends(get_current_user_or_redirect),
+):
+    if current_user.role not in (UserRole.MANAGER, UserRole.ADMIN):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    return templates.TemplateResponse(
+        request=request,
+        name="manager/kpi.html",
+        context={"current_user": current_user, "today": date.today()},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Admin — Impersonation
+# ---------------------------------------------------------------------------
+
+@router.get("/admin/impersonate", response_class=HTMLResponse)
+async def admin_impersonate_page(
+    request: Request,
+    current_user: User = Depends(get_current_user_or_redirect),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    managers = (
+        db.query(User)
+        .filter(User.role == UserRole.MANAGER, User.deleted_at.is_(None))
+        .order_by(User.full_name)
+        .all()
+    )
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/impersonate.html",
+        context={"current_user": current_user, "managers": managers},
     )
 
 

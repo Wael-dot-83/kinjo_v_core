@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% block title %}{% if class_id %}{{ _('تعديل شعبة') }}{% else %}{{ _('إنشاء شعبة') }}{% endif %} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-door-open-fill"></i>
+            {{ _('المدير') }}
+        </div>
+        <h1 class="page-header-title">
+            {% if class_id %}{{ _('تعديل شعبة') }}{% else %}{{ _('إنشاء شعبة جديدة') }}{% endif %}
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item"><a href="/manager/classes" class="text-decoration-none">{{ _('الشعب') }}</a></li>
+                <li class="breadcrumb-item active">{% if class_id %}{{ _('تعديل') }}{% else %}{{ _('جديدة') }}{% endif %}</li>
+            </ol>
+        </nav>
+    </div>
+    <a href="/manager/classes" class="btn btn-ghost">
+        <i class="bi bi-arrow-right me-2"></i>{{ _('رجوع') }}
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-6 col-lg-8">
+
+        <!-- Validation Banner -->
+        <div id="validationAlert" class="alert alert-danger d-none mb-4" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            <span id="validationMsg"></span>
+        </div>
+
+        <form id="classForm" novalidate autocomplete="off">
+
+            <!-- ── Basic Info ── -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-info-circle-fill me-2 text-primary"></i>
+                        {{ _('معلومات الشعبة') }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="field-label" for="nameAr">{{ _('الاسم بالعربية') }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nameAr" required maxlength="100"
+                                   placeholder="{{ _('مثال: الفصل الأول أ') }}"
+                                   aria-label="{{ _('اسم الشعبة بالعربية') }}" aria-required="true">
+                            <div class="invalid-feedback">{{ _('هذا الحقل مطلوب') }}</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="field-label" for="nameEn">{{ _('الاسم بالإنجليزية') }}</label>
+                            <input type="text" class="form-control" id="nameEn" maxlength="100"
+                                   placeholder="{{ _('e.g. Class 1A') }}"
+                                   aria-label="{{ _('اسم الشعبة بالإنجليزية') }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Capacity ── -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-people-fill me-2 text-primary"></i>
+                        {{ _('الطاقة الاستيعابية') }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="field-label" for="capacityTotal">{{ _('الطاقة الكلية') }}</label>
+                            <input type="number" class="form-control" id="capacityTotal" min="1" max="50"
+                                   placeholder="20"
+                                   aria-label="{{ _('الطاقة الاستيعابية الكلية') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="field-label" for="minAge">{{ _('أدنى عمر (شهر)') }}</label>
+                            <input type="number" class="form-control" id="minAge" min="0" max="84"
+                                   placeholder="24"
+                                   aria-label="{{ _('الحد الأدنى للعمر بالأشهر') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="field-label" for="maxAge">{{ _('أقصى عمر (شهر)') }}</label>
+                            <input type="number" class="form-control" id="maxAge" min="0" max="84"
+                                   placeholder="48"
+                                   aria-label="{{ _('الحد الأقصى للعمر بالأشهر') }}">
+                        </div>
+                    </div>
+                    <div class="form-text mt-2">{{ _('العمر بالأشهر — مثال: 24 شهراً = سنتان') }}</div>
+                </div>
+            </div>
+
+            <!-- ── Status ── -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-toggle-on me-2 text-primary"></i>
+                        {{ _('حالة الشعبة') }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="isActive" role="switch" checked>
+                        <label class="form-check-label fw-600" for="isActive">
+                            {{ _('الشعبة نشطة') }}
+                        </label>
+                    </div>
+                    <div class="form-text">{{ _('يمكن تسجيل الأطفال والمشرفين في الشعب النشطة فقط') }}</div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex justify-content-end gap-2 mb-5 flex-wrap">
+                <a href="/manager/classes" class="btn btn-ghost">{{ _('إلغاء') }}</a>
+                <button type="submit" class="btn btn-primary px-5" id="saveBtn">
+                    <span class="btn-text">
+                        <i class="bi bi-check2-circle me-2"></i>
+                        {% if class_id %}{{ _('حفظ التعديلات') }}{% else %}{{ _('إنشاء الشعبة') }}{% endif %}
+                    </span>
+                    <span class="btn-loading d-none">
+                        <span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري الحفظ...') }}
+                    </span>
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+.field-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:0.35rem; }
+.fw-600 { font-weight:600; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    // Determine if create or edit
+    const CLASS_ID = {% if class_id %}{{ class_id }}{% else %}null{% endif %};
+    const IS_EDIT  = CLASS_ID !== null;
+
+    function getHeaders() {
+        const t = localStorage.getItem('access_token');
+        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` };
+    }
+
+    // Pre-fill if editing
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!IS_EDIT) return;
+        try {
+            const r = await fetch(`/api/classes/${CLASS_ID}`, { headers: getHeaders() });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+            const cls  = data.class || data;
+            document.getElementById('nameAr').value        = cls.name_ar         || '';
+            document.getElementById('nameEn').value        = cls.name_en         || '';
+            document.getElementById('capacityTotal').value = cls.capacity_total  || '';
+            document.getElementById('minAge').value        = cls.min_age_months  || '';
+            document.getElementById('maxAge').value        = cls.max_age_months  || '';
+            document.getElementById('isActive').checked    = cls.is_active !== false;
+        } catch {
+            showValidation('{{ _("تعذّر تحميل بيانات الشعبة") }}');
+        }
+    });
+
+    document.getElementById('classForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideValidation();
+
+        const nameAr = document.getElementById('nameAr').value.trim();
+        if (!nameAr) {
+            showValidation('{{ _("اسم الشعبة بالعربية مطلوب") }}');
+            document.getElementById('nameAr').focus();
+            return;
+        }
+
+        const payload = {
+            name_ar:        nameAr,
+            name_en:        document.getElementById('nameEn').value.trim() || null,
+            capacity_total: parseInt(document.getElementById('capacityTotal').value) || null,
+            min_age_months: parseInt(document.getElementById('minAge').value)        || null,
+            max_age_months: parseInt(document.getElementById('maxAge').value)        || null,
+            is_active:      document.getElementById('isActive').checked,
+        };
+
+        const btn = document.getElementById('saveBtn');
+        setLoading(btn, true);
+
+        try {
+            const url    = IS_EDIT ? `/api/classes/${CLASS_ID}` : '/api/classes';
+            const method = IS_EDIT ? 'PUT' : 'POST';
+            const r = await fetch(url, {
+                method,
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            if (!r.ok) {
+                const err = await r.json().catch(() => ({}));
+                showValidation(err.detail || '{{ _("فشل الحفظ") }}');
+                setLoading(btn, false);
+                return;
+            }
+            const msg = IS_EDIT ? '{{ _("تم تحديث الشعبة بنجاح") }}' : '{{ _("تم إنشاء الشعبة بنجاح") }}';
+            showToast(msg, 'success');
+            setTimeout(() => { window.location.href = '/manager/classes'; }, 1000);
+        } catch {
+            showValidation('{{ _("حدث خطأ في الاتصال بالخادم") }}');
+            setLoading(btn, false);
+        }
+    });
+
+    function setLoading(btn, on) {
+        btn.querySelector('.btn-text').classList.toggle('d-none', on);
+        btn.querySelector('.btn-loading').classList.toggle('d-none', !on);
+        btn.disabled = on;
+    }
+
+    function showValidation(msg) {
+        const el = document.getElementById('validationAlert');
+        document.getElementById('validationMsg').textContent = msg;
+        el.classList.remove('d-none');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hideValidation() {
+        document.getElementById('validationAlert').classList.add('d-none');
+    }
+})();
+</script>
+{% endblock %}

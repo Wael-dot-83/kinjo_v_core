@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('اختيار الروضة') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow"><i class="bi bi-person-plus-fill"></i> {{ _('تسجيل طفل') }}</div>
+        <h1 class="page-header-title">{{ _('الخطوة 2: اختر الروضة') }}</h1>
+    </div>
+</div>
+<!-- Progress bar -->
+<div class="progress mb-4" style="height:6px;">
+    <div class="progress-bar" style="width:50%;" role="progressbar" aria-valuenow="50"></div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div id="kgLoading" class="text-center py-5 text-muted">
+            <div class="spinner-border mb-3" role="status"></div>
+            <div>{{ _('جاري تحميل الروضات...') }}</div>
+        </div>
+        <div id="kgList" class="row g-3 d-none"></div>
+        <div id="kgEmpty" class="card d-none">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-building d-block fs-1 mb-3 opacity-25"></i>
+                <p class="text-muted">{{ _('لا توجد روضات متاحة حالياً') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { margin-bottom:1rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0;color:var(--kinjo-text-primary); }
+.kg-card { cursor:pointer;transition:all 0.2s; }
+.kg-card:hover { border-color:var(--kinjo-primary)!important;box-shadow:0 4px 16px rgba(10,92,142,0.12); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    async function loadKindergartens() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            const r = await fetch('/api/kindergartens?status=ACTIVE&limit=100', { headers });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+            const kgs = data.kindergartens || data.items || data || [];
+
+            document.getElementById('kgLoading').classList.add('d-none');
+
+            if (!kgs.length) {
+                document.getElementById('kgEmpty').classList.remove('d-none');
+                return;
+            }
+
+            const list = document.getElementById('kgList');
+            list.innerHTML = kgs.map(kg => `
+                <div class="col-md-6">
+                    <div class="card kg-card h-100" onclick="selectKG(${kg.id}, '${escHtml(kg.name_ar)}')">
+                        <div class="card-body">
+                            <h6 class="fw-700 mb-1">${escHtml(kg.name_ar)}</h6>
+                            ${kg.name_en ? `<p class="text-muted small mb-2">${escHtml(kg.name_en)}</p>` : ''}
+                            <div class="text-muted small">
+                                <i class="bi bi-geo-alt me-1"></i>${escHtml(kg.city || kg.governorate || '')}
+                            </div>
+                        </div>
+                    </div>
+                </div>`).join('');
+            list.classList.remove('d-none');
+        } catch {
+            document.getElementById('kgLoading').classList.add('d-none');
+            document.getElementById('kgEmpty').classList.remove('d-none');
+        }
+    }
+
+    window.selectKG = function(id, name) {
+        sessionStorage.setItem('enroll_kg_id', id);
+        sessionStorage.setItem('enroll_kg_name', name);
+        window.location.href = '/parent/enroll/step3';
+    };
+
+    function escHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    loadKindergartens();
+})();
+</script>
+{% endblock %}

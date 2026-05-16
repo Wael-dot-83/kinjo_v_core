@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('رسالة جديدة') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-chat-dots-fill"></i>
+            {{ _('المدير') }}
+        </div>
+        <h1 class="page-header-title">{{ _('إنشاء رسالة') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('رسالة جديدة') }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-4 justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">
+                <i class="bi bi-send-fill me-2 text-primary"></i>{{ _('إرسال رسالة') }}
+            </div>
+            <div class="card-body">
+                <form id="messageForm" novalidate>
+                    <!-- Recipient type -->
+                    <div class="mb-3">
+                        <label class="form-label">{{ _('المستلمون') }}</label>
+                        <select class="form-select" id="recipientType" onchange="onRecipientTypeChange()">
+                            <option value="supervisor">مشرف محدد</option>
+                            <option value="all_supervisors">كل المشرفين</option>
+                            <option value="parents_class">أولياء شعبة</option>
+                            <option value="all_parents">كل أولياء الأمور</option>
+                        </select>
+                    </div>
+
+                    <!-- Supervisor selector (shown when type=supervisor) -->
+                    <div class="mb-3" id="supervisorSelectorGroup">
+                        <label class="form-label">{{ _('اختر المشرف') }}</label>
+                        <select class="form-select" id="supervisorSelector">
+                            <option value="">— جاري التحميل —</option>
+                        </select>
+                    </div>
+
+                    <!-- Class selector (shown when type=parents_class) -->
+                    <div class="mb-3 d-none" id="classSelectorGroup">
+                        <label class="form-label">{{ _('اختر الشعبة') }}</label>
+                        <select class="form-select" id="classSelector">
+                            <option value="">— جاري التحميل —</option>
+                        </select>
+                    </div>
+
+                    <!-- Recipient preview -->
+                    <div class="mb-3 d-none" id="recipientPreview">
+                        <div class="alert alert-info small py-2 mb-0">
+                            <i class="bi bi-people-fill me-1"></i>
+                            <span id="previewText"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="msgSubject">{{ _('الموضوع') }}</label>
+                        <input type="text" class="form-control" id="msgSubject" placeholder="{{ _('اكتب موضوع الرسالة') }}">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label" for="msgBody">{{ _('الرسالة') }} <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="msgBody" rows="6"
+                                  placeholder="{{ _('اكتب محتوى الرسالة هنا…') }}" required></textarea>
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary" id="sendBtn">
+                            <span id="sendSpinner" class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
+                            <i class="bi bi-send-fill me-2" id="sendIcon"></i>{{ _('إرسال') }}
+                        </button>
+                        <a href="/dashboard" class="btn btn-ghost">{{ _('إلغاء') }}</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const h = () => {
+    const t = localStorage.getItem('access_token');
+    return { 'Content-Type': 'application/json', ...(t ? { 'Authorization': `Bearer ${t}` } : {}) };
+};
+
+let _supervisors = [];
+let _classes = [];
+
+async function init() {
+    const [supRes, clsRes] = await Promise.all([
+        fetch('/api/manager/supervisors', { headers: h() }).catch(() => null),
+        fetch('/api/manager/classes', { headers: h() }).catch(() => null),
+    ]);
+    if (supRes && supRes.ok) {
+        const d = await supRes.json();
+        _supervisors = d.supervisors || [];
+        const sel = document.getElementById('supervisorSelector');
+        sel.innerHTML = _supervisors.map(s => `<option value="${s.id}">${s.full_name} (@${s.username})</option>`).join('') || '<option value="">لا يوجد مشرفون</option>';
+    }
+    if (clsRes && clsRes.ok) {
+        const d = await clsRes.json();
+        _classes = d.classes || [];
+        const sel = document.getElementById('classSelector');
+        sel.innerHTML = _classes.map(c => `<option value="${c.id}">${c.name_ar}</option>`).join('') || '<option value="">لا توجد شعب</option>';
+    }
+    updatePreview();
+}
+
+function onRecipientTypeChange() {
+    const type = document.getElementById('recipientType').value;
+    document.getElementById('supervisorSelectorGroup').classList.toggle('d-none', type !== 'supervisor');
+    document.getElementById('classSelectorGroup').classList.toggle('d-none', type !== 'parents_class');
+    updatePreview();
+}
+
+function updatePreview() {
+    const type = document.getElementById('recipientType').value;
+    const preview = document.getElementById('recipientPreview');
+    const text = document.getElementById('previewText');
+    let msg = '';
+    if (type === 'all_supervisors')  msg = `سيتم إرسال الرسالة إلى ${_supervisors.length} مشرف`;
+    else if (type === 'all_parents') msg = 'سيتم إرسال الرسالة إلى كل أولياء الأمور';
+    else if (type === 'parents_class') msg = 'سيتم إرسال الرسالة إلى أولياء أمور الشعبة المختارة';
+    if (msg) { text.textContent = msg; preview.classList.remove('d-none'); }
+    else preview.classList.add('d-none');
+}
+
+document.getElementById('supervisorSelector').addEventListener('change', updatePreview);
+document.getElementById('classSelector').addEventListener('change', updatePreview);
+
+document.getElementById('messageForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = document.getElementById('msgBody').value.trim();
+    if (!body) { showToast('الرجاء كتابة محتوى الرسالة', 'warning'); return; }
+
+    const type    = document.getElementById('recipientType').value;
+    const subject = document.getElementById('msgSubject').value.trim();
+    const btn     = document.getElementById('sendBtn');
+    const spinner = document.getElementById('sendSpinner');
+    const icon    = document.getElementById('sendIcon');
+    btn.disabled = true; spinner.classList.remove('d-none'); icon.classList.add('d-none');
+
+    try {
+        let recipients = [];
+        if (type === 'supervisor') {
+            const id = parseInt(document.getElementById('supervisorSelector').value);
+            if (id) recipients = [{ role: 'supervisor', id }];
+        } else if (type === 'all_supervisors') {
+            recipients = _supervisors.map(s => ({ role: 'supervisor', id: s.id }));
+        } else if (type === 'parents_class') {
+            const classId = parseInt(document.getElementById('classSelector').value);
+            if (classId) recipients = [{ role: 'parents_class', class_id: classId }];
+        } else if (type === 'all_parents') {
+            recipients = [{ role: 'all_parents' }];
+        }
+
+        const res = await fetch('/api/messages/broadcast', {
+            method: 'POST', headers: h(),
+            body: JSON.stringify({ subject, body, recipients }),
+        });
+        if (res.ok) {
+            showToast('تم إرسال الرسالة بنجاح', 'success');
+            setTimeout(() => window.location.href = '/dashboard', 1200);
+        } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.detail || 'فشل الإرسال', 'error');
+        }
+    } catch { showToast('خطأ في الشبكة', 'error'); }
+    finally { btn.disabled = false; spinner.classList.add('d-none'); icon.classList.remove('d-none'); }
+});
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+{% endblock %}

@@ -82,6 +82,10 @@ from analytics_service import router as analytics_router
 from analytics_ws import router as analytics_ws_router
 from government_api import router as government_router
 from routers.ai import router as ai_router
+from routers.supervisor import router as supervisor_router
+from routers.manager import router as manager_router
+from routers.admin_impersonation import router as admin_impersonation_router
+from routers.messaging import router as messaging_router
 
 # =============================================================================
 # Scheduled Jobs
@@ -346,6 +350,10 @@ app.include_router(analytics_router, prefix="/api", tags=["Analytics"])
 app.include_router(analytics_ws_router)
 app.include_router(government_router, prefix="/api", tags=["Government"])
 app.include_router(ai_router, prefix="/api", tags=["AI"])
+app.include_router(supervisor_router)   # prefix already contains /api/supervisor
+app.include_router(manager_router)      # prefix already contains /api/manager
+app.include_router(admin_impersonation_router, prefix="/api", tags=["Admin"])
+app.include_router(messaging_router, prefix="/api", tags=["Messaging"])
 app.include_router(frontend_router)
 
 

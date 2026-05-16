@@ -155,18 +155,6 @@ async def get_current_user_or_redirect(
     db: Session = Depends(get_db)
 ) -> models.User:
     """Get current user or redirect to login page (for frontend routes)"""
-    # In test runs, bypass auth redirects to allow template assertions
-    from config import settings
-    if settings.TESTING:
-        return models.User(
-            id=1,
-            username="testuser",
-            email="test@kinjo.sa",
-            role=models.UserRole.MANAGER,
-            status=models.UserStatus.ACTIVE,
-            hashed_password="test",
-        )
-
     token = None
 
     # 1. Authorization header

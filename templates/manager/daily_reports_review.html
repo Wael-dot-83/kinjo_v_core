@@ -1,0 +1,457 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('مراجعة التقارير اليومية') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-journal-richtext"></i>
+            {{ _('المدير') }}
+        </div>
+        <h1 class="page-header-title">{{ _('مراجعة التقارير اليومية') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('مراجعة التقارير') }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="page-header-actions">
+        <button class="btn btn-ghost" onclick="loadReports()">
+            <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4 stagger-children">
+    <div class="col-6 col-md-3">
+        <div class="stat-card warning card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('بانتظار المراجعة') }}</div>
+                    <div class="stat-value" id="statPending">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card success card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('أُرسلت للوالدين') }}</div>
+                    <div class="stat-value" id="statSent">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                    <i class="bi bi-send-check-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('تقارير اليوم') }}</div>
+                    <div class="stat-value" id="statToday">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('إجمالي هذا الأسبوع') }}</div>
+                    <div class="stat-value" id="statWeek">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(6,182,212,0.12);color:#0891b2;">
+                    <i class="bi bi-journals"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card mb-3">
+    <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
+        <span class="fw-700 small text-nowrap">{{ _('تصفية:') }}</span>
+        <select id="filterClass" class="form-select form-select-sm" style="width:auto;"
+                aria-label="{{ _('تصفية حسب الشعبة') }}">
+            <option value="">{{ _('— جميع الشعب —') }}</option>
+        </select>
+        <select id="filterSupervisor" class="form-select form-select-sm" style="width:auto;"
+                aria-label="{{ _('تصفية حسب المشرف') }}">
+            <option value="">{{ _('— جميع المشرفين —') }}</option>
+        </select>
+        <input type="date" id="filterFrom" class="form-control form-control-sm" style="width:auto;"
+               aria-label="{{ _('من تاريخ') }}">
+        <span class="text-muted small">{{ _('إلى') }}</span>
+        <input type="date" id="filterTo" class="form-control form-control-sm" style="width:auto;"
+               aria-label="{{ _('إلى تاريخ') }}">
+        <select id="filterStatus" class="form-select form-select-sm" style="width:auto;"
+                aria-label="{{ _('تصفية حسب الحالة') }}">
+            <option value="">{{ _('— جميع الحالات —') }}</option>
+            <option value="SUBMITTED">{{ _('بانتظار المراجعة') }}</option>
+            <option value="SENT_TO_PARENT">{{ _('أُرسل للوالدين') }}</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadReports()">
+            <i class="bi bi-search me-1"></i>{{ _('تطبيق') }}
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="resetFilters()">
+            <i class="bi bi-x-circle me-1"></i>{{ _('إعادة ضبط') }}
+        </button>
+        <span class="ms-auto small text-muted" id="reportsCount"></span>
+    </div>
+</div>
+
+<!-- Reports Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="card-title-sm mb-0">
+            <i class="bi bi-table me-2 text-primary"></i>
+            {{ _('التقارير') }}
+        </h6>
+    </div>
+
+    <div id="tableLoading" class="card-body text-center py-5 text-muted">
+        <div class="spinner-border mb-3" role="status" aria-label="{{ _('جاري التحميل') }}"></div>
+        <div>{{ _('جاري تحميل التقارير...') }}</div>
+    </div>
+
+    <div id="tableEmpty" class="card-body text-center py-5 text-muted d-none">
+        <i class="bi bi-journal d-block fs-1 mb-3 opacity-25"></i>
+        <p class="fw-600">{{ _('لا توجد تقارير تطابق الفلاتر المحددة') }}</p>
+    </div>
+
+    <div id="tableError" class="card-body text-center py-5 d-none">
+        <i class="bi bi-exclamation-circle d-block fs-1 mb-3 text-danger opacity-50"></i>
+        <p class="text-muted">{{ _('تعذّر تحميل التقارير') }}</p>
+        <button class="btn btn-ghost btn-sm" onclick="loadReports()">
+            <i class="bi bi-arrow-clockwise me-1"></i>{{ _('إعادة المحاولة') }}
+        </button>
+    </div>
+
+    <div id="tableWrap" class="d-none">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" aria-label="{{ _('جدول التقارير اليومية') }}">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">{{ _('التاريخ') }}</th>
+                        <th scope="col">{{ _('الطفل') }}</th>
+                        <th scope="col">{{ _('المشرف') }}</th>
+                        <th scope="col">{{ _('الشعبة') }}</th>
+                        <th scope="col">{{ _('الحالة') }}</th>
+                        <th scope="col" class="text-center">{{ _('الإجراءات') }}</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Send to Parents Confirm Modal -->
+<div class="modal fade" id="sendParentsModal" tabindex="-1" aria-labelledby="sendParentsModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-700" id="sendParentsModalLabel">
+                    <i class="bi bi-send-fill me-2 text-success"></i>
+                    {{ _('إرسال التقرير للوالدين') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">{{ _('هل أنت متأكد من إرسال هذا التقرير للوالدين؟') }}</p>
+                <p class="small text-muted">{{ _('سيتمكن الوالدان من رؤية التقرير في تطبيقهم.') }}</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                <button type="button" class="btn btn-success" id="confirmSendParentsBtn" onclick="confirmSendToParents()">
+                    <span class="btn-text"><i class="bi bi-send me-2"></i>{{ _('إرسال') }}</span>
+                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteReportModal" tabindex="-1" aria-labelledby="deleteReportModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-700 text-danger" id="deleteReportModalLabel">
+                    <i class="bi bi-trash3-fill me-2"></i>{{ _('حذف التقرير') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">{{ _('هل أنت متأكد من حذف هذا التقرير؟ لا يمكن التراجع عن هذا الإجراء.') }}</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteReportBtn" onclick="confirmDeleteReport()">
+                    <span class="btn-text"><i class="bi bi-trash3 me-2"></i>{{ _('حذف') }}</span>
+                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
+.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+.fw-600 { font-weight:600; }
+.fw-700 { font-weight:700; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    let sendParentsModal = null;
+    let deleteReportModal = null;
+    let pendingSendId    = null;
+    let pendingDeleteId  = null;
+
+    const STATUS_BADGE = {
+        'SUBMITTED':      `<span class="badge bg-info text-white">{{ _('بانتظار المراجعة') }}</span>`,
+        'SENT_TO_PARENT': `<span class="badge bg-success">{{ _('أُرسل للوالدين') }}</span>`,
+        'DRAFT':          `<span class="badge bg-warning text-dark">{{ _('مسودة') }}</span>`,
+        'APPROVED':       `<span class="badge bg-primary">{{ _('مُوافق عليه') }}</span>`,
+    };
+
+    function getHeaders() {
+        const t = localStorage.getItem('access_token');
+        const h = { 'Content-Type': 'application/json' };
+        if (t) h['Authorization'] = `Bearer ${t}`;
+        return h;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        sendParentsModal  = new bootstrap.Modal(document.getElementById('sendParentsModal'));
+        deleteReportModal = new bootstrap.Modal(document.getElementById('deleteReportModal'));
+        await Promise.all([loadFilterOptions(), setDefaultDates()]);
+        loadReports();
+    });
+
+    async function loadFilterOptions() {
+        try {
+            const [clsRes, supRes] = await Promise.all([
+                fetch('/api/classes', { headers: getHeaders() }),
+                fetch('/api/supervisors', { headers: getHeaders() })
+            ]);
+            if (clsRes.ok) {
+                const d = await clsRes.json();
+                const sel = document.getElementById('filterClass');
+                (d.classes || []).forEach(c => {
+                    sel.innerHTML += `<option value="${c.id}">${escHtml(c.name_ar)}</option>`;
+                });
+            }
+            if (supRes.ok) {
+                const d = await supRes.json();
+                const sel = document.getElementById('filterSupervisor');
+                (d.supervisors || []).forEach(s => {
+                    sel.innerHTML += `<option value="${s.id}">${escHtml(s.name || s.username)}</option>`;
+                });
+            }
+        } catch {}
+    }
+
+    function setDefaultDates() {
+        const now  = new Date();
+        const from = new Date(now);
+        from.setDate(from.getDate() - 6);
+        document.getElementById('filterFrom').value = from.toISOString().slice(0, 10);
+        document.getElementById('filterTo').value   = now.toISOString().slice(0, 10);
+    }
+
+    window.resetFilters = function () {
+        document.getElementById('filterClass').value      = '';
+        document.getElementById('filterSupervisor').value = '';
+        document.getElementById('filterStatus').value     = '';
+        setDefaultDates();
+        loadReports();
+    };
+
+    window.loadReports = async function () {
+        const classId    = document.getElementById('filterClass').value;
+        const supId      = document.getElementById('filterSupervisor').value;
+        const from       = document.getElementById('filterFrom').value;
+        const to         = document.getElementById('filterTo').value;
+        const status     = document.getElementById('filterStatus').value;
+
+        document.getElementById('tableLoading').classList.remove('d-none');
+        document.getElementById('tableEmpty').classList.add('d-none');
+        document.getElementById('tableError').classList.add('d-none');
+        document.getElementById('tableWrap').classList.add('d-none');
+
+        let url = '/api/daily-reports?';
+        if (classId) url += `class_id=${classId}&`;
+        if (supId)   url += `supervisor_id=${supId}&`;
+        if (from)    url += `from=${from}&`;
+        if (to)      url += `to=${to}&`;
+        if (status)  url += `status=${status}&`;
+
+        try {
+            const r = await fetch(url, { headers: getHeaders() });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+            const reports = data.reports || [];
+            const stats   = data.stats || {};
+
+            document.getElementById('statPending').textContent = stats.submitted       ?? '—';
+            document.getElementById('statSent').textContent    = stats.sent_to_parent  ?? '—';
+            document.getElementById('statToday').textContent   = stats.today           ?? '—';
+            document.getElementById('statWeek').textContent    = stats.this_week       ?? '—';
+
+            const cnt = document.getElementById('reportsCount');
+            if (cnt) cnt.textContent = `${reports.length} {{ _('تقرير') }}`;
+
+            document.getElementById('tableLoading').classList.add('d-none');
+
+            if (!reports.length) {
+                document.getElementById('tableEmpty').classList.remove('d-none');
+                return;
+            }
+
+            renderTable(reports);
+            document.getElementById('tableWrap').classList.remove('d-none');
+
+        } catch {
+            document.getElementById('tableLoading').classList.add('d-none');
+            document.getElementById('tableError').classList.remove('d-none');
+        }
+    };
+
+    function renderTable(reports) {
+        const tbody = document.getElementById('reportsTableBody');
+        tbody.innerHTML = reports.map(r => {
+            const date  = r.date ? new Date(r.date).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'}) : '—';
+            const badge = STATUS_BADGE[r.status] || escHtml(r.status);
+            const canSend = r.status === 'SUBMITTED';
+            return `
+            <tr>
+                <td class="small text-muted">${date}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="child-avatar-sm"><i class="bi bi-emoji-smile-fill"></i></div>
+                        <span class="fw-600">${escHtml(r.child_name || '—')}</span>
+                    </div>
+                </td>
+                <td class="small">${escHtml(r.supervisor_name || '—')}</td>
+                <td class="small text-muted">${escHtml(r.class_name || '—')}</td>
+                <td>${badge}</td>
+                <td>
+                    <div class="d-flex gap-1 justify-content-center flex-wrap">
+                        <a href="/daily-reports/${r.id}" class="btn btn-sm btn-ghost">
+                            <i class="bi bi-eye me-1"></i>{{ _('عرض') }}
+                        </a>
+                        <a href="/daily-reports/${r.id}/edit" class="btn btn-sm btn-ghost">
+                            <i class="bi bi-pencil me-1"></i>{{ _('تعديل') }}
+                        </a>
+                        ${canSend ? `
+                        <button class="btn btn-sm btn-outline-success" onclick="openSendParentsModal(${r.id})">
+                            <i class="bi bi-send me-1"></i>{{ _('إرسال للوالدين') }}
+                        </button>` : ''}
+                        <button class="btn btn-sm btn-outline-danger" onclick="openDeleteReportModal(${r.id})">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    window.openSendParentsModal = function (id) {
+        pendingSendId = id;
+        sendParentsModal.show();
+    };
+
+    window.confirmSendToParents = async function () {
+        if (!pendingSendId) return;
+        const btn = document.getElementById('confirmSendParentsBtn');
+        setLoading(btn, true);
+        try {
+            const r = await fetch(`/api/daily-reports/${pendingSendId}/send-to-parents`, {
+                method: 'PUT',
+                headers: getHeaders()
+            });
+            if (!r.ok) throw new Error();
+            showToast('{{ _("تم إرسال التقرير للوالدين بنجاح") }}', 'success');
+            sendParentsModal.hide();
+            await loadReports();
+        } catch {
+            showToast('{{ _("حدث خطأ في الإرسال") }}', 'error');
+        } finally {
+            setLoading(btn, false);
+            pendingSendId = null;
+        }
+    };
+
+    window.openDeleteReportModal = function (id) {
+        pendingDeleteId = id;
+        deleteReportModal.show();
+    };
+
+    window.confirmDeleteReport = async function () {
+        if (!pendingDeleteId) return;
+        const btn = document.getElementById('confirmDeleteReportBtn');
+        setLoading(btn, true);
+        try {
+            const r = await fetch(`/api/daily-reports/${pendingDeleteId}`, {
+                method: 'DELETE',
+                headers: getHeaders()
+            });
+            if (!r.ok) throw new Error();
+            showToast('{{ _("تم حذف التقرير") }}', 'success');
+            deleteReportModal.hide();
+            await loadReports();
+        } catch {
+            showToast('{{ _("حدث خطأ في الحذف") }}', 'error');
+        } finally {
+            setLoading(btn, false);
+            pendingDeleteId = null;
+        }
+    };
+
+    function setLoading(btn, on) {
+        btn.querySelector('.btn-text').classList.toggle('d-none', on);
+        btn.querySelector('.btn-loading').classList.toggle('d-none', !on);
+        btn.disabled = on;
+    }
+
+    function escHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+})();
+</script>
+
+<style>
+.child-avatar-sm {
+    width:30px;height:30px;border-radius:50%;
+    background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.8rem;flex-shrink:0;
+}
+</style>
+{% endblock %}

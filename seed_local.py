@@ -17,9 +17,12 @@ from database import SessionLocal, init_db
 from models import (
     User, UserRole, UserStatus,
     Kindergarten, KindergartenStatus,
+    Class,
+    SupervisorAssignment,
     Child, Gender,
     EnrollmentApplication, EnrollmentStatus,
     AttendanceLog, AttendanceMethod,
+    DailyReport, DailyReportStatus,
     Incident, IncidentType, SeverityLevel,
     ParentProfile, AuditLog
 )
@@ -91,6 +94,29 @@ def run():
         upsert_user("supervisor2", "sup2@kinjo.jo",        "Super@1234",   UserRole.SUPERVISOR, kg2.id, "أحمد", "ناصر")
         upsert_user("parent2",     "parent2@kinjo.jo",     "Parent@1234",  UserRole.PARENT,     None,   "هند",  "سالم")
 
+        # ── Classes ───────────────────────────────────────────────────────────
+        def upsert_class(kg_id, name_ar, name_en):
+            c = db.query(Class).filter(Class.kindergarten_id == kg_id, Class.name_en == name_en).first()
+            if not c:
+                c = Class(
+                    kindergarten_id=kg_id,
+                    name_ar=name_ar,
+                    name_en=name_en,
+                    capacity_total=20,
+                    min_age_months=24,
+                    max_age_months=60,
+                    is_active=True,
+                )
+                db.add(c)
+                db.commit()
+                db.refresh(c)
+                print(f"  Created class: {name_en} (kg_id={kg_id})")
+            return c
+
+        class_a = upsert_class(kg1.id, "الصف الأول أ",  "Class A")
+        class_b = upsert_class(kg1.id, "الصف الثاني ب", "Class B")
+        class_c = upsert_class(kg2.id, "الصف الأول ج",  "Class C")
+
         # ── Parent Profiles ───────────────────────────────────────────────────
         def upsert_parent_profile(user_id, phone, nationality, first, last, gender_val=Gender.MALE):
             pp = db.query(ParentProfile).filter(ParentProfile.user_id == user_id).first()
@@ -135,7 +161,7 @@ def run():
         print(f"Children: {child1.first_name}, {child2.first_name}, {child3.first_name}")
 
         # ── Enrollments ───────────────────────────────────────────────────────
-        def upsert_enrollment(child_id, kg_id, status=EnrollmentStatus.ACTIVE):
+        def upsert_enrollment(child_id, kg_id, class_id, status=EnrollmentStatus.ACTIVE):
             e = db.query(EnrollmentApplication).filter(
                 EnrollmentApplication.child_id == child_id,
                 EnrollmentApplication.kindergarten_id == kg_id,
@@ -144,18 +170,81 @@ def run():
                 e = EnrollmentApplication(
                     child_id=child_id,
                     kindergarten_id=kg_id,
+                    class_id=class_id,
                     status=status,
                     source="WEB",
                 )
                 db.add(e)
                 db.commit()
                 db.refresh(e)
+            elif e.class_id is None:
+                e.class_id = class_id
+                db.commit()
             return e
 
-        enroll1 = upsert_enrollment(child1.id, kg1.id)
-        enroll2 = upsert_enrollment(child2.id, kg1.id)
-        enroll3 = upsert_enrollment(child3.id, kg2.id)
+        enroll1 = upsert_enrollment(child1.id, kg1.id, class_a.id)
+        enroll2 = upsert_enrollment(child2.id, kg1.id, class_a.id)
+        enroll3 = upsert_enrollment(child3.id, kg2.id, class_c.id)
         print("Enrollments created")
+
+        # ── Supervisor Assignments ────────────────────────────────────────────
+        def upsert_supervisor_assignment(supervisor_id, class_id, is_primary=True):
+            a = db.query(SupervisorAssignment).filter(
+                SupervisorAssignment.supervisor_id == supervisor_id,
+                SupervisorAssignment.class_id == class_id,
+                SupervisorAssignment.deleted_at.is_(None),
+            ).first()
+            if not a:
+                a = SupervisorAssignment(
+                    supervisor_id=supervisor_id,
+                    class_id=class_id,
+                    is_primary=is_primary,
+                    start_date=date.today(),
+                )
+                db.add(a)
+                db.commit()
+                db.refresh(a)
+                print(f"  Assigned supervisor {supervisor_id} → class {class_id}")
+            return a
+
+        sup2_user = db.query(User).filter(User.username == "supervisor2").first()
+        upsert_supervisor_assignment(sup.id,             class_a.id, is_primary=True)
+        upsert_supervisor_assignment(sup.id,             class_b.id, is_primary=False)
+        if sup2_user:
+            upsert_supervisor_assignment(sup2_user.id,   class_c.id, is_primary=True)
+        print("Supervisor assignments created")
+
+        # ── Sample Daily Reports ──────────────────────────────────────────────
+        def upsert_daily_report(child_id, report_date, status, submitted_by_id):
+            r = db.query(DailyReport).filter(
+                DailyReport.child_id == child_id,
+                DailyReport.date == report_date,
+            ).first()
+            if not r:
+                r = DailyReport(
+                    child_id=child_id,
+                    date=report_date,
+                    status=status,
+                    submitted_by=submitted_by_id,
+                    submitted_at=datetime.utcnow() if status != DailyReportStatus.DRAFT else None,
+                    arrival_time="08:00",
+                    leave_time="14:00",
+                    breakfast=True,
+                    snack=True,
+                    milk=True,
+                    lunch=False,
+                    notes="تقرير يومي تجريبي",
+                )
+                db.add(r)
+                db.commit()
+            return r
+
+        today = date.today()
+        upsert_daily_report(child1.id, today,                   DailyReportStatus.DRAFT,     sup.id)
+        upsert_daily_report(child1.id, today - timedelta(days=1), DailyReportStatus.SUBMITTED, sup.id)
+        upsert_daily_report(child2.id, today,                   DailyReportStatus.DRAFT,     sup.id)
+        upsert_daily_report(child2.id, today - timedelta(days=1), DailyReportStatus.SENT_TO_PARENT, sup.id)
+        print("Daily reports created")
 
         # ── Attendance ────────────────────────────────────────────────────────
         today = date.today()
@@ -172,9 +261,9 @@ def run():
                 if not exists and cls_id:
                     checkin = datetime.combine(d, datetime.min.time()).replace(hour=8)
                     db.execute(text(
-                        "INSERT INTO attendance_logs (child_id, class_id, date, check_in_at, check_out_at, method, status, recorded_by, dropped_by_name) "
-                        "VALUES (:cid, :clsid, :d, :cin, :cout, 'MANUAL', 'PRESENT', :rbid, :dby)"
-                    ), {"cid": child.id, "clsid": cls_id, "d": str(d), "cin": str(checkin), "cout": str(checkin.replace(hour=13)), "rbid": sup.id, "dby": "سامي الخالد"})
+                        "INSERT INTO attendance_logs (child_id, class_id, date, check_in_at, check_out_at, method, dropped_by_name) "
+                        "VALUES (:cid, :clsid, :d, :cin, :cout, 'MANUAL', :dby)"
+                    ), {"cid": child.id, "clsid": cls_id, "d": str(d), "cin": str(checkin), "cout": str(checkin.replace(hour=13)), "dby": "سامي الخالد"})
         db.commit()
         print("Attendance records created")
 

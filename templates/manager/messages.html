@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('الرسائل') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow"><i class="bi bi-chat-dots-fill"></i> {{ _('المدير') }}</div>
+        <h1 class="page-header-title">{{ _('الرسائل') }}</h1>
+    </div>
+    <div class="page-header-actions">
+        <a href="/manager/new-message" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>{{ _('رسالة جديدة') }}
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Tabs -->
+<ul class="nav nav-pills mb-4" id="msgTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-folder="inbox" onclick="loadMessages('inbox')">
+            <i class="bi bi-inbox me-1"></i>{{ _('الوارد') }}
+            <span class="badge bg-danger ms-1 d-none" id="inboxBadge">0</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" data-folder="sent" onclick="loadMessages('sent')">
+            <i class="bi bi-send me-1"></i>{{ _('المُرسل') }}
+        </button>
+    </li>
+</ul>
+
+<!-- Loading -->
+<div id="msgLoading" class="text-center py-5 text-muted">
+    <div class="spinner-border mb-3" role="status"></div>
+    <div>{{ _('جاري تحميل الرسائل...') }}</div>
+</div>
+
+<!-- Empty state -->
+<div id="msgEmpty" class="card d-none">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-chat d-block fs-1 mb-3 opacity-25"></i>
+        <p class="text-muted mb-0">{{ _('لا توجد رسائل') }}</p>
+    </div>
+</div>
+
+<!-- Message list -->
+<div id="msgList" class="card d-none">
+    <div class="list-group list-group-flush" id="msgItems"></div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0;color:var(--kinjo-text-primary); }
+.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
+.msg-item { display:flex;align-items:flex-start;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--kinjo-border);transition:background 0.15s; }
+.msg-item:hover { background:var(--kinjo-bg-subtle); }
+.msg-avatar { width:38px;height:38px;border-radius:50%;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0; }
+.msg-subject { font-weight:700;font-size:0.9rem;color:var(--kinjo-text-primary); }
+.msg-preview { font-size:0.82rem;color:var(--kinjo-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:380px; }
+.msg-meta { font-size:0.75rem;color:var(--kinjo-text-muted);white-space:nowrap; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    let currentFolder = 'inbox';
+
+    function getHeaders() {
+        const t = localStorage.getItem('access_token');
+        return { 'Authorization': `Bearer ${t}` };
+    }
+
+    window.loadMessages = async function(folder) {
+        currentFolder = folder;
+        document.querySelectorAll('[data-folder]').forEach(b => b.classList.remove('active'));
+        document.querySelector(`[data-folder="${folder}"]`)?.classList.add('active');
+
+        document.getElementById('msgLoading').classList.remove('d-none');
+        document.getElementById('msgEmpty').classList.add('d-none');
+        document.getElementById('msgList').classList.add('d-none');
+
+        try {
+            const r = await fetch(`/api/messages?folder=${folder}&limit=50`, { headers: getHeaders() });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+
+            document.getElementById('msgLoading').classList.add('d-none');
+
+            if (!data.messages || !data.messages.length) {
+                document.getElementById('msgEmpty').classList.remove('d-none');
+                return;
+            }
+
+            const items = document.getElementById('msgItems');
+            items.innerHTML = data.messages.map(m => {
+                const dt = m.created_at ? new Date(m.created_at).toLocaleDateString('ar-SA', {month:'short',day:'numeric'}) : '';
+                const subj = escHtml(m.subject || '{{ _("بدون موضوع") }}');
+                const preview = escHtml((m.message_body || '').slice(0, 80));
+                const sender = escHtml(m.sender_name || '');
+                return `<div class="msg-item list-group-item">
+                    <div class="msg-avatar"><i class="bi bi-person-fill"></i></div>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="msg-subject">${subj}</div>
+                            <span class="msg-meta">${dt}</span>
+                        </div>
+                        <div class="msg-preview">${sender ? sender + ': ' : ''}${preview}</div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('msgList').classList.remove('d-none');
+
+        } catch {
+            document.getElementById('msgLoading').classList.add('d-none');
+            document.getElementById('msgEmpty').classList.remove('d-none');
+        }
+    };
+
+    function escHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => loadMessages('inbox'));
+})();
+</script>
+{% endblock %}

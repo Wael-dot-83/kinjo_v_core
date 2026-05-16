@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('تفاصيل الحادثة') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow"><i class="bi bi-shield-exclamation"></i> {{ _('السلامة') }}</div>
+        <h1 class="page-header-title">{{ _('تفاصيل الحادثة') }} #{{ incident.id }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item"><a href="/safety" class="text-decoration-none">{{ _('السلامة') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('الحادثة') }} #{{ incident.id }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="page-header-actions">
+        <a href="/safety" class="btn btn-ghost btn-sm">
+            <i class="bi bi-arrow-right me-1"></i>{{ _('العودة') }}
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">{{ _('معلومات الحادثة') }}</h6>
+            </div>
+            <div class="card-body p-0">
+                {% set severity_class = {'LOW': 'success', 'MEDIUM': 'warning', 'HIGH': 'danger', 'CRITICAL': 'danger'} %}
+                <div class="detail-row">
+                    <span class="detail-label">{{ _('الطفل') }}</span>
+                    <span class="detail-value fw-700">
+                        {% if incident.child %}{{ incident.child.first_name }} {{ incident.child.last_name }}{% else %}—{% endif %}
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">{{ _('نوع الحادثة') }}</span>
+                    <span class="detail-value">{{ incident.type.value if incident.type else '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">{{ _('مستوى الخطورة') }}</span>
+                    <span class="detail-value">
+                        {% if incident.severity_level %}
+                        <span class="badge bg-{{ severity_class.get(incident.severity_level.value, 'secondary') }}">
+                            {{ incident.severity_level.value }}
+                        </span>
+                        {% else %}—{% endif %}
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">{{ _('وقت الحادثة') }}</span>
+                    <span class="detail-value">
+                        {{ incident.occurred_at.strftime('%Y-%m-%d %H:%M') if incident.occurred_at else '—' }}
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">{{ _('الوصف') }}</span>
+                    <span class="detail-value">{{ incident.description or '—' }}</span>
+                </div>
+                <div class="detail-row" style="border-bottom:none;">
+                    <span class="detail-label">{{ _('تم إبلاغ ولي الأمر') }}</span>
+                    <span class="detail-value">
+                        {% if incident.parent_informed %}
+                        <span class="badge bg-success">{{ _('نعم') }}</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ _('لا') }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">{{ _('المُبلِّغ') }}</h6>
+            </div>
+            <div class="card-body">
+                {% if reporter %}
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:38px;height:38px;border-radius:50%;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);display:flex;align-items:center;justify-content:center;">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div>
+                        <div class="fw-700 small">{{ reporter.full_name or reporter.username }}</div>
+                        <div class="text-muted" style="font-size:0.78rem;">{{ reporter.role.value }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <span class="text-muted small">{{ _('غير محدد') }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">{{ _('متابعة الحادثة') }}</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="detail-row">
+                    <span class="detail-label">{{ _('الحالة') }}</span>
+                    <span class="detail-value">
+                        {% if incident.followup_status %}
+                        <span class="badge bg-info">{{ incident.followup_status }}</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ _('جديدة') }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="detail-row" style="border-bottom:none;">
+                    <span class="detail-label">{{ _('الموعد النهائي') }}</span>
+                    <span class="detail-value small">
+                        {{ incident.followup_sla_deadline.strftime('%Y-%m-%d') if incident.followup_sla_deadline else '—' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0;color:var(--kinjo-text-primary); }
+.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
+.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+.detail-row { display:flex;justify-content:space-between;align-items:flex-start;padding:0.75rem 1.25rem;border-bottom:1px solid var(--kinjo-border);gap:1rem; }
+.detail-label { font-size:0.85rem;color:var(--kinjo-text-secondary);flex-shrink:0;min-width:140px; }
+.detail-value { font-size:0.875rem;color:var(--kinjo-text-primary);text-align:end; }
+</style>
+{% endblock %}

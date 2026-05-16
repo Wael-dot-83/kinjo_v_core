@@ -1,0 +1,380 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('تقرير يومي جديد') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-journal-plus"></i>
+            {{ _('المشرف') }}
+        </div>
+        <h1 class="page-header-title">{{ _('تقرير يومي جديد') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item"><a href="/supervisor/daily-reports" class="text-decoration-none">{{ _('التقارير اليومية') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('جديد') }}</li>
+            </ol>
+        </nav>
+    </div>
+    <a href="/supervisor/daily-reports" class="btn btn-ghost">
+        <i class="bi bi-arrow-right me-2"></i>{{ _('رجوع') }}
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-8 col-lg-10">
+
+        <!-- Validation banner -->
+        <div id="validationAlert" class="alert alert-danger d-none mb-4" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            <span id="validationMsg">{{ _('يرجى تعبئة جميع الحقول المطلوبة') }}</span>
+        </div>
+
+        <form id="reportForm" novalidate autocomplete="off">
+
+            <!-- ── 1. Child + Date ── -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-person-fill me-2 text-primary"></i>
+                        {{ _('الطفل والتاريخ') }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="field-label" for="childSelect">{{ _('الطفل') }} <span class="text-danger">*</span></label>
+                            <select class="form-select" id="childSelect" required aria-required="true">
+                                <option value="">{{ _('— جاري التحميل... —') }}</option>
+                            </select>
+                            <div class="invalid-feedback">{{ _('يجب اختيار الطفل') }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="field-label" for="reportDate">{{ _('تاريخ التقرير') }} <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="reportDate" required aria-required="true">
+                            <div class="invalid-feedback">{{ _('يجب اختيار التاريخ') }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 2. Arrival / Leave ── -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-clock me-2 text-primary"></i>
+                        {{ _('أوقات الحضور والمغادرة') }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="field-label" for="arrivalTime">{{ _('وقت الوصول') }}</label>
+                            <input type="time" class="form-control" id="arrivalTime"
+                                   aria-label="{{ _('وقت وصول الطفل') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="field-label" for="leaveTime">{{ _('وقت المغادرة') }}</label>
+                            <input type="time" class="form-control" id="leaveTime"
+                                   aria-label="{{ _('وقت مغادرة الطفل') }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 3. Meals ── -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-cup-hot-fill me-2 text-primary"></i>
+                        {{ _('الوجبات والتغذية') }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6 col-md-3">
+                            <div class="meal-check-card">
+                                <input class="form-check-input" type="checkbox" id="mealBreakfast" value="breakfast">
+                                <label class="meal-check-label" for="mealBreakfast">
+                                    <span class="meal-icon">🍳</span>
+                                    <span>{{ _('فطور') }}</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="meal-check-card">
+                                <input class="form-check-input" type="checkbox" id="mealSnack" value="snack">
+                                <label class="meal-check-label" for="mealSnack">
+                                    <span class="meal-icon">🍎</span>
+                                    <span>{{ _('وجبة خفيفة') }}</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="meal-check-card">
+                                <input class="form-check-input" type="checkbox" id="mealMilk" value="milk">
+                                <label class="meal-check-label" for="mealMilk">
+                                    <span class="meal-icon">🥛</span>
+                                    <span>{{ _('حليب') }}</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="meal-check-card">
+                                <input class="form-check-input" type="checkbox" id="mealLunch" value="lunch">
+                                <label class="meal-check-label" for="mealLunch">
+                                    <span class="meal-icon">🍽️</span>
+                                    <span>{{ _('غداء') }}</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 4. Nap ── -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-moon-stars-fill me-2 text-primary"></i>
+                        {{ _('وقت القيلولة') }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="field-label" for="napStart">{{ _('بداية النوم') }}</label>
+                            <input type="time" class="form-control" id="napStart"
+                                   aria-label="{{ _('وقت بدء القيلولة') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="field-label" for="napEnd">{{ _('نهاية النوم') }}</label>
+                            <input type="time" class="form-control" id="napEnd"
+                                   aria-label="{{ _('وقت انتهاء القيلولة') }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 5. Activities ── -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-stars me-2 text-primary"></i>
+                        {{ _('الأنشطة') }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <label class="field-label mb-2" for="activities">{{ _('الأنشطة التي مارسها الطفل') }}</label>
+                    <textarea class="form-control" id="activities" rows="3"
+                              placeholder="{{ _('مثال: رسم وتلوين، ألعاب تجميع، نشاط خارجي...') }}"
+                              aria-label="{{ _('أنشطة الطفل') }}"></textarea>
+                    <div class="d-flex justify-content-end mt-1">
+                        <span class="text-muted" style="font-size:0.72rem;" id="activitiesCount">0 / 500</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 6. Notes ── -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">
+                        <i class="bi bi-chat-text-fill me-2 text-primary"></i>
+                        {{ _('ملاحظات') }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <label class="field-label mb-2" for="notes">{{ _('ملاحظات للوالدين أو الإدارة') }}</label>
+                    <textarea class="form-control" id="notes" rows="4"
+                              placeholder="{{ _('أي ملاحظات إضافية حول الطفل اليوم...') }}"
+                              aria-label="{{ _('ملاحظات إضافية') }}"></textarea>
+                    <div class="d-flex justify-content-end mt-1">
+                        <span class="text-muted" style="font-size:0.72rem;" id="notesCount">0 / 1000</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex justify-content-end gap-2 mb-5 flex-wrap">
+                <a href="/supervisor/daily-reports" class="btn btn-ghost">{{ _('إلغاء') }}</a>
+                <button type="button" class="btn btn-warning text-dark" id="saveDraftBtn" onclick="submitReport('DRAFT')">
+                    <span class="btn-text"><i class="bi bi-save me-2"></i>{{ _('حفظ كمسودة') }}</span>
+                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري الحفظ...') }}</span>
+                </button>
+                <button type="button" class="btn btn-primary" id="submitBtn" onclick="submitReport('SUBMITTED')">
+                    <span class="btn-text"><i class="bi bi-send me-2"></i>{{ _('إرسال للمدير') }}</span>
+                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري الإرسال...') }}</span>
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+.field-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block; }
+
+.meal-check-card {
+    position:relative;
+    border:2px solid var(--kinjo-border);
+    border-radius:var(--kinjo-radius-lg);
+    padding:0.75rem;
+    text-align:center;
+    cursor:pointer;
+    transition:all 0.15s;
+    background:var(--kinjo-surface);
+    height:100%;
+}
+.meal-check-card:has(input:checked) {
+    border-color:var(--kinjo-primary);
+    background:var(--kinjo-primary-xlight);
+}
+.meal-check-card .form-check-input {
+    position:absolute;top:0.5rem;
+    inset-inline-end:0.5rem;
+    cursor:pointer;
+}
+.meal-check-label {
+    display:flex;flex-direction:column;align-items:center;gap:0.35rem;
+    cursor:pointer;font-size:0.82rem;font-weight:600;
+    color:var(--kinjo-text-secondary);
+    padding-top:0.25rem;
+}
+.meal-icon { font-size:1.5rem; }
+.meal-check-card:has(input:checked) .meal-check-label { color:var(--kinjo-primary); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    function getHeaders() {
+        const t = localStorage.getItem('access_token');
+        const h = { 'Content-Type': 'application/json' };
+        if (t) h['Authorization'] = `Bearer ${t}`;
+        return h;
+    }
+
+    // Set default date to today
+    document.getElementById('reportDate').value = new Date().toISOString().slice(0, 10);
+
+    // Character counters
+    document.getElementById('activities').addEventListener('input', function () {
+        document.getElementById('activitiesCount').textContent = `${this.value.length} / 500`;
+    });
+    document.getElementById('notes').addEventListener('input', function () {
+        document.getElementById('notesCount').textContent = `${this.value.length} / 1000`;
+    });
+
+    // Load supervisor's children
+    document.addEventListener('DOMContentLoaded', async () => {
+        const sel = document.getElementById('childSelect');
+        try {
+            const r = await fetch('/api/supervisor/children', { headers: getHeaders() });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+            const children = data.children || [];
+            if (!children.length) {
+                sel.innerHTML = `<option value="">{{ _('— لا يوجد أطفال في شعبتك —') }}</option>`;
+            } else {
+                sel.innerHTML = `<option value="">{{ _('— اختر الطفل —') }}</option>` +
+                    children.map(c => `<option value="${c.id}">${escHtml(c.name || c.first_name + ' ' + c.last_name)}</option>`).join('');
+            }
+        } catch {
+            sel.innerHTML = `<option value="">{{ _('— خطأ في تحميل الأطفال —') }}</option>`;
+        }
+    });
+
+    window.submitReport = async function (status) {
+        hideValidation();
+
+        // Validate required fields
+        const childId   = document.getElementById('childSelect').value;
+        const date      = document.getElementById('reportDate').value;
+
+        if (!childId || !date) {
+            const errors = [];
+            if (!childId) errors.push('{{ _("يجب اختيار الطفل") }}');
+            if (!date)    errors.push('{{ _("يجب اختيار تاريخ التقرير") }}');
+            showValidation(errors.join(' — '));
+            return;
+        }
+
+        const meals = [];
+        ['mealBreakfast','mealSnack','mealMilk','mealLunch'].forEach(id => {
+            if (document.getElementById(id).checked) meals.push(document.getElementById(id).value);
+        });
+
+        const payload = {
+            child_id:     parseInt(childId),
+            date:         date,
+            arrival_time: document.getElementById('arrivalTime').value || null,
+            leave_time:   document.getElementById('leaveTime').value   || null,
+            meals:        meals,
+            nap_start:    document.getElementById('napStart').value    || null,
+            nap_end:      document.getElementById('napEnd').value      || null,
+            activities:   document.getElementById('activities').value.trim() || null,
+            notes:        document.getElementById('notes').value.trim()      || null,
+            status:       status,
+        };
+
+        const btnId = status === 'DRAFT' ? 'saveDraftBtn' : 'submitBtn';
+        const btn = document.getElementById(btnId);
+        setLoading(btn, true);
+
+        try {
+            const r = await fetch('/api/supervisor/daily-reports', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            if (!r.ok) {
+                const err = await r.json().catch(() => ({}));
+                showValidation('{{ _("خطأ:") }} ' + (err.detail || '{{ _("فشل الحفظ") }}'));
+                setLoading(btn, false);
+                return;
+            }
+            const msg = status === 'DRAFT'
+                ? '{{ _("تم حفظ التقرير كمسودة") }}'
+                : '{{ _("تم إرسال التقرير للمدير بنجاح") }}';
+            showToast(msg, 'success');
+            setTimeout(() => { window.location.href = '/supervisor/daily-reports'; }, 1200);
+        } catch {
+            showValidation('{{ _("حدث خطأ في الاتصال بالخادم") }}');
+            setLoading(btn, false);
+        }
+    };
+
+    function setLoading(btn, on) {
+        if (!btn) return;
+        btn.querySelector('.btn-text').classList.toggle('d-none', on);
+        btn.querySelector('.btn-loading').classList.toggle('d-none', !on);
+        btn.disabled = on;
+    }
+
+    function showValidation(msg) {
+        const el = document.getElementById('validationAlert');
+        document.getElementById('validationMsg').textContent = msg;
+        el.classList.remove('d-none');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hideValidation() {
+        document.getElementById('validationAlert').classList.add('d-none');
+    }
+
+    function escHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+})();
+</script>
+{% endblock %}

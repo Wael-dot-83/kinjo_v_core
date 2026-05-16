@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('مراسلات معلقة') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-inbox-fill"></i>
+            {{ _('المدير') }}
+        </div>
+        <h1 class="page-header-title">{{ _('مراسلات معلقة') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('مراسلات معلقة') }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="page-header-actions">
+        <a href="/manager/new-message" class="btn btn-primary">
+            <i class="bi bi-pencil-fill me-2"></i>{{ _('رسالة جديدة') }}
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="card shadow-sm">
+    <div class="card-header fw-semibold">
+        <i class="bi bi-hourglass-split me-2 text-warning"></i>{{ _('الرسائل التي تنتظر الرد') }}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ _('المرسل') }}</th>
+                        <th>{{ _('الموضوع') }}</th>
+                        <th>{{ _('التاريخ') }}</th>
+                        <th>{{ _('الحالة') }}</th>
+                        <th class="text-center">{{ _('الإجراءات') }}</th>
+                    </tr>
+                </thead>
+                <tbody id="pendingTableBody">
+                    <tr><td colspan="5" class="text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        جاري التحميل…
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const h = () => {
+    const t = localStorage.getItem('access_token');
+    return t ? { 'Authorization': `Bearer ${t}` } : {};
+};
+
+async function loadPending() {
+    try {
+        const res = await fetch('/api/messages?unread=true', { headers: h() });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const msgs = Array.isArray(data) ? data : (data.messages || []);
+        renderTable(msgs.filter(m => !m.is_read));
+    } catch {
+        showToast('تعذّر تحميل الرسائل', 'error');
+    }
+}
+
+function renderTable(messages) {
+    const tbody = document.getElementById('pendingTableBody');
+    if (!messages.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted">
+            <i class="bi bi-check2-circle fs-3 opacity-25 d-block mb-2"></i>
+            لا توجد رسائل معلقة
+        </td></tr>`;
+        return;
+    }
+    tbody.innerHTML = messages.map(m => `
+        <tr>
+            <td>${m.sender_name || '—'}</td>
+            <td class="fw-semibold">${m.subject || '(بدون موضوع)'}</td>
+            <td class="text-muted small">${m.created_at ? new Date(m.created_at).toLocaleDateString('ar-SA') : '—'}</td>
+            <td><span class="badge bg-warning text-dark rounded-pill">غير مقروءة</span></td>
+            <td class="text-center">
+                <a href="/messages/${m.id}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-eye me-1"></i>عرض
+                </a>
+            </td>
+        </tr>`).join('');
+}
+
+document.addEventListener('DOMContentLoaded', loadPending);
+</script>
+{% endblock %}
