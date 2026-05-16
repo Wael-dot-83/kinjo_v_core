@@ -22,6 +22,7 @@ from database import get_db
 from dependencies import get_current_user
 from models import (
     AttendanceLog,
+    AuditLog,
     DailyReport,
     DailyReportStatus,
     Incident,
@@ -421,6 +422,14 @@ def create_daily_report(
         created_at=now,
     )
     db.add(report)
+    db.flush()
+    db.add(AuditLog(
+        user_id=current_user.id,
+        action=target_status.value.lower(),
+        entity_type="daily_report",
+        entity_id=report.id,
+        details=f"Supervisor created daily report for child {body.child_id} dated {body.date} as {target_status.value}",
+    ))
     db.commit()
     db.refresh(report)
     return {"id": report.id, "status": report.status.value}
@@ -489,6 +498,13 @@ def submit_daily_report(
         raise HTTPException(status_code=403, detail="Only DRAFT reports can be submitted.")
     report.status = DailyReportStatus.SUBMITTED
     report.submitted_at = datetime.now(timezone.utc)
+    db.add(AuditLog(
+        user_id=current_user.id,
+        action="submit",
+        entity_type="daily_report",
+        entity_id=report.id,
+        details=f"Supervisor submitted daily report for child {report.child_id}",
+    ))
     db.commit()
     return {"id": report.id, "status": report.status.value}
 
@@ -719,7 +735,8 @@ def get_supervisor_kpi(
     date_from = date.fromisoformat(from_date) if from_date else today - timedelta(days=6)
     date_to = date.fromisoformat(to_date) if to_date else today
 
-    cache_key = f"supervisor_kpi:{current_user.id}:{date_from}:{date_to}"
+    lang = current_user.preferred_language or "ar"
+    cache_key = f"supervisor_kpi:{current_user.id}:{date_from}:{date_to}:{lang}"
 
     # Try Redis cache
     try:

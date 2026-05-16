@@ -110,6 +110,7 @@
 </head>
 
 <body class="kinjo-app {% block body_class %}{% endblock %}">
+    {% include 'components/impersonation_banner.html' %}
     {% block body %}
     <a href="#mainContent" class="skip-link">{% if ui_lang == 'en' %}Skip to main content{% else %}تخطي إلى المحتوى الرئيسي{% endif %}</a>
 

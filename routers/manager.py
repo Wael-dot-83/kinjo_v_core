@@ -412,6 +412,13 @@ def edit_daily_report(
         if val is not None:
             setattr(report, field, val)
 
+    db.add(AuditLog(
+        user_id=current_user.id,
+        action="edit",
+        entity_type="daily_report",
+        entity_id=report.id,
+        details=f"Manager edited daily report for child {report.child_id}",
+    ))
     db.commit()
     return {"id": report.id, "status": report.status.value}
 
@@ -450,6 +457,13 @@ def send_report_to_parents(
     report.status = DailyReportStatus.SENT_TO_PARENT
     report.approved_by = current_user.id
     report.approved_at = datetime.now(timezone.utc)
+    db.add(AuditLog(
+        user_id=current_user.id,
+        action="send_to_parent",
+        entity_type="daily_report",
+        entity_id=report.id,
+        details=f"Manager sent daily report for child {report.child_id} to parent",
+    ))
     db.commit()
 
     # Create notification message for parent
@@ -478,8 +492,30 @@ def delete_report(
     report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404)
+
+    from models import Child
+    enrollment = (
+        db.query(EnrollmentApplication)
+        .join(Class, EnrollmentApplication.class_id == Class.id)
+        .filter(
+            EnrollmentApplication.child_id == report.child_id,
+            Class.kindergarten_id == current_user.kindergarten_id,
+        )
+        .first()
+    )
+    if not enrollment:
+        raise HTTPException(status_code=403, detail="Report is outside your kindergarten.")
+
     if report.status == DailyReportStatus.SENT_TO_PARENT:
         raise HTTPException(status_code=409, detail="Cannot delete a report that has been sent to parents.")
+
+    db.add(AuditLog(
+        user_id=current_user.id,
+        action="delete",
+        entity_type="daily_report",
+        entity_id=report.id,
+        details=f"Manager deleted daily report for child {report.child_id} dated {report.date}",
+    ))
     db.delete(report)
     db.commit()
 

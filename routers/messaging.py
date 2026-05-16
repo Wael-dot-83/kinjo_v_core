@@ -98,7 +98,7 @@ def _resolve_manager_for_parent(parent_user_id: int, db: Session) -> Optional[Us
 
 
 def _allowed_recipient_ids_for_manager(manager: User, db: Session) -> List[int]:
-    """Return IDs the manager can message: supervisors + parents in their KG + admins."""
+    """Return IDs the manager can message: supervisors + parents in their KG only."""
     if not manager.kindergarten_id:
         return []
     # Supervisors in same KG
@@ -123,9 +123,7 @@ def _allowed_recipient_ids_for_manager(manager: User, db: Session) -> List[int]:
         .distinct()
         .all()
     )
-    # Admins
-    admins = db.query(User.id).filter(User.role == UserRole.ADMIN, User.deleted_at.is_(None)).all()
-    return [r.id for r in supervisors] + [r.user_id for r in parent_ids] + [r.id for r in admins]
+    return [r.id for r in supervisors] + [r.user_id for r in parent_ids]
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +140,7 @@ def get_allowed_recipients(
     Return the recipients the current user is allowed to message.
     - SUPERVISOR: returns single auto-resolved manager (no choice)
     - PARENT:     returns single auto-resolved manager (no choice)
-    - MANAGER:    returns all supervisors + parents + admins in their KG
+    - MANAGER:    returns all supervisors + parents in their KG
     - ADMIN:      returns all users
     """
     if current_user.role == UserRole.SUPERVISOR:

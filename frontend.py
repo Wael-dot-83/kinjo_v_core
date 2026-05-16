@@ -33,6 +33,10 @@ def language_context_processor(request: Request) -> dict:
         or getattr(request.state, "ui_lang", None)
         or request.query_params.get("lang")
     )
+    # Pass impersonation state so the banner template can render it
+    from rbac import IMPERSONATION_SESSION_KEY
+    session = getattr(request.state, "session", None) or {}
+    impersonation = session.get(IMPERSONATION_SESSION_KEY)
     return {
         "ui_lang": lang,
         "ui_dir": "rtl" if lang == "ar" else "ltr",
@@ -42,6 +46,7 @@ def language_context_processor(request: Request) -> dict:
             "csrf_token",
             request.cookies.get(settings.CSRF_COOKIE_NAME, ""),
         ),
+        "impersonation": impersonation,
     }
 
 
@@ -346,20 +351,17 @@ async def edit_kindergarten_page(request: Request, kg_id: int, db: Session = Dep
 
 @router.get("/classes", response_class=HTMLResponse)
 async def list_classes_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Class list page (Admin & Manager)"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+    """Class list page — Manager only. Admin uses admin panel; direct access returns 403."""
+    if current_user.role != UserRole.MANAGER:
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     return templates.TemplateResponse(request=request, name="classes/list.html", context={"current_user": current_user})
 
 @router.get("/classes/create", response_class=HTMLResponse)
 async def create_class_page(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    """Create class page (Admin & Manager)"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+    """Create class page — Manager only."""
+    if current_user.role != UserRole.MANAGER:
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
-    if current_user.role == UserRole.MANAGER:
-        kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
-    else:
-        kgs = db.query(Kindergarten).filter(Kindergarten.status == models.KindergartenStatus.ACTIVE).all()
+    kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
     return templates.TemplateResponse(request=request, name="classes/form.html", context={
         "current_user": current_user,
         "kindergartens": kgs,
@@ -368,20 +370,16 @@ async def create_class_page(request: Request, db: Session = Depends(get_db), cur
 
 @router.get("/classes/{class_id}/edit", response_class=HTMLResponse)
 async def edit_class_page(request: Request, class_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    """Edit class page (Admin & Manager)"""
+    """Edit class page — Manager only."""
     from models import Class
-    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+    if current_user.role != UserRole.MANAGER:
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     class_obj = db.query(Class).filter(Class.id == class_id).first()
     if not class_obj:
         return templates.TemplateResponse(request=request, name="404.html", status_code=404)
-    # Scope check
-    if current_user.role == UserRole.MANAGER and class_obj.kindergarten_id != current_user.kindergarten_id:
+    if class_obj.kindergarten_id != current_user.kindergarten_id:
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
-    if current_user.role == UserRole.MANAGER:
-        kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
-    else:
-        kgs = db.query(Kindergarten).filter(Kindergarten.status == models.KindergartenStatus.ACTIVE).all()
+    kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
     return templates.TemplateResponse(request=request, name="classes/form.html", context={
         "current_user": current_user,
         "kindergartens": kgs,
@@ -931,13 +929,14 @@ async def kpi_main(request: Request, current_user: User = Depends(get_current_us
 
 @router.get("/classes/{class_id}", response_class=HTMLResponse)
 async def view_class(request: Request, class_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    """View class details"""
+    """View class details — Admin blocked (use admin panel); Manager scoped to own KG."""
     from models import Class
+    if current_user.role == UserRole.ADMIN:
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     class_obj = db.query(Class).filter(Class.id == class_id).first()
     if not class_obj:
         return templates.TemplateResponse(request=request, name="404.html", status_code=404)
-    # Kindergarten scope check for non-admin users
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role in (UserRole.MANAGER, UserRole.SUPERVISOR):
         if class_obj.kindergarten_id != current_user.kindergarten_id:
             return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     return templates.TemplateResponse(request=request, name="classes/view.html", context={"current_user": current_user, "class": class_obj})

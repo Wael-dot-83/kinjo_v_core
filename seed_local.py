@@ -21,7 +21,7 @@ from models import (
     SupervisorAssignment,
     Child, Gender,
     EnrollmentApplication, EnrollmentStatus,
-    AttendanceLog, AttendanceMethod,
+    AttendanceLog, AttendanceStatus,
     DailyReport, DailyReportStatus,
     Incident, IncidentType, SeverityLevel,
     ParentProfile, AuditLog
@@ -95,27 +95,42 @@ def run():
         upsert_user("parent2",     "parent2@kinjo.jo",     "Parent@1234",  UserRole.PARENT,     None,   "هند",  "سالم")
 
         # ── Classes ───────────────────────────────────────────────────────────
-        def upsert_class(kg_id, name_ar, name_en):
+        def upsert_class(kg_id, name_ar, name_en, class_code):
             c = db.query(Class).filter(Class.kindergarten_id == kg_id, Class.name_en == name_en).first()
             if not c:
                 c = Class(
                     kindergarten_id=kg_id,
                     name_ar=name_ar,
                     name_en=name_en,
+                    class_code=class_code,
+                    age_group="AGE_2_4",
                     capacity_total=20,
                     min_age_months=24,
-                    max_age_months=60,
+                    max_age_months=84,
                     is_active=True,
                 )
                 db.add(c)
                 db.commit()
                 db.refresh(c)
                 print(f"  Created class: {name_en} (kg_id={kg_id})")
+            else:
+                changed = False
+                if not c.class_code:
+                    c.class_code = class_code
+                    changed = True
+                if not c.age_group:
+                    c.age_group = "AGE_2_4"
+                    changed = True
+                if c.max_age_months < 84:
+                    c.max_age_months = 84
+                    changed = True
+                if changed:
+                    db.commit()
             return c
 
-        class_a = upsert_class(kg1.id, "الصف الأول أ",  "Class A")
-        class_b = upsert_class(kg1.id, "الصف الثاني ب", "Class B")
-        class_c = upsert_class(kg2.id, "الصف الأول ج",  "Class C")
+        class_a = upsert_class(kg1.id, "الصف الأول أ",  "Class A", "KG1-A")
+        class_b = upsert_class(kg1.id, "الصف الثاني ب", "Class B", "KG1-B")
+        class_c = upsert_class(kg2.id, "الصف الأول ج",  "Class C", "KG2-C")
 
         # ── Parent Profiles ───────────────────────────────────────────────────
         def upsert_parent_profile(user_id, phone, nationality, first, last, gender_val=Gender.MALE):
@@ -155,9 +170,10 @@ def run():
                 c = db.query(Child).filter(Child.parent_id == parent_user_id, Child.first_name == first_ar).first()
             return c
 
-        child1 = upsert_child("علي",  "الخالد", date(2021, 3, 10), Gender.MALE,   "سامي الخالد",  pp1.id)
-        child2 = upsert_child("لينا", "الخالد", date(2021, 9, 5),  Gender.FEMALE, "سامي الخالد",  pp1.id)
-        child3 = upsert_child("يوسف","سالم",    date(2020, 12, 1), Gender.MALE,   "هند سالم",     pp2.id if pp2 else pp1.id)
+        today = date.today()
+        child1 = upsert_child("علي",  "الخالد", today - timedelta(days=365 * 4), Gender.MALE,   "سامي الخالد",  pp1.id)
+        child2 = upsert_child("لينا", "الخالد", today - timedelta(days=365 * 3), Gender.FEMALE, "سامي الخالد",  pp1.id)
+        child3 = upsert_child("يوسف","سالم",    today - timedelta(days=365 * 4 + 90), Gender.MALE,   "هند سالم",     pp2.id if pp2 else pp1.id)
         print(f"Children: {child1.first_name}, {child2.first_name}, {child3.first_name}")
 
         # ── Enrollments ───────────────────────────────────────────────────────
@@ -215,14 +231,16 @@ def run():
         print("Supervisor assignments created")
 
         # ── Sample Daily Reports ──────────────────────────────────────────────
-        def upsert_daily_report(child_id, report_date, status, submitted_by_id):
+        def upsert_daily_report(child_id, kg_id, report_date, status, submitted_by_id):
             r = db.query(DailyReport).filter(
                 DailyReport.child_id == child_id,
+                DailyReport.kindergarten_id == kg_id,
                 DailyReport.date == report_date,
             ).first()
             if not r:
                 r = DailyReport(
                     child_id=child_id,
+                    kindergarten_id=kg_id,
                     date=report_date,
                     status=status,
                     submitted_by=submitted_by_id,
@@ -240,10 +258,10 @@ def run():
             return r
 
         today = date.today()
-        upsert_daily_report(child1.id, today,                   DailyReportStatus.DRAFT,     sup.id)
-        upsert_daily_report(child1.id, today - timedelta(days=1), DailyReportStatus.SUBMITTED, sup.id)
-        upsert_daily_report(child2.id, today,                   DailyReportStatus.DRAFT,     sup.id)
-        upsert_daily_report(child2.id, today - timedelta(days=1), DailyReportStatus.SENT_TO_PARENT, sup.id)
+        upsert_daily_report(child1.id, kg1.id, today,                   DailyReportStatus.DRAFT,     sup.id)
+        upsert_daily_report(child1.id, kg1.id, today - timedelta(days=1), DailyReportStatus.SUBMITTED, sup.id)
+        upsert_daily_report(child2.id, kg1.id, today,                   DailyReportStatus.DRAFT,     sup.id)
+        upsert_daily_report(child2.id, kg1.id, today - timedelta(days=1), DailyReportStatus.SENT_TO_PARENT, sup.id)
         print("Daily reports created")
 
         # ── Attendance ────────────────────────────────────────────────────────
@@ -261,9 +279,18 @@ def run():
                 if not exists and cls_id:
                     checkin = datetime.combine(d, datetime.min.time()).replace(hour=8)
                     db.execute(text(
-                        "INSERT INTO attendance_logs (child_id, class_id, date, check_in_at, check_out_at, method, dropped_by_name) "
-                        "VALUES (:cid, :clsid, :d, :cin, :cout, 'MANUAL', :dby)"
-                    ), {"cid": child.id, "clsid": cls_id, "d": str(d), "cin": str(checkin), "cout": str(checkin.replace(hour=13)), "dby": "سامي الخالد"})
+                        "INSERT INTO attendance_logs (child_id, class_id, date, status, check_in_at, check_out_at, recorded_by, picked_by_name) "
+                        "VALUES (:cid, :clsid, :d, :status, :cin, :cout, :recorded_by, :picked_by)"
+                    ), {
+                        "cid": child.id,
+                        "clsid": cls_id,
+                        "d": str(d),
+                        "status": AttendanceStatus.PRESENT.value,
+                        "cin": str(checkin),
+                        "cout": str(checkin.replace(hour=13)),
+                        "recorded_by": sup.id,
+                        "picked_by": "سامي الخالد",
+                    })
         db.commit()
         print("Attendance records created")
 

@@ -169,3 +169,14 @@ seed_output.txt
 # Root-level diagnostic duplicates
 diag_*.py
 inspect_dataset.py
+
+# Coverage reports
+coverage.xml
+.coverage
+htmlcov/
+
+# Root-level ad-hoc test scripts (not part of the test suite)
+/test_advanced_analytics_cache.py
+/test_advanced_analytics_cache_multi.py
+/test_api_advanced_cache.py
+/test_cache_invalidation.py

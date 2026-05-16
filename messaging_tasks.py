@@ -52,6 +52,10 @@ def dispatch_scheduled_messages_now(db=None) -> int:
                 msg.recipient_id,
                 msg.scheduled_at,
             )
+            db.query(models.MessageRecipient).filter(
+                models.MessageRecipient.message_id == msg.id,
+                models.MessageRecipient.delivered_at.is_(None),
+            ).update({"delivered_at": now}, synchronize_session=False)
 
         if dispatched:
             db.commit()
