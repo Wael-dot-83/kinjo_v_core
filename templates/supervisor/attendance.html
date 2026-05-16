@@ -316,7 +316,7 @@
     window.checkIn = async function (childId, name) {
         setActionLoading(childId, true);
         try {
-            const r = await fetch('/api/attendance', {
+            const r = await fetch('/api/supervisor/attendance', {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify({ child_id: childId, action: 'check_in' })
@@ -333,7 +333,7 @@
     window.checkOut = async function (childId, name) {
         setActionLoading(childId, true);
         try {
-            const r = await fetch('/api/attendance', {
+            const r = await fetch('/api/supervisor/attendance', {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify({ child_id: childId, action: 'check_out' })
@@ -361,7 +361,7 @@
         btn.disabled = true;
 
         try {
-            const r = await fetch('/api/attendance', {
+            const r = await fetch('/api/supervisor/attendance', {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify({ child_id: pendingAbsentChildId, action: 'mark_absent' })

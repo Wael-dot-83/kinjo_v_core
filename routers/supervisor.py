@@ -471,6 +471,25 @@ def update_daily_report(
     return {"id": report.id, "status": report.status.value}
 
 
+@router.put("/daily-reports/{report_id}/submit")
+def submit_daily_report(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(_require_supervisor),
+):
+    """Convenience endpoint: transition report from DRAFT → SUBMITTED."""
+    report = db.query(DailyReport).filter(DailyReport.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    assert_supervisor_owns_child(current_user.id, report.child_id, db)
+    if report.status != DailyReportStatus.DRAFT:
+        raise HTTPException(status_code=403, detail="Only DRAFT reports can be submitted.")
+    report.status = DailyReportStatus.SUBMITTED
+    report.submitted_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"id": report.id, "status": report.status.value}
+
+
 # ---------------------------------------------------------------------------
 # Safety Incidents (scoped)
 # ---------------------------------------------------------------------------

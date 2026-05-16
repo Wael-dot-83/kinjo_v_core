@@ -258,7 +258,7 @@
         try {
             const [clsRes, supRes] = await Promise.all([
                 fetch('/api/classes', { headers: getHeaders() }),
-                fetch('/api/supervisors', { headers: getHeaders() })
+                fetch('/api/manager/supervisors', { headers: getHeaders() })
             ]);
             if (clsRes.ok) {
                 const d = await clsRes.json();
@@ -392,7 +392,7 @@
         const btn = document.getElementById('confirmSendParentsBtn');
         setLoading(btn, true);
         try {
-            const r = await fetch(`/api/daily-reports/${pendingSendId}/send-to-parents`, {
+            const r = await fetch(`/api/manager/daily-reports/${pendingSendId}/send-to-parents`, {
                 method: 'PUT',
                 headers: getHeaders()
             });
@@ -418,7 +418,7 @@
         const btn = document.getElementById('confirmDeleteReportBtn');
         setLoading(btn, true);
         try {
-            const r = await fetch(`/api/daily-reports/${pendingDeleteId}`, {
+            const r = await fetch(`/api/manager/daily-reports/${pendingDeleteId}`, {
                 method: 'DELETE',
                 headers: getHeaders()
             });
