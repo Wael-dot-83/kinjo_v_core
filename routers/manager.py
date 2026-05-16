@@ -661,15 +661,33 @@ def get_manager_kpi(
         .count()
     )
 
+    # Build completion_rates for template (name + rate derived from reports/expected)
+    sup_completion_rates = []
+    for s in supervisor_stats:
+        sup_completion_rates.append({"name": s["name"], "rate": min(round(s["reports"] / max(days, 1), 1), 100)})
+
     return {
         "date_from": str(d_from),
         "date_to": str(d_to),
-        "children": {"total": total_children, "class_count": len(classes)},
-        "supervisors": {"total": len(supervisors), "stats": supervisor_stats},
+        "children": {
+            "total": total_children,
+            "enrolled": total_children,
+            "active": total_children,
+            "class_count": len(classes),
+        },
+        "supervisors": {
+            "total": len(supervisors),
+            "count": len(supervisors),
+            "stats": supervisor_stats,
+            "completion_rates": sup_completion_rates,
+        },
         "operational": {
             "attendance_rate": attendance_rate,
             "report_completion_rate": report_rate,
+            "report_completion": report_rate,
             "incident_count": incident_count,
+            "incident_frequency": incident_count,
+            "trend": [],
         },
         "messaging": {
             "sent": messages_sent,

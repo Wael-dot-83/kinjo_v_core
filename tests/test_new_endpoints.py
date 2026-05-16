@@ -619,3 +619,222 @@ class TestCurriculumAccess:
     def test_admin_is_blocked_from_curriculum(self, client, admin_token):
         r = client.get("/curriculum", headers=_hdr(admin_token))
         assert r.status_code == 403
+
+
+# ===========================================================================
+# Frontend RBAC — supervisor page access restrictions (criteria 1 & 2)
+# ===========================================================================
+
+class TestSupervisorFrontendBlocks:
+    def test_supervisor_blocked_from_enrollments_redirected(self, client, supervisor_token):
+        r = client.get("/enrollments", headers=_hdr(supervisor_token), follow_redirects=False)
+        # Supervisor is redirected to /supervisor/dashboard (302)
+        assert r.status_code in (302, 303)
+        assert "supervisor" in r.headers.get("location", "")
+
+    def test_supervisor_blocked_from_attendance_daily(self, client, supervisor_token):
+        r = client.get("/attendance/daily", headers=_hdr(supervisor_token))
+        assert r.status_code == 403
+
+    def test_supervisor_blocked_from_daily_reports_create(self, client, supervisor_token):
+        r = client.get("/daily-reports/create", headers=_hdr(supervisor_token))
+        assert r.status_code == 403
+
+
+# ===========================================================================
+# Frontend RBAC — admin classroom page blocks (criteria 20)
+# ===========================================================================
+
+class TestAdminFrontendBlocks:
+    def test_admin_blocked_from_attendance_daily(self, client, admin_token):
+        r = client.get("/attendance/daily", headers=_hdr(admin_token))
+        assert r.status_code == 403
+
+    def test_admin_blocked_from_daily_reports_create(self, client, admin_token):
+        r = client.get("/daily-reports/create", headers=_hdr(admin_token))
+        assert r.status_code == 403
+
+    def test_admin_blocked_from_attendance_history(self, client, admin_token):
+        r = client.get("/attendance/history", headers=_hdr(admin_token))
+        assert r.status_code == 403
+
+
+# ===========================================================================
+# Manager child move between classes (criteria 12)
+# ===========================================================================
+
+class TestManagerChildMove:
+    def test_manager_can_move_child_between_classes(
+        self,
+        client,
+        test_db,
+        manager_user,
+        manager_token,
+        sample_kindergarten,
+        sample_child,
+        sample_class,
+        sample_enrollment,
+    ):
+        # Create a second class in the same kindergarten
+        class_b = models.Class(
+            kindergarten_id=sample_kindergarten.id,
+            name_ar="الصف ب", name_en="Class B",
+            capacity_total=20, min_age_months=24, max_age_months=60, is_active=True,
+        )
+        test_db.add(class_b)
+        test_db.commit()
+        test_db.refresh(class_b)
+
+        r = client.post(
+            "/api/manager/children/move-class",
+            json={"child_id": sample_child.id, "from_class_id": sample_class.id, "to_class_id": class_b.id},
+            headers=_hdr(manager_token),
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["new_class_id"] == class_b.id
+
+        # Verify enrollment updated in DB
+        test_db.expire_all()
+        updated = test_db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == sample_child.id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).first()
+        assert updated.class_id == class_b.id
+
+    def test_manager_cannot_move_child_to_foreign_class(
+        self,
+        client,
+        test_db,
+        manager_user,
+        manager_token,
+        sample_child,
+        sample_class,
+        sample_enrollment,
+    ):
+        other_kg = models.Kindergarten(
+            name_ar="روضة مختلفة", name_en="Other KG",
+            governorate="Zarqa", city="Zarqa", area="West", address_line="St 1",
+            contact_phone="0600000042", status=models.KindergartenStatus.ACTIVE,
+        )
+        test_db.add(other_kg)
+        test_db.commit()
+        test_db.refresh(other_kg)
+        foreign_class = models.Class(
+            kindergarten_id=other_kg.id, name_ar="فصل غريب", name_en="Foreign",
+            capacity_total=10, min_age_months=24, max_age_months=60, is_active=True,
+        )
+        test_db.add(foreign_class)
+        test_db.commit()
+        test_db.refresh(foreign_class)
+
+        r = client.post(
+            "/api/manager/children/move-class",
+            json={"child_id": sample_child.id, "from_class_id": sample_class.id, "to_class_id": foreign_class.id},
+            headers=_hdr(manager_token),
+        )
+        assert r.status_code == 403
+
+
+# ===========================================================================
+# Parent receives message when report sent (criteria 16)
+# ===========================================================================
+
+class TestParentReceivesReportMessage:
+    def test_parent_gets_message_when_report_sent_to_parents(
+        self,
+        client,
+        test_db,
+        manager_user,
+        manager_token,
+        parent_user,
+        sample_child,
+        sample_enrollment,
+        supervisor_user,
+    ):
+        report = models.DailyReport(
+            child_id=sample_child.id,
+            date=date.today(),
+            status=models.DailyReportStatus.SUBMITTED,
+            submitted_by=supervisor_user.id,
+            arrival_time="08:00",
+            leave_time="14:00",
+        )
+        test_db.add(report)
+        test_db.commit()
+        test_db.refresh(report)
+
+        r = client.put(
+            f"/api/manager/daily-reports/{report.id}/send-to-parents",
+            headers=_hdr(manager_token),
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert data["status"] == "SENT_TO_PARENT"
+
+        # Verify a notification message was created for the parent
+        msg = test_db.query(models.Message).filter(
+            models.Message.recipient_id == parent_user.id,
+            models.Message.child_id == sample_child.id,
+        ).first()
+        assert msg is not None, "No message created for parent after send-to-parents"
+
+
+# ===========================================================================
+# Supervisor unassign and swap (criteria 10, partial)
+# ===========================================================================
+
+class TestManagerSupervisorAssignment:
+    def test_manager_can_unassign_supervisor(
+        self,
+        client,
+        test_db,
+        manager_user,
+        manager_token,
+        supervisor_user,
+        sample_class,
+        sample_supervisor_assignment,
+    ):
+        r = client.delete(
+            f"/api/manager/classes/{sample_class.id}/supervisors/{supervisor_user.id}",
+            headers=_hdr(manager_token),
+        )
+        assert r.status_code == 204
+
+        # Assignment should be soft-deleted (deleted_at set)
+        test_db.expire_all()
+        remaining = test_db.query(models.SupervisorAssignment).filter(
+            models.SupervisorAssignment.class_id == sample_class.id,
+            models.SupervisorAssignment.supervisor_id == supervisor_user.id,
+        ).first()
+        assert remaining is None or remaining.deleted_at is not None
+
+    def test_manager_can_swap_supervisor(
+        self,
+        client,
+        test_db,
+        manager_user,
+        manager_token,
+        supervisor_user,
+        sample_class,
+        sample_kindergarten,
+        sample_supervisor_assignment,
+    ):
+        from auth import get_password_hash
+        new_sup = models.User(
+            username="newsup01", email="newsup01@test.com",
+            hashed_password=get_password_hash("Pass123!"),
+            role=models.UserRole.SUPERVISOR,
+            kindergarten_id=sample_kindergarten.id,
+            status=models.UserStatus.ACTIVE,
+        )
+        test_db.add(new_sup)
+        test_db.commit()
+        test_db.refresh(new_sup)
+
+        r = client.put(
+            f"/api/manager/classes/{sample_class.id}/swap-supervisor",
+            json={"supervisor_id": new_sup.id, "class_id": sample_class.id, "is_primary": True},
+            headers=_hdr(manager_token),
+        )
+        assert r.status_code == 200

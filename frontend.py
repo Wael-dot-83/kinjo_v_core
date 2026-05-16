@@ -297,8 +297,8 @@ async def view_enrollment(request: Request, app_id: int, db: Session = Depends(g
 
 @router.get("/attendance/daily", response_class=HTMLResponse)
 async def attendance_daily(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    if current_user.role == UserRole.ADMIN:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins do not access classroom pages directly.")
+    if current_user.role in (UserRole.ADMIN, UserRole.SUPERVISOR):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
     return templates.TemplateResponse(request=request, name="attendance/daily.html", context={"current_user": current_user, "today": date.today()})
 
 @router.get("/attendance/history", response_class=HTMLResponse)
@@ -532,9 +532,9 @@ async def daily_reports_list(request: Request, current_user: User = Depends(get_
 
 @router.get("/daily-reports/create", response_class=HTMLResponse)
 async def create_daily_report(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Create a new daily report — Admin is blocked from operational data entry."""
-    if current_user.role.value == "ADMIN":
-        return RedirectResponse(url="/daily-reports")
+    """Create a new daily report — Admin and Supervisor are blocked (supervisors use /supervisor/daily-reports/create)."""
+    if current_user.role in (UserRole.ADMIN, UserRole.SUPERVISOR):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
     return templates.TemplateResponse(request=request, name="reports/form.html", context={"current_user": current_user, "today": date.today()})
 
 

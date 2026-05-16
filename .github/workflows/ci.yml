@@ -40,7 +40,10 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt ruff
+
+      - name: Lint (ruff)
+        run: ruff check . --select=F8,E9 --ignore=F811,F841 --exclude=frontend_extensions.py,kpi_service.py
 
       - name: Verify Alembic migrations (upgrade → downgrade → upgrade)
         run: |

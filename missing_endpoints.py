@@ -1845,6 +1845,19 @@ def list_classes(
                 "name": s_user.username  # User model uses username, not first/last name
             }
             
+        # Count all active supervisor assignments for this class
+        active_sup_count = db.query(models.SupervisorAssignment).filter(
+            models.SupervisorAssignment.class_id == c.id,
+            models.SupervisorAssignment.start_date <= today,
+            (models.SupervisorAssignment.end_date == None) | (models.SupervisorAssignment.end_date >= today)
+        ).count()
+
+        # Count children actively enrolled in this class
+        children_count = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.class_id == c.id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).count()
+
         c_dict = {
             "id": c.id,
             "name_ar": c.name_ar,
@@ -1853,7 +1866,10 @@ def list_classes(
             "max_age_months": c.max_age_months,
             "capacity_total": c.capacity_total,
             "is_active": c.is_active,
-            "current_supervisor": current_supervisor
+            "current_supervisor": current_supervisor,
+            "supervisor_count": active_sup_count,
+            "supervisors_count": active_sup_count,
+            "children_count": children_count,
         }
         result.append(c_dict)
 
@@ -4661,6 +4677,10 @@ def _meal_rating(report: models.DailyReport) -> str:
 def list_daily_reports(
     report_date: Optional[str] = Query(default=None, alias="date"),
     child_id: Optional[int] = None,
+    class_id: Optional[int] = None,
+    supervisor_id: Optional[int] = None,
+    from_date: Optional[str] = Query(default=None, alias="from"),
+    to_date: Optional[str] = Query(default=None, alias="to"),
     status_filter: Optional[str] = Query(default=None, alias="status"),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -4674,8 +4694,29 @@ def list_daily_reports(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format")
 
+    if from_date:
+        try:
+            query = query.filter(models.DailyReport.date >= date.fromisoformat(from_date))
+        except ValueError:
+            pass
+
+    if to_date:
+        try:
+            query = query.filter(models.DailyReport.date <= date.fromisoformat(to_date))
+        except ValueError:
+            pass
+
     if child_id:
         query = query.filter(models.DailyReport.child_id == child_id)
+
+    if class_id:
+        query = query.join(
+            models.EnrollmentApplication,
+            models.EnrollmentApplication.child_id == models.DailyReport.child_id
+        ).filter(models.EnrollmentApplication.class_id == class_id)
+
+    if supervisor_id:
+        query = query.filter(models.DailyReport.submitted_by == supervisor_id)
 
     if status_filter:
         normalized_status = status_filter.upper()
@@ -4704,6 +4745,9 @@ def list_daily_reports(
 
     reports = query.order_by(models.DailyReport.date.desc(), models.DailyReport.id.desc()).all()
 
+    today_str = date.today().isoformat()
+    week_start = date.today() - timedelta(days=date.today().weekday())
+
     report_items = []
     for report in reports:
         enrollment = db.query(models.EnrollmentApplication).filter(
@@ -4712,14 +4756,16 @@ def list_daily_reports(
         ).order_by(models.EnrollmentApplication.id.desc()).first()
         class_obj = enrollment.class_ if enrollment else None
         nap_minutes = report.nap_duration_minutes or _minutes_between(report.nap_start, report.nap_end)
+        submitter = db.query(models.User).filter(models.User.id == report.submitted_by).first() if report.submitted_by else None
 
         report_items.append({
             "id": report.id,
             "child_id": report.child_id,
             "child_name": f"{report.child.first_name} {report.child.last_name}",
             "class_name": (class_obj.name_ar or class_obj.name_en) if class_obj else None,
+            "supervisor_name": (submitter.full_name or submitter.username) if submitter else None,
             "date": report.date.isoformat(),
-            "status": report.status.value.lower(),
+            "status": report.status.value,
             "mood": "happy",
             "meal_rating": _meal_rating(report),
             "nap_minutes": nap_minutes,
@@ -4731,8 +4777,16 @@ def list_daily_reports(
     sent = sum(1 for report in reports if report.status in [models.DailyReportStatus.SUBMITTED, models.DailyReportStatus.APPROVED])
     eating_count = sum(1 for report in reports if _meal_rating(report) != "none")
 
+    stats = {
+        "submitted": sum(1 for r in reports if r.status == models.DailyReportStatus.SUBMITTED),
+        "sent_to_parent": sum(1 for r in reports if r.status == models.DailyReportStatus.SENT_TO_PARENT),
+        "today": sum(1 for r in reports if r.date.isoformat() == today_str),
+        "this_week": sum(1 for r in reports if r.date >= week_start),
+    }
+
     return {
         "reports": report_items,
+        "stats": stats,
         "summary": {
             "total": total,
             "sent": sent,

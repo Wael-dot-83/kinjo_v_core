@@ -119,8 +119,25 @@ def get_attendance(
     if not child_ids:
         return {"date": str(target_date), "children": [], "present": 0, "absent": 0, "total": 0}
 
-    from models import Child
+    from models import Child, Class, EnrollmentApplication, EnrollmentStatus
     children = {c.id: c for c in db.query(Child).filter(Child.id.in_(child_ids)).all()}
+
+    # Build class_name map via active enrollment
+    enrollments = (
+        db.query(EnrollmentApplication)
+        .filter(
+            EnrollmentApplication.child_id.in_(child_ids),
+            EnrollmentApplication.status == EnrollmentStatus.ACTIVE,
+        )
+        .all()
+    )
+    class_ids_for_children = {e.child_id: e.class_id for e in enrollments}
+    classes = {c.id: c for c in db.query(Class).filter(Class.id.in_(class_ids_for_children.values())).all()}
+    class_name_map = {
+        child_id: (classes[cid].name_ar or classes[cid].name_en or "")
+        for child_id, cid in class_ids_for_children.items()
+        if cid in classes
+    }
 
     logs = (
         db.query(AttendanceLog)
@@ -132,24 +149,32 @@ def get_attendance(
     result = []
     for cid, child in children.items():
         log = logged.get(cid)
+        check_in_at = log.check_in_at if log else None
+        check_out_at = log.check_out_at if log else None
+        if check_in_at and check_out_at:
+            att_status = "checked_out"
+        elif check_in_at:
+            att_status = "present"
+        else:
+            att_status = "not_arrived"
         result.append(
             {
-                "child_id": cid,
+                "id": cid,
                 "name": f"{child.first_name} {child.last_name}",
-                "checked_in": log is not None and log.check_in_at is not None,
-                "checked_out": log is not None and log.check_out_at is not None,
-                "check_in_at": log.check_in_at.isoformat() if log and log.check_in_at else None,
-                "check_out_at": log.check_out_at.isoformat() if log and log.check_out_at else None,
-                "log_id": log.id if log else None,
+                "class_name": class_name_map.get(cid, ""),
+                "status": att_status,
+                "check_in_time": check_in_at.strftime("%H:%M") if check_in_at else None,
+                "check_out_time": check_out_at.strftime("%H:%M") if check_out_at else None,
             }
         )
 
-    present = sum(1 for r in result if r["checked_in"])
+    present = sum(1 for r in result if r["status"] == "present")
+    checked_out = sum(1 for r in result if r["status"] == "checked_out")
     return {
         "date": str(target_date),
         "children": result,
-        "present": present,
-        "absent": len(result) - present,
+        "present": present + checked_out,
+        "absent": len(result) - present - checked_out,
         "total": len(result),
     }
 
@@ -223,30 +248,50 @@ def record_attendance(
 
 @router.get("/daily-reports")
 def get_daily_reports(
-    from_date: Optional[str] = Query(None),
-    to_date: Optional[str] = Query(None),
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date: Optional[str] = Query(None, alias="to"),
+    status_filter: Optional[str] = Query(None, alias="status"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_supervisor),
 ):
     child_ids = get_supervisor_child_ids(current_user.id, db)
     if not child_ids:
-        return []
+        return {"reports": [], "stats": {"submitted": 0, "pending": 0, "draft": 0, "sent_to_parent": 0}}
 
     q = db.query(DailyReport).filter(DailyReport.child_id.in_(child_ids))
     if from_date:
         q = q.filter(DailyReport.date >= date.fromisoformat(from_date))
     if to_date:
         q = q.filter(DailyReport.date <= date.fromisoformat(to_date))
+    if status_filter:
+        try:
+            q = q.filter(DailyReport.status == DailyReportStatus(status_filter.upper()))
+        except ValueError:
+            pass
 
     reports = q.order_by(DailyReport.date.desc()).all()
-    from models import Child
+    from models import Child, Class, EnrollmentApplication, EnrollmentStatus
     child_map = {c.id: c for c in db.query(Child).filter(Child.id.in_(child_ids)).all()}
 
-    return [
+    # Build class_name map for all children
+    enrollments = (
+        db.query(EnrollmentApplication)
+        .filter(EnrollmentApplication.child_id.in_(child_ids), EnrollmentApplication.status == EnrollmentStatus.ACTIVE)
+        .all()
+    )
+    class_ids = {e.child_id: e.class_id for e in enrollments}
+    classes = {c.id: c for c in db.query(Class).filter(Class.id.in_(class_ids.values())).all()}
+    class_name_map = {
+        cid: (classes[class_ids[cid]].name_ar or classes[class_ids[cid]].name_en or "")
+        for cid in class_ids if class_ids[cid] in classes
+    }
+
+    report_list = [
         {
             "id": r.id,
             "child_id": r.child_id,
             "child_name": f"{child_map[r.child_id].first_name} {child_map[r.child_id].last_name}" if r.child_id in child_map else "",
+            "class_name": class_name_map.get(r.child_id, ""),
             "date": str(r.date),
             "status": r.status.value if r.status else None,
             "submitted_at": r.submitted_at.isoformat() if r.submitted_at else None,
@@ -254,6 +299,17 @@ def get_daily_reports(
         }
         for r in reports
     ]
+
+    # Stats over ALL reports for this supervisor (not just the filtered set)
+    all_reports = db.query(DailyReport).filter(DailyReport.child_id.in_(child_ids)).all()
+    stats = {
+        "submitted": sum(1 for r in all_reports if r.status == DailyReportStatus.SUBMITTED),
+        "pending": sum(1 for r in all_reports if r.status in (DailyReportStatus.SUBMITTED, DailyReportStatus.DRAFT)),
+        "draft": sum(1 for r in all_reports if r.status == DailyReportStatus.DRAFT),
+        "sent_to_parent": sum(1 for r in all_reports if r.status == DailyReportStatus.SENT_TO_PARENT),
+    }
+
+    return {"reports": report_list, "stats": stats}
 
 
 class DailyReportIn(BaseModel):
@@ -469,28 +525,45 @@ def create_safety_incident(
 
 @router.get("/safety-incidents")
 def get_safety_incidents(
+    severity: Optional[str] = Query(None),
+    type_filter: Optional[str] = Query(None, alias="type"),
+    status_filter: Optional[str] = Query(None, alias="status"),
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_supervisor),
 ):
     child_ids = get_supervisor_child_ids(current_user.id, db)
     if not child_ids:
-        return []
+        return {"incidents": [], "stats": {"open": 0, "high_severity": 0, "closed": 0}}
 
-    incidents = (
-        db.query(Incident)
-        .filter(Incident.child_id.in_(child_ids), Incident.deleted_at.is_(None))
-        .order_by(Incident.occurred_at.desc())
-        .all()
-    )
+    q = db.query(Incident).filter(Incident.child_id.in_(child_ids), Incident.deleted_at.is_(None))
+    if severity:
+        try:
+            q = q.filter(Incident.severity_level == SeverityLevel(severity.upper()))
+        except ValueError:
+            pass
+    if type_filter:
+        try:
+            q = q.filter(Incident.type == IncidentType(type_filter.upper()))
+        except ValueError:
+            pass
+
+    incidents = q.order_by(Incident.occurred_at.desc()).all()
     from models import Child
     child_map = {c.id: c for c in db.query(Child).filter(Child.id.in_(child_ids)).all()}
 
-    return [
+    def _incident_status(i: Incident) -> str:
+        return "CLOSED" if i.closed_at else "OPEN"
+
+    if status_filter:
+        incidents = [i for i in incidents if _incident_status(i) == status_filter.upper()]
+
+    result = [
         {
             "id": i.id,
             "child_name": f"{child_map[i.child_id].first_name} {child_map[i.child_id].last_name}" if i.child_id in child_map else "",
             "type": i.type.value if i.type else None,
-            "severity": i.severity_level.value if i.severity_level else None,
+            "severity_level": i.severity_level.value if i.severity_level else None,
+            "status": _incident_status(i),
             "occurred_at": i.occurred_at.isoformat() if i.occurred_at else None,
             "description": i.description,
             "parent_informed": i.parent_informed,
@@ -498,12 +571,41 @@ def get_safety_incidents(
         for i in incidents
     ]
 
+    # Stats use all incidents for this supervisor (pre-type/severity filter for stats accuracy)
+    all_incidents = db.query(Incident).filter(Incident.child_id.in_(child_ids), Incident.deleted_at.is_(None)).all()
+    stats = {
+        "open": sum(1 for i in all_incidents if not i.closed_at),
+        "high_severity": sum(1 for i in all_incidents if i.severity_level in (SeverityLevel.HIGH, SeverityLevel.CRITICAL)),
+        "closed": sum(1 for i in all_incidents if i.closed_at),
+    }
+
+    return {"incidents": result, "stats": stats}
+
 
 # ---------------------------------------------------------------------------
 # Messages — auto-route to supervisor's kindergarten manager
 # ---------------------------------------------------------------------------
 
 
+def _message_list(messages, current_user_id: int, db: Session):
+    result = []
+    for m in messages:
+        sender = db.query(User).filter(User.id == m.sender_id).first()
+        result.append({
+            "id": m.id,
+            "direction": "sent" if m.sender_id == current_user_id else "received",
+            "subject": m.subject,
+            "body": m.message_body or "",
+            "preview": (m.message_body or "")[:100],
+            "sender_name": sender.full_name or sender.username if sender else "",
+            "is_read": m.is_read,
+            "attachment_url": None,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+        })
+    return result
+
+
+@router.get("/messages/inbox")
 @router.get("/messages")
 def get_messages(
     db: Session = Depends(get_db),
@@ -521,17 +623,21 @@ def get_messages(
         .limit(50)
         .all()
     )
-    return [
-        {
-            "id": m.id,
-            "direction": "sent" if m.sender_id == current_user.id else "received",
-            "subject": m.subject,
-            "preview": (m.message_body or "")[:100],
-            "is_read": m.is_read,
-            "created_at": m.created_at.isoformat() if m.created_at else None,
-        }
-        for m in messages
-    ]
+    return _message_list(messages, current_user.id, db)
+
+
+@router.put("/messages/{message_id}/read")
+def mark_message_read(
+    message_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(_require_supervisor),
+):
+    msg = db.query(Message).filter(Message.id == message_id, Message.recipient_id == current_user.id).first()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found.")
+    msg.is_read = True
+    db.commit()
+    return {"status": "ok"}
 
 
 class MessageIn(BaseModel):
