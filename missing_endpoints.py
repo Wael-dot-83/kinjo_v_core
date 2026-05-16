@@ -19,8 +19,7 @@ import kpi_service as _kpi_svc
 from config import settings
 from database import get_db, engine as _db_engine
 from dependencies import get_current_user
-from auth import get_password_hash, normalize_email, normalize_jordan_phone, jordan_phone_login_variants
-from security import PasswordValidator
+from auth import get_password_hash, normalize_email, normalize_jordan_phone, jordan_phone_login_variants, PasswordValidator
 
 
 router = APIRouter()

@@ -253,7 +253,7 @@ def send_message_safe(
 
     # Create MessageRecipient record for tracking
     if recipient_id:
-        db.add(MessageRecipient(message_id=msg.id, recipient_id=recipient_id))
+        db.add(MessageRecipient(message_id=msg.id, recipient_user_id=recipient_id))
     elif thread_type == MessageThreadType.BROADCAST and current_user.kindergarten_id:
         # Fan out to all active parents in the KG
         parent_ids = (
@@ -268,7 +268,7 @@ def send_message_safe(
             .all()
         )
         for (pid,) in parent_ids:
-            db.add(MessageRecipient(message_id=msg.id, recipient_id=pid))
+            db.add(MessageRecipient(message_id=msg.id, recipient_user_id=pid))
 
     db.commit()
     db.refresh(msg)
@@ -304,7 +304,7 @@ def list_messages(
         # Direct messages to me OR I'm in message_recipients
         recipient_msg_ids = (
             db.query(MessageRecipient.message_id)
-            .filter(MessageRecipient.recipient_id == current_user.id)
+            .filter(MessageRecipient.recipient_user_id == current_user.id)
             .subquery()
         )
         base = base.filter(
@@ -319,7 +319,7 @@ def list_messages(
     else:
         recipient_msg_ids = (
             db.query(MessageRecipient.message_id)
-            .filter(MessageRecipient.recipient_id == current_user.id)
+            .filter(MessageRecipient.recipient_user_id == current_user.id)
             .subquery()
         )
         base = base.filter(
@@ -357,7 +357,7 @@ def mark_message_read(
         db.query(MessageRecipient)
         .filter(
             MessageRecipient.message_id == message_id,
-            MessageRecipient.recipient_id == current_user.id,
+            MessageRecipient.recipient_user_id == current_user.id,
         )
         .first()
     )
@@ -378,7 +378,7 @@ def mark_message_read(
         raise HTTPException(status_code=404)
 
     now = datetime.now(timezone.utc)
-    row = MessageRecipient(message_id=msg.id, recipient_id=current_user.id, delivered_at=now, read_at=now)
+    row = MessageRecipient(message_id=msg.id, recipient_user_id=current_user.id, delivered_at=now, read_at=now)
     db.add(row)
     db.commit()
     return {"read_at": now.isoformat()}
@@ -496,7 +496,7 @@ def broadcast_message(
             )
             db.add(msg)
             db.flush()
-            db.add(MessageRecipient(message_id=msg.id, recipient_id=rid))
+            db.add(MessageRecipient(message_id=msg.id, recipient_user_id=rid))
             created_ids.append(msg.id)
 
     db.commit()

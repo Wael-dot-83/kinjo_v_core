@@ -399,3 +399,99 @@ def auth_headers_parent(parent_token):
         "X-CSRF-Token": csrf_token,
         "Cookie": f"kinjo_csrf_token={csrf_token}"
     }
+
+
+@pytest.fixture
+def sample_enrollment(test_db, sample_child, sample_kindergarten, sample_class):
+    from models import EnrollmentApplication, EnrollmentStatus
+    enrollment = EnrollmentApplication(
+        child_id=sample_child.id,
+        kindergarten_id=sample_kindergarten.id,
+        class_id=sample_class.id,
+        status=EnrollmentStatus.ACTIVE,
+        source="WEB",
+        created_at=datetime(2026, 1, 10),
+        submitted_at=datetime(2026, 1, 10),
+        enrollment_start_date=date(2026, 1, 15),
+    )
+    test_db.add(enrollment)
+    test_db.commit()
+    test_db.refresh(enrollment)
+    return enrollment
+
+
+@pytest.fixture
+def sample_incident(test_db, sample_child, sample_kindergarten, supervisor_user, sample_enrollment):
+    from models import Incident, IncidentType, SeverityLevel
+    incident = Incident(
+        child_id=sample_child.id,
+        kindergarten_id=sample_kindergarten.id,
+        supervisor_id=supervisor_user.id,
+        type=IncidentType.ILLNESS,
+        severity_level=SeverityLevel.LOW,
+        description="تعثّر الطفل في الملعب",
+        occurred_at=datetime(2026, 5, 2, 10, 30),
+        reported_by=supervisor_user.id,
+        parent_informed=True,
+        followup_required_flag=False,
+    )
+    test_db.add(incident)
+    test_db.commit()
+    test_db.refresh(incident)
+    return incident
+
+
+@pytest.fixture
+def sample_daily_report(test_db, sample_child, supervisor_user, sample_enrollment, sample_kindergarten):
+    from models import DailyReport, DailyReportStatus
+    report = DailyReport(
+        child_id=sample_child.id,
+        date=date(2026, 5, 1),
+        status=DailyReportStatus.SUBMITTED,
+        submitted_by=supervisor_user.id,
+        submitted_at=datetime(2026, 5, 1, 14, 0),
+        arrival_time="08:00",
+        leave_time="14:00",
+        breakfast=True,
+        snack=True,
+        milk=True,
+        lunch=False,
+        kindergarten_id=sample_kindergarten.id,
+    )
+    test_db.add(report)
+    test_db.commit()
+    test_db.refresh(report)
+    return report
+
+
+@pytest.fixture
+def sample_attendance(test_db, sample_child, sample_class, supervisor_user, sample_enrollment):
+    from models import AttendanceLog, AttendanceStatus
+    from datetime import datetime, timezone
+    log = AttendanceLog(
+        child_id=sample_child.id,
+        class_id=sample_class.id,
+        date=date(2026, 5, 1),
+        status=AttendanceStatus.PRESENT,
+        check_in_at=datetime(2026, 5, 1, 8, 0, tzinfo=timezone.utc),
+        recorded_by=supervisor_user.id,
+    )
+    test_db.add(log)
+    test_db.commit()
+    test_db.refresh(log)
+    return log
+
+
+@pytest.fixture
+def sample_supervisor_assignment(test_db, supervisor_user, sample_class):
+    from models import SupervisorAssignment
+    assignment = SupervisorAssignment(
+        class_id=sample_class.id,
+        supervisor_id=supervisor_user.id,
+        is_primary=True,
+        start_date=date(2026, 1, 1),
+    )
+    test_db.add(assignment)
+    test_db.commit()
+    test_db.refresh(assignment)
+    return assignment

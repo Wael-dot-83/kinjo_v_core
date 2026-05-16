@@ -8,6 +8,7 @@ GET  /api/admin/impersonate/audit   — recent impersonation audit log entries
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -68,7 +69,7 @@ def _write_audit(
         action=action,
         entity_type="User",
         entity_id=target_id,
-        details={"reason": reason},
+        details=json.dumps({"reason": reason}),
         ip_address=ip,
         sensitivity_level=4,
         impersonated_by=admin_id,

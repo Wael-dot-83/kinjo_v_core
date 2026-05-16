@@ -6,6 +6,7 @@ the manager's own kindergarten(s).
 """
 from __future__ import annotations
 
+import uuid
 from datetime import date, datetime, timezone
 from typing import Optional
 
@@ -23,6 +24,7 @@ from models import (
     EnrollmentApplication,
     EnrollmentStatus,
     Message,
+    MessageRecipient,
     MessageThreadType,
     SupervisorAssignment,
     User,
@@ -86,6 +88,7 @@ def list_classes(
 class ClassIn(BaseModel):
     name_ar: str
     name_en: Optional[str] = None
+    age_group: str = "AGE_2_4"
     capacity_total: int = 20
     min_age_months: int = 24
     max_age_months: int = 72
@@ -102,6 +105,8 @@ def create_class(
         kindergarten_id=current_user.kindergarten_id,
         name_ar=body.name_ar,
         name_en=body.name_en,
+        class_code=str(uuid.uuid4())[:8].upper(),
+        age_group=body.age_group,
         capacity_total=body.capacity_total,
         min_age_months=body.min_age_months,
         max_age_months=body.max_age_months,
@@ -147,7 +152,6 @@ def delete_class(
     if active_count:
         raise HTTPException(status_code=409, detail=f"Cannot delete class with {active_count} active enrollment(s).")
     cls.deleted_at = datetime.now(timezone.utc)
-    cls.deleted_by = current_user.id
     db.commit()
 
 
@@ -221,7 +225,6 @@ def unassign_supervisor_from_class(
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found.")
     assignment.deleted_at = datetime.now(timezone.utc)
-    assignment.deleted_by = current_user.id
     db.commit()
 
 
@@ -239,7 +242,7 @@ def swap_supervisor(
     db.query(SupervisorAssignment).filter(
         SupervisorAssignment.class_id == class_id,
         SupervisorAssignment.deleted_at.is_(None),
-    ).update({"deleted_at": now, "deleted_by": current_user.id})
+    ).update({"deleted_at": now})
 
     new_sup = db.query(User).filter(User.id == body.supervisor_id, User.deleted_at.is_(None)).first()
     if not new_sup or new_sup.role != UserRole.SUPERVISOR or new_sup.kindergarten_id != current_user.kindergarten_id:
@@ -459,7 +462,6 @@ def send_report_to_parents(
             kindergarten_id=current_user.kindergarten_id,
             subject=f"تقرير يومي جديد — {child.first_name} — {report.date}",
             message_body=f"تم إرسال تقرير يومي جديد لطفلك {child.first_name} بتاريخ {report.date}.",
-            child_id=report.child_id,
         )
         db.add(notification)
         db.commit()
@@ -652,11 +654,16 @@ def get_manager_kpi(
         )
         .count()
     )
+    read_msg_ids = (
+        db.query(MessageRecipient.message_id)
+        .filter(MessageRecipient.read_at.isnot(None))
+        .subquery()
+    )
     messages_read = (
         db.query(Message).filter(
             Message.sender_id.in_([u.id for u in supervisors] + [current_user.id]),
             Message.kindergarten_id == kg_id,
-            Message.is_read.is_(True),
+            Message.id.in_(read_msg_ids),
         )
         .count()
     )

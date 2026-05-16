@@ -26,6 +26,7 @@ def _make_message(
     msg = models.Message(
         sender_id=sender_id,
         recipient_id=recipient_id,
+        thread_type=models.MessageThreadType.DIRECT,
         message_body="test body",
         queue_status=queue_status,
         scheduled_at=scheduled_at,

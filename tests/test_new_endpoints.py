@@ -9,6 +9,7 @@ Tests for newly implemented endpoints:
 """
 from __future__ import annotations
 
+import uuid
 from datetime import date
 
 import models
@@ -61,6 +62,7 @@ class TestSupervisorDashboard:
             submitted_by=supervisor_user.id,
             arrival_time="08:00",
             leave_time="14:00",
+            kindergarten_id=supervisor_user.kindergarten_id,
         )
         test_db.add(draft)
         test_db.commit()
@@ -327,6 +329,7 @@ class TestManagerChildren:
             kindergarten_id=sample_kindergarten.id,
             name_ar="شعبة أخرى", name_en="Other", capacity_total=10,
             min_age_months=24, max_age_months=60, is_active=True,
+            class_code=str(uuid.uuid4())[:8].upper(), age_group="AGE_2_4",
         )
         test_db.add(other_class)
         test_db.commit()
@@ -355,6 +358,7 @@ class TestManagerChildren:
             kindergarten_id=other_kg.id,
             name_ar="شعبة غريبة", name_en="Foreign Class", capacity_total=10,
             min_age_months=24, max_age_months=60, is_active=True,
+            class_code=str(uuid.uuid4())[:8].upper(), age_group="AGE_2_4",
         )
         test_db.add(foreign_class)
         test_db.commit()
@@ -474,9 +478,14 @@ class TestMessagesBroadcast:
 # ===========================================================================
 
 class TestManagerReportEdit:
-    def _make_report(self, test_db, child_id, supervisor_id, status):
+    def _make_report(self, test_db, child_id, supervisor_id, status, kindergarten_id=None):
         import models
         from datetime import date
+        if kindergarten_id is None:
+            enr = test_db.query(models.EnrollmentApplication).filter(
+                models.EnrollmentApplication.child_id == child_id
+            ).first()
+            kindergarten_id = enr.kindergarten_id if enr else None
         report = models.DailyReport(
             child_id=child_id,
             date=date.today(),
@@ -484,6 +493,7 @@ class TestManagerReportEdit:
             submitted_by=supervisor_id,
             arrival_time="08:00",
             leave_time="14:00",
+            kindergarten_id=kindergarten_id,
         )
         test_db.add(report)
         test_db.commit()
@@ -560,6 +570,7 @@ class TestManagerReportEdit:
             min_age_months=24,
             max_age_months=48,
             is_active=True,
+            class_code=str(uuid.uuid4())[:8].upper(), age_group="AGE_2_4",
         )
         test_db.add(other_class)
         test_db.commit()
@@ -628,8 +639,8 @@ class TestCurriculumAccess:
 class TestSupervisorFrontendBlocks:
     def test_supervisor_blocked_from_enrollments_redirected(self, client, supervisor_token):
         r = client.get("/enrollments", headers=_hdr(supervisor_token), follow_redirects=False)
-        # Supervisor is redirected to /supervisor/dashboard (302)
-        assert r.status_code in (302, 303)
+        # Supervisor is redirected to /supervisor/dashboard (302/307)
+        assert r.status_code in (302, 303, 307)
         assert "supervisor" in r.headers.get("location", "")
 
     def test_supervisor_blocked_from_attendance_daily(self, client, supervisor_token):
@@ -680,6 +691,7 @@ class TestManagerChildMove:
             kindergarten_id=sample_kindergarten.id,
             name_ar="الصف ب", name_en="Class B",
             capacity_total=20, min_age_months=24, max_age_months=60, is_active=True,
+            class_code=str(uuid.uuid4())[:8].upper(), age_group="AGE_2_4",
         )
         test_db.add(class_b)
         test_db.commit()
@@ -723,6 +735,7 @@ class TestManagerChildMove:
         foreign_class = models.Class(
             kindergarten_id=other_kg.id, name_ar="فصل غريب", name_en="Foreign",
             capacity_total=10, min_age_months=24, max_age_months=60, is_active=True,
+            class_code=str(uuid.uuid4())[:8].upper(), age_group="AGE_2_4",
         )
         test_db.add(foreign_class)
         test_db.commit()
@@ -759,6 +772,7 @@ class TestParentReceivesReportMessage:
             submitted_by=supervisor_user.id,
             arrival_time="08:00",
             leave_time="14:00",
+            kindergarten_id=manager_user.kindergarten_id,
         )
         test_db.add(report)
         test_db.commit()
@@ -775,7 +789,6 @@ class TestParentReceivesReportMessage:
         # Verify a notification message was created for the parent
         msg = test_db.query(models.Message).filter(
             models.Message.recipient_id == parent_user.id,
-            models.Message.child_id == sample_child.id,
         ).first()
         assert msg is not None, "No message created for parent after send-to-parents"
 

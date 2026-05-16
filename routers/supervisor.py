@@ -197,7 +197,7 @@ def record_attendance(
 
     log = (
         db.query(AttendanceLog)
-        .filter(AttendanceLog.child_id == body.child_id, AttendanceLog.date == target_date, AttendanceLog.deleted_at.is_(None))
+        .filter(AttendanceLog.child_id == body.child_id, AttendanceLog.date == target_date)
         .first()
     )
 
@@ -215,12 +215,14 @@ def record_attendance(
     )
     class_id = enrollment.class_id if enrollment else None
 
-    from models import AttendanceMethod
+    from models import AttendanceStatus
     if body.action == "check_in":
         if not log:
             log = AttendanceLog(
                 child_id=body.child_id, class_id=class_id, date=target_date,
-                check_in_at=now, method=AttendanceMethod.MANUAL,
+                status=AttendanceStatus.PRESENT,
+                check_in_at=now,
+                recorded_by=current_user.id,
             )
             db.add(log)
         else:
@@ -415,6 +417,7 @@ def create_daily_report(
         nap_end=body.nap_end,
         activities=body.activities,
         notes=body.notes,
+        kindergarten_id=current_user.kindergarten_id,
         created_at=now,
     )
     db.add(report)

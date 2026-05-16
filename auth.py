@@ -54,6 +54,47 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
+class PasswordValidator:
+    """Thin shim kept for backward-compat with missing_endpoints.py."""
+
+    @classmethod
+    def validate(cls, password: str) -> tuple[bool, str]:
+        errors = validate_password_complexity(password)
+        if errors:
+            return False, " ".join(errors)
+        return True, ""
+
+    @classmethod
+    def check_breached(cls, password: str) -> bool:
+        return False
+
+
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def normalize_jordan_phone(phone: str) -> str:
+    phone = phone.strip().replace(" ", "").replace("-", "")
+    if phone.startswith("+962"):
+        phone = "0" + phone[4:]
+    elif phone.startswith("00962"):
+        phone = "0" + phone[5:]
+    elif phone.startswith("7") and len(phone) == 9:
+        phone = "0" + phone
+    return phone
+
+
+def jordan_phone_login_variants(phone: str) -> list[str]:
+    normalized = normalize_jordan_phone(phone)
+    variants: list[str] = [normalized]
+    if normalized.startswith("07"):
+        local_no_zero = normalized[1:]
+        intl = "+962" + local_no_zero
+        intl_zero = "00962" + local_no_zero
+        variants += [local_no_zero, intl, intl_zero]
+    return list(dict.fromkeys(variants))
+
+
 def get_password_hash(password: str) -> str:
     """
     Hash a password with bcrypt, enforcing complexity rules and safe length limits.

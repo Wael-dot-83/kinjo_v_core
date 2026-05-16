@@ -41,10 +41,13 @@ def _make_supervisor(test_db, kg_id, username="sup2", email="sup2@test.com"):
 
 
 def _make_class(test_db, kg_id, name="Class B"):
+    import uuid
     c = models.Class(
         kindergarten_id=kg_id,
         name_ar=name,
         name_en=name,
+        class_code=str(uuid.uuid4())[:8].upper(),
+        age_group="AGE_2_4",
         capacity_total=15,
         min_age_months=24,
         max_age_months=60,
@@ -156,7 +159,7 @@ class TestSupervisorScoping:
     ):
         """Children in an unassigned class are NOT returned."""
         other_class = _make_class(test_db, sample_kindergarten.id, "Unassigned Class")
-        other_child = _make_child(test_db, parent_user.parent.id, "Omar", "Outside")
+        other_child = _make_child(test_db, parent_user.parent_profile.id, "Omar", "Outside")
         _make_enrollment(test_db, other_child.id, sample_kindergarten.id, other_class.id)
 
         r = client.get("/api/supervisor/children", headers=_hdr(supervisor_token))
@@ -184,7 +187,7 @@ class TestSupervisorScoping:
     ):
         """Marking attendance for a child in an unassigned class returns 403."""
         other_class = _make_class(test_db, sample_kindergarten.id, "Forbidden Class")
-        other_child = _make_child(test_db, parent_user.parent.id, "Forbidden", "Child")
+        other_child = _make_child(test_db, parent_user.parent_profile.id, "Forbidden", "Child")
         _make_enrollment(test_db, other_child.id, sample_kindergarten.id, other_class.id)
 
         payload = {
@@ -452,6 +455,7 @@ class TestDailyReportWorkflow:
             submitted_by=other_sup.id,
             arrival_time="08:00",
             leave_time="14:00",
+            kindergarten_id=sample_kindergarten.id,
         )
         test_db.add(report)
         test_db.commit()

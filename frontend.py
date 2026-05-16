@@ -397,7 +397,7 @@ async def list_enrollments(request: Request, current_user: User = Depends(get_cu
     # Supervisors cannot access enrollments
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role == 'SUPERVISOR':
-        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
+        return RedirectResponse(url="/supervisor/dashboard")
     if user_role == 'PARENT':
         return RedirectResponse(url="/parent/enrollments")
     return templates.TemplateResponse(request=request, name="enrollment/list.html", context={"current_user": current_user})
@@ -547,6 +547,8 @@ async def attendance_history(
     current_user: User = Depends(get_current_user_or_redirect)
 ):
     user_role = current_user.role.value if hasattr(current_user.role, "value") else current_user.role
+    if user_role == "ADMIN":
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     if user_role == "PARENT":
         return RedirectResponse(url="/parent/dashboard")
 
@@ -843,6 +845,14 @@ async def create_daily_report(request: Request, current_user: User = Depends(get
     if user_role != 'MANAGER':
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="reports/form.html", context={"current_user": current_user, "today": date.today()})
+
+
+@router.get("/curriculum", response_class=HTMLResponse)
+async def curriculum_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role in ('ADMIN', 'SUPERVISOR'):
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
+    return RedirectResponse(url="/dashboard")
 
 
 @router.get("/incidents", response_class=HTMLResponse)
