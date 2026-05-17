@@ -4356,6 +4356,37 @@ def export_incident_report_csv(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@router.get("/admin/managers")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def list_managers_for_impersonation(
+    request: Request,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """List all active MANAGER users for the impersonation picker."""
+    managers = (
+        db.query(models.User)
+        .filter(
+            models.User.role == models.UserRole.MANAGER,
+            models.User.status == models.UserStatus.ACTIVE,
+            models.User.deleted_at.is_(None),
+        )
+        .all()
+    )
+    result = []
+    for m in managers:
+        kg = None
+        if m.kindergarten_id:
+            kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == m.kindergarten_id).first()
+        result.append({
+            "id": m.id,
+            "username": m.username,
+            "name": m.full_name or m.username,
+            "kindergarten_name": (kg.name_ar or kg.name_en) if kg else None,
+        })
+    return {"managers": result}
+
+
 @router.get("/admin/reports/scopes")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_available_scopes(
