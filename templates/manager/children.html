@@ -96,7 +96,7 @@
 {% block extra_js %}
 <script>
 const h = () => {
-    const t = localStorage.getItem('access_token');
+    const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
     return { 'Content-Type': 'application/json', ...(t ? { 'Authorization': `Bearer ${t}` } : {}) };
 };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

@@ -241,7 +241,7 @@
     };
 
     function getHeaders() {
-        const t = localStorage.getItem('access_token');
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
         const h = { 'Content-Type': 'application/json' };
         if (t) h['Authorization'] = `Bearer ${t}`;
         return h;

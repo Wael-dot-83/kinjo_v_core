@@ -58,7 +58,7 @@
 {% block extra_js %}
 <script>
 const h = () => {
-    const t = localStorage.getItem('access_token');
+    const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
     return t ? { 'Authorization': `Bearer ${t}` } : {};
 };
 

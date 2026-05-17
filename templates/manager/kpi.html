@@ -286,7 +286,7 @@
     let msgPieInst    = null;
 
     function getHeaders() {
-        const t = localStorage.getItem('access_token');
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
         return { 'Authorization': `Bearer ${t}` };
     }
 

@@ -125,7 +125,7 @@
 {% block extra_js %}
 <script>
 (function(){
-    const h = () => { const t = localStorage.getItem('access_token'); return t ? { 'Authorization': `Bearer ${t}` } : {}; };
+    const h = () => { const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token'); return t ? { 'Authorization': `Bearer ${t}` } : {}; };
 
     function fmtLang(code) {
         return code === 'en' ? 'English' : 'العربية';

@@ -297,7 +297,7 @@
 <script>
 (function () {
     "use strict";
-    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    const token = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token') || localStorage.getItem('token');
     const authHeaders = { 'Authorization': `Bearer ${token}` };
 
     // Load kindergartens for filter

@@ -175,12 +175,12 @@
     const messageStore = new Map();
 
     function getHeaders() {
-        const t = localStorage.getItem('access_token');
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
         return { 'Authorization': `Bearer ${t}` };
     }
 
     function jsonHeaders() {
-        const t = localStorage.getItem('access_token');
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
         return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` };
     }
 
@@ -313,7 +313,7 @@
                 formData.append('attachment', fileInput.files[0]);
             }
 
-            const token = localStorage.getItem('access_token');
+            const token = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
             const r = await fetch('/api/supervisor/messages', {
                 method: 'POST',
                 headers: token ? { 'Authorization': `Bearer ${token}` } : {},

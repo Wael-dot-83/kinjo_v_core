@@ -94,14 +94,14 @@
 <script>
 (function(){
     const h = (json) => {
-        const t = localStorage.getItem('access_token');
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
         const headers = { 'Content-Type': 'application/json' };
         if (t) headers['Authorization'] = `Bearer ${t}`;
         return headers;
     };
 
     // Load current values
-    fetch('/api/supervisor/profile', { headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` } })
+    fetch('/api/supervisor/profile', { headers: { 'Authorization': `Bearer ${localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token')}` } })
         .then(r => r.ok ? r.json() : Promise.reject(r))
         .then(p => {
             document.getElementById('inputEmail').value   = p.email || '';

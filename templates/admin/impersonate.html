@@ -230,7 +230,7 @@
     let pendingPayload = null;
 
     function getHeaders() {
-        const t = localStorage.getItem('access_token');
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
         return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` };
     }
 
