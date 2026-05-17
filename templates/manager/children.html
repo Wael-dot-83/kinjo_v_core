@@ -99,6 +99,7 @@ const h = () => {
     const t = localStorage.getItem('access_token');
     return { 'Content-Type': 'application/json', ...(t ? { 'Authorization': `Bearer ${t}` } : {}) };
 };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 let _allChildren = [];
 let _classes = [];
@@ -149,14 +150,19 @@ function renderTable(children) {
     }
     tbody.innerHTML = children.map(c => {
         const gender = c.gender === 'MALE' ? 'ذكر' : (c.gender === 'FEMALE' ? 'أنثى' : '—');
+        const fullName = esc(c.first_name + ' ' + c.last_name);
+        const className = esc(c.class_name_ar || '—');
+        const dob = esc(c.date_of_birth || '—');
+        const nameJson = JSON.stringify(c.first_name + ' ' + c.last_name);
+        const classJson = JSON.stringify(c.class_name_ar || '');
         return `<tr>
-            <td class="fw-semibold">${c.first_name} ${c.last_name}</td>
+            <td class="fw-semibold">${fullName}</td>
             <td>${gender}</td>
-            <td>${c.date_of_birth || '—'}</td>
-            <td>${c.class_name_ar || '—'}</td>
+            <td>${dob}</td>
+            <td>${className}</td>
             <td class="text-center">
                 <button class="btn btn-sm btn-outline-primary"
-                        onclick="openMoveModal(${c.id},'${c.first_name} ${c.last_name}',${c.class_id},'${c.class_name_ar}')">
+                        onclick="openMoveModal(${c.id},${nameJson},${c.class_id},${classJson})">
                     <i class="bi bi-arrow-left-right me-1"></i>نقل
                 </button>
             </td>

@@ -325,13 +325,10 @@
 
     function buildActions(r) {
         const btns = [];
-        btns.push(`<a href="/supervisor/daily-reports/${r.id}" class="btn btn-sm btn-ghost" aria-label="{{ _('عرض التقرير') }}">
+        btns.push(`<a href="/reports/${r.id}" class="btn btn-sm btn-ghost" aria-label="{{ _('عرض التقرير') }}">
             <i class="bi bi-eye me-1"></i>{{ _('عرض') }}
         </a>`);
         if (r.status === 'DRAFT') {
-            btns.push(`<a href="/supervisor/daily-reports/${r.id}/edit" class="btn btn-sm btn-outline-warning" aria-label="{{ _('تعديل التقرير') }}">
-                <i class="bi bi-pencil me-1"></i>{{ _('تعديل') }}
-            </a>`);
             btns.push(`<button class="btn btn-sm btn-outline-primary" onclick="openSubmitModal(${r.id})" aria-label="{{ _('إرسال للمدير') }}">
                 <i class="bi bi-send me-1"></i>{{ _('إرسال للمدير') }}
             </button>`);
