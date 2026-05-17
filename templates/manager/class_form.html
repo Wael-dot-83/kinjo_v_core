@@ -14,12 +14,12 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
                 <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
-                <li class="breadcrumb-item"><a href="/manager/classes" class="text-decoration-none">{{ _('الشعب') }}</a></li>
+                <li class="breadcrumb-item"><a href="/classes" class="text-decoration-none">{{ _('الشعب') }}</a></li>
                 <li class="breadcrumb-item active">{% if class_id %}{{ _('تعديل') }}{% else %}{{ _('جديدة') }}{% endif %}</li>
             </ol>
         </nav>
     </div>
-    <a href="/manager/classes" class="btn btn-ghost">
+    <a href="/classes" class="btn btn-ghost">
         <i class="bi bi-arrow-right me-2"></i>{{ _('رجوع') }}
     </a>
 </div>
@@ -118,7 +118,7 @@
 
             <!-- Actions -->
             <div class="d-flex justify-content-end gap-2 mb-5 flex-wrap">
-                <a href="/manager/classes" class="btn btn-ghost">{{ _('إلغاء') }}</a>
+                <a href="/classes" class="btn btn-ghost">{{ _('إلغاء') }}</a>
                 <button type="submit" class="btn btn-primary px-5" id="saveBtn">
                     <span class="btn-text">
                         <i class="bi bi-check2-circle me-2"></i>
