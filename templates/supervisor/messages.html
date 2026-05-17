@@ -172,6 +172,7 @@
     'use strict';
 
     let msgModal = null;
+    const messageStore = new Map();
 
     function getHeaders() {
         const t = localStorage.getItem('access_token');
@@ -225,8 +226,10 @@
     };
 
     function renderInbox(messages) {
+        messageStore.clear();
         const container = document.getElementById('inboxList');
         container.innerHTML = messages.map(msg => {
+            messageStore.set(msg.id, msg);
             const date = msg.created_at
                 ? new Date(msg.created_at).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'})
                 : '—';
@@ -236,7 +239,7 @@
                 : `<span class="badge bg-primary" style="font-size:0.65rem;">{{ _('جديد') }}</span>`;
             const preview = (msg.body || '').slice(0, 80);
             return `
-            <div class="msg-item ${unread}" onclick="openMessage(${msg.id},'${escHtml(msg.subject || '')}','${escHtml(msg.sender_name || '{{ _("المدير") }}')}','${escHtml(msg.body || '')}','${date}','${escHtml(msg.attachment_url || '')}')">
+            <div class="msg-item ${unread}" onclick="openMessage(${msg.id})">
                 <div class="msg-avatar"><i class="bi bi-person-badge-fill"></i></div>
                 <div class="flex-grow-1 min-width-0">
                     <div class="d-flex justify-content-between align-items-start gap-2">
@@ -255,15 +258,20 @@
         }).join('');
     }
 
-    window.openMessage = function (id, subject, sender, body, date, attachmentUrl) {
-        document.getElementById('msgModalLabel').textContent = subject || '{{ _("رسالة") }}';
+    window.openMessage = function (id) {
+        const msg = messageStore.get(id);
+        if (!msg) return;
+        const date = msg.created_at
+            ? new Date(msg.created_at).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'})
+            : '—';
+        document.getElementById('msgModalLabel').textContent = msg.subject || '{{ _("رسالة") }}';
         document.getElementById('msgModalMeta').innerHTML =
-            `<i class="bi bi-person me-1"></i>${escHtml(sender)} &nbsp;·&nbsp; <i class="bi bi-calendar3 me-1"></i>${date}`;
-        document.getElementById('msgModalBody').textContent = body;
+            `<i class="bi bi-person me-1"></i>${escHtml(msg.sender_name || '{{ _("المدير") }}')} &nbsp;·&nbsp; <i class="bi bi-calendar3 me-1"></i>${date}`;
+        document.getElementById('msgModalBody').textContent = msg.body || '';
 
         const attEl = document.getElementById('msgModalAttachment');
-        if (attachmentUrl) {
-            attEl.innerHTML = `<a href="${escHtml(attachmentUrl)}" target="_blank" class="btn btn-ghost btn-sm">
+        if (msg.attachment_url) {
+            attEl.innerHTML = `<a href="${escHtml(msg.attachment_url)}" target="_blank" class="btn btn-ghost btn-sm">
                 <i class="bi bi-paperclip me-2"></i>{{ _('عرض المرفق') }}
             </a>`;
         } else {

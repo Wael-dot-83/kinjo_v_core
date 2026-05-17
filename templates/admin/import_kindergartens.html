@@ -125,6 +125,10 @@
 </div>
 
 <script>
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
     document.getElementById('importForm').addEventListener('submit', async function (e) {
         e.preventDefault();
 
@@ -184,12 +188,12 @@
                     recordsData.kindergartens.slice(0, 50).forEach(kg => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                        <td>${kg.name_ar}</td>
-                        <td>${kg.name_en || ''}</td>
-                        <td>${kg.governorate}</td>
-                        <td>${kg.city}</td>
-                        <td>${kg.area || ''}</td>
-                        <td>${kg.phone}</td>
+                        <td>${escHtml(kg.name_ar)}</td>
+                        <td>${escHtml(kg.name_en || '')}</td>
+                        <td>${escHtml(kg.governorate)}</td>
+                        <td>${escHtml(kg.city)}</td>
+                        <td>${escHtml(kg.area || '')}</td>
+                        <td>${escHtml(kg.phone)}</td>
                         <td><span class="badge badge-success">Imported</span></td>
                     `;
                         tbody.appendChild(row);

@@ -302,11 +302,11 @@
                            aria-label="{{ _('تعديل') }} ${escHtml(cls.name_ar)}">
                             <i class="bi bi-pencil me-1"></i>{{ _('تعديل') }}
                         </a>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="openSwapModal(${cls.id},'${escHtml(cls.name_ar)}')"
+                        <button class="btn btn-sm btn-outline-secondary" onclick="openSwapModal(${cls.id},${escHtml(JSON.stringify(cls.name_ar))})"
                                 aria-label="{{ _('تغيير المشرف') }}">
                             <i class="bi bi-arrow-left-right me-1"></i>{{ _('مشرف') }}
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="openDeleteModal(${cls.id},'${escHtml(cls.name_ar)}')"
+                        <button class="btn btn-sm btn-outline-danger" onclick="openDeleteModal(${cls.id},${escHtml(JSON.stringify(cls.name_ar))})"
                                 aria-label="{{ _('حذف') }} ${escHtml(cls.name_ar)}">
                             <i class="bi bi-trash3 me-1"></i>{{ _('حذف') }}
                         </button>

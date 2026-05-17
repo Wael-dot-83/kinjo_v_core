@@ -268,17 +268,17 @@
         const btns = [];
         if (child.status === 'not_arrived' || !child.status) {
             btns.push(`
-                <button class="btn btn-sm btn-success" onclick="checkIn(${child.id},'${escHtml(child.name)}')"
+                <button class="btn btn-sm btn-success" onclick="checkIn(${child.id},${escHtml(JSON.stringify(child.name))})"
                         aria-label="{{ _('تسجيل حضور') }} ${escHtml(child.name)}">
                     <i class="bi bi-box-arrow-in-right me-1"></i>{{ _('حضور') }}
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="openAbsentModal(${child.id},'${escHtml(child.name)}')"
+                <button class="btn btn-sm btn-outline-danger" onclick="openAbsentModal(${child.id},${escHtml(JSON.stringify(child.name))})"
                         aria-label="{{ _('تسجيل غياب') }} ${escHtml(child.name)}">
                     <i class="bi bi-person-dash me-1"></i>{{ _('غائب') }}
                 </button>`);
         } else if (child.status === 'present') {
             btns.push(`
-                <button class="btn btn-sm btn-outline-secondary" onclick="checkOut(${child.id},'${escHtml(child.name)}')"
+                <button class="btn btn-sm btn-outline-secondary" onclick="checkOut(${child.id},${escHtml(JSON.stringify(child.name))})"
                         aria-label="{{ _('تسجيل خروج') }} ${escHtml(child.name)}">
                     <i class="bi bi-box-arrow-right me-1"></i>{{ _('خروج') }}
                 </button>`);

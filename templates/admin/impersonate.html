@@ -266,7 +266,7 @@
         wrap.innerHTML = managers.map(m => `
             <div class="manager-item ${selectedMgrId === m.id ? 'selected' : ''}"
                  role="option" aria-selected="${selectedMgrId === m.id}"
-                 onclick="selectManager(${m.id},'${escHtml(m.name || m.username)}','${escHtml(m.kindergarten_name || '')}')"
+                 onclick="selectManager(${m.id})"
                  id="mgr-${m.id}">
                 <div class="manager-avatar"><i class="bi bi-person-badge-fill"></i></div>
                 <div>
@@ -280,7 +280,7 @@
         wrap.classList.remove('d-none');
     }
 
-    window.selectManager = function (id, name, kg) {
+    window.selectManager = function (id) {
         selectedMgrId = id;
         renderManagerList(allManagers.filter(m => {
             const q = document.getElementById('managerSearch').value.toLowerCase();
