@@ -505,10 +505,11 @@
         }
         const items = attachments.map(att => {
             const sizeKb = att.file_size ? (att.file_size / 1024).toFixed(1) : '';
+            const safeUrl = encodeURI(att.url || '');
             return `
                 <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
-                    <a href="${att.url}" target="_blank" rel="noopener">${att.file_name}</a>
-                    <small class="text-muted">${sizeKb} KB</small>
+                    <a href="${safeUrl}" target="_blank" rel="noopener">${escHtml(att.file_name)}</a>
+                    <small class="text-muted">${escHtml(String(sizeKb))} KB</small>
                 </div>
             `;
         }).join('');
@@ -526,8 +527,8 @@
             const timestamp = reply.created_at ? new Date(reply.created_at).toLocaleString() : '';
             return `
                 <div class="border-top pt-2 mt-2">
-                    <div class="small text-muted">${sender} ${T('في', 'at')} ${timestamp}</div>
-                    <div class="text-break">${reply.message_body || ''}</div>
+                    <div class="small text-muted">${escHtml(sender)} ${T('في', 'at')} ${escHtml(timestamp)}</div>
+                    <div class="text-break">${escHtml(reply.message_body || '')}</div>
                 </div>
             `;
         }).join('');
@@ -807,6 +808,10 @@
         } catch (error) {
             console.error(error);
         }
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}
