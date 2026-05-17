@@ -4551,6 +4551,95 @@ class IncidentCreateRequest(BaseModel):
     parent_not_informed_reason: Optional[str] = None
 
 
+@router.get("/daily-reports/submitted")
+def list_submitted_daily_reports(
+    report_date: Optional[str] = Query(default=None, alias="date"),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Submitted daily reports for the reports/list page (MANAGER view)."""
+    if current_user.role != models.UserRole.MANAGER:
+        raise HTTPException(status_code=403, detail="Manager access required")
+    from models import Class, EnrollmentApplication, EnrollmentStatus, Child, User as UserModel
+    kg_id = current_user.kindergarten_id
+    classes = db.query(Class).filter(Class.kindergarten_id == kg_id, Class.deleted_at.is_(None)).all()
+    class_ids = {c.id for c in classes}
+    child_ids = {
+        e.child_id
+        for e in db.query(EnrollmentApplication)
+        .filter(EnrollmentApplication.class_id.in_(class_ids), EnrollmentApplication.status == EnrollmentStatus.ACTIVE)
+        .all()
+    }
+    q = db.query(models.DailyReport).filter(
+        models.DailyReport.child_id.in_(child_ids),
+        models.DailyReport.status == models.DailyReportStatus.SUBMITTED,
+    )
+    if report_date:
+        try:
+            q = q.filter(models.DailyReport.date == date.fromisoformat(report_date))
+        except ValueError:
+            pass
+    reports = q.order_by(models.DailyReport.date.desc()).all()
+    children_map = {c.id: c for c in db.query(Child).filter(Child.id.in_(child_ids)).all()}
+    return {
+        "reports": [
+            {
+                "id": r.id,
+                "child_name": f"{children_map[r.child_id].first_name} {children_map[r.child_id].last_name}" if r.child_id in children_map else "—",
+                "date": str(r.date),
+                "submitted_by": r.submitted_by_name if hasattr(r, "submitted_by_name") else None,
+                "submitted_at": r.submitted_at.isoformat() if r.submitted_at else None,
+                "status": r.status.value if r.status else None,
+            }
+            for r in reports
+        ]
+    }
+
+
+@router.get("/daily-reports/supervisor/my-children")
+def supervisor_my_children_report_status(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Children with today's report status for supervisor reports/list view."""
+    if current_user.role != models.UserRole.SUPERVISOR:
+        raise HTTPException(status_code=403, detail="Supervisor access required")
+    today = date.today()
+    from models import Child, SupervisorAssignment, EnrollmentApplication, EnrollmentStatus
+    assignments = db.query(SupervisorAssignment).filter(
+        SupervisorAssignment.supervisor_id == current_user.id,
+        SupervisorAssignment.deleted_at.is_(None),
+    ).all()
+    class_ids = {a.class_id for a in assignments}
+    if not class_ids:
+        return {"children": []}
+    child_ids = {
+        e.child_id
+        for e in db.query(EnrollmentApplication)
+        .filter(EnrollmentApplication.class_id.in_(class_ids), EnrollmentApplication.status == EnrollmentStatus.ACTIVE)
+        .all()
+    }
+    children = db.query(Child).filter(Child.id.in_(child_ids)).all()
+    reports_today = {
+        r.child_id: r
+        for r in db.query(models.DailyReport)
+        .filter(models.DailyReport.child_id.in_(child_ids), models.DailyReport.date == today)
+        .all()
+    }
+    return {
+        "children": [
+            {
+                "child_id": c.id,
+                "child_name": f"{c.first_name} {c.last_name}",
+                "can_create_report": c.id not in reports_today,
+                "report_id": reports_today[c.id].id if c.id in reports_today else None,
+                "report_status": reports_today[c.id].status.value if c.id in reports_today else None,
+            }
+            for c in children
+        ]
+    }
+
+
 @router.post("/incidents", status_code=status.HTTP_201_CREATED)
 def create_incident_json(
     incident_data: IncidentCreateRequest,
