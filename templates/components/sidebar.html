@@ -233,6 +233,20 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link {% if '/admin/safety-analytics' in request.url.path %}active{% endif %}"
+                    href="/admin/safety-analytics">
+                    <i class="bi bi-shield-exclamation me-2"></i>
+                    <span>{% if ui_lang == 'en' %}Safety Analytics{% else %}تحليلات السلامة{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/admin/impersonate' in request.url.path %}active{% endif %}"
+                    href="/admin/impersonate">
+                    <i class="bi bi-person-fill-lock me-2"></i>
+                    <span>{% if ui_lang == 'en' %}Impersonate Manager{% else %}انتحال هوية مدير{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link {% if '/audit-logs' in request.url.path %}active{% endif %}" href="/audit-logs">
                     <i class="bi bi-clock-history me-2"></i>
                     <span data-i18n="sidebar.audit_logs">{% if ui_lang == 'en' %}Task and Activity Log{% else %}سجل المهام والنشاط{% endif %}</span>

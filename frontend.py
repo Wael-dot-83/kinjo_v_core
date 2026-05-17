@@ -1447,3 +1447,23 @@ async def incident_report_detail_page(report_id: int, request: Request, current_
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="admin/analytics/incident_report_detail.html", context={"current_user": current_user, "report_id": report_id})
 
+
+# =============================================================================
+# Admin — Impersonation & Safety Analytics pages
+# =============================================================================
+
+@router.get("/admin/impersonate", response_class=HTMLResponse)
+async def admin_impersonate_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/impersonate.html", context={"current_user": current_user})
+
+
+@router.get("/admin/safety-analytics", response_class=HTMLResponse)
+async def admin_safety_analytics_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/safety_analytics.html", context={"current_user": current_user})
+
