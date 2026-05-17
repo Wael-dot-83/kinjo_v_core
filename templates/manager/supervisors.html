@@ -148,7 +148,7 @@ function renderSupervisors(supervisors) {
     }
     container.innerHTML = supervisors.map(sup => {
         const classBadges = sup.classes && sup.classes.length
-            ? sup.classes.map(c => `<span class="badge rounded-pill me-1" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">${c.name_ar}${c.is_primary ? ' ★' : ''}</span>`).join('')
+            ? sup.classes.map(c => `<span class="badge rounded-pill me-1" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">${escHtml(c.name_ar)}${c.is_primary ? ' ★' : ''}</span>`).join('')
             : `<span class="text-muted small">بدون تعيين</span>`;
         return `
         <div class="col-12 col-md-6 col-xl-4">
@@ -160,13 +160,13 @@ function renderSupervisors(supervisors) {
                             <i class="bi bi-person-fill"></i>
                         </div>
                         <div class="flex-grow-1 min-w-0">
-                            <div class="fw-semibold text-truncate">${sup.full_name}</div>
-                            <div class="text-muted small">@${sup.username}</div>
+                            <div class="fw-semibold text-truncate">${escHtml(sup.full_name)}</div>
+                            <div class="text-muted small">@${escHtml(sup.username)}</div>
                             <span class="badge ${sup.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary'} rounded-pill mt-1" style="font-size:0.7rem;">${sup.status === 'ACTIVE' ? 'نشط' : 'غير نشط'}</span>
                         </div>
                     </div>
-                    <div class="mb-2 small"><i class="bi bi-envelope me-1 text-muted"></i>${sup.email || '—'}</div>
-                    <div class="mb-3 small"><i class="bi bi-telephone me-1 text-muted"></i>${sup.phone_number || '—'}</div>
+                    <div class="mb-2 small"><i class="bi bi-envelope me-1 text-muted"></i>${escHtml(sup.email || '—')}</div>
+                    <div class="mb-3 small"><i class="bi bi-telephone me-1 text-muted"></i>${escHtml(sup.phone_number || '—')}</div>
                     <div class="mb-3">${classBadges}</div>
                     <div class="d-flex gap-2 flex-wrap">
                         <button class="btn btn-sm btn-outline-primary" onclick="openAssignModal(${sup.id})">
@@ -208,5 +208,9 @@ async function confirmAssignClass() {
 }
 
 document.addEventListener('DOMContentLoaded', loadSupervisors);
+
+function escHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 </script>
 {% endblock %}
