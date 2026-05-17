@@ -116,6 +116,7 @@ breadcrumbs=[
     const isAdmin = '{{ current_user.role.value }}' === 'ADMIN';
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
     document.addEventListener('DOMContentLoaded', async () => {
         if (isAdmin) {
@@ -214,7 +215,7 @@ breadcrumbs=[
                     <a href="/classes/${c.id}/edit" class="btn btn-outline-warning" title="${T('تعديل', 'Edit')}">
                         <i class="bi bi-pencil"></i>
                     </a>
-                    <button class="btn btn-outline-danger" title="${T('حذف', 'Delete')}" onclick="deleteClass(${c.id}, '${(c.name_ar || '').replace(/'/g, "\\'")}')">
+                    <button class="btn btn-outline-danger" title="${T('حذف', 'Delete')}" onclick="deleteClass(${c.id}, ${JSON.stringify(c.name_ar || '')})">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>

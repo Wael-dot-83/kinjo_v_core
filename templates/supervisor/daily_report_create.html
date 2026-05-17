@@ -12,12 +12,12 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
                 <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
-                <li class="breadcrumb-item"><a href="/supervisor/daily-reports" class="text-decoration-none">{{ _('التقارير اليومية') }}</a></li>
+                <li class="breadcrumb-item"><a href="/daily-reports" class="text-decoration-none">{{ _('التقارير اليومية') }}</a></li>
                 <li class="breadcrumb-item active">{{ _('جديد') }}</li>
             </ol>
         </nav>
     </div>
-    <a href="/supervisor/daily-reports" class="btn btn-ghost">
+    <a href="/daily-reports" class="btn btn-ghost">
         <i class="bi bi-arrow-right me-2"></i>{{ _('رجوع') }}
     </a>
 </div>
@@ -199,7 +199,7 @@
 
             <!-- Actions -->
             <div class="d-flex justify-content-end gap-2 mb-5 flex-wrap">
-                <a href="/supervisor/daily-reports" class="btn btn-ghost">{{ _('إلغاء') }}</a>
+                <a href="/daily-reports" class="btn btn-ghost">{{ _('إلغاء') }}</a>
                 <button type="button" class="btn btn-warning text-dark" id="saveDraftBtn" onclick="submitReport('DRAFT')">
                     <span class="btn-text"><i class="bi bi-save me-2"></i>{{ _('حفظ كمسودة') }}</span>
                     <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري الحفظ...') }}</span>
@@ -347,7 +347,7 @@
                 ? '{{ _("تم حفظ التقرير كمسودة") }}'
                 : '{{ _("تم إرسال التقرير للمدير بنجاح") }}';
             showToast(msg, 'success');
-            setTimeout(() => { window.location.href = '/supervisor/daily-reports'; }, 1200);
+            setTimeout(() => { window.location.href = '/daily-reports'; }, 1200);
         } catch {
             showValidation('{{ _("حدث خطأ في الاتصال بالخادم") }}');
             setLoading(btn, false);
