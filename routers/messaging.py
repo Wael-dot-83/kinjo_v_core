@@ -198,7 +198,7 @@ def send_message_safe(
         mgr = _resolve_manager_for_supervisor(current_user.id, db)
         if not mgr:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="No manager found for your kindergarten.",
             )
         recipient_id = mgr.id
@@ -209,7 +209,7 @@ def send_message_safe(
         mgr = _resolve_manager_for_parent(current_user.id, db)
         if not mgr:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="No manager found for your child's kindergarten.",
             )
         recipient_id = mgr.id

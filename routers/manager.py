@@ -12,6 +12,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -699,7 +700,7 @@ def get_manager_kpi(
         db.query(Message).filter(
             Message.sender_id.in_([u.id for u in supervisors] + [current_user.id]),
             Message.kindergarten_id == kg_id,
-            Message.id.in_(read_msg_ids),
+            Message.id.in_(select(read_msg_ids.c.message_id)),
         )
         .count()
     )

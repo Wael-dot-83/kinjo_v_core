@@ -134,7 +134,7 @@ def start_impersonation(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     if target.role != UserRole.MANAGER:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Only managers can be impersonated.",
         )
 
