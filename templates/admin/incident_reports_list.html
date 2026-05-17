@@ -98,7 +98,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{% if ui_lang == 'en' %}Generate New Incident Report{% else %}إنشاء تقرير حوادث جديد{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
             </div>
             <div class="modal-body">
                 <form id="generateReportForm">
@@ -157,7 +157,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="reportDetailTitle">{% if ui_lang == 'en' %}Report Details{% else %}تفاصيل التقرير{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
             </div>
             <div class="modal-body">
                 <div id="reportDetailContent">
