@@ -3326,6 +3326,62 @@ def register_parent(
 
 
 # ============================================================================
+# Parent Profile Update
+# ============================================================================
+
+class ParentProfileUpdate(BaseModel):
+    model_config = {"extra": "ignore"}
+    first_name: Optional[str] = None
+    second_name: Optional[str] = None
+    last_name: Optional[str] = None
+    first_name_en: Optional[str] = None
+    last_name_en: Optional[str] = None
+    phone_number: Optional[str] = None
+    nationality: Optional[str] = None
+    national_id: Optional[str] = None
+    passport_number: Optional[str] = None
+    home_governorate: Optional[str] = None
+    home_city: Optional[str] = None
+    home_area: Optional[str] = None
+    home_address_line: Optional[str] = None
+    work_address: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    emergency_contact_relationship: Optional[str] = None
+    correspondence_preference: Optional[bool] = None
+
+
+@router.put("/parent-profiles/{profile_id}")
+def update_parent_profile(
+    profile_id: int,
+    body: ParentProfileUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Partial update of a parent's own profile. Only the owning PARENT user may edit."""
+    profile = db.query(models.ParentProfile).filter(models.ParentProfile.id == profile_id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorised")
+    if current_user.role != models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Parent access only")
+
+    for field, value in body.model_dump(exclude_none=True).items():
+        setattr(profile, field, value)
+
+    required = ["first_name", "last_name", "phone_number", "home_governorate",
+                "home_city", "home_area", "home_address_line", "nationality"]
+    if all(getattr(profile, f) for f in required):
+        profile.profile_complete = True
+        if not profile.profile_completed_at:
+            profile.profile_completed_at = datetime.utcnow()
+
+    db.commit()
+    return {"id": profile.id, "profile_complete": profile.profile_complete}
+
+
+# ============================================================================
 # Enrollment Endpoints
 # ============================================================================
 
