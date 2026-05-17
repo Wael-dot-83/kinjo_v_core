@@ -116,6 +116,7 @@ def _log_government_request(
     user: Optional[models.User] = None,
 ) -> None:
     """Log every government API request to audit_logs (non-fatal)."""
+    import json as _json
     ip = request.client.host if request.client else None
     try:
         log = models.AuditLog(
@@ -123,8 +124,7 @@ def _log_government_request(
             action="GOVERNMENT_API_ACCESS",
             entity_type="government_api",
             entity_id=None,
-            details={"endpoint": endpoint, "params": dict(request.query_params)},
-            actor_role=user.role.value if user else None,
+            details=_json.dumps({"endpoint": endpoint, "params": dict(request.query_params)}),
             ip_address=ip,
             sensitivity_level=3,
         )
@@ -166,9 +166,7 @@ _HIST_SQL = text("""
     JOIN parent_profiles pp ON pp.id = c.parent_id
     LEFT JOIN enrollment_applications ea
            ON ea.child_id = c.id
-          AND ea.deleted_at IS NULL
           AND ea.enrollment_start_date IS NOT NULL
-    WHERE c.deleted_at IS NULL
     GROUP BY pp.home_governorate,
              EXTRACT(YEAR FROM ea.enrollment_start_date)::integer
     HAVING COUNT(DISTINCT c.id) > 0
@@ -187,9 +185,7 @@ _HIST_SQLITE_SQL = text("""
     JOIN parent_profiles pp ON pp.id = c.parent_id
     LEFT JOIN enrollment_applications ea
            ON ea.child_id = c.id
-          AND ea.deleted_at IS NULL
           AND ea.enrollment_start_date IS NOT NULL
-    WHERE c.deleted_at IS NULL
     GROUP BY pp.home_governorate,
              CAST(strftime('%Y', ea.enrollment_start_date) AS INTEGER)
     HAVING COUNT(DISTINCT c.id) > 0
@@ -203,7 +199,6 @@ _ELIGIBLE_SQL = text("""
         COUNT(c.id)         AS eligible_count
     FROM children c
     JOIN parent_profiles pp ON pp.id = c.parent_id
-    WHERE c.deleted_at IS NULL
       AND DATE_PART('year', AGE(
               MAKE_DATE(CAST(:year AS INTEGER), 9, 1), c.date_of_birth
           )) BETWEEN 5 AND 6
@@ -217,7 +212,6 @@ _ELIGIBLE_SQLITE_SQL = text("""
         COUNT(c.id)         AS eligible_count
     FROM children c
     JOIN parent_profiles pp ON pp.id = c.parent_id
-    WHERE c.deleted_at IS NULL
       AND c.date_of_birth <= date(:sep1, '-5 years')
       AND c.date_of_birth >= date(:sep1, '-7 years')
     GROUP BY pp.home_governorate
@@ -434,7 +428,6 @@ async def get_quality_certificate(
         FROM enrollment_applications ea
         WHERE ea.kindergarten_id = :kg_id
           AND ea.status IN ('ACTIVE', 'ACCEPTED')
-          AND ea.deleted_at IS NULL
     """), {"kg_id": nursery_id}).scalar() or 0
 
     incident_count = db.execute(text("""
@@ -442,7 +435,6 @@ async def get_quality_certificate(
         FROM incidents
         WHERE kindergarten_id = :kg_id
           AND occurred_at >= :since
-          AND deleted_at IS NULL
     """), {"kg_id": nursery_id, "since": period_start}).scalar() or 0
 
     if active_children > 0:
@@ -468,9 +460,7 @@ async def get_quality_certificate(
         JOIN enrollment_applications ea ON ea.child_id = al.child_id
         WHERE ea.kindergarten_id = :kg_id
           AND ea.status IN ('ACTIVE', 'ACCEPTED')
-          AND ea.deleted_at IS NULL
           AND al.date >= :since
-          AND al.deleted_at IS NULL
     """), {"kg_id": nursery_id, "since": period_start}).scalar() or 0
 
     expected_logs = int(active_children) * int(open_days)
@@ -645,7 +635,7 @@ async def _development_dashboard_live(db: Session) -> DevelopmentDashboard:
     )).scalar() or 0
 
     child_count = db.execute(text(
-        "SELECT COUNT(*) FROM children WHERE deleted_at IS NULL"
+        "SELECT COUNT(*) FROM children"
     )).scalar() or 0
 
     # Average attendance % last 30 days
@@ -655,7 +645,7 @@ async def _development_dashboard_live(db: Session) -> DevelopmentDashboard:
     if dialect == "sqlite":
         present = db.execute(text(
             "SELECT COUNT(*) FROM attendance_logs "
-            "WHERE date >= date('now', '-30 days') AND deleted_at IS NULL"
+            "WHERE date >= date('now', '-30 days')"
         )).scalar() or 0
         avg_att = min(100.0, float(present) / max(1, int(child_count)) * 5)
     else:
@@ -669,7 +659,6 @@ async def _development_dashboard_live(db: Session) -> DevelopmentDashboard:
                          FROM enrollment_applications ea2
                          JOIN operating_calendar oc2 ON oc2.kindergarten_id = ea2.kindergarten_id
                          WHERE ea2.status IN ('ACTIVE','ACCEPTED')
-                           AND ea2.deleted_at IS NULL
                            AND oc2.is_open = TRUE
                            AND oc2.date BETWEEN CURRENT_DATE - 30 AND CURRENT_DATE
                         ), 0
@@ -677,7 +666,6 @@ async def _development_dashboard_live(db: Session) -> DevelopmentDashboard:
                 ) AS att_pct
             FROM attendance_logs al
             WHERE al.date BETWEEN CURRENT_DATE - 30 AND CURRENT_DATE
-              AND al.deleted_at IS NULL
         """)).scalar()
         avg_att = round(float(att_val or 0), 1)
 
@@ -689,7 +677,6 @@ async def _development_dashboard_live(db: Session) -> DevelopmentDashboard:
                 COUNT(*) AS incident_count
             FROM incidents
             WHERE occurred_at >= date('now', '-56 days')
-              AND deleted_at IS NULL
             GROUP BY date(occurred_at, 'weekday 1', '-6 days')
             ORDER BY week_start
         """)).fetchall()
@@ -700,7 +687,6 @@ async def _development_dashboard_live(db: Session) -> DevelopmentDashboard:
                 COUNT(*) AS incident_count
             FROM incidents
             WHERE occurred_at >= CURRENT_DATE - 56
-              AND deleted_at IS NULL
             GROUP BY DATE_TRUNC('week', occurred_at)
             ORDER BY week_start
         """)).fetchall()
@@ -721,7 +707,6 @@ async def _development_dashboard_live(db: Session) -> DevelopmentDashboard:
         LEFT JOIN enrollment_applications ea
                ON ea.kindergarten_id = k.id
               AND ea.status IN ('ACTIVE', 'ACCEPTED')
-              AND ea.deleted_at IS NULL
         WHERE k.status = 'ACTIVE'
         GROUP BY k.area, k.governorate
         ORDER BY enrolled_children DESC, nursery_count ASC
@@ -787,7 +772,6 @@ async def get_child_density(
             COUNT(c.id)         AS child_count
         FROM children c
         JOIN parent_profiles pp ON pp.id = c.parent_id
-        WHERE c.deleted_at IS NULL
           AND c.date_of_birth >= :cutoff
           AND (:governorate IS NULL OR pp.home_governorate = :governorate)
           AND (:district IS NULL OR pp.home_area = :district)

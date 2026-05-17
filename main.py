@@ -178,6 +178,7 @@ from routers.supervisor import router as supervisor_scoped_router
 from routers.manager import router as manager_scoped_router
 from routers.admin_impersonation import router as admin_impersonation_router
 from routers.messaging import router as messaging_router
+from government_api import router as government_api_router
 
 # =============================================================================
 # Lifespan Event Handler
@@ -1010,6 +1011,7 @@ app.include_router(manager_scoped_router)           # prefix /api/manager alread
 app.include_router(admin_impersonation_router, prefix="/api", tags=["Admin"])
 app.include_router(messaging_router, prefix="/api", tags=["Messaging"])
 app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
+app.include_router(government_api_router, prefix="/api", tags=["Government API"])
 
 # WebSocket endpoint for real-time dashboard updates
 from dependencies import get_current_user_optional

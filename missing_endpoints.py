@@ -2005,13 +2005,9 @@ def get_supervisors_in_class(
 def get_safety_analytics(
     kindergarten_id: Optional[int] = None,
     governorate: Optional[str] = None,
-    class_id: Optional[int] = None,
-    supervisor_id: Optional[int] = None,
     child_id: Optional[int] = None,
     incident_type: Optional[str] = None,
-    classification: Optional[str] = None,
     severity: Optional[str] = None,
-    parent_informed: Optional[bool] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     current_user: models.User = Depends(get_current_user),
@@ -2020,27 +2016,16 @@ def get_safety_analytics(
     """Admin-only safety analytics endpoint — aggregate incident statistics."""
     validators.validate_admin_role(current_user)
 
-    query = db.query(models.Incident).filter(models.Incident.deleted_at.is_(None))
+    query = db.query(models.Incident)
 
     if kindergarten_id:
         query = query.filter(models.Incident.kindergarten_id == kindergarten_id)
-    if class_id:
-        query = query.filter(models.Incident.class_id == class_id)
-    if supervisor_id:
-        query = query.filter(models.Incident.supervisor_id == supervisor_id)
     if child_id:
         query = query.filter(models.Incident.child_id == child_id)
-    if parent_informed is not None:
-        query = query.filter(models.Incident.parent_informed == parent_informed)
 
     if incident_type:
         try:
             query = query.filter(models.Incident.type == models.IncidentType(incident_type.upper()))
-        except ValueError:
-            pass
-    if classification:
-        try:
-            query = query.filter(models.Incident.classification == models.IncidentClassification(classification.upper()))
         except ValueError:
             pass
     if severity:
@@ -2060,7 +2045,6 @@ def get_safety_analytics(
         except ValueError:
             pass
 
-    # Filter by governorate via Kindergarten join
     if governorate:
         query = query.join(models.Kindergarten, models.Incident.kindergarten_id == models.Kindergarten.id)
         query = query.filter(models.Kindergarten.governorate == governorate)
@@ -2073,11 +2057,8 @@ def get_safety_analytics(
 
     by_severity: dict = {}
     by_type: dict = {}
-    by_classification: dict = {}
     by_kindergarten: dict = {}
     by_child: dict = {}
-    parent_informed_count = 0
-    parent_not_informed_count = 0
 
     for i in incidents:
         sev = i.severity_level.value if i.severity_level else "UNKNOWN"
@@ -2086,19 +2067,11 @@ def get_safety_analytics(
         t = i.type.value if i.type else "UNKNOWN"
         by_type[t] = by_type.get(t, 0) + 1
 
-        cls_val = i.classification.value if i.classification else "UNKNOWN"
-        by_classification[cls_val] = by_classification.get(cls_val, 0) + 1
-
         kg = str(i.kindergarten_id)
         by_kindergarten[kg] = by_kindergarten.get(kg, 0) + 1
 
         ch = str(i.child_id)
         by_child[ch] = by_child.get(ch, 0) + 1
-
-        if i.parent_informed is True:
-            parent_informed_count += 1
-        elif i.parent_informed is False:
-            parent_not_informed_count += 1
 
     repeated_children = {k: v for k, v in by_child.items() if v > 1}
     high_risk_kg = {k: v for k, v in by_kindergarten.items() if v >= 5}
@@ -2107,11 +2080,8 @@ def get_safety_analytics(
         "total": total,
         "open": open_count,
         "closed": closed_count,
-        "parent_informed": parent_informed_count,
-        "parent_not_informed": parent_not_informed_count,
         "by_severity": by_severity,
         "by_type": by_type,
-        "by_classification": by_classification,
         "by_kindergarten": by_kindergarten,
         "repeated_children": repeated_children,
         "high_risk_kindergartens": high_risk_kg,
@@ -2817,324 +2787,6 @@ def get_admin_dashboard(
     return dashboard
 
 
-# ============================================================================
-# Parent Dashboard
-# ============================================================================
-
-@router.get("/parent/dashboard")
-def get_parent_dashboard(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get comprehensive parent dashboard"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Parent access only")
-
-    parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
-
-    if not parent_profile:
-        raise HTTPException(status_code=404, detail="Parent profile not found")
-
-    # Get all children
-    children = db.query(models.Child).filter(
-        models.Child.parent_id == parent_profile.id
-    ).all()
-
-    children_data = []
-    for child in children:
-        # Get active enrollment
-        enrollment = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == child.id,
-            models.EnrollmentApplication.status.in_([
-                models.EnrollmentStatus.ACTIVE,
-                models.EnrollmentStatus.WAITLISTED,
-                models.EnrollmentStatus.PENDING_REVIEW
-            ])
-        ).first()
-
-        # Today's attendance
-        today = date.today()
-        attendance = db.query(models.AttendanceLog).filter(
-            models.AttendanceLog.child_id == child.id,
-            models.AttendanceLog.date == today
-        ).first()
-
-        # Latest approved daily report
-        latest_report = db.query(models.DailyReport).filter(
-            models.DailyReport.child_id == child.id,
-            models.DailyReport.status == models.DailyReportStatus.APPROVED
-        ).order_by(models.DailyReport.date.desc()).first()
-
-        child_info = {
-            "id": child.id,
-            "first_name": child.first_name,
-            "last_name": child.last_name,
-            "age_months": (date.today() - child.date_of_birth).days // 30 if child.date_of_birth else None,
-            "enrollment": None,
-            "attendance_today": None,
-            "latest_report_date": None
-        }
-
-        if enrollment:
-            child_info["enrollment"] = {
-                "status": enrollment.status.value,
-                "kindergarten_id": enrollment.kindergarten_id,
-                "class_id": enrollment.class_id
-            }
-
-        if attendance:
-            child_info["attendance_today"] = {
-                "checked_in": attendance.check_in_at.strftime("%H:%M"),
-                "checked_out": attendance.check_out_at.strftime("%H:%M") if attendance.check_out_at else None
-            }
-
-        if latest_report:
-            child_info["latest_report_date"] = latest_report.date
-
-        children_data.append(child_info)
-
-    # Build notifications from unread messages and recent health alerts
-    notifications = []
-
-    # Unread messages for this parent (up to 10 most recent)
-    _parent_unread_ids = (
-        db.query(models.MessageRecipient.message_id)
-        .filter(
-            models.MessageRecipient.recipient_user_id == current_user.id,
-            models.MessageRecipient.read_at.is_(None),
-        )
-        .scalar_subquery()
-    )
-    unread_msgs = db.query(models.Message).filter(
-        models.Message.id.in_(_parent_unread_ids),
-    ).order_by(models.Message.created_at.desc()).limit(10).all()
-    for msg in unread_msgs:
-        notifications.append({
-            "type": "message",
-            "title": msg.subject or "رسالة جديدة",
-            "created_at": msg.created_at.isoformat() if msg.created_at else None
-        })
-
-    # Recent health alerts for parent's children (up to 5)
-    child_ids_list = [c.id for c in children]
-    if child_ids_list:
-        recent_alerts = db.query(models.HealthAlert).filter(
-            models.HealthAlert.child_id.in_(child_ids_list)
-        ).order_by(models.HealthAlert.created_at.desc()).limit(5).all()
-        child_map = {c.id: c.first_name for c in children}
-        for alert in recent_alerts:
-            child_name = child_map.get(alert.child_id, "")
-            notifications.append({
-                "type": "health_alert",
-                "title": f"تنبيه صحي: {child_name} - {alert.alert_type}",
-                "created_at": alert.created_at.isoformat() if alert.created_at else None
-            })
-
-    return {
-        "parent": {
-            "name": f"{parent_profile.first_name} {parent_profile.last_name}",
-            "phone": parent_profile.phone_number
-        },
-        "children": children_data,
-        "total_children": len(children),
-        "notifications": notifications
-    }
-
-
-@router.get("/parent/children")
-def get_parent_children(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get list of parent's children with computed stats"""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Parent access only")
-
-    parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
-
-    if not parent_profile:
-        return {"children": []}
-
-    children = db.query(models.Child).filter(
-        models.Child.parent_id == parent_profile.id
-    ).all()
-
-    today = date.today()
-    result = []
-    for c in children:
-        # --- Age ---
-        age_str = "—"
-        if c.date_of_birth:
-            total_months = (today.year - c.date_of_birth.year) * 12 + (today.month - c.date_of_birth.month)
-            years, months = divmod(total_months, 12)
-            age_str = f"{years} سنة {months} شهر" if years else f"{months} شهر"
-
-        # --- Class name from active/accepted enrollment ---
-        class_name = "—"
-        active_enrollment = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == c.id,
-            models.EnrollmentApplication.status.in_([
-                models.EnrollmentStatus.ACTIVE,
-                models.EnrollmentStatus.ACCEPTED,
-            ])
-        ).order_by(models.EnrollmentApplication.created_at.desc()).first()
-        if active_enrollment and active_enrollment.class_id:
-            cls = db.query(models.Class).filter(models.Class.id == active_enrollment.class_id).first()
-            if cls:
-                class_name = cls.name_ar or cls.name_en or "—"
-
-        # --- Attendance rate for current month ---
-        month_start = today.replace(day=1)
-        present_days = db.query(models.AttendanceLog).filter(
-            models.AttendanceLog.child_id == c.id,
-            models.AttendanceLog.date >= month_start,
-            models.AttendanceLog.date <= today,
-        ).count()
-        # School days = weekdays (Mon–Fri) from month start to today
-        school_days = sum(
-            1 for d in range((today - month_start).days + 1)
-            if date.fromordinal(month_start.toordinal() + d).weekday() < 5  # Mon=0 … Fri=4
-        )
-        attendance_rate = round((present_days / school_days) * 100) if school_days > 0 else 0
-
-        # --- Reports count ---
-        reports_count = db.query(models.DailyReport).filter(
-            models.DailyReport.child_id == c.id
-        ).count()
-
-        result.append({
-            "id": c.id,
-            "full_name_ar": f"{c.first_name} {c.last_name}",
-            "name": f"{c.first_name} {c.last_name}",
-            "first_name": c.first_name,
-            "last_name": c.last_name,
-            "age": age_str,
-            "class_name": class_name,
-            "attendance_rate": attendance_rate,
-            "reports_count": reports_count,
-        })
-
-    return {"children": result}
-
-
-@router.get("/parent/enrollments")
-def get_parent_enrollments(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get enrollment applications for the current parent."""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Parent access only")
-
-    parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
-    if not parent_profile:
-        return {"enrollments": []}
-
-    rows = db.query(
-        models.EnrollmentApplication,
-        models.Child,
-        models.Kindergarten
-    ).join(
-        models.Child, models.EnrollmentApplication.child_id == models.Child.id
-    ).join(
-        models.Kindergarten, models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id
-    ).filter(
-        models.Child.parent_id == parent_profile.id
-    ).order_by(models.EnrollmentApplication.created_at.desc()).all()
-
-    return {
-        "enrollments": [
-            {
-                "id": enrollment.id,
-                "child_id": child.id,
-                "child_name": f"{child.first_name} {child.last_name}",
-                "kindergarten_id": kg.id,
-                "kindergarten_name": kg.name_ar or kg.name_en,
-                "status": enrollment.status.value.lower(),
-                "created_at": enrollment.created_at.isoformat() if enrollment.created_at else None,
-                "submitted_at": enrollment.submitted_at.isoformat() if enrollment.submitted_at else None,
-            }
-            for enrollment, child, kg in rows
-        ]
-    }
-
-
-@router.get("/parent/attendance")
-def get_parent_attendance(
-    year: int,
-    month: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get monthly attendance/approved absence records for current parent's children."""
-    if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Parent access only")
-    if month < 1 or month > 12:
-        raise HTTPException(status_code=400, detail="Invalid month")
-
-    parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
-    if not parent_profile:
-        return {"records": []}
-
-    child_ids = [
-        c.id for c in db.query(models.Child.id).filter(
-            models.Child.parent_id == parent_profile.id
-        ).all()
-    ]
-    if not child_ids:
-        return {"records": []}
-
-    start_date = date(year, month, 1)
-    end_date = date(year + 1, 1, 1) - timedelta(days=1) if month == 12 else date(year, month + 1, 1) - timedelta(days=1)
-
-    attendance = db.query(models.AttendanceLog).filter(
-        models.AttendanceLog.child_id.in_(child_ids),
-        models.AttendanceLog.date >= start_date,
-        models.AttendanceLog.date <= end_date
-    ).order_by(models.AttendanceLog.date.desc()).all()
-
-    records = [
-        {
-            "date": row.date.isoformat(),
-            "child_id": row.child_id,
-            "status": "present",
-            "notes": row.check_in_at.strftime("%H:%M") if row.check_in_at else None,
-        }
-        for row in attendance
-    ]
-
-    absence_rows = db.execute(
-        text(
-            "SELECT child_id, start_date, end_date, reason, status FROM absence_requests "
-            "WHERE parent_id = :parent_id AND status = 'APPROVED' "
-            "AND start_date <= :end_date AND end_date >= :start_date"
-        ),
-        {"parent_id": parent_profile.id, "start_date": start_date, "end_date": end_date}
-    ).mappings().all()
-    for row in absence_rows:
-        absence_start = _coerce_date(row["start_date"])
-        absence_end = _coerce_date(row["end_date"])
-        current = max(absence_start, start_date)
-        last = min(absence_end, end_date)
-        while current <= last:
-            records.append({
-                "date": current.isoformat(),
-                "child_id": row["child_id"],
-                "status": "excused",
-                "notes": row["reason"],
-            })
-            current += timedelta(days=1)
-
-    records.sort(key=lambda item: item["date"], reverse=True)
-    return {"records": records}
 
 
 @router.get("/reports")
@@ -4805,166 +4457,6 @@ def list_daily_reports(
     }
 
 
-@router.post("/daily-reports/create")
-def create_daily_report(
-    report_data: DailyReportCreateRequest,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Create a new daily report (Supervisor only)"""
-    if current_user.role != models.UserRole.SUPERVISOR:
-        raise HTTPException(status_code=403, detail="Only supervisors can create daily reports")
-    
-    # Verify child exists
-    child = db.query(models.Child).filter(models.Child.id == report_data.child_id).first()
-    if not child:
-        raise HTTPException(status_code=404, detail="Child not found")
-        
-    # Verify active enrollment and scope
-    active_enrollment = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.child_id == report_data.child_id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-    ).first()
-    
-    if not active_enrollment:
-         raise HTTPException(status_code=400, detail="Child not active in any class")
-         
-    validators.validate_kindergarten_scope(current_user, active_enrollment.kindergarten_id)
-    
-    # Validate date
-    report_date = date.fromisoformat(report_data.date)
-    if report_date > date.today():
-        raise HTTPException(status_code=400, detail="Cannot create reports for future dates")
-    
-    report = models.DailyReport(
-        child_id=report_data.child_id,
-        date=report_date,
-        status=models.DailyReportStatus.DRAFT,
-        submitted_by=current_user.id,
-        arrival_time=report_data.arrival_time,
-        leave_time=report_data.leave_time,
-        breakfast=report_data.breakfast,
-        snack=report_data.snack,
-        milk=report_data.milk,
-        lunch=report_data.lunch,
-        nap_start=report_data.nap_start,
-        nap_end=report_data.nap_end,
-        activities=report_data.activities,
-        notes=report_data.notes
-    )
-    db.add(report)
-    db.commit()
-    db.refresh(report)
-    
-    return {
-        "id": report.id,
-        "child_id": report.child_id,
-        "date": report.date.isoformat(),
-        "status": report.status.value.lower()
-    }
-
-
-@router.post("/daily-reports/{report_id}/submit")
-def submit_daily_report(
-    report_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Submit daily report for manager review — Supervisor only."""
-    if current_user.role != models.UserRole.SUPERVISOR:
-        raise HTTPException(status_code=403, detail="Only supervisors can submit daily reports")
-
-    report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()
-
-    if not report:
-        raise HTTPException(status_code=404, detail="Daily report not found")
-
-    if report.submitted_by != current_user.id:
-        raise HTTPException(status_code=403, detail="You can only submit your own reports")
-
-    if report.status != models.DailyReportStatus.DRAFT:
-        raise HTTPException(status_code=400, detail="Only draft reports can be submitted")
-    
-    report.status = models.DailyReportStatus.SUBMITTED
-    report.submitted_at = datetime.now()
-    db.commit()
-    db.refresh(report)
-    
-    return {
-        "id": report.id,
-        "status": report.status.value.lower(),
-        "submitted_at": report.submitted_at.isoformat() if report.submitted_at else None
-    }
-
-
-@router.post("/daily-reports/{report_id}/approve")
-def approve_daily_report(
-    report_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Approve a daily report (Manager only)"""
-    validators.validate_manager_role(current_user)
-    
-    report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()
-    
-    if not report:
-        raise HTTPException(status_code=404, detail="Daily report not found")
-    
-    if report.status != models.DailyReportStatus.SUBMITTED:
-        raise HTTPException(status_code=400, detail="Only submitted reports can be approved")
-    
-    report.status = models.DailyReportStatus.APPROVED
-    report.approved_by = current_user.id
-    report.approved_at = datetime.now()
-    db.commit()
-    db.refresh(report)
-    
-    return {
-        "id": report.id,
-        "status": report.status.value.lower(),
-        "approved_at": report.approved_at.isoformat() if report.approved_at else None
-    }
-
-
-@router.get("/daily-reports/child/{child_id}")
-def get_child_daily_reports(
-    child_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get daily reports for a child (parents only see approved reports)"""
-    # Parents: enforce that the child belongs to them
-    if current_user.role == models.UserRole.PARENT:
-        parent_profile = db.query(models.ParentProfile).filter(
-            models.ParentProfile.user_id == current_user.id
-        ).first()
-        child = db.query(models.Child).filter(models.Child.id == child_id).first()
-        if not child or not parent_profile or child.parent_id != parent_profile.id:
-            raise HTTPException(status_code=403, detail="Access denied to this child's reports")
-
-    query = db.query(models.DailyReport).filter(models.DailyReport.child_id == child_id)
-
-    # Parents only see approved reports
-    if current_user.role == models.UserRole.PARENT:
-        query = query.filter(models.DailyReport.status == models.DailyReportStatus.APPROVED)
-    
-    reports = query.order_by(models.DailyReport.date.desc()).all()
-    
-    return {
-        "reports": [
-            {
-                "id": r.id,
-                "date": r.date.isoformat(),
-                "status": r.status.value,
-                "arrival_time": r.arrival_time,
-                "leave_time": r.leave_time,
-                "activities": r.activities,
-                "notes": r.notes
-            }
-            for r in reports
-        ]
-    }
 
 
 # ============================================================================
@@ -5050,30 +4542,16 @@ def create_incident_json(
     except ValueError:
         raise HTTPException(status_code=400, detail=f"درجة الخطورة غير صحيحة: {incident_data.severity_level}")
 
-    classification = None
-    if incident_data.classification:
-        try:
-            classification = models.IncidentClassification(incident_data.classification.upper())
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"تصنيف الحادث غير صحيح: {incident_data.classification}")
-
     occurred_at = datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00'))
 
     incident = models.Incident(
         child_id=incident_data.child_id,
         kindergarten_id=kindergarten_id,
-        class_id=incident_data.class_id,
-        supervisor_id=incident_data.supervisor_id,
         type=incident_type,
-        classification=classification,
         severity_level=severity,
         description=incident_data.description,
         occurred_at=occurred_at,
         followup_required_flag=incident_data.followup_required_flag or False,
-        parent_informed=incident_data.parent_informed,
-        parent_response=incident_data.parent_response,
-        parent_not_informed_reason=incident_data.parent_not_informed_reason,
-        reported_by=current_user.id,
         notify_parent_at=datetime.utcnow() if incident_data.parent_informed else None,
     )
 
@@ -5098,12 +4576,8 @@ def create_incident_json(
         "id": incident.id,
         "child_id": incident.child_id,
         "kindergarten_id": incident.kindergarten_id,
-        "class_id": incident.class_id,
-        "supervisor_id": incident.supervisor_id,
         "type": incident.type.value,
-        "classification": incident.classification.value if incident.classification else None,
         "severity_level": incident.severity_level.value,
-        "parent_informed": incident.parent_informed,
         "followup_required_flag": incident.followup_required_flag,
     }
 
@@ -5112,20 +4586,16 @@ def create_incident_json(
 def list_incidents(
     child_id: Optional[int] = None,
     kindergarten_id: Optional[int] = None,
-    class_id: Optional[int] = None,
-    supervisor_id: Optional[int] = None,
     severity: Optional[str] = None,
     incident_type: Optional[str] = None,
-    classification: Optional[str] = None,
-    parent_informed: Optional[bool] = None,
     unresolved_only: Optional[bool] = False,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List incidents with rich filtering. Admin sees all; others scoped to their kindergarten."""
-    query = db.query(models.Incident).filter(models.Incident.deleted_at.is_(None))
+    """List incidents with filtering. Admin sees all; others scoped to their kindergarten."""
+    query = db.query(models.Incident)
 
     if current_user.role != models.UserRole.ADMIN:
         query = query.filter(models.Incident.kindergarten_id == current_user.kindergarten_id)
@@ -5134,12 +4604,6 @@ def list_incidents(
 
     if child_id:
         query = query.filter(models.Incident.child_id == child_id)
-    if class_id:
-        query = query.filter(models.Incident.class_id == class_id)
-    if supervisor_id:
-        query = query.filter(models.Incident.supervisor_id == supervisor_id)
-    if parent_informed is not None:
-        query = query.filter(models.Incident.parent_informed == parent_informed)
     if unresolved_only:
         query = query.filter(models.Incident.closed_at.is_(None))
 
@@ -5152,12 +4616,6 @@ def list_incidents(
     if incident_type:
         try:
             query = query.filter(models.Incident.type == models.IncidentType(incident_type.upper()))
-        except ValueError:
-            pass
-
-    if classification:
-        try:
-            query = query.filter(models.Incident.classification == models.IncidentClassification(classification.upper()))
         except ValueError:
             pass
 
@@ -5179,28 +4637,21 @@ def list_incidents(
         child_name = None
         if i.child:
             child_name = f"{i.child.first_name} {i.child.last_name}".strip() or None
-        supervisor_name = None
-        if i.supervisor:
-            supervisor_name = i.supervisor.username
 
         result.append({
             "id": i.id,
             "child_id": i.child_id,
             "child_name": child_name,
             "kindergarten_id": i.kindergarten_id,
-            "class_id": i.class_id,
-            "supervisor_id": i.supervisor_id,
-            "supervisor_name": supervisor_name,
             "type": i.type.value,
-            "classification": i.classification.value if i.classification else None,
             "severity_level": i.severity_level.value,
             "description": i.description,
             "occurred_at": i.occurred_at.isoformat() if i.occurred_at else None,
-            "closed_at": i.closed_at.isoformat() if i.closed_at else None,
+            "notify_parent_at": i.notify_parent_at.isoformat() if i.notify_parent_at else None,
             "followup_required_flag": i.followup_required_flag,
-            "parent_informed": i.parent_informed,
-            "parent_response": i.parent_response,
-            "parent_not_informed_reason": i.parent_not_informed_reason,
+            "followup_sla_deadline": i.followup_sla_deadline.isoformat() if i.followup_sla_deadline else None,
+            "closed_at": i.closed_at.isoformat() if i.closed_at else None,
+            "created_at": i.created_at.isoformat() if i.created_at else None,
         })
     return result
 
@@ -6323,127 +5774,4 @@ def list_audit_logs(
         "page": page,
         "limit": limit,
         "total_pages": total_pages
-    }
-
-
-@router.get("/audit-logs/export")
-def export_audit_logs(
-    format: str = "csv",
-    period: str = "30",
-    action: Optional[str] = None,
-    entity_type: Optional[str] = None,
-    user: Optional[str] = None,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Export audit logs (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized to export audit logs")
-
-    query = db.query(
-        models.AuditLog,
-        models.User.username.label('user_name')
-    ).outerjoin(
-        models.User, models.AuditLog.user_id == models.User.id
-    )
-
-    # Apply date filter based on period
-    if period != "all":
-        days = int(period)
-        from datetime import datetime, timedelta
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
-        query = query.filter(models.AuditLog.created_at >= cutoff_date)
-
-    # Apply other filters
-    if action:
-        query = query.filter(models.AuditLog.action == action)
-
-    if entity_type:
-        query = query.filter(models.AuditLog.entity_type == entity_type)
-
-    if user:
-        query = query.filter(models.User.username.ilike(f"%{user}%"))
-
-    results = query.order_by(models.AuditLog.created_at.desc()).all()
-
-    # Format data for export
-    data = []
-    for audit_log, user_name in results:
-        data.append({
-            "id": audit_log.id,
-            "user_name": user_name or "غير محدد",
-            "action": audit_log.action,
-            "entity_type": audit_log.entity_type,
-            "entity_id": audit_log.entity_id,
-            "details": audit_log.details,
-            "ip_address": audit_log.ip_address,
-            "created_at": audit_log.created_at.isoformat() if audit_log.created_at else None
-        })
-
-    if format == "csv":
-        # Return CSV response
-        import csv
-        import io
-        from fastapi.responses import StreamingResponse
-
-        def generate_csv():
-            output = io.StringIO()
-            writer = csv.DictWriter(output, fieldnames=data[0].keys() if data else [])
-            writer.writeheader()
-            for row in data:
-                writer.writerow(row)
-            output.seek(0)
-            yield output.getvalue()
-
-        return StreamingResponse(
-            generate_csv(),
-            media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=audit-logs.csv"}
-        )
-
-    elif format == "json":
-        # Return JSON response
-        from fastapi.responses import JSONResponse
-        return JSONResponse(
-            content={"audit_logs": data},
-            headers={"Content-Disposition": "attachment; filename=audit-logs.json"}
-        )
-
-    else:
-        raise HTTPException(status_code=400, detail="Unsupported export format")
-
-
-# ============================================================================
-# Parent Profile Endpoint
-# ============================================================================
-
-@router.get("/parent/profile")
-def get_parent_profile(
-    request: Request,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get parent profile. Returns 403 with translated message for non-parent users."""
-    if current_user.role != models.UserRole.PARENT:
-        from i18n import request_language, gettext
-        lang = request_language(request)
-        if lang == "ar":
-            detail = "الوصول للوالدين فقط"
-        else:
-            detail = "Parent access only"
-        raise HTTPException(status_code=403, detail=detail)
-
-    parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
-
-    if not parent_profile:
-        raise HTTPException(status_code=404, detail="Parent profile not found")
-
-    return {
-        "id": parent_profile.id,
-        "first_name": parent_profile.first_name,
-        "last_name": parent_profile.last_name,
-        "phone_number": parent_profile.phone_number,
-        "user_id": parent_profile.user_id,
     }

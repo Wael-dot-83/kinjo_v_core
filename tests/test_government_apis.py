@@ -134,13 +134,40 @@ def gov_setup(test_db):
     kg = _make_kindergarten(test_db)
     admin = _make_admin_user(test_db)
 
-    # Parent + child aged ~5.5 years (eligible for enrollment forecast)
-    _, profile, child = _make_parent_and_child(test_db, age_days=2000)
+    # Parent + child aged ~3 years (within kindergarten age limit of 56 months)
+    _, profile, child = _make_parent_and_child(test_db, age_days=1100)
+
+    # Supervisor user to record attendance
+    supervisor = models.User(
+        username="govsupervisor@test.com",
+        email="govsupervisor@test.com",
+        hashed_password=get_password_hash("Super123!"),
+        role=models.UserRole.SUPERVISOR,
+        status=models.UserStatus.ACTIVE,
+        kindergarten_id=kg.id,
+    )
+    test_db.add(supervisor)
+    test_db.flush()
+
+    # Class in the kindergarten
+    cls = models.Class(
+        name_ar="الفصل أ",
+        name_en="Class A",
+        class_code="GOV-A-001",
+        kindergarten_id=kg.id,
+        capacity_total=20,
+        age_group="AGE_2_4",
+        min_age_months=24,
+        max_age_months=48,
+    )
+    test_db.add(cls)
+    test_db.flush()
 
     # Enrollment
     enrollment = models.EnrollmentApplication(
         child_id=child.id,
         kindergarten_id=kg.id,
+        class_id=cls.id,
         status=models.EnrollmentStatus.ACTIVE,
         enrollment_start_date=date.today() - timedelta(days=30),
         source="online",
@@ -160,15 +187,17 @@ def gov_setup(test_db):
     for delta in range(1, 6):
         test_db.add(models.AttendanceLog(
             child_id=child.id,
-            class_id=None,
+            class_id=cls.id,
             date=date.today() - timedelta(days=delta),
+            status=models.AttendanceStatus.PRESENT,
             check_in_at=datetime.now() - timedelta(days=delta),
-            method=models.AttendanceMethod.MANUAL,
+            recorded_by=supervisor.id,
         ))
 
     # Daily report
     test_db.add(models.DailyReport(
         child_id=child.id,
+        kindergarten_id=kg.id,
         date=date.today() - timedelta(days=1),
         status=models.DailyReportStatus.SUBMITTED,
         submitted_by=admin.id,

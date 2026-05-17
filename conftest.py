@@ -426,13 +426,10 @@ def sample_incident(test_db, sample_child, sample_kindergarten, supervisor_user,
     incident = Incident(
         child_id=sample_child.id,
         kindergarten_id=sample_kindergarten.id,
-        supervisor_id=supervisor_user.id,
         type=IncidentType.ILLNESS,
         severity_level=SeverityLevel.LOW,
         description="تعثّر الطفل في الملعب",
         occurred_at=datetime(2026, 5, 2, 10, 30),
-        reported_by=supervisor_user.id,
-        parent_informed=True,
         followup_required_flag=False,
     )
     test_db.add(incident)
