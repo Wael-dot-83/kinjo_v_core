@@ -103,13 +103,13 @@
             <tr>
                 <td>${new Date(inc.occurred_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}</td>
                 <td><a href="/children/${inc.child_id}" class="text-decoration-none fw-bold">${T('الطفل', 'Child')} #${inc.child_id}</a></td>
-                <td><span class="badge bg-secondary">${inc.type}</span></td>
+                <td><span class="badge bg-secondary">${escHtml(inc.type)}</span></td>
                 <td>
                     <span class="badge ${getSeverityClass(inc.severity_level)}">
-                        ${inc.severity_level}
+                        ${escHtml(inc.severity_level)}
                     </span>
                 </td>
-                <td>${inc.description.substring(0, 50)}...</td>
+                <td>${escHtml(inc.description.substring(0, 50))}...</td>
                 <td>
                     ${inc.closed_at ? `<span class="badge bg-success">${T('مغلق', 'Closed')}</span>` : `<span class="badge bg-warning text-dark">${T('مفتوح', 'Open')}</span>`}
                 </td>
@@ -143,5 +143,9 @@
             console.error(error);
         }
     };
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
 {% endblock %}

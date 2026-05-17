@@ -162,12 +162,12 @@
                 <tr>
                     <td>${i + 1}</td>
                     <td>
-                        <div class="fw-semibold">${e.child_name}</div>
+                        <div class="fw-semibold">${escHtml(e.child_name)}</div>
                     </td>
-                    <td>${e.kindergarten_name}</td>
+                    <td>${escHtml(e.kindergarten_name)}</td>
                     <td>
                         <span class="badge ${STATUS_CLASS[e.status] || 'bg-secondary'}">
-                            ${STATUS_LABEL[e.status] || e.status}
+                            ${STATUS_LABEL[e.status] || escHtml(e.status)}
                         </span>
                     </td>
                     <td>${formatDate(e.submitted_at || e.created_at)}</td>
@@ -184,6 +184,10 @@
                 </tr>
             `;
         }
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

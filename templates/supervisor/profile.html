@@ -154,7 +154,7 @@
                 cc.innerHTML = p.classes.map(c => `
                     <span class="badge rounded-pill px-3 py-2"
                           style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
-                        ${c.name_ar || c.name_en}
+                        ${escHtml(c.name_ar || c.name_en)}
                         ${c.is_primary ? '<i class="bi bi-star-fill ms-1" style="font-size:0.7rem;"></i>' : ''}
                     </span>`).join('');
             } else {
@@ -162,6 +162,10 @@
             }
         })
         .catch(() => showToast('تعذّر تحميل الملف الشخصي', 'error'));
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 })();
 </script>
 {% endblock %}

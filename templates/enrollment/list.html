@@ -219,12 +219,12 @@
                             <i class="bi bi-person text-primary"></i>
                         </div>
                         <div>
-                            <span class="fw-semibold">${e.child_name || T('غير محدد', 'Not specified')}</span>
+                            <span class="fw-semibold">${escHtml(e.child_name || T('غير محدد', 'Not specified'))}</span>
                         </div>
                     </div>
                 </td>
-                <td>${e.parent_name || T('غير محدد', 'Not specified')}</td>
-                <td>${e.kindergarten_name || T('غير محدد', 'Not specified')}</td>
+                <td>${escHtml(e.parent_name || T('غير محدد', 'Not specified'))}</td>
+                <td>${escHtml(e.kindergarten_name || T('غير محدد', 'Not specified'))}</td>
                 <td>${formatDate(e.created_at)}</td>
                 <td>${getStatusBadge(e.status)}</td>
                 <td>
@@ -323,7 +323,10 @@
     
     function exportEnrollments() {
         showToast(T('جاري تحضير الملف للتصدير...', 'Preparing file for export...'), 'info');
-        // Implement export logic
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

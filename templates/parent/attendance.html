@@ -207,16 +207,16 @@
             tbody.innerHTML = records.map((r, i) => `
                 <tr>
                     <td>${i + 1}</td>
-                    <td class="fw-semibold">${r.child_name || '—'}</td>
+                    <td class="fw-semibold">${escHtml(r.child_name || '—')}</td>
                     <td>${formatDate(r.date)}</td>
                     <td>
                         <span class="badge ${STATUS_CLASS[r.status] || 'bg-secondary'}">
-                            ${STATUS_LABEL[r.status] || r.status}
+                            ${STATUS_LABEL[r.status] || escHtml(r.status)}
                         </span>
                     </td>
                     <td>${formatTime(r.check_in_at)}</td>
                     <td>${formatTime(r.check_out_at)}</td>
-                    <td>${r.notes || '—'}</td>
+                    <td>${escHtml(r.notes || '—')}</td>
                 </tr>
             `).join('');
 
@@ -230,6 +230,10 @@
                 </tr>
             `;
         }
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

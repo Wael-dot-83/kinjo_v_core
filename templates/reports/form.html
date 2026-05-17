@@ -344,9 +344,9 @@
                 select.innerHTML = `<option value="">${T('اختر الطفل...', 'Select child...')}</option>` +
                     children.map(c => {
                         const name = c.first_name_ar && c.last_name_ar ?
-                            `${c.first_name_ar} ${c.last_name_ar}` :
-                            `${c.first_name} ${c.last_name}`;
-                        const classInfo = c.class_name ? ` (${c.class_name})` : '';
+                            `${escHtml(c.first_name_ar)} ${escHtml(c.last_name_ar)}` :
+                            `${escHtml(c.first_name)} ${escHtml(c.last_name)}`;
+                        const classInfo = c.class_name ? ` (${escHtml(c.class_name)})` : '';
                         return `<option value="${c.id}">${name}${classInfo}</option>`;
                     }).join('');
             } else {
@@ -378,7 +378,7 @@
                 select.innerHTML = `<option value="">${T('جميع الصفوف', 'All Classes')}</option>` +
                     classes.map(c => {
                         const className = c.name || c.name_ar || c.name_en || `${T('صف', 'Class')} #${c.id}`;
-                        return `<option value="${c.id}">${className}</option>`;
+                        return `<option value="${c.id}">${escHtml(className)}</option>`;
                     }).join('');
             }
         } catch (error) {
@@ -508,5 +508,9 @@
             alert(T('حدث خطأ في الاتصال','Connection error'));
         }
     });
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
 {% endblock %}
