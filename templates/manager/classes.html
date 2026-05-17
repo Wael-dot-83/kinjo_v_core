@@ -336,7 +336,7 @@
         const btn = document.getElementById('confirmDeleteBtn');
         setLoading(btn, true);
         try {
-            const r = await fetch(`/api/classes/${pendingDeleteId}`, {
+            const r = await fetch(`/api/manager/classes/${pendingDeleteId}`, {
                 method: 'DELETE',
                 headers: getHeaders()
             });
@@ -376,10 +376,10 @@
         const btn = document.getElementById('confirmSwapBtn');
         setLoading(btn, true);
         try {
-            const r = await fetch(`/api/classes/${pendingSwapId}/supervisors`, {
-                method: 'POST',
+            const r = await fetch(`/api/manager/classes/${pendingSwapId}/swap-supervisor`, {
+                method: 'PUT',
                 headers: getHeaders(),
-                body: JSON.stringify({ supervisor_id: parseInt(supId) })
+                body: JSON.stringify({ supervisor_id: parseInt(supId), class_id: pendingSwapId, is_primary: true })
             });
             if (!r.ok) throw new Error();
             showToast('{{ _("تم تغيير المشرف بنجاح") }}', 'success');
