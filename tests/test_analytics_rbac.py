@@ -19,7 +19,7 @@ ANALYTICS_ENDPOINTS_WITH_REQUIRED_PARAMS = [
     "/api/analytics/attendance/by-class?kindergarten_id=1",
     "/api/analytics/attendance/chronic-absence",
     "/api/analytics/daily-reports/supervisor-performance",
-    "/api/analytics/enrollment/trends",
+    "/api/analytics/enrollment/trends?granularity=weekly",
 ]
 
 KPI_ADMIN_ENDPOINTS = [

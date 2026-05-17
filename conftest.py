@@ -410,9 +410,9 @@ def sample_enrollment(test_db, sample_child, sample_kindergarten, sample_class):
         class_id=sample_class.id,
         status=EnrollmentStatus.ACTIVE,
         source="WEB",
-        created_at=datetime(2026, 1, 10),
-        submitted_at=datetime(2026, 1, 10),
-        enrollment_start_date=date(2026, 1, 15),
+        created_at=datetime(2026, 4, 15),
+        submitted_at=datetime(2026, 4, 15),
+        enrollment_start_date=date(2026, 4, 20),
     )
     test_db.add(enrollment)
     test_db.commit()

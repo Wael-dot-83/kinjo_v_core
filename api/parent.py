@@ -123,12 +123,15 @@ _ENROLLMENT_STATUS_AR = {
 
 @router.get("/parent/profile")
 def get_parent_profile(
+    request: Request,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get current parent's profile"""
     if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Parent access only")
+        lang = request.headers.get("Accept-Language", "en")
+        detail = "الوصول للوالدين فقط" if lang.startswith("ar") else "Parent access only"
+        raise HTTPException(status_code=403, detail=detail)
 
     profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id

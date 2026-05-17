@@ -975,7 +975,6 @@ async def refresh_token(
 
 # Include routers AFTER auth endpoints
 app.include_router(admin_router, prefix="/api", tags=["Admin"])
-app.include_router(api_router, prefix="/api", tags=["API"])
 app.include_router(communication_router, prefix="/comm", tags=["Communication"])
 app.include_router(safety_router, prefix="/api", tags=["Safety"])
 app.include_router(kpi_router, prefix="/api", tags=["KPI"])
@@ -1012,6 +1011,7 @@ app.include_router(admin_impersonation_router, prefix="/api", tags=["Admin"])
 app.include_router(messaging_router, prefix="/api", tags=["Messaging"])
 app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
 app.include_router(government_api_router, prefix="/api", tags=["Government API"])
+app.include_router(api_router, prefix="/api", tags=["API"])
 
 # WebSocket endpoint for real-time dashboard updates
 from dependencies import get_current_user_optional

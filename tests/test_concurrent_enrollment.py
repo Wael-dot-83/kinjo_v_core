@@ -87,6 +87,8 @@ def full_scenario(test_db, client):
         kindergarten_id=kg.id,
         name_ar="الصف المتنافس",
         name_en="Contested Class",
+        class_code="CONC-001",
+        age_group="AGE_2_4",
         capacity_total=1,
         min_age_months=24,
         max_age_months=60,

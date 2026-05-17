@@ -92,8 +92,7 @@ def test_reports_list(test_client):
 
 def test_attendance_page(test_client):
     response = test_client.get("/attendance/daily", follow_redirects=False)
-    assert response.status_code == 307
-    assert response.headers.get("location") == "/dashboard"
+    assert response.status_code == 403
 
 def test_kpi_dashboard(test_client):
     response = test_client.get("/kpi/dashboard")

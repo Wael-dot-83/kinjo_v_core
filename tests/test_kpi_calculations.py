@@ -14,7 +14,8 @@ PERIOD_END = date(2026, 5, 7)  # 7-day test window
 
 class TestAttendanceRate:
     def test_perfect_attendance_is_100(
-        self, test_db, sample_kindergarten, sample_child, sample_enrollment
+        self, test_db, sample_kindergarten, sample_child, sample_enrollment,
+        supervisor_user
     ):
         # 1 child enrolled; seed 7 attendance logs for 7 days
         for i in range(7):
@@ -23,8 +24,9 @@ class TestAttendanceRate:
                 child_id=sample_child.id,
                 class_id=sample_enrollment.class_id,
                 date=d,
+                status=models.AttendanceStatus.PRESENT,
                 check_in_at=datetime(d.year, d.month, d.day, 8, 0),
-                method=models.AttendanceMethod.MANUAL
+                recorded_by=supervisor_user.id
             ))
         test_db.commit()
 
@@ -42,7 +44,8 @@ class TestAttendanceRate:
         assert rate == 0.0
 
     def test_partial_attendance(
-        self, test_db, sample_kindergarten, sample_child, sample_enrollment
+        self, test_db, sample_kindergarten, sample_child, sample_enrollment,
+        supervisor_user
     ):
         # 1 child; 3 out of 7 days attended → 3/7 * 100 ≈ 42.86%
         for i in range(3):
@@ -51,8 +54,9 @@ class TestAttendanceRate:
                 child_id=sample_child.id,
                 class_id=sample_enrollment.class_id,
                 date=d,
+                status=models.AttendanceStatus.PRESENT,
                 check_in_at=datetime(d.year, d.month, d.day, 8, 0),
-                method=models.AttendanceMethod.MANUAL
+                recorded_by=supervisor_user.id
             ))
         test_db.commit()
 
@@ -82,17 +86,24 @@ class TestIncidentRate:
         self, test_db, sample_kindergarten, sample_child, supervisor_user,
         sample_enrollment, sample_attendance
     ):
-        # sample_attendance has 3 logs; add 1 incident
+        # sample_attendance provides 1 log (May 1); add 2 more to make 3 total
+        for d_offset in [3, 4]:  # May 4, May 5
+            d = PERIOD_START + timedelta(days=d_offset)
+            test_db.add(models.AttendanceLog(
+                child_id=sample_child.id,
+                class_id=sample_enrollment.class_id,
+                date=d,
+                status=models.AttendanceStatus.PRESENT,
+                check_in_at=datetime(d.year, d.month, d.day, 8, 0),
+                recorded_by=supervisor_user.id
+            ))
         test_db.add(models.Incident(
             child_id=sample_child.id,
             kindergarten_id=sample_kindergarten.id,
-            supervisor_id=supervisor_user.id,
             type=models.IncidentType.INJURY,
             severity_level=models.SeverityLevel.LOW,
             description="تعثّر",
             occurred_at=datetime(2026, 5, 1, 10, 0),
-            reported_by=supervisor_user.id,
-            parent_informed=True,
             followup_required_flag=False
         ))
         test_db.commit()
@@ -100,8 +111,7 @@ class TestIncidentRate:
         rate = KPIService.compute_incident_rate(
             test_db, sample_kindergarten.id, PERIOD_START, PERIOD_END
         )
-        # 3 attendance logs in fixture (May 1, 4, 5 - within our period)
-        # 1 incident / 3 attended days * 100
+        # 3 attendance logs (May 1, 4, 5); 1 incident / 3 attended days * 100
         expected = round(1 / 3 * 100, 2)
         assert rate == expected
 
@@ -114,13 +124,10 @@ class TestSeriousIncidentRate:
         test_db.add(models.Incident(
             child_id=sample_child.id,
             kindergarten_id=sample_kindergarten.id,
-            supervisor_id=supervisor_user.id,
             type=models.IncidentType.INJURY,
             severity_level=models.SeverityLevel.LOW,
             description="خدش بسيط",
             occurred_at=datetime(2026, 5, 1, 10, 0),
-            reported_by=supervisor_user.id,
-            parent_informed=True,
             followup_required_flag=False
         ))
         test_db.commit()
@@ -137,13 +144,10 @@ class TestSeriousIncidentRate:
         test_db.add(models.Incident(
             child_id=sample_child.id,
             kindergarten_id=sample_kindergarten.id,
-            supervisor_id=supervisor_user.id,
             type=models.IncidentType.INJURY,
             severity_level=models.SeverityLevel.CRITICAL,
             description="حادث خطير",
             occurred_at=datetime(2026, 5, 1, 10, 0),
-            reported_by=supervisor_user.id,
-            parent_informed=True,
             followup_required_flag=True
         ))
         test_db.commit()
@@ -167,7 +171,8 @@ class TestChronicAbsenceRate:
         assert rate == 100.0
 
     def test_perfect_attendance_not_chronic(
-        self, test_db, sample_kindergarten, sample_child, sample_enrollment
+        self, test_db, sample_kindergarten, sample_child, sample_enrollment,
+        supervisor_user
     ):
         for i in range(7):
             d = PERIOD_START + timedelta(days=i)
@@ -175,8 +180,9 @@ class TestChronicAbsenceRate:
                 child_id=sample_child.id,
                 class_id=sample_enrollment.class_id,
                 date=d,
+                status=models.AttendanceStatus.PRESENT,
                 check_in_at=datetime(d.year, d.month, d.day, 8, 0),
-                method=models.AttendanceMethod.MANUAL
+                recorded_by=supervisor_user.id
             ))
         test_db.commit()
 
@@ -244,8 +250,6 @@ class TestFollowupSLACompliance:
             severity_level=models.SeverityLevel.LOW,
             description="test",
             occurred_at=datetime(2026, 5, 1, 10, 0),
-            reported_by=supervisor_user.id,
-            parent_informed=True,
             followup_required_flag=True,
             followup_sla_deadline=datetime(2026, 5, 3),
             closed_at=datetime(2026, 5, 2)  # closed before deadline

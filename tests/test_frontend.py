@@ -553,15 +553,11 @@ class TestFrontendRoutes:
         app.dependency_overrides.clear()
 
     def test_attendance_history(self, client, admin_user, sample_kindergarten):
-        """Test attendance history page"""
+        """Test attendance history page is blocked for admin"""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
 
         response = client.get("/attendance/history")
-        assert response.status_code == 200
-        assert "text/html" in response.headers.get("content-type", "")
-        assert b'id="kindergartenFilter"' in response.content
-        assert b'data-all-kindergartens="true"' in response.content
-        assert str(sample_kindergarten.id).encode() in response.content
+        assert response.status_code == 403
 
         app.dependency_overrides.clear()
 
@@ -700,12 +696,11 @@ class TestFrontendRoutes:
         app.dependency_overrides.clear()
 
     def test_attendance_daily_admin(self, client, admin_user, test_db):
-        """Test attendance daily page is unavailable for admin"""
+        """Test attendance daily page is blocked for admin"""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
 
         response = client.get("/attendance/daily", follow_redirects=False)
-        assert response.status_code == 307
-        assert "/dashboard" in response.headers.get("location", "")
+        assert response.status_code == 403
 
         app.dependency_overrides.clear()
 
@@ -740,12 +735,11 @@ class TestFrontendRoutes:
         app.dependency_overrides.clear()
 
     def test_create_daily_report_redirect(self, client, admin_user):
-        """Test create daily-report page renders"""
+        """Test create daily-report page is blocked for admin"""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
 
         response = client.get("/daily-reports/create")
-        assert response.status_code == 200  # Renders form page
-        assert "text/html" in response.headers.get("content-type", "")
+        assert response.status_code == 403
 
         app.dependency_overrides.clear()
 

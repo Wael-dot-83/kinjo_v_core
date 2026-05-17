@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %}{% endblock %}
+{% block title %}{{ _('My Profile') }}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
             <i class="bi bi-person-circle me-2 text-primary"></i>
-            {% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %}
+            {{ _('My Profile') }}
         </h1>
-        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+        <nav aria-label="{{ _('Breadcrumb') }}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
-                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %}</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{{ _('Dashboard') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('My Profile') }}</li>
             </ol>
         </nav>
     </div>
@@ -23,8 +23,8 @@
 <!-- Profile Completion Alert -->
 <div id="profileAlert" class="alert alert-warning d-none" role="alert">
     <i class="bi bi-exclamation-triangle me-2"></i>
-    <strong>{% if ui_lang == 'en' %}Your profile is incomplete.{% else %}ملفك الشخصي غير مكتمل.{% endif %}</strong>
-    {% if ui_lang == 'en' %}You must complete all required fields to submit enrollment requests.{% else %}يجب إكمال جميع الحقول المطلوبة لتتمكن من تقديم طلبات تسجيل.{% endif %}
+    <strong>{{ _('Your profile is incomplete.') }}</strong>
+    {{ _('You must complete all required fields to submit enrollment requests.') }}
 </div>
 
 <div class="row g-4">
@@ -33,10 +33,10 @@
         <div class="card shadow-sm">
             <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    <i class="bi bi-person me-2 text-primary"></i>{% if ui_lang == 'en' %}Personal Information{% else %}المعلومات الشخصية{% endif %}
+                    <i class="bi bi-person me-2 text-primary"></i>{{ _('Personal Information') }}
                 </h5>
                 <button class="btn btn-sm btn-outline-primary" id="btnEditProfile" onclick="toggleEditMode()">
-                    <i class="bi bi-pencil me-1"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}
+                    <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
                 </button>
             </div>
             <div class="card-body">
@@ -44,43 +44,43 @@
                 <div id="viewMode">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}First Name{% else %}الاسم الأول{% endif %}</label>
+                            <label class="text-muted small">{{ _('First Name') }}</label>
                             <div class="fw-semibold" id="viewFirstName">—</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Middle Name{% else %}الاسم الثاني{% endif %}</label>
+                            <label class="text-muted small">{{ _('Middle Name') }}</label>
                             <div class="fw-semibold" id="viewSecondName">—</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Last Name{% else %}اسم العائلة{% endif %}</label>
+                            <label class="text-muted small">{{ _('Last Name') }}</label>
                             <div class="fw-semibold" id="viewLastName">—</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Phone Number{% else %}رقم الهاتف{% endif %}</label>
+                            <label class="text-muted small">{{ _('Phone Number') }}</label>
                             <div class="fw-semibold" id="viewPhone">—</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label>
+                            <label class="text-muted small">{{ _('Email') }}</label>
                             <div class="fw-semibold" id="viewEmail">—</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Gender{% else %}الجنس{% endif %}</label>
+                            <label class="text-muted small">{{ _('Gender') }}</label>
                             <div class="fw-semibold" id="viewGender">—</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Nationality{% else %}الجنسية{% endif %}</label>
+                            <label class="text-muted small">{{ _('Nationality') }}</label>
                             <div class="fw-semibold" id="viewNationality">—</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Relationship to Child{% else %}صلة القرابة{% endif %}</label>
+                            <label class="text-muted small">{{ _('Relationship to Child') }}</label>
                             <div class="fw-semibold" id="viewRelationship">—</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}National ID{% else %}الرقم الوطني{% endif %}</label>
+                            <label class="text-muted small">{{ _('National ID') }}</label>
                             <div class="fw-semibold" id="viewNationalId">—</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Passport Number{% else %}رقم جواز السفر{% endif %}</label>
+                            <label class="text-muted small">{{ _('Passport Number') }}</label>
                             <div class="fw-semibold" id="viewPassport">—</div>
                         </div>
                     </div>
@@ -90,37 +90,37 @@
                 <form id="editMode" class="d-none">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label for="editFirstName" class="form-label">{% if ui_lang == 'en' %}First Name{% else %}الاسم الأول{% endif %} <span class="text-danger">*</span></label>
+                            <label for="editFirstName" class="form-label">{{ _('First Name') }} <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="editFirstName" required>
                         </div>
                         <div class="col-md-4">
-                            <label for="editSecondName" class="form-label">{% if ui_lang == 'en' %}Middle Name{% else %}الاسم الثاني{% endif %}</label>
+                            <label for="editSecondName" class="form-label">{{ _('Middle Name') }}</label>
                             <input type="text" class="form-control" id="editSecondName">
                         </div>
                         <div class="col-md-4">
-                            <label for="editLastName" class="form-label">{% if ui_lang == 'en' %}Last Name{% else %}اسم العائلة{% endif %} <span class="text-danger">*</span></label>
+                            <label for="editLastName" class="form-label">{{ _('Last Name') }} <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="editLastName" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="editPhone" class="form-label">{% if ui_lang == 'en' %}Phone Number{% else %}رقم الهاتف{% endif %} <span class="text-danger">*</span></label>
+                            <label for="editPhone" class="form-label">{{ _('Phone Number') }} <span class="text-danger">*</span></label>
                             <input type="tel" class="form-control" id="editPhone" dir="ltr" placeholder="+962..." required>
                         </div>
                         <div class="col-md-6">
-                            <label for="editRelationship" class="form-label">{% if ui_lang == 'en' %}Relationship to Child{% else %}صلة القرابة{% endif %}</label>
+                            <label for="editRelationship" class="form-label">{{ _('Relationship to Child') }}</label>
                             <select class="form-select" id="editRelationship">
-                                <option value="">{% if ui_lang == 'en' %}Select...{% else %}اختر...{% endif %}</option>
-                                <option value="FATHER">{% if ui_lang == 'en' %}Father{% else %}أب{% endif %}</option>
-                                <option value="MOTHER">{% if ui_lang == 'en' %}Mother{% else %}أم{% endif %}</option>
-                                <option value="GUARDIAN">{% if ui_lang == 'en' %}Guardian{% else %}ولي أمر{% endif %}</option>
-                                <option value="OTHER">{% if ui_lang == 'en' %}Other{% else %}أخرى{% endif %}</option>
+                                <option value="">{{ _('Select...') }}</option>
+                                <option value="FATHER">{{ _('Father') }}</option>
+                                <option value="MOTHER">{{ _('Mother') }}</option>
+                                <option value="GUARDIAN">{{ _('Guardian') }}</option>
+                                <option value="OTHER">{{ _('Other') }}</option>
                             </select>
                         </div>
                         <div class="col-12 mt-3">
                             <button type="submit" class="btn btn-primary px-4">
-                                <i class="bi bi-save me-1"></i>{% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}
+                                <i class="bi bi-save me-1"></i>{{ _('Save Changes') }}
                             </button>
                             <button type="button" class="btn btn-outline-secondary me-2" onclick="cancelEdit()">
-                                {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+                                {{ _('Cancel') }}
                             </button>
                         </div>
                     </div>
@@ -132,10 +132,10 @@
         <div class="card shadow-sm mt-4">
             <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    <i class="bi bi-geo-alt me-2 text-success"></i>{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %}
+                    <i class="bi bi-geo-alt me-2 text-success"></i>{{ _('Address') }}
                 </h5>
                 <button class="btn btn-sm btn-outline-success" id="btnEditAddress" onclick="toggleAddressEdit()">
-                    <i class="bi bi-pencil me-1"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}
+                    <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
                 </button>
             </div>
             <div class="card-body">
@@ -143,23 +143,23 @@
                 <div id="addressViewMode">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                            <label class="text-muted small">{{ _('Governorate') }}</label>
                             <div class="fw-semibold" id="viewGovernorate">—</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
+                            <label class="text-muted small">{{ _('City') }}</label>
                             <div class="fw-semibold" id="viewCity">—</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</label>
+                            <label class="text-muted small">{{ _('Area') }}</label>
                             <div class="fw-semibold" id="viewArea">—</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Home Address{% else %}عنوان السكن{% endif %}</label>
+                            <label class="text-muted small">{{ _('Home Address') }}</label>
                             <div class="fw-semibold" id="viewAddressLine">—</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Work Address{% else %}عنوان العمل{% endif %}</label>
+                            <label class="text-muted small">{{ _('Work Address') }}</label>
                             <div class="fw-semibold" id="viewWorkAddress">—</div>
                         </div>
                     </div>
@@ -169,35 +169,35 @@
                 <form id="addressEditMode" class="d-none">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label for="editGovernorate" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %} <span class="text-danger">*</span></label>
+                            <label for="editGovernorate" class="form-label">{{ _('Governorate') }} <span class="text-danger">*</span></label>
                             <select class="form-select" id="editGovernorate" required>
-                                <option value="">{% if ui_lang == 'en' %}Select governorate{% else %}اختر المحافظة{% endif %}</option>
+                                <option value="">{{ _('Select governorate') }}</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="editCity" class="form-label">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %} <span class="text-danger">*</span></label>
+                            <label for="editCity" class="form-label">{{ _('City') }} <span class="text-danger">*</span></label>
                             <select class="form-select" id="editCity" required>
-                                <option value="">{% if ui_lang == 'en' %}Select governorate first{% else %}اختر المحافظة أولاً{% endif %}</option>
+                                <option value="">{{ _('Select governorate first') }}</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="editArea" class="form-label">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %} <span class="text-danger">*</span></label>
+                            <label for="editArea" class="form-label">{{ _('Area') }} <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="editArea" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="editAddressLine" class="form-label">{% if ui_lang == 'en' %}Home Address{% else %}عنوان السكن{% endif %} <span class="text-danger">*</span></label>
+                            <label for="editAddressLine" class="form-label">{{ _('Home Address') }} <span class="text-danger">*</span></label>
                             <textarea class="form-control" id="editAddressLine" rows="2" required></textarea>
                         </div>
                         <div class="col-md-6">
-                            <label for="editWorkAddress" class="form-label">{% if ui_lang == 'en' %}Work Address{% else %}عنوان العمل{% endif %}</label>
+                            <label for="editWorkAddress" class="form-label">{{ _('Work Address') }}</label>
                             <textarea class="form-control" id="editWorkAddress" rows="2"></textarea>
                         </div>
                         <div class="col-12 mt-3">
                             <button type="submit" class="btn btn-success px-4">
-                                <i class="bi bi-save me-1"></i>{% if ui_lang == 'en' %}Save Address{% else %}حفظ العنوان{% endif %}
+                                <i class="bi bi-save me-1"></i>{{ _('Save Address') }}
                             </button>
                             <button type="button" class="btn btn-outline-secondary me-2" onclick="cancelAddressEdit()">
-                                {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+                                {{ _('Cancel') }}
                             </button>
                         </div>
                     </div>
@@ -209,10 +209,10 @@
         <div class="card shadow-sm mt-4">
             <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    <i class="bi bi-telephone-fill me-2 text-danger"></i>{% if ui_lang == 'en' %}Emergency Contact{% else %}جهة اتصال الطوارئ{% endif %}
+                    <i class="bi bi-telephone-fill me-2 text-danger"></i>{{ _('Emergency Contact') }}
                 </h5>
                 <button class="btn btn-sm btn-outline-danger" id="btnEditEmergency" onclick="toggleEmergencyEdit()">
-                    <i class="bi bi-pencil me-1"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}
+                    <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
                 </button>
             </div>
             <div class="card-body">
@@ -220,15 +220,15 @@
                 <div id="emergencyViewMode">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Contact Name{% else %}اسم جهة الاتصال{% endif %}</label>
+                            <label class="text-muted small">{{ _('Contact Name') }}</label>
                             <div class="fw-semibold" id="viewEmergencyName">—</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Contact Phone{% else %}رقم هاتف الطوارئ{% endif %}</label>
+                            <label class="text-muted small">{{ _('Contact Phone') }}</label>
                             <div class="fw-semibold" id="viewEmergencyPhone">—</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="text-muted small">{% if ui_lang == 'en' %}Relationship{% else %}صلة القرابة{% endif %}</label>
+                            <label class="text-muted small">{{ _('Relationship') }}</label>
                             <div class="fw-semibold" id="viewEmergencyRelationship">—</div>
                         </div>
                     </div>
@@ -238,23 +238,23 @@
                 <form id="emergencyEditMode" class="d-none">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label for="editEmergencyName" class="form-label">{% if ui_lang == 'en' %}Contact Name{% else %}اسم جهة الاتصال{% endif %} <span class="text-danger">*</span></label>
+                            <label for="editEmergencyName" class="form-label">{{ _('Contact Name') }} <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="editEmergencyName" required>
                         </div>
                         <div class="col-md-4">
-                            <label for="editEmergencyPhone" class="form-label">{% if ui_lang == 'en' %}Contact Phone{% else %}رقم هاتف الطوارئ{% endif %} <span class="text-danger">*</span></label>
+                            <label for="editEmergencyPhone" class="form-label">{{ _('Contact Phone') }} <span class="text-danger">*</span></label>
                             <input type="tel" class="form-control" id="editEmergencyPhone" dir="ltr" placeholder="+962..." required>
                         </div>
                         <div class="col-md-4">
-                            <label for="editEmergencyRelationship" class="form-label">{% if ui_lang == 'en' %}Relationship{% else %}صلة القرابة{% endif %}</label>
+                            <label for="editEmergencyRelationship" class="form-label">{{ _('Relationship') }}</label>
                             <input type="text" class="form-control" id="editEmergencyRelationship">
                         </div>
                         <div class="col-12 mt-3">
                             <button type="submit" class="btn btn-danger px-4">
-                                <i class="bi bi-save me-1"></i>{% if ui_lang == 'en' %}Save Emergency Contact{% else %}حفظ جهة الطوارئ{% endif %}
+                                <i class="bi bi-save me-1"></i>{{ _('Save Emergency Contact') }}
                             </button>
                             <button type="button" class="btn btn-outline-secondary me-2" onclick="cancelEmergencyEdit()">
-                                {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+                                {{ _('Cancel') }}
                             </button>
                         </div>
                     </div>
@@ -273,9 +273,9 @@
                     <i class="bi bi-person-fill text-primary fs-1"></i>
                 </div>
                 <h5 class="mb-1" id="profileFullName">—</h5>
-                <p class="text-muted mb-3" id="profileRole">{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</p>
+                <p class="text-muted mb-3" id="profileRole">{{ _('Parent') }}</p>
                 <div id="profileStatusBadge">
-                    <span class="badge bg-secondary">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                    <span class="badge bg-secondary">{{ _('Loading...') }}</span>
                 </div>
             </div>
         </div>
@@ -283,24 +283,24 @@
         <!-- Quick Links Card -->
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-transparent">
-                <h5 class="card-title mb-0"><i class="bi bi-link-45deg me-2"></i>{% if ui_lang == 'en' %}Quick Links{% else %}روابط سريعة{% endif %}</h5>
+                <h5 class="card-title mb-0"><i class="bi bi-link-45deg me-2"></i>{{ _('Quick Links') }}</h5>
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
                     <a href="/parent/children" class="btn btn-outline-primary">
-                        <i class="bi bi-people me-2"></i>{% if ui_lang == 'en' %}My Children{% else %}أطفالي{% endif %}
+                        <i class="bi bi-people me-2"></i>{{ _('My Children') }}
                     </a>
                     <a href="/enroll" class="btn btn-outline-success">
-                        <i class="bi bi-person-plus me-2"></i>{% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}
+                        <i class="bi bi-person-plus me-2"></i>{{ _('Register New Child') }}
                     </a>
                     <a href="/parent/enrollments" class="btn btn-outline-info">
-                        <i class="bi bi-clipboard-check me-2"></i>{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}
+                        <i class="bi bi-clipboard-check me-2"></i>{{ _('Enrollment Requests') }}
                     </a>
                     <a href="/my-reports" class="btn btn-outline-warning">
-                        <i class="bi bi-journal-text me-2"></i>{% if ui_lang == 'en' %}My Reports{% else %}تقارير أطفالي{% endif %}
+                        <i class="bi bi-journal-text me-2"></i>{{ _('My Reports') }}
                     </a>
                     <a href="/absence-requests" class="btn btn-outline-secondary">
-                        <i class="bi bi-calendar-x me-2"></i>{% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الغياب{% endif %}
+                        <i class="bi bi-calendar-x me-2"></i>{{ _('Absence Requests') }}
                     </a>
                 </div>
             </div>
@@ -309,13 +309,13 @@
         <!-- Preferences -->
         <div class="card shadow-sm">
             <div class="card-header bg-transparent">
-                <h5 class="card-title mb-0"><i class="bi bi-sliders me-2"></i>{% if ui_lang == 'en' %}Preferences{% else %}التفضيلات{% endif %}</h5>
+                <h5 class="card-title mb-0"><i class="bi bi-sliders me-2"></i>{{ _('Preferences') }}</h5>
             </div>
             <div class="card-body">
                 <div class="form-check form-switch mb-3">
                     <input class="form-check-input" type="checkbox" id="correspondenceSwitch" checked>
                     <label class="form-check-label" for="correspondenceSwitch">
-                        {% if ui_lang == 'en' %}Receive correspondence{% else %}استلام المراسلات{% endif %}
+                        {{ _('Receive correspondence') }}
                     </label>
                 </div>
             </div>

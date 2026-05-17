@@ -1227,7 +1227,7 @@ class KindergartenCreate(BaseModel):
     def validate_governorate(cls, value):
         if not validators.validate_jordan_governorate(value):
             raise ValueError(f"Invalid governorate: {value}. Must be one of: {', '.join(settings.JORDAN_GOVERNORATES)}")
-        return validators.normalise_jordan_governorate(value)
+        return value
 
 
 def detect_kindergarten_duplicate(db: Session, data: KindergartenCreate, exclude_id: Optional[int] = None) -> Optional[str]:
@@ -2563,22 +2563,6 @@ def get_manager_dashboard(
                 "priority": "critical" if days_until_expiry < 0 else "high"
             })
 
-    pending_corresponding = (
-        db.query(func.count(models.Child.id))
-        .join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id)
-        .filter(
-            models.Child.corresponding_type == "PENDING_MANAGER",
-            models.Child.deleted_at.is_(None),
-            models.EnrollmentApplication.kindergarten_id == kindergarten_id
-        )
-        .scalar() or 0
-    )
-    if pending_corresponding > 0:
-        dashboard["alerts"].append({
-            "type": "pending_corresponding",
-            "message": f"{pending_corresponding} طفل بانتظار تعيين جهة اتصال أساسية",
-            "priority": "high"
-        })
 
     return dashboard
 # ============================================================================
@@ -3209,7 +3193,7 @@ class ParentRegistrationRequest(BaseModel):
     def validate_home_governorate(cls, value):
         if not validators.validate_jordan_governorate(value):
             raise ValueError(f"Invalid governorate: {value}. Must be one of: {', '.join(settings.JORDAN_GOVERNORATES)}")
-        return validators.normalise_jordan_governorate(value)
+        return value
 
     @model_validator(mode="after")
     def validate_primary_identifier(self):

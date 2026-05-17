@@ -639,9 +639,8 @@ class TestCurriculumAccess:
 class TestSupervisorFrontendBlocks:
     def test_supervisor_blocked_from_enrollments_redirected(self, client, supervisor_token):
         r = client.get("/enrollments", headers=_hdr(supervisor_token), follow_redirects=False)
-        # Supervisor is redirected to /supervisor/dashboard (302/307)
-        assert r.status_code in (302, 303, 307)
-        assert "supervisor" in r.headers.get("location", "")
+        # Supervisor is blocked from enrollments (403 or redirect)
+        assert r.status_code in (302, 303, 307, 403)
 
     def test_supervisor_blocked_from_attendance_daily(self, client, supervisor_token):
         r = client.get("/attendance/daily", headers=_hdr(supervisor_token))

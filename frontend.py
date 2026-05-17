@@ -2,7 +2,9 @@ from fastapi import APIRouter, Request, Depends, status, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from jinja2 import pass_context
 import models
+from i18n import gettext as _i18n_gettext
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from datetime import date, timedelta
@@ -56,6 +58,15 @@ templates = Jinja2Templates(
     context_processors=[language_context_processor],
 )
 templates.env.globals['encoding'] = 'utf-8'
+
+
+@pass_context
+def _jinja_gettext(ctx, message, **kwargs):
+    lang = ctx.get('ui_lang', 'ar')
+    return _i18n_gettext(message, lang=lang, **kwargs)
+
+
+templates.env.globals['_'] = _jinja_gettext
 # Ensure auto_reload for development
 templates.env.auto_reload = True
 
@@ -351,8 +362,8 @@ async def edit_kindergarten_page(request: Request, kg_id: int, db: Session = Dep
 
 @router.get("/classes", response_class=HTMLResponse)
 async def list_classes_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Class list page — Manager only. Admin uses admin panel; direct access returns 403."""
-    if current_user.role != UserRole.MANAGER:
+    """Class list page — Manager and Admin."""
+    if current_user.role not in (UserRole.MANAGER, UserRole.ADMIN):
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     return templates.TemplateResponse(request=request, name="classes/list.html", context={"current_user": current_user})
 
@@ -395,7 +406,7 @@ async def list_enrollments(request: Request, current_user: User = Depends(get_cu
     # Supervisors cannot access enrollments
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role == 'SUPERVISOR':
-        return RedirectResponse(url="/supervisor/dashboard")
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     if user_role == 'PARENT':
         return RedirectResponse(url="/parent/enrollments")
     return templates.TemplateResponse(request=request, name="enrollment/list.html", context={"current_user": current_user})
@@ -545,10 +556,10 @@ async def attendance_history(
     current_user: User = Depends(get_current_user_or_redirect)
 ):
     user_role = current_user.role.value if hasattr(current_user.role, "value") else current_user.role
-    if user_role == "ADMIN":
-        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     if user_role == "PARENT":
         return RedirectResponse(url="/parent/dashboard")
+    if user_role == "ADMIN":
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
 
     today = date.today()
     context = {
@@ -716,7 +727,7 @@ async def attendance_daily(request: Request, db: Session = Depends(get_db), curr
     from sqlalchemy import or_
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
 
-    # Admin and Supervisor do not use this shared attendance page
+    # Admin and Supervisor are blocked from daily attendance (operational Manager page)
     if user_role in ('ADMIN', 'SUPERVISOR'):
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
 
@@ -724,8 +735,8 @@ async def attendance_daily(request: Request, db: Session = Depends(get_db), curr
     if user_role == 'PARENT':
         return RedirectResponse(url="/absence-requests")
 
-    # For managers and supervisors, automatically set their kindergarten
-    if user_role in ['MANAGER', 'SUPERVISOR']:
+    # For managers, automatically set their kindergarten
+    if user_role == 'MANAGER':
         kindergarten = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).first()
         if not kindergarten:
             # This should not happen due to database constraints, but handle gracefully
@@ -838,10 +849,8 @@ async def daily_reports_list(request: Request, current_user: User = Depends(get_
 async def create_daily_report(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Create a new daily report"""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
-    if user_role in ('ADMIN', 'SUPERVISOR'):
-        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     if user_role != 'MANAGER':
-        return RedirectResponse(url="/dashboard")
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     return templates.TemplateResponse(request=request, name="reports/form.html", context={"current_user": current_user, "today": date.today()})
 
 
@@ -929,10 +938,8 @@ async def kpi_main(request: Request, current_user: User = Depends(get_current_us
 
 @router.get("/classes/{class_id}", response_class=HTMLResponse)
 async def view_class(request: Request, class_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    """View class details — Admin blocked (use admin panel); Manager scoped to own KG."""
+    """View class details — Admin and Manager can access; Manager scoped to own KG."""
     from models import Class
-    if current_user.role == UserRole.ADMIN:
-        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     class_obj = db.query(Class).filter(Class.id == class_id).first()
     if not class_obj:
         return templates.TemplateResponse(request=request, name="404.html", status_code=404)
