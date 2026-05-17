@@ -111,13 +111,13 @@
             } else {
                 tbody.innerHTML = data.kindergartens.map(kg => `
                 <tr>
-                    <td>${kg.name_ar}</td>
-                    <td>${kg.name_en || ''}</td>
-                    <td>${kg.governorate}</td>
-                    <td>${kg.city}</td>
-                    <td>${kg.area || ''}</td>
-                    <td>${kg.phone}</td>
-                    <td>${kg.detailed_address || ''}</td>
+                    <td>${escHtml(kg.name_ar)}</td>
+                    <td>${escHtml(kg.name_en || '')}</td>
+                    <td>${escHtml(kg.governorate)}</td>
+                    <td>${escHtml(kg.city)}</td>
+                    <td>${escHtml(kg.area || '')}</td>
+                    <td>${escHtml(kg.phone)}</td>
+                    <td>${escHtml(kg.detailed_address || '')}</td>
                     <td>${new Date(kg.created_at).toLocaleDateString()}</td>
                 </tr>
             `).join('');
@@ -182,5 +182,9 @@
 
     // Load initial data
     loadKindergartens();
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
 {% endblock %}

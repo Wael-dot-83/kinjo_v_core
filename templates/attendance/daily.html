@@ -483,7 +483,7 @@
                 <div class="form-check">
                     <input class="form-check-input class-checkbox" type="checkbox" id="class-${cls.id}" value="${cls.id}" ${isChecked}>
                     <label class="form-check-label" for="class-${cls.id}">
-                        ${preferredText(cls.name_ar, cls.name_en)}
+                        ${escHtml(preferredText(cls.name_ar, cls.name_en))}
                     </label>
                 </div>
             `;
@@ -531,7 +531,7 @@
                 <div class="form-check">
                     <input class="form-check-input child-checkbox" type="checkbox" id="child-${child.id}" value="${child.id}">
                     <label class="form-check-label" for="child-${child.id}">
-                        ${preferredText(child.first_name_ar, child.first_name)} ${preferredText(child.last_name_ar, child.last_name)}
+                        ${escHtml(preferredText(child.first_name_ar, child.first_name))} ${escHtml(preferredText(child.last_name_ar, child.last_name))}
                     </label>
                 </div>
             `;
@@ -604,10 +604,10 @@
         const kg = reportData.meta.kindergarten;
         header.innerHTML = `
         <div class="col-md-6">
-            <h6>${preferredText(kg.name_ar, kg.name_en)}</h6>
-            <p class="mb-1"><strong>${attendanceText('common.governorate', 'المحافظة', 'Governorate')}:</strong> ${preferredText(kg.governorate, kg.governorate_en)}</p>
-            <p class="mb-1"><strong>${attendanceText('common.city', 'المدينة', 'City')}:</strong> ${preferredText(kg.city, kg.city_en)}</p>
-            <p class="mb-0"><strong>${attendanceText('common.phone', 'الهاتف', 'Phone')}:</strong> ${kg.phone || attendanceText('common.unspecified', 'غير محدد', 'Not specified')}</p>
+            <h6>${escHtml(preferredText(kg.name_ar, kg.name_en))}</h6>
+            <p class="mb-1"><strong>${attendanceText('common.governorate', 'المحافظة', 'Governorate')}:</strong> ${escHtml(preferredText(kg.governorate, kg.governorate_en))}</p>
+            <p class="mb-1"><strong>${attendanceText('common.city', 'المدينة', 'City')}:</strong> ${escHtml(preferredText(kg.city, kg.city_en))}</p>
+            <p class="mb-0"><strong>${attendanceText('common.phone', 'الهاتف', 'Phone')}:</strong> ${escHtml(kg.phone || attendanceText('common.unspecified', 'غير محدد', 'Not specified'))}</p>
         </div>
         <div class="col-md-6">
             <h6>${attendanceText('attendance.report_period', 'فترة التقرير', 'Report period')}</h6>
@@ -735,8 +735,8 @@
         // Child rows
         reportData.children.forEach(child => {
             html += `<tr>
-            <td class="sticky-col fw-bold">${preferredText(child.name_ar, child.name_en || child.name)}</td>
-            <td>${preferredText(child.class_name, child.class_name_en) || attendanceText('common.unspecified', 'غير محدد', 'Not specified')}</td>`;
+            <td class="sticky-col fw-bold">${escHtml(preferredText(child.name_ar, child.name_en || child.name))}</td>
+            <td>${escHtml(preferredText(child.class_name, child.class_name_en) || attendanceText('common.unspecified', 'غير محدد', 'Not specified'))}</td>`;
 
             let presentCount = 0;
             let absentCount = 0;
@@ -785,6 +785,10 @@
             range: attendanceText('attendance.period.custom', 'فترة مخصصة', 'Custom range'),
         };
         return labels[type] || type;
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

@@ -75,16 +75,16 @@
         }
 
         container.innerHTML = notifications.map(n => `
-        <a href="#" class="list-group-item list-group-item-action ${n.read ? '' : 'bg-light'}" 
+        <a href="#" class="list-group-item list-group-item-action ${n.read ? '' : 'bg-light'}"
            onclick="markAsRead(${n.id})">
             <div class="d-flex w-100 justify-content-between">
                 <h6 class="mb-1">
                     ${n.read ? '' : `<span class="badge bg-primary me-2">${T('جديد', 'New')}</span>`}
-                    ${n.title || T('إشعار', 'Notification')}
+                    ${escHtml(n.title || T('إشعار', 'Notification'))}
                 </h6>
                 <small class="text-muted">${formatDate(n.created_at)}</small>
             </div>
-            <p class="mb-1 text-muted">${n.message || ''}</p>
+            <p class="mb-1 text-muted">${escHtml(n.message || '')}</p>
         </a>
     `).join('');
     }
@@ -142,5 +142,9 @@
 
     // Load notifications on page load
     loadNotifications();
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
 {% endblock %}

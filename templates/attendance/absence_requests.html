@@ -166,11 +166,11 @@
             <tr>
                 <td>${i + 1}</td>
                 <td>${childName(r.child_id)}</td>
-                <td>${r.start_date}</td>
-                <td>${r.end_date}</td>
-                <td class="text-truncate" style="max-width:200px">${r.reason}</td>
+                <td>${escHtml(r.start_date)}</td>
+                <td>${escHtml(r.end_date)}</td>
+                <td class="text-truncate" style="max-width:200px">${escHtml(r.reason)}</td>
                 <td>${statusBadge(r.status)}</td>
-                <td>${r.decision_note || '-'}</td>
+                <td>${escHtml(r.decision_note || '-')}</td>
                 <td>
                     ${r.status === 'SUBMITTED' ? `<button class="btn btn-sm btn-outline-danger cancel-btn" data-id="${r.id}"><i class="bi bi-x-circle"></i> ${T('إلغاء', 'Cancel')}</button>` : '-'}
                 </td>
@@ -259,5 +259,9 @@
         // initial load
         loadRequests();
     });
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
 {% endblock %}

@@ -222,12 +222,12 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <h5 class="card-title ${task.status === 'COMPLETED' ? 'text-decoration-line-through text-muted' : ''}">
-                                ${task.title}
+                                ${escHtml(task.title)}
                             </h5>
                             ${getPriorityBadge(task.priority)}
                         </div>
 
-                        ${task.description ? `<p class="card-text text-muted small">${task.description}</p>` : ''}
+                        ${task.description ? `<p class="card-text text-muted small">${escHtml(task.description)}</p>` : ''}
 
                         <div class="mb-3">
                             ${getStatusBadge(task.status)}
@@ -404,5 +404,9 @@
 
     // Reset form when modal is closed
     document.getElementById('taskModal').addEventListener('hidden.bs.modal', resetForm);
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
 {% endblock %}

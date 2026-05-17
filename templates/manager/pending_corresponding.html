@@ -85,8 +85,8 @@ function renderTable(messages) {
     }
     tbody.innerHTML = messages.map(m => `
         <tr>
-            <td>${m.sender_name || '—'}</td>
-            <td class="fw-semibold">${m.subject || '(بدون موضوع)'}</td>
+            <td>${escHtml(m.sender_name || '—')}</td>
+            <td class="fw-semibold">${escHtml(m.subject || '(بدون موضوع)')}</td>
             <td class="text-muted small">${m.created_at ? new Date(m.created_at).toLocaleDateString('ar-SA') : '—'}</td>
             <td><span class="badge bg-warning text-dark rounded-pill">غير مقروءة</span></td>
             <td class="text-center">
@@ -95,6 +95,10 @@ function renderTable(messages) {
                 </a>
             </td>
         </tr>`).join('');
+}
+
+function escHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 document.addEventListener('DOMContentLoaded', loadPending);

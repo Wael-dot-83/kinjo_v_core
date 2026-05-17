@@ -234,7 +234,7 @@
                                 </span>
                             ` : ''}
                         </div>
-                        <h4 class="card-title mb-1">${child.first_name} ${child.last_name}</h4>
+                        <h4 class="card-title mb-1">${escHtml(child.first_name)} ${escHtml(child.last_name)}</h4>
                         <p class="text-muted mb-2">${child.enrollment ? parentText('status.enrolled', 'مسجل', 'Enrolled') : parentText('status.pending_enrollment', 'بانتظار التسجيل', 'Pending enrollment')}</p>
                         
                         <div class="d-grid gap-2">
@@ -275,8 +275,8 @@
             <div class="list-group-item list-group-item-action">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="mb-1">${report.child_name}</h6>
-                        <p class="mb-1 text-muted small">${report.notes || parentText('common.no_notes', 'لا توجد ملاحظات', 'No notes')}</p>
+                        <h6 class="mb-1">${escHtml(report.child_name || '')}</h6>
+                        <p class="mb-1 text-muted small">${escHtml(report.notes || parentText('common.no_notes', 'لا توجد ملاحظات', 'No notes'))}</p>
                         <small class="text-muted">
                             <i class="bi bi-calendar me-1"></i>${formatDate(report.date)}
                         </small>
@@ -285,6 +285,10 @@
                 </div>
             </div>
         `).join('');
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

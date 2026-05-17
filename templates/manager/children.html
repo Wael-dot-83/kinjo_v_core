@@ -178,7 +178,7 @@ function openMoveModal(childId, childName, fromClassId, fromClassName) {
     const sel = document.getElementById('moveToClassSelect');
     sel.innerHTML = _classes
         .filter(c => c.id !== fromClassId)
-        .map(c => `<option value="${c.id}">${c.name_ar}</option>`)
+        .map(c => `<option value="${c.id}">${esc(c.name_ar)}</option>`)
         .join('');
     new bootstrap.Modal(document.getElementById('moveChildModal')).show();
 }

@@ -338,11 +338,11 @@
         reports.forEach(report => {
             html += `
             <tr>
-                <td>${report.title}</td>
+                <td>${escHtml(report.title)}</td>
                 <td>${getScopeDisplayName(report.scope_type, report.scope_name)}</td>
-                <td>${report.start_date} - ${report.end_date}</td>
+                <td>${escHtml(report.start_date)} - ${escHtml(report.end_date)}</td>
                 <td>${new Date(report.created_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}</td>
-                <td>${report.created_by}</td>
+                <td>${escHtml(report.created_by)}</td>
                 <td><span class="badge bg-warning">${report.total_incidents}</span></td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary me-1" onclick="viewReport(${report.id})">
@@ -369,13 +369,13 @@
     function getScopeDisplayName(scopeType, scopeName) {
         switch (scopeType) {
             case 'KINDERGARTEN':
-                return T('روضة:', 'Kindergarten:') + ` ${scopeName}`;
+                return T('روضة:', 'Kindergarten:') + ` ${escHtml(scopeName)}`;
             case 'GOVERNORATE':
-                return T('محافظة:', 'Governorate:') + ` ${scopeName}`;
+                return T('محافظة:', 'Governorate:') + ` ${escHtml(scopeName)}`;
             case 'ALL':
                 return T('جميع الروضات', 'All Kindergartens');
             default:
-                return scopeName || scopeType;
+                return escHtml(scopeName || scopeType);
         }
     }
 
@@ -521,7 +521,7 @@
                     </thead>
                     <tbody>
                         ${Object.entries(metrics.per_kindergarten).map(([name, count]) =>
-            `<tr><td>${name}</td><td>${count}</td></tr>`
+            `<tr><td>${escHtml(name)}</td><td>${count}</td></tr>`
         ).join('')}
                     </tbody>
                 </table>
@@ -556,6 +556,10 @@
             console.error('Error exporting report:', error);
             alert(T('حدث خطأ في التصدير', 'Error exporting report'));
         }
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 
