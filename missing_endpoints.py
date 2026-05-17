@@ -291,6 +291,13 @@ def get_parent_info(
     }
 
 
+@router.get("/reference/governorates")
+def list_reference_governorates():
+    """Return the static Jordan governorate list used by dropdowns. No auth required."""
+    pairs = list(zip(settings.JORDAN_GOVERNORATES, settings.JORDAN_GOVERNORATES_ENGLISH))
+    return {"governorates": [{"name_ar": ar, "name_en": en} for ar, en in pairs]}
+
+
 @router.get("/notifications")
 def list_notifications(
     limit: int = Query(50, ge=1, le=200),
@@ -4053,6 +4060,31 @@ def create_absence_request(
     )
     db.commit()
     return {"id": result.lastrowid, "status": "pending"}
+
+
+@router.post("/attendance/absence-requests/{request_id}/cancel", status_code=status.HTTP_200_OK)
+def cancel_absence_request(
+    request_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Cancel a pending absence request. Only the owning parent may cancel."""
+    row = db.execute(
+        text("SELECT id, parent_user_id, status FROM absence_requests WHERE id = :id"),
+        {"id": request_id},
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Absence request not found")
+    if row.parent_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorised")
+    if row.status not in ("pending", "PENDING"):
+        raise HTTPException(status_code=400, detail="Only pending requests can be cancelled")
+    db.execute(
+        text("UPDATE absence_requests SET status = 'CANCELLED' WHERE id = :id"),
+        {"id": request_id},
+    )
+    db.commit()
+    return {"id": request_id, "status": "CANCELLED"}
 
 
 # ============================================================================

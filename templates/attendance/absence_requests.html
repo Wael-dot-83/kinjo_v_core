@@ -144,7 +144,7 @@
 
         // ---- load requests ----
         function loadRequests() {
-            let url = '/api/absence-requests';
+            let url = '/api/attendance/absence-requests';
             if (currentFilter !== 'all') url += '?status=' + currentFilter;
 
             fetch(url, { headers: HEADERS })
@@ -199,7 +199,7 @@
                 cancelButtonText: T('تراجع', 'Go back'),
             }).then(result => {
                 if (!result.isConfirmed) return;
-                fetch(`/api/absence-requests/${id}/cancel`, { method: 'POST', headers: HEADERS })
+                fetch(`/api/attendance/absence-requests/${id}/cancel`, { method: 'POST', headers: HEADERS })
                     .then(r => { if (!r.ok) throw r; return r.json(); })
                     .then(() => { Swal.fire(T('تم', 'Done'), T('تم إلغاء الطلب', 'Request cancelled'), 'success'); loadRequests(); })
                     .catch(() => Swal.fire(T('خطأ', 'Error'), T('فشل في إلغاء الطلب', 'Failed to cancel request'), 'error'));
@@ -219,7 +219,7 @@
                 reason: document.getElementById('reason').value,
             };
 
-            fetch('/api/absence-requests', { method: 'POST', headers: HEADERS, body: JSON.stringify(body) })
+            fetch('/api/attendance/absence-requests', { method: 'POST', headers: HEADERS, body: JSON.stringify(body) })
                 .then(r => {
                     if (!r.ok) return r.json().then(d => { throw d; });
                     return r.json();

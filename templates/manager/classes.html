@@ -360,7 +360,7 @@
         swapModal.show();
 
         try {
-            const r = await fetch('/api/supervisors', { headers: getHeaders() });
+            const r = await fetch('/api/manager/supervisors', { headers: getHeaders() });
             const data = r.ok ? await r.json() : {};
             const sups = data.supervisors || [];
             sel.innerHTML = `<option value="">{{ _('— اختر مشرفاً —') }}</option>` +
