@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   const state = {
     entityType: "KINDERGARTEN",
     trendChart: null,

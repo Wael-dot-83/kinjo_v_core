@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Admin Governance Reports — Daily Report Compliance Dashboard
  */
 

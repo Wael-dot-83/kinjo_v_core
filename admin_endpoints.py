@@ -3295,7 +3295,7 @@ def get_admin_dashboard(
             DashboardAlert(
                 id="recent_incidents",
                 title="حوادث مسجلة حديثاً",
-                message=f"تم تسجيل {recent_incidents} حادث خلال آخر 7 أيام.",
+                message=f"تم تسجيل {recent_incidents} حوادث خلال آخر 7 أيام.",
                 severity="error" if recent_incidents > 5 else "warning",
                 timestamp=now.isoformat(),
                 category="safety",

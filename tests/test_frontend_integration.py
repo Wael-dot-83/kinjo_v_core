@@ -150,3 +150,26 @@ def test_admin_sidebar_shows_admin_links(test_client):
     assert "/admin/users" in html
     assert "/admin/analytics" in html
     assert "/audit-logs" in html
+
+
+def test_parent_sidebar_hides_safety_link():
+    """PARENT sidebar must not show the Safety and Incidents nav link."""
+    async def mock_parent_user():
+        return User(
+            id=2,
+            username="parentuser",
+            email="parent@kinjo.sa",
+            role=UserRole.PARENT,
+            status=UserStatus.ACTIVE,
+            hashed_password=get_password_hash("TestPass123!")
+        )
+
+    app.dependency_overrides[get_current_user] = mock_parent_user
+    app.dependency_overrides[get_current_user_or_redirect] = mock_parent_user
+    client = TestClient(app)
+    try:
+        response = client.get("/dashboard")
+        assert response.status_code == 200
+        assert 'data-i18n="sidebar.safety_incidents"' not in response.text
+    finally:
+        app.dependency_overrides.clear()

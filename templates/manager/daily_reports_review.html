@@ -305,27 +305,33 @@
         document.getElementById('tableError').classList.add('d-none');
         document.getElementById('tableWrap').classList.add('d-none');
 
-        let url = '/api/daily-reports?';
+        let url = '/api/manager/daily-reports?';
         if (classId) url += `class_id=${classId}&`;
         if (supId)   url += `supervisor_id=${supId}&`;
-        if (from)    url += `from=${from}&`;
-        if (to)      url += `to=${to}&`;
-        if (status)  url += `status=${status}&`;
+        if (from)    url += `from_date=${from}&`;
+        if (to)      url += `to_date=${to}&`;
+        if (status)  url += `report_status=${status}&`;
 
         try {
             const r = await fetch(url, { headers: getHeaders() });
             if (!r.ok) throw new Error();
-            const data = await r.json();
-            const reports = data.reports || [];
-            const stats   = data.stats || {};
+            const reports = await r.json();
 
-            document.getElementById('statPending').textContent = stats.submitted       ?? '—';
-            document.getElementById('statSent').textContent    = stats.sent_to_parent  ?? '—';
-            document.getElementById('statToday').textContent   = stats.today           ?? '—';
-            document.getElementById('statWeek').textContent    = stats.this_week       ?? '—';
+            // Compute stats from the returned list
+            const today = new Date().toISOString().slice(0, 10);
+            const weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+            const statPending = reports.filter(x => x.status === 'SUBMITTED').length;
+            const statSent    = reports.filter(x => x.status === 'SENT_TO_PARENT').length;
+            const statToday   = reports.filter(x => x.date === today).length;
+            const statWeek    = reports.filter(x => x.date >= weekAgo).length;
+
+            document.getElementById('statPending').textContent = statPending;
+            document.getElementById('statSent').textContent    = statSent;
+            document.getElementById('statToday').textContent   = statToday;
+            document.getElementById('statWeek').textContent    = statWeek;
 
             const cnt = document.getElementById('reportsCount');
-            if (cnt) cnt.textContent = `${reports.length} {{ _('تقرير') }}`;
+            if (cnt) cnt.textContent = `${Array.isArray(reports) ? reports.length : 0} {{ _('تقرير') }}`;
 
             document.getElementById('tableLoading').classList.add('d-none');
 
@@ -363,11 +369,8 @@
                 <td>${badge}</td>
                 <td>
                     <div class="d-flex gap-1 justify-content-center flex-wrap">
-                        <a href="/daily-reports/${r.id}" class="btn btn-sm btn-ghost">
+                        <a href="/reports/${r.id}" class="btn btn-sm btn-ghost">
                             <i class="bi bi-eye me-1"></i>{{ _('عرض') }}
-                        </a>
-                        <a href="/daily-reports/${r.id}/edit" class="btn btn-sm btn-ghost">
-                            <i class="bi bi-pencil me-1"></i>{{ _('تعديل') }}
                         </a>
                         ${canSend ? `
                         <button class="btn btn-sm btn-outline-success" onclick="openSendParentsModal(${r.id})">

@@ -47,7 +47,8 @@
   }
 
   function formatSeconds(milliseconds) {
-    return `${(milliseconds / 1000).toFixed(2)}s`;
+    const seconds = (milliseconds / 1000).toFixed(2);
+    return currentLang() === "en" ? `${seconds}s` : `${seconds} ثانية`;
   }
 
   function totalPending() {

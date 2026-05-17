@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 /**
  * KinJo Analytics Module
  * Handles admin analytics dashboard functionality

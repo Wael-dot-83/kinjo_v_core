@@ -17,9 +17,6 @@
         </nav>
     </div>
     <div class="page-header-actions">
-        <a href="#" id="exportBtn" class="btn btn-ghost" aria-label="{{ _('تصدير PDF') }}">
-            <i class="bi bi-file-earmark-pdf me-2"></i>{{ _('تصدير PDF') }}
-        </a>
         <button class="btn btn-ghost" onclick="loadKPI()">
             <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
         </button>
@@ -312,11 +309,8 @@
         document.getElementById('kpiError').classList.add('d-none');
         document.getElementById('kpiContent').classList.add('d-none');
 
-        // Update export link
-        document.getElementById('exportBtn').href = `/api/manager/kpi/export?from=${from}&to=${to}`;
-
         try {
-            const r = await fetch(`/api/manager/kpi?from=${from}&to=${to}`, { headers: getHeaders() });
+            const r = await fetch(`/api/manager/kpi?from_date=${from}&to_date=${to}`, { headers: getHeaders() });
             if (!r.ok) throw new Error();
             const data = await r.json();
 

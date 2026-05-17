@@ -498,7 +498,7 @@ def test_class_create_creates_primary_supervisor_assignment(
     headers = {"Authorization": f"Bearer {manager_token}"}
     payload = {
         "kindergarten_id": sample_kindergarten.id,
-        "name_ar": "ØµÙ ØªØ¹ÙŠÙŠÙ† Ù…Ø´Ø±Ù",
+        "name_ar": "صف تعيين مشرف",
         "name_en": "Assignment Class",
         "class_code": "ASSIGN-001",
         "age_group": "AGE_2_4",
@@ -563,7 +563,7 @@ def test_class_eligible_supervisors_endpoint_filters_assigned_users(
 
     create_payload = {
         "kindergarten_id": sample_kindergarten.id,
-        "name_ar": "ØµÙ Ù…Ø³Ù†Ø¯",
+        "name_ar": "صف مسند",
         "name_en": "Assigned Class",
         "class_code": "ELIG-001",
         "age_group": "AGE_1_2",
@@ -611,7 +611,7 @@ def test_class_update_rejects_cross_kindergarten_supervisor(
     ensure_supervisor_profile(test_db, supervisor_user, sample_kindergarten.id)
 
     other_kg = models.Kindergarten(
-        name_ar="Ø±ÙˆØ¶Ø© Ø£Ø®Ø±Ù‰",
+        name_ar="روضة أخرى",
         name_en="Other KG",
         governorate="Amman",
         city="Amman",
@@ -639,7 +639,7 @@ def test_class_update_rejects_cross_kindergarten_supervisor(
 
     create_payload = {
         "kindergarten_id": sample_kindergarten.id,
-        "name_ar": "ØµÙ ØªØ­Ø¯ÙŠØ«",
+        "name_ar": "صف تحديث",
         "name_en": "Update Guard Class",
         "class_code": "UP-GUARD-001",
         "age_group": "AGE_2_4",
