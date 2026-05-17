@@ -183,7 +183,7 @@ function renderSupervisors(supervisors) {
 function openAssignModal(supId) {
     document.getElementById('assignSupId').value = supId;
     const sel = document.getElementById('assignClassSelect');
-    sel.innerHTML = _classes.map(c => `<option value="${c.id}">${c.name_ar}</option>`).join('');
+    sel.innerHTML = _classes.map(c => `<option value="${c.id}">${escHtml(c.name_ar)}</option>`).join('');
     new bootstrap.Modal(document.getElementById('assignClassModal')).show();
 }
 

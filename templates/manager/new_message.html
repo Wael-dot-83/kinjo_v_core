@@ -108,13 +108,13 @@ async function init() {
         const d = await supRes.json();
         _supervisors = d.supervisors || [];
         const sel = document.getElementById('supervisorSelector');
-        sel.innerHTML = _supervisors.map(s => `<option value="${s.id}">${s.full_name} (@${s.username})</option>`).join('') || '<option value="">لا يوجد مشرفون</option>';
+        sel.innerHTML = _supervisors.map(s => `<option value="${s.id}">${escHtml(s.full_name)} (@${escHtml(s.username)})</option>`).join('') || '<option value="">لا يوجد مشرفون</option>';
     }
     if (clsRes && clsRes.ok) {
         const d = await clsRes.json();
         _classes = d.classes || [];
         const sel = document.getElementById('classSelector');
-        sel.innerHTML = _classes.map(c => `<option value="${c.id}">${c.name_ar}</option>`).join('') || '<option value="">لا توجد شعب</option>';
+        sel.innerHTML = _classes.map(c => `<option value="${c.id}">${escHtml(c.name_ar)}</option>`).join('') || '<option value="">لا توجد شعب</option>';
     }
     updatePreview();
 }
@@ -183,5 +183,9 @@ document.getElementById('messageForm').addEventListener('submit', async (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', init);
+
+function escHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 </script>
 {% endblock %}
