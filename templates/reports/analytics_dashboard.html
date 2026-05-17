@@ -420,7 +420,7 @@
             html += `
         <div class="alert alert-${a.severity === 'high' ? 'danger' : 'warning'} d-flex align-items-center py-2 mb-2">
             ${severityIcon[a.severity] || ''}
-            <span class="me-2 ms-2">${a.message}</span>
+            <span class="me-2 ms-2">${escHtml(a.message)}</span>
         </div>`;
         });
         container.innerHTML = html;
@@ -446,12 +446,12 @@
         rows.forEach((r, i) => {
             html += `<tr>
             <td>${i + 1}</td>
-            <td>${r.child_name || ''}</td>
-            <td>${(r.date || '').substring(0, 10)}</td>
-            <td>${statusAr[r.status] || r.status}</td>
-            <td>${r.arrival_time || ''}</td>
-            <td>${r.leave_time || ''}</td>
-            <td>${moodAr[r.mood] || r.mood || '-'}</td>
+            <td>${escHtml(r.child_name || '')}</td>
+            <td>${escHtml((r.date || '').substring(0, 10))}</td>
+            <td>${statusAr[r.status] || escHtml(r.status)}</td>
+            <td>${escHtml(r.arrival_time || '')}</td>
+            <td>${escHtml(r.leave_time || '')}</td>
+            <td>${moodAr[r.mood] || escHtml(r.mood || '-')}</td>
             <td>${r.breakfast ? '✅' : '❌'}</td>
             <td>${r.lunch ? '✅' : '❌'}</td>
             <td>${r.nap_duration_minutes || '-'}</td>
@@ -473,5 +473,9 @@
     function showEl(id) { document.getElementById(id).classList.remove('d-none'); }
     function hideEl(id) { document.getElementById(id).classList.add('d-none'); }
     function setText(id, val) { document.getElementById(id).textContent = val; }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
 {% endblock %}

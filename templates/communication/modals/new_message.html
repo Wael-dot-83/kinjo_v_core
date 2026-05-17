@@ -1679,7 +1679,7 @@
                     const id = `adminKg_${kg.id}`;
                     div.innerHTML = `
                         <input class="form-check-input admin-kg-checkbox" type="checkbox" value="${kg.id}" id="${id}" onchange="previewRecipients()">
-                        <label class="form-check-label" for="${id}">${kg.name_ar || kg.name_en || T('روضة ', 'Kindergarten ') + kg.id}${kg.city ? ' (' + kg.city + ')' : ''}</label>
+                        <label class="form-check-label" for="${id}">${escHtml(kg.name_ar || kg.name_en || T('روضة ', 'Kindergarten ') + kg.id)}${kg.city ? ' (' + escHtml(kg.city) + ')' : ''}</label>
                     `;
                     container.appendChild(div);
                 });
@@ -2107,4 +2107,8 @@
 
     // Initial update
     updateGovernorateLabels();
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
