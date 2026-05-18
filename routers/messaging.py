@@ -335,9 +335,28 @@ def list_messages(
     sender_ids = {m.sender_id for m in messages}
     users = {u.id: u for u in db.query(User).filter(User.id.in_(sender_ids)).all()} if sender_ids else {}
 
+    # Build is_read map: a message is read if the user has a MessageRecipient row with read_at set
+    msg_ids = [m.id for m in messages]
+    read_ids: set[int] = set()
+    if msg_ids:
+        read_rows = (
+            db.query(MessageRecipient.message_id)
+            .filter(
+                MessageRecipient.message_id.in_(msg_ids),
+                MessageRecipient.recipient_user_id == current_user.id,
+                MessageRecipient.read_at.isnot(None),
+            )
+            .all()
+        )
+        read_ids = {row.message_id for row in read_rows}
+        # Sent messages are always "read" from sender's perspective
+        for m in messages:
+            if m.sender_id == current_user.id:
+                read_ids.add(m.id)
+
     return {
         "total": total,
-        "messages": [_message_brief(m, users) for m in messages],
+        "messages": [_message_brief(m, users, m.id in read_ids) for m in messages],
     }
 
 
@@ -515,7 +534,7 @@ def _user_brief(u: User) -> dict:
     }
 
 
-def _message_brief(m: Message, users: dict) -> dict:
+def _message_brief(m: Message, users: dict, is_read: bool = False) -> dict:
     sender = users.get(m.sender_id)
     return {
         "id": m.id,
@@ -525,6 +544,7 @@ def _message_brief(m: Message, users: dict) -> dict:
         "recipient_id": m.recipient_id,
         "subject": m.subject,
         "message_body": m.message_body,
+        "is_read": is_read,
         "queue_status": m.queue_status.value if m.queue_status else None,
         "scheduled_at": m.scheduled_at.isoformat() if m.scheduled_at else None,
         "created_at": m.created_at.isoformat() if m.created_at else None,

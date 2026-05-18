@@ -376,7 +376,7 @@
                 const color = colorMap[key] || '#6366f1';
                 const label = labelMap[key] || key;
                 return `<div class="mini-bar-row">
-                    <span class="mini-bar-label">${label}</span>
+                    <span class="mini-bar-label">${escapeHtml(label)}</span>
                     <div class="mini-bar-track">
                         <div class="mini-bar-fill" style="width:${pct}%;background:${color};"></div>
                     </div>
@@ -413,8 +413,9 @@
         if (hrCount > 0) { badge.textContent = `${hrCount} روضة عالية الخطر`; badge.style.display = ''; }
         tbody.innerHTML = entries.map(([kgId, count]) => {
             const isHigh = highRisk[kgId];
+            const safeKgId = parseInt(kgId, 10) || 0;
             return `<tr>
-                <td style="font-size:0.84rem;">روضة #${kgId}</td>
+                <td style="font-size:0.84rem;">روضة #${safeKgId}</td>
                 <td style="font-size:0.84rem;font-weight:700;">${count}</td>
                 <td>${isHigh
                     ? '<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--kinjo-danger);font-size:0.72rem;">خطر مرتفع</span>'
@@ -431,12 +432,14 @@
             tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3 small">لا توجد أطفال بحوادث متكررة</td></tr>';
             return;
         }
-        tbody.innerHTML = entries.map(([childId, count]) => `
-            <tr>
-                <td style="font-size:0.84rem;">طفل #${childId}</td>
-                <td style="font-size:0.84rem;font-weight:700;color:var(--kinjo-danger);">${count}</td>
-                <td><a href="/children/${childId}" class="btn btn-ghost btn-sm px-2" style="font-size:0.75rem;">عرض الملف</a></td>
-            </tr>`).join('');
+        tbody.innerHTML = entries.map(([childId, count]) => {
+            const safeId = parseInt(childId, 10) || 0;
+            return `<tr>
+                <td style="font-size:0.84rem;">طفل #${safeId}</td>
+                <td style="font-size:0.84rem;font-weight:700;color:var(--kinjo-danger);">${parseInt(count, 10) || 0}</td>
+                <td><a href="/children/${safeId}" class="btn btn-ghost btn-sm px-2" style="font-size:0.75rem;">عرض الملف</a></td>
+            </tr>`;
+        }).join('');
     }
 
     // Init

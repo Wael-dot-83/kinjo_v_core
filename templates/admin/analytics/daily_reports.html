@@ -291,10 +291,10 @@ breadcrumbs=[
             <div class="col-md-6">
                 <h6>${T('معلومات التقرير', 'Report Information')}</h6>
                 <table class="table table-sm">
-                    <tr><td><strong>${T('النطاق:', 'Scope:')}</strong></td><td>${report.scope_name}</td></tr>
+                    <tr><td><strong>${T('النطاق:', 'Scope:')}</strong></td><td>${escHtml(report.scope_name)}</td></tr>
                     <tr><td><strong>${T('تاريخ البداية:', 'Start Date:')}</strong></td><td>${formatDate(report.start_date)}</td></tr>
                     <tr><td><strong>${T('تاريخ النهاية:', 'End Date:')}</strong></td><td>${formatDate(report.end_date)}</td></tr>
-                    <tr><td><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong></td><td>${report.created_by}</td></tr>
+                    <tr><td><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong></td><td>${escHtml(report.created_by)}</td></tr>
                     <tr><td><strong>${T('تاريخ الإنشاء:', 'Created Date:')}</strong></td><td>${formatDateTime(report.created_at)}</td></tr>
                 </table>
             </div>
@@ -353,7 +353,7 @@ breadcrumbs=[
                     </thead>
                     <tbody>
                         ${Object.entries(metrics.per_kindergarten).map(([kg, count]) =>
-            `<tr><td>${kg}</td><td>${count}</td></tr>`
+            `<tr><td>${escHtml(kg)}</td><td>${Number(count)}</td></tr>`
         ).join('')}
                     </tbody>
                 </table>
