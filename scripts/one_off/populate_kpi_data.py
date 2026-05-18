@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 KPI Data Population Script
 Populates RatioCompliance data for existing kindergartens
@@ -31,9 +31,9 @@ def populate_all_ratio_compliance():
             print(f"Populating ratio compliance for {kg.name_en} (ID: {kg.id})")
             try:
                 KPIService.populate_ratio_compliance_for_period(db, kg.id, start_date, end_date)
-                print(f"  âœ“ Completed for {kg.name_en}")
+                print(f"  [OK] Completed for {kg.name_en}")
             except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
-                print(f"  âœ— Error for {kg.name_en}: {e}")
+                print(f"  [ERROR] Error for {kg.name_en}: {e}")
 
         print("Ratio compliance data population completed")
 

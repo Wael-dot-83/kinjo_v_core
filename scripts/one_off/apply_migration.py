@@ -1,4 +1,4 @@
-﻿from database import get_db
+from database import get_db
 from sqlalchemy import text
 
 db = next(get_db())

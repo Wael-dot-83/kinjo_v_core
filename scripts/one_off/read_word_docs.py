@@ -1,4 +1,4 @@
-﻿"""
+"""
 Script to read Word documents and extract requirements for implementation
 """
 from docx import Document
