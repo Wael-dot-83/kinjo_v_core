@@ -66,9 +66,11 @@ def _create_index(name: str, table: str, cols: str, unique: bool = False) -> Non
         return
     uniq = "UNIQUE " if unique else ""
     if _dialect() == "postgresql":
-        op.execute(sa.text(
-            f"CREATE {uniq}INDEX CONCURRENTLY IF NOT EXISTS {name} ON {table} ({cols})"
-        ))
+        # CONCURRENTLY requires running outside a transaction block (autocommit)
+        with op.get_context().autocommit_block():
+            op.execute(sa.text(
+                f"CREATE {uniq}INDEX CONCURRENTLY IF NOT EXISTS {name} ON {table} ({cols})"
+            ))
     else:
         op.create_index(name, table, cols.split(", "), unique=unique)
 
@@ -87,7 +89,9 @@ def _drop_index(name: str, table: str) -> None:
     if not _has_index(table, name):
         return
     if _dialect() == "postgresql":
-        op.execute(sa.text(f"DROP INDEX CONCURRENTLY IF EXISTS {name}"))
+        # CONCURRENTLY requires running outside a transaction block (autocommit)
+        with op.get_context().autocommit_block():
+            op.execute(sa.text(f"DROP INDEX CONCURRENTLY IF EXISTS {name}"))
     else:
         op.drop_index(name, table_name=table)
 
