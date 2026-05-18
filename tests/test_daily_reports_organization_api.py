@@ -409,7 +409,7 @@ def test_non_admin_user_receives_403_forbidden(
     )
     assert response.status_code == 403
     body = response.json()
-    assert "هذا الإجراء متاح للإداريين فقط" in body["detail"]
+    assert "Admin access only" in body["detail"]
 
 
 def test_unknown_status_value_handled_with_fallback(

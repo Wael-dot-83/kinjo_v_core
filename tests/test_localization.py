@@ -59,7 +59,7 @@ def test_parent_api_errors_translate_when_arabic_requested(client, admin_token):
     headers["Accept-Language"] = "ar"
     response = client.get("/api/parent/profile", headers=headers)
     assert response.status_code == 403
-    assert response.json()["detail"] == "الوصول للوالدين فقط"
+    assert response.json()["detail"] == "مخصص لأولياء الأمور فقط"
 
 
 def test_date_and_number_localization_helpers():

@@ -195,7 +195,12 @@ class TestDuplicateEnrollmentPrevention:
         # Second enrollment with same child data + same KG should fail
         response2 = client.post("/api/enrollment/apply", json=enrollment_data, headers=headers)
         assert response2.status_code == 400
-        assert "طلب تسجيل" in response2.json()["detail"]
+        detail = response2.json()["detail"]
+        assert (
+            "duplicate" in detail.lower()
+            or "enrollment" in detail.lower()
+            or "تسجيل" in detail  # Arabic: "يوجد طلب تسجيل..."
+        )
 
     def test_same_child_different_kg_allowed(self, client, parent_token, test_db, sample_kindergarten, parent_user):
         """Same child should be allowed to enroll in a different KG"""
@@ -290,7 +295,8 @@ class TestDuplicateEnrollmentPrevention:
 
         response = client.post("/api/enrollment/apply", json=enrollment_data, headers=headers)
         assert response.status_code == 400
-        assert "هذا الطفل" in response.json()["detail"]
+        detail = response.json()["detail"]
+        assert "child" in detail.lower() or "طفل" in detail  # Arabic: "هذا الطفل مسجل..."
 
     def test_submit_blocked_when_active_elsewhere(self, client, parent_token, test_db, sample_kindergarten, parent_user):
         """Submitting draft should fail if child has active enrollment elsewhere"""
@@ -341,7 +347,8 @@ class TestDuplicateEnrollmentPrevention:
 
         response = client.post(f"/api/enrollment/{enrollment_draft.id}/submit", headers=headers)
         assert response.status_code == 400
-        assert "هذا الطفل" in response.json()["detail"]
+        detail = response.json()["detail"]
+        assert "child" in detail.lower() or "طفل" in detail  # Arabic: "هذا الطفل مسجل..."
 
 
 class TestEnrollmentUniquenessConcurrency:

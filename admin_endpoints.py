@@ -3791,7 +3791,7 @@ async def get_governance_kpis(
 ):
     """Get governance funnel KPIs for daily report compliance monitoring."""
     if end_date < start_date:
-        raise HTTPException(status_code=400, detail="يجب أن يكون تاريخ النهاية أكبر من أو يساوي تاريخ البداية")
+        raise HTTPException(status_code=400, detail="end_date must be greater than or equal to start_date")
 
     funnel = compute_governance_funnel(db, start_date, end_date, kindergarten_id)
     timeliness = compute_timeliness_metrics(db, start_date, end_date, kindergarten_id)
@@ -3819,7 +3819,7 @@ async def get_governance_leaderboard(
 ):
     """Get Bayesian-ranked kindergarten leaderboard for daily report compliance."""
     if end_date < start_date:
-        raise HTTPException(status_code=400, detail="يجب أن يكون تاريخ النهاية أكبر من أو يساوي تاريخ البداية")
+        raise HTTPException(status_code=400, detail="end_date must be greater than or equal to start_date")
 
     funnel = compute_governance_funnel(db, start_date, end_date)
     ranked = compute_fair_ranking(funnel, db)
@@ -3843,7 +3843,7 @@ async def send_governance_reminder_endpoint(
 ):
     """Send a governance reminder to a kindergarten or supervisor."""
     if body.target_type not in ("kindergarten", "supervisor"):
-        raise HTTPException(status_code=400, detail="قيمة target_type يجب أن تكون kindergarten أو supervisor")
+        raise HTTPException(status_code=400, detail="target_type must be 'kindergarten' or 'supervisor'")
 
     can_send, last_sent_at = check_reminder_cooldown(db, body.target_type, body.target_id)
     if not can_send:
@@ -3851,8 +3851,8 @@ async def send_governance_reminder_endpoint(
             status_code=429,
             detail={
                 "message": (
-                    "لا يمكن إرسال تذكير الآن بسبب فترة التبريد. "
-                    f"آخر إرسال كان عند {last_sent_at.isoformat() if last_sent_at else 'غير معروف'}"
+                    f"Reminder cannot be sent yet due to cooldown. "
+                    f"Last sent at {last_sent_at.isoformat() if last_sent_at else 'unknown'}"
                 ),
                 "cooldown_hours": settings.GOVERNANCE_REMINDER_COOLDOWN_HOURS,
                 "last_sent_at": last_sent_at.isoformat() if last_sent_at else None,

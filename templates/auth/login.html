@@ -1,278 +1,1411 @@
-{% extends 'base.html' %}
-
-{% block title %}{% if ui_lang == 'en' %}Sign In{% else %}تسجيل الدخول{% endif %}{% endblock %}
-{% block body_class %}auth-page{% endblock %}
-
-{% block extra_css %}
+{% extends 'base.html' %} {% block title %}{% if ui_lang == 'en' %}Sign In —
+KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {% block body_class
+%}auth-page{% endblock %} {% block extra_css %}
 <style>
-    .auth-page {
-        background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 40%, #f8fafc 100%);
-        min-height: 100vh;
+  /* ============================================================================
+   Auth Layout — Two-panel design
+   Desktop: brand panel (start) + form panel (end)
+   Mobile: form panel only
+   ============================================================================ */
+
+  .auth-layout {
+    min-height: 100vh;
+    display: flex;
+    align-items: stretch;
+  }
+
+  /* ── Brand Panel ── */
+  .auth-brand-panel {
+    display: none;
+    flex: 0 0 42%;
+    max-width: 42%;
+    position: relative;
+    background: linear-gradient(155deg, #1e3a8a 0%, #1d4ed8 50%, #3b82f6 100%);
+    overflow: hidden;
+    padding: 3.5rem 3rem;
+    flex-direction: column;
+    justify-content: center;
+    color: #fff;
+  }
+  @media (min-width: 992px) {
+    .auth-brand-panel {
+      display: flex;
     }
-    .auth-card {
-        border: none;
-        border-radius: var(--kinjo-radius-lg, 1rem);
-        box-shadow: 0 8px 32px rgba(37, 99, 235, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-        overflow: hidden;
+  }
+
+  .auth-brand-panel::before {
+    content: "";
+    position: absolute;
+    top: -130px;
+    inset-inline-end: -90px;
+    width: 380px;
+    height: 380px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    pointer-events: none;
+  }
+  .auth-brand-panel::after {
+    content: "";
+    position: absolute;
+    bottom: -110px;
+    inset-inline-start: -70px;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    pointer-events: none;
+  }
+
+  .auth-brand-logo-wrap {
+    width: 84px;
+    height: 84px;
+    border-radius: 1.375rem;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.75rem;
+    flex-shrink: 0;
+  }
+  .auth-brand-logo-wrap i {
+    font-size: 2.4rem;
+  }
+
+  .auth-brand-name {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 0.625rem;
+  }
+  .auth-brand-tagline {
+    font-size: 1.0625rem;
+    opacity: 0.82;
+    line-height: 1.65;
+    max-width: 310px;
+    margin-bottom: 2.75rem;
+  }
+  .auth-brand-features {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .auth-brand-features li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.1rem;
+    font-size: 0.9375rem;
+    opacity: 0.9;
+  }
+  .auth-brand-features li i {
+    font-size: 1.125rem;
+    flex-shrink: 0;
+    width: 1.375rem;
+    text-align: center;
+    opacity: 0.9;
+  }
+
+  /* ── Form Panel ── */
+  .auth-form-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    overflow-y: auto;
+    min-width: 0;
+  }
+  .auth-form-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2.5rem 2rem;
+    max-width: 472px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  @media (min-width: 576px) {
+    .auth-form-inner {
+      padding: 3rem 2.5rem;
     }
-    .auth-card .card-body {
-        padding: 2rem 2.25rem;
+  }
+  @media (max-width: 575.98px) {
+    .auth-form-inner {
+      padding: 1.75rem 1.25rem;
     }
-    .auth-logo-circle {
-        width: 72px;
-        height: 72px;
-        border-radius: 1.25rem;
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+  }
+
+  /* Mobile logo */
+  .auth-mobile-logo-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  @media (min-width: 992px) {
+    .auth-mobile-logo-row {
+      display: none;
     }
-    .auth-logo-circle i {
-        font-size: 2rem;
-        color: white;
+  }
+
+  .auth-mobile-logo-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+    flex-shrink: 0;
+  }
+  .auth-mobile-logo-icon i {
+    font-size: 1.5rem;
+    color: #fff;
+  }
+  .auth-mobile-logo-text-name {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: #0f172a;
+    line-height: 1.25;
+  }
+  .auth-mobile-logo-text-sub {
+    font-size: 0.78rem;
+    color: #64748b;
+    line-height: 1.3;
+  }
+
+  /* ── Language toggle ── */
+  .auth-lang-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1.625rem;
+  }
+  .auth-lang-btn {
+    font-size: 0.8125rem;
+    color: #64748b;
+    border: 1.5px solid #e2e8f0;
+    background: transparent;
+    border-radius: 0.4375rem;
+    padding: 0.3125rem 0.6875rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    transition:
+      border-color 0.15s,
+      color 0.15s,
+      background 0.15s;
+    line-height: 1.4;
+  }
+  .auth-lang-btn:hover,
+  .auth-lang-btn:focus-visible {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: #eff6ff;
+    outline: 2px solid #93c5fd;
+    outline-offset: 2px;
+  }
+
+  /* ── Welcome heading ── */
+  .auth-heading {
+    font-size: 1.625rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.25;
+    margin-bottom: 0.375rem;
+  }
+  .auth-subheading {
+    font-size: 0.9375rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 1.875rem;
+  }
+
+  /* ── Alerts ── */
+  .auth-alert {
+    border: none;
+    border-radius: 0.625rem;
+    padding: 0.875rem 1rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .auth-alert i {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+    font-size: 1rem;
+  }
+  .auth-alert-warning {
+    background: #fffbeb;
+    color: #92400e;
+  }
+  .auth-alert-danger {
+    background: #fff1f2;
+    color: #be123c;
+  }
+
+  /* ── Field groups ── */
+  .auth-field {
+    margin-bottom: 1.25rem;
+  }
+  .auth-field label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.4rem;
+  }
+  .auth-field label .req-star {
+    color: #ef4444;
+    margin-inline-start: 0.2rem;
+  }
+
+  .auth-input-wrap {
+    position: relative;
+  }
+  .auth-input-wrap .af-icon {
+    position: absolute;
+    top: 50%;
+    inset-inline-start: 0.875rem;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 4;
+    transition: color 0.15s;
+  }
+  .auth-input-wrap .af-status {
+    position: absolute;
+    top: 50%;
+    inset-inline-end: 0.875rem;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 4;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .auth-input-wrap .af-status.show-valid {
+    color: #10b981;
+    opacity: 1;
+  }
+  .auth-input-wrap .af-status.show-invalid {
+    color: #ef4444;
+    opacity: 1;
+  }
+  .auth-input-wrap.has-eye-toggle .af-status {
+    inset-inline-end: 3rem;
+  }
+
+  .auth-input-wrap .af-toggle {
+    position: absolute;
+    top: 50%;
+    inset-inline-end: 0.625rem;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0.3rem 0.4rem;
+    font-size: 1.0625rem;
+    z-index: 5;
+    border-radius: 0.375rem;
+    line-height: 1;
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s;
+  }
+  .auth-input-wrap .af-toggle:hover {
+    color: #475569;
+  }
+  .auth-input-wrap .af-toggle:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
+    color: #475569;
+  }
+
+  .af-control {
+    display: block;
+    width: 100%;
+    height: 48px;
+    padding: 0 0.875rem;
+    padding-inline-start: 2.75rem;
+    font-size: 0.9375rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 0.625rem;
+    background: #f8fafc;
+    color: #1e293b;
+    -webkit-appearance: none;
+    appearance: none;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s,
+      background-color 0.2s;
+  }
+  .af-control::placeholder {
+    color: #b0bec5;
+  }
+  .af-control:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  .af-control.af-has-toggle {
+    padding-inline-end: 2.75rem;
+  }
+  .af-control.af-valid {
+    border-color: #10b981;
+    background: #f0fdf4;
+  }
+  .af-control.af-valid:focus {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+  }
+  .af-control.af-invalid {
+    border-color: #ef4444;
+    background: #fff8f8;
+  }
+  .af-control.af-invalid:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+  }
+
+  .af-hint {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin-top: 0.3125rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+  }
+  .af-error {
+    font-size: 0.8125rem;
+    color: #dc2626;
+    margin-top: 0.3125rem;
+    display: none;
+    align-items: baseline;
+    gap: 0.3rem;
+  }
+  .af-error.visible {
+    display: flex;
+  }
+
+  /* ── Remember / Forgot row ── */
+  .auth-options-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .auth-check-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #475569;
+    cursor: pointer;
+    user-select: none;
+  }
+  .auth-check-label input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #2563eb;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .auth-forgot-link {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #2563eb;
+    text-decoration: none;
+    border-radius: 0.25rem;
+    padding: 0.125rem 0.25rem;
+    margin-inline: -0.25rem;
+    transition:
+      color 0.15s,
+      background 0.15s;
+  }
+  .auth-forgot-link:hover {
+    color: #1d4ed8;
+    background: #eff6ff;
+  }
+  .auth-forgot-link:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  /* ── Submit button ── */
+  .auth-submit-btn {
+    width: 100%;
+    height: 50px;
+    border: none;
+    border-radius: 0.625rem;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.28);
+    transition:
+      transform 0.15s,
+      box-shadow 0.2s,
+      opacity 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .auth-submit-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    box-shadow: 0 6px 22px rgba(37, 99, 235, 0.36);
+    transform: translateY(-1px);
+  }
+  .auth-submit-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.22);
+  }
+  .auth-submit-btn:focus-visible {
+    outline: 2px solid #93c5fd;
+    outline-offset: 2px;
+  }
+  .auth-submit-btn:disabled {
+    opacity: 0.68;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .af-spinner {
+    width: 1.125rem;
+    height: 1.125rem;
+    border: 2.5px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: afSpin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes afSpin {
+    to {
+      transform: rotate(360deg);
     }
-    .auth-brand-title {
-        font-weight: 700;
-        color: #1e293b;
-        font-size: 1.5rem;
-        margin-top: 0.75rem;
+  }
+
+  /* ── Divider ── */
+  .auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    color: #94a3b8;
+    font-size: 0.8125rem;
+    margin: 1.5rem 0;
+  }
+  .auth-divider::before,
+  .auth-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+  }
+
+  /* ── Register / Info ── */
+  .auth-register-row {
+    text-align: center;
+    font-size: 0.875rem;
+    color: #64748b;
+  }
+  .auth-register-link {
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
+    margin-inline-start: 0.25rem;
+  }
+  .auth-register-link:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+  }
+  .auth-register-link:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .auth-closed-notice {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    border-radius: 0.625rem;
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    margin-top: 1.25rem;
+  }
+  .auth-closed-notice i {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+  }
+
+  /* ── Footer ── */
+  .auth-footer {
+    padding: 1.25rem 2rem 1.5rem;
+    text-align: center;
+    border-top: 1px solid #f1f5f9;
+    background: #fafbff;
+  }
+  @media (max-width: 575.98px) {
+    .auth-footer {
+      padding: 1rem 1.25rem 1.25rem;
     }
-    .auth-input-group {
-        position: relative;
+  }
+
+  .auth-footer-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+  }
+  .auth-footer-nav a {
+    font-size: 0.8125rem;
+    color: #94a3b8;
+    text-decoration: none;
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.25rem;
+    transition:
+      color 0.15s,
+      background 0.15s;
+  }
+  .auth-footer-nav a:hover {
+    color: #475569;
+    background: #f1f5f9;
+  }
+  .auth-footer-nav a:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
+  }
+  .auth-footer-sep {
+    font-size: 0.75rem;
+    color: #d1d5db;
+    padding: 0 0.1rem;
+    line-height: 1;
+  }
+  .auth-copyright {
+    font-size: 0.78rem;
+    color: #b0bec5;
+    margin: 0;
+  }
+
+  /* ── Animations ── */
+  @keyframes afFadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
     }
-    .auth-input-group .form-control {
-        padding-inline-start: 2.75rem;
-        height: 48px;
-        border-radius: 0.625rem;
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
-    .auth-input-group .input-icon {
-        position: absolute;
-        top: 50%;
-        inset-inline-start: 0.875rem;
-        transform: translateY(-50%);
-        color: #94a3b8;
-        font-size: 1.1rem;
-        z-index: 4;
-        pointer-events: none;
+  }
+  .af-anim {
+    animation: afFadeUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+  .af-delay1 {
+    animation-delay: 0.04s;
+  }
+  .af-delay2 {
+    animation-delay: 0.08s;
+  }
+  .af-delay3 {
+    animation-delay: 0.12s;
+  }
+  .af-delay4 {
+    animation-delay: 0.16s;
+  }
+
+  /* ── Dark mode ── */
+  @media (prefers-color-scheme: dark) {
+    .auth-form-panel {
+      background: #0f172a;
     }
-    .auth-input-group .toggle-password {
-        position: absolute;
-        top: 50%;
-        inset-inline-end: 0.75rem;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: #94a3b8;
-        cursor: pointer;
-        z-index: 4;
-        padding: 0.25rem;
-        font-size: 1.1rem;
+    .auth-footer {
+      background: #0a0f1e;
+      border-top-color: #1e293b;
     }
-    .btn-login {
-        height: 48px;
-        font-size: 1rem;
-        font-weight: 600;
-        border-radius: 0.625rem;
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        border: none;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    .auth-heading {
+      color: #f1f5f9;
     }
-    .divider-text {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        color: #94a3b8;
-        font-size: 0.8125rem;
-        margin: 1.5rem 0;
+    .auth-subheading {
+      color: #94a3b8;
     }
-    .divider-text::before,
-    .divider-text::after {
-        content: "";
-        flex: 1;
-        height: 1px;
-        background: #e2e8f0;
+    .auth-field label {
+      color: #cbd5e1;
     }
-    @media (max-width: 575.98px) {
-        .auth-card .card-body {
-            padding: 1.5rem 1.25rem;
-        }
+    .af-control {
+      background: #1e293b;
+      border-color: #334155;
+      color: #f1f5f9;
     }
+    .af-control::placeholder {
+      color: #4b5563;
+    }
+    .af-control:focus {
+      background: #1e293b;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    .af-control.af-valid {
+      background: #071f14;
+      border-color: #059669;
+    }
+    .af-control.af-invalid {
+      background: #1f0a0a;
+      border-color: #dc2626;
+    }
+    .auth-input-wrap .af-icon {
+      color: #4b5563;
+    }
+    .auth-input-wrap .af-toggle {
+      color: #4b5563;
+    }
+    .auth-input-wrap .af-toggle:hover {
+      color: #94a3b8;
+    }
+    .auth-alert-warning {
+      background: #2d1800;
+      color: #fbbf24;
+    }
+    .auth-alert-danger {
+      background: #2d0a0a;
+      color: #fca5a5;
+    }
+    .auth-check-label {
+      color: #94a3b8;
+    }
+    .auth-forgot-link {
+      color: #60a5fa;
+    }
+    .auth-forgot-link:hover {
+      background: #1e293b;
+    }
+    .auth-register-row {
+      color: #94a3b8;
+    }
+    .auth-register-link {
+      color: #60a5fa;
+    }
+    .auth-closed-notice {
+      background: #1a2d4d;
+      color: #93c5fd;
+      border-color: #1e40af;
+    }
+    .af-hint {
+      color: #475569;
+    }
+    .af-error {
+      color: #f87171;
+    }
+    .auth-divider {
+      color: #475569;
+    }
+    .auth-divider::before,
+    .auth-divider::after {
+      background: #334155;
+    }
+    .auth-footer-nav a {
+      color: #4b5563;
+    }
+    .auth-footer-nav a:hover {
+      background: #1e293b;
+      color: #94a3b8;
+    }
+    .auth-copyright {
+      color: #334155;
+    }
+    .auth-lang-btn {
+      color: #4b5563;
+      border-color: #334155;
+      background: transparent;
+    }
+    .auth-lang-btn:hover,
+    .auth-lang-btn:focus-visible {
+      background: #1e293b;
+      color: #93c5fd;
+      border-color: #3b82f6;
+    }
+    .auth-mobile-logo-text-name {
+      color: #f1f5f9;
+    }
+    .auth-mobile-logo-text-sub {
+      color: #64748b;
+    }
+  }
 </style>
-{% endblock %}
+{% endblock %} {% block body %} {# Skip link — targets login form directly #}
+<a href="#loginForm" class="visually-hidden-focusable">
+  {% if ui_lang == 'en' %}Skip to sign-in form{% else %}تخطي إلى نموذج تسجيل
+  الدخول{% endif %}
+</a>
 
-{% block body %}
-<div class="container">
-    <div class="row justify-content-center align-items-center min-vh-100 py-4">
-        <div class="col-sm-10 col-md-7 col-lg-5 col-xl-4">
-            <div class="text-center mb-4 fade-in">
-                <a href="/" class="text-decoration-none">
-                    <div class="auth-logo-circle mx-auto mb-2">
-                        <i class="bi bi-building"></i>
-                    </div>
-                    <h2 class="auth-brand-title">KinJo</h2>
-                    <p class="text-muted small mb-0">
-                        {% if ui_lang == 'en' %}Kindergarten Management Platform{% else %}منصة إدارة الروضات{% endif %}
-                    </p>
-                </a>
-            </div>
-
-            <div class="card auth-card fade-in">
-                <div class="card-body">
-                    <h5 class="text-center mb-4 fw-semibold">
-                        {% if ui_lang == 'en' %}Sign in to your account{% else %}تسجيل الدخول إلى حسابك{% endif %}
-                    </h5>
-
-                    <div id="sessionExpiredAlert" class="alert alert-warning d-none" role="alert">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        {% if ui_lang == 'en' %}Your session has expired. Please sign in again.{% else %}انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى.{% endif %}
-                    </div>
-
-                    <div id="loginError" class="alert alert-danger d-none" role="alert">
-                        <i class="bi bi-x-circle me-2"></i>
-                        <span id="loginErrorMessage"></span>
-                    </div>
-
-                    <form id="loginForm" method="POST" action="/token" novalidate>
-                        <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
-                        <div class="mb-3">
-                            <label for="username" class="form-label required">
-                                {% if ui_lang == 'en' %}Username, Phone or Email{% else %}اسم المستخدم أو الهاتف أو البريد الإلكتروني{% endif %}
-                            </label>
-                            <div class="auth-input-group">
-                                <i class="bi bi-person input-icon" id="loginInputIcon"></i>
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    id="username"
-                                    name="username"
-                                    placeholder="admin / 07XXXXXXXX / email@example.com"
-                                    autocomplete="username"
-                                    required
-                                    dir="ltr">
-                            </div>
-                            <div class="invalid-feedback" id="usernameError">
-                                {% if ui_lang == 'en' %}Please enter your username, phone number, or email address.{% else %}يرجى إدخال اسم المستخدم أو رقم الهاتف أو البريد الإلكتروني.{% endif %}
-                            </div>
-                            <small class="text-muted mt-1 d-block" id="loginFormatHint">
-                                {% if ui_lang == 'en' %}Use your username, 07XXXXXXXX mobile number, or email address. Validation now happens on the server.{% else %}استخدم اسم المستخدم أو رقم الهاتف 07XXXXXXXX أو البريد الإلكتروني. يتم التحقق الآن على الخادم.{% endif %}
-                            </small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="password" class="form-label required">
-                                {% if ui_lang == 'en' %}Password{% else %}كلمة المرور{% endif %}
-                            </label>
-                            <div class="auth-input-group">
-                                <i class="bi bi-lock input-icon"></i>
-                                <input
-                                    type="password"
-                                    class="form-control"
-                                    id="password"
-                                    name="password"
-                                    placeholder="{% if ui_lang == 'en' %}Enter password{% else %}أدخل كلمة المرور{% endif %}"
-                                    autocomplete="current-password"
-                                    required>
-                                <button type="button" class="toggle-password" onclick="togglePassword()" aria-label="{% if ui_lang == 'en' %}Show password{% else %}إظهار كلمة المرور{% endif %}">
-                                    <i class="bi bi-eye" id="togglePasswordIcon"></i>
-                                </button>
-                            </div>
-                            <div class="invalid-feedback">
-                                {% if ui_lang == 'en' %}Please enter your password.{% else %}يرجى إدخال كلمة المرور.{% endif %}
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="rememberMe" name="remember_me">
-                                <label class="form-check-label small" for="rememberMe">
-                                    {% if ui_lang == 'en' %}Remember me{% else %}تذكرني{% endif %}
-                                </label>
-                            </div>
-                            <a href="/forgot-password" class="small text-decoration-none">
-                                {% if ui_lang == 'en' %}Forgot password?{% else %}نسيت كلمة المرور؟{% endif %}
-                            </a>
-                        </div>
-
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-login" id="loginBtn">
-                                <span class="btn-text">
-                                    <i class="bi bi-box-arrow-in-left me-2"></i>
-                                    {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
-                                </span>
-                                <span class="btn-loading d-none">
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    {% if ui_lang == 'en' %}Signing in...{% else %}جار تسجيل الدخول...{% endif %}
-                                </span>
-                            </button>
-                        </div>
-                    </form>
-
-                    {% if public_registration_enabled %}
-                    <div class="divider-text">
-                        <span>{% if ui_lang == 'en' %}or{% else %}أو{% endif %}</span>
-                    </div>
-                    <div class="text-center">
-                        <p class="mb-0 small text-muted">
-                            {% if ui_lang == 'en' %}Don't have an account?{% else %}ليس لديك حساب؟{% endif %}
-                            <a href="/register" class="text-decoration-none fw-semibold ms-1">
-                                {% if ui_lang == 'en' %}Create account{% else %}إنشاء حساب جديد{% endif %}
-                            </a>
-                        </p>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info mt-4 mb-0" role="alert">
-                        <i class="bi bi-shield-lock me-2"></i>
-                        {% if ui_lang == 'en' %}Public self-registration is disabled. Contact the platform administrator for an invite or managed account setup.{% else %}تم تعطيل التسجيل الذاتي العام. تواصل مع مسؤول المنصة للحصول على دعوة أو إنشاء حساب مُدار.{% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="text-center mt-4">
-                <a href="/help" class="text-muted small text-decoration-none me-3">{% if ui_lang == 'en' %}Help{% else %}المساعدة{% endif %}</a>
-                <a href="/privacy" class="text-muted small text-decoration-none me-3">{% if ui_lang == 'en' %}Privacy{% else %}الخصوصية{% endif %}</a>
-                <a href="/terms" class="text-muted small text-decoration-none">{% if ui_lang == 'en' %}Terms{% else %}الشروط{% endif %}</a>
-            </div>
-
-            <p class="text-center text-muted small mt-3">
-                {% if ui_lang == 'en' %}&copy; 2026 KinJo - All rights reserved{% else %}&copy; 2026 KinJo - جميع الحقوق محفوظة{% endif %}
-            </p>
-        </div>
+<div class="auth-layout" id="authLayout">
+  {# ══════════════════════════════════════════ Brand Panel — visible on lg+
+  screens only (aria-hidden: decorative, not needed by AT)
+  ══════════════════════════════════════════ #}
+  <aside class="auth-brand-panel" aria-hidden="true">
+    <div class="auth-brand-logo-wrap">
+      <i class="bi bi-building"></i>
     </div>
+    <div class="auth-brand-name">KinJo</div>
+    <p class="auth-brand-tagline">
+      {% if ui_lang == 'en' %} The complete kindergarten management platform for
+      administrators, directors, supervisors, and parents. {% else %} منصة
+      الإدارة المتكاملة للروضات — للمديرين والمشرفين وأولياء الأمور. {% endif %}
+    </p>
+    <ul class="auth-brand-features">
+      <li>
+        <i class="bi bi-people-fill"></i>
+        <span
+          >{% if ui_lang == 'en' %}Manage children, staff &amp; parents{% else
+          %}إدارة الأطفال والكوادر وأولياء الأمور{% endif %}</span
+        >
+      </li>
+      <li>
+        <i class="bi bi-graph-up-arrow"></i>
+        <span
+          >{% if ui_lang == 'en' %}Real-time analytics &amp; reports{% else
+          %}تقارير وإحصاءات فورية{% endif %}</span
+        >
+      </li>
+      <li>
+        <i class="bi bi-shield-check"></i>
+        <span
+          >{% if ui_lang == 'en' %}Secure, role-based access control{% else
+          %}صلاحيات آمنة حسب الدور الوظيفي{% endif %}</span
+        >
+      </li>
+      <li>
+        <i class="bi bi-bell-fill"></i>
+        <span
+          >{% if ui_lang == 'en' %}Smart notifications &amp; alerts{% else
+          %}إشعارات ذكية وتنبيهات فورية{% endif %}</span
+        >
+      </li>
+    </ul>
+  </aside>
+
+  {# ══════════════════════════════════════════ Form Panel
+  ══════════════════════════════════════════ #}
+  <div class="auth-form-panel" id="formPanel">
+    <div class="auth-form-inner">
+      {# Language toggle #}
+      <div class="auth-lang-row">
+        {% if ui_lang == 'en' %}
+        <a
+          href="?lang=ar"
+          class="auth-lang-btn"
+          aria-label="التبديل إلى العربية"
+        >
+          <i class="bi bi-translate" aria-hidden="true"></i>
+          <span>العربية</span>
+        </a>
+        {% else %}
+        <a href="?lang=en" class="auth-lang-btn" aria-label="Switch to English">
+          <i class="bi bi-translate" aria-hidden="true"></i>
+          <span>English</span>
+        </a>
+        {% endif %}
+      </div>
+
+      {# Mobile logo — only shown when brand panel is hidden #}
+      <div class="auth-mobile-logo-row af-anim">
+        <div class="auth-mobile-logo-icon" aria-hidden="true">
+          <i class="bi bi-building"></i>
+        </div>
+        <div>
+          <div class="auth-mobile-logo-text-name">KinJo</div>
+          <div class="auth-mobile-logo-text-sub">
+            {% if ui_lang == 'en' %}Kindergarten Management{% else %}منصة إدارة
+            الروضات{% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# Welcome heading #}
+      <div class="af-anim af-delay1">
+        <h1 class="auth-heading">
+          {% if ui_lang == 'en' %}Welcome back to KinJo{% else %}مرحباً بعودتك
+          إلى كينجو{% endif %}
+        </h1>
+        <p class="auth-subheading">
+          {% if ui_lang == 'en' %} Sign in to manage your kindergarten account.
+          {% else %} سجّل الدخول لإدارة حسابك في منصة الحضانة. {% endif %}
+        </p>
+      </div>
+
+      {# ── Session expired alert ── #}
+      <div
+        id="sessionExpiredAlert"
+        class="auth-alert auth-alert-warning d-none"
+        role="alert"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <span>
+          {% if ui_lang == 'en' %}Your session has expired. Please sign in
+          again.{% else %}انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.{%
+          endif %}
+        </span>
+      </div>
+
+      {# ── Login error alert ── #}
+      <div
+        id="loginError"
+        class="auth-alert auth-alert-danger d-none"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
+        <span id="loginErrorMessage"></span>
+      </div>
+
+      {# ══════════════════════════ Login Form ══════════════════════════ #}
+      <form
+        id="loginForm"
+        method="POST"
+        action="/token"
+        novalidate
+        autocomplete="on"
+        class="af-anim af-delay2"
+      >
+        <input
+          type="hidden"
+          id="csrfToken"
+          name="csrf_token"
+          value="{{ csrf_token }}"
+        />
+
+        {# ── Username / Phone / Email ── #}
+        <div class="auth-field" id="usernameField">
+          <label for="username">
+            {% if ui_lang == 'en' %}Username, phone, or email{% else %}اسم
+            المستخدم أو رقم الهاتف أو البريد الإلكتروني{% endif %}
+            <span class="req-star" aria-hidden="true">*</span>
+          </label>
+          <div class="auth-input-wrap" id="usernameWrap">
+            <i
+              class="bi bi-person af-icon"
+              id="loginInputIcon"
+              aria-hidden="true"
+            ></i>
+            <input
+              type="text"
+              class="af-control"
+              id="username"
+              name="username"
+              placeholder="{% if ui_lang == 'en' %}Example: 07XXXXXXXX{% else %}مثال: 07XXXXXXXX{% endif %}"
+              autocomplete="username"
+              inputmode="text"
+              required
+              aria-required="true"
+              aria-describedby="usernameHint usernameError"
+              dir="ltr"
+            />
+            <i
+              class="bi bi-check-circle-fill af-status"
+              id="usernameStatus"
+              aria-hidden="true"
+            ></i>
+          </div>
+          <p id="usernameHint" class="af-hint">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %} Enter your registered Jordanian phone
+            number, email address, or username. {% else %} أدخل رقم هاتفك
+            الأردني المسجل أو بريدك الإلكتروني أو اسم المستخدم. {% endif %}
+          </p>
+          <p
+            id="usernameError"
+            class="af-error"
+            role="alert"
+            aria-live="polite"
+            aria-atomic="true"
+          ></p>
+        </div>
+
+        {# ── Password ── #}
+        <div class="auth-field" id="passwordField">
+          <label for="password">
+            {% if ui_lang == 'en' %}Password{% else %}كلمة المرور{% endif %}
+            <span class="req-star" aria-hidden="true">*</span>
+          </label>
+          <div class="auth-input-wrap has-eye-toggle" id="passwordWrap">
+            <i class="bi bi-lock af-icon" aria-hidden="true"></i>
+            <input
+              type="password"
+              class="af-control af-has-toggle"
+              id="password"
+              name="password"
+              placeholder="{% if ui_lang == 'en' %}Enter your password{% else %}أدخل كلمة المرور{% endif %}"
+              autocomplete="current-password"
+              required
+              aria-required="true"
+              aria-describedby="passwordError"
+            />
+            <button
+              type="button"
+              class="af-toggle"
+              id="togglePasswordBtn"
+              aria-label="{% if ui_lang == 'en' %}Show password{% else %}إظهار كلمة المرور{% endif %}"
+              aria-pressed="false"
+              aria-controls="password"
+            >
+              <i
+                class="bi bi-eye"
+                id="togglePasswordIcon"
+                aria-hidden="true"
+              ></i>
+            </button>
+          </div>
+          <p
+            id="passwordError"
+            class="af-error"
+            role="alert"
+            aria-live="polite"
+            aria-atomic="true"
+          ></p>
+        </div>
+
+        {# ── Remember me + Forgot password ── #}
+        <div class="auth-options-row af-anim af-delay3">
+          <label class="auth-check-label" for="rememberMe">
+            <input type="checkbox" id="rememberMe" name="remember_me" />
+            {% if ui_lang == 'en' %}Remember me{% else %}تذكّرني{% endif %}
+          </label>
+          <a href="/forgot-password" class="auth-forgot-link">
+            {% if ui_lang == 'en' %}Forgot password?{% else %}هل نسيت كلمة
+            المرور؟{% endif %}
+          </a>
+        </div>
+
+        {# ── Submit button ── #}
+        <button
+          type="submit"
+          class="auth-submit-btn af-anim af-delay4"
+          id="loginBtn"
+        >
+          <span class="btn-text">
+            <i
+              class="bi bi-box-arrow-in-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %}"
+              aria-hidden="true"
+            ></i>
+            {% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
+          </span>
+          <span class="btn-loading d-none" aria-hidden="true">
+            <span class="af-spinner"></span>
+            {% if ui_lang == 'en' %}Signing in…{% else %}جارٍ تسجيل الدخول…{%
+            endif %}
+          </span>
+        </button>
+      </form>
+      {# /#loginForm #} {# ── Create account section ── #} {% if
+      public_registration_enabled %}
+      <div class="auth-divider">
+        <span>{% if ui_lang == 'en' %}or{% else %}أو{% endif %}</span>
+      </div>
+      <p class="auth-register-row">
+        {% if ui_lang == 'en' %}Don't have an account?{% else %}ليس لديك حساب؟{%
+        endif %}
+        <a href="/register" class="auth-register-link">
+          {% if ui_lang == 'en' %}Create new account{% else %}إنشاء حساب جديد{%
+          endif %}
+        </a>
+      </p>
+      {% else %}
+      <div class="auth-closed-notice">
+        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+        <span>
+          {% if ui_lang == 'en' %} Public registration is currently disabled.
+          Please contact your platform administrator for account access. {% else
+          %} التسجيل العام معطّل حالياً. يرجى التواصل مع مسؤول المنصة للحصول على
+          حساب. {% endif %}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+    {# /.auth-form-inner #} {# ── Footer ── #}
+    <footer
+      class="auth-footer"
+      aria-label="{% if ui_lang == 'en' %}Footer links{% else %}روابط التذييل{% endif %}"
+    >
+      <nav
+        class="auth-footer-nav"
+        aria-label="{% if ui_lang == 'en' %}Help and legal links{% else %}روابط المساعدة والقانونية{% endif %}"
+      >
+        <a href="/help"
+          >{% if ui_lang == 'en' %}Help{% else %}المساعدة{% endif %}</a
+        >
+        <span class="auth-footer-sep" aria-hidden="true">·</span>
+        <a href="/privacy"
+          >{% if ui_lang == 'en' %}Privacy{% else %}الخصوصية{% endif %}</a
+        >
+        <span class="auth-footer-sep" aria-hidden="true">·</span>
+        <a href="/terms"
+          >{% if ui_lang == 'en' %}Terms{% else %}الشروط والأحكام{% endif %}</a
+        >
+      </nav>
+      <p class="auth-copyright">
+        &copy; 2026 KinJo &mdash; {% if ui_lang == 'en' %}All rights reserved{%
+        else %}جميع الحقوق محفوظة{% endif %}
+      </p>
+    </footer>
+  </div>
+  {# /.auth-form-panel #}
 </div>
-{% endblock %}
-
-{% block extra_js %}
+{# /.auth-layout #} {% endblock %} {% block extra_js %}
 <script>
-    function togglePassword() {
-        const passwordInput = document.getElementById('password');
-        const icon = document.getElementById('togglePasswordIcon');
-        if (!passwordInput || !icon) {
-            return;
-        }
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            icon.classList.replace('bi-eye', 'bi-eye-slash');
-        } else {
-            passwordInput.type = 'password';
-            icon.classList.replace('bi-eye-slash', 'bi-eye');
-        }
+  (function () {
+    "use strict";
+
+    /* ─────────────────────────────────────────
+     Language helper
+     ───────────────────────────────────────── */
+    const LANG = '{{ ui_lang | default("ar") }}';
+    function tr(ar, en) {
+      return LANG === "en" ? en : ar;
     }
 
-    const usernameInput = document.getElementById('username');
-    const loginInputIcon = document.getElementById('loginInputIcon');
-    if (usernameInput && loginInputIcon) {
-        usernameInput.addEventListener('input', function () {
-            const value = this.value.trim();
-            if (value.includes('@')) {
-                loginInputIcon.className = 'bi bi-envelope input-icon';
-            } else if (/^0?7/.test(value.replace(/[\s\-+]/g, '')) || /^(\+?962|00962)/.test(value.replace(/[\s\-]/g, ''))) {
-                loginInputIcon.className = 'bi bi-telephone input-icon';
-            } else {
-                loginInputIcon.className = 'bi bi-person input-icon';
-            }
-        });
+    /* ─────────────────────────────────────────
+     Validation messages
+     ───────────────────────────────────────── */
+    const MSG = {
+      usernameRequired: tr("هذا الحقل مطلوب.", "This field is required."),
+      phoneInvalid: tr(
+        "أدخل رقم هاتف أردني صحيح، مثل 07XXXXXXXX.",
+        "Enter a valid Jordanian phone number, e.g. 07XXXXXXXX.",
+      ),
+      emailInvalid: tr(
+        "أدخل بريداً إلكترونياً صحيحاً.",
+        "Enter a valid email address.",
+      ),
+      passwordRequired: tr("كلمة المرور مطلوبة.", "Password is required."),
+      loginFailed: tr(
+        "بيانات تسجيل الدخول غير صحيحة. يرجى التحقق من معلوماتك والمحاولة مرة أخرى.",
+        "The sign-in details are incorrect. Please check your information and try again.",
+      ),
+    };
+
+    /* ─────────────────────────────────────────
+     DOM refs
+     ───────────────────────────────────────── */
+    const usernameInput = document.getElementById("username");
+    const usernameStatus = document.getElementById("usernameStatus");
+    const usernameError = document.getElementById("usernameError");
+    const loginInputIcon = document.getElementById("loginInputIcon");
+
+    const passwordInput = document.getElementById("password");
+    const passwordError = document.getElementById("passwordError");
+
+    const toggleBtn = document.getElementById("togglePasswordBtn");
+    const toggleIcon = document.getElementById("togglePasswordIcon");
+
+    const loginForm = document.getElementById("loginForm");
+
+    /* ─────────────────────────────────────────
+     Field state helpers
+     ───────────────────────────────────────── */
+    function setValid(inputEl, statusEl, errorEl) {
+      inputEl.classList.remove("af-invalid");
+      inputEl.classList.add("af-valid");
+      inputEl.removeAttribute("aria-invalid");
+      if (statusEl) {
+        statusEl.className = "bi bi-check-circle-fill af-status show-valid";
+      }
+      if (errorEl) {
+        errorEl.textContent = "";
+        errorEl.classList.remove("visible");
+      }
     }
+
+    function setInvalid(inputEl, statusEl, errorEl, msg) {
+      inputEl.classList.remove("af-valid");
+      inputEl.classList.add("af-invalid");
+      inputEl.setAttribute("aria-invalid", "true");
+      if (statusEl) {
+        statusEl.className = "bi bi-x-circle-fill af-status show-invalid";
+      }
+      if (errorEl) {
+        errorEl.textContent = msg;
+        errorEl.classList.add("visible");
+      }
+    }
+
+    function clearState(inputEl, statusEl, errorEl) {
+      inputEl.classList.remove("af-valid", "af-invalid");
+      inputEl.removeAttribute("aria-invalid");
+      if (statusEl) {
+        statusEl.className = "bi bi-check-circle-fill af-status";
+      }
+      if (errorEl) {
+        errorEl.textContent = "";
+        errorEl.classList.remove("visible");
+      }
+    }
+
+    /* ─────────────────────────────────────────
+     Classify input value type
+     ───────────────────────────────────────── */
+    function classifyInput(raw) {
+      if (!raw) return null;
+      const cleaned = raw.replace(/[\s\-+]/g, "");
+      let phone = cleaned;
+      if (phone.startsWith("962") && phone.length === 12)
+        phone = "0" + phone.slice(3);
+      if (phone.startsWith("00962") && phone.length === 14)
+        phone = "0" + phone.slice(5);
+      if (/^07\d{8}$/.test(phone)) return "phone";
+      if (raw.includes("@")) return "email";
+      return "username";
+    }
+
+    /* ─────────────────────────────────────────
+     Validators
+     ───────────────────────────────────────── */
+    function validateUsername(value) {
+      if (!value.trim()) return { ok: false, msg: MSG.usernameRequired };
+      const type = classifyInput(value);
+      if (type === "phone") return { ok: true };
+      if (type === "email") {
+        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
+        return valid ? { ok: true } : { ok: false, msg: MSG.emailInvalid };
+      }
+      return { ok: true }; // username — server validates further
+    }
+
+    function validatePassword(value) {
+      return value ? { ok: true } : { ok: false, msg: MSG.passwordRequired };
+    }
+
+    /* ─────────────────────────────────────────
+     Username — real-time icon + validation
+     ───────────────────────────────────────── */
+    let usernameTouched = false;
+
+    if (usernameInput && loginInputIcon) {
+      usernameInput.addEventListener("input", function () {
+        const type = classifyInput(this.value);
+        if (type === "email")
+          loginInputIcon.className = "bi bi-envelope af-icon";
+        else if (type === "phone")
+          loginInputIcon.className = "bi bi-telephone af-icon";
+        else loginInputIcon.className = "bi bi-person af-icon";
+
+        if (usernameTouched) {
+          if (!this.value.trim()) {
+            clearState(usernameInput, usernameStatus, usernameError);
+            return;
+          }
+          const r = validateUsername(this.value);
+          r.ok
+            ? setValid(usernameInput, usernameStatus, usernameError)
+            : setInvalid(usernameInput, usernameStatus, usernameError, r.msg);
+        }
+      });
+
+      usernameInput.addEventListener("blur", function () {
+        usernameTouched = true;
+        if (!this.value.trim()) {
+          clearState(usernameInput, usernameStatus, usernameError);
+          return;
+        }
+        const r = validateUsername(this.value);
+        r.ok
+          ? setValid(usernameInput, usernameStatus, usernameError)
+          : setInvalid(usernameInput, usernameStatus, usernameError, r.msg);
+      });
+    }
+
+    /* ─────────────────────────────────────────
+     Password — blur validation
+     ───────────────────────────────────────── */
+    let passwordTouched = false;
+
+    if (passwordInput) {
+      passwordInput.addEventListener("input", function () {
+        if (!passwordTouched) return;
+        if (!this.value) {
+          clearState(passwordInput, null, passwordError);
+          return;
+        }
+        const r = validatePassword(this.value);
+        if (!r.ok) setInvalid(passwordInput, null, passwordError, r.msg);
+        else {
+          passwordInput.classList.remove("af-invalid");
+          if (passwordError) {
+            passwordError.textContent = "";
+            passwordError.classList.remove("visible");
+          }
+        }
+      });
+
+      passwordInput.addEventListener("blur", function () {
+        passwordTouched = true;
+        if (!this.value) {
+          clearState(passwordInput, null, passwordError);
+          return;
+        }
+        const r = validatePassword(this.value);
+        if (!r.ok) setInvalid(passwordInput, null, passwordError, r.msg);
+      });
+    }
+
+    /* ─────────────────────────────────────────
+     Password visibility toggle
+     ───────────────────────────────────────── */
+    if (toggleBtn && passwordInput && toggleIcon) {
+      toggleBtn.addEventListener("click", function () {
+        const showing = passwordInput.type === "text";
+        passwordInput.type = showing ? "password" : "text";
+        toggleIcon.className = showing ? "bi bi-eye" : "bi bi-eye-slash";
+        this.setAttribute("aria-pressed", String(!showing));
+        this.setAttribute(
+          "aria-label",
+          showing
+            ? tr("إظهار كلمة المرور", "Show password")
+            : tr("إخفاء كلمة المرور", "Hide password"),
+        );
+      });
+    }
+
+    // Backward-compat global (no inline onclick used, but safe to expose)
+    window.togglePassword = function () {
+      toggleBtn && toggleBtn.click();
+    };
+
+    /* ─────────────────────────────────────────
+     Submit-time validation (capture phase)
+     Fires before auth.js bubble handler.
+     On error: preventDefault + stopImmediatePropagation.
+     On success: let auth.js handle the async login.
+     ───────────────────────────────────────── */
+    if (loginForm) {
+      loginForm.addEventListener(
+        "submit",
+        function (e) {
+          usernameTouched = true;
+          passwordTouched = true;
+
+          const uVal = usernameInput ? usernameInput.value : "";
+          const pVal = passwordInput ? passwordInput.value : "";
+          let hasError = false;
+
+          if (!uVal.trim()) {
+            setInvalid(
+              usernameInput,
+              usernameStatus,
+              usernameError,
+              MSG.usernameRequired,
+            );
+            hasError = true;
+          } else {
+            const r = validateUsername(uVal);
+            if (!r.ok) {
+              setInvalid(usernameInput, usernameStatus, usernameError, r.msg);
+              hasError = true;
+            } else {
+              setValid(usernameInput, usernameStatus, usernameError);
+            }
+          }
+
+          if (!pVal) {
+            setInvalid(
+              passwordInput,
+              null,
+              passwordError,
+              MSG.passwordRequired,
+            );
+            hasError = true;
+          }
+
+          if (hasError) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            // Focus first invalid field
+            if (usernameInput && usernameInput.classList.contains("af-invalid"))
+              usernameInput.focus();
+            else if (
+              passwordInput &&
+              passwordInput.classList.contains("af-invalid")
+            )
+              passwordInput.focus();
+          }
+        },
+        true /* capture — fires before auth.js bubble handler */,
+      );
+    }
+
+    /* ─────────────────────────────────────────
+     Session expired banner
+     ───────────────────────────────────────── */
+    if (new URLSearchParams(window.location.search).get("expired") === "true") {
+      const banner = document.getElementById("sessionExpiredAlert");
+      if (banner) banner.classList.remove("d-none");
+    }
+
+    /* ─────────────────────────────────────────
+     Sanitise generic server error messages
+     ───────────────────────────────────────── */
+    const errorBox = document.getElementById("loginError");
+    const errorMsg = document.getElementById("loginErrorMessage");
+    if (errorBox && errorMsg) {
+      new MutationObserver(function () {
+        if (!errorBox.classList.contains("d-none")) {
+          const txt = errorMsg.textContent || "";
+          const isGeneric =
+            txt.includes("Incorrect") ||
+            txt.includes("incorrect") ||
+            txt.includes("credentials") ||
+            txt.includes("Unable") ||
+            txt.includes("تعذر") ||
+            txt.includes("غير صحيح") ||
+            txt.includes("بيانات") ||
+            /40[01]/.test(txt);
+          if (!txt || isGeneric) {
+            errorMsg.textContent = MSG.loginFailed;
+          }
+        }
+      }).observe(errorBox, { attributes: true, attributeFilter: ["class"] });
+    }
+
+    /* ─────────────────────────────────────────
+     Language toggle — set cookie + reload
+     ───────────────────────────────────────── */
+    document.querySelectorAll(".auth-lang-btn").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        const href = this.getAttribute("href") || "";
+        const match = href.match(/[?&]lang=([a-z]{2})/);
+        if (!match) return;
+        e.preventDefault();
+        const lang = match[1];
+        document.cookie =
+          "kinjo_lang=" + lang + "; path=/; max-age=31536000; SameSite=Lax";
+        localStorage.setItem("kinjo_lang", lang);
+        localStorage.setItem("admin_language", lang);
+        window.location.reload();
+      });
+    });
+  })();
 </script>
 {% endblock %}

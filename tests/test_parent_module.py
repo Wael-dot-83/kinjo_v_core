@@ -76,7 +76,8 @@ class TestParentProfileAPI:
             email="noprofile@test.com",
             hashed_password=get_password_hash("Parent123!"),
             role=models.UserRole.PARENT,
-            status=models.UserStatus.ACTIVE
+            status=models.UserStatus.ACTIVE,
+            preferred_language="en",
         )
         test_db.add(user)
         test_db.commit()

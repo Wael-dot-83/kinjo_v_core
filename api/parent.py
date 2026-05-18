@@ -16,6 +16,12 @@ import validators
 from config import settings
 from database import get_db
 from dependencies import get_current_user
+from i18n import gettext as _api
+
+
+def _ulang(user) -> str:
+    """Return the user's preferred UI language, defaulting to Arabic."""
+    return getattr(user, "preferred_language", None) or "ar"
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Parent"])
@@ -27,14 +33,14 @@ def get_parent_dashboard(
 ):
     """Get comprehensive parent dashboard"""
     if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Parent access only")
+        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
     parent_profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id
     ).first()
 
     if not parent_profile:
-        raise HTTPException(status_code=404, detail="Parent profile not found")
+        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     # Get all children
     children = db.query(models.Child).filter(
@@ -129,15 +135,13 @@ def get_parent_profile(
 ):
     """Get current parent's profile"""
     if current_user.role != models.UserRole.PARENT:
-        lang = request.headers.get("Accept-Language", "en")
-        detail = "الوصول للوالدين فقط" if lang.startswith("ar") else "Parent access only"
-        raise HTTPException(status_code=403, detail=detail)
+        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
     profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id
     ).first()
     if not profile:
-        raise HTTPException(status_code=404, detail="Parent profile not found")
+        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     return {
         "id": profile.id,
@@ -166,6 +170,7 @@ def get_parent_profile(
         "profile_complete": profile.profile_complete,
         "profile_completed_at": profile.profile_completed_at.isoformat() if profile.profile_completed_at else None,
         "correspondence_preference": profile.correspondence_preference,
+        "notification_language": profile.notification_language,
     }
 
 
@@ -176,13 +181,13 @@ def get_parent_children(
 ):
     """Get current parent's children with their enrollments"""
     if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Parent access only")
+        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
     profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id
     ).first()
     if not profile:
-        raise HTTPException(status_code=404, detail="Parent profile not found")
+        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     children = db.query(models.Child).filter(
         models.Child.parent_id == profile.id
@@ -233,13 +238,13 @@ def get_parent_enrollments(
 ):
     """Get all enrollment applications for current parent's children"""
     if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Parent access only")
+        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
     profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id
     ).first()
     if not profile:
-        raise HTTPException(status_code=404, detail="Parent profile not found")
+        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     child_ids = [
         cid for (cid,) in db.query(models.Child.id).filter(
@@ -286,13 +291,13 @@ def get_parent_attendance(
 ):
     """Get attendance history for parent's children"""
     if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Parent access only")
+        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
     profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id
     ).first()
     if not profile:
-        raise HTTPException(status_code=404, detail="Parent profile not found")
+        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     child_ids = [
         cid for (cid,) in db.query(models.Child.id).filter(
@@ -302,7 +307,7 @@ def get_parent_attendance(
 
     if child_id:
         if child_id not in child_ids:
-            raise HTTPException(status_code=403, detail="Not authorized to view this child's attendance")
+            raise HTTPException(status_code=403, detail=_api("Not authorized to view this child's attendance", _ulang(current_user)))
         child_ids = [child_id]
 
     if not child_ids:
@@ -357,13 +362,13 @@ def get_parent_children_simple(
 ):
     """Simple children list for filter dropdowns"""
     if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Parent access only")
+        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
 
     profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id
     ).first()
     if not profile:
-        raise HTTPException(status_code=404, detail="Parent profile not found")
+        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     children = db.query(models.Child).filter(
         models.Child.parent_id == profile.id
@@ -375,3 +380,67 @@ def get_parent_children_simple(
             for c in children
         ]
     }
+
+
+class ParentProfileSelfUpdateRequest(BaseModel):
+    first_name: Optional[str] = None
+    second_name: Optional[str] = None
+    last_name: Optional[str] = None
+    first_name_en: Optional[str] = None
+    last_name_en: Optional[str] = None
+    phone_number: Optional[str] = None
+    gender: Optional[str] = None
+    nationality: Optional[str] = None
+    national_id: Optional[str] = None
+    passport_number: Optional[str] = None
+    home_governorate: Optional[str] = None
+    home_city: Optional[str] = None
+    home_area: Optional[str] = None
+    home_address_line: Optional[str] = None
+    work_address: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    emergency_contact_relationship: Optional[str] = None
+    relationship_to_child: Optional[str] = None
+    correspondence_preference: Optional[bool] = None
+    notification_language: Optional[str] = None
+    language: Optional[str] = None  # updates user.preferred_language
+
+
+@router.put("/parent/profile")
+def update_parent_profile_self(
+    data: ParentProfileSelfUpdateRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Allow authenticated parent to update their own profile and language preference."""
+    if current_user.role != models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail=_api("Parent access only", _ulang(current_user)))
+
+    profile = db.query(models.ParentProfile).filter(
+        models.ParentProfile.user_id == current_user.id
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
+
+    profile_fields = [
+        "first_name", "second_name", "last_name", "first_name_en", "last_name_en",
+        "phone_number", "gender", "nationality", "national_id", "passport_number",
+        "home_governorate", "home_city", "home_area", "home_address_line", "work_address",
+        "emergency_contact_name", "emergency_contact_phone", "emergency_contact_relationship",
+        "relationship_to_child", "correspondence_preference", "notification_language",
+    ]
+    for field in profile_fields:
+        val = getattr(data, field)
+        if val is not None:
+            setattr(profile, field, val)
+
+    # Update user language preference
+    if data.language and data.language in ("en", "ar"):
+        current_user.preferred_language = data.language
+
+    db.commit()
+    db.refresh(profile)
+
+    lang = _ulang(current_user)
+    return {"detail": _api("Saved successfully", lang)}

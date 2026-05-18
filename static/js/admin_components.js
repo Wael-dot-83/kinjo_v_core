@@ -35,10 +35,16 @@ class AdminComponents {
   initializeComponents() {
     // Initialize existing components on page load
     this.initDropdowns();
-    this.initModals();
     this.initTooltips();
     this.initTabs();
-    this.initNotifications();
+  }
+
+  initModals() {
+    // Placeholder: modals are created programmatically via createModal()
+  }
+
+  initNotifications() {
+    // Placeholder: notifications are shown programmatically via showNotification()
   }
 
   // ============================================================================
@@ -258,7 +264,13 @@ class AdminComponents {
    * Show toast notifications
    */
   showNotification(options = {}) {
-    const { type = "info", title = "", message = "", duration = 5000, closable = true } = options;
+    const {
+      type = "info",
+      title = "",
+      message = "",
+      duration = 5000,
+      closable = true,
+    } = options;
 
     // Create notification container if it doesn't exist
     let container = document.querySelector(".admin-notifications");

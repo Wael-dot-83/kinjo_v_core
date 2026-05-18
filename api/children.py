@@ -19,6 +19,12 @@ import validators
 from config import settings
 from database import get_db
 from dependencies import get_current_user
+from i18n import gettext as _api
+
+
+def _ulang(user) -> str:
+    """Return the user's preferred UI language, defaulting to Arabic."""
+    return getattr(user, "preferred_language", None) or "ar"
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Children"])
@@ -50,11 +56,11 @@ def update_parent_profile(
     """Update parent profile. Parents may update their own profile; Admin can update any."""
     parent = db.query(models.ParentProfile).filter(models.ParentProfile.id == parent_id).first()
     if not parent:
-        raise HTTPException(status_code=404, detail="Parent profile not found")
+        raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     # Authorization
     if current_user.role == models.UserRole.PARENT and parent.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to update this profile")
+        raise HTTPException(status_code=403, detail=_api("Not authorized to update this profile", _ulang(current_user)))
 
     # Apply updates
     changed = False

@@ -129,7 +129,7 @@ async def get_current_admin_user(
     if current_user.role != models.UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="هذا الإجراء متاح للإداريين فقط"
+            detail="Admin access only"
         )
     return current_user
 
@@ -140,7 +140,7 @@ def require_role(*roles: models.UserRole):
         if current_user.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Requires one of these roles: {[r.value for r in roles]}"
+                detail="Access denied."
             )
         return current_user
     return role_checker

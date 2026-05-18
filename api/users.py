@@ -125,6 +125,14 @@ def update_user_language(
     if payload.user_lang not in ("ar", "en"):
         raise HTTPException(status_code=400, detail="Supported languages: ar, en")
     current_user.preferred_language = payload.user_lang
+    # Sync notification_language on parent_profiles so notifications use the
+    # same language as the UI preference.
+    if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        if parent_profile:
+            parent_profile.notification_language = payload.user_lang
     db.commit()
     db.refresh(current_user)
     return {"user_lang": current_user.preferred_language}

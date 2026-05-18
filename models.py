@@ -457,6 +457,7 @@ class ParentProfile(Base):
     emergency_contact_relationship = Column(String(100), nullable=True)  # e.g. uncle, grandmother
     relationship_to_child = Column(String(100), nullable=True)  # father, mother, guardian
     correspondence_preference = Column(Boolean, nullable=False, default=True)
+    notification_language = Column(String(10), nullable=False, server_default="ar", default="ar")
     profile_complete = Column(Boolean, nullable=False, default=False)
     profile_completed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -772,12 +773,12 @@ class DailyReport(Base):
     def get_status_badge(self) -> dict:
         """Return status badge info for UI"""
         status_map = {
-            DailyReportStatus.DRAFT: {"text": "مسودة", "color": "secondary", "icon": "bi-pencil"},
-            DailyReportStatus.SUBMITTED: {"text": "بانتظار اعتماد المدير", "color": "warning", "icon": "bi-hourglass-split"},
-            DailyReportStatus.APPROVED: {"text": "تم الاعتماد", "color": "success", "icon": "bi-check-circle"},
-            DailyReportStatus.SENT_TO_PARENT: {"text": "تم الإرسال لولي الأمر", "color": "primary", "icon": "bi-send-check"},
-            DailyReportStatus.REJECTED: {"text": "مرفوض من المدير", "color": "danger", "icon": "bi-x-circle"},
-            DailyReportStatus.RETURNED: {"text": "مرفوض من المدير", "color": "danger", "icon": "bi-x-circle"},
+            DailyReportStatus.DRAFT: {"text": "Draft", "color": "secondary", "icon": "bi-pencil"},
+            DailyReportStatus.SUBMITTED: {"text": "Awaiting approval", "color": "warning", "icon": "bi-hourglass-split"},
+            DailyReportStatus.APPROVED: {"text": "Approved", "color": "success", "icon": "bi-check-circle"},
+            DailyReportStatus.SENT_TO_PARENT: {"text": "Sent to parent", "color": "primary", "icon": "bi-send-check"},
+            DailyReportStatus.REJECTED: {"text": "Rejected", "color": "danger", "icon": "bi-x-circle"},
+            DailyReportStatus.RETURNED: {"text": "Returned", "color": "danger", "icon": "bi-x-circle"},
         }
         return status_map.get(self.status, {"text": str(self.status.value), "color": "secondary", "icon": "bi-question-circle"})
 

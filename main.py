@@ -660,7 +660,8 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
         )
         raise build_generic_auth_exception()
 
-    user_lang = _resolve_user_language(db, user.id)
+    _stored_lang = getattr(user, "preferred_language", None)
+    user_lang = _stored_lang if _stored_lang in ("ar", "en") else _resolve_user_language(db, user.id)
     base_payload = {
         "user_lang": user_lang,
         "remember_me": remember_me,
@@ -816,6 +817,7 @@ async def logout(
 
 
 @app.post("/api/auth/mfa/setup")
+@limiter.limit("5/minute")
 async def mfa_setup(
     request: Request,
     db: Session = Depends(get_db),
@@ -855,6 +857,7 @@ async def mfa_setup(
 
 
 @app.post("/api/auth/mfa/verify")
+@limiter.limit("5/minute")
 async def mfa_verify(
     request: Request,
     payload: MFACodeRequest,
@@ -919,10 +922,12 @@ async def mfa_verify(
         sensitivity_level=2,
     )
 
+    _mfa_stored_lang = getattr(user, "preferred_language", None)
+    _mfa_user_lang = _mfa_stored_lang if _mfa_stored_lang in ("ar", "en") else _resolve_user_language(db, user.id)
     auth_payload = {
         "access_token": access_token,
         "token_type": "bearer",
-        "user_lang": _resolve_user_language(db, user.id),
+        "user_lang": _mfa_user_lang,
         "remember_me": remember_me,
         "mfa_required": False,
         "user": {

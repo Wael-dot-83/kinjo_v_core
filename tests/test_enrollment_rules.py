@@ -245,7 +245,8 @@ class TestReviewBlockedWhenActiveElsewhere:
         parent_headers = {"Authorization": f"Bearer {parent_token}"}
         resp2 = client.post(f"/api/enrollment/{ea2.id}/submit", headers=parent_headers)
         assert resp2.status_code == 400
-        assert "هذا الطفل" in resp2.json()["detail"]
+        detail2 = resp2.json()["detail"]
+        assert "child" in detail2.lower() or "طفل" in detail2  # Arabic: "هذا الطفل مسجل..."
 
     def test_reject_allowed_even_with_active_elsewhere(
         self, client, test_db, parent_user, sample_kindergarten, manager_user, manager_token, parent_token
