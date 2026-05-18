@@ -5,6 +5,7 @@ import logging
 import sqlite3
 from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import sessionmaker, declarative_base, with_loader_criteria, Session
+from sqlalchemy.pool import StaticPool
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -28,12 +29,18 @@ _validate_production_database()
 connect_args = {}
 if settings.DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
-    engine = create_engine(
-        settings.DATABASE_URL,
+    _is_memory = settings.DATABASE_URL == "sqlite:///:memory:" or ":memory:" in settings.DATABASE_URL
+    _engine_kwargs: dict = dict(
         connect_args=connect_args,
         echo=settings.DEBUG,
         pool_pre_ping=True,
     )
+    if _is_memory:
+        # StaticPool ensures all connections share the single in-memory DB
+        # (required for tests and CI that use DATABASE_URL=sqlite:///:memory:)
+        _engine_kwargs["poolclass"] = StaticPool
+        _engine_kwargs.pop("pool_pre_ping", None)
+    engine = create_engine(settings.DATABASE_URL, **_engine_kwargs)
 
     # Ensure SQLite uses UTF-8 encoding
     @event.listens_for(engine, "connect")
