@@ -195,7 +195,7 @@
             <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
                 <div
                     class="card-header bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
-                    <h4 class="fw-bold mb-0">{% if ui_lang == 'en' %}Key Performance Indicators{% else %}لوحة مؤشرات الأداء الرئيسية{% endif %}</h4>
+                    <h4 class="fw-bold mb-0">{% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}</h4>
                     <div class="btn-group btn-group-sm rounded-pill shadow-sm overflow-hidden">
                         <button class="btn btn-light px-3 active" id="viewCardsBtn" onclick="toggleKPIView('cards')"
                             aria-label="{% if ui_lang == 'en' %}Cards view{% else %}عرض البطاقات{% endif %}">
@@ -257,8 +257,7 @@
                                 </div>
                                 <div>
                                     <p class="mb-1 fw-bold">{% if ui_lang == 'en' %}Speed Up Enrollment Review{% else %}تسريع مراجعة التسجيلات{% endif %}</p>
-                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}There are 5 requests pending review for over 2 days.{% else %}هناك 5 طلبات تنتظر المراجعة منذ أكثر من
-                                        يومين.{% endif %}</small>
+                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}There are 5 requests pending review for over 2 days. Review them now.{% else %}هناك 5 طلبات تنتظر المراجعة منذ أكثر من يومين. راجع الطلبات الآن.{% endif %}</small>
                                     <span class="text-primary small fw-bold">{% if ui_lang == 'en' %}Review requests now{% else %}راجع الطلبات الآن{% endif %} <i
                                             class="bi bi-arrow-left ms-1"></i></span>
                                 </div>
@@ -272,8 +271,7 @@
                                 </div>
                                 <div>
                                     <p class="mb-1 fw-bold">{% if ui_lang == 'en' %}Follow Up on Repeated Absences{% else %}متابعة الغياب المتكرر{% endif %}</p>
-                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}A 4% decrease in children's attendance was detected this week.{% else %}تم رصد تراجع في حضور الأطفال هذا الأسبوع
-                                        بنسبة 4%.{% endif %}</small>
+                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}A 4% decrease in children's attendance was detected this week. Check the attendance report.{% else %}تم رصد تراجع في حضور الأطفال هذا الأسبوع بنسبة 4%. افحص تقرير الحضور.{% endif %}</small>
                                     <span class="text-success small fw-bold">{% if ui_lang == 'en' %}Check attendance report{% else %}افحص تقرير الحضور{% endif %} <i
                                             class="bi bi-arrow-left ms-1"></i></span>
                                 </div>
@@ -842,7 +840,7 @@
                             </div>
                             <div class="flex-grow-1">
                                 <p class="mb-1 small">{% if ui_lang == 'en' %}Attendance recorded{% else %}تسجيل حضور{% endif %}</p>
-                                <small class="text-muted">{% if ui_lang == 'en' %}15 children - 30 min ago{% else %}15 طفل - منذ 30 دقيقة{% endif %}</small>
+                                <small class="text-muted">{% if ui_lang == 'en' %}15 children - 30 min ago{% else %}15 طفلاً - منذ 30 دقيقة{% endif %}</small>
                             </div>
                         </div>
                     </a>
@@ -885,7 +883,7 @@
                     <div class="col-6 col-md-3">
                         <div class="kpi-card">
                             <div class="kpi-value text-info" id="kpiRatioCompliance">--</div>
-                            <div class="kpi-label">{% if ui_lang == 'en' %}Ratio Compliance{% else %}امتثال النسبة{% endif %}</div>
+                            <div class="kpi-label">{% if ui_lang == 'en' %}Ratio Compliance{% else %}امتثال نسبة الإشراف{% endif %}</div>
                             <div class="kpi-trend up">
                                 <i class="bi bi-arrow-up"></i> 1.2%
                             </div>
@@ -1494,7 +1492,7 @@
         if (modal) {
             new bootstrap.Modal(modal).show();
         } else {
-            console.log(dashboardInlineText('dashboard.explanations.in_development', 'شرح المؤشرات: الميزة قيد التطوير', 'Indicator explanation: feature under development'));
+            alert(dashboardInlineText('dashboard.explanations.unavailable', 'تعذر فتح شرح المؤشرات حالياً.', 'Indicator explanation is currently unavailable.'));
         }
     }
 
@@ -1508,7 +1506,7 @@
         if (url) {
             window.location.href = url;
         } else {
-            console.log(dashboardInlineText('dashboard.quick_action.unknown', 'إجراء سريع غير معرّف', 'Unknown quick action') + ':', action);
+            alert(dashboardInlineText('dashboard.quick_action.unknown', 'تعذر تنفيذ هذا الإجراء السريع.', 'Unable to run this quick action.'));
         }
     }
 
@@ -1557,7 +1555,7 @@
         }
     }
 
-    // Custom date range picker (placeholder)
+    // Custom date range picker
     function showCustomDateRange() {
         const html = `<div class="p-3 text-start">
             <div class="mb-3"><label class="form-label">${dashboardInlineText('common.from_date', 'من تاريخ', 'From date')}</label><input type="date" class="form-control" id="customDateFrom"></div>
@@ -1599,7 +1597,7 @@
                 }
             });
         } else {
-            alert(dashboardInlineText('dashboard.range.custom_in_development', 'ميزة التاريخ المخصص قيد التطوير', 'Custom date range is under development'));
+            alert(dashboardInlineText('dashboard.range.custom_unavailable', 'تعذر فتح اختيار النطاق المخصص.', 'Custom date range picker is unavailable.'));
         }
     }
 
@@ -1612,7 +1610,7 @@
         if (modal) {
             new bootstrap.Modal(modal).show();
         } else {
-            console.log(dashboardInlineText('dashboard.validation.modal_not_found', 'تعذر العثور على نافذة تفاصيل التحقق', 'Validation details modal was not found'));
+            alert(dashboardInlineText('dashboard.validation.modal_not_found', 'تعذر فتح تفاصيل التحقق حالياً.', 'Validation details are currently unavailable.'));
         }
     }
 

@@ -1,0 +1,465 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('مؤشرات الأداء') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-graph-up-arrow"></i>
+            {{ _('المشرف') }}
+        </div>
+        <h1 class="page-header-title">{{ _('مؤشرات أدائي') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('مؤشرات الأداء') }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="page-header-actions">
+        <a href="/api/supervisor/kpi/export" class="btn btn-ghost" id="exportBtn"
+           aria-label="{{ _('تصدير البيانات') }}">
+            <i class="bi bi-download me-2"></i>{{ _('تصدير') }}
+        </a>
+        <button class="btn btn-ghost" onclick="loadKPI()" aria-label="{{ _('تحديث البيانات') }}">
+            <i class="bi bi-arrow-clockwise me-2"></i>{{ _('تحديث') }}
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Date Range Picker -->
+<div class="card mb-4">
+    <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
+        <span class="fw-700 small text-nowrap">{{ _('الفترة الزمنية:') }}</span>
+        <input type="date" id="dateFrom" class="form-control form-control-sm" style="width:auto;"
+               aria-label="{{ _('من تاريخ') }}">
+        <span class="text-muted small">{{ _('إلى') }}</span>
+        <input type="date" id="dateTo" class="form-control form-control-sm" style="width:auto;"
+               aria-label="{{ _('إلى تاريخ') }}">
+        <button class="btn btn-primary btn-sm" onclick="loadKPI()">
+            <i class="bi bi-bar-chart me-1"></i>{{ _('عرض') }}
+        </button>
+        <div class="d-flex gap-1">
+            <button class="btn btn-ghost btn-sm" onclick="setRange(7)">{{ _('آخر 7 أيام') }}</button>
+            <button class="btn btn-ghost btn-sm" onclick="setRange(14)">{{ _('14 يوم') }}</button>
+            <button class="btn btn-ghost btn-sm" onclick="setRange(30)">{{ _('30 يوم') }}</button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="kpiLoading" class="text-center py-5 text-muted">
+    <div class="spinner-border mb-3" role="status" aria-label="{{ _('جاري التحميل') }}"></div>
+    <div>{{ _('جاري تحميل مؤشرات الأداء...') }}</div>
+</div>
+
+<!-- Error State -->
+<div id="kpiError" class="card d-none mb-4">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-exclamation-circle d-block fs-1 mb-3 text-danger opacity-50"></i>
+        <p class="text-muted">{{ _('تعذّر تحميل البيانات') }}</p>
+        <button class="btn btn-ghost btn-sm" onclick="loadKPI()">
+            <i class="bi bi-arrow-clockwise me-1"></i>{{ _('إعادة المحاولة') }}
+        </button>
+    </div>
+</div>
+
+<!-- Main KPI Content -->
+<div id="kpiContent" class="d-none">
+
+    <!-- Section 1: My Performance -->
+    <div class="section-title mb-3">
+        <i class="bi bi-person-check-fill me-2 text-primary"></i>
+        {{ _('أدائي الشخصي') }}
+    </div>
+    <div class="row g-3 mb-4 stagger-children">
+        <div class="col-6 col-md-4">
+            <div class="stat-card success card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('معدل إكمال التقارير') }}</div>
+                        <div class="stat-value" id="kpiCompletionRate">—%</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                        <i class="bi bi-journal-check"></i>
+                    </div>
+                </div>
+                <div class="progress mt-2" style="height:4px;border-radius:0;margin:-1px -1px 0;">
+                    <div class="progress-bar bg-success" id="kpiCompletionBar" style="width:0%;transition:width 1s;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="stat-card card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('معدل الالتزام بالمواعيد') }}</div>
+                        <div class="stat-value" id="kpiOnTimeRate">—%</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                </div>
+                <div class="progress mt-2" style="height:4px;border-radius:0;margin:-1px -1px 0;">
+                    <div class="progress-bar" id="kpiOnTimeBar" style="width:0%;background:var(--kinjo-primary);transition:width 1s;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="stat-card card">
+                <div class="card-body">
+                    <div class="stat-info">
+                        <div class="stat-label">{{ _('متوسط طول التقرير') }}</div>
+                        <div class="stat-value" id="kpiAvgLength">—</div>
+                    </div>
+                    <div class="stat-icon-wrap" style="background:rgba(6,182,212,0.12);color:#0891b2;">
+                        <i class="bi bi-file-text"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Per-Child Summary -->
+    <div class="section-title mb-3">
+        <i class="bi bi-people-fill me-2 text-primary"></i>
+        {{ _('ملخص الأطفال') }}
+    </div>
+    <div class="card mb-4">
+        <div class="card-body p-0">
+            <div id="childrenTableLoading" class="text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>{{ _('جاري التحميل...') }}
+            </div>
+            <div id="childrenTableEmpty" class="text-center py-4 text-muted d-none">
+                <i class="bi bi-people d-block fs-2 mb-2 opacity-25"></i>
+                <small>{{ _('لا يوجد أطفال') }}</small>
+            </div>
+            <div id="childrenTableWrap" class="d-none">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{{ _('الطفل') }}</th>
+                                <th class="text-center">{{ _('تقارير هذا الأسبوع') }}</th>
+                                <th class="text-center">{{ _('تقارير مفقودة') }}</th>
+                                <th class="text-center">{{ _('الاتجاه') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="childrenTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Daily Trend Chart -->
+    <div class="section-title mb-3">
+        <i class="bi bi-bar-chart-fill me-2 text-primary"></i>
+        {{ _('المؤشر اليومي — آخر 14 يوم') }}
+    </div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div id="trendChartLoading" class="text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>{{ _('جاري التحميل...') }}
+            </div>
+            <canvas id="trendChart" style="max-height:260px;display:none;" aria-label="{{ _('مخطط التقارير اليومية') }}"></canvas>
+        </div>
+    </div>
+
+    <!-- Section 4: Activity -->
+    <div class="section-title mb-3">
+        <i class="bi bi-activity me-2 text-primary"></i>
+        {{ _('نشاطي') }}
+    </div>
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">{{ _('إحصاءات النشاط') }}</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="summary-row">
+                        <span class="summary-label">{{ _('آخر تسجيل دخول') }}</span>
+                        <span class="summary-value" id="actLastLogin">—</span>
+                    </div>
+                    <div class="summary-row" style="border-bottom:none;">
+                        <span class="summary-label">{{ _('أيام نشطة هذا الشهر') }}</span>
+                        <span class="summary-value" id="actDaysActive">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="card-title-sm mb-0">{{ _('خريطة النشاط — آخر 28 يوم') }}</h6>
+                </div>
+                <div class="card-body">
+                    <div id="heatmapGrid" class="heatmap-grid" aria-label="{{ _('خريطة نشاط آخر 28 يوم') }}">
+                        <!-- 7 cols × 4 rows = 28 cells rendered by JS -->
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mt-3" style="font-size:0.72rem;color:var(--kinjo-text-muted);">
+                        <span>{{ _('لا نشاط') }}</span>
+                        <div class="heatmap-cell level-0"></div>
+                        <div class="heatmap-cell level-1"></div>
+                        <div class="heatmap-cell level-2"></div>
+                        <div class="heatmap-cell level-3"></div>
+                        <span>{{ _('نشط جداً') }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /kpiContent -->
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-actions { display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap; }
+.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+.fw-600 { font-weight:600; }
+.fw-700 { font-weight:700; }
+
+.section-title {
+    font-size:0.88rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--kinjo-text-muted);display:flex;align-items:center;
+}
+
+.summary-row { display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
+.summary-label { font-size:0.85rem;color:var(--kinjo-text-secondary); }
+.summary-value { font-size:0.875rem;font-weight:700;color:var(--kinjo-text-primary); }
+
+/* Heatmap */
+.heatmap-grid {
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:4px;
+}
+.heatmap-cell {
+    aspect-ratio:1;border-radius:4px;
+    background:var(--kinjo-border);
+    transition:background 0.2s;
+}
+.heatmap-cell.level-0 { background:var(--kinjo-border); }
+.heatmap-cell.level-1 { background:rgba(10,92,142,0.25); }
+.heatmap-cell.level-2 { background:rgba(10,92,142,0.55); }
+.heatmap-cell.level-3 { background:var(--kinjo-primary); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    let trendChartInst = null;
+
+    function getHeaders() {
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+        return { 'Authorization': `Bearer ${t}` };
+    }
+
+    function setRange(days) {
+        const to   = new Date();
+        const from = new Date();
+        from.setDate(from.getDate() - (days - 1));
+        document.getElementById('dateFrom').value = from.toISOString().slice(0, 10);
+        document.getElementById('dateTo').value   = to.toISOString().slice(0, 10);
+        loadKPI();
+    }
+    window.setRange = setRange;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setRange(7); // default: last 7 days
+    });
+
+    window.loadKPI = async function () {
+        const from = document.getElementById('dateFrom').value;
+        const to   = document.getElementById('dateTo').value;
+
+        document.getElementById('kpiLoading').classList.remove('d-none');
+        document.getElementById('kpiError').classList.add('d-none');
+        document.getElementById('kpiContent').classList.add('d-none');
+
+        // Update export link
+        document.getElementById('exportBtn').href = `/api/supervisor/kpi/export?from=${from}&to=${to}`;
+
+        try {
+            const r = await fetch(`/api/supervisor/kpi?from_date=${from}&to_date=${to}`, { headers: getHeaders() });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+
+            document.getElementById('kpiLoading').classList.add('d-none');
+
+            // Normalise API response shape (flat keys) into the expected structure
+            const performance = {
+                completion_rate:    data.completion_rate    ?? 0,
+                on_time_rate:       data.on_time_rate       ?? null,
+                avg_report_length:  data.avg_report_length  ?? null,
+            };
+            const children = (data.per_child || []).map(c => ({
+                ...c,
+                reports_this_week: c.reports_submitted ?? 0,
+            }));
+            const dailyTrend = (data.trend_labels || []).map((lbl, i) => ({
+                date:  lbl,
+                count: (data.trend_values || [])[i] ?? 0,
+            }));
+            const activity = {
+                last_login:             data.last_login,
+                days_active_this_month: data.days_active_this_month ?? 0,
+                heatmap:                data.heatmap || [],
+            };
+
+            updatePerformanceCards(performance);
+            updateChildrenTable(children);
+            updateTrendChart(dailyTrend);
+            updateActivity(activity);
+
+            document.getElementById('kpiContent').classList.remove('d-none');
+
+        } catch {
+            document.getElementById('kpiLoading').classList.add('d-none');
+            document.getElementById('kpiError').classList.remove('d-none');
+        }
+    };
+
+    function updatePerformanceCards(p) {
+        const completion = Math.round(p.completion_rate || 0);
+        const onTime     = p.on_time_rate !== null ? Math.round(p.on_time_rate) : null;
+        const avgLen     = p.avg_report_length !== null ? Math.round(p.avg_report_length) + ' {{ _("حرف") }}' : '—';
+
+        document.getElementById('kpiCompletionRate').textContent = completion + '%';
+        document.getElementById('kpiOnTimeRate').textContent     = onTime !== null ? onTime + '%' : '—';
+        document.getElementById('kpiAvgLength').textContent      = avgLen;
+
+        document.getElementById('kpiCompletionBar').style.width = completion + '%';
+        document.getElementById('kpiOnTimeBar').style.width     = (onTime ?? 0) + '%';
+    }
+
+    function updateChildrenTable(children) {
+        document.getElementById('childrenTableLoading').classList.add('d-none');
+        const wrap  = document.getElementById('childrenTableWrap');
+        const empty = document.getElementById('childrenTableEmpty');
+
+        if (!children.length) {
+            empty.classList.remove('d-none');
+            return;
+        }
+
+        const tbody = document.getElementById('childrenTableBody');
+        tbody.innerHTML = children.map(c => {
+            const trend = c.trend === 'up'   ? '<span class="text-success fw-700">↑</span>'
+                        : c.trend === 'down' ? '<span class="text-danger fw-700">↓</span>'
+                        : '<span class="text-muted">—</span>';
+            return `
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="child-avatar-sm"><i class="bi bi-emoji-smile-fill"></i></div>
+                        <span class="fw-600">${escHtml(c.name)}</span>
+                    </div>
+                </td>
+                <td class="text-center fw-700">${c.reports_this_week ?? '—'}</td>
+                <td class="text-center">
+                    ${c.missing_reports > 0
+                        ? `<span class="badge bg-warning text-dark">${c.missing_reports}</span>`
+                        : `<span class="badge bg-success">0</span>`}
+                </td>
+                <td class="text-center">${trend}</td>
+            </tr>`;
+        }).join('');
+        wrap.classList.remove('d-none');
+    }
+
+    function updateTrendChart(trend) {
+        document.getElementById('trendChartLoading').classList.add('d-none');
+        const canvas = document.getElementById('trendChart');
+        canvas.style.display = 'block';
+
+        const labels = trend.map(d => {
+            const dt = new Date(d.date);
+            return dt.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+        });
+        const values = trend.map(d => d.count || 0);
+
+        if (trendChartInst) trendChartInst.destroy();
+        trendChartInst = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: '{{ _("تقارير مُقدَّمة") }}',
+                    data: values,
+                    backgroundColor: 'rgba(10,92,142,0.75)',
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { rtl: true, titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, font: { family: 'Cairo' } },
+                        grid: { color: 'rgba(0,0,0,0.06)' }
+                    },
+                    x: {
+                        ticks: { font: { family: 'Cairo', size: 11 } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateActivity(act) {
+        const lastLogin = act.last_login
+            ? new Date(act.last_login).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'})
+            : '—';
+        document.getElementById('actLastLogin').textContent   = lastLogin;
+        document.getElementById('actDaysActive').textContent  = act.days_active_this_month ?? '—';
+
+        // Render heatmap (28 cells, last 28 days)
+        const grid = document.getElementById('heatmapGrid');
+        const actMap = {};
+        (act.heatmap || []).forEach(d => { actMap[d.date] = d.level || 0; });
+
+        const today = new Date();
+        let cells = '';
+        for (let i = 27; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const key = d.toISOString().slice(0, 10);
+            const level = actMap[key] || 0;
+            const label = d.toLocaleDateString('ar-SA', {month:'short',day:'numeric'});
+            cells += `<div class="heatmap-cell level-${level}" title="${label}" aria-label="{{ _('نشاط') }} ${label}"></div>`;
+        }
+        grid.innerHTML = cells;
+    }
+
+    function escHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+})();
+</script>
+
+<style>
+.child-avatar-sm {
+    width:30px;height:30px;border-radius:50%;
+    background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.8rem;flex-shrink:0;
+}
+</style>
+{% endblock %}

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Audit Logs Management
  * Handles loading, filtering, and displaying audit logs
  */

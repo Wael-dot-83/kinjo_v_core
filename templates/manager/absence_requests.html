@@ -195,18 +195,18 @@
             tbody.innerHTML = data.map((r, i) => {
                     const cname = (r.child_name && String(r.child_name).trim()) ? r.child_name : `#${r.child_id}`;
                     const actions = r.status === 'SUBMITTED'
-                        ? `<button class="btn btn-sm btn-success approve-btn me-1" data-id="${r.id}" data-child="${cname}" data-start="${r.start_date}" data-end="${r.end_date}" data-reason="${r.reason}"><i class="bi bi-check-circle"></i> ${tr('قبول', 'Approve')}</button>
-                       <button class="btn btn-sm btn-danger reject-btn" data-id="${r.id}" data-child="${cname}" data-start="${r.start_date}" data-end="${r.end_date}" data-reason="${r.reason}"><i class="bi bi-x-circle"></i> ${tr('رفض', 'Reject')}</button>`
-                        : (r.decision_note || '-');
+                        ? `<button class="btn btn-sm btn-success approve-btn me-1" data-id="${r.id}" data-child="${escHtml(cname)}" data-start="${escHtml(r.start_date)}" data-end="${escHtml(r.end_date)}" data-reason="${escHtml(r.reason)}"><i class="bi bi-check-circle"></i> ${tr('قبول', 'Approve')}</button>
+                       <button class="btn btn-sm btn-danger reject-btn" data-id="${r.id}" data-child="${escHtml(cname)}" data-start="${escHtml(r.start_date)}" data-end="${escHtml(r.end_date)}" data-reason="${escHtml(r.reason)}"><i class="bi bi-x-circle"></i> ${tr('رفض', 'Reject')}</button>`
+                        : escHtml(r.decision_note || '-');
 
                     return `
                     <tr>
                         <td>${i + 1}</td>
-                        <td>${cname}</td>
+                        <td>${escHtml(cname)}</td>
                         <td>-</td>
-                        <td>${r.start_date}</td>
-                        <td>${r.end_date}</td>
-                        <td class="text-truncate" style="max-width:200px">${r.reason}</td>
+                        <td>${escHtml(r.start_date)}</td>
+                        <td>${escHtml(r.end_date)}</td>
+                        <td class="text-truncate" style="max-width:200px">${escHtml(r.reason)}</td>
                         <td>${statusBadge(r.status)}</td>
                         <td>${actions}</td>
                     </tr>`;
@@ -235,9 +235,9 @@
             document.getElementById('decisionAction').value = action;
             document.getElementById('decisionNote').value = '';
 
-            const info = `<strong>${tr('الطفل', 'Child')}:</strong> ${child}<br>
-                      <strong>${tr('الفترة', 'Period')}:</strong> ${start} - ${end}<br>
-                      <strong>${tr('السبب', 'Reason')}:</strong> ${reason}`;
+            const info = `<strong>${tr('الطفل', 'Child')}:</strong> ${escHtml(child)}<br>
+                      <strong>${tr('الفترة', 'Period')}:</strong> ${escHtml(start)} - ${escHtml(end)}<br>
+                      <strong>${tr('السبب', 'Reason')}:</strong> ${escHtml(reason)}`;
             document.getElementById('decisionInfo').innerHTML = info;
 
             const dbtn = document.getElementById('decisionBtn');
@@ -294,5 +294,9 @@
 
         loadRequests();
     });
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
 {% endblock %}

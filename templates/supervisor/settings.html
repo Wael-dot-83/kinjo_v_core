@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('الإعدادات') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-gear-fill"></i>
+            {{ _('المشرف') }}
+        </div>
+        <h1 class="page-header-title">{{ _('الإعدادات') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item"><a href="/profile" class="text-decoration-none">{{ _('الملف الشخصي') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('الإعدادات') }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-4 justify-content-center">
+    <div class="col-12 col-lg-7">
+
+        <!-- Editable contact info -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header fw-semibold">
+                <i class="bi bi-pencil-fill me-2 text-primary"></i>{{ _('تعديل معلومات الاتصال') }}
+            </div>
+            <div class="card-body">
+                <form id="settingsForm" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputEmail">{{ _('البريد الإلكتروني') }}</label>
+                        <input type="email" class="form-control" id="inputEmail" name="email"
+                               placeholder="{{ _('أدخل البريد الإلكتروني') }}" autocomplete="email">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputPhone">{{ _('الهاتف') }}</label>
+                        <input type="tel" class="form-control" id="inputPhone" name="phone_number"
+                               placeholder="{{ _('أدخل رقم الهاتف') }}" autocomplete="tel">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label" for="inputLang">{{ _('اللغة المفضلة') }}</label>
+                        <select class="form-select" id="inputLang" name="preferred_language">
+                            <option value="ar">العربية</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">
+                        <span id="saveBtnSpinner" class="spinner-border spinner-border-sm d-none me-2" role="status"></span>
+                        {{ _('حفظ التغييرات') }}
+                    </button>
+                    <a href="/profile" class="btn btn-ghost ms-2">{{ _('إلغاء') }}</a>
+                </form>
+            </div>
+        </div>
+
+        <!-- Read-only: assignment info -->
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold text-muted">
+                <i class="bi bi-lock-fill me-2"></i>{{ _('معلومات التعيين (للقراءة فقط)') }}
+            </div>
+            <div class="card-body">
+                <div class="row g-3 text-muted small">
+                    <div class="col-sm-6">
+                        <label class="form-label">{{ _('الاسم الكامل') }}</label>
+                        <p class="fw-semibold text-body mb-0" id="roFullName">—</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label">{{ _('الدور') }}</label>
+                        <p class="fw-semibold text-body mb-0">{{ _('مشرف') }}</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label">{{ _('الروضة') }}</label>
+                        <p class="fw-semibold text-body mb-0" id="roKg">—</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label">{{ _('الشعب المُعيَّنة') }}</label>
+                        <p class="fw-semibold text-body mb-0" id="roClasses">—</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+    const h = (json) => {
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (t) headers['Authorization'] = `Bearer ${t}`;
+        return headers;
+    };
+
+    // Load current values
+    fetch('/api/supervisor/profile', { headers: { 'Authorization': `Bearer ${localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token')}` } })
+        .then(r => r.ok ? r.json() : Promise.reject(r))
+        .then(p => {
+            document.getElementById('inputEmail').value   = p.email || '';
+            document.getElementById('inputPhone').value   = p.phone_number || '';
+            document.getElementById('inputLang').value    = p.preferred_language || 'ar';
+
+            document.getElementById('roFullName').textContent = p.full_name || p.username || '—';
+            document.getElementById('roKg').textContent       = p.kindergarten_name_ar || '—';
+            document.getElementById('roClasses').textContent  = p.classes && p.classes.length
+                ? p.classes.map(c => c.name_ar || c.name_en).join('، ')
+                : '—';
+        })
+        .catch(() => showToast('تعذّر تحميل البيانات', 'error'));
+
+    document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('saveBtn');
+        const spinner = document.getElementById('saveBtnSpinner');
+        btn.disabled = true;
+        spinner.classList.remove('d-none');
+
+        const payload = {
+            email:              document.getElementById('inputEmail').value.trim() || null,
+            phone_number:       document.getElementById('inputPhone').value.trim() || null,
+            preferred_language: document.getElementById('inputLang').value,
+        };
+
+        try {
+            const res = await fetch('/api/supervisor/settings', {
+                method: 'PUT',
+                headers: h(),
+                body: JSON.stringify(payload),
+            });
+            if (res.ok) {
+                showToast('تم حفظ الإعدادات بنجاح', 'success');
+                // If language changed, reload to apply
+                if (payload.preferred_language) {
+                    document.cookie = `ui_lang=${payload.preferred_language}; path=/; max-age=31536000; SameSite=Lax`;
+                    setTimeout(() => window.location.reload(), 800);
+                }
+            } else {
+                const err = await res.json().catch(() => ({}));
+                showToast(err.detail || 'فشل الحفظ', 'error');
+            }
+        } catch {
+            showToast('خطأ في الشبكة', 'error');
+        } finally {
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+        }
+    });
+})();
+</script>
+{% endblock %}

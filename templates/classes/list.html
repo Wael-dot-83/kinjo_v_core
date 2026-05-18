@@ -116,6 +116,7 @@ breadcrumbs=[
     const isAdmin = '{{ current_user.role.value }}' === 'ADMIN';
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
     document.addEventListener('DOMContentLoaded', async () => {
         if (isAdmin) {
@@ -189,18 +190,18 @@ breadcrumbs=[
             <td>${idx + 1}</td>
             <td>
                 <a href="/classes/${c.id}" class="text-decoration-none fw-semibold">
-                    ${c.name_ar || ''}
+                    ${escHtml(c.name_ar || '')}
                 </a>
-                ${c.name_en ? `<br><small class="text-muted">${c.name_en}</small>` : ''}
+                ${c.name_en ? `<br><small class="text-muted">${escHtml(c.name_en)}</small>` : ''}
             </td>
-            ${isAdmin ? `<td>${c.kindergarten_name || '-'}</td>` : ''}
+            ${isAdmin ? `<td>${escHtml(c.kindergarten_name || '-')}</td>` : ''}
             <td>
                 <span class="badge bg-info bg-opacity-10 text-info age-badge">
                     ${c.min_age_months} - ${c.max_age_months} ${T('شهر', 'mo')}
                 </span>
             </td>
             <td>${c.capacity_total || '-'}</td>
-            <td>${c.current_supervisor ? c.current_supervisor.name : '<span class="text-muted">-</span>'}</td>
+            <td>${c.current_supervisor ? escHtml(c.current_supervisor.name) : '<span class="text-muted">-</span>'}</td>
             <td>
                 ${c.is_active
                 ? `<span class="badge bg-success">${T('نشط', 'Active')}</span>`
@@ -214,7 +215,7 @@ breadcrumbs=[
                     <a href="/classes/${c.id}/edit" class="btn btn-outline-warning" title="${T('تعديل', 'Edit')}">
                         <i class="bi bi-pencil"></i>
                     </a>
-                    <button class="btn btn-outline-danger" title="${T('حذف', 'Delete')}" onclick="deleteClass(${c.id}, '${(c.name_ar || '').replace(/'/g, "\\'")}')">
+                    <button class="btn btn-outline-danger" title="${T('حذف', 'Delete')}" onclick="deleteClass(${c.id}, ${JSON.stringify(c.name_ar || '')})">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -266,6 +267,10 @@ breadcrumbs=[
                 text: e.message || T('حدث خطأ أثناء الحذف', 'An error occurred while deleting')
             });
         }
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

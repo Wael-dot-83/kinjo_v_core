@@ -1,4 +1,4 @@
-﻿"""
+"""
 Script to check existing data and populate test data for KPI dashboard
 """
 from database import get_db
@@ -46,22 +46,22 @@ def create_supervisors(db: Session):
             "username": "supervisor1",
             "email": "supervisor1@kindergarten8.com",
             "password": "password123",
-            "first_name": "Ø£Ø­Ù…Ø¯",
-            "last_name": "Ù…Ø­Ù…Ø¯"
+            "first_name": "أحمد",
+            "last_name": "محمد"
         },
         {
             "username": "supervisor2",
             "email": "supervisor2@kindergarten8.com",
             "password": "password123",
-            "first_name": "ÙØ§Ø·Ù…Ø©",
-            "last_name": "Ø¹Ù„ÙŠ"
+            "first_name": "فاطمة",
+            "last_name": "علي"
         },
         {
             "username": "supervisor3",
             "email": "supervisor3@kindergarten8.com",
             "password": "password123",
-            "first_name": "Ù…Ø±ÙŠÙ…",
-            "last_name": "Ø£Ø­Ù…Ø¯"
+            "first_name": "مريم",
+            "last_name": "أحمد"
         }
     ]
 
@@ -99,16 +99,16 @@ def create_children_and_enrollments(db: Session):
             "username": "parent_mohammed_ali_2",
             "email": "mohammed.ali2@example.com",
             "password": "password123",
-            "first_name": "Ù…Ø­Ù…Ø¯",
-            "last_name": "Ø§Ù„Ø¹Ù„ÙŠ",
+            "first_name": "محمد",
+            "last_name": "العلي",
             "phone": "0501234567"
         },
         {
             "username": "parent_sara_ahmed_2",
             "email": "sara.ahmed2@example.com",
             "password": "password123",
-            "first_name": "Ø³Ø§Ø±Ø©",
-            "last_name": "Ø£Ø­Ù…Ø¯",
+            "first_name": "سارة",
+            "last_name": "أحمد",
             "phone": "0502345678"
         }
     ]
@@ -116,58 +116,58 @@ def create_children_and_enrollments(db: Session):
     valid_dob = date.today() - timedelta(days=365 * 3)
     children_data = [
         {
-            "first_name": "Ø¹Ù„ÙŠ",
-            "last_name": "Ù…Ø­Ù…Ø¯",
+            "first_name": "علي",
+            "last_name": "محمد",
             "gender": "MALE",
             "date_of_birth": valid_dob - timedelta(days=30),
-            "father_name": "Ù…Ø­Ù…Ø¯ Ø§Ù„Ø¹Ù„ÙŠ",
-            "mother_first_name": "ÙØ§Ø·Ù…Ø©",
-            "mother_last_name": "Ø§Ù„Ø¹Ù„ÙŠ",
-            "mother_nationality": "Ø§Ù„Ø³Ø¹ÙˆØ¯ÙŠØ©",
+            "father_name": "محمد العلي",
+            "mother_first_name": "فاطمة",
+            "mother_last_name": "العلي",
+            "mother_nationality": "السعودية",
             "parent_index": 0
         },
         {
-            "first_name": "Ù„ÙŠÙ†Ø§",
-            "last_name": "Ø£Ø­Ù…Ø¯",
+            "first_name": "لينا",
+            "last_name": "أحمد",
             "gender": "FEMALE",
             "date_of_birth": valid_dob - timedelta(days=60),
-            "father_name": "Ø£Ø­Ù…Ø¯ Ø³Ø§Ø±Ø©",
-            "mother_first_name": "Ø³Ø§Ø±Ø©",
-            "mother_last_name": "Ø£Ø­Ù…Ø¯",
-            "mother_nationality": "Ø§Ù„Ø³Ø¹ÙˆØ¯ÙŠØ©",
+            "father_name": "أحمد سارة",
+            "mother_first_name": "سارة",
+            "mother_last_name": "أحمد",
+            "mother_nationality": "السعودية",
             "parent_index": 1
         },
         {
-            "first_name": "ÙŠÙˆØ³Ù",
-            "last_name": "Ù…Ø­Ù…Ø¯",
+            "first_name": "يوسف",
+            "last_name": "محمد",
             "gender": "MALE",
             "date_of_birth": valid_dob - timedelta(days=90),
-            "father_name": "Ù…Ø­Ù…Ø¯ Ø§Ù„Ø¹Ù„ÙŠ",
-            "mother_first_name": "ÙØ§Ø·Ù…Ø©",
-            "mother_last_name": "Ø§Ù„Ø¹Ù„ÙŠ",
-            "mother_nationality": "Ø§Ù„Ø³Ø¹ÙˆØ¯ÙŠØ©",
+            "father_name": "محمد العلي",
+            "mother_first_name": "فاطمة",
+            "mother_last_name": "العلي",
+            "mother_nationality": "السعودية",
             "parent_index": 0
         },
         {
-            "first_name": "Ù†ÙˆØ±",
-            "last_name": "Ø£Ø­Ù…Ø¯",
+            "first_name": "نور",
+            "last_name": "أحمد",
             "gender": "FEMALE",
             "date_of_birth": valid_dob - timedelta(days=120),
-            "father_name": "Ø£Ø­Ù…Ø¯ Ø³Ø§Ø±Ø©",
-            "mother_first_name": "Ø³Ø§Ø±Ø©",
-            "mother_last_name": "Ø£Ø­Ù…Ø¯",
-            "mother_nationality": "Ø§Ù„Ø³Ø¹ÙˆØ¯ÙŠØ©",
+            "father_name": "أحمد سارة",
+            "mother_first_name": "سارة",
+            "mother_last_name": "أحمد",
+            "mother_nationality": "السعودية",
             "parent_index": 1
         },
         {
-            "first_name": "Ø¹Ù…Ø±",
-            "last_name": "Ù…Ø­Ù…Ø¯",
+            "first_name": "عمر",
+            "last_name": "محمد",
             "gender": "MALE",
             "date_of_birth": valid_dob - timedelta(days=150),
-            "father_name": "Ù…Ø­Ù…Ø¯ Ø§Ù„Ø¹Ù„ÙŠ",
-            "mother_first_name": "ÙØ§Ø·Ù…Ø©",
-            "mother_last_name": "Ø§Ù„Ø¹Ù„ÙŠ",
-            "mother_nationality": "Ø§Ù„Ø³Ø¹ÙˆØ¯ÙŠØ©",
+            "father_name": "محمد العلي",
+            "mother_first_name": "فاطمة",
+            "mother_last_name": "العلي",
+            "mother_nationality": "السعودية",
             "parent_index": 0
         }
     ]
@@ -198,12 +198,12 @@ def create_children_and_enrollments(db: Session):
                     first_name=parent_data["first_name"],
                     last_name=parent_data["last_name"],
                     phone_number=parent_data["phone"],
-                    gender="MALE" if parent_data["first_name"] in ["Ù…Ø­Ù…Ø¯", "Ø£Ø­Ù…Ø¯"] else "FEMALE",
-                    nationality="Ø§Ù„Ø³Ø¹ÙˆØ¯ÙŠØ©",
-                    home_governorate="Ø§Ù„Ø±ÙŠØ§Ø¶",
-                    home_city="Ø§Ù„Ø±ÙŠØ§Ø¶",
-                    home_area="Ø§Ù„Ù…Ù„Ø²",
-                    home_address_line="Ø´Ø§Ø±Ø¹ Ø§Ù„Ù…Ù„Ùƒ Ø¹Ø¨Ø¯Ø§Ù„Ø¹Ø²ÙŠØ²",
+                    gender="MALE" if parent_data["first_name"] in ["محمد", "أحمد"] else "FEMALE",
+                    nationality="السعودية",
+                    home_governorate="الرياض",
+                    home_city="الرياض",
+                    home_area="الملز",
+                    home_address_line="شارع الملك عبدالعزيز",
                     correspondence_preference=True
                 )
                 db.add(parent_profile)
@@ -288,8 +288,8 @@ def create_attendance_records(db: Session, enrollments):
                     check_in_at=check_in_time,
                     check_out_at=check_out_time,
                     method="MANUAL",
-                    dropped_by_name="Ø§Ù„ÙˆØ§Ù„Ø¯",
-                    picked_by_name="Ø§Ù„ÙˆØ§Ù„Ø¯"
+                    dropped_by_name="الوالد",
+                    picked_by_name="الوالد"
                 )
                 db.add(attendance)
                 attendance_count += 1
@@ -309,7 +309,7 @@ def create_incidents(db: Session, enrollments):
             "child_id": child_ids[0],
             "type": "INJURY",
             "severity": "LOW",
-            "description": "Ø³Ù‚ÙˆØ· Ø·ÙÙŠÙ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ù„Ø¹Ø¨",
+            "description": "سقوط طفيف أثناء اللعب",
             "occurred_at": datetime.now() - timedelta(days=5),
             "followup_required": False
         },
@@ -317,7 +317,7 @@ def create_incidents(db: Session, enrollments):
             "child_id": child_ids[1],
             "type": "ILLNESS",
             "severity": "MEDIUM",
-            "description": "Ø§Ø±ØªÙØ§Ø¹ ÙÙŠ Ø¯Ø±Ø¬Ø© Ø§Ù„Ø­Ø±Ø§Ø±Ø©",
+            "description": "ارتفاع في درجة الحرارة",
             "occurred_at": datetime.now() - timedelta(days=10),
             "followup_required": True
         },
@@ -325,7 +325,7 @@ def create_incidents(db: Session, enrollments):
             "child_id": child_ids[2],
             "type": "BEHAVIOR",
             "severity": "LOW",
-            "description": "Ù…Ø´Ø§Ø¯Ø© Ù…Ø¹ Ø²Ù…ÙŠÙ„",
+            "description": "مشادة مع زميل",
             "occurred_at": datetime.now() - timedelta(days=15),
             "followup_required": False
         }
@@ -398,11 +398,11 @@ if __name__ == "__main__":
         update_ratio_compliance(db)
 
         print("\n=== DATA POPULATION COMPLETE ===")
-        print("âœ… Supervisors created")
-        print("âœ… Children and enrollments created")
-        print("âœ… Attendance records created")
-        print("âœ… Safety incidents created")
-        print("âœ… Ratio compliance data updated")
+        print("[OK] Supervisors created")
+        print("[OK] Children and enrollments created")
+        print("[OK] Attendance records created")
+        print("[OK] Safety incidents created")
+        print("[OK] Ratio compliance data updated")
 
     except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
         print(f"Error during data population: {e}")

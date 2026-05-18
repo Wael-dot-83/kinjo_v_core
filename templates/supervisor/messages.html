@@ -1,0 +1,364 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('الرسائل') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-envelope-fill"></i>
+            {{ _('المشرف') }}
+        </div>
+        <h1 class="page-header-title">{{ _('الرسائل') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('الرسائل') }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+    <!-- Compose Panel -->
+    <div class="col-lg-5">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-send-fill me-2 text-primary"></i>
+                    {{ _('رسالة جديدة للمدير') }}
+                </h6>
+            </div>
+            <div class="card-body">
+
+                <!-- Info banner: auto-routed -->
+                <div class="alert alert-info d-flex align-items-start gap-2 mb-4 py-2" role="note">
+                    <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+                    <span class="small">{{ _('ستُرسَل رسالتك مباشرةً إلى مدير الروضة.') }}</span>
+                </div>
+
+                <!-- Validation -->
+                <div id="composeError" class="alert alert-danger d-none mb-3" role="alert">
+                    <i class="bi bi-exclamation-circle me-2"></i>
+                    <span id="composeErrorMsg"></span>
+                </div>
+
+                <form id="composeForm" novalidate>
+                    <div class="mb-3">
+                        <label class="field-label" for="msgSubject">{{ _('الموضوع') }} <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="msgSubject" required maxlength="200"
+                               placeholder="{{ _('موضوع الرسالة') }}"
+                               aria-label="{{ _('موضوع الرسالة') }}" aria-required="true">
+                    </div>
+                    <div class="mb-3">
+                        <label class="field-label" for="msgBody">{{ _('نص الرسالة') }} <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="msgBody" rows="5" required maxlength="2000"
+                                  placeholder="{{ _('اكتب رسالتك هنا...') }}"
+                                  aria-label="{{ _('نص الرسالة') }}" aria-required="true"></textarea>
+                        <div class="d-flex justify-content-end mt-1">
+                            <span class="text-muted" style="font-size:0.72rem;" id="bodyCount">0 / 2000</span>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="field-label" for="msgAttachment">{{ _('مرفق (اختياري)') }}</label>
+                        <input type="file" class="form-control form-control-sm" id="msgAttachment"
+                               accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                               aria-label="{{ _('إرفاق ملف') }}">
+                        <div class="form-text">{{ _('الحجم الأقصى: 5MB — PDF, صور, Word') }}</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="sendBtn">
+                        <span class="btn-text"><i class="bi bi-send me-2"></i>{{ _('إرسال الرسالة') }}</span>
+                        <span class="btn-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري الإرسال...') }}
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inbox -->
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-inbox-fill me-2 text-primary"></i>
+                    {{ _('البريد الوارد') }}
+                </h6>
+                <button class="btn btn-ghost btn-sm" onclick="loadInbox()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+
+            <div id="inboxLoading" class="card-body text-center py-5 text-muted">
+                <div class="spinner-border mb-3" role="status" aria-label="{{ _('جاري التحميل') }}"></div>
+                <div>{{ _('جاري تحميل الرسائل...') }}</div>
+            </div>
+
+            <div id="inboxEmpty" class="card-body text-center py-5 text-muted d-none">
+                <i class="bi bi-inbox d-block fs-1 mb-3 opacity-25"></i>
+                <p class="fw-600">{{ _('لا توجد رسائل واردة') }}</p>
+            </div>
+
+            <div id="inboxError" class="card-body text-center py-5 d-none">
+                <i class="bi bi-exclamation-circle d-block fs-1 mb-3 text-danger opacity-50"></i>
+                <p class="text-muted">{{ _('تعذّر تحميل الرسائل') }}</p>
+                <button class="btn btn-ghost btn-sm" onclick="loadInbox()">{{ _('إعادة المحاولة') }}</button>
+            </div>
+
+            <div id="inboxList" class="d-none">
+                <!-- Messages rendered here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Message Detail Modal -->
+<div class="modal fade" id="msgModal" tabindex="-1" aria-labelledby="msgModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-700" id="msgModalLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-muted small mb-3" id="msgModalMeta"></div>
+                <div id="msgModalBody" style="white-space:pre-line;"></div>
+                <div id="msgModalAttachment" class="mt-3"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إغلاق') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+.field-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:0.35rem; }
+.fw-600 { font-weight:600; }
+.fw-700 { font-weight:700; }
+
+.msg-item {
+    display:flex;align-items:flex-start;gap:0.875rem;
+    padding:0.875rem 1.25rem;
+    border-bottom:1px solid var(--kinjo-border);
+    cursor:pointer;transition:background 0.15s;
+}
+.msg-item:hover { background:var(--kinjo-surface); }
+.msg-item:last-child { border-bottom:none; }
+.msg-item.unread { background:rgba(10,92,142,0.04); }
+.msg-item.unread .msg-subject { font-weight:800; }
+.msg-avatar {
+    width:38px;height:38px;border-radius:50%;
+    background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.9rem;flex-shrink:0;
+}
+.msg-subject { font-size:0.875rem;font-weight:600;color:var(--kinjo-text-primary);margin-bottom:0.2rem; }
+.msg-preview { font-size:0.78rem;color:var(--kinjo-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px; }
+.msg-date { font-size:0.72rem;color:var(--kinjo-text-muted);white-space:nowrap; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    let msgModal = null;
+    const messageStore = new Map();
+
+    function getHeaders() {
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+        return { 'Authorization': `Bearer ${t}` };
+    }
+
+    function jsonHeaders() {
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        msgModal = new bootstrap.Modal(document.getElementById('msgModal'));
+        loadInbox();
+
+        // Character counter
+        document.getElementById('msgBody').addEventListener('input', function () {
+            document.getElementById('bodyCount').textContent = `${this.value.length} / 2000`;
+        });
+
+        // Form submit
+        document.getElementById('composeForm').addEventListener('submit', sendMessage);
+    });
+
+    window.loadInbox = async function () {
+        document.getElementById('inboxLoading').classList.remove('d-none');
+        document.getElementById('inboxEmpty').classList.add('d-none');
+        document.getElementById('inboxError').classList.add('d-none');
+        document.getElementById('inboxList').classList.add('d-none');
+
+        try {
+            const r = await fetch('/api/supervisor/messages/inbox', { headers: getHeaders() });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+            const messages = data.messages || [];
+
+            document.getElementById('inboxLoading').classList.add('d-none');
+
+            if (!messages.length) {
+                document.getElementById('inboxEmpty').classList.remove('d-none');
+                return;
+            }
+
+            renderInbox(messages);
+            document.getElementById('inboxList').classList.remove('d-none');
+
+        } catch {
+            document.getElementById('inboxLoading').classList.add('d-none');
+            document.getElementById('inboxError').classList.remove('d-none');
+        }
+    };
+
+    function renderInbox(messages) {
+        messageStore.clear();
+        const container = document.getElementById('inboxList');
+        container.innerHTML = messages.map(msg => {
+            messageStore.set(msg.id, msg);
+            const date = msg.created_at
+                ? new Date(msg.created_at).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'})
+                : '—';
+            const unread = !msg.is_read ? 'unread' : '';
+            const readBadge = msg.is_read
+                ? `<span class="badge bg-light text-muted border" style="font-size:0.65rem;">{{ _('مقروء') }}</span>`
+                : `<span class="badge bg-primary" style="font-size:0.65rem;">{{ _('جديد') }}</span>`;
+            const preview = (msg.body || '').slice(0, 80);
+            return `
+            <div class="msg-item ${unread}" onclick="openMessage(${msg.id})">
+                <div class="msg-avatar"><i class="bi bi-person-badge-fill"></i></div>
+                <div class="flex-grow-1 min-width-0">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div class="msg-subject">${escHtml(msg.subject || '{{ _("بدون موضوع") }}')}</div>
+                        <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                            <span class="msg-date">${date}</span>
+                            ${readBadge}
+                        </div>
+                    </div>
+                    <div class="msg-preview">${escHtml(preview)}${preview.length >= 80 ? '...' : ''}</div>
+                    <div class="small text-muted mt-1">
+                        <i class="bi bi-person me-1"></i>${escHtml(msg.sender_name || '{{ _("المدير") }}')}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    window.openMessage = function (id) {
+        const msg = messageStore.get(id);
+        if (!msg) return;
+        const date = msg.created_at
+            ? new Date(msg.created_at).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'})
+            : '—';
+        document.getElementById('msgModalLabel').textContent = msg.subject || '{{ _("رسالة") }}';
+        document.getElementById('msgModalMeta').innerHTML =
+            `<i class="bi bi-person me-1"></i>${escHtml(msg.sender_name || '{{ _("المدير") }}')} &nbsp;·&nbsp; <i class="bi bi-calendar3 me-1"></i>${date}`;
+        document.getElementById('msgModalBody').textContent = msg.body || '';
+
+        const attEl = document.getElementById('msgModalAttachment');
+        if (msg.attachment_url) {
+            attEl.innerHTML = `<a href="${escHtml(msg.attachment_url)}" target="_blank" class="btn btn-ghost btn-sm">
+                <i class="bi bi-paperclip me-2"></i>{{ _('عرض المرفق') }}
+            </a>`;
+        } else {
+            attEl.innerHTML = '';
+        }
+        msgModal.show();
+
+        // Mark as read
+        fetch(`/api/supervisor/messages/${id}/read`, {
+            method: 'PUT',
+            headers: jsonHeaders()
+        }).catch(() => {});
+    };
+
+    async function sendMessage(e) {
+        e.preventDefault();
+        hideError();
+
+        const subject = document.getElementById('msgSubject').value.trim();
+        const body    = document.getElementById('msgBody').value.trim();
+
+        if (!subject || !body) {
+            const errors = [];
+            if (!subject) errors.push('{{ _("يجب كتابة الموضوع") }}');
+            if (!body)    errors.push('{{ _("يجب كتابة نص الرسالة") }}');
+            showError(errors.join(' — '));
+            return;
+        }
+
+        const btn = document.getElementById('sendBtn');
+        setLoading(btn, true);
+
+        try {
+            const fileInput = document.getElementById('msgAttachment');
+            const formData  = new FormData();
+            formData.append('subject', subject);
+            formData.append('body', body);
+            if (fileInput.files.length > 0) {
+                formData.append('attachment', fileInput.files[0]);
+            }
+
+            const token = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+            const r = await fetch('/api/supervisor/messages', {
+                method: 'POST',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                body: formData
+            });
+
+            if (!r.ok) {
+                const err = await r.json().catch(() => ({}));
+                showError(err.detail || '{{ _("فشل إرسال الرسالة") }}');
+                setLoading(btn, false);
+                return;
+            }
+
+            showToast('{{ _("تم إرسال الرسالة بنجاح") }}', 'success');
+            document.getElementById('composeForm').reset();
+            document.getElementById('bodyCount').textContent = '0 / 2000';
+            await loadInbox();
+
+        } catch {
+            showError('{{ _("حدث خطأ في الاتصال بالخادم") }}');
+        } finally {
+            setLoading(btn, false);
+        }
+    }
+
+    function setLoading(btn, on) {
+        btn.querySelector('.btn-text').classList.toggle('d-none', on);
+        btn.querySelector('.btn-loading').classList.toggle('d-none', !on);
+        btn.disabled = on;
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('composeError');
+        document.getElementById('composeErrorMsg').textContent = msg;
+        el.classList.remove('d-none');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hideError() {
+        document.getElementById('composeError').classList.add('d-none');
+    }
+
+    function escHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('السلامة والحوادث') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow" style="color:var(--kinjo-danger,#ef4444);">
+            <i class="bi bi-shield-exclamation"></i>
+            {{ _('المشرف') }}
+        </div>
+        <h1 class="page-header-title">{{ _('السلامة والحوادث') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('السلامة') }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="page-header-actions">
+        <a href="/safety/incidents/new" class="btn btn-danger">
+            <i class="bi bi-plus-circle me-2"></i>{{ _('حادث جديد') }}
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4 stagger-children">
+    <div class="col-6 col-md-4">
+        <div class="stat-card danger card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('حوادث مفتوحة هذا الشهر') }}</div>
+                    <div class="stat-value" id="statOpen">
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    </div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
+                    <i class="bi bi-shield-exclamation"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="stat-card warning card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('خطورة عالية') }}</div>
+                    <div class="stat-value" id="statHighSeverity">
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    </div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="stat-card success card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('حوادث مُغلقة') }}</div>
+                    <div class="stat-value" id="statClosed">
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    </div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card mb-3">
+    <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
+        <span class="fw-700 small text-nowrap">{{ _('تصفية:') }}</span>
+        <select id="filterSeverity" class="form-select form-select-sm" style="width:auto;"
+                aria-label="{{ _('تصفية حسب الخطورة') }}">
+            <option value="">{{ _('— جميع الخطورات —') }}</option>
+            <option value="LOW">{{ _('منخفض') }}</option>
+            <option value="MEDIUM">{{ _('متوسط') }}</option>
+            <option value="HIGH">{{ _('عالٍ') }}</option>
+            <option value="CRITICAL">{{ _('حرج') }}</option>
+        </select>
+        <select id="filterType" class="form-select form-select-sm" style="width:auto;"
+                aria-label="{{ _('تصفية حسب النوع') }}">
+            <option value="">{{ _('— جميع الأنواع —') }}</option>
+            <option value="INJURY">{{ _('إصابة جسدية') }}</option>
+            <option value="ILLNESS">{{ _('مرض') }}</option>
+            <option value="ALLERGY">{{ _('حساسية') }}</option>
+            <option value="BEHAVIOR">{{ _('سلوكي') }}</option>
+            <option value="OTHER">{{ _('أخرى') }}</option>
+        </select>
+        <select id="filterStatus" class="form-select form-select-sm" style="width:auto;"
+                aria-label="{{ _('تصفية حسب الحالة') }}">
+            <option value="">{{ _('— جميع الحالات —') }}</option>
+            <option value="OPEN">{{ _('مفتوح') }}</option>
+            <option value="UNDER_REVIEW">{{ _('تحت المراجعة') }}</option>
+            <option value="CLOSED">{{ _('مُغلق') }}</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadIncidents()">
+            <i class="bi bi-search me-1"></i>{{ _('تطبيق') }}
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="resetFilters()">
+            <i class="bi bi-x-circle me-1"></i>{{ _('إعادة ضبط') }}
+        </button>
+        <span class="ms-auto small text-muted" id="incidentCount"></span>
+    </div>
+</div>
+
+<!-- Incidents Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="card-title-sm mb-0">
+            <i class="bi bi-table me-2 text-danger"></i>
+            {{ _('سجل الحوادث') }}
+        </h6>
+    </div>
+
+    <div id="tableLoading" class="card-body text-center py-5 text-muted">
+        <div class="spinner-border mb-3" role="status" aria-label="{{ _('جاري التحميل') }}"></div>
+        <div>{{ _('جاري تحميل الحوادث...') }}</div>
+    </div>
+
+    <div id="tableEmpty" class="card-body text-center py-5 text-muted d-none">
+        <i class="bi bi-shield-check d-block fs-1 mb-3 opacity-25" style="color:var(--kinjo-success);"></i>
+        <p class="fw-600">{{ _('لا توجد حوادث مسجلة') }}</p>
+        <p class="small text-muted">{{ _('الروضة آمنة — لا توجد حوادث لهذه الفترة') }}</p>
+    </div>
+
+    <div id="tableError" class="card-body text-center py-5 d-none">
+        <i class="bi bi-exclamation-circle d-block fs-1 mb-3 text-danger opacity-50"></i>
+        <p class="text-muted">{{ _('تعذّر تحميل البيانات') }}</p>
+        <button class="btn btn-ghost btn-sm" onclick="loadIncidents()">
+            <i class="bi bi-arrow-clockwise me-1"></i>{{ _('إعادة المحاولة') }}
+        </button>
+    </div>
+
+    <div id="tableWrap" class="d-none">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" aria-label="{{ _('جدول الحوادث') }}">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">{{ _('التاريخ') }}</th>
+                        <th scope="col">{{ _('الطفل') }}</th>
+                        <th scope="col">{{ _('النوع') }}</th>
+                        <th scope="col">{{ _('الخطورة') }}</th>
+                        <th scope="col">{{ _('الحالة') }}</th>
+                        <th scope="col" class="text-center">{{ _('الإجراء') }}</th>
+                    </tr>
+                </thead>
+                <tbody id="incidentsTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
+.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+.fw-600 { font-weight:600; }
+.fw-700 { font-weight:700; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const SEVERITY_BADGE = {
+        'LOW':      `<span class="badge" style="background:rgba(6,182,212,0.15);color:#0891b2;">{{ _('منخفض') }}</span>`,
+        'MEDIUM':   `<span class="badge bg-warning text-dark">{{ _('متوسط') }}</span>`,
+        'HIGH':     `<span class="badge bg-danger">{{ _('عالٍ') }}</span>`,
+        'CRITICAL': `<span class="badge" style="background:rgba(124,58,237,0.15);color:#7c3aed;">{{ _('حرج') }}</span>`,
+    };
+
+    const STATUS_BADGE = {
+        'OPEN':         `<span class="badge bg-danger">{{ _('مفتوح') }}</span>`,
+        'UNDER_REVIEW': `<span class="badge bg-warning text-dark">{{ _('تحت المراجعة') }}</span>`,
+        'CLOSED':       `<span class="badge bg-success">{{ _('مُغلق') }}</span>`,
+    };
+
+    const TYPE_LABEL = {
+        'INJURY':   '🩹 {{ _("إصابة") }}',
+        'ILLNESS':  '🤒 {{ _("مرض") }}',
+        'ALLERGY':  '🤧 {{ _("حساسية") }}',
+        'BEHAVIOR': '😤 {{ _("سلوكي") }}',
+        'OTHER':    '📋 {{ _("أخرى") }}',
+    };
+
+    function getHeaders() {
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+        const h = { 'Content-Type': 'application/json' };
+        if (t) h['Authorization'] = `Bearer ${t}`;
+        return h;
+    }
+
+    window.resetFilters = function () {
+        document.getElementById('filterSeverity').value = '';
+        document.getElementById('filterType').value = '';
+        document.getElementById('filterStatus').value = '';
+        loadIncidents();
+    };
+
+    document.addEventListener('DOMContentLoaded', loadIncidents);
+
+    window.loadIncidents = async function () {
+        const severity = document.getElementById('filterSeverity').value;
+        const type     = document.getElementById('filterType').value;
+        const status   = document.getElementById('filterStatus').value;
+
+        document.getElementById('tableLoading').classList.remove('d-none');
+        document.getElementById('tableEmpty').classList.add('d-none');
+        document.getElementById('tableError').classList.add('d-none');
+        document.getElementById('tableWrap').classList.add('d-none');
+
+        let url = '/api/supervisor/safety-incidents?';
+        if (severity) url += `severity=${severity}&`;
+        if (type)     url += `type=${type}&`;
+        if (status)   url += `status=${status}&`;
+
+        try {
+            const r = await fetch(url, { headers: getHeaders() });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+            const incidents = data.incidents || [];
+            const stats = data.stats || {};
+
+            document.getElementById('statOpen').textContent        = stats.open         ?? '—';
+            document.getElementById('statHighSeverity').textContent = stats.high_severity ?? '—';
+            document.getElementById('statClosed').textContent       = stats.closed        ?? '—';
+
+            const cnt = document.getElementById('incidentCount');
+            if (cnt) cnt.textContent = `${incidents.length} {{ _('حادث') }}`;
+
+            document.getElementById('tableLoading').classList.add('d-none');
+
+            if (!incidents.length) {
+                document.getElementById('tableEmpty').classList.remove('d-none');
+                return;
+            }
+
+            renderTable(incidents);
+            document.getElementById('tableWrap').classList.remove('d-none');
+
+        } catch {
+            document.getElementById('tableLoading').classList.add('d-none');
+            document.getElementById('tableError').classList.remove('d-none');
+        }
+    };
+
+    function renderTable(incidents) {
+        const tbody = document.getElementById('incidentsTableBody');
+        tbody.innerHTML = incidents.map(inc => {
+            const date = inc.occurred_at
+                ? new Date(inc.occurred_at).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'})
+                : '—';
+            const sevBadge  = SEVERITY_BADGE[inc.severity_level] || escHtml(inc.severity_level);
+            const statBadge = STATUS_BADGE[inc.status] || escHtml(inc.status);
+            const typeLabel = TYPE_LABEL[inc.type] || escHtml(inc.type);
+            return `
+            <tr>
+                <td class="small text-muted">${date}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="child-avatar-sm"><i class="bi bi-person-fill"></i></div>
+                        <span class="fw-600">${escHtml(inc.child_name || '—')}</span>
+                    </div>
+                </td>
+                <td class="small">${typeLabel}</td>
+                <td>${sevBadge}</td>
+                <td>${statBadge}</td>
+                <td class="text-center">
+                    <a href="/safety/incidents/${inc.id}" class="btn btn-sm btn-ghost"
+                       aria-label="{{ _('عرض الحادث') }}">
+                        <i class="bi bi-eye me-1"></i>{{ _('عرض') }}
+                    </a>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function escHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+})();
+</script>
+
+<style>
+.child-avatar-sm {
+    width:30px;height:30px;border-radius:50%;
+    background:rgba(239,68,68,0.1);color:var(--kinjo-danger);
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.8rem;flex-shrink:0;
+}
+</style>
+{% endblock %}

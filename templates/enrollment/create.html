@@ -530,7 +530,7 @@ breadcrumbs=[
 
     .kg-results-list .kg-item .kg-actions {
         flex-shrink: 0;
-        margin-right: 0.75rem;
+        margin-inline-start: 0.75rem;
     }
 
     /* Detail modal rows */
@@ -567,7 +567,7 @@ breadcrumbs=[
         }
 
         .kg-results-list .kg-item .kg-actions {
-            margin-right: 0;
+            margin-inline-start: 0;
             margin-top: 0.5rem;
             text-align: start;
         }
@@ -1072,7 +1072,7 @@ breadcrumbs=[
             <div class="row">
                 <div class="col-md-6">
                     <h6 class="text-primary"><i class="bi bi-building me-2"></i>${enrollmentText('common.kindergarten', 'الروضة', 'Kindergarten')}</h6>
-                    <p>${kindergartenName}</p>
+                    <p>${escHtml(kindergartenName)}</p>
                 </div>
                 ${sourceHtml ? '<div class="col-md-6">' + sourceHtml + '</div>' : ''}
             </div>
@@ -1080,14 +1080,14 @@ breadcrumbs=[
             <div class="row">
                 <div class="col-md-6">
                     <h6 class="text-primary"><i class="bi bi-emoji-smile me-2"></i>${enrollmentText('enrollment.child_info', 'بيانات الطفل', 'Child information')}</h6>
-                    <p><strong>${enrollmentText('common.name', 'الاسم', 'Name')}:</strong> ${data.first_name} ${data.last_name}</p>
-                    <p><strong>${enrollmentText('common.gender', 'الجنس', 'Gender')}:</strong> ${genderDisplay}</p>
-                    <p><strong>${enrollmentText('common.date_of_birth', 'تاريخ الميلاد', 'Date of birth')}:</strong> ${data.date_of_birth}</p>
-                    <p><strong>${enrollmentText('enrollment.father_name', 'اسم الأب', 'Father name')}:</strong> ${data.father_name}</p>
+                    <p><strong>${enrollmentText('common.name', 'الاسم', 'Name')}:</strong> ${escHtml(data.first_name)} ${escHtml(data.last_name)}</p>
+                    <p><strong>${enrollmentText('common.gender', 'الجنس', 'Gender')}:</strong> ${escHtml(genderDisplay)}</p>
+                    <p><strong>${enrollmentText('common.date_of_birth', 'تاريخ الميلاد', 'Date of birth')}:</strong> ${escHtml(data.date_of_birth)}</p>
+                    <p><strong>${enrollmentText('enrollment.father_name', 'اسم الأب', 'Father name')}:</strong> ${escHtml(data.father_name)}</p>
                 </div>
                 <div class="col-md-6">
                     <h6 class="text-primary"><i class="bi bi-person-heart me-2"></i>${enrollmentText('enrollment.mother_info', 'بيانات الأم', 'Mother information')}</h6>
-                    <p><strong>${enrollmentText('common.name', 'الاسم', 'Name')}:</strong> ${motherFullName}</p>
+                    <p><strong>${enrollmentText('common.name', 'الاسم', 'Name')}:</strong> ${escHtml(motherFullName)}</p>
                     <p><strong>${enrollmentText('common.nationality', 'الجنسية', 'Nationality')}:</strong> ${nationalityDisplay}</p>
                     ${idDisplay}
                 </div>
@@ -1193,5 +1193,9 @@ breadcrumbs=[
             showToast(error.message || enrollmentText('enrollment.submit_error', 'حدث خطأ في إرسال الطلب', 'An error occurred while submitting the request'), 'error');
         }
     });
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
 {% endblock %}

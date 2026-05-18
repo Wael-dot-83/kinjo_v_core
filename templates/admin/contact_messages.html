@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('رسائل التواصل') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow"><i class="bi bi-headset"></i> {{ _('الإدارة') }}</div>
+        <h1 class="page-header-title">{{ _('رسائل التواصل') }}</h1>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<form method="get" action="/admin/contact-messages" class="card mb-4">
+    <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
+        <div class="input-group input-group-sm" style="max-width:280px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" name="q" value="{{ filters.q or '' }}"
+                   class="form-control" placeholder="{{ _('بحث بالاسم أو الموضوع...') }}">
+        </div>
+        <select name="status_filter" class="form-select form-select-sm" style="width:auto;">
+            <option value="">{{ _('الكل') }}</option>
+            <option value="open" {% if filters.status_filter == 'open' %}selected{% endif %}>{{ _('مفتوحة') }}</option>
+            <option value="resolved" {% if filters.status_filter == 'resolved' %}selected{% endif %}>{{ _('مُغلقة') }}</option>
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm">{{ _('تصفية') }}</button>
+    </div>
+</form>
+
+<!-- Stats -->
+<div class="d-flex gap-3 mb-3">
+    <span class="badge bg-secondary fs-6">{{ _('الإجمالي:') }} {{ pagination.total }}</span>
+    <span class="text-muted small">{{ _('الصفحة') }} {{ pagination.page }} {{ _('من') }} {{ pagination.total_pages }}</span>
+</div>
+
+<!-- Table -->
+<div class="card">
+    {% if contact_messages %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>{{ _('الاسم') }}</th>
+                    <th>{{ _('البريد') }}</th>
+                    <th>{{ _('الموضوع') }}</th>
+                    <th>{{ _('التاريخ') }}</th>
+                    <th>{{ _('الحالة') }}</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for msg in contact_messages %}
+                <tr>
+                    <td class="text-muted small">{{ msg.id }}</td>
+                    <td class="fw-600">{{ msg.name }}</td>
+                    <td class="text-muted small">{{ msg.email }}</td>
+                    <td>{{ msg.subject }}</td>
+                    <td class="text-muted small text-nowrap">
+                        {{ msg.submitted_at.strftime('%Y-%m-%d') if msg.submitted_at else '—' }}
+                    </td>
+                    <td>
+                        {% if msg.is_resolved %}
+                        <span class="badge bg-success">{{ _('مُغلقة') }}</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">{{ _('مفتوحة') }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not msg.is_resolved %}
+                        <form method="post" action="/admin/contact-messages/{{ msg.id }}/resolve" class="d-inline">
+                            <button type="submit" class="btn btn-ghost btn-sm text-success"
+                                    title="{{ _('إغلاق الرسالة') }}">
+                                <i class="bi bi-check-circle"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                        <button class="btn btn-ghost btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#msgModal{{ msg.id }}" title="{{ _('عرض الرسالة') }}">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-center py-5">
+        <i class="bi bi-inbox d-block fs-1 mb-3 opacity-25"></i>
+        <p class="text-muted mb-0">{{ _('لا توجد رسائل') }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Pagination -->
+{% if pagination.total_pages > 1 %}
+<nav class="mt-3" aria-label="{{ _('التنقل بين الصفحات') }}">
+    <ul class="pagination justify-content-center">
+        {% for p in range(1, pagination.total_pages + 1) %}
+        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+            <a class="page-link" href="?q={{ filters.q or '' }}&status_filter={{ filters.status_filter or '' }}&page={{ p }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- View modals -->
+{% for msg in contact_messages %}
+<div class="modal fade" id="msgModal{{ msg.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ msg.subject }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row mb-3">
+                    <dt class="col-sm-3">{{ _('الاسم') }}</dt><dd class="col-sm-9">{{ msg.name }}</dd>
+                    <dt class="col-sm-3">{{ _('البريد') }}</dt><dd class="col-sm-9">{{ msg.email }}</dd>
+                    <dt class="col-sm-3">{{ _('الهاتف') }}</dt><dd class="col-sm-9">{{ msg.phone }}</dd>
+                </dl>
+                <p style="white-space:pre-line;">{{ msg.message }}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('إغلاق') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0;color:var(--kinjo-text-primary); }
+.fw-600 { font-weight:600; }
+</style>
+{% endblock %}

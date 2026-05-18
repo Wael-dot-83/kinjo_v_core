@@ -1815,8 +1815,9 @@ def get_analytics_overview(
     db: Session = Depends(get_db)
 ):
     """
-    Get network-wide analytics overview (scoped for admins/managers/supervisors)
+    Get network-wide analytics overview (admin only)
     """
+    validators.validate_admin_role(current_user)
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
     if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
@@ -2020,7 +2021,8 @@ def get_time_series_data(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get time series data for charts"""
+    """Get time series data for charts (admin only)"""
+    validators.validate_admin_role(current_user)
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
     allowed_govs = _allowed_governorates(current_user, db) or []
 
@@ -2486,7 +2488,8 @@ def get_enrollment_summary(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get enrollment analytics"""
+    """Get enrollment analytics (admin only)"""
+    validators.validate_admin_role(current_user)
     kindergarten_id = enforce_kindergarten_scope(current_user, kindergarten_id, db)
 
     period_start, period_end = get_date_range(start_date, end_date)
@@ -2509,7 +2512,8 @@ def get_attendance_summary(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get attendance analytics"""
+    """Get attendance analytics (admin only)"""
+    validators.validate_admin_role(current_user)
     kindergarten_id = enforce_kindergarten_scope(current_user, kindergarten_id, db)
 
     period_start, period_end = get_date_range(start_date, end_date)
@@ -2532,7 +2536,8 @@ def get_daily_reports_summary(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get daily reports analytics"""
+    """Get daily reports analytics (admin only)"""
+    validators.validate_admin_role(current_user)
     kindergarten_id = enforce_kindergarten_scope(current_user, kindergarten_id, db)
 
     period_start, period_end = get_date_range(start_date, end_date)
@@ -2555,7 +2560,8 @@ def get_safety_summary(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get safety/incident analytics"""
+    """Get safety/incident analytics (admin only)"""
+    validators.validate_admin_role(current_user)
     kindergarten_id = enforce_kindergarten_scope(current_user, kindergarten_id, db)
 
     period_start, period_end = get_date_range(start_date, end_date)
@@ -2578,7 +2584,8 @@ def get_staffing_summary(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get staffing analytics"""
+    """Get staffing analytics (admin only)"""
+    validators.validate_admin_role(current_user)
     kindergarten_id = enforce_kindergarten_scope(current_user, kindergarten_id, db)
 
     period_start, period_end = get_date_range(start_date, end_date)
@@ -4220,3 +4227,241 @@ class AnalyticsService:
         )
         db.add(metric)
         db.commit()
+
+
+# ============================================================================
+# New admin-only analytics endpoints
+# ============================================================================
+
+@router.get("/attendance/by-class")
+def get_attendance_by_class(
+    kindergarten_id: int = Query(...),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Attendance breakdown by class for a kindergarten (admin only)"""
+    validators.validate_admin_role(current_user)
+    period_start, period_end = get_date_range(start_date, end_date)
+    total_days = (period_end - period_start).days + 1
+
+    classes = db.query(models.Class).filter(
+        models.Class.kindergarten_id == kindergarten_id,
+        models.Class.is_active == True
+    ).all()
+
+    result = []
+    for cls in classes:
+        enrolled = db.query(func.count(models.EnrollmentApplication.id)).filter(
+            models.EnrollmentApplication.class_id == cls.id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        ).scalar() or 0
+        expected = enrolled * total_days
+        attended = db.query(func.count(models.AttendanceLog.id)).filter(
+            models.AttendanceLog.class_id == cls.id,
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status == models.AttendanceStatus.PRESENT
+        ).scalar() or 0
+        attendance_rate = round((attended / expected) * 100, 2) if expected > 0 else 0.0
+        result.append({
+            "class_id": cls.id,
+            "class_name": cls.name_ar or cls.name_en,
+            "attendance_rate": attendance_rate,
+            "enrolled_count": enrolled,
+        })
+
+    return {"classes": result}
+
+
+@router.get("/attendance/chronic-absence")
+def get_chronic_absence(
+    threshold_pct: float = Query(80.0),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Children with attendance rate below threshold (admin only)"""
+    validators.validate_admin_role(current_user)
+    period_start, period_end = get_date_range(start_date, end_date)
+    total_days = max((period_end - period_start).days + 1, 1)
+
+    enrollment_q = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    )
+    if kindergarten_id:
+        enrollment_q = enrollment_q.filter(
+            models.EnrollmentApplication.kindergarten_id == kindergarten_id
+        )
+    enrollments = enrollment_q.all()
+
+    chronic_children = []
+    for enrollment in enrollments:
+        attended = db.query(func.count(models.AttendanceLog.id)).filter(
+            models.AttendanceLog.child_id == enrollment.child_id,
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status == models.AttendanceStatus.PRESENT
+        ).scalar() or 0
+        attendance_rate = round((attended / total_days) * 100, 2)
+        if attendance_rate < threshold_pct:
+            child = enrollment.child
+            chronic_children.append({
+                "child_id": enrollment.child_id,
+                "child_name": f"{child.first_name} {child.last_name}" if child else str(enrollment.child_id),
+                "attendance_rate": attendance_rate,
+                "kindergarten_id": enrollment.kindergarten_id,
+            })
+
+    return {
+        "chronically_absent_children": chronic_children,
+        "count": len(chronic_children),
+        "threshold_pct": threshold_pct,
+    }
+
+
+@router.get("/attendance/by-governorate")
+def get_attendance_by_governorate(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Attendance breakdown by governorate (admin only)"""
+    validators.validate_admin_role(current_user)
+    period_start, period_end = get_date_range(start_date, end_date)
+
+    governorates = db.query(models.Kindergarten.governorate).filter(
+        models.Kindergarten.governorate.isnot(None),
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+    ).distinct().all()
+
+    result = []
+    for (gov,) in governorates:
+        kg_ids = [k.id for k in db.query(models.Kindergarten).filter(
+            models.Kindergarten.governorate == gov,
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+        ).all()]
+        if not kg_ids:
+            continue
+        total_days = max((period_end - period_start).days + 1, 1)
+        enrolled = db.query(func.count(models.EnrollmentApplication.id)).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        ).scalar() or 0
+        expected_total = enrolled * total_days
+        attended = db.query(func.count(models.AttendanceLog.id)).join(
+            models.Class, models.Class.id == models.AttendanceLog.class_id
+        ).filter(
+            models.Class.kindergarten_id.in_(kg_ids),
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status == models.AttendanceStatus.PRESENT
+        ).scalar() or 0
+        attendance_rate = round((attended / expected_total) * 100, 2) if expected_total > 0 else 0.0
+        result.append({
+            "governorate": gov,
+            "attendance_rate": attendance_rate,
+            "kindergarten_count": len(kg_ids),
+        })
+
+    return {"governorates": result}
+
+
+@router.get("/daily-reports/supervisor-performance")
+def get_supervisor_performance(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Supervisor daily report submission performance (admin only)"""
+    validators.validate_admin_role(current_user)
+    period_start, period_end = get_date_range(start_date, end_date)
+
+    report_q = db.query(models.DailyReport).filter(
+        models.DailyReport.date >= period_start,
+        models.DailyReport.date <= period_end,
+        models.DailyReport.submitted_by.isnot(None)
+    )
+    if kindergarten_id:
+        report_q = report_q.filter(models.DailyReport.kindergarten_id == kindergarten_id)
+    reports = report_q.all()
+
+    by_supervisor: dict = {}
+    for report in reports:
+        sid = report.submitted_by
+        if sid not in by_supervisor:
+            by_supervisor[sid] = {"total": 0, "submitted": 0}
+        by_supervisor[sid]["total"] += 1
+        if report.status != models.DailyReportStatus.DRAFT:
+            by_supervisor[sid]["submitted"] += 1
+
+    supervisors = []
+    for sid, counts in by_supervisor.items():
+        total = counts["total"]
+        submitted = counts["submitted"]
+        completion_rate = round((submitted / total) * 100, 2) if total > 0 else 0.0
+        supervisors.append({
+            "supervisor_id": sid,
+            "total_reports": total,
+            "submitted_reports": submitted,
+            "completion_rate": completion_rate,
+        })
+
+    return {"supervisors": supervisors}
+
+
+@router.get("/enrollment/trends")
+def get_enrollment_trends(
+    granularity: str = Query(..., pattern="^(weekly|monthly)$"),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Enrollment trends over time (admin only). granularity: 'weekly' or 'monthly'."""
+    validators.validate_admin_role(current_user)
+    period_start, period_end = get_date_range(start_date, end_date)
+
+    enrollment_q = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.created_at.isnot(None),
+    )
+    if kindergarten_id:
+        enrollment_q = enrollment_q.filter(
+            models.EnrollmentApplication.kindergarten_id == kindergarten_id
+        )
+    enrollments = enrollment_q.all()
+
+    periods: dict = {}
+    for enrollment in enrollments:
+        created = enrollment.created_at
+        if created is None:
+            continue
+        created_date = created.date() if hasattr(created, 'date') else created
+        if created_date < period_start or created_date > period_end:
+            continue
+        if granularity == "weekly":
+            monday = created_date - timedelta(days=created_date.weekday())
+            period_key = monday.isoformat()
+        else:
+            period_key = f"{created_date.year}-{created_date.month:02d}-01"
+        periods[period_key] = periods.get(period_key, 0) + 1
+
+    sorted_periods = sorted(periods.items())
+    trends = []
+    cumulative = 0
+    for period_key, count in sorted_periods:
+        cumulative += count
+        trends.append({
+            "period": period_key,
+            "new_applications": count,
+            "cumulative": cumulative,
+        })
+
+    return {"trends": trends, "granularity": granularity}

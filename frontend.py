@@ -2,7 +2,9 @@ from fastapi import APIRouter, Request, Depends, status, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from jinja2 import pass_context
 import models
+from i18n import gettext as _i18n_gettext
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from datetime import date, timedelta
@@ -33,6 +35,10 @@ def language_context_processor(request: Request) -> dict:
         or getattr(request.state, "ui_lang", None)
         or request.query_params.get("lang")
     )
+    # Pass impersonation state so the banner template can render it
+    from rbac import IMPERSONATION_SESSION_KEY
+    session = getattr(request.state, "session", None) or {}
+    impersonation = session.get(IMPERSONATION_SESSION_KEY)
     return {
         "ui_lang": lang,
         "ui_dir": "rtl" if lang == "ar" else "ltr",
@@ -42,6 +48,7 @@ def language_context_processor(request: Request) -> dict:
             "csrf_token",
             request.cookies.get(settings.CSRF_COOKIE_NAME, ""),
         ),
+        "impersonation": impersonation,
     }
 
 
@@ -51,6 +58,15 @@ templates = Jinja2Templates(
     context_processors=[language_context_processor],
 )
 templates.env.globals['encoding'] = 'utf-8'
+
+
+@pass_context
+def _jinja_gettext(ctx, message, **kwargs):
+    lang = ctx.get('ui_lang', 'ar')
+    return _i18n_gettext(message, lang=lang, **kwargs)
+
+
+templates.env.globals['_'] = _jinja_gettext
 # Ensure auto_reload for development
 templates.env.auto_reload = True
 
@@ -346,20 +362,17 @@ async def edit_kindergarten_page(request: Request, kg_id: int, db: Session = Dep
 
 @router.get("/classes", response_class=HTMLResponse)
 async def list_classes_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Class list page (Admin & Manager)"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+    """Class list page — Manager and Admin."""
+    if current_user.role not in (UserRole.MANAGER, UserRole.ADMIN):
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     return templates.TemplateResponse(request=request, name="classes/list.html", context={"current_user": current_user})
 
 @router.get("/classes/create", response_class=HTMLResponse)
 async def create_class_page(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    """Create class page (Admin & Manager)"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+    """Create class page — Manager only."""
+    if current_user.role != UserRole.MANAGER:
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
-    if current_user.role == UserRole.MANAGER:
-        kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
-    else:
-        kgs = db.query(Kindergarten).filter(Kindergarten.status == models.KindergartenStatus.ACTIVE).all()
+    kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
     return templates.TemplateResponse(request=request, name="classes/form.html", context={
         "current_user": current_user,
         "kindergartens": kgs,
@@ -368,20 +381,16 @@ async def create_class_page(request: Request, db: Session = Depends(get_db), cur
 
 @router.get("/classes/{class_id}/edit", response_class=HTMLResponse)
 async def edit_class_page(request: Request, class_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    """Edit class page (Admin & Manager)"""
+    """Edit class page — Manager only."""
     from models import Class
-    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+    if current_user.role != UserRole.MANAGER:
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     class_obj = db.query(Class).filter(Class.id == class_id).first()
     if not class_obj:
         return templates.TemplateResponse(request=request, name="404.html", status_code=404)
-    # Scope check
-    if current_user.role == UserRole.MANAGER and class_obj.kindergarten_id != current_user.kindergarten_id:
+    if class_obj.kindergarten_id != current_user.kindergarten_id:
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
-    if current_user.role == UserRole.MANAGER:
-        kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
-    else:
-        kgs = db.query(Kindergarten).filter(Kindergarten.status == models.KindergartenStatus.ACTIVE).all()
+    kgs = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).all()
     return templates.TemplateResponse(request=request, name="classes/form.html", context={
         "current_user": current_user,
         "kindergartens": kgs,
@@ -549,6 +558,8 @@ async def attendance_history(
     user_role = current_user.role.value if hasattr(current_user.role, "value") else current_user.role
     if user_role == "PARENT":
         return RedirectResponse(url="/parent/dashboard")
+    if user_role == "ADMIN":
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
 
     today = date.today()
     context = {
@@ -716,16 +727,16 @@ async def attendance_daily(request: Request, db: Session = Depends(get_db), curr
     from sqlalchemy import or_
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
 
-    # Admin no longer uses this page
-    if user_role == 'ADMIN':
-        return RedirectResponse(url="/dashboard")
+    # Admin and Supervisor are blocked from daily attendance (operational Manager page)
+    if user_role in ('ADMIN', 'SUPERVISOR'):
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
 
     # Parents see the absence-request page instead of staff attendance
     if user_role == 'PARENT':
         return RedirectResponse(url="/absence-requests")
 
-    # For managers and supervisors, automatically set their kindergarten
-    if user_role in ['MANAGER', 'SUPERVISOR']:
+    # For managers, automatically set their kindergarten
+    if user_role == 'MANAGER':
         kindergarten = db.query(Kindergarten).filter(Kindergarten.id == current_user.kindergarten_id).first()
         if not kindergarten:
             # This should not happen due to database constraints, but handle gracefully
@@ -838,9 +849,17 @@ async def daily_reports_list(request: Request, current_user: User = Depends(get_
 async def create_daily_report(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Create a new daily report"""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
-    if user_role not in ('SUPERVISOR', 'MANAGER'):
-        return RedirectResponse(url="/dashboard")
+    if user_role != 'MANAGER':
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     return templates.TemplateResponse(request=request, name="reports/form.html", context={"current_user": current_user, "today": date.today()})
+
+
+@router.get("/curriculum", response_class=HTMLResponse)
+async def curriculum_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role in ('ADMIN', 'SUPERVISOR'):
+        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
+    return RedirectResponse(url="/dashboard")
 
 
 @router.get("/incidents", response_class=HTMLResponse)
@@ -919,13 +938,12 @@ async def kpi_main(request: Request, current_user: User = Depends(get_current_us
 
 @router.get("/classes/{class_id}", response_class=HTMLResponse)
 async def view_class(request: Request, class_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
-    """View class details"""
+    """View class details — Admin and Manager can access; Manager scoped to own KG."""
     from models import Class
     class_obj = db.query(Class).filter(Class.id == class_id).first()
     if not class_obj:
         return templates.TemplateResponse(request=request, name="404.html", status_code=404)
-    # Kindergarten scope check for non-admin users
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role in (UserRole.MANAGER, UserRole.SUPERVISOR):
         if class_obj.kindergarten_id != current_user.kindergarten_id:
             return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
     return templates.TemplateResponse(request=request, name="classes/view.html", context={"current_user": current_user, "class": class_obj})
@@ -1428,4 +1446,24 @@ async def incident_report_detail_page(report_id: int, request: Request, current_
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="admin/analytics/incident_report_detail.html", context={"current_user": current_user, "report_id": report_id})
+
+
+# =============================================================================
+# Admin — Impersonation & Safety Analytics pages
+# =============================================================================
+
+@router.get("/admin/impersonate", response_class=HTMLResponse)
+async def admin_impersonate_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/impersonate.html", context={"current_user": current_user})
+
+
+@router.get("/admin/safety-analytics", response_class=HTMLResponse)
+async def admin_safety_analytics_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/safety_analytics.html", context={"current_user": current_user})
 

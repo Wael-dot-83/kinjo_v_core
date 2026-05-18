@@ -94,10 +94,10 @@
             let html = `
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
-                        <h5 class="card-title">${survey.title}</h5>
-                        <small class="text-muted">${T('ينتهي', 'Ends')}: ${survey.end_date}</small>
+                        <h5 class="card-title">${escHtml(survey.title)}</h5>
+                        <small class="text-muted">${T('ينتهي', 'Ends')}: ${escHtml(survey.end_date)}</small>
                     </div>
-                    <p class="card-text text-secondary">${survey.description || ''}</p>
+                    <p class="card-text text-secondary">${escHtml(survey.description || '')}</p>
                     
                     <hr>
                     <form onsubmit="submitSurvey(event, ${survey.id})">
@@ -170,6 +170,10 @@
             console.error(error);
             alert(T('خطأ في الاتصال', 'Connection error'));
         }
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

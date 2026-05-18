@@ -23,12 +23,14 @@ router = APIRouter()
 
 class IncidentCreate(BaseModel):
     child_id: int
-    type: str # INJURY, BEHAVIOR, ILLNESS, OTHER
-    severity_level: str # LOW, MEDIUM, HIGH, CRITICAL
+    type: models.IncidentType
+    severity_level: models.SeverityLevel
     description: str
     occurred_at: datetime
     notify_parent_at: Optional[datetime] = None
     followup_required_flag: bool = False
+    parent_informed: bool = True
+    parent_not_informed_reason: Optional[str] = None
 
 class IncidentUpdate(BaseModel):
     description: Optional[str] = None
@@ -50,39 +52,35 @@ def report_incident(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Report a new incident"""
-    # Supervisors and Managers can report
-    validators.validate_supervisor_role(current_user)
-    
-    # Verify child exists and is within global age bounds
+    """Report a new incident. Only Manager and Supervisor can create incidents."""
+    if current_user.role not in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager or Supervisor role required")
+
+    if not incident_data.parent_informed and not (incident_data.parent_not_informed_reason or "").strip():
+        raise HTTPException(status_code=400, detail="Reason required when parent is not informed")
+
     child = validators.ensure_child_in_range(db, incident_data.child_id)
-        
-    # Check enrollment to map to kindergarten if not obvious (but User has kindergarten_id)
-    # Ideally should check if child is enrolled in current_user.kindergarten_id
-    if current_user.role != models.UserRole.ADMIN:
-        # Check active enrollment in user's KG
-        enrollment = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == child.id,
-            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).first()
-        
-        if not enrollment and current_user.role != models.UserRole.ADMIN:
-             # Fallback: maybe just check if child parent profile is linked? 
-             # Sticking to: Child MUST be enrolled in the reporter's KG to report incident there.
-             raise HTTPException(status_code=400, detail="Child is not currently enrolled in your kindergarten")
+
+    enrollment = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.child_id == child.id,
+        models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    ).first()
+
+    if not enrollment:
+        raise HTTPException(status_code=400, detail="Child is not currently enrolled in your kindergarten")
 
     incident = models.Incident(
         child_id=incident_data.child_id,
         kindergarten_id=current_user.kindergarten_id,
-        type=models.IncidentType(incident_data.type),
-        severity_level=models.SeverityLevel(incident_data.severity_level),
+        type=incident_data.type,
+        severity_level=incident_data.severity_level,
         description=incident_data.description,
         occurred_at=incident_data.occurred_at,
         notify_parent_at=incident_data.notify_parent_at,
         followup_required_flag=incident_data.followup_required_flag
     )
-    
+
     db.add(incident)
     db.commit()
     db.refresh(incident)

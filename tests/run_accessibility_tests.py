@@ -216,13 +216,13 @@ def main():
 
     # Exit code based on critical/serious issues
     if total_critical > 0:
-        print("\nâŒ FAILED: Critical accessibility issues found")
+        print("\n[FAILED] FAILED: Critical accessibility issues found")
         return 1
     elif total_serious > 0:
-        print("\nâš ï¸  WARNING: Serious accessibility issues found")
+        print("\n[WARNING]  WARNING: Serious accessibility issues found")
         return 0
     else:
-        print("\nâœ… PASSED: No critical or serious accessibility issues")
+        print("\n[PASSED] PASSED: No critical or serious accessibility issues")
         return 0
 
 

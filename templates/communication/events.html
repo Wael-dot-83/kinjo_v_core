@@ -106,19 +106,23 @@
                 <div class="card h-100 border-start border-4 border-success">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title mb-0">${evt.title}</h5>
-                            <span class="badge bg-light text-dark border">${evt.type}</span>
+                            <h5 class="card-title mb-0">${escHtml(evt.title)}</h5>
+                            <span class="badge bg-light text-dark border">${escHtml(evt.type)}</span>
                         </div>
                         <h6 class="card-subtitle mb-2 text-muted">
                             <i class="bi bi-clock me-1"></i> ${range}
                         </h6>
-                        <p class="card-text text-secondary mb-3">${evt.description || T('لا يوجد وصف', 'No description')}</p>
+                        <p class="card-text text-secondary mb-3">${escHtml(evt.description || T('لا يوجد وصف', 'No description'))}</p>
                         ${consentBadge}
                     </div>
                 </div>
             `;
             container.appendChild(card);
         });
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
     function formatEventDate(start, end) {

@@ -2,10 +2,28 @@
 Configuration management for KinJo platform
 """
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple, Type
 
 from pydantic import ConfigDict, field_validator
-from pydantic_settings import BaseSettings
+from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource
+
+
+class _CommaListEnvSource(EnvSettingsSource):
+    """Env source that accepts comma-separated strings for List[str] fields."""
+
+    def prepare_field_value(
+        self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool
+    ) -> Any:
+        if isinstance(value, str):
+            is_complex, _ = self._field_is_complex(field)
+            if is_complex or value_is_complex:
+                stripped = value.strip()
+                if not stripped:
+                    return None
+                if not stripped.startswith(("[", "{")):
+                    return [item.strip().strip("\"'") for item in stripped.split(",") if item.strip()]
+        return super().prepare_field_value(field_name, field, value, value_is_complex)
 
 logger = logging.getLogger(__name__)
 
@@ -264,6 +282,22 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            init_settings,
+            _CommaListEnvSource(settings_cls),
+            dotenv_settings,
+            file_secret_settings,
+        )
+
 
 def validate_production_settings():
     """Validate critical settings for production environment."""
@@ -313,9 +347,9 @@ def validate_production_settings():
             "Currently set to: " + settings.SESSION_COOKIE_SAMESITE
         )
 
-    # Warn when SMTP is not configured — password reset emails will not be delivered
+    # Raise when SMTP is not configured — password reset emails will not be delivered
     if not (settings.SMTP_HOST and settings.SMTP_FROM):
-        logger.critical(
+        raise RuntimeError(
             "SMTP_UNCONFIGURED: SMTP_HOST or SMTP_FROM is not set in production. "
             "Password reset emails WILL NOT be delivered. "
             "Set SMTP_HOST, SMTP_PORT, SMTP_FROM (and optionally SMTP_USERNAME/SMTP_PASSWORD) in .env."

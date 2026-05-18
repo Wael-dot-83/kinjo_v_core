@@ -212,6 +212,15 @@ class MessageThreadType(str, enum.Enum):
     BROADCAST = "BROADCAST"
 
 
+class MessageQueueStatus(str, enum.Enum):
+    DRAFT = "DRAFT"
+    QUEUED = "QUEUED"
+    SCHEDULED = "SCHEDULED"
+    SENT = "SENT"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
 class NotificationChannel(str, enum.Enum):
     EMAIL = "EMAIL"
     PUSH = "PUSH"
@@ -319,6 +328,7 @@ class User(Base):
     mfa_enrolled_at = Column(DateTime(timezone=True), nullable=True)
     mfa_last_verified_at = Column(DateTime(timezone=True), nullable=True)
     preferred_language = Column(String(10), nullable=False, default="ar", server_default="ar")
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -531,6 +541,7 @@ class Class(Base):
     max_age_months = Column(Integer, nullable=False)
     supervisor_id = Column(Integer, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -562,6 +573,7 @@ class SupervisorAssignment(Base):
     full_time_dedication = Column(Boolean, nullable=False, default=True)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -887,6 +899,8 @@ class Message(Base):
     target_search = Column(String(255), nullable=True)
     recipient_count = Column(Integer, nullable=True)
     translated_text = Column(Text, nullable=True)
+    queue_status = Column(Enum(MessageQueueStatus), nullable=True, default=MessageQueueStatus.SENT)
+    scheduled_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -1145,6 +1159,8 @@ class AuditLog(Base):
     details = Column(Text, nullable=True)
     ip_address = Column(String(50), nullable=True)
     sensitivity_level = Column(Integer, nullable=True)
+    impersonated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    impersonation_reason = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (

@@ -473,6 +473,7 @@
     const kindergartenId = JSON.parse('{{ kindergarten.id | tojson }}');
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
     // Auth helper
     function getHeaders() {
@@ -505,8 +506,8 @@
                 }
                 tbody.innerHTML = services.map(s => `
                     <tr>
-                        <td>${s.service_name}</td>
-                        <td>${s.description}</td>
+                        <td>${esc(s.service_name)}</td>
+                        <td>${esc(s.description)}</td>
                         <td>${s.enabled_flag ? '<span class="badge bg-success">' + T('مفعل', 'Enabled') + '</span>' : '<span class="badge bg-secondary">' + T('معطل', 'Disabled') + '</span>'}</td>
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
@@ -684,42 +685,49 @@
                 return;
             }
 
-            tbody.innerHTML = classes.map(c => `
+            tbody.innerHTML = classes.map(c => {
+                const cNameAr = c.name_ar || c.name_en || '';
+                const cNameEn = c.name_en || '';
+                const cNameArJ = JSON.stringify(cNameAr);
+                const cNameEnJ = JSON.stringify(cNameEn);
+                const supName  = c.current_supervisor ? esc(c.current_supervisor.name) : '';
+                const supId    = c.current_supervisor ? c.current_supervisor.id : 'null';
+                return `
                 <tr>
-                    <td><strong>${c.name_ar || c.name_en}</strong></td>
+                    <td><strong>${esc(cNameAr)}</strong></td>
                     <td><span class="badge bg-info text-dark">${formatAgeRange(c.min_age_months, c.max_age_months)}</span></td>
                     <td>${c.capacity_total}</td>
                     <td>${c.current_supervisor ?
-                    `<span class="badge bg-success">${c.current_supervisor.name}</span>` :
-                    `<span class="text-muted small">${T('غير معين', 'Unassigned')}</span>`}
+                        `<span class="badge bg-success">${supName}</span>` :
+                        `<span class="text-muted small">${T('غير معين', 'Unassigned')}</span>`}
                     </td>
                     <td>-</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary me-1" 
-                                onclick="openAssignSupervisorModal(${c.id}, '${c.name_ar || c.name_en}', ${c.current_supervisor ? c.current_supervisor.id : 'null'})">
+                        <button class="btn btn-sm btn-outline-primary me-1"
+                                onclick="openAssignSupervisorModal(${c.id}, ${cNameArJ}, ${supId})">
                             <i class="bi bi-person-check"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-secondary me-1" 
-                                onclick="editClass(${c.id}, '${c.name_ar || c.name_en}', '${c.name_en || ''}', ${c.capacity_total}, ${c.min_age_months}, ${c.max_age_months})">
+                        <button class="btn btn-sm btn-outline-secondary me-1"
+                                onclick="editClass(${c.id}, ${cNameArJ}, ${cNameEnJ}, ${c.capacity_total}, ${c.min_age_months}, ${c.max_age_months})">
                             <i class="bi bi-pencil"></i>
                         </button>
                         ${c.is_active ?
-                    `<button class="btn btn-sm btn-outline-warning me-1" 
-                                    onclick="confirmDeactivateClass(${c.id}, '${c.name_ar || c.name_en}')">
+                            `<button class="btn btn-sm btn-outline-warning me-1"
+                                    onclick="confirmDeactivateClass(${c.id}, ${cNameArJ})">
                                 <i class="bi bi-pause-circle"></i>
                             </button>` :
-                    `<button class="btn btn-sm btn-outline-success me-1" 
-                                    onclick="reactivateClass(${c.id}, '${c.name_ar || c.name_en}')">
+                            `<button class="btn btn-sm btn-outline-success me-1"
+                                    onclick="reactivateClass(${c.id}, ${cNameArJ})">
                                 <i class="bi bi-play-circle"></i>
                             </button>`
-                }
-                        <button class="btn btn-sm btn-outline-danger" 
-                                onclick="confirmDeleteClass(${c.id}, '${c.name_ar || c.name_en}')">
+                        }
+                        <button class="btn btn-sm btn-outline-danger"
+                                onclick="confirmDeleteClass(${c.id}, ${cNameArJ})">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
 
         } catch (error) {
             console.error('Error:', error);
@@ -778,52 +786,57 @@
                         <tbody>
             `;
 
-            html += loadedStaff.map(u => `
+            html += loadedStaff.map(u => {
+                const uNameJ   = JSON.stringify(u.username);
+                const uEmailJ  = JSON.stringify(u.email);
+                const uRoleJ   = JSON.stringify(u.role);
+                const uStatusJ = JSON.stringify(u.status);
+                return `
                 <tr>
                     <td>
                         <div class="d-flex align-items-center">
                             <div class="avatar-sm bg-light rounded-circle text-center d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px">
                                 <i class="bi bi-person"></i>
                             </div>
-                            ${u.username}
+                            ${esc(u.username)}
                         </div>
                     </td>
                     <td><span class="badge bg-light text-dark border">${translateRole(u.role)}</span></td>
-                    <td>${u.email}</td>
+                    <td>${esc(u.email)}</td>
                     <td>${getStatusBadge(u.status)}</td>
                     <td>
                         <div class="btn-group btn-group-sm" role="group">
-                            <button class="btn btn-outline-secondary" 
-                                    onclick="editStaff(${u.id}, '${u.username}', '${u.email}', '${u.role}', '${u.status}')"
+                            <button class="btn btn-outline-secondary"
+                                    onclick="editStaff(${u.id}, ${uNameJ}, ${uEmailJ}, ${uRoleJ}, ${uStatusJ})"
                                     title="${T('تعديل', 'Edit')}">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             ${u.status === 'ACTIVE' ?
-                    `<button class="btn btn-outline-warning" 
-                                        onclick="confirmDeactivateStaff(${u.id}, '${u.username}')"
+                                `<button class="btn btn-outline-warning"
+                                        onclick="confirmDeactivateStaff(${u.id}, ${uNameJ})"
                                         title="${T('إلغاء تفعيل', 'Deactivate')}">
                                     <i class="bi bi-pause-circle"></i>
                                 </button>` :
-                    `<button class="btn btn-outline-success" 
-                                        onclick="reactivateStaff(${u.id}, '${u.username}')"
+                                `<button class="btn btn-outline-success"
+                                        onclick="reactivateStaff(${u.id}, ${uNameJ})"
                                         title="${T('إعادة تفعيل', 'Reactivate')}">
                                     <i class="bi bi-play-circle"></i>
                                 </button>`
-                }
-                            <button class="btn btn-outline-danger" 
-                                    onclick="confirmRemoveStaff(${u.id}, '${u.username}')"
+                            }
+                            <button class="btn btn-outline-danger"
+                                    onclick="confirmRemoveStaff(${u.id}, ${uNameJ})"
                                     title="${T('حذف', 'Delete')}">
                                 <i class="bi bi-trash"></i>
                             </button>
-                            <button class="btn btn-outline-info" 
-                                    onclick="confirmResetStaffPassword(${u.id}, '${u.username}')"
+                            <button class="btn btn-outline-info"
+                                    onclick="confirmResetStaffPassword(${u.id}, ${uNameJ})"
                                     title="${T('إعادة تعيين كلمة المرور', 'Reset Password')}">
                                 <i class="bi bi-key"></i>
                             </button>
                         </div>
                     </td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
 
             html += `</tbody></table></div>`;
             container.innerHTML = html;

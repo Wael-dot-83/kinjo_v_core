@@ -107,7 +107,7 @@ breadcrumbs=[
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="reportModalTitle">{% if ui_lang == 'en' %}Report Details{% else %}تفاصيل التقرير{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
             </div>
             <div class="modal-body" id="reportModalBody">
                 <!-- Report details will be loaded here -->
@@ -185,14 +185,14 @@ breadcrumbs=[
             <div class="card-body">
                 <div class="row align-items-center">
                     <div class="col-md-6">
-                        <h6 class="card-title mb-1">${report.title}</h6>
+                        <h6 class="card-title mb-1">${escHtml(report.title)}</h6>
                         <p class="card-text small text-muted mb-0">
-                            ${T('النطاق:', 'Scope:')} ${report.scope_name} |
+                            ${T('النطاق:', 'Scope:')} ${escHtml(report.scope_name)} |
                             ${T('الفترة:', 'Period:')} ${formatDate(report.start_date)} - ${formatDate(report.end_date)}
                         </p>
                     </div>
                     <div class="col-md-3">
-                        <small class="text-muted d-block">${T('أنشئ بواسطة:', 'Created By:')} ${report.created_by}</small>
+                        <small class="text-muted d-block">${T('أنشئ بواسطة:', 'Created By:')} ${escHtml(report.created_by)}</small>
                         <small class="text-muted d-block">${T('تاريخ الإنشاء:', 'Created Date:')} ${formatDateTime(report.created_at)}</small>
                     </div>
                     <div class="col-md-3 text-end">
@@ -291,10 +291,10 @@ breadcrumbs=[
             <div class="col-md-6">
                 <h6>${T('معلومات التقرير', 'Report Information')}</h6>
                 <table class="table table-sm">
-                    <tr><td><strong>${T('النطاق:', 'Scope:')}</strong></td><td>${report.scope_name}</td></tr>
+                    <tr><td><strong>${T('النطاق:', 'Scope:')}</strong></td><td>${escHtml(report.scope_name)}</td></tr>
                     <tr><td><strong>${T('تاريخ البداية:', 'Start Date:')}</strong></td><td>${formatDate(report.start_date)}</td></tr>
                     <tr><td><strong>${T('تاريخ النهاية:', 'End Date:')}</strong></td><td>${formatDate(report.end_date)}</td></tr>
-                    <tr><td><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong></td><td>${report.created_by}</td></tr>
+                    <tr><td><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong></td><td>${escHtml(report.created_by)}</td></tr>
                     <tr><td><strong>${T('تاريخ الإنشاء:', 'Created Date:')}</strong></td><td>${formatDateTime(report.created_at)}</td></tr>
                 </table>
             </div>
@@ -353,7 +353,7 @@ breadcrumbs=[
                     </thead>
                     <tbody>
                         ${Object.entries(metrics.per_kindergarten).map(([kg, count]) =>
-            `<tr><td>${kg}</td><td>${count}</td></tr>`
+            `<tr><td>${escHtml(kg)}</td><td>${Number(count)}</td></tr>`
         ).join('')}
                     </tbody>
                 </table>
@@ -384,7 +384,7 @@ breadcrumbs=[
         alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
         alertDiv.innerHTML = `
         ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ _('إغلاق') }}"></button>
     `;
         document.body.appendChild(alertDiv);
 
@@ -397,5 +397,9 @@ breadcrumbs=[
     document.addEventListener('DOMContentLoaded', () => {
         loadReports();
     });
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 </script>
 {% endblock %}

@@ -51,8 +51,8 @@ def test_analytics_governorate_breakdown_manager(client, manager_user, auth_user
     assert isinstance(response.json(), list)
 
 
-def test_analytics_enrollments_summary_manager(client, manager_user, auth_user):
-    auth_user(manager_user)
+def test_analytics_enrollments_summary_admin(client, admin_user, auth_user):
+    auth_user(admin_user)
     response = client.get("/api/analytics/enrollments/summary")
     assert response.status_code == 200
     data = response.json()
@@ -60,8 +60,8 @@ def test_analytics_enrollments_summary_manager(client, manager_user, auth_user):
     assert "period_end" in data
 
 
-def test_analytics_attendance_summary_manager(client, manager_user, auth_user):
-    auth_user(manager_user)
+def test_analytics_attendance_summary_admin(client, admin_user, auth_user):
+    auth_user(admin_user)
     response = client.get("/api/analytics/attendance/summary")
     assert response.status_code == 200
     data = response.json()
@@ -69,8 +69,8 @@ def test_analytics_attendance_summary_manager(client, manager_user, auth_user):
     assert "period_end" in data
 
 
-def test_analytics_daily_reports_summary_manager(client, manager_user, auth_user):
-    auth_user(manager_user)
+def test_analytics_daily_reports_summary_admin(client, admin_user, auth_user):
+    auth_user(admin_user)
     response = client.get("/api/analytics/daily-reports/summary")
     assert response.status_code == 200
     data = response.json()
@@ -78,8 +78,8 @@ def test_analytics_daily_reports_summary_manager(client, manager_user, auth_user
     assert "period_end" in data
 
 
-def test_analytics_safety_summary_manager(client, manager_user, auth_user):
-    auth_user(manager_user)
+def test_analytics_safety_summary_admin(client, admin_user, auth_user):
+    auth_user(admin_user)
     response = client.get("/api/analytics/safety/summary")
     assert response.status_code == 200
     data = response.json()
@@ -87,8 +87,8 @@ def test_analytics_safety_summary_manager(client, manager_user, auth_user):
     assert "period_end" in data
 
 
-def test_analytics_staffing_summary_manager(client, manager_user, auth_user):
-    auth_user(manager_user)
+def test_analytics_staffing_summary_admin(client, admin_user, auth_user):
+    auth_user(admin_user)
     response = client.get("/api/analytics/staffing/summary")
     assert response.status_code == 200
     data = response.json()

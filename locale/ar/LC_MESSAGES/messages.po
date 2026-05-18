@@ -1,0 +1,1015 @@
+
+msgid ""
+msgstr ""
+"Project-Id-Version: KinJo Parent Module 1.0\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-04-26 08:13+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: ar\n"
+"Language-Team: ar <LL@li.org>\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : "
+"n%100>=3 && n%100<=10 ? 3 : n%100>=0 && n%100<=2 ? 4 : 5);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: i18n.py:159 templates/attendance/absence_requests.html:14
+#: templates/parent/attendance.html:14 templates/parent/children.html:14
+#: templates/parent/enrollments.html:14 templates/parent/profile.html:14
+#: templates/reports/parent_list.html:14
+msgid "Dashboard"
+msgstr "لوحة التحكم"
+
+#: i18n.py:160 templates/parent/children.html:3
+#: templates/parent/children.html:10 templates/parent/children.html:15
+#: templates/parent/profile.html:291
+msgid "My Children"
+msgstr "أطفالي"
+
+#: i18n.py:161 templates/parent/attendance.html:15
+msgid "Attendance"
+msgstr "الحضور"
+
+#: i18n.py:162 templates/reports/parent_list.html:15
+msgid "Reports"
+msgstr "التقارير"
+
+#: i18n.py:163
+msgid "Profile"
+msgstr "الملف الشخصي"
+
+#: i18n.py:164 templates/parent/enrollments.html:15
+msgid "Enrollments"
+msgstr "التسجيلات"
+
+#: i18n.py:165 templates/attendance/absence_requests.html:3
+#: templates/attendance/absence_requests.html:10
+#: templates/attendance/absence_requests.html:15
+#: templates/parent/profile.html:303
+msgid "Absence Requests"
+msgstr "طلبات الغياب"
+
+#: i18n.py:166 templates/parent/attendance.html:54
+msgid "Present"
+msgstr "حاضر"
+
+#: i18n.py:167 templates/parent/attendance.html:62
+msgid "Absent"
+msgstr "غائب"
+
+#: i18n.py:168 templates/parent/attendance.html:70
+msgid "Late"
+msgstr "متأخر"
+
+#: i18n.py:169
+msgid "Pending"
+msgstr "قيد الانتظار"
+
+#: i18n.py:170 templates/attendance/absence_requests.html:36
+#: templates/reports/parent_list.html:59
+msgid "Approved"
+msgstr "موافق"
+
+#: i18n.py:171 templates/attendance/absence_requests.html:39
+#: templates/parent/enrollments.html:58 templates/reports/parent_list.html:63
+msgid "Rejected"
+msgstr "مرفوض"
+
+#: i18n.py:172
+msgid "No data found"
+msgstr "لا توجد بيانات"
+
+#: i18n.py:173 templates/attendance/absence_requests.html:64
+#: templates/parent/attendance.html:96 templates/parent/enrollments.html:82
+#: templates/parent/profile.html:278
+msgid "Loading..."
+msgstr "جاري التحميل..."
+
+#: i18n.py:174
+msgid "Submit"
+msgstr "إرسال"
+
+#: i18n.py:175 templates/attendance/absence_requests.html:112
+#: templates/parent/profile.html:123 templates/parent/profile.html:200
+#: templates/parent/profile.html:257
+msgid "Cancel"
+msgstr "إلغاء"
+
+#: i18n.py:176 templates/parent/profile.html:120
+msgid "Save Changes"
+msgstr "حفظ التغييرات"
+
+#: i18n.py:177
+msgid "Delete"
+msgstr "حذف"
+
+#: i18n.py:178 templates/parent/profile.html:39
+#: templates/parent/profile.html:138 templates/parent/profile.html:215
+msgid "Edit"
+msgstr "تعديل"
+
+#: i18n.py:179
+msgid "Parent access only"
+msgstr "مخصص لأولياء الأمور فقط"
+
+#: api/children.py:59 i18n.py:180
+msgid "Parent profile not found"
+msgstr "لم يُعثَر على ملف ولي الأمر"
+
+#: templates/dashboard/parent.html
+msgid "Parent Portal"
+msgstr "بوابة ولي الأمر"
+
+#: templates/dashboard/parent.html
+msgid "Register New Child"
+msgstr "تسجيل طفل جديد"
+
+#: templates/dashboard/parent.html
+msgid "Quick Services"
+msgstr "الخدمات السريعة"
+
+#: templates/dashboard/parent.html
+msgid "Register Child"
+msgstr "تسجيل طفل"
+
+#: templates/dashboard/parent.html
+msgid "Add New Child"
+msgstr "إضافة طفل جديد"
+
+#: templates/dashboard/parent.html
+msgid "Daily Reports"
+msgstr "التقارير اليومية"
+
+#: templates/dashboard/parent.html
+msgid "Children's Reports"
+msgstr "تقارير الأطفال"
+
+#: templates/dashboard/parent.html
+msgid "Messages"
+msgstr "الرسائل"
+
+#: templates/dashboard/parent.html
+msgid "Contact the Kindergarten"
+msgstr "تواصل مع الروضة"
+
+#: templates/dashboard/parent.html
+msgid "Settings"
+msgstr "الإعدادات"
+
+#: templates/dashboard/parent.html
+msgid "My Account"
+msgstr "إعدادات الحساب"
+
+#: templates/dashboard/parent.html
+msgid "Latest Daily Reports"
+msgstr "أحدث التقارير اليومية"
+
+#: templates/dashboard/parent.html
+msgid "View All"
+msgstr "عرض الكل"
+
+#: templates/dashboard/parent.html
+msgid "Upcoming Events"
+msgstr "الفعاليات القادمة"
+
+#: templates/dashboard/parent.html
+msgid "No upcoming events"
+msgstr "لا توجد فعاليات قادمة"
+
+#: templates/dashboard/parent.html
+msgid "Need Help?"
+msgstr "هل تحتاج إلى مساعدة؟"
+
+#: templates/dashboard/parent.html
+msgid "Support team is ready to help"
+msgstr "فريق الدعم الفني مستعدٌّ لمساعدتك"
+
+#: templates/dashboard/parent.html
+msgid "Contact Us"
+msgstr "تواصل معنا"
+
+#: templates/dashboard/parent.html
+msgid "Under Review"
+msgstr "قيد المراجعة"
+
+#: templates/dashboard/parent.html
+msgid "Draft"
+msgstr "مسودة"
+
+#: templates/dashboard/parent.html
+msgid "No reports yet"
+msgstr "لا توجد تقارير حالياً"
+
+#: templates/dashboard/parent.html
+msgid "No notes"
+msgstr "لا توجد ملاحظات"
+
+#: templates/dashboard/parent.html
+msgid "children"
+msgstr "أطفال"
+
+#: templates/dashboard/parent.html
+msgid "Present today"
+msgstr "حاضر اليوم"
+
+#: templates/dashboard/parent.html
+msgid "Not arrived yet"
+msgstr "لم يُسجَّل حضوره بعد"
+
+#: templates/dashboard/parent.html
+msgid "Today's report available"
+msgstr "تقرير اليوم متاح"
+
+#: templates/dashboard/parent.html
+msgid "You have not registered any children yet"
+msgstr "لم تقم بتسجيل أي طفل بعد"
+
+#: templates/dashboard/parent.html
+msgid "Start by enrolling your child in a kindergarten"
+msgstr "ابدأ بتسجيل طفلك في إحدى الروضات"
+
+
+#: i18n.py:181
+msgid "Not authorized to view this child's attendance"
+msgstr "لا تملك صلاحية الاطلاع على سجل حضور هذا الطفل"
+
+#: api/children.py:75 api/users.py:130 i18n.py:182
+msgid "Supported languages: ar, en"
+msgstr "اللغات المدعومة: العربية والإنجليزية"
+
+#: i18n.py:183
+msgid "Are you sure?"
+msgstr "هل أنت متأكد؟"
+
+#: i18n.py:184
+msgid "Saved successfully"
+msgstr "تم الحفظ بنجاح"
+
+#: i18n.py:185
+msgid "An error occurred"
+msgstr "حدث خطأ"
+
+#: api/children.py:66
+msgid "Not authorized to update this profile"
+msgstr "لا تملك صلاحية تحديث هذا الملف الشخصي"
+
+#: templates/attendance/absence_requests.html:12
+#: templates/parent/attendance.html:12 templates/parent/children.html:12
+#: templates/parent/enrollments.html:12 templates/parent/profile.html:12
+#: templates/reports/parent_list.html:12
+msgid "Breadcrumb"
+msgstr "مسار التنقل"
+
+#: templates/attendance/absence_requests.html:20
+#: templates/attendance/absence_requests.html:79
+msgid "New Absence Request"
+msgstr "طلب غياب جديد"
+
+#: templates/attendance/absence_requests.html:30
+msgid "All"
+msgstr "الكل"
+
+#: templates/attendance/absence_requests.html:33
+#: templates/parent/enrollments.html:50 templates/reports/parent_list.html:62
+msgid "Under Review"
+msgstr "قيد المراجعة"
+
+#: templates/attendance/absence_requests.html:51
+#: templates/attendance/absence_requests.html:86
+msgid "Child Name"
+msgstr "اسم الطفل"
+
+#: templates/attendance/absence_requests.html:52
+msgid "From"
+msgstr "من"
+
+#: templates/attendance/absence_requests.html:53
+msgid "To"
+msgstr "إلى"
+
+#: templates/attendance/absence_requests.html:54
+#: templates/attendance/absence_requests.html:106
+msgid "Reason"
+msgstr "السبب"
+
+#: templates/attendance/absence_requests.html:55
+#: templates/parent/attendance.html:86 templates/parent/enrollments.html:74
+msgid "Status"
+msgstr "الحالة"
+
+#: templates/attendance/absence_requests.html:56
+#: templates/parent/attendance.html:89 templates/reports/parent_list.html:74
+msgid "Notes"
+msgstr "ملاحظات"
+
+#: templates/attendance/absence_requests.html:57
+msgid "Action"
+msgstr "إجراء"
+
+#: templates/attendance/absence_requests.html:81
+msgid "Close"
+msgstr "إغلاق"
+
+#: templates/attendance/absence_requests.html:88
+msgid "Select child..."
+msgstr "اختر الطفل..."
+
+#: templates/attendance/absence_requests.html:96
+msgid "From Date"
+msgstr "تاريخ البداية"
+
+#: templates/attendance/absence_requests.html:101
+msgid "To Date"
+msgstr "تاريخ الانتهاء"
+
+#: templates/attendance/absence_requests.html:108
+msgid "Please state the reason for absence..."
+msgstr "يرجى ذكر سبب الغياب..."
+
+#: templates/attendance/absence_requests.html:114
+msgid "Submit Request"
+msgstr "إرسال الطلب"
+
+#: templates/dashboard/parent.html:3
+msgid "Parent Dashboard"
+msgstr "لوحة ولي الأمر"
+
+#: templates/dashboard/parent.html:11
+msgid "Welcome,"
+msgstr "مرحباً،"
+
+#: templates/dashboard/parent.html:13
+msgid "Track your children's news and daily reports from one place"
+msgstr "تابع أخبار أطفالك وتقاريرهم اليومية من مكان واحد"
+
+#: templates/dashboard/parent.html:25 templates/parent/children.html:33
+msgid "Loading children data..."
+msgstr "جارٍ تحميل بيانات أطفالك..."
+
+#: templates/dashboard/parent.html:38 templates/parent/children.html:21
+#: templates/parent/profile.html:294
+msgid "Register New Child"
+msgstr "تسجيل طفل جديد"
+
+#: templates/dashboard/parent.html:44
+msgid "Daily Reports"
+msgstr "التقارير اليومية"
+
+#: templates/dashboard/parent.html:50
+msgid "Messages"
+msgstr "الرسائل"
+
+#: templates/dashboard/parent.html:56 templates/parent/profile.html:3
+#: templates/parent/profile.html:10 templates/parent/profile.html:15
+msgid "My Profile"
+msgstr "ملفي الشخصي"
+
+#: templates/dashboard/parent.html:72
+msgid "Latest Daily Reports"
+msgstr "أحدث التقارير اليومية"
+
+#: templates/dashboard/parent.html:74
+msgid "View All"
+msgstr "عرض الكل"
+
+#: templates/dashboard/parent.html:90
+msgid "Upcoming Events"
+msgstr "الفعاليات القادمة"
+
+#: templates/dashboard/parent.html:97
+msgid "No upcoming events"
+msgstr "لا توجد فعاليات قادمة"
+
+#: templates/dashboard/parent.html:107
+msgid "Need Help?"
+msgstr "هل تحتاج إلى مساعدة؟"
+
+#: templates/dashboard/parent.html:108
+msgid "Contact kindergarten management"
+msgstr "تواصل مع إدارة الروضة"
+
+#: templates/dashboard/parent.html:110
+msgid "Contact Us"
+msgstr "تواصل معنا"
+
+#: templates/parent/attendance.html:3 templates/parent/attendance.html:10
+msgid "Attendance Record"
+msgstr "سجل الحضور"
+
+#: templates/parent/attendance.html:26 templates/reports/parent_list.html:32
+msgid "Child:"
+msgstr "الطفل:"
+
+#: templates/parent/attendance.html:28 templates/reports/parent_list.html:34
+msgid "All Children"
+msgstr "جميع الأطفال"
+
+#: templates/parent/attendance.html:32 templates/reports/parent_list.html:28
+msgid "Date:"
+msgstr "التاريخ:"
+
+#: templates/parent/attendance.html:36 templates/reports/parent_list.html:38
+msgid "Filter"
+msgstr "تصفية"
+
+#: templates/parent/attendance.html:46
+msgid "Total Records"
+msgstr "إجمالي السجلات"
+
+#: templates/parent/attendance.html:84 templates/parent/enrollments.html:72
+#: templates/reports/parent_list.html:53
+msgid "Child"
+msgstr "الطفل"
+
+#: templates/parent/attendance.html:85
+msgid "Date"
+msgstr "التاريخ"
+
+#: templates/parent/attendance.html:87
+msgid "Check-in"
+msgstr "وقت الحضور"
+
+#: templates/parent/attendance.html:88
+msgid "Check-out"
+msgstr "وقت الانصراف"
+
+#: templates/parent/enrollments.html:3 templates/parent/enrollments.html:10
+msgid "Enrollment Applications"
+msgstr "طلبات التسجيل"
+
+#: templates/parent/enrollments.html:21
+msgid "New Application"
+msgstr "طلب جديد"
+
+#: templates/parent/enrollments.html:34
+msgid "Total"
+msgstr "الإجمالي"
+
+#: templates/parent/enrollments.html:42
+msgid "Active / Accepted"
+msgstr "نشط / مقبول"
+
+#: templates/parent/enrollments.html:73
+msgid "Kindergarten"
+msgstr "الروضة"
+
+#: templates/parent/enrollments.html:75
+msgid "Submitted"
+msgstr "مقدّم"
+
+#: templates/parent/profile.html:26
+msgid "Your profile is incomplete."
+msgstr "ملفك الشخصي غير مكتمل."
+
+#: templates/parent/profile.html:27
+msgid "You must complete all required fields to submit enrollment requests."
+msgstr "يجب إكمال جميع الحقول المطلوبة لتتمكن من تقديم طلبات تسجيل."
+
+#: templates/parent/profile.html:36
+msgid "Personal Information"
+msgstr "المعلومات الشخصية"
+
+#: templates/parent/profile.html:47 templates/parent/profile.html:93
+msgid "First Name"
+msgstr "الاسم الأول"
+
+#: templates/parent/profile.html:51 templates/parent/profile.html:97
+msgid "Middle Name"
+msgstr "الاسم الأوسط"
+
+#: templates/parent/profile.html:55 templates/parent/profile.html:101
+msgid "Last Name"
+msgstr "اسم العائلة"
+
+#: templates/parent/profile.html:59 templates/parent/profile.html:105
+msgid "Phone Number"
+msgstr "رقم الهاتف"
+
+#: templates/parent/profile.html:63
+msgid "Email"
+msgstr "البريد الإلكتروني"
+
+#: templates/parent/profile.html:67
+msgid "Gender"
+msgstr "الجنس"
+
+#: templates/parent/profile.html:71
+msgid "Nationality"
+msgstr "الجنسية"
+
+#: templates/parent/profile.html:75 templates/parent/profile.html:109
+msgid "Relationship to Child"
+msgstr "صلة القرابة"
+
+#: templates/parent/profile.html:79
+msgid "National ID"
+msgstr "رقم الهوية الوطنية"
+
+#: templates/parent/profile.html:83
+msgid "Passport Number"
+msgstr "رقم جواز السفر"
+
+#: templates/parent/profile.html:111
+msgid "Select..."
+msgstr "اختر..."
+
+#: templates/parent/profile.html:112
+msgid "Father"
+msgstr "أب"
+
+#: templates/parent/profile.html:113
+msgid "Mother"
+msgstr "أم"
+
+#: templates/parent/profile.html:114
+msgid "Guardian"
+msgstr "ولي أمر"
+
+#: templates/parent/profile.html:115
+msgid "Other"
+msgstr "أخرى"
+
+#: templates/parent/profile.html:135
+msgid "Address"
+msgstr "العنوان"
+
+#: templates/parent/profile.html:146 templates/parent/profile.html:172
+msgid "Governorate"
+msgstr "المحافظة"
+
+#: templates/parent/profile.html:150 templates/parent/profile.html:178
+msgid "City"
+msgstr "المدينة"
+
+#: templates/parent/profile.html:154 templates/parent/profile.html:184
+msgid "Area"
+msgstr "المنطقة"
+
+#: templates/parent/profile.html:158 templates/parent/profile.html:188
+msgid "Home Address"
+msgstr "عنوان السكن"
+
+#: templates/parent/profile.html:162 templates/parent/profile.html:192
+msgid "Work Address"
+msgstr "عنوان العمل"
+
+#: templates/parent/profile.html:174
+msgid "Select governorate"
+msgstr "اختر المحافظة"
+
+#: templates/parent/profile.html:180
+msgid "Select governorate first"
+msgstr "اختر المحافظة أولاً"
+
+#: templates/parent/profile.html:197
+msgid "Save Address"
+msgstr "حفظ العنوان"
+
+#: templates/parent/profile.html:212
+msgid "Emergency Contact"
+msgstr "جهة الاتصال للطوارئ"
+
+#: templates/parent/profile.html:223 templates/parent/profile.html:241
+msgid "Contact Name"
+msgstr "اسم جهة الاتصال"
+
+#: templates/parent/profile.html:227 templates/parent/profile.html:245
+msgid "Contact Phone"
+msgstr "رقم هاتف الطوارئ"
+
+#: templates/parent/profile.html:231 templates/parent/profile.html:249
+msgid "Relationship"
+msgstr "صلة القرابة"
+
+#: templates/parent/profile.html:254
+msgid "Save Emergency Contact"
+msgstr "حفظ جهة الطوارئ"
+
+#: templates/parent/profile.html:276
+msgid "Parent"
+msgstr "ولي أمر"
+
+#: templates/parent/profile.html:286
+msgid "Quick Links"
+msgstr "روابط سريعة"
+
+#: templates/parent/profile.html:297
+msgid "Enrollment Requests"
+msgstr "طلبات التسجيل"
+
+#: templates/parent/profile.html:300
+msgid "My Reports"
+msgstr "تقاريري"
+
+#: templates/parent/profile.html:312
+msgid "Preferences"
+msgstr "التفضيلات"
+
+#: templates/parent/profile.html:318
+msgid "Receive correspondence"
+msgstr "تلقّي المراسلات والإشعارات"
+
+#: templates/parent/profile.html:321
+msgid "Language"
+msgstr "اللغة"
+
+#: templates/parent/profile.html:323
+msgid "Arabic"
+msgstr "العربية"
+
+#: templates/parent/profile.html:324
+msgid "English"
+msgstr "الإنجليزية"
+
+#: templates/reports/parent_list.html:3 templates/reports/parent_list.html:10
+msgid "My Children's Reports"
+msgstr "تقارير أطفالي"
+
+#: templates/reports/parent_list.html:60
+msgid "Draft"
+msgstr "مسودة"
+
+#: templates/reports/parent_list.html:61
+msgid "Sent"
+msgstr "مرسل"
+
+#: templates/reports/parent_list.html:70
+msgid "Mood"
+msgstr "الحالة المزاجية"
+
+#: templates/reports/parent_list.html:71
+msgid "Not specified"
+msgstr "غير محدد"
+
+#: templates/reports/parent_list.html:75
+msgid "No notes"
+msgstr "لا توجد ملاحظات"
+
+#: templates/reports/parent_list.html:79
+msgid "View Details"
+msgstr "عرض التفاصيل"
+
+#: templates/reports/parent_list.html:87
+msgid "No reports for this date"
+msgstr "لا توجد تقارير لهذا التاريخ"
+
+msgid "Sidebar Navigation"
+msgstr "القائمة الجانبية"
+
+msgid "Online"
+msgstr "متصل"
+
+msgid "System Admin"
+msgstr "مدير النظام"
+
+msgid "Kindergarten Manager"
+msgstr "مدير الروضة"
+
+msgid "Supervisor"
+msgstr "مشرف"
+
+msgid "Parent"
+msgstr "ولي أمر"
+
+msgid "Main Menu"
+msgstr "القائمة الرئيسية"
+
+msgid "Operations"
+msgstr "العمليات"
+
+msgid "Messages"
+msgstr "الرسائل"
+
+msgid "Kindergartens"
+msgstr "الروضات"
+
+msgid "Daily Reports"
+msgstr "التقارير اليومية"
+
+msgid "Safety & Incidents"
+msgstr "السلامة والحوادث"
+
+msgid "Curriculum & Notes"
+msgstr "المنهج والملاحظات"
+
+msgid "My Services"
+msgstr "خدماتي"
+
+msgid "My Children Reports"
+msgstr "تقارير أطفالي"
+
+msgid "Enroll a Child"
+msgstr "تسجيل طفل"
+
+msgid "Management & Reports"
+msgstr "الإدارة والتقارير"
+
+msgid "KPI"
+msgstr "مؤشرات الأداء"
+
+msgid "Tasks"
+msgstr "المهام"
+
+msgid "User Management"
+msgstr "إدارة المستخدمين"
+
+msgid "Analytics & Reports"
+msgstr "التحليلات والتقارير"
+
+msgid "Activity Log"
+msgstr "سجل النشاط"
+
+msgid "Record Attendance"
+msgstr "تسجيل حضور"
+
+msgid "New Daily Report"
+msgstr "تقرير يومي جديد"
+
+msgid "Contact Us"
+msgstr "تواصل معنا"
+
+msgid "Skip to main content"
+msgstr "الانتقال إلى المحتوى الرئيسي"
+
+msgid "Back to top"
+msgstr "العودة إلى الأعلى"
+
+msgid "Operation successful"
+msgstr "تمّت العملية"
+
+msgid "An error occurred"
+msgstr "حدث خطأ"
+
+msgid "Warning"
+msgstr "تنبيه"
+
+msgid "Note"
+msgstr "ملاحظة"
+
+msgid "Notification"
+msgstr "إشعار"
+
+msgid "Close"
+msgstr "إغلاق"
+
+msgid "Main Navigation"
+msgstr "التنقل الرئيسي"
+
+msgid "Toggle Sidebar"
+msgstr "تبديل الشريط الجانبي"
+
+msgid "Open Menu"
+msgstr "فتح القائمة"
+
+msgid "Search for a child, parent, kindergarten..."
+msgstr "البحث عن طفل، ولي أمر، روضة..."
+
+msgid "Global Search"
+msgstr "بحث شامل"
+
+msgid "Search Results"
+msgstr "نتائج البحث"
+
+msgid "Start typing to search..."
+msgstr "ابدأ الكتابة للبحث..."
+
+msgid "Notifications"
+msgstr "الإشعارات"
+
+msgid "Toggle Language"
+msgstr "تغيير اللغة"
+
+msgid "Mark all as read"
+msgstr "تعيين الكل كمقروء"
+
+msgid "View all"
+msgstr "عرض الكل"
+
+msgid "No new notifications"
+msgstr "لا توجد إشعارات جديدة"
+
+msgid "View all notifications"
+msgstr "عرض جميع الإشعارات"
+
+msgid "Profile"
+msgstr "الملف الشخصي"
+
+msgid "Settings"
+msgstr "الإعدادات"
+
+msgid "Logout"
+msgstr "تسجيل الخروج"
+
+msgid "Login"
+msgstr "دخول"
+
+msgid "Create Account"
+msgstr "إنشاء حساب"
+
+msgid "Searching..."
+msgstr "جاري البحث..."
+
+msgid "No results found"
+msgstr "لا توجد نتائج"
+
+msgid "Child"
+msgstr "طفل"
+
+msgid "Kindergarten"
+msgstr "روضة"
+
+msgid "Report"
+msgstr "تقرير"
+
+#~ msgid ""
+#~ "Absence request submitted successfully and "
+#~ "will be reviewed by management"
+#~ msgstr "تم إرسال طلب الغياب بنجاح وسيتم مراجعته من قبل الإدارة"
+
+#~ msgid "Accepted"
+#~ msgstr "مقبول"
+
+#~ msgid "Active"
+#~ msgstr "نشط"
+
+#~ msgid "Address updated successfully"
+#~ msgstr "تم تحديث العنوان بنجاح"
+
+#~ msgid "Are you sure you want to cancel this request?"
+#~ msgstr "هل أنت متأكد من إلغاء هذا الطلب؟"
+
+#~ msgid "Cancelled"
+#~ msgstr "ملغى"
+
+#~ msgid "Complete"
+#~ msgstr "مكتمل"
+
+#~ msgid "Confirm Cancellation"
+#~ msgstr "تأكيد الإلغاء"
+
+#~ msgid "Date of Birth"
+#~ msgstr "تاريخ الميلاد"
+
+#~ msgid "Done"
+#~ msgstr "تم"
+
+#~ msgid "Emergency contact updated successfully"
+#~ msgstr "تم تحديث جهة الطوارئ بنجاح"
+
+#~ msgid "Enroll"
+#~ msgstr "تسجيل"
+
+#~ msgid "Enroll child"
+#~ msgstr "تسجيل طفل"
+
+#~ msgid "Enrolled"
+#~ msgstr "مسجل"
+
+#~ msgid "Error"
+#~ msgstr "خطأ"
+
+#~ msgid "Error loading children data"
+#~ msgstr "خطأ في تحميل بيانات الأطفال"
+
+#~ msgid "Error loading data"
+#~ msgstr "خطأ في تحميل البيانات"
+
+#~ msgid "Excused"
+#~ msgstr "غياب بعذر"
+
+#~ msgid "Failed to cancel request"
+#~ msgstr "فشل في إلغاء الطلب"
+
+#~ msgid "Failed to load profile"
+#~ msgstr "تعذر تحميل الملف الشخصي"
+
+#~ msgid "Failed to save address"
+#~ msgstr "تعذر حفظ العنوان"
+
+#~ msgid "Failed to save changes"
+#~ msgstr "تعذر حفظ التغييرات"
+
+#~ msgid "Failed to save emergency contact"
+#~ msgstr "تعذر حفظ جهة الطوارئ"
+
+#~ msgid "Failed to save language"
+#~ msgstr "تعذر حفظ اللغة"
+
+#~ msgid "Failed to submit request"
+#~ msgstr "فشل في إرسال الطلب"
+
+#~ msgid "Father Name"
+#~ msgstr "اسم الأب"
+
+#~ msgid "Female"
+#~ msgstr "أنثى"
+
+#~ msgid "Go back"
+#~ msgstr "تراجع"
+
+#~ msgid "Incomplete"
+#~ msgstr "غير مكتمل"
+
+#~ msgid "Incomplete profile"
+#~ msgstr "الملف غير مكتمل"
+
+#~ msgid "Male"
+#~ msgstr "ذكر"
+
+#~ msgid "No attendance records found"
+#~ msgstr "لا توجد سجلات حضور"
+
+#~ msgid "No children registered yet"
+#~ msgstr "لم تقم بتسجيل أي طفل بعد"
+
+#~ msgid "No cities"
+#~ msgstr "لا توجد مدن"
+
+#~ msgid "No enrollment applications"
+#~ msgstr "لا توجد طلبات تسجيل"
+
+#~ msgid "No reports available"
+#~ msgstr "لا توجد تقارير حالياً"
+
+#~ msgid "No requests"
+#~ msgstr "لا توجد طلبات"
+
+#~ msgid "Pending Children"
+#~ msgstr "أطفال قيد المتابعة"
+
+#~ msgid "Pending enrollment"
+#~ msgstr "بانتظار التسجيل"
+
+#~ msgid "Personal information updated successfully"
+#~ msgstr "تم تحديث البيانات الشخصية بنجاح"
+
+#~ msgid "Please contact administration."
+#~ msgstr "يرجى التواصل مع الإدارة."
+
+#~ msgid "Please fill all required address fields"
+#~ msgstr "يرجى تعبئة جميع حقول العنوان المطلوبة"
+
+#~ msgid "Please fill all required fields"
+#~ msgstr "يرجى تعبئة جميع الحقول المطلوبة"
+
+#~ msgid "Please fill emergency contact name and phone"
+#~ msgstr "يرجى تعبئة اسم ورقم جهة الطوارئ"
+
+#~ msgid "Profile not found."
+#~ msgstr "لم يتم العثور على ملفك الشخصي."
+
+#~ msgid "Request cancelled"
+#~ msgstr "تم إلغاء الطلب"
+
+#~ msgid "Retry"
+#~ msgstr "إعادة المحاولة"
+
+#~ msgid "Saving..."
+#~ msgstr "جاري الحفظ..."
+
+#~ msgid "Select city..."
+#~ msgstr "اختر المدينة..."
+
+#~ msgid "Sent to parent"
+#~ msgstr "مرسل لولي الأمر"
+
+#~ msgid "Sick"
+#~ msgstr "مريض"
+
+#~ msgid "Start by enrolling your child in a kindergarten"
+#~ msgstr "ابدأ بتسجيل طفلك في إحدى الروضات"
+
+#~ msgid "Submit New Application"
+#~ msgstr "تقديم طلب جديد"
+
+#~ msgid "Today report is available"
+#~ msgstr "تقرير اليوم متاح"
+
+#~ msgid "Unable to load dashboard"
+#~ msgstr "تعذر تحميل لوحة المعلومات"
+
+#~ msgid "Under review"
+#~ msgstr "قيد المراجعة"
+
+#~ msgid "Unknown"
+#~ msgstr "غير معروف"
+
+#~ msgid "View"
+#~ msgstr "عرض"
+
+#~ msgid "Waitlisted"
+#~ msgstr "قائمة الانتظار"
+
+#~ msgid "Warning"
+#~ msgstr "تنبيه"
+
+#~ msgid "Withdrawn"
+#~ msgstr "منسحب"
+
+#~ msgid "Yes, cancel it"
+#~ msgstr "نعم، إلغاء الطلب"
+
+#~ msgid "You have not enrolled any child yet"
+#~ msgstr "لم تقم بتسجيل أي طفل بعد"

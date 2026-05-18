@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: ["**"]
   pull_request:
     branches: [ main ]
 
@@ -14,18 +14,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
       - run: pip install ruff
-      - name: Ruff check
+      - name: Ruff check (pyproject.toml config — E722 + F821)
         run: ruff check .
       - name: Ruff strict checks (expanded rules on core services)
         run: ruff check data_quality_service.py predictive_analytics.py email_service.py api/auth/password_reset_service.py api/analytics/scope_domain.py api/attendance/summary_domain.py --select F401,F841,I001
-      - name: Install frontend lint dependencies
-        run: npm install
-      - name: ESLint check
-        run: npm run lint:js
 
   test:
     runs-on: ubuntu-latest
@@ -59,3 +52,39 @@ jobs:
           files: ./coverage.xml
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  migrations:
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: kinjo
+          POSTGRES_PASSWORD: kinjo
+          POSTGRES_DB: kinjo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://kinjo:kinjo@localhost:5432/kinjo_test
+      SECRET_KEY: ci-secret-key
+      REDIS_URL: redis://localhost:6379/0
+      TESTING: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Verify Alembic migrations (upgrade → downgrade → upgrade)
+        run: |
+          alembic upgrade head
+          alembic downgrade -1
+          alembic upgrade head

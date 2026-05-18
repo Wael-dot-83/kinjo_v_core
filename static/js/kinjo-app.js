@@ -407,13 +407,11 @@ function renderPageGuide(guide) {
 
   if (titleEl) titleEl.textContent = guide.title;
 
-  const stepsHtml = guide.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("");
-  const tipsHtml = guide.tips.length
-    ? `<div class="small text-muted">${guide.tips.map((t) => escapeHtml(t)).join(" • ")}</div>`
-    : "";
+  const stepsHtml = renderGuideSteps(guide.steps, escapeHtml);
+  const tipsHtml = renderGuideTips(guide.tips, escapeHtml, "small text-muted");
 
   body.innerHTML = `
-        <ol class="guide-steps mb-2">${stepsHtml}</ol>
+        ${stepsHtml}
         ${tipsHtml}
     `;
 
@@ -431,15 +429,47 @@ function syncHelpModalContent(guide) {
   }
 
   helpContent.setAttribute("data-help-title", guide.title);
-  const stepsHtml = guide.steps.map((step) => `<li>${step}</li>`).join("");
-  const tipsHtml = guide.tips.length
-    ? `<div class="alert alert-light border mt-3 mb-0">${guide.tips.join(" • ")}</div>`
-    : "";
+  const stepsHtml = renderGuideSteps(guide.steps, escapeHtml);
+  const tipsHtml = renderGuideTips(guide.tips, escapeHtml, "alert alert-light border mt-3 mb-0");
 
   helpContent.innerHTML = `
-        <ol class="mb-3">${stepsHtml}</ol>
+        ${stepsHtml}
         ${tipsHtml}
     `;
+}
+
+function guideStepNumber(index) {
+  const arabicIndic = ["١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+  return appCurrentLang() === "ar" ? arabicIndic[index] || String(index + 1) : String(index + 1);
+}
+
+function renderGuideSteps(steps, escapeFn) {
+  const dir = appCurrentLang() === "ar" ? "rtl" : "ltr";
+  const items = steps
+    .map(
+      (step, index) => `
+        <li class="guide-step d-flex align-items-start gap-2 mb-1">
+          <span class="guide-step-number flex-shrink-0">${guideStepNumber(index)}.</span>
+          <span>${escapeFn(step)}</span>
+        </li>`
+    )
+    .join("");
+  return `<ol class="guide-steps list-unstyled mb-2" dir="${dir}">${items}</ol>`;
+}
+
+function renderGuideTips(tips, escapeFn, className) {
+  if (!tips.length) return "";
+  const dir = appCurrentLang() === "ar" ? "rtl" : "ltr";
+  const items = tips
+    .map(
+      (tip) => `
+        <li class="d-flex align-items-start gap-2 mb-1">
+          <span aria-hidden="true" class="flex-shrink-0">•</span>
+          <span>${escapeFn(tip)}</span>
+        </li>`
+    )
+    .join("");
+  return `<ul class="guide-tips list-unstyled ${className}" dir="${dir}">${items}</ul>`;
 }
 
 function injectRequiredFieldHints() {
@@ -738,8 +768,7 @@ async function initDashboard() {
       const dashboard = await api.getSupervisorDashboard();
       renderSupervisorDashboard(dashboard);
     } else if (user.role === "admin" || user.role === "manager") {
-      // Dashboard loading is handled by the HTML template
-      console.log("Manager dashboard handled by HTML template");
+      // Dashboard loading is handled by the HTML template.
     } else {
       await loadParentDashboard();
     }

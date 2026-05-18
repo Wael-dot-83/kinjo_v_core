@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if ui_lang == 'en' %}Attendance Record{% else %}سجل الحضور{% endif %}{% endblock %}
+{% block title %}{{ _('Attendance Record') }}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
             <i class="bi bi-calendar-check me-2 text-primary"></i>
-            {% if ui_lang == 'en' %}Attendance Record{% else %}سجل الحضور{% endif %}
+            {{ _('Attendance Record') }}
         </h1>
-        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+        <nav aria-label="{{ _('Breadcrumb') }}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
-                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Attendance{% else %}سجل الحضور{% endif %}</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{{ _('Dashboard') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('Attendance') }}</li>
             </ol>
         </nav>
     </div>
@@ -23,17 +23,17 @@
 <!-- Filters -->
 <div class="d-flex flex-wrap align-items-center mb-4 bg-white p-3 rounded shadow-sm border gap-3">
     <div class="d-flex align-items-center">
-        <span class="fw-bold me-2">{% if ui_lang == 'en' %}Child:{% else %}الطفل:{% endif %}</span>
+        <span class="fw-bold me-2">{{ _('Child:') }}</span>
         <select class="form-select w-auto" id="childFilter">
-            <option value="">{% if ui_lang == 'en' %}All Children{% else %}جميع الأطفال{% endif %}</option>
+            <option value="">{{ _('All Children') }}</option>
         </select>
     </div>
     <div class="d-flex align-items-center">
-        <span class="fw-bold me-2">{% if ui_lang == 'en' %}Date:{% else %}التاريخ:{% endif %}</span>
+        <span class="fw-bold me-2">{{ _('Date:') }}</span>
         <input type="date" class="form-control w-auto" id="dateFilter">
     </div>
     <button class="btn btn-outline-primary" onclick="loadAttendance()">
-        <i class="bi bi-funnel me-1"></i>{% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}
+        <i class="bi bi-funnel me-1"></i>{{ _('Filter') }}
     </button>
 </div>
 
@@ -43,7 +43,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-primary" id="countTotal">0</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Total Records{% else %}إجمالي السجلات{% endif %}</small>
+                <small class="text-muted">{{ _('Total Records') }}</small>
             </div>
         </div>
     </div>
@@ -51,7 +51,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-success" id="countPresent">0</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Present{% else %}حاضر{% endif %}</small>
+                <small class="text-muted">{{ _('Present') }}</small>
             </div>
         </div>
     </div>
@@ -59,7 +59,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-danger" id="countAbsent">0</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Absent{% else %}غائب{% endif %}</small>
+                <small class="text-muted">{{ _('Absent') }}</small>
             </div>
         </div>
     </div>
@@ -67,7 +67,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-warning" id="countLate">0</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Late{% else %}متأخر{% endif %}</small>
+                <small class="text-muted">{{ _('Late') }}</small>
             </div>
         </div>
     </div>
@@ -81,19 +81,19 @@
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Check-in{% else %}وقت الحضور{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Check-out{% else %}وقت الانصراف{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Notes{% else %}ملاحظات{% endif %}</th>
+                        <th>{{ _('Child') }}</th>
+                        <th>{{ _('Date') }}</th>
+                        <th>{{ _('Status') }}</th>
+                        <th>{{ _('Check-in') }}</th>
+                        <th>{{ _('Check-out') }}</th>
+                        <th>{{ _('Notes') }}</th>
                     </tr>
                 </thead>
                 <tbody id="attendanceTableBody">
                     <tr>
                         <td colspan="7" class="text-center py-4">
                             <div class="spinner-border spinner-border-sm" role="status"></div>
-                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                            <span class="ms-2">{{ _('Loading...') }}</span>
                         </td>
                     </tr>
                 </tbody>
@@ -207,16 +207,16 @@
             tbody.innerHTML = records.map((r, i) => `
                 <tr>
                     <td>${i + 1}</td>
-                    <td class="fw-semibold">${r.child_name || '—'}</td>
+                    <td class="fw-semibold">${escHtml(r.child_name || '—')}</td>
                     <td>${formatDate(r.date)}</td>
                     <td>
                         <span class="badge ${STATUS_CLASS[r.status] || 'bg-secondary'}">
-                            ${STATUS_LABEL[r.status] || r.status}
+                            ${STATUS_LABEL[r.status] || escHtml(r.status)}
                         </span>
                     </td>
                     <td>${formatTime(r.check_in_at)}</td>
                     <td>${formatTime(r.check_out_at)}</td>
-                    <td>${r.notes || '—'}</td>
+                    <td>${escHtml(r.notes || '—')}</td>
                 </tr>
             `).join('');
 
@@ -230,6 +230,10 @@
                 </tr>
             `;
         }
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

@@ -1,15 +1,21 @@
 """
-Celery application configuration.
+Celery application for KinJo background task processing.
+
+Tasks run eagerly in-process when TESTING=True so no Redis is required in CI.
 """
+import logging
+
 from celery import Celery
 
 from config import settings
 
+logger = logging.getLogger(__name__)
 
 celery_app = Celery(
     "kinjo",
     broker=settings.CELERY_BROKER_URL,
-    backend=settings.CELERY_RESULT_BACKEND
+    backend=settings.CELERY_RESULT_BACKEND,
+    include=["messaging_tasks"],
 )
 
 celery_app.conf.update(
@@ -19,8 +25,13 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
     task_always_eager=settings.TESTING,
-    task_eager_propagates=False,
+    task_eager_propagates=settings.TESTING,
+    beat_schedule={
+        "dispatch-scheduled-messages": {
+            "task": "messaging_tasks.dispatch_scheduled_messages",
+            "schedule": 60.0,
+        },
+    },
 )
-
 
 __all__ = ["celery_app"]

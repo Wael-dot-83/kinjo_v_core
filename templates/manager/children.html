@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('الأطفال') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-people-fill"></i>
+            {{ _('المدير') }}
+        </div>
+        <h1 class="page-header-title">{{ _('الأطفال') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('الأطفال') }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="page-header-actions">
+        <select class="form-select form-select-sm" id="classFilter" style="width:auto;" onchange="loadChildren()">
+            <option value="">كل الشعب</option>
+        </select>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <span class="fw-semibold">
+            <i class="bi bi-list-ul me-2 text-primary"></i>قائمة الأطفال
+            <span class="badge bg-primary rounded-pill ms-2" id="totalBadge">—</span>
+        </span>
+        <div class="d-flex gap-2">
+            <input type="search" class="form-control form-control-sm" id="searchInput"
+                   placeholder="بحث باسم الطفل…" oninput="filterTable()" style="width:200px;">
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ _('اسم الطفل') }}</th>
+                        <th>{{ _('الجنس') }}</th>
+                        <th>{{ _('تاريخ الميلاد') }}</th>
+                        <th>{{ _('الشعبة') }}</th>
+                        <th class="text-center">{{ _('الإجراءات') }}</th>
+                    </tr>
+                </thead>
+                <tbody id="childrenTableBody">
+                    <tr><td colspan="5" class="text-center py-4 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        جاري التحميل…
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Move child modal -->
+<div class="modal fade" id="moveChildModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ _('نقل طفل إلى شعبة أخرى') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
+            </div>
+            <div class="modal-body">
+                <p id="moveChildName" class="fw-semibold mb-3"></p>
+                <input type="hidden" id="moveChildId">
+                <input type="hidden" id="moveFromClassId">
+                <div class="mb-3">
+                    <label class="form-label">{{ _('الشعبة الحالية') }}</label>
+                    <p id="moveFromClassName" class="text-muted mb-0"></p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{{ _('الشعبة الجديدة') }}</label>
+                    <select class="form-select" id="moveToClassSelect"></select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                <button class="btn btn-primary" onclick="confirmMoveChild()">
+                    <i class="bi bi-arrow-left-right me-2"></i>{{ _('نقل') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const h = () => {
+    const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+    return { 'Content-Type': 'application/json', ...(t ? { 'Authorization': `Bearer ${t}` } : {}) };
+};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let _allChildren = [];
+let _classes = [];
+
+async function init() {
+    const clsRes = await fetch('/api/manager/classes', { headers: h() }).catch(() => null);
+    if (clsRes && clsRes.ok) {
+        const d = await clsRes.json();
+        _classes = d.classes || [];
+        const sel = document.getElementById('classFilter');
+        _classes.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id; opt.textContent = c.name_ar;
+            sel.appendChild(opt);
+        });
+    }
+    await loadChildren();
+}
+
+async function loadChildren() {
+    const classId = document.getElementById('classFilter').value;
+    const url = classId ? `/api/manager/children?class_id=${classId}` : '/api/manager/children';
+    try {
+        const res = await fetch(url, { headers: h() });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        _allChildren = data.children || [];
+        document.getElementById('totalBadge').textContent = data.total || 0;
+        renderTable(_allChildren);
+    } catch {
+        showToast('تعذّر تحميل الأطفال', 'error');
+    }
+}
+
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = _allChildren.filter(c =>
+        (c.first_name + ' ' + c.last_name).toLowerCase().includes(q)
+    );
+    renderTable(filtered);
+}
+
+function renderTable(children) {
+    const tbody = document.getElementById('childrenTableBody');
+    if (!children.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted">لا يوجد أطفال</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = children.map(c => {
+        const gender = c.gender === 'MALE' ? 'ذكر' : (c.gender === 'FEMALE' ? 'أنثى' : '—');
+        const fullName = esc(c.first_name + ' ' + c.last_name);
+        const className = esc(c.class_name_ar || '—');
+        const dob = esc(c.date_of_birth || '—');
+        const nameJson = JSON.stringify(c.first_name + ' ' + c.last_name);
+        const classJson = JSON.stringify(c.class_name_ar || '');
+        return `<tr>
+            <td class="fw-semibold">${fullName}</td>
+            <td>${gender}</td>
+            <td>${dob}</td>
+            <td>${className}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary"
+                        onclick="openMoveModal(${c.id},${nameJson},${c.class_id},${classJson})">
+                    <i class="bi bi-arrow-left-right me-1"></i>نقل
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function openMoveModal(childId, childName, fromClassId, fromClassName) {
+    document.getElementById('moveChildId').value     = childId;
+    document.getElementById('moveFromClassId').value = fromClassId;
+    document.getElementById('moveChildName').textContent    = childName;
+    document.getElementById('moveFromClassName').textContent = fromClassName || '—';
+    const sel = document.getElementById('moveToClassSelect');
+    sel.innerHTML = _classes
+        .filter(c => c.id !== fromClassId)
+        .map(c => `<option value="${c.id}">${esc(c.name_ar)}</option>`)
+        .join('');
+    new bootstrap.Modal(document.getElementById('moveChildModal')).show();
+}
+
+async function confirmMoveChild() {
+    const childId     = parseInt(document.getElementById('moveChildId').value);
+    const fromClassId = parseInt(document.getElementById('moveFromClassId').value);
+    const toClassId   = parseInt(document.getElementById('moveToClassSelect').value);
+    try {
+        const res = await fetch('/api/manager/children/move-class', {
+            method: 'POST', headers: h(),
+            body: JSON.stringify({ child_id: childId, from_class_id: fromClassId, to_class_id: toClassId }),
+        });
+        if (res.ok) {
+            showToast('تم نقل الطفل بنجاح', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('moveChildModal')).hide();
+            loadChildren();
+        } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.detail || 'فشل النقل', 'error');
+        }
+    } catch { showToast('خطأ في الشبكة', 'error'); }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+{% endblock %}

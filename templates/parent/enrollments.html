@@ -1,24 +1,24 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if ui_lang == 'en' %}Enrollment Applications{% else %}طلبات التسجيل{% endif %}{% endblock %}
+{% block title %}{{ _('Enrollment Applications') }}{% endblock %}
 
 {% block page_header %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">
             <i class="bi bi-clipboard-check me-2 text-primary"></i>
-            {% if ui_lang == 'en' %}Enrollment Applications{% else %}طلبات التسجيل{% endif %}
+            {{ _('Enrollment Applications') }}
         </h1>
-        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+        <nav aria-label="{{ _('Breadcrumb') }}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
-                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Enrollments{% else %}طلبات التسجيل{% endif %}</li>
+                <li class="breadcrumb-item"><a href="/dashboard">{{ _('Dashboard') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('Enrollments') }}</li>
             </ol>
         </nav>
     </div>
     <div class="btn-toolbar">
         <a href="/enroll" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}New Application{% else %}طلب جديد{% endif %}
+            <i class="bi bi-plus-circle me-2"></i>{{ _('New Application') }}
         </a>
     </div>
 </div>
@@ -31,7 +31,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-primary" id="countTotal">0</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Total{% else %}الإجمالي{% endif %}</small>
+                <small class="text-muted">{{ _('Total') }}</small>
             </div>
         </div>
     </div>
@@ -39,7 +39,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-success" id="countActive">0</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Active / Accepted{% else %}نشط / مقبول{% endif %}</small>
+                <small class="text-muted">{{ _('Active / Accepted') }}</small>
             </div>
         </div>
     </div>
@@ -47,7 +47,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-warning" id="countPending">0</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Under Review{% else %}قيد المراجعة{% endif %}</small>
+                <small class="text-muted">{{ _('Under Review') }}</small>
             </div>
         </div>
     </div>
@@ -55,7 +55,7 @@
         <div class="card text-center border-0 shadow-sm">
             <div class="card-body py-3">
                 <h3 class="mb-0 text-danger" id="countRejected">0</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</small>
+                <small class="text-muted">{{ _('Rejected') }}</small>
             </div>
         </div>
     </div>
@@ -69,17 +69,17 @@
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                        <th>{% if ui_lang == 'en' %}Submitted{% else %}تاريخ التقديم{% endif %}</th>
+                        <th>{{ _('Child') }}</th>
+                        <th>{{ _('Kindergarten') }}</th>
+                        <th>{{ _('Status') }}</th>
+                        <th>{{ _('Submitted') }}</th>
                     </tr>
                 </thead>
                 <tbody id="enrollmentsTableBody">
                     <tr>
                         <td colspan="5" class="text-center py-4">
                             <div class="spinner-border spinner-border-sm" role="status"></div>
-                            <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                            <span class="ms-2">{{ _('Loading...') }}</span>
                         </td>
                     </tr>
                 </tbody>
@@ -162,12 +162,12 @@
                 <tr>
                     <td>${i + 1}</td>
                     <td>
-                        <div class="fw-semibold">${e.child_name}</div>
+                        <div class="fw-semibold">${escHtml(e.child_name)}</div>
                     </td>
-                    <td>${e.kindergarten_name}</td>
+                    <td>${escHtml(e.kindergarten_name)}</td>
                     <td>
                         <span class="badge ${STATUS_CLASS[e.status] || 'bg-secondary'}">
-                            ${STATUS_LABEL[e.status] || e.status}
+                            ${STATUS_LABEL[e.status] || escHtml(e.status)}
                         </span>
                     </td>
                     <td>${formatDate(e.submitted_at || e.created_at)}</td>
@@ -184,6 +184,10 @@
                 </tr>
             `;
         }
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

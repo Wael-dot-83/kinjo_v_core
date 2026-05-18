@@ -1,4 +1,4 @@
-﻿document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", function () {
   // Set default date range (Current Month)
   const today = new Date();
   console.log("Today:", today);

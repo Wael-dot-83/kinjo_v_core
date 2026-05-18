@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %}{% endblock %}
 
@@ -293,7 +293,7 @@
         <div class="form-check">
             <input class="form-check-input kg-checkbox" type="checkbox" value="${kg.id}" id="kg_${kg.id}">
             <label class="form-check-label small" for="kg_${kg.id}">
-                ${kg.name_ar || kg.name} <span class="text-muted">(${kg.city})</span>
+                ${escHtml(kg.name_ar || kg.name)} <span class="text-muted">(${escHtml(kg.city)})</span>
             </label>
         </div>
     `).join('');
@@ -432,10 +432,10 @@
             return;
         }
         sampleList.innerHTML = samples.map(u => `
-        <li class="mb-1 text-truncate" title="${u.display_name}">
+        <li class="mb-1 text-truncate" title="${escHtml(u.display_name)}">
             <i class="bi bi-person text-secondary me-1"></i>
-            ${u.display_name}
-            <span class="text-muted opacity-75">(${u.role})</span>
+            ${escHtml(u.display_name)}
+            <span class="text-muted opacity-75">(${escHtml(u.role)})</span>
         </li>
     `).join('');
     }
@@ -496,6 +496,10 @@
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

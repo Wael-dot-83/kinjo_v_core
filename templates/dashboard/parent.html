@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if ui_lang == 'en' %}Parent Dashboard{% else %}لوحة ولي الأمر{% endif %}{% endblock %}
+{% block title %}{{ _('Parent Dashboard') }}{% endblock %}
 
 {% block page_header %}
 <div class="dashboard-header">
@@ -8,9 +8,9 @@
         <div>
             <h1 class="h2 mb-1">
                 <i class="bi bi-house-heart me-2 text-primary"></i>
-                {% if ui_lang == 'en' %}Welcome{% else %}مرحباً بك{% endif %}
+                {{ _('Welcome') }}
             </h1>
-            <p class="text-muted mb-0">{% if ui_lang == 'en' %}Follow your children's news and daily reports{% else %}تابع أخبار أطفالك وتقاريرهم اليومية{% endif %}</p>
+            <p class="text-muted mb-0">{{ _("Follow your children's news and daily reports") }}</p>
         </div>
     </div>
 </div>
@@ -22,7 +22,7 @@
     <!-- Populated by JavaScript -->
     <div class="col-12 text-center py-5">
         <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2 text-muted">{% if ui_lang == 'en' %}Loading children data...{% else %}جاري تحميل بيانات أطفالك...{% endif %}</p>
+        <p class="mt-2 text-muted">{{ _('Loading children data...') }}</p>
     </div>
 </div>
 
@@ -35,25 +35,25 @@
                     <div class="col-md-3">
                         <a href="/enroll" class="btn btn-primary btn-lg w-100 py-3">
                             <i class="bi bi-person-plus fs-3 d-block mb-2"></i>
-                            {% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}
+                            {{ _('Register New Child') }}
                         </a>
                     </div>
                     <div class="col-md-3">
                         <a href="/my-reports" class="btn btn-success btn-lg w-100 py-3">
                             <i class="bi bi-journal-text fs-3 d-block mb-2"></i>
-                            {% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}
+                            {{ _('Daily Reports') }}
                         </a>
                     </div>
                     <div class="col-md-3">
                         <a href="/messages" class="btn btn-info btn-lg w-100 py-3">
                             <i class="bi bi-chat-dots fs-3 d-block mb-2"></i>
-                            {% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}
+                            {{ _('Messages') }}
                         </a>
                     </div>
                     <div class="col-md-3">
                         <a href="/parent/profile" class="btn btn-secondary btn-lg w-100 py-3">
                             <i class="bi bi-person-circle fs-3 d-block mb-2"></i>
-                            {% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %}
+                            {{ _('My Profile') }}
                         </a>
                     </div>
                 </div>
@@ -69,9 +69,9 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-journal-text me-2"></i>
-                    {% if ui_lang == 'en' %}Latest Daily Reports{% else %}آخر التقارير اليومية{% endif %}
+                    {{ _('Latest Daily Reports') }}
                 </h5>
-                <a href="/my-reports" class="btn btn-sm btn-outline-primary">{% if ui_lang == 'en' %}View All{% else %}عرض الكل{% endif %}</a>
+                <a href="/my-reports" class="btn btn-sm btn-outline-primary">{{ _('View All') }}</a>
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush" id="latestReports">
@@ -87,14 +87,14 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-calendar-event me-2"></i>
-                    {% if ui_lang == 'en' %}Upcoming Events{% else %}الفعاليات القادمة{% endif %}
+                    {{ _('Upcoming Events') }}
                 </h5>
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush" id="upcomingEvents">
                     <div class="list-group-item text-center text-muted py-4">
                         <i class="bi bi-calendar-x d-block fs-2 mb-2 opacity-25"></i>
-                        <small>{% if ui_lang == 'en' %}No upcoming events{% else %}لا توجد فعاليات قادمة{% endif %}</small>
+                        <small>{{ _('No upcoming events') }}</small>
                     </div>
                 </div>
             </div>
@@ -104,10 +104,10 @@
         <div class="card">
             <div class="card-body text-center">
                 <i class="bi bi-headset fs-1 text-primary mb-3"></i>
-                <h5>{% if ui_lang == 'en' %}Need Help?{% else %}تحتاج مساعدة؟{% endif %}</h5>
-                <p class="text-muted small">{% if ui_lang == 'en' %}Contact kindergarten management{% else %}تواصل مع إدارة الروضة{% endif %}</p>
+                <h5>{{ _('Need Help?') }}</h5>
+                <p class="text-muted small">{{ _('Contact kindergarten management') }}</p>
                 <a href="/contact" class="btn btn-outline-primary">
-                    <i class="bi bi-chat me-2"></i>{% if ui_lang == 'en' %}Contact Us{% else %}تواصل معنا{% endif %}
+                    <i class="bi bi-chat me-2"></i>{{ _('Contact Us') }}
                 </a>
             </div>
         </div>
@@ -234,7 +234,7 @@
                                 </span>
                             ` : ''}
                         </div>
-                        <h4 class="card-title mb-1">${child.first_name} ${child.last_name}</h4>
+                        <h4 class="card-title mb-1">${escHtml(child.first_name)} ${escHtml(child.last_name)}</h4>
                         <p class="text-muted mb-2">${child.enrollment ? parentText('status.enrolled', 'مسجل', 'Enrolled') : parentText('status.pending_enrollment', 'بانتظار التسجيل', 'Pending enrollment')}</p>
                         
                         <div class="d-grid gap-2">
@@ -275,8 +275,8 @@
             <div class="list-group-item list-group-item-action">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="mb-1">${report.child_name}</h6>
-                        <p class="mb-1 text-muted small">${report.notes || parentText('common.no_notes', 'لا توجد ملاحظات', 'No notes')}</p>
+                        <h6 class="mb-1">${escHtml(report.child_name || '')}</h6>
+                        <p class="mb-1 text-muted small">${escHtml(report.notes || parentText('common.no_notes', 'لا توجد ملاحظات', 'No notes'))}</p>
                         <small class="text-muted">
                             <i class="bi bi-calendar me-1"></i>${formatDate(report.date)}
                         </small>
@@ -285,6 +285,10 @@
                 </div>
             </div>
         `).join('');
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

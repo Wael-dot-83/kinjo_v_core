@@ -315,6 +315,10 @@
         return arValue || enValue || fallback;
     };
 
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
     // Helper to get headers with token
     function getHeaders() {
         // Use centralized auth system
@@ -357,7 +361,7 @@
                 select.innerHTML = `<option value="" selected>-- ${enrollmentViewText('classes.select', 'اختر الشعبة', 'Select class')} --</option>` +
                     classes.map(c => `
                         <option value="${c.id}">
-                            ${preferredEnrollmentValue(c.name_ar, c.name_en, enrollmentViewText('classes.unnamed', 'فصل بدون اسم', 'Unnamed class'))}
+                            ${escHtml(preferredEnrollmentValue(c.name_ar, c.name_en, enrollmentViewText('classes.unnamed', 'فصل بدون اسم', 'Unnamed class')))}
                             (${enrollmentViewText('classes.capacity', 'السعة', 'Capacity')}: ${c.capacity_total})
                         </option>
                     `).join('');

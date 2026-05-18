@@ -1,0 +1,407 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('الشعب الدراسية') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-door-open-fill"></i>
+            {{ _('المدير') }}
+        </div>
+        <h1 class="page-header-title">{{ _('الشعب الدراسية') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('الشعب') }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="page-header-actions">
+        <a href="/classes/create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>{{ _('إنشاء شعبة') }}
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats row -->
+<div class="row g-3 mb-4 stagger-children">
+    <div class="col-6 col-md-3">
+        <div class="stat-card card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('إجمالي الشعب') }}</div>
+                    <div class="stat-value" id="statTotal">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
+                    <i class="bi bi-door-open-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card success card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('شعب نشطة') }}</div>
+                    <div class="stat-value" id="statActive">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('إجمالي الأطفال') }}</div>
+                    <div class="stat-value" id="statChildren">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(6,182,212,0.12);color:#0891b2;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('إجمالي المشرفين') }}</div>
+                    <div class="stat-value" id="statSupervisors">—</div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
+                    <i class="bi bi-person-badge-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Classes Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="card-title-sm mb-0">
+            <i class="bi bi-table me-2 text-primary"></i>
+            {{ _('قائمة الشعب') }}
+        </h6>
+        <input type="search" class="form-control form-control-sm" style="width:200px;"
+               id="classSearch" placeholder="{{ _('بحث...') }}"
+               aria-label="{{ _('بحث في الشعب') }}" oninput="filterTable(this.value)">
+    </div>
+
+    <div id="tableLoading" class="card-body text-center py-5 text-muted">
+        <div class="spinner-border mb-3" role="status" aria-label="{{ _('جاري التحميل') }}"></div>
+        <div>{{ _('جاري تحميل الشعب...') }}</div>
+    </div>
+
+    <div id="tableEmpty" class="card-body text-center py-5 text-muted d-none">
+        <i class="bi bi-door-open d-block fs-1 mb-3 opacity-25"></i>
+        <p class="fw-600">{{ _('لا توجد شعب مسجلة') }}</p>
+        <a href="/classes/create" class="btn btn-primary btn-sm mt-2">
+            <i class="bi bi-plus-circle me-2"></i>{{ _('إنشاء أول شعبة') }}
+        </a>
+    </div>
+
+    <div id="tableError" class="card-body text-center py-5 d-none">
+        <i class="bi bi-exclamation-circle d-block fs-1 mb-3 text-danger opacity-50"></i>
+        <p class="text-muted">{{ _('تعذّر تحميل البيانات') }}</p>
+        <button class="btn btn-ghost btn-sm" onclick="loadClasses()">
+            <i class="bi bi-arrow-clockwise me-1"></i>{{ _('إعادة المحاولة') }}
+        </button>
+    </div>
+
+    <div id="tableWrap" class="d-none">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="classesTable" aria-label="{{ _('جدول الشعب الدراسية') }}">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">{{ _('اسم الشعبة') }}</th>
+                        <th scope="col" class="text-center">{{ _('الطاقة') }}</th>
+                        <th scope="col" class="text-center">{{ _('الفئة العمرية') }}</th>
+                        <th scope="col" class="text-center">{{ _('المشرفون') }}</th>
+                        <th scope="col" class="text-center">{{ _('الأطفال') }}</th>
+                        <th scope="col" class="text-center">{{ _('الحالة') }}</th>
+                        <th scope="col" class="text-center">{{ _('الإجراءات') }}</th>
+                    </tr>
+                </thead>
+                <tbody id="classesTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-700 text-danger" id="deleteModalLabel">
+                    <i class="bi bi-trash3-fill me-2"></i>{{ _('حذف الشعبة') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
+            </div>
+            <div class="modal-body">
+                <p>{{ _('هل أنت متأكد من حذف شعبة') }} <strong id="deleteClassName"></strong>؟</p>
+                <div class="alert alert-warning py-2 small">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    {{ _('سيؤدي الحذف إلى إزالة جميع بيانات الشعبة بشكل دائم.') }}
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDelete()">
+                    <span class="btn-text"><i class="bi bi-trash3 me-2"></i>{{ _('نعم، حذف') }}</span>
+                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Swap Supervisor Modal -->
+<div class="modal fade" id="swapSupervisorModal" tabindex="-1" aria-labelledby="swapModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-700" id="swapModalLabel">
+                    <i class="bi bi-arrow-left-right me-2 text-primary"></i>
+                    {{ _('تغيير المشرف') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">{{ _('اختر المشرف الجديد للشعبة') }} <strong id="swapClassName"></strong></p>
+                <label class="field-label mb-2" for="supervisorSelector">{{ _('المشرف') }}</label>
+                <select class="form-select" id="supervisorSelector" aria-label="{{ _('اختر مشرفاً') }}">
+                    <option value="">{{ _('— جاري التحميل... —') }}</option>
+                </select>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                <button type="button" class="btn btn-primary" id="confirmSwapBtn" onclick="confirmSwap()">
+                    <span class="btn-text"><i class="bi bi-check2 me-2"></i>{{ _('تطبيق') }}</span>
+                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
+.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+.field-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block; }
+.fw-600 { font-weight:600; }
+.fw-700 { font-weight:700; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    let deleteModal = null;
+    let swapModal   = null;
+    let pendingDeleteId  = null;
+    let pendingSwapId    = null;
+    let allClasses = [];
+
+    function getHeaders() {
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+        const h = { 'Content-Type': 'application/json' };
+        if (t) h['Authorization'] = `Bearer ${t}`;
+        return h;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        swapModal   = new bootstrap.Modal(document.getElementById('swapSupervisorModal'));
+        loadClasses();
+    });
+
+    window.loadClasses = async function () {
+        document.getElementById('tableLoading').classList.remove('d-none');
+        document.getElementById('tableEmpty').classList.add('d-none');
+        document.getElementById('tableError').classList.add('d-none');
+        document.getElementById('tableWrap').classList.add('d-none');
+
+        try {
+            const r = await fetch('/api/classes', { headers: getHeaders() });
+            if (!r.ok) throw new Error();
+            const data = await r.json();
+            allClasses = data.classes || [];
+
+            const active  = allClasses.filter(c => c.is_active).length;
+            const totalCh = allClasses.reduce((s, c) => s + (c.children_count || 0), 0);
+            const totalSu = allClasses.reduce((s, c) => s + (c.supervisors_count || 0), 0);
+
+            document.getElementById('statTotal').textContent       = allClasses.length;
+            document.getElementById('statActive').textContent      = active;
+            document.getElementById('statChildren').textContent    = totalCh;
+            document.getElementById('statSupervisors').textContent = totalSu;
+
+            document.getElementById('tableLoading').classList.add('d-none');
+
+            if (!allClasses.length) {
+                document.getElementById('tableEmpty').classList.remove('d-none');
+                return;
+            }
+
+            renderTable(allClasses);
+            document.getElementById('tableWrap').classList.remove('d-none');
+
+        } catch {
+            document.getElementById('tableLoading').classList.add('d-none');
+            document.getElementById('tableError').classList.remove('d-none');
+        }
+    };
+
+    function renderTable(classes) {
+        const tbody = document.getElementById('classesTableBody');
+        tbody.innerHTML = classes.map(cls => {
+            const ageRange = (cls.min_age_months && cls.max_age_months)
+                ? `${cls.min_age_months}–${cls.max_age_months} {{ _("شهر") }}`
+                : '—';
+            const activeBadge = cls.is_active
+                ? `<span class="badge bg-success">{{ _('نشطة') }}</span>`
+                : `<span class="badge bg-light text-muted border">{{ _('موقوفة') }}</span>`;
+            return `
+            <tr>
+                <td>
+                    <div class="fw-700">${escHtml(cls.name_ar)}</div>
+                    ${cls.name_en ? `<div class="text-muted small">${escHtml(cls.name_en)}</div>` : ''}
+                </td>
+                <td class="text-center">
+                    <span class="fw-600">${cls.capacity_total || '—'}</span>
+                </td>
+                <td class="text-center small text-muted">${ageRange}</td>
+                <td class="text-center">
+                    <span class="badge" style="background:rgba(245,158,11,0.15);color:#d97706;">
+                        ${cls.supervisors_count || 0}
+                    </span>
+                </td>
+                <td class="text-center">
+                    <span class="badge" style="background:rgba(6,182,212,0.12);color:#0891b2;">
+                        ${cls.children_count || 0}
+                    </span>
+                </td>
+                <td class="text-center">${activeBadge}</td>
+                <td>
+                    <div class="d-flex gap-1 justify-content-center flex-wrap">
+                        <a href="/classes/${cls.id}/edit" class="btn btn-sm btn-ghost"
+                           aria-label="{{ _('تعديل') }} ${escHtml(cls.name_ar)}">
+                            <i class="bi bi-pencil me-1"></i>{{ _('تعديل') }}
+                        </a>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="openSwapModal(${cls.id},${escHtml(JSON.stringify(cls.name_ar))})"
+                                aria-label="{{ _('تغيير المشرف') }}">
+                            <i class="bi bi-arrow-left-right me-1"></i>{{ _('مشرف') }}
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="openDeleteModal(${cls.id},${escHtml(JSON.stringify(cls.name_ar))})"
+                                aria-label="{{ _('حذف') }} ${escHtml(cls.name_ar)}">
+                            <i class="bi bi-trash3 me-1"></i>{{ _('حذف') }}
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    window.filterTable = function (query) {
+        const q = query.toLowerCase();
+        const filtered = allClasses.filter(c =>
+            (c.name_ar || '').toLowerCase().includes(q) ||
+            (c.name_en || '').toLowerCase().includes(q)
+        );
+        renderTable(filtered);
+    };
+
+    window.openDeleteModal = function (id, name) {
+        pendingDeleteId = id;
+        document.getElementById('deleteClassName').textContent = name;
+        deleteModal.show();
+    };
+
+    window.confirmDelete = async function () {
+        if (!pendingDeleteId) return;
+        const btn = document.getElementById('confirmDeleteBtn');
+        setLoading(btn, true);
+        try {
+            const r = await fetch(`/api/manager/classes/${pendingDeleteId}`, {
+                method: 'DELETE',
+                headers: getHeaders()
+            });
+            if (!r.ok) throw new Error();
+            showToast('{{ _("تم حذف الشعبة بنجاح") }}', 'success');
+            deleteModal.hide();
+            await loadClasses();
+        } catch {
+            showToast('{{ _("حدث خطأ في الحذف") }}', 'error');
+        } finally {
+            setLoading(btn, false);
+            pendingDeleteId = null;
+        }
+    };
+
+    window.openSwapModal = async function (classId, className) {
+        pendingSwapId = classId;
+        document.getElementById('swapClassName').textContent = className;
+        const sel = document.getElementById('supervisorSelector');
+        sel.innerHTML = `<option value="">{{ _('— جاري التحميل... —') }}</option>`;
+        swapModal.show();
+
+        try {
+            const r = await fetch('/api/manager/supervisors', { headers: getHeaders() });
+            const data = r.ok ? await r.json() : {};
+            const sups = data.supervisors || [];
+            sel.innerHTML = `<option value="">{{ _('— اختر مشرفاً —') }}</option>` +
+                sups.map(s => `<option value="${s.id}">${escHtml(s.name || s.username)}</option>`).join('');
+        } catch {
+            sel.innerHTML = `<option value="">{{ _('— خطأ في التحميل —') }}</option>`;
+        }
+    };
+
+    window.confirmSwap = async function () {
+        const supId = document.getElementById('supervisorSelector').value;
+        if (!supId) { showToast('{{ _("يجب اختيار مشرف") }}', 'warning'); return; }
+        const btn = document.getElementById('confirmSwapBtn');
+        setLoading(btn, true);
+        try {
+            const r = await fetch(`/api/manager/classes/${pendingSwapId}/swap-supervisor`, {
+                method: 'PUT',
+                headers: getHeaders(),
+                body: JSON.stringify({ supervisor_id: parseInt(supId), class_id: pendingSwapId, is_primary: true })
+            });
+            if (!r.ok) throw new Error();
+            showToast('{{ _("تم تغيير المشرف بنجاح") }}', 'success');
+            swapModal.hide();
+            await loadClasses();
+        } catch {
+            showToast('{{ _("حدث خطأ في تغيير المشرف") }}', 'error');
+        } finally {
+            setLoading(btn, false);
+            pendingSwapId = null;
+        }
+    };
+
+    function setLoading(btn, on) {
+        btn.querySelector('.btn-text').classList.toggle('d-none', on);
+        btn.querySelector('.btn-loading').classList.toggle('d-none', !on);
+        btn.disabled = on;
+    }
+
+    function escHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+})();
+</script>
+{% endblock %}

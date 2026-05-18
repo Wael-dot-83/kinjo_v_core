@@ -155,17 +155,17 @@ breadcrumbs=[
         // Report details
         const detailsHtml = `
         <p><strong>${T('تاريخ الإنشاء:', 'Created Date:')}</strong> ${new Date(reportData.created_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-EG')}</p>
-        <p><strong>${T('الفترة الزمنية:', 'Time Period:')}</strong> ${reportData.start_date} - ${reportData.end_date}</p>
-        <p><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong> ${reportData.creator_name || T('غير محدد', 'Unknown')}</p>
+        <p><strong>${T('الفترة الزمنية:', 'Time Period:')}</strong> ${escHtml(reportData.start_date)} - ${escHtml(reportData.end_date)}</p>
+        <p><strong>${T('أنشئ بواسطة:', 'Created By:')}</strong> ${escHtml(reportData.creator_name || T('غير محدد', 'Unknown'))}</p>
     `;
         document.getElementById('reportDetails').innerHTML = detailsHtml;
 
         // Report scope
         let scopeHtml = `<p><strong>${T('النوع:', 'Type:')}</strong> ${getScopeTypeLabel(reportData.scope_type)}</p>`;
         if (reportData.scope_type === 'KINDERGARTEN' && reportData.kindergarten_name) {
-            scopeHtml += `<p><strong>${T('الروضة:', 'Kindergarten:')}</strong> ${reportData.kindergarten_name}</p>`;
+            scopeHtml += `<p><strong>${T('الروضة:', 'Kindergarten:')}</strong> ${escHtml(reportData.kindergarten_name)}</p>`;
         } else if (reportData.scope_type === 'GOVERNORATE' && reportData.governorate) {
-            scopeHtml += `<p><strong>${T('المحافظة:', 'Governorate:')}</strong> ${reportData.governorate}</p>`;
+            scopeHtml += `<p><strong>${T('المحافظة:', 'Governorate:')}</strong> ${escHtml(reportData.governorate)}</p>`;
         }
         document.getElementById('reportScope').innerHTML = scopeHtml;
 
@@ -301,6 +301,10 @@ breadcrumbs=[
         window.location.href = `/api/admin/reports/incidents/${reportId}/export`;
         const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
         modal.hide();
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 </script>
 {% endblock %}

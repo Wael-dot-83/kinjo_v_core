@@ -1359,7 +1359,6 @@ class KPIService:
             operating_minutes += minutes_per_day
             children_count = children_by_day.get(day, 0)
             if children_count <= 0:
-                compliant_minutes += minutes_per_day
                 continue
             staff_count = staff_by_day.get(day, 0)
             required_staff = max(1, ceil(children_count / 10))
@@ -1389,7 +1388,7 @@ class KPIService:
         ).scalar() or 0
 
         if total_followup_required == 0:
-            return 0.0
+            return 100.0
 
         # Count incidents closed within SLA
         closed_within_sla = db.query(func.count(models.Incident.id)).filter(
@@ -3575,3 +3574,63 @@ def get_enhanced_manager_kpi_dashboard(
         last_updated=last_updated,
         data_freshness=data_freshness
     )
+
+
+@router.get("/kpi/network-summary")
+def get_kpi_network_summary(
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """KPI network summary across all active kindergartens (admin only)"""
+    validators.validate_admin_role(current_user)
+
+    if end_date is None:
+        end_date = date.today()
+    if start_date is None:
+        start_date = end_date - timedelta(days=30)
+
+    kindergartens = db.query(models.Kindergarten).filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+    ).all()
+
+    per_kg = []
+    attendance_rates = []
+    incident_rates = []
+    ratio_compliances = []
+    gqi_scores = []
+
+    for kg in kindergartens:
+        ar = KPIService.compute_attendance_rate(db, kg.id, start_date, end_date)
+        ir = KPIService.compute_incident_rate(db, kg.id, start_date, end_date)
+        rc = KPIService.compute_ratio_compliance(db, kg.id, start_date, end_date)
+        gs_tuple = KPIService.compute_governance_score(db, kg.id, start_date, end_date)
+        gs = gs_tuple[0] if isinstance(gs_tuple, tuple) else float(gs_tuple)
+        band = gs_tuple[1] if isinstance(gs_tuple, tuple) else ("GREEN" if gs >= 70 else ("AMBER" if gs >= 40 else "RED"))
+
+        attendance_rates.append(ar)
+        incident_rates.append(ir)
+        ratio_compliances.append(rc)
+        gqi_scores.append(gs)
+
+        per_kg.append({
+            "kindergarten_id": kg.id,
+            "attendance_rate": ar,
+            "incident_rate": ir,
+            "ratio_compliance": rc,
+            "governance_score": gs,
+            "governance_band": band,
+        })
+
+    def _avg(lst: list) -> float:
+        return round(sum(lst) / len(lst), 2) if lst else 0.0
+
+    return {
+        "kindergarten_count": len(kindergartens),
+        "avg_attendance_rate": _avg(attendance_rates),
+        "avg_incident_rate": _avg(incident_rates),
+        "avg_ratio_compliance": _avg(ratio_compliances),
+        "avg_gqi_score": _avg(gqi_scores),
+        "per_kindergarten": per_kg,
+    }

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Unified dashboard client logic for ADMIN, MANAGER, SUPERVISOR, and PARENT.
  * It hydrates widgets defensively: if an element does not exist for a role,
  * the updater simply no-ops.
@@ -45,80 +45,80 @@ function dashboardText(key, arText, enText) {
 }
 
 const DASHBOARD_LITERAL_EN = {
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù…ØªØ§Ø­Ø©": "No data available",
-  "Ù…Ø±Ø§Ø³Ù„Ø© Ø§Ù„Ù…Ø´Ø±Ù": "Message supervisor",
-  "Ù…Ø±Ø§Ø³Ù„Ø© ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±": "Message parent",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ ÙØµÙˆÙ„": "No classes",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª ÙØµÙˆÙ„ Ù„Ø¹Ø±Ø¶Ù‡Ø§": "No class data to display",
-  "Ù†Ø³Ø¨Ø© Ø¥Ø´ØºØ§Ù„ Ø§Ù„ÙØµÙ„": "Class occupancy rate",
-  "Ù†Ø´Ø·": "Active",
-  "ØºÙŠØ± Ù†Ø´Ø·": "Inactive",
-  "Ø¹Ø±Ø¶ Ø§Ù„ÙØµÙ„": "View class",
-  "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„ÙØµÙˆÙ„": "Unable to load classes",
-  "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ù…Ù„Ø®Øµ Ø§Ù„ÙØµÙˆÙ„": "Unable to load class summary",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ‚Ø§Ø±ÙŠØ± Ù…Ø¹Ù„Ù‚Ø©": "No pending reports",
-  "ØªØ§Ø±ÙŠØ® ØºÙŠØ± Ù…Ø­Ø¯Ø¯": "Date not specified",
-  "Ø§Ù„ÙŠÙˆÙ…": "Today",
-  "Ø£Ù…Ø³": "Yesterday",
-  "Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©": "Pending review",
-  "Ø¹Ø±Ø¶ Ø§Ù„ØªÙ‚Ø±ÙŠØ±": "View report",
-  "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±": "Unable to load reports",
-  "Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø´Ø±ÙÙŠÙ†": "Total supervisors",
-  "Ø§Ù„Ù†Ø·Ø§Ù‚ Ø§Ù„Ø¥Ø¯Ø§Ø±ÙŠ Ø§Ù„Ø­Ø§Ù„ÙŠ": "Current management scope",
-  "Ø§Ù„Ù…Ø´Ø±ÙÙˆÙ† Ø§Ù„Ù†Ø´Ø·ÙˆÙ†": "Active supervisors",
-  "Ù…Ù† Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø´Ø±ÙÙŠÙ†": "of total supervisors",
-  "Ù…Ø¹Ø¯Ù„ Ù†Ø´Ø§Ø· Ø§Ù„Ù…Ø´Ø±ÙÙŠÙ†": "Supervisor activity rate",
-  "Ø§Ù„Ù…Ø´Ø±ÙÙˆÙ† ØºÙŠØ± Ø§Ù„Ù†Ø´Ø·ÙŠÙ†": "Inactive supervisors",
-  "Ù…Ø¹Ø¯Ù„ Ø¹Ø¯Ù… Ø§Ù„Ù†Ø´Ø§Ø·": "Inactivity rate",
-  "ØºÙŠØ± Ù…ØªØ§Ø­ Ø­Ø§Ù„ÙŠØ§Ù‹": "Currently unavailable",
-  "Ù†Ø³Ø¨Ø© Ø­Ø¶ÙˆØ±": "attendance rate",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª": "No requests",
-  "Ø¥Ø¬Ø±Ø§Ø¡ ÙÙˆØ±ÙŠ": "Immediate action",
-  "ØªØ­ØªØ§Ø¬ Ù…ØªØ§Ø¨Ø¹Ø©": "Needs follow-up",
-  "Ù…Ø³ØªÙ‚Ø±": "Stable",
-  "Ø­Ø±Ø¬": "Critical",
-  "ØªØ­Øª Ø§Ù„Ù…Ø±Ø§Ù‚Ø¨Ø©": "Under monitoring",
-  "Ù…Ù…ØªØ§Ø²": "Excellent",
-  "Ø¬ÙŠØ¯": "Good",
-  "Ù…ØªÙˆØ³Ø·": "Average",
-  "Ù…Ù‡Ø¯Ø¯": "At risk",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø±ÙˆØ¶Ø§Øª": "No kindergartens",
-  "Ø³Ø§Ø±ÙŠ": "Valid",
-  "Ù‚Ø§Ø±Ø¨ Ø¹Ù„Ù‰ Ø§Ù„Ø§Ù†ØªÙ‡Ø§Ø¡": "Expiring soon",
-  "Ù…Ù†ØªÙ‡ÙŠ": "Expired",
-  "Ø¹Ø±Ø¶ Ø§Ù„Ø±ÙˆØ¶Ø©": "View kindergarten",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª": "No data",
-  "ØªÙ†Ø¨ÙŠÙ‡": "Alert",
-  "Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„ØªØ±Ø®ÙŠØµ": "License expiry",
-  "Ø·Ù„Ø¨Ø§Øª ØªØ³Ø¬ÙŠÙ„ Ù…Ø¹Ù„Ù‚Ø©": "Pending enrollments",
-  "Ø§Ù†Ø®ÙØ§Ø¶ Ø§Ù„Ø­Ø¶ÙˆØ±": "Low attendance",
-  "Ø§Ø±ØªÙØ§Ø¹ Ø§Ù„Ø­ÙˆØ§Ø¯Ø«": "High incidents",
-  "Ø·Ù„Ø¨Ø§Øª Ø§Ù„ØªØ³Ø¬ÙŠÙ„": "Enrollment requests",
-  "Ø§Ù„Ø³Ù„Ø§Ù…Ø©": "Safety",
-  "Ø§Ù„ØªØ±Ø®ÙŠØµ": "License",
-  "Ø§Ù„Ø§Ù…ØªØ«Ø§Ù„": "Compliance",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙØ§ØµÙŠÙ„ Ù…ØªØ§Ø­Ø©.": "No details available.",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ù†Ø´Ø·Ø©": "No active alerts",
-  "ÙØªØ­": "Open",
-  "Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø­Ø§Ù„Ø§Øª": "Total cases",
-  "Ø§Ù„Ø­Ø¶ÙˆØ±": "Attendance",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ø­Ø¶ÙˆØ± Ø¶Ù…Ù† Ø§Ù„ÙØªØ±Ø© Ø§Ù„Ù…Ø®ØªØ§Ø±Ø©":
+  "لا توجد بيانات متاحة": "No data available",
+  "مراسلة المشرف": "Message supervisor",
+  "مراسلة ولي الأمر": "Message parent",
+  "لا توجد فصول": "No classes",
+  "لا توجد بيانات فصول لعرضها": "No class data to display",
+  "نسبة إشغال الفصل": "Class occupancy rate",
+  "نشط": "Active",
+  "غير نشط": "Inactive",
+  "عرض الفصل": "View class",
+  "تعذر تحميل الفصول": "Unable to load classes",
+  "تعذر تحميل ملخص الفصول": "Unable to load class summary",
+  "لا توجد تقارير معلقة": "No pending reports",
+  "تاريخ غير محدد": "Date not specified",
+  "اليوم": "Today",
+  "أمس": "Yesterday",
+  "بانتظار المراجعة": "Pending review",
+  "عرض التقرير": "View report",
+  "تعذر تحميل التقارير": "Unable to load reports",
+  "إجمالي المشرفين": "Total supervisors",
+  "النطاق الإداري الحالي": "Current management scope",
+  "المشرفون النشطون": "Active supervisors",
+  "من إجمالي المشرفين": "of total supervisors",
+  "معدل نشاط المشرفين": "Supervisor activity rate",
+  "المشرفون غير النشطين": "Inactive supervisors",
+  "معدل عدم النشاط": "Inactivity rate",
+  "غير متاح حالياً": "Currently unavailable",
+  "نسبة الحضور": "attendance rate",
+  "لا توجد طلبات": "No requests",
+  "إجراء فوري": "Immediate action",
+  "تحتاج متابعة": "Needs follow-up",
+  "مستقر": "Stable",
+  "حرج": "Critical",
+  "تحت المراقبة": "Under monitoring",
+  "ممتاز": "Excellent",
+  "جيد": "Good",
+  "متوسط": "Average",
+  "مهدد": "At risk",
+  "لا توجد روضات": "No kindergartens",
+  "ساري": "Valid",
+  "قارب على الانتهاء": "Expiring soon",
+  "منتهي": "Expired",
+  "عرض الروضة": "View kindergarten",
+  "لا توجد بيانات": "No data",
+  "تنبيه": "Alert",
+  "انتهاء الترخيص": "License expiry",
+  "طلبات تسجيل معلقة": "Pending enrollments",
+  "انخفاض الحضور": "Low attendance",
+  "ارتفاع الحوادث": "High incidents",
+  "طلبات التسجيل": "Enrollment requests",
+  "السلامة": "Safety",
+  "الترخيص": "License",
+  "الامتثال": "Compliance",
+  "لا توجد تفاصيل متاحة.": "No details available.",
+  "لا توجد تنبيهات نشطة": "No active alerts",
+  "فتح": "Open",
+  "إجمالي الحالات": "Total cases",
+  "الحضور": "Attendance",
+  "لا توجد بيانات حضور ضمن الفترة المختارة":
     "No attendance data for selected range",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø­Ø§Ù„Ø§Øª ØªØ³Ø¬ÙŠÙ„ Ù…ØªØ§Ø­Ø©": "No enrollment states available",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù…Ø¤Ø´Ø±Ø§Øª Ø­Ø§Ù„ÙŠØ§Ù‹": "No KPI data available currently",
-  "Ø§Ù„Ø§ØªØ¬Ø§Ù‡": "Trend",
-  "Ø¹Ø±Ø¶ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª": "View actions",
-  "Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª": "Actions",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø´Ø±ÙˆØ­Ø§Øª Ù…ØªØ§Ø­Ø© Ù„Ù„Ù…Ø¤Ø´Ø±Ø§Øª.": "No KPI explanations available.",
-  "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø´Ø±Ø­ Ù…ØªØ§Ø­.": "No explanation available.",
-  "Ø®Ø·Ø© Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡": "Action plan",
-  "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ù…Ù‚ØªØ±Ø­Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„Ù…Ø¤Ø´Ø±.":
+  "لا توجد حالات تسجيل متاحة": "No enrollment states available",
+  "لا توجد بيانات مؤشرات حالياً": "No KPI data available currently",
+  "الاتجاه": "Trend",
+  "عرض الإجراءات": "View actions",
+  "إجراءات": "Actions",
+  "لا توجد شروحات متاحة للمؤشرات.": "No KPI explanations available.",
+  "لا يوجد شرح متاح.": "No explanation available.",
+  "خطة الإجراء": "Action plan",
+  "لا توجد إجراءات مقترحة لهذا المؤشر.":
     "No suggested actions for this KPI.",
-  "Ø¹Ø§Ù„ÙŠØ©": "High",
-  "Ù…ØªÙˆØ³Ø·Ø©": "Medium",
-  "Ù…Ù†Ø®ÙØ¶Ø©": "Low",
-  "Ø¥Ø¬Ø±Ø§Ø¡": "Action",
-  "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø±ÙˆØ¶Ø§Øª": "Unable to load kindergarten data",
+  "عالية": "High",
+  "متوسطة": "Medium",
+  "منخفضة": "Low",
+  "إجراء": "Action",
+  "تعذر تحميل بيانات الروضات": "Unable to load kindergarten data",
 };
 
 function dashboardLiteral(text) {
@@ -144,7 +144,7 @@ const KPI_DEFINITIONS = [
     label: () =>
       dashboardText(
         "dashboard.kpi.overall_gcei",
-        "Ù…Ø¤Ø´Ø± Ø¬ÙˆØ¯Ø© Ø§Ù„Ø­ÙˆÙƒÙ…Ø© Ø§Ù„ÙƒÙ„ÙŠ",
+        "مؤشر جودة الحوكمة الكلي",
         "Overall governance quality index"
       ),
     unit: "%",
@@ -152,7 +152,7 @@ const KPI_DEFINITIONS = [
   {
     key: "attendance_rate",
     label: () =>
-      dashboardText("dashboard.kpi.attendance_rate", "Ù†Ø³Ø¨Ø© Ø§Ù„Ø­Ø¶ÙˆØ±", "Attendance rate"),
+      dashboardText("dashboard.kpi.attendance_rate", "نسبة الحضور", "Attendance rate"),
     unit: "%",
   },
   {
@@ -160,7 +160,7 @@ const KPI_DEFINITIONS = [
     label: () =>
       dashboardText(
         "dashboard.kpi.ratio_compliance",
-        "Ø§Ù…ØªØ«Ø§Ù„ Ù†Ø³Ø¨Ø© Ø§Ù„Ø¥Ø´Ø±Ø§Ù",
+        "امتثال نسبة الإشراف",
         "Supervisor ratio compliance"
       ),
     unit: "%",
@@ -170,7 +170,7 @@ const KPI_DEFINITIONS = [
     label: () =>
       dashboardText(
         "dashboard.kpi.training_completion",
-        "Ø§ÙƒØªÙ…Ø§Ù„ Ø§Ù„ØªØ¯Ø±ÙŠØ¨",
+        "نسبة إكمال التدريب",
         "Training completion"
       ),
     unit: "%",
@@ -180,7 +180,7 @@ const KPI_DEFINITIONS = [
     label: () =>
       dashboardText(
         "dashboard.kpi.report_submission",
-        "ØªØ³Ù„ÙŠÙ… Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±",
+        "الالتزام بتسليم التقارير",
         "Report submission"
       ),
     unit: "%",
@@ -188,7 +188,7 @@ const KPI_DEFINITIONS = [
   {
     key: "incident_rate",
     label: () =>
-      dashboardText("dashboard.kpi.incident_rate", "Ù…Ø¹Ø¯Ù„ Ø§Ù„Ø­ÙˆØ§Ø¯Ø«", "Incident rate"),
+      dashboardText("dashboard.kpi.incident_rate", "معدل الحوادث", "Incident rate"),
     unit: "",
   },
   {
@@ -196,7 +196,7 @@ const KPI_DEFINITIONS = [
     label: () =>
       dashboardText(
         "dashboard.kpi.serious_incident_rate",
-        "Ù…Ø¹Ø¯Ù„ Ø§Ù„Ø­ÙˆØ§Ø¯Ø« Ø§Ù„Ø¬Ø³ÙŠÙ…Ø©",
+        "معدل الحوادث الجسيمة",
         "Serious incident rate"
       ),
     unit: "",
@@ -206,7 +206,7 @@ const KPI_DEFINITIONS = [
     label: () =>
       dashboardText(
         "dashboard.kpi.incident_followup_sla",
-        "Ø§Ù„Ø§Ù„ØªØ²Ø§Ù… Ø¨Ù…ØªØ§Ø¨Ø¹Ø© Ø§Ù„Ø­ÙˆØ§Ø¯Ø«",
+        "الالتزام بمتابعة الحوادث",
         "Incident follow-up compliance"
       ),
     unit: "%",
@@ -216,7 +216,7 @@ const KPI_DEFINITIONS = [
     label: () =>
       dashboardText(
         "dashboard.kpi.chronic_absence_rate",
-        "Ø§Ù„ØºÙŠØ§Ø¨ Ø§Ù„Ù…Ø²Ù…Ù†",
+        "الغياب المزمن",
         "Chronic absence rate"
       ),
     unit: "%",
@@ -226,7 +226,7 @@ const KPI_DEFINITIONS = [
     label: () =>
       dashboardText(
         "dashboard.kpi.capacity_utilization_rate",
-        "Ø§Ø³ØªØºÙ„Ø§Ù„ Ø§Ù„Ø³Ø¹Ø©",
+        "استغلال السعة",
         "Capacity utilization"
       ),
     unit: "%",
@@ -236,7 +236,7 @@ const KPI_DEFINITIONS = [
     label: () =>
       dashboardText(
         "dashboard.kpi.active_enrollments",
-        "Ø§Ù„ØªØ³Ø¬ÙŠÙ„Ø§Øª Ø§Ù„Ù†Ø´Ø·Ø©",
+        "التسجيلات النشطة",
         "Active enrollments"
       ),
     unit: "",
@@ -246,7 +246,7 @@ const KPI_DEFINITIONS = [
     label: () =>
       dashboardText(
         "dashboard.kpi.new_enrollments",
-        "Ø§Ù„ØªØ³Ø¬ÙŠÙ„Ø§Øª Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©",
+        "التسجيلات الجديدة",
         "New enrollments"
       ),
     unit: "",
@@ -261,10 +261,10 @@ const BAND_BOOTSTRAP = {
 };
 
 const BAND_LABEL = {
-  green: () => dashboardText("dashboard.band.green", "Ø¬ÙŠØ¯", "Good"),
-  amber: () => dashboardText("dashboard.band.amber", "ÙŠØ­ØªØ§Ø¬ Ù…ØªØ§Ø¨Ø¹Ø©", "Needs follow-up"),
-  red: () => dashboardText("dashboard.band.red", "Ø­Ø±Ø¬", "Critical"),
-  neutral: () => dashboardText("dashboard.band.neutral", "Ù…Ø­Ø§ÙŠØ¯", "Neutral"),
+  green: () => dashboardText("dashboard.band.green", "جيد", "Good"),
+  amber: () => dashboardText("dashboard.band.amber", "متوسط", "Needs follow-up"),
+  red: () => dashboardText("dashboard.band.red", "حرج", "Critical"),
+  neutral: () => dashboardText("dashboard.band.neutral", "محايد", "Neutral"),
 };
 
 const DASHBOARD_STATE = {
@@ -279,7 +279,7 @@ const DASHBOARD_STATE = {
     status: "unknown",
     summary: dashboardText(
       "dashboard.validation.checking",
-      "Ø¬Ø§Ø± Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø³Ù„Ø§Ù…Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª...",
+      "جار التحقق من سلامة البيانات...",
       "Validating data integrity..."
     ),
     checks: [],
@@ -394,7 +394,7 @@ function updateValidationIndicator(status, summary, checks = []) {
     ? status
     : "unknown";
   const resolvedSummary =
-    summary || dashboardText("common.not_available", "ØºÙŠØ± Ù…ØªØ§Ø­", "Not available");
+    summary || dashboardText("common.not_available", "غير متاح", "Not available");
 
   DASHBOARD_STATE.validation = {
     status: normalizedStatus,
@@ -440,28 +440,28 @@ function renderValidationDetails() {
           : "secondary";
   const statusLabel =
     state.status === "valid"
-      ? dashboardText("dashboard.validation.valid", "Ø³Ù„ÙŠÙ…", "Valid")
+      ? dashboardText("dashboard.validation.valid", "سليم", "Valid")
       : state.status === "warning"
         ? dashboardText(
             "dashboard.validation.warning",
-            "ÙŠØ­ØªØ§Ø¬ Ù…ØªØ§Ø¨Ø¹Ø©",
+            "يحتاج متابعة",
             "Needs follow-up"
           )
         : state.status === "error"
           ? dashboardText(
               "dashboard.validation.error",
-              "ØªØ¹Ø°Ø± Ø§Ù„ØªØ­Ù‚Ù‚",
+              "تعذر التحقق",
               "Validation failed"
             )
-          : dashboardText("dashboard.validation.unknown", "ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ", "Unknown");
+          : dashboardText("dashboard.validation.unknown", "غير معروف", "Unknown");
 
   const rows = checks.length
     ? checks
         .map((check) => {
           const cStatus = check.ok ? "success" : "danger";
           const cLabel = check.ok
-            ? dashboardText("common.success", "Ù†Ø¬Ø­", "Passed")
-            : dashboardText("common.failed", "ØªØ¹Ø°Ø±", "Failed");
+            ? dashboardText("common.success", "نجح", "Passed")
+            : dashboardText("common.failed", "تعذر", "Failed");
           return `
             <tr>
               <td>${escapeHtml(check.name || "-")}</td>
@@ -473,29 +473,29 @@ function renderValidationDetails() {
         .join("")
     : `<tr><td colspan="3" class="text-center text-muted py-3">${dashboardText(
         "dashboard.validation.no_extra_details",
-        "Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙØ§ØµÙŠÙ„ Ø¥Ø¶Ø§ÙÙŠØ©",
+        "لا توجد تفاصيل إضافية",
         "No additional details"
       )}</td></tr>`;
 
   const lastUpdated = state.lastUpdated
     ? new Date(state.lastUpdated).toLocaleString(dashboardCurrentLocale())
-    : dashboardText("common.not_available", "ØºÙŠØ± Ù…ØªØ§Ø­", "Not available");
+    : dashboardText("common.not_available", "غير متاح", "Not available");
 
   container.innerHTML = `
     <div class="alert alert-${statusClass}-subtle border border-${statusClass} mb-3">
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div class="fw-semibold">${escapeHtml(state.summary || dashboardText("common.not_available", "ØºÙŠØ± Ù…ØªØ§Ø­", "Not available"))}</div>
+        <div class="fw-semibold">${escapeHtml(state.summary || dashboardText("common.not_available", "غير متاح", "Not available"))}</div>
         <span class="badge bg-${statusClass}">${statusLabel}</span>
       </div>
-      <div class="small text-muted mt-1">${dashboardText("common.last_updated", "Ø¢Ø®Ø± ØªØ­Ø¯ÙŠØ«", "Last updated")}: ${escapeHtml(lastUpdated)}</div>
+      <div class="small text-muted mt-1">${dashboardText("common.last_updated", "آخر تحديث", "Last updated")}: ${escapeHtml(lastUpdated)}</div>
     </div>
     <div class="table-responsive">
       <table class="table table-sm align-middle">
         <thead>
           <tr>
-            <th>${dashboardText("dashboard.validation.check", "Ø§Ù„ÙØ­Øµ", "Check")}</th>
-            <th>${dashboardText("dashboard.validation.result", "Ø§Ù„Ù†ØªÙŠØ¬Ø©", "Result")}</th>
-            <th>${dashboardText("dashboard.validation.details", "Ø§Ù„ØªÙØ§ØµÙŠÙ„", "Details")}</th>
+            <th>${dashboardText("dashboard.validation.check", "الفحص", "Check")}</th>
+            <th>${dashboardText("dashboard.validation.result", "النتيجة", "Result")}</th>
+            <th>${dashboardText("dashboard.validation.details", "التفاصيل", "Details")}</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -570,7 +570,7 @@ function reportPriorityMeta(reportDate) {
       levelClass: "level-medium",
       label: dashboardText(
         "dashboard.priority.needs_followup",
-        "ØªØ­ØªØ§Ø¬ Ù…ØªØ§Ø¨Ø¹Ø©",
+        "تحتاج متابعة",
         "Needs follow-up"
       ),
     };
@@ -581,7 +581,7 @@ function reportPriorityMeta(reportDate) {
       label:
         dashboardCurrentLang() === "en"
           ? `Overdue by ${formatNumber(days)} day(s)`
-          : `${dashboardText("dashboard.priority.overdue_prefix", "Ù…ØªØ£Ø®Ø±", "Overdue")} ${formatNumber(days)} ${dashboardText("dashboard.priority.day", "ÙŠÙˆÙ…", "day(s)")}`,
+          : `${dashboardText("dashboard.priority.overdue_prefix", "متأخر", "Overdue")} ${formatNumber(days)} ${dashboardText("dashboard.priority.day", "يوم", "day(s)")}`,
     };
   }
   if (days >= 1) {
@@ -590,14 +590,14 @@ function reportPriorityMeta(reportDate) {
       label:
         dashboardCurrentLang() === "en"
           ? `Pending review for ${formatNumber(days)} day(s)`
-          : `${dashboardText("dashboard.priority.pending_review_since", "Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø© Ù…Ù†Ø°", "Pending review for")} ${formatNumber(days)} ${dashboardText("dashboard.priority.day", "ÙŠÙˆÙ…", "day(s)")}`,
+          : `${dashboardText("dashboard.priority.pending_review_since", "بانتظار المراجعة منذ", "Pending review for")} ${formatNumber(days)} ${dashboardText("dashboard.priority.day", "يوم", "day(s)")}`,
     };
   }
   return {
     levelClass: "level-low",
     label: dashboardText(
       "dashboard.priority.new_today",
-      "ØªÙ‚Ø±ÙŠØ± Ø¬Ø¯ÙŠØ¯ Ø§Ù„ÙŠÙˆÙ…",
+      "تقرير جديد اليوم",
       "New report today"
     ),
   };
@@ -648,9 +648,9 @@ function normalizeTrend(raw) {
 }
 
 function trendSymbol(trend) {
-  if (trend === "up") return dashboardText("dashboard.trend.up", "ØµØ§Ø¹Ø¯", "Up");
-  if (trend === "down") return dashboardText("dashboard.trend.down", "Ù‡Ø§Ø¨Ø·", "Down");
-  return dashboardText("dashboard.trend.flat", "Ø«Ø§Ø¨Øª", "Flat");
+  if (trend === "up") return dashboardText("dashboard.trend.up", "صاعد", "Up");
+  if (trend === "down") return dashboardText("dashboard.trend.down", "هابط", "Down");
+  return dashboardText("dashboard.trend.flat", "ثابت", "Flat");
 }
 
 function inferBand(metricKey, value) {
@@ -687,28 +687,28 @@ function inferBand(metricKey, value) {
 function statusLabel(status) {
   const s = String(status || "").toUpperCase();
   const labels = {
-    ACTIVE: dashboardText("status.active", "Ù†Ø´Ø·", "Active"),
-    DRAFT: dashboardText("status.draft", "Ù…Ø³ÙˆØ¯Ø©", "Draft"),
-    INACTIVE: dashboardText("status.inactive", "ØºÙŠØ± Ù†Ø´Ø·", "Inactive"),
-    ARCHIVED: dashboardText("status.archived", "Ù…Ø¤Ø±Ø´Ù", "Archived"),
+    ACTIVE: dashboardText("status.active", "نشط", "Active"),
+    DRAFT: dashboardText("status.draft", "مسودة", "Draft"),
+    INACTIVE: dashboardText("status.inactive", "غير نشط", "Inactive"),
+    ARCHIVED: dashboardText("status.archived", "مؤرشف", "Archived"),
     PENDING_REVIEW: dashboardText(
       "status.pending_review",
-      "Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©",
+      "بانتظار المراجعة",
       "Pending review"
     ),
-    SUBMITTED: dashboardText("status.submitted", "Ù…Ù‚Ø¯Ù…", "Submitted"),
-    APPROVED: dashboardText("status.approved", "Ù…Ø¹ØªÙ…Ø¯", "Approved"),
-    WAITLISTED: dashboardText("status.waitlisted", "Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±", "Waitlisted"),
+    SUBMITTED: dashboardText("status.submitted", "مقدم", "Submitted"),
+    APPROVED: dashboardText("status.approved", "معتمد", "Approved"),
+    WAITLISTED: dashboardText("status.waitlisted", "قائمة الانتظار", "Waitlisted"),
     SENT_TO_PARENT: dashboardText(
       "status.sent_to_parent",
-      "Ù…Ø±Ø³Ù„ Ù„ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±",
+      "مرسل لولي الأمر",
       "Sent to parent"
     ),
-    ACCEPTED: dashboardText("status.accepted", "Ù…Ù‚Ø¨ÙˆÙ„", "Accepted"),
-    REJECTED: dashboardText("status.rejected", "Ù…Ø±ÙÙˆØ¶", "Rejected"),
-    WITHDRAWN: dashboardText("status.withdrawn", "Ù…Ù†Ø³Ø­Ø¨", "Withdrawn"),
+    ACCEPTED: dashboardText("status.accepted", "مقبول", "Accepted"),
+    REJECTED: dashboardText("status.rejected", "مرفوض", "Rejected"),
+    WITHDRAWN: dashboardText("status.withdrawn", "منسحب", "Withdrawn"),
   };
-  return labels[s] || dashboardText("common.unspecified", "ØºÙŠØ± Ù…Ø­Ø¯Ø¯", "Unspecified");
+  return labels[s] || dashboardText("common.unspecified", "غير محدد", "Unspecified");
 }
 
 async function dashboardFetch(url, options = {}) {
@@ -791,7 +791,7 @@ async function loadDashboard() {
     "unknown",
     dashboardText(
       "dashboard.validation.checking",
-      "Ø¬Ø§Ø± Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø³Ù„Ø§Ù…Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª...",
+      "جار التحقق من سلامة البيانات...",
       "Validating data integrity..."
     )
   );
@@ -824,33 +824,33 @@ async function loadDashboard() {
         "valid",
         dashboardText(
           "dashboard.validation.supervisor_loaded",
-          "ØªÙ… ØªØ­Ù…ÙŠÙ„ Ù„ÙˆØ­Ø© Ø§Ù„Ù…Ø´Ø±Ù Ø¨Ù†Ø¬Ø§Ø­",
+          "تم تحميل لوحة المشرف بنجاح",
           "Supervisor dashboard loaded successfully"
         ),
         [
           {
             name: dashboardText(
               "dashboard.validation.user_identity",
-              "Ù‡ÙˆÙŠØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…",
+              "هوية المستخدم",
               "User identity"
             ),
             ok: true,
             message: dashboardText(
               "dashboard.validation.session_verified",
-              "ØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ØµÙ„Ø§Ø­ÙŠØ© Ø§Ù„Ø¬Ù„Ø³Ø©.",
+              "تم التحقق من صلاحية الجلسة.",
               "Session validity verified."
             ),
           },
           {
             name: dashboardText(
               "dashboard.validation.supervisor_data",
-              "Ø¨ÙŠØ§Ù†Ø§Øª Ù„ÙˆØ­Ø© Ø§Ù„Ù…Ø´Ø±Ù",
+              "بيانات لوحة المشرف",
               "Supervisor dashboard data"
             ),
             ok: true,
             message: dashboardText(
               "dashboard.validation.core_loaded",
-              "ØªÙ… ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø£Ø³Ø§Ø³ÙŠØ©.",
+              "تم تحميل البيانات الأساسية.",
               "Core data loaded."
             ),
           },
@@ -866,53 +866,53 @@ async function loadDashboard() {
         hasAnyKpi
           ? dashboardText(
               "dashboard.validation.manager_loaded",
-              "ØªÙ… ØªØ­Ù…ÙŠÙ„ Ù„ÙˆØ­Ø© Ø§Ù„Ù…Ø¯ÙŠØ± Ø¨Ù†Ø¬Ø§Ø­",
+              "تم تحميل لوحة المدير بنجاح",
               "Manager dashboard loaded successfully"
             )
           : dashboardText(
               "dashboard.validation.kpi_missing",
-              "ØªÙ… Ø§Ù„ØªØ­Ù…ÙŠÙ„ Ù…Ø¹ Ù†Ù‚Øµ ÙÙŠ Ù…Ø¤Ø´Ø±Ø§Øª KPI",
+              "تم تحميل الصفحة مع نقص في مؤشرات الأداء الرئيسية.",
               "Loaded with missing KPI indicators"
             ),
         [
           {
             name: dashboardText(
               "dashboard.validation.user_identity",
-              "Ù‡ÙˆÙŠØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…",
+              "هوية المستخدم",
               "User identity"
             ),
             ok: true,
             message: dashboardText(
               "dashboard.validation.session_verified",
-              "ØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ØµÙ„Ø§Ø­ÙŠØ© Ø§Ù„Ø¬Ù„Ø³Ø©.",
+              "تم التحقق من صلاحية الجلسة.",
               "Session validity verified."
             ),
           },
           {
             name: dashboardText(
               "dashboard.validation.classes_reports",
-              "Ø§Ù„ÙØµÙˆÙ„ ÙˆØ§Ù„ØªÙ‚Ø§Ø±ÙŠØ±",
+              "الفصول والتقارير",
               "Classes and reports"
             ),
             ok: true,
             message: dashboardText(
               "dashboard.validation.operational_loaded",
-              "ØªÙ… ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø£Ù‚Ø³Ø§Ù… Ø§Ù„ØªØ´ØºÙŠÙ„ÙŠØ©.",
+              "تم تحميل الأقسام التشغيلية.",
               "Operational sections loaded."
             ),
           },
           {
-            name: dashboardText("dashboard.validation.kpi", "Ù…Ø¤Ø´Ø±Ø§Øª Ø§Ù„Ø£Ø¯Ø§Ø¡", "KPIs"),
+            name: dashboardText("dashboard.validation.kpi", "مؤشرات الأداء الرئيسية (KPI)", "KPIs"),
             ok: hasAnyKpi,
             message: hasAnyKpi
               ? dashboardText(
                   "dashboard.validation.kpi_loaded",
-                  "ØªÙ… ØªØ­Ù…ÙŠÙ„ Ù…Ø¤Ø´Ø±Ø§Øª KPI.",
+                  "تم تحميل مؤشرات الأداء الرئيسية.",
                   "KPI indicators loaded."
                 )
               : dashboardText(
                   "dashboard.validation.kpi_failed",
-                  "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ù…Ø¤Ø´Ø±Ø§Øª KPI Ø¨Ø§Ù„ÙƒØ§Ù…Ù„.",
+                  "تعذر تحميل مؤشرات الأداء الرئيسية بالكامل.",
                   "Unable to load all KPI indicators."
                 ),
           },
@@ -928,59 +928,59 @@ async function loadDashboard() {
       const summary = !hasAnyKpi
         ? dashboardText(
             "dashboard.validation.admin_missing_metrics",
-            "ØªÙ… Ø§Ù„ØªØ­Ù…ÙŠÙ„ Ù…Ø¹ Ù†Ù‚Øµ ÙÙŠ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø¤Ø´Ø±Ø§Øª",
+            "تم تحميل الصفحة مع نقص في بيانات المؤشرات.",
             "Loaded with missing indicator data"
           )
         : hasCriticalKpis
           ? dashboardText(
               "dashboard.validation.admin_critical_kpis",
-              "ØªÙ… Ø§Ù„ØªØ­Ù…ÙŠÙ„ Ù…Ø¹ ÙˆØ¬ÙˆØ¯ Ù…Ø¤Ø´Ø±Ø§Øª Ø­Ø±Ø¬Ø© ØªØ­ØªØ§Ø¬ Ù…ØªØ§Ø¨Ø¹Ø©",
+              "تم تحميل الصفحة مع وجود مؤشرات حرجة تحتاج إلى متابعة.",
               "Loaded with critical indicators that need follow-up"
             )
           : dashboardText(
               "dashboard.validation.admin_loaded",
-              "ØªÙ… ØªØ­Ù…ÙŠÙ„ Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø¨Ù†Ø¬Ø§Ø­",
+              "تم تحميل لوحة الإدارة بنجاح",
               "Admin dashboard loaded successfully"
             );
       updateValidationIndicator(status, summary, [
         {
           name: dashboardText(
             "dashboard.validation.user_identity",
-            "Ù‡ÙˆÙŠØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…",
+            "هوية المستخدم",
             "User identity"
           ),
           ok: true,
           message: dashboardText(
             "dashboard.validation.session_verified",
-            "ØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ØµÙ„Ø§Ø­ÙŠØ© Ø§Ù„Ø¬Ù„Ø³Ø©.",
+            "تم التحقق من صلاحية الجلسة.",
             "Session validity verified."
           ),
         },
         {
           name: dashboardText(
             "dashboard.validation.admin_data",
-            "Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©",
+            "بيانات الإدارة",
             "Administration data"
           ),
           ok: true,
           message: dashboardText(
             "dashboard.validation.kg_summary_loaded",
-            "ØªÙ… ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø±ÙˆØ¶Ø§Øª ÙˆØ§Ù„Ù…Ù„Ø®Øµ.",
+            "تم تحميل بيانات الروضات والملخص.",
             "Kindergarten and summary data loaded."
           ),
         },
         {
-          name: dashboardText("dashboard.validation.kpi", "Ù…Ø¤Ø´Ø±Ø§Øª Ø§Ù„Ø£Ø¯Ø§Ø¡", "KPIs"),
+          name: dashboardText("dashboard.validation.kpi", "مؤشرات الأداء الرئيسية (KPI)", "KPIs"),
           ok: hasAnyKpi,
           message: hasAnyKpi
             ? dashboardText(
                 "dashboard.validation.kpi_loaded",
-                "ØªÙ… ØªØ­Ù…ÙŠÙ„ Ù…Ø¤Ø´Ø±Ø§Øª KPI.",
+                "تم تحميل مؤشرات الأداء الرئيسية.",
                 "KPI indicators loaded."
               )
             : dashboardText(
                 "dashboard.validation.kpi_failed",
-                "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ù…Ø¤Ø´Ø±Ø§Øª KPI Ø¨Ø§Ù„ÙƒØ§Ù…Ù„.",
+                "تعذر تحميل مؤشرات الأداء الرئيسية بالكامل.",
                 "Unable to load all KPI indicators."
               ),
         },
@@ -993,20 +993,20 @@ async function loadDashboard() {
         "valid",
         dashboardText(
           "dashboard.validation.parent_ready",
-          "Ù„ÙˆØ­Ø© ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø± Ø¬Ø§Ù‡Ø²Ø©",
+          "لوحة ولي الأمر جاهزة",
           "Parent dashboard is ready"
         ),
         [
           {
             name: dashboardText(
               "dashboard.validation.user_identity",
-              "Ù‡ÙˆÙŠØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…",
+              "هوية المستخدم",
               "User identity"
             ),
             ok: true,
             message: dashboardText(
               "dashboard.validation.session_verified",
-              "ØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† ØµÙ„Ø§Ø­ÙŠØ© Ø§Ù„Ø¬Ù„Ø³Ø©.",
+              "تم التحقق من صلاحية الجلسة.",
               "Session validity verified."
             ),
           },
@@ -1019,14 +1019,14 @@ async function loadDashboard() {
       "error",
       dashboardText(
         "dashboard.validation.load_failed",
-        "ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø¨Ø§Ù„ÙƒØ§Ù…Ù„",
+        "تعذر تحميل البيانات بالكامل",
         "Unable to load all data"
       ),
       [
         {
           name: dashboardText(
             "dashboard.validation.user_session",
-            "Ø¬Ù„Ø³Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…",
+            "جلسة المستخدم",
             "User session"
           ),
           ok: false,
@@ -1034,7 +1034,7 @@ async function loadDashboard() {
             error.message ||
             dashboardText(
               "dashboard.validation.session_fetch_failed",
-              "ØªØ¹Ø°Ø± Ø§Ø³ØªØ±Ø¬Ø§Ø¹ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¬Ù„Ø³Ø©.",
+              "تعذر استرجاع بيانات الجلسة.",
               "Unable to retrieve session data."
             ),
         },
@@ -1166,7 +1166,7 @@ function renderManagerUsersTable(tableId, users, type) {
   if (!Array.isArray(users) || users.length === 0) {
     const colspan = type === "supervisor" ? 4 : 5;
     tableBody.innerHTML = dashboardTemplate(
-      `<tr><td colspan="${colspan}" class="text-center py-4 text-muted">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù…ØªØ§Ø­Ø©</td></tr>`
+      `<tr><td colspan="${colspan}" class="text-center py-4 text-muted">لا توجد بيانات متاحة</td></tr>`
     );
     return;
   }
@@ -1201,7 +1201,7 @@ function renderManagerUsersTable(tableId, users, type) {
             <td>${escapeHtml(user.email || "-")}</td>
             <td>${escapeHtml(createdAt)}</td>
             <td>
-              <a href="${profileLink}" ${actionAttrs} aria-label="${dashboardLiteral("Ù…Ø±Ø§Ø³Ù„Ø© Ø§Ù„Ù…Ø´Ø±Ù")}">
+              <a href="${profileLink}" ${actionAttrs} aria-label="${dashboardLiteral("مراسلة المشرف")}">
                 <i class="bi bi-envelope"></i>
               </a>
             </td>
@@ -1242,7 +1242,7 @@ function renderManagerUsersTable(tableId, users, type) {
           <td>${escapeHtml(phone)}</td>
           <td>${escapeHtml(childrenCount)}</td>
           <td>
-            <a href="${profileLink}" ${actionAttrs} aria-label="${dashboardLiteral("Ù…Ø±Ø§Ø³Ù„Ø© ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±")}">
+            <a href="${profileLink}" ${actionAttrs} aria-label="${dashboardLiteral("مراسلة ولي الأمر")}">
               <i class="bi bi-envelope"></i>
             </a>
           </td>
@@ -1313,12 +1313,12 @@ async function loadClasses() {
     if (!Array.isArray(classes) || classes.length === 0) {
       if (tableBody) {
         tableBody.innerHTML = dashboardTemplate(
-          '<tr><td colspan="7" class="text-center py-4 text-muted">Ù„Ø§ ØªÙˆØ¬Ø¯ ÙØµÙˆÙ„</td></tr>'
+          '<tr><td colspan="7" class="text-center py-4 text-muted">لا توجد فصول</td></tr>'
         );
       }
       if (hasOverviewTables) {
         const emptyRow = dashboardTemplate(
-          '<tr><td colspan="7" class="text-center py-4 text-muted">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª ÙØµÙˆÙ„ Ù„Ø¹Ø±Ø¶Ù‡Ø§</td></tr>'
+          '<tr><td colspan="7" class="text-center py-4 text-muted">لا توجد بيانات فصول لعرضها</td></tr>'
         );
         overviewTableBodies.forEach((body) => {
           body.innerHTML = emptyRow;
@@ -1360,7 +1360,7 @@ async function loadClasses() {
                   <span>${formatNumber(capacityTotal)}</span>
                   <span>${formatOneDecimal(utilizationPct)}%</span>
                 </div>
-                <div class="progress mt-1" role="progressbar" aria-label="${dashboardLiteral("Ù†Ø³Ø¨Ø© Ø¥Ø´ØºØ§Ù„ Ø§Ù„ÙØµÙ„")}"
+                <div class="progress mt-1" role="progressbar" aria-label="${dashboardLiteral("نسبة إشغال الفصل")}"
                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="${formatOneDecimal(utilizationPct)}">
                   <div class="progress-bar bg-${utilizationClass}" style="width:${utilizationPct}%"></div>
                 </div>
@@ -1368,9 +1368,9 @@ async function loadClasses() {
             </td>
             <td>${formatNumber(enrolled)}</td>
             <td>${formatNumber(waitlist)}</td>
-            <td><span class="badge bg-${isActive ? "success" : "secondary"}">${isActive ? dashboardLiteral("Ù†Ø´Ø·") : dashboardLiteral("ØºÙŠØ± Ù†Ø´Ø·")}</span></td>
+            <td><span class="badge bg-${isActive ? "success" : "secondary"}">${isActive ? dashboardLiteral("نشط") : dashboardLiteral("غير نشط")}</span></td>
             <td>
-              <a href="${classUrl}" ${actionAttrs} aria-label="${dashboardLiteral("Ø¹Ø±Ø¶ Ø§Ù„ÙØµÙ„")}">
+              <a href="${classUrl}" ${actionAttrs} aria-label="${dashboardLiteral("عرض الفصل")}">
                 <i class="bi bi-eye"></i>
               </a>
             </td>
@@ -1404,9 +1404,9 @@ async function loadClasses() {
               <td>${formatMaybeNumber(present)}</td>
               <td>${formatMaybeNumber(absent)}</td>
               <td>${formatMaybeNumber(pendingReports)}</td>
-              <td><span class="badge bg-${isActive ? "success" : "secondary"}">${isActive ? dashboardLiteral("Ù†Ø´Ø·") : dashboardLiteral("ØºÙŠØ± Ù†Ø´Ø·")}</span></td>
+              <td><span class="badge bg-${isActive ? "success" : "secondary"}">${isActive ? dashboardLiteral("نشط") : dashboardLiteral("غير نشط")}</span></td>
               <td>
-                <a href="${classUrl}" ${actionAttrs} aria-label="${dashboardLiteral("Ø¹Ø±Ø¶ Ø§Ù„ÙØµÙ„")}">
+                <a href="${classUrl}" ${actionAttrs} aria-label="${dashboardLiteral("عرض الفصل")}">
                   <i class="bi bi-eye"></i>
                 </a>
               </td>
@@ -1423,12 +1423,12 @@ async function loadClasses() {
     console.error("Error loading classes:", error);
     if (tableBody) {
       tableBody.innerHTML = dashboardTemplate(
-        '<tr><td colspan="7" class="text-center py-4 text-danger">ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„ÙØµÙˆÙ„</td></tr>'
+        '<tr><td colspan="7" class="text-center py-4 text-danger">تعذر تحميل الفصول</td></tr>'
       );
     }
     if (hasOverviewTables) {
       const errorRow = dashboardTemplate(
-        '<tr><td colspan="7" class="text-center py-4 text-danger">ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ù…Ù„Ø®Øµ Ø§Ù„ÙØµÙˆÙ„</td></tr>'
+        '<tr><td colspan="7" class="text-center py-4 text-danger">تعذر تحميل ملخص الفصول</td></tr>'
       );
       overviewTableBodies.forEach((body) => {
         body.innerHTML = errorRow;
@@ -1450,7 +1450,7 @@ async function loadSubmittedReports() {
 
     if (reportList.length === 0) {
       tableBody.innerHTML = dashboardTemplate(
-        '<tr><td colspan="5" class="text-center py-4 text-muted">Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ‚Ø§Ø±ÙŠØ± Ù…Ø¹Ù„Ù‚Ø©</td></tr>'
+        '<tr><td colspan="5" class="text-center py-4 text-muted">لا توجد تقارير معلقة</td></tr>'
       );
       return;
     }
@@ -1464,14 +1464,14 @@ async function loadSubmittedReports() {
           const daysSince = getDaysSinceDate(report.date);
           const relativeText =
             daysSince == null
-              ? dashboardLiteral("ØªØ§Ø±ÙŠØ® ØºÙŠØ± Ù…Ø­Ø¯Ø¯")
+              ? dashboardLiteral("تاريخ غير محدد")
               : daysSince === 0
-                ? dashboardLiteral("Ø§Ù„ÙŠÙˆÙ…")
+                ? dashboardLiteral("اليوم")
                 : daysSince === 1
-                  ? dashboardLiteral("Ø£Ù…Ø³")
+                  ? dashboardLiteral("أمس")
                   : dashboardCurrentLang() === "en"
                     ? `${formatNumber(daysSince)} day(s) ago`
-                    : `${dashboardText("dashboard.time.ago_prefix", "Ù…Ù†Ø°", "ago")} ${formatNumber(daysSince)} ${dashboardText("dashboard.priority.day", "ÙŠÙˆÙ…", "day(s)")}`;
+                    : `${dashboardText("dashboard.time.ago_prefix", "منذ", "ago")} ${formatNumber(daysSince)} ${dashboardText("dashboard.priority.day", "يوم", "day(s)")}`;
           const priority = reportPriorityMeta(report.date);
           return `
           <tr>
@@ -1482,14 +1482,14 @@ async function loadSubmittedReports() {
             </td>
             <td>${escapeHtml(submitterName)}</td>
             <td>
-              <span class="badge bg-warning">${dashboardLiteral("Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©")}</span>
+              <span class="badge bg-warning">${dashboardLiteral("بانتظار المراجعة")}</span>
               <div class="manager-report-priority ${priority.levelClass}">
                 <i class="bi bi-clock-history"></i>
                 <span>${escapeHtml(priority.label)}</span>
               </div>
             </td>
             <td>
-              <a href="/reports/${report.id}" class="btn btn-sm btn-outline-primary" aria-label="${dashboardLiteral("Ø¹Ø±Ø¶ Ø§Ù„ØªÙ‚Ø±ÙŠØ±")}">
+              <a href="/reports/${report.id}" class="btn btn-sm btn-outline-primary" aria-label="${dashboardLiteral("عرض التقرير")}">
                 <i class="bi bi-eye"></i>
               </a>
             </td>
@@ -1502,7 +1502,7 @@ async function loadSubmittedReports() {
     console.error("Error loading reports:", error);
     DASHBOARD_STATE.managerSummary.pendingReports = 0;
     tableBody.innerHTML = dashboardTemplate(
-      '<tr><td colspan="5" class="text-center py-4 text-danger">ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±</td></tr>'
+      '<tr><td colspan="5" class="text-center py-4 text-danger">تعذر تحميل التقارير</td></tr>'
     );
   }
 }
@@ -1525,19 +1525,19 @@ async function loadSupervisorStats() {
         <div class="col-md-4">
           <div class="card border-0 bg-primary-subtle h-100">
             <div class="card-body">
-              <div class="small text-primary mb-1">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø´Ø±ÙÙŠÙ†</div>
+              <div class="small text-primary mb-1">إجمالي المشرفين</div>
               <h3 class="fw-bold mb-0">${formatNumber(all.length)}</h3>
-              <div class="small text-muted mt-2">Ø§Ù„Ù†Ø·Ø§Ù‚ Ø§Ù„Ø¥Ø¯Ø§Ø±ÙŠ Ø§Ù„Ø­Ø§Ù„ÙŠ</div>
+              <div class="small text-muted mt-2">النطاق الإداري الحالي</div>
             </div>
           </div>
         </div>
         <div class="col-md-4">
           <div class="card border-0 bg-success-subtle h-100">
             <div class="card-body">
-              <div class="small text-success mb-1">Ø§Ù„Ù…Ø´Ø±ÙÙˆÙ† Ø§Ù„Ù†Ø´Ø·ÙˆÙ†</div>
+              <div class="small text-success mb-1">المشرفون النشطون</div>
               <h3 class="fw-bold mb-0">${formatNumber(active)}</h3>
-              <div class="small text-muted mt-1">${formatOneDecimal(activeRate)}% Ù…Ù† Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø´Ø±ÙÙŠÙ†</div>
-              <div class="progress manager-stats-progress mt-2" role="progressbar" aria-label="Ù…Ø¹Ø¯Ù„ Ù†Ø´Ø§Ø· Ø§Ù„Ù…Ø´Ø±ÙÙŠÙ†"
+              <div class="small text-muted mt-1">${formatOneDecimal(activeRate)}% من إجمالي المشرفين</div>
+              <div class="progress manager-stats-progress mt-2" role="progressbar" aria-label="معدل نشاط المشرفين"
                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="${formatOneDecimal(activeRate)}">
                 <div class="progress-bar bg-success" style="width:${clampPercent(activeRate)}%"></div>
               </div>
@@ -1547,10 +1547,10 @@ async function loadSupervisorStats() {
         <div class="col-md-4">
           <div class="card border-0 bg-secondary-subtle h-100">
             <div class="card-body">
-              <div class="small text-secondary mb-1">Ø§Ù„Ù…Ø´Ø±ÙÙˆÙ† ØºÙŠØ± Ø§Ù„Ù†Ø´Ø·ÙŠÙ†</div>
+              <div class="small text-secondary mb-1">المشرفون غير النشطين</div>
               <h3 class="fw-bold mb-0">${formatNumber(inactive)}</h3>
-              <div class="small text-muted mt-1">${formatOneDecimal(inactiveRate)}% Ù…Ù† Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø´Ø±ÙÙŠÙ†</div>
-              <div class="progress manager-stats-progress mt-2" role="progressbar" aria-label="Ù…Ø¹Ø¯Ù„ Ø¹Ø¯Ù… Ø§Ù„Ù†Ø´Ø§Ø·"
+              <div class="small text-muted mt-1">${formatOneDecimal(inactiveRate)}% من إجمالي المشرفين</div>
+              <div class="progress manager-stats-progress mt-2" role="progressbar" aria-label="معدل عدم النشاط"
                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="${formatOneDecimal(inactiveRate)}">
                 <div class="progress-bar bg-secondary" style="width:${clampPercent(inactiveRate)}%"></div>
               </div>
@@ -1564,7 +1564,7 @@ async function loadSupervisorStats() {
     console.error("Error loading supervisor stats:", error);
     DASHBOARD_STATE.managerSummary.activeSupervisors = 0;
     container.innerHTML = dashboardTemplate(
-      '<p class="text-muted mb-0">ØºÙŠØ± Ù…ØªØ§Ø­ Ø­Ø§Ù„ÙŠØ§Ù‹</p>'
+      '<p class="text-muted mb-0">غير متاح حالياً</p>'
     );
   }
 }
@@ -1593,20 +1593,20 @@ function renderAdminSummaryCards(summary) {
     attendanceNote.textContent =
       dashboardCurrentLang() === "en"
         ? `${formatOneDecimal(attendanceRate)}% attendance rate`
-        : `${formatOneDecimal(attendanceRate)}% ${dashboardText("dashboard.attendance_rate_suffix", "Ù†Ø³Ø¨Ø© Ø­Ø¶ÙˆØ±", "attendance rate")}`;
+        : `${formatOneDecimal(attendanceRate)}% ${dashboardText("dashboard.attendance_rate_suffix", "نسبة الحضور", "attendance rate")}`;
   }
 
   const pendingBadge = document.getElementById("pendingEnrollmentsBadge");
   if (pendingBadge) {
     if (pendingApplications === 0) {
       pendingBadge.className = "badge bg-success-subtle text-success rounded-pill px-3";
-      pendingBadge.textContent = dashboardLiteral("Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª");
+      pendingBadge.textContent = dashboardLiteral("لا توجد طلبات");
     } else if (pendingApplications > 10) {
       pendingBadge.className = "badge bg-danger-subtle text-danger rounded-pill px-3";
-      pendingBadge.textContent = dashboardLiteral("Ø¥Ø¬Ø±Ø§Ø¡ ÙÙˆØ±ÙŠ");
+      pendingBadge.textContent = dashboardLiteral("إجراء فوري");
     } else {
       pendingBadge.className = "badge bg-warning-subtle text-warning rounded-pill px-3";
-      pendingBadge.textContent = dashboardLiteral("ØªØ­ØªØ§Ø¬ Ù…ØªØ§Ø¨Ø¹Ø©");
+      pendingBadge.textContent = dashboardLiteral("تحتاج متابعة");
     }
   }
 
@@ -1614,13 +1614,13 @@ function renderAdminSummaryCards(summary) {
   if (incidentsBadge) {
     if (recentIncidents === 0) {
       incidentsBadge.className = "badge bg-success-subtle text-success rounded-pill px-3";
-      incidentsBadge.textContent = dashboardLiteral("Ù…Ø³ØªÙ‚Ø±");
+      incidentsBadge.textContent = dashboardLiteral("مستقر");
     } else if (recentIncidents >= 5) {
       incidentsBadge.className = "badge bg-danger-subtle text-danger rounded-pill px-3";
-      incidentsBadge.textContent = dashboardLiteral("Ø­Ø±Ø¬");
+      incidentsBadge.textContent = dashboardLiteral("حرج");
     } else {
       incidentsBadge.className = "badge bg-warning-subtle text-warning rounded-pill px-3";
-      incidentsBadge.textContent = dashboardLiteral("ØªØ­Øª Ø§Ù„Ù…Ø±Ø§Ù‚Ø¨Ø©");
+      incidentsBadge.textContent = dashboardLiteral("تحت المراقبة");
     }
   }
 }
@@ -1638,10 +1638,10 @@ function renderAdminSystemOverview(overview) {
   if (health) {
     const activeRate =
       totalKindergartens > 0 ? (activeKindergartens / totalKindergartens) * 100 : 0;
-    if (activeRate >= 90) health.textContent = dashboardLiteral("Ù…Ù…ØªØ§Ø²");
-    else if (activeRate >= 75) health.textContent = dashboardLiteral("Ø¬ÙŠØ¯");
-    else if (activeRate >= 50) health.textContent = dashboardLiteral("Ù…ØªÙˆØ³Ø·");
-    else health.textContent = dashboardLiteral("Ù…Ù‡Ø¯Ø¯");
+    if (activeRate >= 90) health.textContent = dashboardLiteral("ممتاز");
+    else if (activeRate >= 75) health.textContent = dashboardLiteral("جيد");
+    else if (activeRate >= 50) health.textContent = dashboardLiteral("متوسط");
+    else health.textContent = dashboardLiteral("حرج");
   }
 }
 
@@ -1651,7 +1651,7 @@ function renderAdminKindergartensTable(kindergartens) {
 
   if (!Array.isArray(kindergartens) || kindergartens.length === 0) {
     tableBody.innerHTML = dashboardTemplate(
-      '<tr><td colspan="8" class="text-center py-4 text-muted">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø±ÙˆØ¶Ø§Øª</td></tr>'
+      '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد روضات</td></tr>'
     );
     return;
   }
@@ -1666,10 +1666,10 @@ function renderAdminKindergartensTable(kindergartens) {
           license === "valid" ? "success" : license === "expiring_soon" ? "warning" : "danger";
         const licenseText =
           license === "valid"
-            ? dashboardLiteral("Ø³Ø§Ø±ÙŠ")
+            ? dashboardLiteral("ساري")
             : license === "expiring_soon"
-              ? dashboardLiteral("Ù‚Ø§Ø±Ø¨ Ø¹Ù„Ù‰ Ø§Ù„Ø§Ù†ØªÙ‡Ø§Ø¡")
-              : dashboardLiteral("Ù…Ù†ØªÙ‡ÙŠ");
+              ? dashboardLiteral("قارب على الانتهاء")
+              : dashboardLiteral("منتهي");
 
         return `
         <tr>
@@ -1681,7 +1681,7 @@ function renderAdminKindergartensTable(kindergartens) {
           <td>${formatOneDecimal(kg.capacity_utilization || 0)}%</td>
           <td><span class="badge bg-${licenseClass}">${licenseText}</span></td>
           <td>
-            <a href="/kindergartens/${kg.id}" class="btn btn-sm btn-outline-primary" aria-label="${dashboardLiteral("Ø¹Ø±Ø¶ Ø§Ù„Ø±ÙˆØ¶Ø©")}">
+            <a href="/kindergartens/${kg.id}" class="btn btn-sm btn-outline-primary" aria-label="${dashboardLiteral("عرض الروضة")}">
               <i class="bi bi-eye"></i>
             </a>
           </td>
@@ -1705,7 +1705,7 @@ function renderPendingReportsList(kindergartens, summary) {
 
   if (!Array.isArray(kindergartens)) {
     list.innerHTML = dashboardTemplate(
-      '<div class="text-center py-4 text-muted">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª</div>'
+      '<div class="text-center py-4 text-muted">لا توجد بيانات</div>'
     );
     return;
   }
@@ -1719,7 +1719,7 @@ function renderPendingReportsList(kindergartens, summary) {
     list.innerHTML = dashboardTemplate(`
       <div class="text-center py-4 text-muted">
         <i class="bi bi-check-circle fs-1 d-block mb-2 opacity-25"></i>
-        <span>Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ‚Ø§Ø±ÙŠØ± Ù…Ø¹Ù„Ù‚Ø©</span>
+        <span>لا توجد تقارير معلقة</span>
       </div>
     `);
     return;
@@ -1733,7 +1733,7 @@ function renderPendingReportsList(kindergartens, summary) {
           <div class="d-flex justify-content-between align-items-center">
             <div>
               <div class="fw-semibold">${escapeHtml(kg.name_ar || kg.name_en || "-")}</div>
-              <small class="text-muted">${dashboardLiteral("Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©")}</small>
+              <small class="text-muted">${dashboardLiteral("بانتظار المراجعة")}</small>
             </div>
             <span class="badge bg-warning rounded-pill">${formatNumber(kg.pending_reports || 0)}</span>
           </div>
@@ -1749,17 +1749,17 @@ function translateAlertType(rawType) {
     .trim()
     .toLowerCase();
   const labels = {
-    alert: dashboardLiteral("ØªÙ†Ø¨ÙŠÙ‡"),
-    license_expiry: dashboardLiteral("Ø§Ù†ØªÙ‡Ø§Ø¡ Ø§Ù„ØªØ±Ø®ÙŠØµ"),
-    high_pending_applications: dashboardLiteral("Ø·Ù„Ø¨Ø§Øª ØªØ³Ø¬ÙŠÙ„ Ù…Ø¹Ù„Ù‚Ø©"),
-    low_attendance: dashboardLiteral("Ø§Ù†Ø®ÙØ§Ø¶ Ø§Ù„Ø­Ø¶ÙˆØ±"),
-    high_incidents: dashboardLiteral("Ø§Ø±ØªÙØ§Ø¹ Ø§Ù„Ø­ÙˆØ§Ø¯Ø«"),
-    applications: dashboardLiteral("Ø·Ù„Ø¨Ø§Øª Ø§Ù„ØªØ³Ø¬ÙŠÙ„"),
-    safety: dashboardLiteral("Ø§Ù„Ø³Ù„Ø§Ù…Ø©"),
-    license: dashboardLiteral("Ø§Ù„ØªØ±Ø®ÙŠØµ"),
-    compliance: dashboardLiteral("Ø§Ù„Ø§Ù…ØªØ«Ø§Ù„"),
+    alert: dashboardLiteral("تنبيه"),
+    license_expiry: dashboardLiteral("انتهاء الترخيص"),
+    high_pending_applications: dashboardLiteral("طلبات تسجيل معلقة"),
+    low_attendance: dashboardLiteral("انخفاض الحضور"),
+    high_incidents: dashboardLiteral("ارتفاع الحوادث"),
+    applications: dashboardLiteral("طلبات التسجيل"),
+    safety: dashboardLiteral("السلامة"),
+    license: dashboardLiteral("الترخيص"),
+    compliance: dashboardLiteral("الامتثال"),
   };
-  return labels[key] || dashboardLiteral("ØªÙ†Ø¨ÙŠÙ‡");
+  return labels[key] || dashboardLiteral("تنبيه");
 }
 
 function normalizeAlertPriority(rawPriority, rawSeverity) {
@@ -1780,13 +1780,13 @@ function normalizeAlertPriority(rawPriority, rawSeverity) {
 function normalizeAlerts(alerts) {
   if (!Array.isArray(alerts)) return [];
   return alerts.map((alert, index) => {
-    const resolvedType = alert.title || alert.type || dashboardLiteral("ØªÙ†Ø¨ÙŠÙ‡");
+    const resolvedType = alert.title || alert.type || dashboardLiteral("تنبيه");
     const resolvedPriority = normalizeAlertPriority(alert.priority, alert.severity);
     return {
       id: alert.id || `${alert.type || "alert"}-${index}`,
       type: translateAlertType(resolvedType),
       message: String(
-        alert.message || alert.details || dashboardLiteral("Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙØ§ØµÙŠÙ„ Ù…ØªØ§Ø­Ø©.")
+        alert.message || alert.details || dashboardLiteral("لا توجد تفاصيل متاحة.")
       ),
       priority: resolvedPriority,
       kindergartenId: alert.kindergarten_id || alert.entity_id || alert.kindergartenId || null,
@@ -1806,7 +1806,7 @@ function renderAlerts(rawAlerts) {
   if (alerts.length === 0) {
     section.style.display = "none";
     container.innerHTML = dashboardTemplate(
-      '<div class="text-muted text-center py-2">Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ù†Ø´Ø·Ø©</div>'
+      '<div class="text-muted text-center py-2">لا توجد تنبيهات نشطة</div>'
     );
     return;
   }
@@ -1832,7 +1832,7 @@ function renderAlerts(rawAlerts) {
               <div class="fw-semibold">${escapeHtml(alert.type)}</div>
               <div class="small">${escapeHtml(alert.message)}</div>
             </div>
-            <a href="${actionUrl}" class="btn btn-sm btn-outline-${klass}">${dashboardLiteral("ÙØªØ­")}</a>
+            <a href="${actionUrl}" class="btn btn-sm btn-outline-${klass}">${dashboardLiteral("فتح")}</a>
           </div>
         </div>
       `;
@@ -1866,7 +1866,7 @@ const NO_DATA_CHART_PLUGIN = {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(
-      options?.message || dashboardLiteral("Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù…ØªØ§Ø­Ø©"),
+      options?.message || dashboardLiteral("لا توجد بيانات متاحة"),
       (area.left + area.right) / 2,
       (area.top + area.bottom) / 2
     );
@@ -1896,7 +1896,7 @@ const DOUGHNUT_SUMMARY_PLUGIN = {
     ctx.fillStyle = "#6c757d";
     ctx.font = '12px "Segoe UI", Tahoma, sans-serif';
     ctx.fillText(
-      options?.label || dashboardLiteral("Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø­Ø§Ù„Ø§Øª"),
+      options?.label || dashboardLiteral("إجمالي الحالات"),
       centerX,
       centerY + 15
     );
@@ -1929,10 +1929,10 @@ function renderAttendanceChart(series) {
     type: chartType,
     plugins: [NO_DATA_CHART_PLUGIN],
     data: {
-      labels: labels.length > 0 ? labels : [dashboardLiteral("Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª")],
+      labels: labels.length > 0 ? labels : [dashboardLiteral("لا توجد بيانات")],
       datasets: [
         {
-          label: dashboardLiteral("Ø§Ù„Ø­Ø¶ÙˆØ±"),
+          label: dashboardLiteral("الحضور"),
           data: values.length > 0 ? values : [0],
           fill: chartType === "line",
           borderColor: "#0d6efd",
@@ -1959,7 +1959,7 @@ function renderAttendanceChart(series) {
         legend: { display: false },
         dashboardNoDataOverlay: {
           message: dashboardLiteral(
-            "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ø­Ø¶ÙˆØ± Ø¶Ù…Ù† Ø§Ù„ÙØªØ±Ø© Ø§Ù„Ù…Ø®ØªØ§Ø±Ø©"
+            "لا توجد بيانات حضور ضمن الفترة المختارة"
           ),
         },
         tooltip: {
@@ -1973,7 +1973,7 @@ function renderAttendanceChart(series) {
             },
             label(context) {
               const value = safeNumber(context.parsed?.y ?? context.parsed);
-              return `${dashboardText("dashboard.chart.attendance", "Ø§Ù„Ø­Ø¶ÙˆØ±", "Attendance")}: ${value.toLocaleString(dashboardCurrentLocale())}`;
+              return `${dashboardText("dashboard.chart.attendance", "الحضور", "Attendance")}: ${value.toLocaleString(dashboardCurrentLocale())}`;
             },
           },
         },
@@ -2014,7 +2014,7 @@ function renderEnrollmentChart(enrollmentMap) {
     type: "doughnut",
     plugins: [NO_DATA_CHART_PLUGIN, DOUGHNUT_SUMMARY_PLUGIN],
     data: {
-      labels: hasData ? labels : [dashboardLiteral("Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª")],
+      labels: hasData ? labels : [dashboardLiteral("لا توجد بيانات")],
       datasets: [
         {
           data: hasData ? values : [0],
@@ -2033,9 +2033,9 @@ function renderEnrollmentChart(enrollmentMap) {
       animation: { duration: 650, easing: "easeOutQuart" },
       plugins: {
         dashboardNoDataOverlay: {
-          message: dashboardLiteral("Ù„Ø§ ØªÙˆØ¬Ø¯ Ø­Ø§Ù„Ø§Øª ØªØ³Ø¬ÙŠÙ„ Ù…ØªØ§Ø­Ø©"),
+          message: dashboardLiteral("لا توجد حالات تسجيل متاحة"),
         },
-        dashboardDoughnutSummary: { label: dashboardLiteral("Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø­Ø§Ù„Ø§Øª") },
+        dashboardDoughnutSummary: { label: dashboardLiteral("إجمالي الحالات") },
         legend: {
           position: "bottom",
           labels: {
@@ -2118,7 +2118,7 @@ function renderKpiCards(kpis) {
 
   if (!Array.isArray(kpis) || kpis.length === 0) {
     container.innerHTML = dashboardTemplate(
-      '<div class="col-12 text-center py-4 text-muted">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù…Ø¤Ø´Ø±Ø§Øª Ø­Ø§Ù„ÙŠØ§Ù‹</div>'
+      '<div class="col-12 text-center py-4 text-muted">لا توجد بيانات مؤشرات حالياً</div>'
     );
     return;
   }
@@ -2141,10 +2141,10 @@ function renderKpiCards(kpis) {
                 <span class="badge bg-${color}">${bandText}</span>
               </div>
               <div class="display-6 fw-bold text-${color}">${formattedValue}${escapeHtml(unit)}</div>
-              <div class="text-muted small mt-1">${dashboardLiteral("Ø§Ù„Ø§ØªØ¬Ø§Ù‡")}: ${trendSymbol(kpi.trend)}</div>
+              <div class="text-muted small mt-1">${dashboardLiteral("الاتجاه")}: ${trendSymbol(kpi.trend)}</div>
               ${
                 hasActions
-                  ? `<button type="button" class="btn btn-sm btn-outline-${color} mt-3" onclick="openKpiActionItems('${kpi.key}')">${dashboardLiteral("Ø¹Ø±Ø¶ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª")}</button>`
+                  ? `<button type="button" class="btn btn-sm btn-outline-${color} mt-3" onclick="openKpiActionItems('${kpi.key}')">${dashboardLiteral("عرض الإجراءات")}</button>`
                   : ""
               }
             </div>
@@ -2162,7 +2162,7 @@ function renderKpiTable(kpis) {
 
   if (!Array.isArray(kpis) || kpis.length === 0) {
     tableBody.innerHTML = dashboardTemplate(
-      '<tr><td colspan="5" class="text-center py-4 text-muted">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù…Ø¤Ø´Ø±Ø§Øª Ø­Ø§Ù„ÙŠØ§Ù‹</td></tr>'
+      '<tr><td colspan="5" class="text-center py-4 text-muted">لا توجد بيانات مؤشرات حالياً</td></tr>'
     );
     return;
   }
@@ -2174,7 +2174,7 @@ function renderKpiTable(kpis) {
         const value = Number.isFinite(kpi.value) ? formatOneDecimal(kpi.value) : "--";
         const actionsLabel =
           Array.isArray(kpi.actions) && kpi.actions.length > 0
-            ? `<button type="button" class="btn btn-sm btn-outline-${color}" onclick="openKpiActionItems('${kpi.key}')">${dashboardLiteral("Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª")}</button>`
+            ? `<button type="button" class="btn btn-sm btn-outline-${color}" onclick="openKpiActionItems('${kpi.key}')">${dashboardLiteral("إجراءات")}</button>`
             : "-";
 
         return `
@@ -2211,7 +2211,7 @@ function renderKpiExplanations(kpis) {
 
   if (!Array.isArray(kpis) || kpis.length === 0) {
     container.innerHTML = dashboardTemplate(
-      '<p class="text-muted mb-0">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø´Ø±ÙˆØ­Ø§Øª Ù…ØªØ§Ø­Ø© Ù„Ù„Ù…Ø¤Ø´Ø±Ø§Øª.</p>'
+      '<p class="text-muted mb-0">لا توجد شروحات متاحة للمؤشرات.</p>'
     );
     return;
   }
@@ -2222,7 +2222,7 @@ function renderKpiExplanations(kpis) {
         return `
         <div class="item">
           <h6 class="mb-1">${escapeHtml(kpi.label)}</h6>
-          <p class="mb-1">${escapeHtml(kpi.explanation || dashboardLiteral("Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø´Ø±Ø­ Ù…ØªØ§Ø­."))}</p>
+          <p class="mb-1">${escapeHtml(kpi.explanation || dashboardLiteral("لا يوجد شرح متاح."))}</p>
           ${
             kpi.managerNote
               ? `<small class="text-muted">${escapeHtml(kpi.managerNote)}</small>`
@@ -2290,12 +2290,12 @@ function openKpiActionItems(metricKey) {
   if (!title || !container || !modalElement) return;
 
   title.textContent = metric
-    ? `${dashboardLiteral("Ø®Ø·Ø© Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡")}: ${metric.label}`
-    : dashboardLiteral("Ø®Ø·Ø© Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡");
+    ? `${dashboardLiteral("خطة الإجراء")}: ${metric.label}`
+    : dashboardLiteral("خطة الإجراء");
 
   if (!metric || !Array.isArray(metric.actions) || metric.actions.length === 0) {
     container.innerHTML = dashboardTemplate(
-      '<p class="text-muted mb-0">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ù…Ù‚ØªØ±Ø­Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„Ù…Ø¤Ø´Ø±.</p>'
+      '<p class="text-muted mb-0">لا توجد إجراءات مقترحة لهذا المؤشر.</p>'
     );
   } else {
     container.innerHTML = dashboardTemplate(
@@ -2304,11 +2304,11 @@ function openKpiActionItems(metricKey) {
           const priority = String(item.priority || "medium").toLowerCase();
           const priorityLabel =
             priority === "high"
-              ? dashboardLiteral("Ø¹Ø§Ù„ÙŠØ©")
+              ? dashboardLiteral("عالية")
               : priority === "medium"
-                ? dashboardLiteral("Ù…ØªÙˆØ³Ø·Ø©")
-                : dashboardLiteral("Ù…Ù†Ø®ÙØ¶Ø©");
-          const actionText = item.ar || item.action || item.en || dashboardLiteral("Ø¥Ø¬Ø±Ø§Ø¡");
+                ? dashboardLiteral("متوسطة")
+                : dashboardLiteral("منخفضة");
+          const actionText = item.ar || item.action || item.en || dashboardLiteral("إجراء");
           const detail = item.ar || item.en || "";
           return `
           <div class="border rounded p-3 mb-2">
@@ -2356,7 +2356,7 @@ async function loadKindergartensOverview() {
 
     if (!Array.isArray(kindergartens) || kindergartens.length === 0) {
       tableBody.innerHTML = dashboardTemplate(
-        '<tr><td colspan="8" class="text-center py-4 text-muted">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø±ÙˆØ¶Ø§Øª</td></tr>'
+        '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد روضات</td></tr>'
       );
       return;
     }
@@ -2374,9 +2374,9 @@ async function loadKindergartensOverview() {
             <td>${formatNumber(kg.attendance_today || 0)}</td>
             <td>${formatNumber(kg.pending_reports || 0)}</td>
             <td>${formatOneDecimal(kg.capacity_utilization || 0)}%</td>
-            <td><span class="badge bg-${kg.license_valid ? "success" : "danger"}">${kg.license_valid ? dashboardLiteral("Ø³Ø§Ø±ÙŠ") : dashboardLiteral("Ù…Ù†ØªÙ‡ÙŠ")}</span></td>
+            <td><span class="badge bg-${kg.license_valid ? "success" : "danger"}">${kg.license_valid ? dashboardLiteral("ساري") : dashboardLiteral("منتهي")}</span></td>
             <td>
-              <a href="/kindergartens/${kg.id}" class="btn btn-sm btn-outline-primary" aria-label="${dashboardLiteral("Ø¹Ø±Ø¶ Ø§Ù„Ø±ÙˆØ¶Ø©")}">
+              <a href="/kindergartens/${kg.id}" class="btn btn-sm btn-outline-primary" aria-label="${dashboardLiteral("عرض الروضة")}">
                 <i class="bi bi-eye"></i>
               </a>
             </td>
@@ -2388,7 +2388,7 @@ async function loadKindergartensOverview() {
   } catch (error) {
     console.error("Error loading kindergartens:", error);
     tableBody.innerHTML = dashboardTemplate(
-      '<tr><td colspan="8" class="text-center py-4 text-danger">ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø±ÙˆØ¶Ø§Øª</td></tr>'
+      '<tr><td colspan="8" class="text-center py-4 text-danger">تعذر تحميل بيانات الروضات</td></tr>'
     );
   }
 }

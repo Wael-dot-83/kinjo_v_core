@@ -1,0 +1,405 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('تسجيل الحضور') }} — KinJo{% endblock %}
+
+{% block page_header %}
+<div class="page-header-wrap">
+    <div>
+        <div class="page-header-eyebrow">
+            <i class="bi bi-calendar-check-fill"></i>
+            {{ _('المشرف') }}
+        </div>
+        <h1 class="page-header-title">{{ _('تسجيل الحضور') }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('الحضور') }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="page-header-actions">
+        <input type="date" id="attendanceDatePicker" class="form-control" style="width:auto;border-radius:var(--kinjo-radius-lg);"
+               aria-label="{{ _('اختر تاريخ') }}">
+        <button class="btn btn-ghost" onclick="loadAttendance()">
+            <i class="bi bi-arrow-clockwise me-1"></i>{{ _('تحديث') }}
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4 stagger-children">
+    <div class="col-6 col-md-4">
+        <div class="stat-card success card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('حاضر اليوم') }}</div>
+                    <div class="stat-value" id="statPresent">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    </div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="stat-card danger card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('غائب اليوم') }}</div>
+                    <div class="stat-value" id="statAbsent">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    </div>
+                </div>
+                <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
+                    <i class="bi bi-person-dash-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="stat-card card">
+            <div class="card-body">
+                <div class="stat-info">
+                    <div class="stat-label">{{ _('إجمالي الأطفال') }}</div>
+                    <div class="stat-value" id="statTotal">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    </div>
+                </div>
+                <div class="stat-icon-wrap" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="card-title-sm mb-0">
+            <i class="bi bi-list-check me-2 text-primary"></i>
+            {{ _('قائمة الأطفال') }}
+        </h6>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small" id="tableDate"></span>
+            <span class="badge bg-success-subtle text-success" id="presentBadge">0 {{ _('حاضر') }}</span>
+        </div>
+    </div>
+
+    <!-- Loading state -->
+    <div id="tableLoading" class="card-body text-center py-5 text-muted">
+        <div class="spinner-border mb-3" role="status" aria-label="{{ _('جاري التحميل') }}"></div>
+        <div>{{ _('جاري تحميل البيانات...') }}</div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="tableEmpty" class="card-body text-center py-5 text-muted d-none">
+        <i class="bi bi-people d-block fs-1 mb-3 opacity-25"></i>
+        <p class="fw-600">{{ _('لا يوجد أطفال مسجلون في شعبتك') }}</p>
+    </div>
+
+    <!-- Error state -->
+    <div id="tableError" class="card-body text-center py-5 d-none">
+        <i class="bi bi-exclamation-circle d-block fs-1 mb-3 text-danger opacity-50"></i>
+        <p class="text-muted">{{ _('تعذّر تحميل البيانات') }}</p>
+        <button class="btn btn-ghost btn-sm" onclick="loadAttendance()">
+            <i class="bi bi-arrow-clockwise me-1"></i>{{ _('إعادة المحاولة') }}
+        </button>
+    </div>
+
+    <!-- Data table -->
+    <div id="tableWrap" class="d-none">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" aria-label="{{ _('جدول الحضور') }}">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">{{ _('اسم الطفل') }}</th>
+                        <th scope="col">{{ _('الشعبة') }}</th>
+                        <th scope="col">{{ _('وقت الدخول') }}</th>
+                        <th scope="col">{{ _('وقت الخروج') }}</th>
+                        <th scope="col">{{ _('الحالة') }}</th>
+                        <th scope="col" class="text-center">{{ _('الإجراء') }}</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Absent Modal -->
+<div class="modal fade" id="absentModal" tabindex="-1" aria-labelledby="absentModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-700" id="absentModalLabel">
+                    <i class="bi bi-person-dash-fill text-danger me-2"></i>
+                    {{ _('تأكيد تسجيل الغياب') }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">{{ _('هل أنت متأكد من تسجيل') }} <strong id="absentChildName"></strong> {{ _('كغائب؟') }}</p>
+                <p class="small text-muted">{{ _('سيتم إشعار ولي الأمر تلقائياً.') }}</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
+                <button type="button" class="btn btn-danger" id="confirmAbsentBtn" onclick="confirmMarkAbsent()">
+                    <span class="btn-text"><i class="bi bi-person-dash me-2"></i>{{ _('نعم، تسجيل غائب') }}</span>
+                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
+.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
+.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
+.page-header-actions { display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap; }
+.fw-600 { font-weight:600; }
+.fw-700 { font-weight:700; }
+.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
+
+.status-present { color:var(--kinjo-success);font-weight:700; }
+.status-absent  { color:var(--kinjo-danger);font-weight:700; }
+.status-checked-out { color:#64748b;font-weight:700; }
+.status-not-arrived { color:var(--kinjo-text-muted); }
+
+.bg-success-subtle { background:rgba(16,185,129,0.1); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const TODAY = new Date().toISOString().slice(0, 10);
+    let pendingAbsentChildId = null;
+    let absentModal = null;
+
+    function getHeaders() {
+        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
+        const h = { 'Content-Type': 'application/json' };
+        if (t) h['Authorization'] = `Bearer ${t}`;
+        return h;
+    }
+
+    // Init date picker
+    const picker = document.getElementById('attendanceDatePicker');
+    picker.value = TODAY;
+    picker.addEventListener('change', loadAttendance);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        absentModal = new bootstrap.Modal(document.getElementById('absentModal'));
+        updateTableDateLabel(TODAY);
+        loadAttendance();
+    });
+
+    function updateTableDateLabel(date) {
+        const el = document.getElementById('tableDate');
+        if (el) {
+            const d = new Date(date);
+            el.textContent = d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+    }
+
+    window.loadAttendance = async function () {
+        const date = document.getElementById('attendanceDatePicker').value || TODAY;
+        updateTableDateLabel(date);
+
+        document.getElementById('tableLoading').classList.remove('d-none');
+        document.getElementById('tableEmpty').classList.add('d-none');
+        document.getElementById('tableError').classList.add('d-none');
+        document.getElementById('tableWrap').classList.add('d-none');
+
+        try {
+            const r = await fetch(`/api/supervisor/attendance?date=${date}`, { headers: getHeaders() });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const data = await r.json();
+            const children = data.children || [];
+
+            document.getElementById('tableLoading').classList.add('d-none');
+
+            if (!children.length) {
+                document.getElementById('tableEmpty').classList.remove('d-none');
+                document.getElementById('statPresent').textContent = '0';
+                document.getElementById('statAbsent').textContent = '0';
+                document.getElementById('statTotal').textContent = '0';
+                return;
+            }
+
+            const present = children.filter(c => c.status === 'present').length;
+            const absent  = children.filter(c => c.status === 'absent').length;
+            document.getElementById('statPresent').textContent = present;
+            document.getElementById('statAbsent').textContent  = absent;
+            document.getElementById('statTotal').textContent   = children.length;
+            document.getElementById('presentBadge').textContent = `${present} {{ _('حاضر') }}`;
+
+            renderTable(children);
+            document.getElementById('tableWrap').classList.remove('d-none');
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('tableLoading').classList.add('d-none');
+            document.getElementById('tableError').classList.remove('d-none');
+        }
+    };
+
+    function statusBadge(status) {
+        const map = {
+            'present':     `<span class="badge bg-success">{{ _('حاضر') }}</span>`,
+            'absent':      `<span class="badge bg-danger">{{ _('غائب') }}</span>`,
+            'checked_out': `<span class="badge bg-secondary">{{ _('غادر') }}</span>`,
+            'not_arrived': `<span class="badge bg-light text-muted border">{{ _('لم يصل') }}</span>`,
+        };
+        return map[status] || `<span class="badge bg-light text-muted border">${status}</span>`;
+    }
+
+    function actionButtons(child) {
+        const btns = [];
+        if (child.status === 'not_arrived' || !child.status) {
+            btns.push(`
+                <button class="btn btn-sm btn-success" onclick="checkIn(${child.id},${escHtml(JSON.stringify(child.name))})"
+                        aria-label="{{ _('تسجيل حضور') }} ${escHtml(child.name)}">
+                    <i class="bi bi-box-arrow-in-right me-1"></i>{{ _('حضور') }}
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="openAbsentModal(${child.id},${escHtml(JSON.stringify(child.name))})"
+                        aria-label="{{ _('تسجيل غياب') }} ${escHtml(child.name)}">
+                    <i class="bi bi-person-dash me-1"></i>{{ _('غائب') }}
+                </button>`);
+        } else if (child.status === 'present') {
+            btns.push(`
+                <button class="btn btn-sm btn-outline-secondary" onclick="checkOut(${child.id},${escHtml(JSON.stringify(child.name))})"
+                        aria-label="{{ _('تسجيل خروج') }} ${escHtml(child.name)}">
+                    <i class="bi bi-box-arrow-right me-1"></i>{{ _('خروج') }}
+                </button>`);
+        } else {
+            btns.push(`<span class="text-muted small">—</span>`);
+        }
+        return btns.join('');
+    }
+
+    function renderTable(children) {
+        const tbody = document.getElementById('attendanceTableBody');
+        tbody.innerHTML = children.map((c, i) => `
+            <tr id="row-${c.id}">
+                <td class="text-muted small">${i + 1}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="att-avatar-sm">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <span class="fw-600">${escHtml(c.name)}</span>
+                    </div>
+                </td>
+                <td class="text-muted small">${escHtml(c.class_name || '—')}</td>
+                <td class="small">${c.check_in_time ? `<span class="text-success fw-600">${c.check_in_time.slice(0,5)}</span>` : '<span class="text-muted">—</span>'}</td>
+                <td class="small">${c.check_out_time ? `<span class="text-secondary fw-600">${c.check_out_time.slice(0,5)}</span>` : '<span class="text-muted">—</span>'}</td>
+                <td>${statusBadge(c.status || 'not_arrived')}</td>
+                <td>
+                    <div class="d-flex gap-1 justify-content-center flex-wrap" id="actions-${c.id}">
+                        ${actionButtons(c)}
+                    </div>
+                </td>
+            </tr>`).join('');
+    }
+
+    window.checkIn = async function (childId, name) {
+        setActionLoading(childId, true);
+        try {
+            const r = await fetch('/api/supervisor/attendance', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ child_id: childId, action: 'check_in' })
+            });
+            if (!r.ok) throw new Error();
+            showToast(`{{ _('تم تسجيل حضور') }} ${name}`, 'success');
+            await loadAttendance();
+        } catch {
+            showToast('{{ _("حدث خطأ في تسجيل الحضور") }}', 'error');
+            setActionLoading(childId, false);
+        }
+    };
+
+    window.checkOut = async function (childId, name) {
+        setActionLoading(childId, true);
+        try {
+            const r = await fetch('/api/supervisor/attendance', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ child_id: childId, action: 'check_out' })
+            });
+            if (!r.ok) throw new Error();
+            showToast(`{{ _('تم تسجيل خروج') }} ${name}`, 'success');
+            await loadAttendance();
+        } catch {
+            showToast('{{ _("حدث خطأ في تسجيل الخروج") }}', 'error');
+            setActionLoading(childId, false);
+        }
+    };
+
+    window.openAbsentModal = function (childId, name) {
+        pendingAbsentChildId = childId;
+        document.getElementById('absentChildName').textContent = name;
+        absentModal.show();
+    };
+
+    window.confirmMarkAbsent = async function () {
+        if (!pendingAbsentChildId) return;
+        const btn = document.getElementById('confirmAbsentBtn');
+        btn.querySelector('.btn-text').classList.add('d-none');
+        btn.querySelector('.btn-loading').classList.remove('d-none');
+        btn.disabled = true;
+
+        try {
+            const r = await fetch('/api/supervisor/attendance', {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ child_id: pendingAbsentChildId, action: 'mark_absent' })
+            });
+            if (!r.ok) throw new Error();
+            showToast('{{ _("تم تسجيل الغياب") }}', 'success');
+            absentModal.hide();
+            await loadAttendance();
+        } catch {
+            showToast('{{ _("حدث خطأ في تسجيل الغياب") }}', 'error');
+        } finally {
+            btn.querySelector('.btn-text').classList.remove('d-none');
+            btn.querySelector('.btn-loading').classList.add('d-none');
+            btn.disabled = false;
+            pendingAbsentChildId = null;
+        }
+    };
+
+    function setActionLoading(childId, loading) {
+        const el = document.getElementById(`actions-${childId}`);
+        if (!el) return;
+        if (loading) {
+            el.innerHTML = `<span class="spinner-border spinner-border-sm text-primary" role="status"></span>`;
+        }
+    }
+
+    function escHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+})();
+</script>
+
+<style>
+.att-avatar-sm {
+    width:32px;height:32px;border-radius:50%;
+    background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.85rem;flex-shrink:0;
+}
+</style>
+{% endblock %}

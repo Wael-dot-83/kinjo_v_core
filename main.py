@@ -174,6 +174,11 @@ from api.tasks import router as tasks_router
 from api.manager import router as manager_router
 from api.supervisor import router as supervisor_router
 from api.portfolio import router as portfolio_router
+from routers.supervisor import router as supervisor_scoped_router
+from routers.manager import router as manager_scoped_router
+from routers.admin_impersonation import router as admin_impersonation_router
+from routers.messaging import router as messaging_router
+from government_api import router as government_api_router
 
 # =============================================================================
 # Lifespan Event Handler
@@ -970,7 +975,6 @@ async def refresh_token(
 
 # Include routers AFTER auth endpoints
 app.include_router(admin_router, prefix="/api", tags=["Admin"])
-app.include_router(api_router, prefix="/api", tags=["API"])
 app.include_router(communication_router, prefix="/comm", tags=["Communication"])
 app.include_router(safety_router, prefix="/api", tags=["Safety"])
 app.include_router(kpi_router, prefix="/api", tags=["KPI"])
@@ -1001,7 +1005,13 @@ app.include_router(users_router, prefix="/api", tags=["Users"])
 app.include_router(tasks_router, prefix="/api", tags=["Tasks"])
 app.include_router(manager_router, prefix="/api", tags=["Manager"])
 app.include_router(supervisor_router, prefix="/api", tags=["Supervisor"])
+app.include_router(supervisor_scoped_router)        # prefix /api/supervisor already in router
+app.include_router(manager_scoped_router)           # prefix /api/manager already in router
+app.include_router(admin_impersonation_router, prefix="/api", tags=["Admin"])
+app.include_router(messaging_router, prefix="/api", tags=["Messaging"])
 app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
+app.include_router(government_api_router, prefix="/api", tags=["Government API"])
+app.include_router(api_router, prefix="/api", tags=["API"])
 
 # WebSocket endpoint for real-time dashboard updates
 from dependencies import get_current_user_optional

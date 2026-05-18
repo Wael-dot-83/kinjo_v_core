@@ -1,4 +1,4 @@
-﻿"""Legacy placeholder utility script.
+"""Legacy placeholder utility script.
 
 This script intentionally does nothing. It exists to keep historical
 references stable while remaining syntactically valid for global

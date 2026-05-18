@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 {% if ui_lang == 'en' %}
 <html lang="en" dir="{{ ui_dir | default('ltr') }}">
 {% else %}
@@ -6,8 +6,7 @@
 {% endif %}
 
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token | default('') }}">
     <meta name="description"
@@ -110,6 +109,7 @@
 </head>
 
 <body class="kinjo-app {% block body_class %}{% endblock %}">
+    {% include 'components/impersonation_banner.html' %}
     {% block body %}
     <a href="#mainContent" class="skip-link">{% if ui_lang == 'en' %}Skip to main content{% else %}تخطي إلى المحتوى الرئيسي{% endif %}</a>
 

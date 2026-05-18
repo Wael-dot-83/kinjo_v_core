@@ -92,8 +92,7 @@ def test_reports_list(test_client):
 
 def test_attendance_page(test_client):
     response = test_client.get("/attendance/daily", follow_redirects=False)
-    assert response.status_code == 307
-    assert response.headers.get("location") == "/dashboard"
+    assert response.status_code == 403
 
 def test_kpi_dashboard(test_client):
     response = test_client.get("/kpi/dashboard")
@@ -127,3 +126,50 @@ def test_terms_page(test_client):
     assert response.status_code == 200
     assert "شروط الاستخدام" in response.text
     assert "شروط" in response.text
+
+
+def test_admin_sidebar_hides_classes_link(test_client):
+    """Admin sidebar must not contain the /classes nav link (admin gets 403 on that route)."""
+    response = test_client.get("/dashboard")
+    assert response.status_code == 200
+    assert 'data-i18n="sidebar.classes"' not in response.text
+
+
+def test_admin_sidebar_hides_daily_reports_link(test_client):
+    """Admin sidebar must not contain the /daily-reports nav link (admin gets 403 on that route)."""
+    response = test_client.get("/dashboard")
+    assert response.status_code == 200
+    assert 'data-i18n="sidebar.daily_reports"' not in response.text
+
+
+def test_admin_sidebar_shows_admin_links(test_client):
+    """Admin sidebar must include admin-specific management links."""
+    response = test_client.get("/dashboard")
+    assert response.status_code == 200
+    html = response.text
+    assert "/admin/users" in html
+    assert "/admin/analytics" in html
+    assert "/audit-logs" in html
+
+
+def test_parent_sidebar_hides_safety_link():
+    """PARENT sidebar must not show the Safety and Incidents nav link."""
+    async def mock_parent_user():
+        return User(
+            id=2,
+            username="parentuser",
+            email="parent@kinjo.sa",
+            role=UserRole.PARENT,
+            status=UserStatus.ACTIVE,
+            hashed_password=get_password_hash("TestPass123!")
+        )
+
+    app.dependency_overrides[get_current_user] = mock_parent_user
+    app.dependency_overrides[get_current_user_or_redirect] = mock_parent_user
+    client = TestClient(app)
+    try:
+        response = client.get("/dashboard")
+        assert response.status_code == 200
+        assert 'data-i18n="sidebar.safety_incidents"' not in response.text
+    finally:
+        app.dependency_overrides.clear()
