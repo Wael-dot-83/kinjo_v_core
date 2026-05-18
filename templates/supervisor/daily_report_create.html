@@ -309,17 +309,15 @@
             return;
         }
 
-        const meals = [];
-        ['mealBreakfast','mealSnack','mealMilk','mealLunch'].forEach(id => {
-            if (document.getElementById(id).checked) meals.push(document.getElementById(id).value);
-        });
-
         const payload = {
             child_id:     parseInt(childId),
             date:         date,
             arrival_time: document.getElementById('arrivalTime').value || null,
             leave_time:   document.getElementById('leaveTime').value   || null,
-            meals:        meals,
+            breakfast:    document.getElementById('mealBreakfast').checked,
+            snack:        document.getElementById('mealSnack').checked,
+            milk:         document.getElementById('mealMilk').checked,
+            lunch:        document.getElementById('mealLunch').checked,
             nap_start:    document.getElementById('napStart').value    || null,
             nap_end:      document.getElementById('napEnd').value      || null,
             activities:   document.getElementById('activities').value.trim() || null,

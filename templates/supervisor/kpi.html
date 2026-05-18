@@ -299,8 +299,8 @@
             // Normalise API response shape (flat keys) into the expected structure
             const performance = {
                 completion_rate:    data.completion_rate    ?? 0,
-                on_time_rate:       data.completion_rate    ?? 0,
-                avg_report_length:  0,
+                on_time_rate:       data.on_time_rate       ?? null,
+                avg_report_length:  data.avg_report_length  ?? null,
             };
             const children = (data.per_child || []).map(c => ({
                 ...c,
@@ -331,15 +331,15 @@
 
     function updatePerformanceCards(p) {
         const completion = Math.round(p.completion_rate || 0);
-        const onTime     = Math.round(p.on_time_rate    || 0);
-        const avgLen     = p.avg_report_length ? Math.round(p.avg_report_length) + ' {{ _("حرف") }}' : '—';
+        const onTime     = p.on_time_rate !== null ? Math.round(p.on_time_rate) : null;
+        const avgLen     = p.avg_report_length !== null ? Math.round(p.avg_report_length) + ' {{ _("حرف") }}' : '—';
 
         document.getElementById('kpiCompletionRate').textContent = completion + '%';
-        document.getElementById('kpiOnTimeRate').textContent     = onTime + '%';
+        document.getElementById('kpiOnTimeRate').textContent     = onTime !== null ? onTime + '%' : '—';
         document.getElementById('kpiAvgLength').textContent      = avgLen;
 
         document.getElementById('kpiCompletionBar').style.width = completion + '%';
-        document.getElementById('kpiOnTimeBar').style.width     = onTime + '%';
+        document.getElementById('kpiOnTimeBar').style.width     = (onTime ?? 0) + '%';
     }
 
     function updateChildrenTable(children) {
