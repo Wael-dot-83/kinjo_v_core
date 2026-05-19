@@ -78,7 +78,9 @@ def report_incident(
         description=incident_data.description,
         occurred_at=incident_data.occurred_at,
         notify_parent_at=incident_data.notify_parent_at,
-        followup_required_flag=incident_data.followup_required_flag
+        followup_required_flag=incident_data.followup_required_flag,
+        reported_by=current_user.id,
+        class_id=enrollment.class_id if enrollment else None,
     )
 
     db.add(incident)
@@ -132,6 +134,7 @@ def update_incident(
         incident.followup_sla_deadline = update_data.followup_sla_deadline
     if update_data.closed_at:
         incident.closed_at = update_data.closed_at
+        incident.closed_by = current_user.id
         
     db.commit()
     db.refresh(incident)

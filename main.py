@@ -89,7 +89,7 @@ from admin_security import CorrelationIdMiddleware, APIError, api_error_handler
 from rate_limiter import limiter, rate_limit_exceeded_handler
 from performance_monitor import PerformanceMiddleware, setup_database_monitoring, start_system_monitoring
 from backup_manager import backup_scheduler
-from daily_report_scheduler import daily_report_scheduler
+from daily_report_scheduler import daily_report_scheduler, waitlist_expiry_scheduler
 from monitoring_service import performance_monitor, health_checker, auto_scaler
 from predictive_analytics import predictive_analytics
 from language_integrity import enforce_english_html_integrity
@@ -205,6 +205,9 @@ async def lifespan(app: FastAPI):
         # Start daily report scheduler
         daily_report_scheduler.start_scheduler()
 
+        # Start waitlist expiry scheduler (every 15 min)
+        waitlist_expiry_scheduler.start_scheduler()
+
         # Start monitoring services
         performance_monitor.start_monitoring()
         auto_scaler.start_auto_scaling()
@@ -225,6 +228,7 @@ async def lifespan(app: FastAPI):
         # Stop schedulers
         backup_scheduler.stop_scheduler()
         daily_report_scheduler.stop_scheduler()
+        waitlist_expiry_scheduler.stop_scheduler()
 
         auto_scaler.stop_auto_scaling()
 

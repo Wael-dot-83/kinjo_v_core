@@ -220,7 +220,9 @@ def create_incident_json(
         description=incident_data.description,
         occurred_at=datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00')),
         followup_required_flag=incident_data.followup_required_flag or False,
-        notify_parent_at=datetime.now(timezone.utc)
+        notify_parent_at=datetime.now(timezone.utc),
+        reported_by=current_user.id,
+        class_id=child_enrollment.class_id if child_enrollment else None,
     )
     
     if incident.followup_required_flag:
@@ -301,6 +303,12 @@ def create_incident(
     validators.validate_manager_role(current_user)
     validators.validate_kindergarten_scope(current_user, kindergarten_id)
     
+    active_enrollment = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.child_id == child_id,
+        models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    ).first()
+
     incident = models.Incident(
         child_id=child_id,
         kindergarten_id=kindergarten_id,
@@ -309,7 +317,9 @@ def create_incident(
         description=description,
         occurred_at=datetime.fromisoformat(occurred_at),
         followup_required_flag=followup_required,
-        notify_parent_at=datetime.now(timezone.utc)
+        notify_parent_at=datetime.now(timezone.utc),
+        reported_by=current_user.id,
+        class_id=active_enrollment.class_id if active_enrollment else None,
     )
     
     if followup_required:

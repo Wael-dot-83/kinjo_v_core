@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from datetime import date, datetime, timedelta, timezone
+import re
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -31,6 +32,24 @@ class DailyReportCreateRequest(BaseModel):
     nap_end: Optional[str] = None
     activities: Optional[str] = None
     notes: Optional[str] = None
+
+    @field_validator("date")
+    @classmethod
+    def date_not_in_future(cls, v: str) -> str:
+        try:
+            parsed = date.fromisoformat(v)
+        except ValueError:
+            raise ValueError("date must be in YYYY-MM-DD format")
+        if parsed > date.today():
+            raise ValueError("date cannot be in the future")
+        return v
+
+    @field_validator("arrival_time", "leave_time")
+    @classmethod
+    def time_format_hhmm(cls, v: str) -> str:
+        if not re.match(r'^([01]\d|2[0-3]):[0-5]\d$', v):
+            raise ValueError("time must be in HH:MM format (24-hour)")
+        return v
 
 
 @router.post("/daily-reports/create", status_code=status.HTTP_201_CREATED)

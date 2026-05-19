@@ -339,6 +339,36 @@ def review_enrollment(
         docs_ok, missing_docs = validators.validate_required_documents(db, child.id)
         if not docs_ok:
             raise HTTPException(status_code=400, detail={"missing_documents": missing_docs})
+
+        # Class capacity guard — row-level lock prevents double-booking
+        if enrollment.class_id:
+            class_obj = (
+                db.query(models.Class)
+                .filter(models.Class.id == enrollment.class_id)
+                .with_for_update()
+                .first()
+            )
+            if class_obj:
+                active_count = (
+                    db.query(func.count(models.EnrollmentApplication.id))
+                    .filter(
+                        models.EnrollmentApplication.class_id == enrollment.class_id,
+                        models.EnrollmentApplication.status.in_(
+                            [models.EnrollmentStatus.ACTIVE, models.EnrollmentStatus.ACCEPTED]
+                        ),
+                        models.EnrollmentApplication.id != enrollment.id,
+                    )
+                    .scalar()
+                ) or 0
+                if active_count >= class_obj.capacity_total:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=_api(
+                            "Class is at full capacity. Place the child on the waitlist.",
+                            _ulang(current_user),
+                        ),
+                    )
+
         enrollment.status = models.EnrollmentStatus.ACCEPTED
         enrollment.accepted_at = datetime.now(timezone.utc)
         audit_action = "ACCEPT"

@@ -361,6 +361,10 @@ def log_audit_event(
         entity_type=target_type,
         entity_id=ids_list[0] if len(ids_list) == 1 else None,
         details=details_str,
+        old_data=before_state,
+        new_data=after_state,
+        actor_role=actor.role.value if actor and actor.role else None,
+        request_id=get_correlation_id(),
         ip_address=get_request_ip(),
         sensitivity_level=sensitivity_level
     )

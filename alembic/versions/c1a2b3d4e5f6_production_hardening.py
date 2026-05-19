@@ -560,6 +560,9 @@ def upgrade() -> None:
             "CREATE INDEX IF NOT EXISTS idx_enrollment_child_status ON enrollment_applications(child_id, status)",
             "CREATE INDEX IF NOT EXISTS idx_ratio_compliance_kg_date ON ratio_compliance(kindergarten_id, date DESC)",
             "CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id, created_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_observation_child_domain ON observations(child_id, domain, observed_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_safeguarding_open ON safeguarding_cases(kindergarten_id, closed_at) WHERE closed_at IS NULL",
+            "CREATE INDEX IF NOT EXISTS idx_waitlist_expiry_scan ON waitlist_entries(status, offer_expiry_at) WHERE status = 'OFFERED'",
         ]
         for ddl in index_ddl:
             op.execute(ddl)
@@ -718,6 +721,8 @@ def downgrade() -> None:
             "idx_safeguarding_status", "idx_health_alerts_child",
             "idx_waitlist_expiry", "idx_enrollment_child_status",
             "idx_ratio_compliance_kg_date", "idx_audit_logs_entity",
+            "idx_observation_child_domain", "idx_safeguarding_open",
+            "idx_waitlist_expiry_scan",
         ]:
             op.execute(f"DROP INDEX IF EXISTS {idx}")
 

@@ -190,19 +190,28 @@ def init_db():
 def ensure_runtime_security_schema():
     """Backfill local-dev security columns when Alembic has not run yet."""
     inspector = inspect(engine)
-    if "users" not in inspector.get_table_names():
-        return
+    table_names = set(inspector.get_table_names())
 
-    existing_columns = {column["name"] for column in inspector.get_columns("users")}
     statements = []
-    if "mfa_enabled" not in existing_columns:
-        statements.append("ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN NOT NULL DEFAULT 0")
-    if "mfa_secret" not in existing_columns:
-        statements.append("ALTER TABLE users ADD COLUMN mfa_secret VARCHAR(255)")
-    if "mfa_enrolled_at" not in existing_columns:
-        statements.append("ALTER TABLE users ADD COLUMN mfa_enrolled_at DATETIME")
-    if "mfa_last_verified_at" not in existing_columns:
-        statements.append("ALTER TABLE users ADD COLUMN mfa_last_verified_at DATETIME")
+
+    if "users" in table_names:
+        existing_columns = {column["name"] for column in inspector.get_columns("users")}
+        if "mfa_enabled" not in existing_columns:
+            statements.append("ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN NOT NULL DEFAULT 0")
+        if "mfa_secret" not in existing_columns:
+            statements.append("ALTER TABLE users ADD COLUMN mfa_secret VARCHAR(255)")
+        if "mfa_enrolled_at" not in existing_columns:
+            statements.append("ALTER TABLE users ADD COLUMN mfa_enrolled_at DATETIME")
+        if "mfa_last_verified_at" not in existing_columns:
+            statements.append("ALTER TABLE users ADD COLUMN mfa_last_verified_at DATETIME")
+
+    if "parent_profiles" in table_names:
+        existing_columns = {column["name"] for column in inspector.get_columns("parent_profiles")}
+        if "notification_language" not in existing_columns:
+            statements.append(
+                "ALTER TABLE parent_profiles "
+                "ADD COLUMN notification_language VARCHAR(10) NOT NULL DEFAULT 'ar'"
+            )
 
     if not statements:
         return

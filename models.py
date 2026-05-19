@@ -329,13 +329,14 @@ class User(Base):
     mfa_last_verified_at = Column(DateTime(timezone=True), nullable=True)
     preferred_language = Column(String(10), nullable=False, default="ar", server_default="ar")
     deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     kindergarten = relationship("Kindergarten", back_populates="users")
-    parent_profile = relationship("ParentProfile", back_populates="user", uselist=False)
-    supervisor_assignments = relationship("SupervisorAssignment", back_populates="supervisor")
+    parent_profile = relationship("ParentProfile", foreign_keys="[ParentProfile.user_id]", back_populates="user", uselist=False)
+    supervisor_assignments = relationship("SupervisorAssignment", foreign_keys="[SupervisorAssignment.supervisor_id]", back_populates="supervisor")
     supervisor_profile = relationship("SupervisorProfile", back_populates="user", uselist=False)
     daily_reports_submitted = relationship("DailyReport", foreign_keys="DailyReport.submitted_by", back_populates="submitter")
     daily_reports_approved = relationship("DailyReport", foreign_keys="DailyReport.approved_by", back_populates="approver")
@@ -460,6 +461,8 @@ class ParentProfile(Base):
     notification_language = Column(String(10), nullable=False, server_default="ar", default="ar")
     profile_complete = Column(Boolean, nullable=False, default=False)
     profile_completed_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -469,7 +472,7 @@ class ParentProfile(Base):
     )
 
     # Relationships
-    user = relationship("User", back_populates="parent_profile")
+    user = relationship("User", foreign_keys=[user_id], back_populates="parent_profile")
     children = relationship("Child", back_populates="parent")
 
 
@@ -514,6 +517,15 @@ class Child(Base):
     educational_notes = Column(Text, nullable=True)  # Learning notes / special needs
     has_special_needs = Column(Boolean, nullable=False, server_default="false", default=False)
     has_medical_condition = Column(Boolean, nullable=False, server_default="false", default=False)
+    medical_notes = Column(Text, nullable=True)
+    allergy_notes = Column(Text, nullable=True)
+    special_needs_notes = Column(Text, nullable=True)
+    emergency_contact_name = Column(String(255), nullable=True)
+    emergency_contact_phone = Column(String(20), nullable=True)
+    blood_type = Column(String(5), nullable=True)
+    vaccination_up_to_date = Column(Boolean, nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
     parent = relationship("ParentProfile", back_populates="children")
@@ -543,6 +555,7 @@ class Class(Base):
     supervisor_id = Column(Integer, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -575,12 +588,13 @@ class SupervisorAssignment(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=True)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     class_ = relationship("Class", back_populates="supervisor_assignments")
-    supervisor = relationship("User", back_populates="supervisor_assignments")
+    supervisor = relationship("User", foreign_keys=[supervisor_id], back_populates="supervisor_assignments")
 
 
 class KindergartenService(Base):
@@ -591,6 +605,8 @@ class KindergartenService(Base):
     service_name = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
     enabled_flag = Column(Boolean, nullable=False, default=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -630,6 +646,8 @@ class EnrollmentApplication(Base):
     enrollment_start_date = Column(Date, nullable=True)
     enrollment_end_date = Column(Date, nullable=True)
     class_assignment_date = Column(Date, nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -797,6 +815,11 @@ class Incident(Base):
     followup_required_flag = Column(Boolean, nullable=False, default=False)
     followup_sla_deadline = Column(DateTime(timezone=True), nullable=True)
     closed_at = Column(DateTime(timezone=True), nullable=True)
+    reported_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)
+    closed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -902,6 +925,8 @@ class Message(Base):
     translated_text = Column(Text, nullable=True)
     queue_status = Column(Enum(MessageQueueStatus), nullable=True, default=MessageQueueStatus.SENT)
     scheduled_at = Column(DateTime(timezone=True), nullable=True)
+    is_read = Column(Boolean, nullable=False, default=False)
+    read_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -1073,6 +1098,8 @@ class Event(Base):
     start_at = Column(DateTime(timezone=True), nullable=False)
     end_at = Column(DateTime(timezone=True), nullable=False)
     requires_consent_flag = Column(Boolean, nullable=False, default=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -1089,6 +1116,8 @@ class Survey(Base):
     nps_question_enabled = Column(Boolean, nullable=False, default=True)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -1158,6 +1187,10 @@ class AuditLog(Base):
     entity_type = Column(String(100), nullable=False)
     entity_id = Column(Integer, nullable=True)
     details = Column(Text, nullable=True)
+    old_data = Column(JSON, nullable=True)
+    new_data = Column(JSON, nullable=True)
+    actor_role = Column(String(50), nullable=True)
+    request_id = Column(String(36), nullable=True)
     ip_address = Column(String(50), nullable=True)
     sensitivity_level = Column(Integer, nullable=True)
     impersonated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
@@ -1231,6 +1264,8 @@ class SafeguardingCase(Base):
     child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
     kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
     case_description = Column(Text, nullable=False)
+    status = Column(String(50), nullable=True)
+    assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
     opened_at = Column(DateTime(timezone=True), nullable=False)
     escalated_at = Column(DateTime(timezone=True), nullable=True)
     closed_at = Column(DateTime(timezone=True), nullable=True)
@@ -1253,6 +1288,8 @@ class Task(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     due_date = Column(Date, nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
