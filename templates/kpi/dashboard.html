@@ -34,6 +34,11 @@
             {% if ui_lang == 'en' %}Classification & Comparisons{% else %}التصنيف والمقارنات{% endif %}
         </a>
         {% endif %}
+        <span id="wsStatusIndicator" class="badge rounded-pill ms-2 d-none"
+              style="font-size:.75rem;vertical-align:middle;">
+            <i class="bi bi-wifi-off me-1"></i>
+            <span id="wsStatusText"></span>
+        </span>
     </div>
 </div>
 {% endblock %}
@@ -494,6 +499,10 @@
         let distributionChart = null;
         let latestDashboardRequestId = 0;
         let dashboardReconnectTimer = null;
+        let wsReconnectAttempts = 0;
+        const WS_MAX_ATTEMPTS = 10;   // give up after ~10 retries (≈5 min total)
+        const WS_BASE_DELAY_MS = 1000; // 1 s initial delay
+        const WS_MAX_DELAY_MS = 30000; // 30 s cap
 
         function clamp(value, min = 0, max = 100) {
             const numeric = Number(value);
@@ -1469,6 +1478,31 @@
         // WebSocket for real-time updates
         let dashboardWebSocket = null;
 
+        /** Show / hide the WS connection-status pill in the page header. */
+        function setWsStatus(state) {
+            const pill = document.getElementById('wsStatusIndicator');
+            const text = document.getElementById('wsStatusText');
+            if (!pill || !text) return;
+            if (state === 'connected') {
+                pill.className = 'badge rounded-pill ms-2 bg-success-subtle text-success border border-success-subtle';
+                pill.querySelector('i').className = 'bi bi-wifi me-1';
+                text.textContent = kpiText('ws.status.connected', 'مباشر', 'Live');
+                pill.classList.remove('d-none');
+                // auto-hide after 3 s — no need to clutter UI when all is well
+                setTimeout(() => pill.classList.add('d-none'), 3000);
+            } else if (state === 'reconnecting') {
+                pill.className = 'badge rounded-pill ms-2 bg-warning-subtle text-warning border border-warning-subtle';
+                pill.querySelector('i').className = 'bi bi-wifi-off me-1';
+                text.textContent = kpiText('ws.status.reconnecting', 'إعادة الاتصال…', 'Reconnecting…');
+                pill.classList.remove('d-none');
+            } else if (state === 'failed') {
+                pill.className = 'badge rounded-pill ms-2 bg-danger-subtle text-danger border border-danger-subtle';
+                pill.querySelector('i').className = 'bi bi-wifi-off me-1';
+                text.textContent = kpiText('ws.status.failed', 'البث المباشر معطّل', 'Live updates unavailable');
+                pill.classList.remove('d-none');
+            }
+        }
+
         function initWebSocket() {
             const token = getToken();
             if (!token || !window.WebSocket) {
@@ -1482,6 +1516,8 @@
 
             dashboardWebSocket.onopen = function (event) {
                 console.log('Dashboard WebSocket connected');
+                wsReconnectAttempts = 0;  // reset back-off counter on successful connect
+                setWsStatus('connected');
                 // Send subscription request for KPI updates
                 dashboardWebSocket.send(JSON.stringify({
                     type: 'subscribe',
@@ -1508,12 +1544,31 @@
             };
 
             dashboardWebSocket.onclose = function (event) {
-                console.log('Dashboard WebSocket disconnected');
-                // Attempt to reconnect after 5 seconds
-                dashboardReconnectTimer = setTimeout(initWebSocket, 5000);
+                // Code 1000 = normal closure (e.g. user navigates away) — do not retry
+                if (event.code === 1000) {
+                    console.log('Dashboard WebSocket closed normally.');
+                    return;
+                }
+
+                if (wsReconnectAttempts >= WS_MAX_ATTEMPTS) {
+                    console.warn('Dashboard WebSocket: max reconnect attempts reached. Giving up.');
+                    setWsStatus('failed');
+                    return;
+                }
+
+                // Exponential back-off with ±10 % jitter
+                const base = WS_BASE_DELAY_MS * Math.pow(2, wsReconnectAttempts);
+                const jitter = base * 0.1 * (Math.random() * 2 - 1); // ±10 %
+                const delay = Math.min(Math.round(base + jitter), WS_MAX_DELAY_MS);
+                wsReconnectAttempts++;
+
+                console.log(`Dashboard WebSocket disconnected. Retry ${wsReconnectAttempts}/${WS_MAX_ATTEMPTS} in ${delay} ms.`);
+                setWsStatus('reconnecting');
+                dashboardReconnectTimer = setTimeout(initWebSocket, delay);
             };
 
             dashboardWebSocket.onerror = function (error) {
+                // onerror is always followed by onclose — let onclose handle retry logic
                 console.error('Dashboard WebSocket error:', error);
             };
 
@@ -1522,8 +1577,9 @@
                     clearTimeout(dashboardReconnectTimer);
                     dashboardReconnectTimer = null;
                 }
-                if (dashboardWebSocket && dashboardWebSocket.readyState === WebSocket.OPEN) {
-                    dashboardWebSocket.close();
+                if (dashboardWebSocket) {
+                    // Close cleanly (code 1000) so onclose does not trigger a reconnect
+                    dashboardWebSocket.close(1000, 'page unloading');
                 }
             }, { once: true });
         }

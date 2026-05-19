@@ -16,9 +16,9 @@ PDF generation for daily reports and analytics is not implemented in this releas
 
 ## Real-time Notifications
 
-WebSocket push for new messages and incident alerts is partially implemented. The server sends events on `/ws/notify`, but the reconnection logic on the client does not yet implement exponential back-off. Under unstable connections, the client may stop receiving events without user feedback.
+WebSocket push for KPI updates and alerts is implemented on `/ws/dashboard` with exponential back-off reconnection (1 s → 2 s → … → 30 s cap, ±10 % jitter, max 10 retries). A visible status pill in the dashboard header shows *Live / Reconnecting… / Live updates unavailable* so users are always informed of the connection state.
 
-**Workaround:** The page polls `GET /api/messages?unread=true` on a 60-second interval as a fallback so counts stay roughly accurate.
+The server endpoint `/ws/notify` (message/incident push) is **not yet implemented**. Until it is, the page polls `GET /api/messages?unread=true` on a 60-second interval as a fallback so counts stay roughly accurate.
 
 ---
 
