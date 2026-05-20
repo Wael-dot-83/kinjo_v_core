@@ -11,19 +11,20 @@
 # =============================================================================
 
 services:
-
   db:
-    # Override port to avoid conflicts with a locally installed postgres
+    # Override port to avoid conflicts with a locally installed postgres.
+    # Bound to 127.0.0.1 so the port is NOT accessible from other hosts on the network.
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     environment:
       POSTGRES_USER: kinjo
       POSTGRES_PASSWORD: kinjo_dev_password
       POSTGRES_DB: kinjo_db
 
   redis:
+    # Bound to 127.0.0.1 — not exposed outside localhost.
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
   web:
     build:
@@ -36,6 +37,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
+      SECRET_KEY: dev-only-secret-key-change-for-production
       ENVIRONMENT: development
       DEBUG: "true"
       API_DOCS_ENABLED: "true"
@@ -50,7 +52,7 @@ services:
         --reload-dir /app
         --log-level debug
     volumes:
-      - .:/app
+      - .:/app # source code hot-reload bind-mount (dev only)
       - ./data:/app/data
       - ./logs:/app/logs
     ports:
@@ -77,7 +79,7 @@ services:
     depends_on:
       - db
     profiles:
-      - tools   # only started when: docker compose ... --profile tools up
+      - tools # only started when: docker compose ... --profile tools up
 
   # ---------------------------------------------------------------------------
   # Redis Commander — optional web UI for Redis
