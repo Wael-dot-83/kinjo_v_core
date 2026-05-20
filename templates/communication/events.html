@@ -3,10 +3,10 @@
 {% block title %}{% if ui_lang == 'en' %}Events & Calendar{% else %}الفعاليات والتقويم{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2 mb-1">
-            <i class="bi bi-calendar-event me-2 text-success"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-calendar-event text-success me-2" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Events & Calendar{% else %}الفعاليات والتقويم{% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
@@ -17,7 +17,7 @@
             </ol>
         </nav>
     </div>
-    <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="page-header-actions">
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newEventModal">
             <i class="bi bi-plus-lg me-1"></i> {% if ui_lang == 'en' %}New Event{% else %}فعالية جديدة{% endif %}
         </button>

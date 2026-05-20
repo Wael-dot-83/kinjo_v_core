@@ -3,21 +3,21 @@
 {% block title %}{{ kindergarten.name_en if ui_lang == 'en' and kindergarten.name_en else kindergarten.name_ar }}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-building me-2 text-primary"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-building text-primary me-2" aria-hidden="true"></i>
             {{ kindergarten.name_en if ui_lang == 'en' and kindergarten.name_en else kindergarten.name_ar }}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
                 <li class="breadcrumb-item"><a href="/kindergartens">{% if ui_lang == 'en' %}Kindergartens{% else %}معلومات الروضة{% endif %}</a></li>
                 <li class="breadcrumb-item active">{{ kindergarten.name_en if ui_lang == 'en' and kindergarten.name_en else kindergarten.name_ar }}</li>
             </ol>
         </nav>
     </div>
-    <div class="btn-toolbar gap-2">
+    <div class="page-header-actions">
         <a href="/kindergartens/{{ kindergarten.id }}/edit" class="btn btn-outline-primary">
             <i class="bi bi-pencil me-2"></i>{% if ui_lang == 'en' %}Edit{% else %}تعديل{% endif %}
         </a>
