@@ -3,22 +3,22 @@
 {% block title %}{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-exclamation-triangle me-2 text-warning"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-exclamation-triangle text-warning me-2" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
                 <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}</li>
             </ol>
         </nav>
     </div>
-    <div class="btn-toolbar">
+    <div class="page-header-actions">
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
-            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
+            <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
         </button>
     </div>
 </div>

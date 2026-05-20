@@ -3,22 +3,22 @@
 {% block title %}{{ _('My Children') }}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-people-fill me-2 text-primary"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-people-fill text-primary me-2" aria-hidden="true"></i>
             {{ _('My Children') }}
         </h1>
         <nav aria-label="{{ _('Breadcrumb') }}">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{{ _('Dashboard') }}</a></li>
                 <li class="breadcrumb-item active">{{ _('My Children') }}</li>
             </ol>
         </nav>
     </div>
-    <div class="btn-toolbar">
+    <div class="page-header-actions">
         <a href="/enroll" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>{{ _('Register New Child') }}
+            <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{{ _('Register New Child') }}
         </a>
     </div>
 </div>

@@ -3,10 +3,10 @@
 {% block title %}{% if ui_lang == 'en' %}Record Observations{% else %}تسجيل الملاحظات{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h3 mb-1">
-            <i class="bi bi-eye me-2 text-primary"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-eye text-primary me-2" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Record an Educational Observation{% else %}تسجيل ملاحظة تربوية{% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
