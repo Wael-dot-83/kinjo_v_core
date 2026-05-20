@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('التقارير اليومية') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -211,10 +211,10 @@
     let submitModal = null;
 
     const STATUS_BADGE = {
-        'DRAFT':          `<span class="badge bg-warning text-dark">{{ _('مسودة') }}</span>`,
-        'SUBMITTED':      `<span class="badge bg-info text-white">{{ _('بانتظار المراجعة') }}</span>`,
-        'APPROVED':       `<span class="badge bg-success">{{ _('مُوافق عليه') }}</span>`,
-        'SENT_TO_PARENT': `<span class="badge bg-secondary">{{ _('أُرسل للوالدين') }}</span>`,
+        'DRAFT':          `<span class="badge badge-soft badge-soft-warning">{{ _('مسودة') }}</span>`,
+        'SUBMITTED':      `<span class="badge badge-soft badge-soft-info text-white">{{ _('بانتظار المراجعة') }}</span>`,
+        'APPROVED':       `<span class="badge badge-soft badge-soft-success">{{ _('مُوافق عليه') }}</span>`,
+        'SENT_TO_PARENT': `<span class="badge badge-soft badge-soft-secondary">{{ _('أُرسل للوالدين') }}</span>`,
     };
 
     function getHeaders() {

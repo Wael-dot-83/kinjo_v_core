@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Messages Inbox{% else %}صندوق الرسائل{% endif %}{% endblock %}
 
@@ -324,7 +324,7 @@
             let badgeClass = 'bg-secondary';
             let badgeText = T('رسالة', 'Message');
 
-            const unreadBadge = msg.is_read ? '' : `<span class="badge bg-primary ms-2">${T('غير مقروءة', 'Unread')}</span>`;
+            const unreadBadge = msg.is_read ? '' : `<span class="badge badge-soft badge-soft-primary ms-2">${T('غير مقروءة', 'Unread')}</span>`;
             const archivedBadge = msg.archived_at ? `<span class="badge bg-light text-dark border ms-2">${T('مؤرشفة', 'Archived')}</span>` : '';
 
             if (msg.thread_type === 'ANNOUNCEMENT') {

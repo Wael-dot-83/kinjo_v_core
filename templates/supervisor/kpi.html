@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('مؤشرات الأداء') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -368,8 +368,8 @@
                 <td class="text-center fw-700">${c.reports_this_week ?? '—'}</td>
                 <td class="text-center">
                     ${c.missing_reports > 0
-                        ? `<span class="badge bg-warning text-dark">${c.missing_reports}</span>`
-                        : `<span class="badge bg-success">0</span>`}
+                        ? `<span class="badge badge-soft badge-soft-warning">${c.missing_reports}</span>`
+                        : `<span class="badge badge-soft badge-soft-success">0</span>`}
                 </td>
                 <td class="text-center">${trend}</td>
             </tr>`;

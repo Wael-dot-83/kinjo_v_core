@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{{ kindergarten.name_en if ui_lang == 'en' and kindergarten.name_en else kindergarten.name_ar }}{% endblock %}
 
@@ -49,15 +49,15 @@
                     <label class="text-muted small">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
                     <div>
                         {% if kindergarten.status == 'active' %}
-                        <span class="badge bg-success">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
+                        <span class="badge badge-soft badge-soft-success">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
                         {% elif kindergarten.status == 'inactive' %}
-                        <span class="badge bg-secondary">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
+                        <span class="badge badge-soft badge-soft-secondary">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
                         {% elif kindergarten.status == 'suspended' %}
-                        <span class="badge bg-danger">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}</span>
+                        <span class="badge badge-soft badge-soft-danger">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}</span>
                         {% elif kindergarten.status == 'pending' %}
-                        <span class="badge bg-warning text-dark">{% if ui_lang == 'en' %}Pending Review{% else %}قيد المراجعة{% endif %}</span>
+                        <span class="badge badge-soft badge-soft-warning">{% if ui_lang == 'en' %}Pending Review{% else %}قيد المراجعة{% endif %}</span>
                         {% else %}
-                        <span class="badge bg-secondary">{{ kindergarten.status }}</span>
+                        <span class="badge badge-soft badge-soft-secondary">{{ kindergarten.status }}</span>
                         {% endif %}
                     </div>
                 </div>
@@ -508,7 +508,7 @@
                     <tr>
                         <td>${esc(s.service_name)}</td>
                         <td>${esc(s.description)}</td>
-                        <td>${s.enabled_flag ? '<span class="badge bg-success">' + T('مفعل', 'Enabled') + '</span>' : '<span class="badge bg-secondary">' + T('معطل', 'Disabled') + '</span>'}</td>
+                        <td>${s.enabled_flag ? '<span class="badge badge-soft badge-soft-success">' + T('مفعل', 'Enabled') + '</span>' : '<span class="badge badge-soft badge-soft-secondary">' + T('معطل', 'Disabled') + '</span>'}</td>
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
                                 <button class="btn btn-outline-secondary" onclick="editService(${s.id}, '${encodeURIComponent(s.service_name)}', '${encodeURIComponent(s.description)}', ${s.enabled_flag})" title="${T('تعديل', 'Edit')}"><i class="bi bi-pencil"></i></button>
@@ -695,10 +695,10 @@
                 return `
                 <tr>
                     <td><strong>${esc(cNameAr)}</strong></td>
-                    <td><span class="badge bg-info text-dark">${formatAgeRange(c.min_age_months, c.max_age_months)}</span></td>
+                    <td><span class="badge badge-soft badge-soft-info">${formatAgeRange(c.min_age_months, c.max_age_months)}</span></td>
                     <td>${c.capacity_total}</td>
                     <td>${c.current_supervisor ?
-                        `<span class="badge bg-success">${supName}</span>` :
+                        `<span class="badge badge-soft badge-soft-success">${supName}</span>` :
                         `<span class="text-muted small">${T('غير معين', 'Unassigned')}</span>`}
                     </td>
                     <td>-</td>
@@ -866,9 +866,9 @@
 
     function getStatusBadge(status) {
         const badges = {
-            'active': '<span class="badge bg-success">' + T('نشط', 'Active') + '</span>',
-            'inactive': '<span class="badge bg-secondary">' + T('غير نشط', 'Inactive') + '</span>',
-            'suspended': '<span class="badge bg-danger">' + T('موقوف', 'Suspended') + '</span>'
+            'active': '<span class="badge badge-soft badge-soft-success">' + T('نشط', 'Active') + '</span>',
+            'inactive': '<span class="badge badge-soft badge-soft-secondary">' + T('غير نشط', 'Inactive') + '</span>',
+            'suspended': '<span class="badge badge-soft badge-soft-danger">' + T('موقوف', 'Suspended') + '</span>'
         };
         return badges[status] || status;
     }

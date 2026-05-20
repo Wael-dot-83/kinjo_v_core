@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}{% endblock %}
@@ -196,7 +196,7 @@ breadcrumbs=[
                         <small class="text-muted d-block">${T('تاريخ الإنشاء:', 'Created Date:')} ${formatDateTime(report.created_at)}</small>
                     </div>
                     <div class="col-md-3 text-end">
-                        <span class="badge bg-info me-2">${report.total_incidents} ${T('حادثة', 'incidents')}</span>
+                        <span class="badge badge-soft badge-soft-info me-2">${report.total_incidents} ${T('حادثة', 'incidents')}</span>
                         <button class="btn btn-sm btn-outline-primary" onclick="viewReport(${report.id})">
                             <i class="bi bi-eye me-1"></i>${T('عرض', 'View')}
                         </button>

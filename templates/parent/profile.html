@@ -1,4 +1,4 @@
-{% extends 'base.html' %} {% block title %}{{ _('My Profile') }}{% endblock %}
+﻿{% extends 'base.html' %} {% block title %}{{ _('My Profile') }}{% endblock %}
 {% block page_header %}
 <div class="page-header-wrap">
     <div>
@@ -380,7 +380,7 @@
         <h5 class="mb-1" id="profileFullName">—</h5>
         <p class="text-muted mb-3" id="profileRole">{{ _('Parent') }}</p>
         <div id="profileStatusBadge">
-          <span class="badge bg-secondary">{{ _('Loading...') }}</span>
+          <span class="badge badge-soft badge-soft-secondary">{{ _('Loading...') }}</span>
         </div>
       </div>
     </div>
@@ -588,8 +588,8 @@
     document.getElementById("profileFullName").textContent =
       `${p.first_name} ${p.second_name || ""} ${p.last_name}`.trim();
     document.getElementById("profileStatusBadge").innerHTML = p.profile_complete
-      ? `<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>${T("مكتمل", "Complete")}</span>`
-      : `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>${T("غير مكتمل", "Incomplete")}</span>`;
+      ? `<span class="badge badge-soft badge-soft-success"><i class="bi bi-check-circle me-1"></i>${T("مكتمل", "Complete")}</span>`
+      : `<span class="badge badge-soft badge-soft-warning"><i class="bi bi-exclamation-circle me-1"></i>${T("غير مكتمل", "Incomplete")}</span>`;
 
     if (!p.profile_complete) {
       document.getElementById("profileAlert").classList.remove("d-none");

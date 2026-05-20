@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('الشعب الدراسية') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -273,7 +273,7 @@
                 ? `${cls.min_age_months}–${cls.max_age_months} {{ _("شهر") }}`
                 : '—';
             const activeBadge = cls.is_active
-                ? `<span class="badge bg-success">{{ _('نشطة') }}</span>`
+                ? `<span class="badge badge-soft badge-soft-success">{{ _('نشطة') }}</span>`
                 : `<span class="badge bg-light text-muted border">{{ _('موقوفة') }}</span>`;
             return `
             <tr>

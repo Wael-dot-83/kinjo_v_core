@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}{% if ui_lang == 'en' %}Daily Reports Analytics{% else %}تحليلات التقارير اليومية{% endif %}{% endblock %}
 
 {% block content %}
@@ -413,9 +413,9 @@
         }
 
         const severityIcon = {
-            high: `<span class="badge bg-danger"><i class="bi bi-exclamation-octagon-fill"></i> ${T('عالي','High')}</span>`,
-            medium: `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill"></i> ${T('متوسط','Medium')}</span>`,
-            low: `<span class="badge bg-info"><i class="bi bi-info-circle-fill"></i> ${T('منخفض','Low')}</span>`,
+            high: `<span class="badge badge-soft badge-soft-danger"><i class="bi bi-exclamation-octagon-fill"></i> ${T('عالي','High')}</span>`,
+            medium: `<span class="badge badge-soft badge-soft-warning"><i class="bi bi-exclamation-triangle-fill"></i> ${T('متوسط','Medium')}</span>`,
+            low: `<span class="badge badge-soft badge-soft-info"><i class="bi bi-info-circle-fill"></i> ${T('منخفض','Low')}</span>`,
         };
 
         let html = '';
@@ -433,12 +433,12 @@
     function populateSampleTable(rows) {
         const tbody = document.getElementById('sampleTableBody');
         const statusAr = {
-            'DRAFT': `<span class="badge bg-secondary">${T('مسودة','Draft')}</span>`,
-            'SUBMITTED': `<span class="badge bg-primary">${T('مقدم','Submitted')}</span>`,
-            'APPROVED': `<span class="badge bg-success">${T('معتمد','Approved')}</span>`,
-            'SENT_TO_PARENT': `<span class="badge bg-info">${T('مرسل','Sent')}</span>`,
-            'REJECTED': `<span class="badge bg-danger">${T('مرفوض','Rejected')}</span>`,
-            'RETURNED': `<span class="badge bg-warning">${T('معاد','Returned')}</span>`,
+            'DRAFT': `<span class="badge badge-soft badge-soft-secondary">${T('مسودة','Draft')}</span>`,
+            'SUBMITTED': `<span class="badge badge-soft badge-soft-primary">${T('مقدم','Submitted')}</span>`,
+            'APPROVED': `<span class="badge badge-soft badge-soft-success">${T('معتمد','Approved')}</span>`,
+            'SENT_TO_PARENT': `<span class="badge badge-soft badge-soft-info">${T('مرسل','Sent')}</span>`,
+            'REJECTED': `<span class="badge badge-soft badge-soft-danger">${T('مرفوض','Rejected')}</span>`,
+            'RETURNED': `<span class="badge badge-soft badge-soft-warning">${T('معاد','Returned')}</span>`,
         };
         const moodAr = {
             'happy': `😊 ${T('سعيد','Happy')}`, 'normal': `😐 ${T('عادي','Normal')}`, 'sad': `😢 ${T('حزين','Sad')}`,

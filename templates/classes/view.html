@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if ui_lang == 'en' %}{{ class.name_en or class.name_ar }}{% else %}{{ class.name_ar }}{% endif %}{% endblock %}
@@ -47,9 +47,9 @@ breadcrumbs=[
                             <dt class="col-sm-5">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</dt>
                             <dd class="col-sm-7">
                                 {% if class.is_active %}
-                                <span class="badge bg-success">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
+                                <span class="badge badge-soft badge-soft-success">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
                                 {% else %}
-                                <span class="badge bg-secondary">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
+                                <span class="badge badge-soft badge-soft-secondary">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
                                 {% endif %}
                             </dd>
                         </dl>

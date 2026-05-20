@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Review Absence Requests{% else %}مراجعة طلبات الغياب{% endif %}{% endblock %}
 
@@ -165,12 +165,12 @@
 
         function statusBadge(s) {
             const map = {
-                'SUBMITTED': `<span class="badge bg-warning text-dark">${tr('قيد المراجعة', 'Under review')}</span>`,
-                'APPROVED': `<span class="badge bg-success">${tr('مقبول', 'Approved')}</span>`,
-                'REJECTED': `<span class="badge bg-danger">${tr('مرفوض', 'Rejected')}</span>`,
-                'CANCELLED': `<span class="badge bg-secondary">${tr('ملغى', 'Cancelled')}</span>`,
+                'SUBMITTED': `<span class="badge badge-soft badge-soft-warning">${tr('قيد المراجعة', 'Under review')}</span>`,
+                'APPROVED': `<span class="badge badge-soft badge-soft-success">${tr('مقبول', 'Approved')}</span>`,
+                'REJECTED': `<span class="badge badge-soft badge-soft-danger">${tr('مرفوض', 'Rejected')}</span>`,
+                'CANCELLED': `<span class="badge badge-soft badge-soft-secondary">${tr('ملغى', 'Cancelled')}</span>`,
             };
-            return map[s] || `<span class="badge bg-secondary">${s}</span>`;
+            return map[s] || `<span class="badge badge-soft badge-soft-secondary">${s}</span>`;
         }
 
         function loadRequests() {

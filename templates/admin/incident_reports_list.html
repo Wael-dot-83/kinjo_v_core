@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}{% endblock %}
 
@@ -343,7 +343,7 @@
                 <td>${escHtml(report.start_date)} - ${escHtml(report.end_date)}</td>
                 <td>${new Date(report.created_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}</td>
                 <td>${escHtml(report.created_by)}</td>
-                <td><span class="badge bg-warning">${report.total_incidents}</span></td>
+                <td><span class="badge badge-soft badge-soft-warning">${report.total_incidents}</span></td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary me-1" onclick="viewReport(${report.id})">
                         <i class="bi bi-eye"></i> ${T('عرض', 'View')}

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{{ _('Parent Dashboard') }}{% endblock %}
 
@@ -138,12 +138,12 @@
     function getStatusBadge(status) {
         const normalized = (status || '').toString().toUpperCase();
         const badges = {
-            APPROVED: `<span class="badge bg-success">${parentText('status.approved', 'معتمد', 'Approved')}</span>`,
-            SENT_TO_PARENT: `<span class="badge bg-primary">${parentText('status.sent_to_parent', 'مرسل لولي الأمر', 'Sent to parent')}</span>`,
-            SUBMITTED: `<span class="badge bg-warning text-dark">${parentText('status.pending_review', 'قيد المراجعة', 'Under review')}</span>`,
-            DRAFT: `<span class="badge bg-secondary">${parentText('status.draft', 'مسودة', 'Draft')}</span>`,
-            REJECTED: `<span class="badge bg-danger">${parentText('status.rejected', 'مرفوض', 'Rejected')}</span>`,
-            RETURNED: `<span class="badge bg-danger">${parentText('status.returned', 'مرفوض', 'Rejected')}</span>`,
+            APPROVED: `<span class="badge badge-soft badge-soft-success">${parentText('status.approved', 'معتمد', 'Approved')}</span>`,
+            SENT_TO_PARENT: `<span class="badge badge-soft badge-soft-primary">${parentText('status.sent_to_parent', 'مرسل لولي الأمر', 'Sent to parent')}</span>`,
+            SUBMITTED: `<span class="badge badge-soft badge-soft-warning">${parentText('status.pending_review', 'قيد المراجعة', 'Under review')}</span>`,
+            DRAFT: `<span class="badge badge-soft badge-soft-secondary">${parentText('status.draft', 'مسودة', 'Draft')}</span>`,
+            REJECTED: `<span class="badge badge-soft badge-soft-danger">${parentText('status.rejected', 'مرفوض', 'Rejected')}</span>`,
+            RETURNED: `<span class="badge badge-soft badge-soft-danger">${parentText('status.returned', 'مرفوض', 'Rejected')}</span>`,
         };
         return badges[normalized] || `<span class="badge bg-light text-dark">${parentText('common.unknown', 'غير معروف', 'Unknown')}</span>`;
     }

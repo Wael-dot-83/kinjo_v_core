@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Events & Calendar{% else %}الفعاليات والتقويم{% endif %}{% endblock %}
 
@@ -97,7 +97,7 @@
         events.forEach(evt => {
             const range = formatEventDate(evt.start_at, evt.end_at);
             const consentBadge = evt.requires_consent_flag
-                ? `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> ${T('يتطلب موافقة', 'Requires consent')}</span>`
+                ? `<span class="badge badge-soft badge-soft-warning"><i class="bi bi-exclamation-triangle"></i> ${T('يتطلب موافقة', 'Requires consent')}</span>`
                 : '';
 
             const card = document.createElement('div');

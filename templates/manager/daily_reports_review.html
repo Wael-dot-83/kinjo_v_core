@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('مراجعة التقارير اليومية') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -234,10 +234,10 @@
     let pendingDeleteId  = null;
 
     const STATUS_BADGE = {
-        'SUBMITTED':      `<span class="badge bg-info text-white">{{ _('بانتظار المراجعة') }}</span>`,
-        'SENT_TO_PARENT': `<span class="badge bg-success">{{ _('أُرسل للوالدين') }}</span>`,
-        'DRAFT':          `<span class="badge bg-warning text-dark">{{ _('مسودة') }}</span>`,
-        'APPROVED':       `<span class="badge bg-primary">{{ _('مُوافق عليه') }}</span>`,
+        'SUBMITTED':      `<span class="badge badge-soft badge-soft-info text-white">{{ _('بانتظار المراجعة') }}</span>`,
+        'SENT_TO_PARENT': `<span class="badge badge-soft badge-soft-success">{{ _('أُرسل للوالدين') }}</span>`,
+        'DRAFT':          `<span class="badge badge-soft badge-soft-warning">{{ _('مسودة') }}</span>`,
+        'APPROVED':       `<span class="badge badge-soft badge-soft-primary">{{ _('مُوافق عليه') }}</span>`,
     };
 
     function getHeaders() {

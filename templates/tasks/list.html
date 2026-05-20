@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Tasks{% else %}المهام{% endif %}{% endblock %}
 
@@ -285,20 +285,20 @@
 
     function getPriorityBadge(priority) {
         const badges = {
-            'URGENT': `<span class="badge bg-danger">${T('عاجل', 'Urgent')}</span>`,
-            'HIGH': `<span class="badge bg-warning">${T('عالية', 'High')}</span>`,
-            'MEDIUM': `<span class="badge bg-info">${T('متوسطة', 'Medium')}</span>`,
-            'LOW': `<span class="badge bg-secondary">${T('منخفضة', 'Low')}</span>`
+            'URGENT': `<span class="badge badge-soft badge-soft-danger">${T('عاجل', 'Urgent')}</span>`,
+            'HIGH': `<span class="badge badge-soft badge-soft-warning">${T('عالية', 'High')}</span>`,
+            'MEDIUM': `<span class="badge badge-soft badge-soft-info">${T('متوسطة', 'Medium')}</span>`,
+            'LOW': `<span class="badge badge-soft badge-soft-secondary">${T('منخفضة', 'Low')}</span>`
         };
         return badges[priority] || '';
     }
 
     function getStatusBadge(status) {
         const badges = {
-            'PENDING': `<span class="badge bg-warning">${T('قيد الانتظار', 'Pending')}</span>`,
-            'IN_PROGRESS': `<span class="badge bg-info">${T('قيد التنفيذ', 'In Progress')}</span>`,
-            'COMPLETED': `<span class="badge bg-success">${T('مكتملة', 'Completed')}</span>`,
-            'CANCELLED': `<span class="badge bg-secondary">${T('ملغاة', 'Cancelled')}</span>`
+            'PENDING': `<span class="badge badge-soft badge-soft-warning">${T('قيد الانتظار', 'Pending')}</span>`,
+            'IN_PROGRESS': `<span class="badge badge-soft badge-soft-info">${T('قيد التنفيذ', 'In Progress')}</span>`,
+            'COMPLETED': `<span class="badge badge-soft badge-soft-success">${T('مكتملة', 'Completed')}</span>`,
+            'CANCELLED': `<span class="badge badge-soft badge-soft-secondary">${T('ملغاة', 'Cancelled')}</span>`
         };
         return badges[status] || '';
     }

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Health and Safety{% else %}الصحة والسلامة{% endif %}{% endblock %}
 
@@ -103,7 +103,7 @@
             <tr>
                 <td>${new Date(inc.occurred_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}</td>
                 <td><a href="/children/${inc.child_id}" class="text-decoration-none fw-bold">${T('الطفل', 'Child')} #${inc.child_id}</a></td>
-                <td><span class="badge bg-secondary">${escHtml(inc.type)}</span></td>
+                <td><span class="badge badge-soft badge-soft-secondary">${escHtml(inc.type)}</span></td>
                 <td>
                     <span class="badge ${getSeverityClass(inc.severity_level)}">
                         ${escHtml(inc.severity_level)}
@@ -111,7 +111,7 @@
                 </td>
                 <td>${escHtml(inc.description.substring(0, 50))}...</td>
                 <td>
-                    ${inc.closed_at ? `<span class="badge bg-success">${T('مغلق', 'Closed')}</span>` : `<span class="badge bg-warning text-dark">${T('مفتوح', 'Open')}</span>`}
+                    ${inc.closed_at ? `<span class="badge badge-soft badge-soft-success">${T('مغلق', 'Closed')}</span>` : `<span class="badge badge-soft badge-soft-warning">${T('مفتوح', 'Open')}</span>`}
                 </td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary">${T('التفاصيل', 'Details')}</button>

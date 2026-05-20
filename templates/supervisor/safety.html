@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('السلامة والحوادث') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -179,15 +179,15 @@
 
     const SEVERITY_BADGE = {
         'LOW':      `<span class="badge" style="background:rgba(6,182,212,0.15);color:#0891b2;">{{ _('منخفض') }}</span>`,
-        'MEDIUM':   `<span class="badge bg-warning text-dark">{{ _('متوسط') }}</span>`,
-        'HIGH':     `<span class="badge bg-danger">{{ _('عالٍ') }}</span>`,
+        'MEDIUM':   `<span class="badge badge-soft badge-soft-warning">{{ _('متوسط') }}</span>`,
+        'HIGH':     `<span class="badge badge-soft badge-soft-danger">{{ _('عالٍ') }}</span>`,
         'CRITICAL': `<span class="badge" style="background:rgba(124,58,237,0.15);color:#7c3aed;">{{ _('حرج') }}</span>`,
     };
 
     const STATUS_BADGE = {
-        'OPEN':         `<span class="badge bg-danger">{{ _('مفتوح') }}</span>`,
-        'UNDER_REVIEW': `<span class="badge bg-warning text-dark">{{ _('تحت المراجعة') }}</span>`,
-        'CLOSED':       `<span class="badge bg-success">{{ _('مُغلق') }}</span>`,
+        'OPEN':         `<span class="badge badge-soft badge-soft-danger">{{ _('مفتوح') }}</span>`,
+        'UNDER_REVIEW': `<span class="badge badge-soft badge-soft-warning">{{ _('تحت المراجعة') }}</span>`,
+        'CLOSED':       `<span class="badge badge-soft badge-soft-success">{{ _('مُغلق') }}</span>`,
     };
 
     const TYPE_LABEL = {

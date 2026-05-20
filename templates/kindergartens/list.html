@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}
 {% if current_user.role.value == 'ADMIN' %}
@@ -158,11 +158,11 @@
                                 <td>{{ kg.contact_phone or ("Not specified" if ui_lang == 'en' else 'غير محدد') }}</td>
                                 <td>
                                     {% if kg.status.value == 'ACTIVE' %}
-                                    <span class="badge bg-success">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
+                                    <span class="badge badge-soft badge-soft-success">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
                                     {% elif kg.status.value == 'DRAFT' %}
-                                    <span class="badge bg-warning">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
+                                    <span class="badge badge-soft badge-soft-warning">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
                                     {% else %}
-                                    <span class="badge bg-secondary">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
+                                    <span class="badge badge-soft badge-soft-secondary">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -346,11 +346,11 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     {% if kg.status.value == 'ACTIVE' %}
-                    <span class="badge bg-success fs-6">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
+                    <span class="badge badge-soft badge-soft-success fs-6">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</span>
                     {% elif kg.status.value == 'DRAFT' %}
-                    <span class="badge bg-warning fs-6">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
+                    <span class="badge badge-soft badge-soft-warning fs-6">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</span>
                     {% else %}
-                    <span class="badge bg-secondary fs-6">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
+                    <span class="badge badge-soft badge-soft-secondary fs-6">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</span>
                     {% endif %}
                 </div>
             </div>

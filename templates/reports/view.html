@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Daily Report Details{% else %}تفاصيل التقرير اليومي{% endif %}{% endblock %}
 
@@ -116,10 +116,10 @@
                             <h6 class="mb-2 fw-bold small">{% if ui_lang == 'en' %}Diaper Change:{% else %}تغيير الحفاظ:{% endif %}</h6>
                             <div class="d-flex gap-2">
                                 {% if report.diaper_wet %}
-                                <span class="badge bg-secondary text-dark">{% if ui_lang == 'en' %}Wet{% else %}مبلل{% endif %}</span>
+                                <span class="badge badge-soft badge-soft-secondary text-dark">{% if ui_lang == 'en' %}Wet{% else %}مبلل{% endif %}</span>
                                 {% endif %}
                                 {% if report.diaper_soiled %}
-                                <span class="badge bg-secondary text-dark">{% if ui_lang == 'en' %}Soiled{% else %}متسخ{% endif %}</span>
+                                <span class="badge badge-soft badge-soft-secondary text-dark">{% if ui_lang == 'en' %}Soiled{% else %}متسخ{% endif %}</span>
                                 {% endif %}
                                 {% if not report.diaper_wet and not report.diaper_soiled %}
                                 <span class="text-muted small">{% if ui_lang == 'en' %}None{% else %}لا يوجد{% endif %}</span>
@@ -141,7 +141,7 @@
                     <h6 class="fw-bold text-muted mb-3">{% if ui_lang == 'en' %}Today's Activities{% else %}أنشطة اليوم{% endif %}</h6>
                     <div class="d-flex flex-wrap gap-2">
                         {% for activity in report.activities %}
-                        <span class="badge bg-warning text-dark border border-warning fs-6 px-3 py-2">
+                        <span class="badge badge-soft badge-soft-warning border border-warning fs-6 px-3 py-2">
                             <i class="bi bi-check-circle me-1"></i>{{ activity }}
                         </span>
                         {% endfor %}
