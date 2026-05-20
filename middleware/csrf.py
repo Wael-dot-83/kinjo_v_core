@@ -58,7 +58,7 @@ async def csrf_protection_middleware(request: Request, call_next: Callable):
                 value=csrf_token,
                 path="/",
                 samesite="strict",
-                secure=settings.ENVIRONMENT.lower() == "production",
+                secure=True,
                 httponly=False,
                 domain=settings.COOKIE_DOMAIN or None,
             )
@@ -81,7 +81,7 @@ async def csrf_protection_middleware(request: Request, call_next: Callable):
             value=csrf_token,
             path="/",
             samesite="strict",
-            secure=settings.ENVIRONMENT.lower() == "production",
+            secure=True,
             httponly=False,
             domain=settings.COOKIE_DOMAIN or None,
         )

@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     TRUSTED_HOSTS: List[str] = ["127.0.0.1", "localhost", "testserver"]
     COOKIE_DOMAIN: str = ""
     SESSION_COOKIE_NAME: str = "kinjo_session"
-    SESSION_COOKIE_SAMESITE: str = "lax"
+    SESSION_COOKIE_SAMESITE: str = "strict"
     CSRF_COOKIE_NAME: str = "kinjo_csrf_token"
     REQUEST_TIMEOUT_SECONDS: int = 30
     PUBLIC_REGISTRATION_ENABLED: bool = False
@@ -271,9 +271,9 @@ class Settings(BaseSettings):
     @field_validator("SESSION_COOKIE_SAMESITE", mode="before")
     @classmethod
     def normalize_cookie_samesite(cls, value: Any) -> str:
-        normalized = str(value or "lax").strip().lower()
+        normalized = str(value or "strict").strip().lower()
         if normalized not in {"lax", "strict", "none"}:
-            return "lax"
+            return "strict"
         return normalized
 
     model_config = ConfigDict(
