@@ -1558,8 +1558,8 @@
     // Custom date range picker
     function showCustomDateRange() {
         const html = `<div class="p-3 text-start">
-            <div class="mb-3"><label class="form-label">${dashboardInlineText('common.from_date', 'من تاريخ', 'From date')}</label><input type="date" class="form-control" id="customDateFrom"></div>
-            <div class="mb-3"><label class="form-label">${dashboardInlineText('common.to_date', 'إلى تاريخ', 'To date')}</label><input type="date" class="form-control" id="customDateTo"></div>
+            <div class="mb-3"><label for="customDateFrom" class="form-label">${dashboardInlineText('common.from_date', 'من تاريخ', 'From date')}</label><input type="date" class="form-control" id="customDateFrom"></div>
+            <div class="mb-3"><label for="customDateTo" class="form-label">${dashboardInlineText('common.to_date', 'إلى تاريخ', 'To date')}</label><input type="date" class="form-control" id="customDateTo"></div>
         </div>`;
         if (typeof Swal !== 'undefined') {
             Swal.fire({

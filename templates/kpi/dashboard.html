@@ -2293,12 +2293,12 @@ endblock %} {% block page_header %}
     function createAlertsWidget(widget) {
       const div = document.createElement("div");
       div.innerHTML = `
-                <div class="alert alert-warning d-none" id="dashboardAlerts">
+                <div class="alert alert-warning d-none js-widget-alerts">
                     <h6 class="alert-heading mb-2">
                         <i class="bi bi-exclamation-triangle me-2"></i>
                         ${kpiText("kpi.system_alerts", "تنبيهات النظام", "System alerts")}
                     </h6>
-                    <ul class="mb-0" id="dashboardAlertsList"></ul>
+                    <ul class="mb-0 js-widget-alerts-list"></ul>
                 </div>
             `;
       return div;

@@ -3,22 +3,22 @@
 {% block title %}{% if ui_lang == 'en' %}Tasks{% else %}المهام{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-check2-square me-2 text-primary"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-check2-square text-primary me-2" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Task List{% else %}قائمة المهام{% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
                 <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Tasks{% else %}المهام{% endif %}</li>
             </ol>
         </nav>
     </div>
-    <div class="btn-toolbar">
+    <div class="page-header-actions">
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#taskModal">
-            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}New Task{% else %}مهمة جديدة{% endif %}
+            <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}New Task{% else %}مهمة جديدة{% endif %}
         </button>
     </div>
 </div>
@@ -26,25 +26,29 @@
 
 {% block content %}
 <!-- Filter Tabs -->
-<ul class="nav nav-tabs mb-4" id="statusTabs" role="tablist">
+<ul class="nav nav-tabs-pill mb-4" id="statusTabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="all-tab" data-filter="" type="button">
-            {% if ui_lang == 'en' %}All{% else %}الكل{% endif %} <span class="badge bg-secondary ms-1" id="countAll">0</span>
+        <button class="nav-link active" id="all-tab" role="tab" data-filter="" type="button" aria-selected="true">
+            {% if ui_lang == 'en' %}All{% else %}الكل{% endif %}
+            <span class="badge badge-soft badge-soft-secondary ms-1" id="countAll">0</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="pending-tab" data-filter="pending" type="button">
-            {% if ui_lang == 'en' %}Pending{% else %}قيد الانتظار{% endif %} <span class="badge bg-warning ms-1" id="countPending">0</span>
+        <button class="nav-link" id="pending-tab" role="tab" data-filter="pending" type="button" aria-selected="false">
+            {% if ui_lang == 'en' %}Pending{% else %}قيد الانتظار{% endif %}
+            <span class="badge badge-soft badge-soft-warning ms-1" id="countPending">0</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="progress-tab" data-filter="in_progress" type="button">
-            {% if ui_lang == 'en' %}In Progress{% else %}قيد التنفيذ{% endif %} <span class="badge bg-info ms-1" id="countProgress">0</span>
+        <button class="nav-link" id="progress-tab" role="tab" data-filter="in_progress" type="button" aria-selected="false">
+            {% if ui_lang == 'en' %}In Progress{% else %}قيد التنفيذ{% endif %}
+            <span class="badge badge-soft badge-soft-info ms-1" id="countProgress">0</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="completed-tab" data-filter="completed" type="button">
-            {% if ui_lang == 'en' %}Completed{% else %}مكتملة{% endif %} <span class="badge bg-success ms-1" id="countCompleted">0</span>
+        <button class="nav-link" id="completed-tab" role="tab" data-filter="completed" type="button" aria-selected="false">
+            {% if ui_lang == 'en' %}Completed{% else %}مكتملة{% endif %}
+            <span class="badge badge-soft badge-soft-success ms-1" id="countCompleted">0</span>
         </button>
     </li>
 </ul>
