@@ -2,14 +2,16 @@
 {% set is_edit = class_obj is not none %}
 {% block title %}{% if is_edit %}{% if ui_lang == 'en' %}Edit Classroom{% else %}تعديل الفصل{% endif %}{% else %}{% if ui_lang == 'en' %}Create New Classroom{% else %}إعداد فصل جديد{% endif %}{% endif %}{% endblock %}
 {% block page_header %}
-<div class="dashboard-header">
-    <h1 class="h2 mb-1">
-        <i class="bi bi-door-open me-2 text-primary"></i>
-        {% if is_edit %}{% if ui_lang == 'en' %}Edit Classroom{% else %}تعديل الفصل{% endif %}{% else %}{% if ui_lang == 'en' %}Create New Classroom{% else %}إعداد فصل جديد{% endif %}{% endif %}
-    </h1>
-    <p class="text-muted mb-0">
-        {% if is_edit %}{% if ui_lang == 'en' %}Update classroom details and assign supervisor.{% else %}حدّث بيانات الفصل وربط المشرف الحالي.{% endif %}{% else %}{% if ui_lang == 'en' %}Create a new classroom and assign a supervisor.{% else %}أنشئ فصلًا جديدًا واربطه بالمشرف المناسب.{% endif %}{% endif %}
-    </p>
+<div class="page-header-wrap">
+    <div>
+        <h1 class="page-header-title">
+            <i class="bi bi-door-open text-primary me-2" aria-hidden="true"></i>
+            {% if is_edit %}{% if ui_lang == 'en' %}Edit Classroom{% else %}تعديل الفصل{% endif %}{% else %}{% if ui_lang == 'en' %}Create New Classroom{% else %}إعداد فصل جديد{% endif %}{% endif %}
+        </h1>
+        <p class="text-muted mb-0 small">
+            {% if is_edit %}{% if ui_lang == 'en' %}Update classroom details and assign supervisor.{% else %}حدّث بيانات الفصل وربط المشرف الحالي.{% endif %}{% else %}{% if ui_lang == 'en' %}Create a new classroom and assign a supervisor.{% else %}أنشئ فصلًا جديدًا واربطه بالمشرف المناسب.{% endif %}{% endif %}
+        </p>
+    </div>
 </div>
 {% endblock %}
 {% block content %}

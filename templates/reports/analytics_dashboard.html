@@ -4,17 +4,20 @@
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header-wrap mb-4">
         <div>
-            <h2 class="mb-1"><i class="bi bi-graph-up-arrow text-primary"></i> {% if ui_lang == 'en' %}Daily Reports Analytics{% else %}تحليلات التقارير اليومية{% endif %}</h2>
-            <p class="text-muted mb-0">{% if ui_lang == 'en' %}Comprehensive analytics dashboard for children's daily reports{% else %}لوحة تحليلات شاملة للتقارير اليومية للأطفال{% endif %}</p>
+            <h1 class="page-header-title">
+                <i class="bi bi-graph-up-arrow text-primary me-2" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}Daily Reports Analytics{% else %}تحليلات التقارير اليومية{% endif %}
+            </h1>
+            <p class="text-muted mb-0 small">{% if ui_lang == 'en' %}Comprehensive analytics dashboard for children's daily reports{% else %}لوحة تحليلات شاملة للتقارير اليومية للأطفال{% endif %}</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="page-header-actions">
             <button class="btn btn-outline-success" onclick="exportData('csv')">
-                <i class="bi bi-file-earmark-spreadsheet"></i> {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> {% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
             </button>
             <button class="btn btn-outline-primary" onclick="exportData('json')">
-                <i class="bi bi-filetype-json"></i> {% if ui_lang == 'en' %}Export JSON{% else %}تصدير JSON{% endif %}
+                <i class="bi bi-filetype-json me-1"></i> {% if ui_lang == 'en' %}Export JSON{% else %}تصدير JSON{% endif %}
             </button>
         </div>
     </div>

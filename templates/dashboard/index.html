@@ -3,59 +3,54 @@
 {% block title %}{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="dashboard-header">
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
-        <div>
-            <h1 class="h2 mb-1">
-                <i class="bi bi-speedometer2 me-2 text-primary"></i>
-                {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
-            </h1>
-            <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="/">{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</a></li>
-                    <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</li>
-                </ol>
-            </nav>
-            <!-- Real-time Validation Status Indicator -->
-            <div id="validationStatusIndicator" class="validation-status-indicator status-unknown mt-2"
-                onclick="showValidationDetails()" style="cursor: pointer;" role="button" tabindex="0"
-                aria-label="{% if ui_lang == 'en' %}View data validation details{% else %}عرض تفاصيل التحقق من البيانات{% endif %}">
-                <i class="bi bi-question-circle-fill me-1"></i>
-                <span>{% if ui_lang == 'en' %}Validating...{% else %}جاري التحقق...{% endif %}</span>
-            </div>
+<div class="page-header-wrap">
+    <div>
+        <h1 class="page-header-title">
+            <i class="bi bi-speedometer2 text-primary me-2" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
+        </h1>
+        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/">{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</a></li>
+                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</li>
+            </ol>
+        </nav>
+        <div id="validationStatusIndicator" class="validation-status-indicator status-unknown mt-2"
+            onclick="showValidationDetails()" style="cursor: pointer;" role="button" tabindex="0"
+            aria-label="{% if ui_lang == 'en' %}View data validation details{% else %}عرض تفاصيل التحقق من البيانات{% endif %}">
+            <i class="bi bi-question-circle-fill me-1"></i>
+            <span>{% if ui_lang == 'en' %}Validating...{% else %}جاري التحقق...{% endif %}</span>
         </div>
-        <div class="btn-toolbar mb-2 mb-md-0">
-            <div class="btn-group me-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()"
-                    aria-label="{% if ui_lang == 'en' %}Print dashboard{% else %}طباعة لوحة التحكم{% endif %}">
-                    <i class="bi bi-printer me-1"></i>{% if ui_lang == 'en' %}Print{% else %}طباعة{% endif %}
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportDashboard()"
-                    aria-label="{% if ui_lang == 'en' %}Export dashboard{% else %}تصدير لوحة التحكم{% endif %}">
-                    <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard(event)"
-                    aria-label="{% if ui_lang == 'en' %}Refresh data{% else %}تحديث بيانات لوحة التحكم{% endif %}">
-                    <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
-                </button>
-            </div>
-            <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
-                    id="dateRangeBtn" aria-label="{% if ui_lang == 'en' %}Select date range{% else %}اختيار نطاق التاريخ{% endif %}">
-                    <i class="bi bi-calendar3 me-1"></i>
-                    {% if ui_lang == 'en' %}This Month{% else %}هذا الشهر{% endif %}
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#" onclick="setDateRange('today')">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="setDateRange('week')">{% if ui_lang == 'en' %}This Week{% else %}هذا الأسبوع{% endif %}</a></li>
-                    <li><a class="dropdown-item active" href="#" onclick="setDateRange('month')">{% if ui_lang == 'en' %}This Month{% else %}هذا الشهر{% endif %}</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="setDateRange('quarter')">{% if ui_lang == 'en' %}This Quarter{% else %}هذا الربع{% endif %}</a></li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item" href="#" onclick="showCustomDateRange()">{% if ui_lang == 'en' %}Custom Date{% else %}تاريخ مخصص{% endif %}</a></li>
-                </ul>
-            </div>
+    </div>
+    <div class="page-header-actions">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()"
+                aria-label="{% if ui_lang == 'en' %}Print dashboard{% else %}طباعة لوحة التحكم{% endif %}">
+                <i class="bi bi-printer me-1"></i>{% if ui_lang == 'en' %}Print{% else %}طباعة{% endif %}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportDashboard()"
+                aria-label="{% if ui_lang == 'en' %}Export dashboard{% else %}تصدير لوحة التحكم{% endif %}">
+                <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard(event)"
+                aria-label="{% if ui_lang == 'en' %}Refresh data{% else %}تحديث بيانات لوحة التحكم{% endif %}">
+                <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+            </button>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                id="dateRangeBtn" aria-label="{% if ui_lang == 'en' %}Select date range{% else %}اختيار نطاق التاريخ{% endif %}">
+                <i class="bi bi-calendar3 me-1"></i>
+                {% if ui_lang == 'en' %}This Month{% else %}هذا الشهر{% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#" onclick="setDateRange('today')">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</a></li>
+                <li><a class="dropdown-item" href="#" onclick="setDateRange('week')">{% if ui_lang == 'en' %}This Week{% else %}هذا الأسبوع{% endif %}</a></li>
+                <li><a class="dropdown-item active" href="#" onclick="setDateRange('month')">{% if ui_lang == 'en' %}This Month{% else %}هذا الشهر{% endif %}</a></li>
+                <li><a class="dropdown-item" href="#" onclick="setDateRange('quarter')">{% if ui_lang == 'en' %}This Quarter{% else %}هذا الربع{% endif %}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#" onclick="showCustomDateRange()">{% if ui_lang == 'en' %}Custom Date{% else %}تاريخ مخصص{% endif %}</a></li>
+            </ul>
         </div>
     </div>
 </div>
