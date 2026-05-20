@@ -127,17 +127,9 @@
             ? appCurrentLocale()
             : (document.documentElement.lang === 'en' ? 'en-US' : 'ar-JO'));
 
-    // Auth helper
+    // Auth helper — session is the HttpOnly kinjo_session cookie, sent automatically.
     function getHeaders() {
-        // Use centralized auth system
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
-
-        const token = AuthService.getToken();
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        return headers;
+        return { 'Content-Type': 'application/json' };
     }
 
     function formatDate(dateStr) {

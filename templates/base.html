@@ -1,12 +1,15 @@
 <!doctype html>
 {% if ui_lang == 'en' %}
-<html lang="en" dir="{{ ui_dir | default('ltr') }}">
+<html lang="en" dir="{{ ui_dir | default('ltr') }}" style="visibility:hidden">
   {% else %}
-  <html lang="ar" dir="{{ ui_dir | default('rtl') }}">
+  <html lang="ar" dir="{{ ui_dir | default('rtl') }}" style="visibility:hidden">
     {% endif %}
 
     <head>
       <meta charset="utf-8" />
+      <!-- Anti-FOUC: html is hidden until CSS+JS are ready. Revealed by inline script at end of body. -->
+      <!-- noscript fallback: reveal immediately if JS is disabled -->
+      <noscript><style>html{visibility:visible!important}</style></noscript>
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
       <meta
@@ -65,19 +68,6 @@
       {% endif %}
       <script src="/static/js/sanitize.js"></script>
       <script src="/static/js/page_load_timer.js"></script>
-
-      <!-- SweetAlert2 -->
-      <link
-        href="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css"
-        rel="stylesheet"
-        integrity="sha384-9zhnRArCpusIVIudEVdI3QmXKH9nCjEGc2rNvdcQ1utx3a3zbLtW3rBOeJ2PvupL"
-        crossorigin="anonymous"
-      />
-      <script
-        src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"
-        integrity="sha384-YB/DdIkloKoRpclWB8bNcYXWakt57USgtQPDzvnIDHYU0lasD5eWlXVo1S4ODukY"
-        crossorigin="anonymous"
-      ></script>
 
       <style>
         /* Skeleton Loader Styles */
@@ -235,7 +225,49 @@
       <script src="/static/js/app_i18n.js?v=2.1"></script>
       <script src="/static/js/kinjo-app.js?v=2.1"></script>
 
+      <!-- SweetAlert2 — loaded after page scripts to avoid render-blocking -->
+      <link
+        href="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css"
+        rel="stylesheet"
+        integrity="sha384-9zhnRArCpusIVIudEVdI3QmXKH9nCjEGc2rNvdcQ1utx3a3zbLtW3rBOeJ2PvupL"
+        crossorigin="anonymous"
+      />
+      <script
+        src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"
+        integrity="sha384-YB/DdIkloKoRpclWB8bNcYXWakt57USgtQPDzvnIDHYU0lasD5eWlXVo1S4ODukY"
+        crossorigin="anonymous"
+      ></script>
+
       {% block extra_js %}{% endblock %} {% block scripts %}{% endblock %}
+
+      <!-- FOUC reveal: make page visible now that CSS + JS are ready -->
+      <script>
+        (function () {
+          var authPaths = ['/login', '/register', '/mfa', '/change-password',
+                          '/forgot-password', '/reset-password', '/mfa/setup'];
+          var onAuthPage = authPaths.some(function (p) {
+            return window.location.pathname === p ||
+                   window.location.pathname.startsWith(p + '/');
+          });
+          var hasSession = document.cookie.indexOf('kinjo_csrf_token=') !== -1;
+
+          function reveal() {
+            document.documentElement.style.visibility = '';
+          }
+
+          if (onAuthPage && hasSession) {
+            // Authenticated user on auth page: stay hidden while auth.js redirects.
+            // Safety fallback: reveal after 3 s if redirect never fires.
+            var _fallback = setTimeout(reveal, 3000);
+            window.__kinjoRevealPage = function () {
+              clearTimeout(_fallback);
+              reveal();
+            };
+          } else {
+            reveal();
+          }
+        })();
+      </script>
     </body>
   </html>
 </html>

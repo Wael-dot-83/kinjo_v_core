@@ -4,6 +4,27 @@
  */
 
 /* ============================================================================
+   Anti-FOUC: stat value cells that JS will populate show a skeleton pulse
+   instead of a raw "--" placeholder. Once JS writes a real value the class
+   .kj-stat-loaded is added and the pulse stops.
+   ============================================================================ */
+.kj-stat-pending {
+  display: inline-block;
+  min-width: 3rem;
+  height: 1em;
+  border-radius: 0.25rem;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: kj-stat-shimmer 1.4s ease-in-out infinite;
+  color: transparent !important;
+  vertical-align: middle;
+}
+@keyframes kj-stat-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ============================================================================
    CSS Variables (Design Tokens)
    ============================================================================ */
 :root {
