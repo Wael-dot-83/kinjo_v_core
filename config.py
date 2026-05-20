@@ -276,6 +276,15 @@ class Settings(BaseSettings):
             return "strict"
         return normalized
 
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.lower() == "production"
+
+    @property
+    def secure_cookies(self) -> bool:
+        """True in production (HTTPS); False in dev so HTTP cookies work."""
+        return self.is_production
+
     model_config = ConfigDict(
         env_file=".env",
         case_sensitive=True,

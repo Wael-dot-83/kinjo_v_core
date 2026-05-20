@@ -568,7 +568,7 @@ def _set_mfa_ticket_cookie(response: Response, ticket: str) -> None:
         max_age=settings.MFA_TICKET_EXPIRE_MINUTES * 60,
         path="/",
         samesite="strict",
-        secure=True,
+        secure=settings.secure_cookies,
         httponly=True,
         domain=settings.COOKIE_DOMAIN or None,
     )
@@ -601,7 +601,7 @@ def _set_authenticated_session(
         max_age=max_age,
         path="/",
         samesite="strict",
-        secure=True,
+        secure=settings.secure_cookies,
         httponly=True,
         domain=settings.COOKIE_DOMAIN or None,
     )
@@ -611,7 +611,7 @@ def _set_authenticated_session(
         max_age=max_age,
         path="/",
         samesite="strict",
-        secure=True,
+        secure=settings.secure_cookies,
         httponly=False,
         domain=settings.COOKIE_DOMAIN or None,
     )
