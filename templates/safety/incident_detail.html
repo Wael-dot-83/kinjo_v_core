@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('تفاصيل الحادثة') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -45,7 +45,7 @@
                     <span class="detail-label">{{ _('مستوى الخطورة') }}</span>
                     <span class="detail-value">
                         {% if incident.severity_level %}
-                        <span class="badge bg-{{ severity_class.get(incident.severity_level.value, 'secondary') }}">
+                        <span class="badge badge-soft badge-soft-{{ severity_class.get(incident.severity_level.value, 'secondary') }}">
                             {{ incident.severity_level.value }}
                         </span>
                         {% else %}—{% endif %}
@@ -65,9 +65,9 @@
                     <span class="detail-label">{{ _('تم إبلاغ ولي الأمر') }}</span>
                     <span class="detail-value">
                         {% if incident.parent_informed %}
-                        <span class="badge bg-success">{{ _('نعم') }}</span>
+                        <span class="badge badge-soft badge-soft-success">{{ _('نعم') }}</span>
                         {% else %}
-                        <span class="badge bg-secondary">{{ _('لا') }}</span>
+                        <span class="badge badge-soft badge-soft-secondary">{{ _('لا') }}</span>
                         {% endif %}
                     </span>
                 </div>
@@ -106,9 +106,9 @@
                     <span class="detail-label">{{ _('الحالة') }}</span>
                     <span class="detail-value">
                         {% if incident.followup_status %}
-                        <span class="badge bg-info">{{ incident.followup_status }}</span>
+                        <span class="badge badge-soft badge-soft-info">{{ incident.followup_status }}</span>
                         {% else %}
-                        <span class="badge bg-secondary">{{ _('جديدة') }}</span>
+                        <span class="badge badge-soft badge-soft-secondary">{{ _('جديدة') }}</span>
                         {% endif %}
                     </span>
                 </div>

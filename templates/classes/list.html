@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if ui_lang == 'en' %}Classroom Management{% else %}إدارة الشعب الصفية{% endif %}{% endblock %}
@@ -196,7 +196,7 @@ breadcrumbs=[
             </td>
             ${isAdmin ? `<td>${escHtml(c.kindergarten_name || '-')}</td>` : ''}
             <td>
-                <span class="badge bg-info bg-opacity-10 text-info age-badge">
+                <span class="badge badge-soft badge-soft-info bg-opacity-10 text-info age-badge">
                     ${c.min_age_months} - ${c.max_age_months} ${T('شهر', 'mo')}
                 </span>
             </td>
@@ -204,8 +204,8 @@ breadcrumbs=[
             <td>${c.current_supervisor ? escHtml(c.current_supervisor.name) : '<span class="text-muted">-</span>'}</td>
             <td>
                 ${c.is_active
-                ? `<span class="badge bg-success">${T('نشط', 'Active')}</span>`
-                : `<span class="badge bg-secondary">${T('غير نشط', 'Inactive')}</span>`}
+                ? `<span class="badge badge-soft badge-soft-success">${T('نشط', 'Active')}</span>`
+                : `<span class="badge badge-soft badge-soft-secondary">${T('غير نشط', 'Inactive')}</span>`}
             </td>
             <td class="text-center">
                 <div class="btn-group btn-group-sm">

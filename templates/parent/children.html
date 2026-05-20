@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{{ _('My Children') }}{% endblock %}
 
@@ -167,8 +167,8 @@
                                 </div>
                                 <div class="ms-auto">
                                     ${child.profile_complete
-                        ? `<span class="badge bg-success-subtle text-success" title="${T('مكتمل', 'Complete')}"><i class="bi bi-check-circle"></i></span>`
-                        : `<span class="badge bg-warning-subtle text-warning" title="${T('الملف غير مكتمل', 'Incomplete profile')}"><i class="bi bi-exclamation-circle"></i></span>`
+                        ? `<span class="badge badge-soft badge-soft-success-subtle text-success" title="${T('مكتمل', 'Complete')}"><i class="bi bi-check-circle"></i></span>`
+                        : `<span class="badge badge-soft badge-soft-warning-subtle text-warning" title="${T('الملف غير مكتمل', 'Incomplete profile')}"><i class="bi bi-exclamation-circle"></i></span>`
                     }
                                 </div>
                             </div>

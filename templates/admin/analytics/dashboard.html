@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 {% from 'components/export-modal.html' import export_modal %}
@@ -118,7 +118,7 @@ actions=filter_actions
                     <hr />
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <h6 class="mb-0">{% if ui_lang == 'en' %}Anomaly Indicators{% else %}مؤشرات الشذوذ{% endif %}</h6>
-                        <span class="badge bg-warning" id="anomalyCount">0</span>
+                        <span class="badge badge-soft badge-soft-warning" id="anomalyCount">0</span>
                     </div>
                     <div id="anomalyList" class="list-group list-group-flush"></div>
                     <hr />
@@ -143,7 +143,7 @@ actions=filter_actions
                         <div class="small text-muted">{% if ui_lang == 'en' %}Data Quality{% else %}جودة البيانات{% endif %}</div>
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="fw-bold" id="dataQualityScore">--</span>
-                            <span class="badge bg-success" id="dataQualityStatus">--</span>
+                            <span class="badge badge-soft badge-soft-success" id="dataQualityStatus">--</span>
                         </div>
                     </div>
                     <div class="list-group list-group-flush" id="alertList"></div>
@@ -478,7 +478,7 @@ actions=filter_actions
                                     <span class="fw-bold d-block">{% if ui_lang == 'en' %}Al-Amal Kindergarten{% else %}روضة الأمل{% endif %}</span>
                                     <small class="text-danger">{% if ui_lang == 'en' %}High absence rate{% else %}معدل غياب مرتفع{% endif %}</small>
                                 </div>
-                                <span class="badge bg-danger rounded-pill">{% if ui_lang == 'en' %}92% Risk{% else %}92% خطر{% endif %}</span>
+                                <span class="badge badge-soft badge-soft-danger rounded-pill">{% if ui_lang == 'en' %}92% Risk{% else %}92% خطر{% endif %}</span>
                             </li>
                         </ul>
                     </div>

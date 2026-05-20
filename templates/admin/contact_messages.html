@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('رسائل التواصل') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -30,7 +30,7 @@
 
 <!-- Stats -->
 <div class="d-flex gap-3 mb-3">
-    <span class="badge bg-secondary fs-6">{{ _('الإجمالي:') }} {{ pagination.total }}</span>
+    <span class="badge badge-soft badge-soft-secondary fs-6">{{ _('الإجمالي:') }} {{ pagination.total }}</span>
     <span class="text-muted small">{{ _('الصفحة') }} {{ pagination.page }} {{ _('من') }} {{ pagination.total_pages }}</span>
 </div>
 
@@ -62,9 +62,9 @@
                     </td>
                     <td>
                         {% if msg.is_resolved %}
-                        <span class="badge bg-success">{{ _('مُغلقة') }}</span>
+                        <span class="badge badge-soft badge-soft-success">{{ _('مُغلقة') }}</span>
                         {% else %}
-                        <span class="badge bg-warning text-dark">{{ _('مفتوحة') }}</span>
+                        <span class="badge badge-soft badge-soft-warning">{{ _('مفتوحة') }}</span>
                         {% endif %}
                     </td>
                     <td>

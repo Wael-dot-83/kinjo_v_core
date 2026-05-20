@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 {% from 'components/filter-row.html' import filter_row %}
 {% from 'components/data-table.html' import pagination %}
@@ -460,18 +460,18 @@ actions=toolbar_actions
     function getRoleBadge(role) {
         const badges = {
             'ADMIN': `<span class="badge bg-dark">${T('مدير النظام', 'System Admin')}</span>`,
-            'MANAGER': `<span class="badge bg-primary">${T('مدير روضة', 'Kindergarten Manager')}</span>`,
-            'SUPERVISOR': `<span class="badge bg-info text-dark">${T('مشرف', 'Supervisor')}</span>`,
-            'PARENT': `<span class="badge bg-success">${T('ولي أمر', 'Parent')}</span>`
+            'MANAGER': `<span class="badge badge-soft badge-soft-primary">${T('مدير روضة', 'Kindergarten Manager')}</span>`,
+            'SUPERVISOR': `<span class="badge badge-soft badge-soft-info">${T('مشرف', 'Supervisor')}</span>`,
+            'PARENT': `<span class="badge badge-soft badge-soft-success">${T('ولي أمر', 'Parent')}</span>`
         };
-        return badges[role] || `<span class="badge bg-secondary">${role}</span>`;
+        return badges[role] || `<span class="badge badge-soft badge-soft-secondary">${role}</span>`;
     }
 
     function getStatusBadge(status) {
         const badges = {
-            'ACTIVE': `<span class="badge bg-soft-success text-success"><i class="bi bi-check-circle me-1"></i>${T('نشط', 'Active')}</span>`,
-            'INACTIVE': `<span class="badge bg-soft-secondary text-secondary"><i class="bi bi-dash-circle me-1"></i>${T('غير نشط', 'Inactive')}</span>`,
-            'SUSPENDED': `<span class="badge bg-soft-danger text-danger"><i class="bi bi-ban me-1"></i>${T('موقوف', 'Suspended')}</span>`
+            'ACTIVE': `<span class="badge badge-soft badge-soft-success"><i class="bi bi-check-circle me-1"></i>${T('نشط', 'Active')}</span>`,
+            'INACTIVE': `<span class="badge badge-soft badge-soft-secondary"><i class="bi bi-dash-circle me-1"></i>${T('غير نشط', 'Inactive')}</span>`,
+            'SUSPENDED': `<span class="badge badge-soft badge-soft-danger"><i class="bi bi-ban me-1"></i>${T('موقوف', 'Suspended')}</span>`
         };
         return badges[status] || `<span class="badge bg-light text-dark">${status}</span>`;
     }

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 {% from 'components/filter-row.html' import filter_row_labeled %}
 {% from 'components/data-table.html' import loading_state, pagination %}
@@ -46,9 +46,9 @@ actions=toolbar_actions
     <div class="mb-4">
         <h6 class="fw-bold text-primary"><i class="bi bi-shield-lock me-2"></i>{% if ui_lang == 'en' %}Severity Levels{% else %}مستويات الأهمية{% endif %}</h6>
         <ul class="list-unstyled">
-            <li class="mb-2"><span class="badge bg-danger">{% if ui_lang == 'en' %}High{% else %}عالي{% endif %}</span>: {% if ui_lang == 'en' %}Sensitive operations such as deletion or permission changes.{% else %}عمليات حساسة مثل الحذف أو تغيير الصلاحيات.{% endif %}</li>
-            <li class="mb-2"><span class="badge bg-warning">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</span>: {% if ui_lang == 'en' %}Modifying important data.{% else %}تعديل البيانات المهمة.{% endif %}</li>
-            <li class="mb-2"><span class="badge bg-info text-dark">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</span>: {% if ui_lang == 'en' %}Monitoring and daily activity operations.{% else %}عمليات المتابعة والنشاط اليومي.{% endif %}</li>
+            <li class="mb-2"><span class="badge badge-soft badge-soft-danger">{% if ui_lang == 'en' %}High{% else %}عالي{% endif %}</span>: {% if ui_lang == 'en' %}Sensitive operations such as deletion or permission changes.{% else %}عمليات حساسة مثل الحذف أو تغيير الصلاحيات.{% endif %}</li>
+            <li class="mb-2"><span class="badge badge-soft badge-soft-warning">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</span>: {% if ui_lang == 'en' %}Modifying important data.{% else %}تعديل البيانات المهمة.{% endif %}</li>
+            <li class="mb-2"><span class="badge badge-soft badge-soft-info">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</span>: {% if ui_lang == 'en' %}Monitoring and daily activity operations.{% else %}عمليات المتابعة والنشاط اليومي.{% endif %}</li>
         </ul>
     </div>
 </div>

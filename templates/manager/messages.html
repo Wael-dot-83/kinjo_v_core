@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('الرسائل') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -21,7 +21,7 @@
     <li class="nav-item" role="presentation">
         <button class="nav-link active" data-folder="inbox" onclick="loadMessages('inbox')">
             <i class="bi bi-inbox me-1"></i>{{ _('الوارد') }}
-            <span class="badge bg-danger ms-1 d-none" id="inboxBadge">0</span>
+            <span class="badge badge-soft badge-soft-danger ms-1 d-none" id="inboxBadge">0</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">

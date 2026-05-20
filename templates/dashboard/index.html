@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}{% endblock %}
 
@@ -311,7 +311,7 @@
                     <div class="card h-100 border-0 shadow-sm status-widget overflow-hidden" id="attendanceCard">
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge bg-success-subtle text-success rounded-pill px-3">{% if ui_lang == 'en' %}Positive{% else %}مؤشر إيجابي{% endif %}</span>
+                                <span class="badge badge-soft badge-soft-success-subtle text-success rounded-pill px-3">{% if ui_lang == 'en' %}Positive{% else %}مؤشر إيجابي{% endif %}</span>
                                 <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
                             </div>
                             <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}</p>
@@ -336,7 +336,7 @@
                     <div class="card h-100 border-0 shadow-sm status-widget" id="pendingEnrollmentsCard">
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge bg-warning-subtle text-warning rounded-pill px-3"
+                                <span class="badge badge-soft badge-soft-warning-subtle text-warning rounded-pill px-3"
                                     id="pendingEnrollmentsBadge">{% if ui_lang == 'en' %}Needs Action{% else %}يحتاج إجراء{% endif %}</span>
                                 <small class="text-muted">{% if ui_lang == 'en' %}This Month{% else %}هذا الشهر{% endif %}</small>
                             </div>
@@ -354,7 +354,7 @@
                     <div class="card h-100 border-0 shadow-sm status-widget" id="pendingReportsCard">
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge bg-info-subtle text-info rounded-pill px-3"
+                                <span class="badge badge-soft badge-soft-info-subtle text-info rounded-pill px-3"
                                     id="pendingReportsBadge">{% if ui_lang == 'en' %}Under Review{% else %}قيد المراجعة{% endif %}</span>
                                 <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
                             </div>
@@ -372,7 +372,7 @@
                     <div class="card h-100 border-0 shadow-sm status-widget" id="incidentsCard">
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge bg-danger-subtle text-danger rounded-pill px-3"
+                                <span class="badge badge-soft badge-soft-danger-subtle text-danger rounded-pill px-3"
                                     id="incidentsBadge">{% if ui_lang == 'en' %}Critical Alert{% else %}تنبيه حرج{% endif %}</span>
                                 <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
                             </div>
@@ -770,7 +770,7 @@
                     <i class="bi bi-clock-history me-2"></i>
                     {% if ui_lang == 'en' %}Pending Reports{% else %}تقارير معلقة{% endif %}
                 </h5>
-                <span class="badge bg-warning" id="pendingReportsListBadge">0</span>
+                <span class="badge badge-soft badge-soft-warning" id="pendingReportsListBadge">0</span>
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush" id="pendingReportsList">
@@ -803,7 +803,7 @@
                     <a href="#" class="list-group-item list-group-item-action">
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0 me-3">
-                                <span class="badge bg-success rounded-pill p-2">
+                                <span class="badge badge-soft badge-soft-success rounded-pill p-2">
                                     <i class="bi bi-check"></i>
                                 </span>
                             </div>
@@ -816,7 +816,7 @@
                     <a href="#" class="list-group-item list-group-item-action">
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0 me-3">
-                                <span class="badge bg-primary rounded-pill p-2">
+                                <span class="badge badge-soft badge-soft-primary rounded-pill p-2">
                                     <i class="bi bi-journal"></i>
                                 </span>
                             </div>
@@ -829,7 +829,7 @@
                     <a href="#" class="list-group-item list-group-item-action">
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0 me-3">
-                                <span class="badge bg-info rounded-pill p-2">
+                                <span class="badge badge-soft badge-soft-info rounded-pill p-2">
                                     <i class="bi bi-box-arrow-in-left"></i>
                                 </span>
                             </div>

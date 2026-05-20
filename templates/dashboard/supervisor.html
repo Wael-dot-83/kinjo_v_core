@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Supervisor Dashboard{% else %}لوحة المشرف{% endif %}{% endblock %}
 
@@ -154,7 +154,7 @@
                     <i class="bi bi-hourglass-split me-2"></i>
                     {% if ui_lang == 'en' %}Draft Daily Reports{% else %}التقارير اليومية المسودة{% endif %}
                 </h5>
-                <span class="badge bg-warning" id="pendingBadge">0</span>
+                <span class="badge badge-soft badge-soft-warning" id="pendingBadge">0</span>
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush" id="pendingReportsList"></div>
@@ -274,9 +274,9 @@
         if (!legend) return;
         const counts = attendanceCounts(children);
         legend.innerHTML = `
-            <span class="badge bg-success-subtle text-success-emphasis">${supervisorText('attendance.present', 'حاضر', 'Present')}: ${counts.present}</span>
-            <span class="badge bg-danger-subtle text-danger-emphasis">${supervisorText('attendance.absent', 'غائب', 'Absent')}: ${counts.absent}</span>
-            <span class="badge bg-secondary-subtle text-secondary-emphasis">${supervisorText('attendance.not_recorded', 'غير مسجل', 'Not recorded')}: ${counts.pending}</span>
+            <span class="badge badge-soft badge-soft-success-subtle text-success-emphasis">${supervisorText('attendance.present', 'حاضر', 'Present')}: ${counts.present}</span>
+            <span class="badge badge-soft badge-soft-danger-subtle text-danger-emphasis">${supervisorText('attendance.absent', 'غائب', 'Absent')}: ${counts.absent}</span>
+            <span class="badge badge-soft badge-soft-secondary-subtle text-secondary-emphasis">${supervisorText('attendance.not_recorded', 'غير مسجل', 'Not recorded')}: ${counts.pending}</span>
             <span class="badge bg-light text-dark">${supervisorText('common.displayed', 'المعروض', 'Displayed')}: ${visibleCount}</span>
         `;
     }

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Message Management{% else %}إدارة الرسائل{% endif %}{% endblock %}
 
@@ -51,7 +51,7 @@
                                     <td>{{ message.subject }}</td>
                                     <td>{{ message.created_at.strftime('%Y-%m-%d') }}</td>
                                     <td>{{ message.recipient_count }}</td>
-                                    <td><span class="badge bg-success">{% if ui_lang == 'en' %}Sent{% else %}مرسلة{% endif %}</span></td>
+                                    <td><span class="badge badge-soft badge-soft-success">{% if ui_lang == 'en' %}Sent{% else %}مرسلة{% endif %}</span></td>
                                     <td>
                                         <button class="btn btn-sm btn-outline-primary">{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}</button>
                                     </td>

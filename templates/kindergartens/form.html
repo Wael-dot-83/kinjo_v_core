@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if kindergarten %}{% if ui_lang == 'en' %}Edit Kindergarten{% else %}تعديل روضة{% endif %}{% else %}{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة روضة جديدة{% endif %}{% endif %}{% endblock %}
@@ -171,7 +171,7 @@ breadcrumbs=[
 
                     <div class="p-3 rounded border bg-light mb-4">
                         <div class="d-flex align-items-start mb-3">
-                            <span class="badge bg-info text-dark me-2"><i class="bi bi-shield-check"></i></span>
+                            <span class="badge badge-soft badge-soft-info me-2"><i class="bi bi-shield-check"></i></span>
                             <div>
                                 <div class="fw-semibold">{% if ui_lang == 'en' %}License Information{% else %}معلومات الترخيص{% endif %}</div>
                                 <small class="text-muted">{% if ui_lang == 'en' %}Ministry of Social Development and relevant authorities license information.{% else %}معلومات ترخيص وزارة التنمية الاجتماعية والجهات

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('الرسائل') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -236,7 +236,7 @@
             const unread = !msg.is_read ? 'unread' : '';
             const readBadge = msg.is_read
                 ? `<span class="badge bg-light text-muted border" style="font-size:0.65rem;">{{ _('مقروء') }}</span>`
-                : `<span class="badge bg-primary" style="font-size:0.65rem;">{{ _('جديد') }}</span>`;
+                : `<span class="badge badge-soft badge-soft-primary" style="font-size:0.65rem;">{{ _('جديد') }}</span>`;
             const preview = (msg.body || '').slice(0, 80);
             return `
             <div class="msg-item ${unread}" onclick="openMessage(${msg.id})">

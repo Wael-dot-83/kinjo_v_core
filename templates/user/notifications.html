@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}Notifications - KinJo{% else %}الإشعارات - كينجو{% endif %}{% endblock %}
 
@@ -84,7 +84,7 @@
            onclick="markAsRead(${n.id})">
             <div class="d-flex w-100 justify-content-between">
                 <h6 class="mb-1">
-                    ${n.read ? '' : `<span class="badge bg-primary me-2">${T('جديد', 'New')}</span>`}
+                    ${n.read ? '' : `<span class="badge badge-soft badge-soft-primary me-2">${T('جديد', 'New')}</span>`}
                     ${escHtml(n.title || T('إشعار', 'Notification'))}
                 </h6>
                 <small class="text-muted">${formatDate(n.created_at)}</small>

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('تسجيل الحضور') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -86,7 +86,7 @@
         </h6>
         <div class="d-flex align-items-center gap-2">
             <span class="text-muted small" id="tableDate"></span>
-            <span class="badge bg-success-subtle text-success" id="presentBadge">0 {{ _('حاضر') }}</span>
+            <span class="badge badge-soft badge-soft-success-subtle text-success" id="presentBadge">0 {{ _('حاضر') }}</span>
         </div>
     </div>
 
@@ -256,9 +256,9 @@
 
     function statusBadge(status) {
         const map = {
-            'present':     `<span class="badge bg-success">{{ _('حاضر') }}</span>`,
-            'absent':      `<span class="badge bg-danger">{{ _('غائب') }}</span>`,
-            'checked_out': `<span class="badge bg-secondary">{{ _('غادر') }}</span>`,
+            'present':     `<span class="badge badge-soft badge-soft-success">{{ _('حاضر') }}</span>`,
+            'absent':      `<span class="badge badge-soft badge-soft-danger">{{ _('غائب') }}</span>`,
+            'checked_out': `<span class="badge badge-soft badge-soft-secondary">{{ _('غادر') }}</span>`,
             'not_arrived': `<span class="badge bg-light text-muted border">{{ _('لم يصل') }}</span>`,
         };
         return map[status] || `<span class="badge bg-light text-muted border">${status}</span>`;
