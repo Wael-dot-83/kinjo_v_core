@@ -496,7 +496,7 @@ class TestUserEndpoints:
 
         app.dependency_overrides[get_current_user] = lambda: admin_user
 
-        payload = {"user_ids": [user1.id, user2.id]}
+        payload = {"user_ids": [user1.id, user2.id], "confirmation_text": "DELETE"}
 
         response = client.post("/api/users/bulk-delete", json=payload)
         assert response.status_code == 200

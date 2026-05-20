@@ -335,9 +335,29 @@ def record_daily_report_view(
     db: Session = Depends(get_db),
 ):
     """Record that a parent has viewed a daily report."""
+    # 1. Restrict to PARENT role only
+    if current_user.role != models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Only parents can record report views")
+
     report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
+    # 2. Report must be in an accessible status (not a draft)
+    allowed_statuses = {models.DailyReportStatus.APPROVED, models.DailyReportStatus.SENT_TO_PARENT}
+    if report.status not in allowed_statuses:
+        raise HTTPException(status_code=403, detail="Report is not accessible")
+
+    # 3. Verify the authenticated parent owns the child referenced in the report
+    child = db.query(models.Child).filter(models.Child.id == report.child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    parent_profile = db.query(models.ParentProfile).filter(
+        models.ParentProfile.user_id == current_user.id
+    ).first()
+    if not parent_profile or child.parent_id != parent_profile.id:
+        raise HTTPException(status_code=403, detail="Access denied to this report")
 
     existing = db.query(models.DailyReportView).filter(
         models.DailyReportView.daily_report_id == report_id,

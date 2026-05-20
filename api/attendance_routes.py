@@ -370,11 +370,20 @@ def correct_attendance_status(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # 1. Role check: admin, manager, or supervisor only
+    validators.validate_supervisor_role(current_user)
+
     att = db.query(models.AttendanceLog).filter(
         models.AttendanceLog.id == att_id
     ).first()
     if not att:
         raise HTTPException(status_code=404, detail="Attendance record not found")
+
+    # 2. Kindergarten scope: verify via the class that owns this attendance record
+    att_class = db.query(models.Class).filter(models.Class.id == att.class_id).first()
+    if not att_class:
+        raise HTTPException(status_code=404, detail="Class for attendance record not found")
+    validators.validate_kindergarten_scope(current_user, att_class.kindergarten_id)
 
     try:
         new_status = models.AttendanceStatus(payload.new_status)
@@ -390,6 +399,17 @@ def correct_attendance_status(
         att.notes = payload.notes
     db.commit()
     db.refresh(att)
+
+    # 3. Audit: record actor, previous and new status
+    validators.log_audit_action(
+        db=db,
+        user_id=current_user.id,
+        action="ATTENDANCE_STATUS_CORRECTED",
+        entity_type="AttendanceLog",
+        entity_id=att.id,
+        details=f"Status changed from {old_status} to {att.status.value} by user {current_user.id}",
+        sensitivity_level=2,
+    )
 
     return {"old_status": old_status, "new_status": att.status.value}
 

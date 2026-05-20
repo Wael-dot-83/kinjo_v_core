@@ -28,6 +28,7 @@ def _ulang(user) -> str:
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Children"])
+MAX_CHILD_EXPORT_ROWS = 10_000
 
 class ParentProfileUpdateRequest(BaseModel):
     first_name: Optional[str] = None
@@ -560,6 +561,7 @@ def export_children(
         db.query(models.Child)
         .join(models.EnrollmentApplication, models.Child.id == models.EnrollmentApplication.child_id)
         .filter(models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
+        .limit(MAX_CHILD_EXPORT_ROWS)
         .all()
     )
 
