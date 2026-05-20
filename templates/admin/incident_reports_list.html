@@ -471,7 +471,7 @@
         <div class="row mb-4">
             <div class="col-md-6">
                 <h6>${T('معلومات التقرير', 'Report Information')}</h6>
-                <table class="table table-sm">
+                <table class="table table-sm table-hover">
                     <tr><td>${T('النطاق:', 'Scope:')}</td><td>${getScopeDisplayName(report.scope_type, report.governorate || report.kindergarten?.name_ar)}</td></tr>
                     <tr><td>${T('الفترة:', 'Period:')}</td><td>${report.start_date} - ${report.end_date}</td></tr>
                     <tr><td>${T('تاريخ الإنشاء:', 'Created Date:')}</td><td>${new Date(report.created_at).toLocaleString(IS_EN ? 'en-US' : 'ar-JO')}</td></tr>
@@ -512,7 +512,7 @@
         <div class="mt-4">
             <h6>${T('الحوادث حسب الروضة', 'Incidents by Kindergarten')}</h6>
             <div class="table-responsive">
-                <table class="table table-sm">
+                <table class="table table-sm table-hover">
                     <thead>
                         <tr>
                             <th>${T('الروضة', 'Kindergarten')}</th>
