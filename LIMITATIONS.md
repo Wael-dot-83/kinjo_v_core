@@ -7,6 +7,7 @@ PDF generation for daily reports and analytics is not implemented in this releas
 **Why:** Server-side PDF rendering (e.g., WeasyPrint, Puppeteer) requires additional system dependencies and was deferred to avoid deployment complexity.
 
 **Alternatives available now:**
+
 - Browser print (`Ctrl+P` / `Cmd+P`) — all report and analytics pages have a `@media print` stylesheet that produces a clean single-column layout suitable for saving as PDF.
 - CSV export is available for attendance and enrollment data via the analytics endpoints.
 
@@ -16,7 +17,7 @@ PDF generation for daily reports and analytics is not implemented in this releas
 
 ## Real-time Notifications
 
-WebSocket push for KPI updates and alerts is implemented on `/ws/dashboard` with exponential back-off reconnection (1 s → 2 s → … → 30 s cap, ±10 % jitter, max 10 retries). A visible status pill in the dashboard header shows *Live / Reconnecting… / Live updates unavailable* so users are always informed of the connection state.
+WebSocket push for KPI updates and alerts is implemented on `/ws/dashboard` with exponential back-off reconnection (1 s → 2 s → … → 30 s cap, ±10 % jitter, max 10 retries). A visible status pill in the dashboard header shows _Live / Reconnecting… / Live updates unavailable_ so users are always informed of the connection state.
 
 The server endpoint `/ws/notify` (message/incident push) is **not yet implemented**. Until it is, the page polls `GET /api/messages?unread=true` on a 60-second interval as a fallback so counts stay roughly accurate.
 
@@ -31,6 +32,7 @@ Admin impersonation is restricted to manager accounts only. Impersonating a supe
 ## Preferred Language Choices
 
 Only Arabic (`ar`) and English (`en`) are accepted by `PUT /api/supervisor/settings`. Adding a new language requires:
+
 1. Adding the locale file under `static/i18n/<code>.json`
 2. Adding `<code>` to the `SUPPORTED_LANGUAGES` list in `.env` / `settings.py`
 3. Updating the `preferred_language` validator in `routers/supervisor.py`
@@ -47,11 +49,11 @@ Child and enrollment search uses SQL `LIKE` pattern matching. For datasets large
 
 Four tests in the suite were already failing before this sprint and are unrelated to changes made here:
 
-| Test | Reason |
-|------|--------|
-| `test_frontend_integration.py::test_enrollment_list` | Frontend route returns login redirect; auth cookie not set in test client |
-| `test_frontend_integration.py::test_kpi_dashboard` | Same auth redirect issue |
-| `test_frontend_integration.py::test_404_template` | `/nonexistent` returns 200 (catch-all route) instead of 404 |
+| Test                                                                                                  | Reason                                                                                              |
+| ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `test_frontend_integration.py::test_enrollment_list`                                                  | Frontend route returns login redirect; auth cookie not set in test client                           |
+| `test_frontend_integration.py::test_kpi_dashboard`                                                    | Same auth redirect issue                                                                            |
+| `test_frontend_integration.py::test_404_template`                                                     | `/nonexistent` returns 200 (catch-all route) instead of 404                                         |
 | `test_integration_comprehensive.py::TestEnrollmentWorkflowIntegration::test_full_enrollment_workflow` | `ImportError: cannot import name 'resolve_corresponding' from 'validators'` — missing function stub |
 
 These do not affect the 287 tests that pass, including all 28 tests introduced in this sprint.

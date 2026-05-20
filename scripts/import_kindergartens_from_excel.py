@@ -14,13 +14,12 @@ import argparse
 import csv
 import json
 import logging
-import os
 import re
 import sys
 import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -401,10 +400,8 @@ def find_excel_file(path_value: str) -> Path:
         if requested.suffix.lower() == ".xlxs":
             corrected = requested.with_suffix(".xlsx")
             if corrected.exists():
-                raise FileNotFoundError(
-                    f"Requested file uses .xlxs but .xlsx exists: {corrected}. "
-                    "Please rerun with the corrected path."
-                )
+                LOGGER.warning("Auto-correcting .xlxs extension to .xlsx: %s", corrected)
+                return corrected
         return requested
 
     search_dir = requested.parent if requested.parent.exists() else Path.cwd()
@@ -438,7 +435,7 @@ def select_sheet(excel: pd.ExcelFile, requested_sheet: str | None = None) -> tup
         for idx, row in preview.iterrows():
             mapped = [map_column(value) for value in row.tolist()]
             score = len([field_name for field_name in mapped if field_name])
-            rows = len(pd.read_excel(excel, sheet_name=sheet_name, header=idx).dropna(how="all"))
+            rows = len(pd.read_excel(excel, sheet_name=sheet_name, header=idx, usecols=[0]).dropna(how="all"))
             if score > best_score or (score == best_score and rows > best_rows):
                 best_sheet = sheet_name
                 best_header = int(idx)
@@ -615,6 +612,24 @@ def make_candidate_from_prepared(row: PreparedRow) -> Candidate:
     )
 
 
+def _add_candidate_to_indexes(indexes: dict[str, dict[Any, list[Candidate]]], candidate: Candidate) -> None:
+    def add(index_name: str, key: Any) -> None:
+        if key is None or key == "" or key == ("", "") or key == ("", "", ""):
+            return
+        indexes[index_name].setdefault(key, []).append(candidate)
+
+    add("id", candidate.match.get("id"))
+    add("license_number", candidate.match.get("license_number"))
+    add("name_ar_governorate", (candidate.match.get("name_ar"), candidate.match.get("governorate")))
+    add(
+        "name_ar_city_area",
+        (candidate.match.get("name_ar"), candidate.match.get("city"), candidate.match.get("area")),
+    )
+    add("name_ar_address", (candidate.match.get("name_ar"), candidate.match.get("address_line")))
+    add("contact_phone", candidate.match.get("contact_phone"))
+    add("name_en_governorate", (candidate.match.get("name_en"), candidate.match.get("governorate")))
+
+
 def build_indexes(candidates: list[Candidate]) -> dict[str, dict[Any, list[Candidate]]]:
     indexes: dict[str, dict[Any, list[Candidate]]] = {
         "id": {},
@@ -625,24 +640,8 @@ def build_indexes(candidates: list[Candidate]) -> dict[str, dict[Any, list[Candi
         "contact_phone": {},
         "name_en_governorate": {},
     }
-
-    def add(index_name: str, key: Any, candidate: Candidate) -> None:
-        if key is None or key == "" or key == ("", "") or key == ("", "", ""):
-            return
-        indexes[index_name].setdefault(key, []).append(candidate)
-
     for candidate in candidates:
-        add("id", candidate.match.get("id"), candidate)
-        add("license_number", candidate.match.get("license_number"), candidate)
-        add("name_ar_governorate", (candidate.match.get("name_ar"), candidate.match.get("governorate")), candidate)
-        add(
-            "name_ar_city_area",
-            (candidate.match.get("name_ar"), candidate.match.get("city"), candidate.match.get("area")),
-            candidate,
-        )
-        add("name_ar_address", (candidate.match.get("name_ar"), candidate.match.get("address_line")), candidate)
-        add("contact_phone", candidate.match.get("contact_phone"), candidate)
-        add("name_en_governorate", (candidate.match.get("name_en"), candidate.match.get("governorate")), candidate)
+        _add_candidate_to_indexes(indexes, candidate)
     return indexes
 
 
@@ -723,6 +722,7 @@ def build_import_plan(
 
     existing_candidates = [candidate_from_kindergarten(kg) for kg in db.query(models.Kindergarten).all()]
     candidates = existing_candidates.copy()
+    indexes = build_indexes(candidates)
     matched_existing_rows: dict[int, int] = {}
 
     for dataframe_index, row in df.iterrows():
@@ -737,7 +737,6 @@ def build_import_plan(
             continue
 
         assert prepared is not None
-        indexes = build_indexes(candidates)
         rule_name, matches = find_match(prepared, indexes)
         unique_matches = list({match.key: match for match in matches}.values())
 
@@ -825,7 +824,11 @@ def build_import_plan(
                 "extra": prepared.extra,
             }
         )
-        candidates.append(make_candidate_from_prepared(PreparedRow(excel_row, prepared.raw, new_payload, prepared.match, prepared.extra)))
+        new_candidate = make_candidate_from_prepared(
+            PreparedRow(excel_row, prepared.raw, new_payload, prepared.match, prepared.extra)
+        )
+        candidates.append(new_candidate)
+        _add_candidate_to_indexes(indexes, new_candidate)
 
     plan.duplicate_checks = duplicate_check_summary(db)
     return plan
