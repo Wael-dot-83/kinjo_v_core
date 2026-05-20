@@ -4,11 +4,7 @@
  */
 
 const AUTH_CONFIG = {
-  tokenKey: "kinjo_token",
-  tokenTypeKey: "kinjo_token_type",
   userKey: "kinjo_user",
-  mfaTicketKey: "kinjo_mfa_ticket",
-  mfaModeKey: "kinjo_mfa_mode",
   loginEndpoint: "/token",
   logoutEndpoint: "/api/auth/logout",
   refreshEndpoint: "/api/auth/refresh",
@@ -20,6 +16,10 @@ const AUTH_CONFIG = {
 
 const CSRF_CONFIG = {
   cookieName: "kinjo_csrf_token",
+};
+
+const inMemoryMfaState = {
+  mode: null,
 };
 
 function currentLanguage() {
@@ -40,7 +40,10 @@ function safeJsonParse(value, fallback = null) {
 }
 
 function readMetaContent(name) {
-  return document.querySelector(`meta[name="${name}"]`)?.getAttribute("content") || "";
+  return (
+    document.querySelector(`meta[name="${name}"]`)?.getAttribute("content") ||
+    ""
+  );
 }
 
 function readCsrfToken() {
@@ -77,15 +80,17 @@ class AuthStorage {
   }
 
   static getActiveStorage() {
-    if (localStorage.getItem(AUTH_CONFIG.tokenKey)) {
+    if (localStorage.getItem(AUTH_CONFIG.userKey)) {
       return localStorage;
     }
     return sessionStorage;
   }
 
-  setToken(token, tokenType = "bearer") {
-    this.storage.setItem(AUTH_CONFIG.tokenKey, token);
-    this.storage.setItem(AUTH_CONFIG.tokenTypeKey, tokenType);
+  setToken(_token, _tokenType = "bearer") {
+    // Token storage in web storage is intentionally disabled.
+    // The backend sets an HttpOnly 'kinjo_session' cookie on login/refresh;
+    // that cookie is sent automatically by the browser with every same-origin request.
+    // Storing the JWT in localStorage or sessionStorage would expose it to XSS.
   }
 
   setUser(user) {
@@ -93,18 +98,14 @@ class AuthStorage {
   }
 
   static getToken() {
-    return (
-      localStorage.getItem(AUTH_CONFIG.tokenKey) ||
-      sessionStorage.getItem(AUTH_CONFIG.tokenKey)
-    );
+    // The real session token lives in the HttpOnly 'kinjo_session' cookie (not readable
+    // from JS). Return the CSRF cookie value as a truthy sentinel so callers that test
+    // `if (getToken())` still work correctly without exposing the JWT to JS.
+    return AuthStorage.getCookie(CSRF_CONFIG.cookieName) || null;
   }
 
   static getTokenType() {
-    return (
-      localStorage.getItem(AUTH_CONFIG.tokenTypeKey) ||
-      sessionStorage.getItem(AUTH_CONFIG.tokenTypeKey) ||
-      "bearer"
-    );
+    return "bearer";
   }
 
   static getUser() {
@@ -124,50 +125,46 @@ class AuthStorage {
     return null;
   }
 
-  static setPendingMfa(ticket, mode) {
-    sessionStorage.setItem(AUTH_CONFIG.mfaTicketKey, ticket);
-    sessionStorage.setItem(AUTH_CONFIG.mfaModeKey, mode);
-  }
-
-  static getMfaTicket() {
-    return sessionStorage.getItem(AUTH_CONFIG.mfaTicketKey);
+  static setPendingMfaMode(mode) {
+    inMemoryMfaState.mode = mode || null;
   }
 
   static getMfaMode() {
-    return sessionStorage.getItem(AUTH_CONFIG.mfaModeKey);
+    return inMemoryMfaState.mode;
   }
 
   static clearPendingMfa() {
-    sessionStorage.removeItem(AUTH_CONFIG.mfaTicketKey);
-    sessionStorage.removeItem(AUTH_CONFIG.mfaModeKey);
+    inMemoryMfaState.mode = null;
   }
 
   static clearAll() {
+    // Remove any user profile data stored in web storage.
     [localStorage, sessionStorage].forEach((storage) => {
-      storage.removeItem(AUTH_CONFIG.tokenKey);
-      storage.removeItem(AUTH_CONFIG.tokenTypeKey);
       storage.removeItem(AUTH_CONFIG.userKey);
     });
     AuthStorage.clearPendingMfa();
-    document.cookie = "kinjo_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie = "kinjo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    // Expire any legacy plaintext cookie that older code may have set.
+    document.cookie =
+      "kinjo_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    // The HttpOnly kinjo_session and kinjo_csrf_token cookies are cleared by the
+    // server /api/auth/logout endpoint via Set-Cookie headers.
   }
 
   static isAuthenticated() {
-    return Boolean(AuthStorage.getToken());
+    // The HttpOnly session cookie is unreadable from JS; use the non-HttpOnly
+    // CSRF cookie as the JS-visible signal that an active session exists.
+    return Boolean(AuthStorage.getCookie(CSRF_CONFIG.cookieName));
   }
 
   static async ensureServerSession() {
-    const token = AuthStorage.getToken();
-    if (!token) {
+    if (!AuthStorage.isAuthenticated()) {
       return false;
     }
     try {
+      // The HttpOnly kinjo_session cookie is sent automatically by the browser.
+      // No Authorization header is needed or safe to use here.
       const response = await fetch(AUTH_CONFIG.refreshEndpoint, {
         method: "POST",
-        headers: {
-          Authorization: `${AuthStorage.getTokenType()} ${token}`,
-        },
       });
       return response.ok;
     } catch {
@@ -185,23 +182,18 @@ class HttpInterceptor {
 
     const originalFetch = window.fetch.bind(window);
     window.fetch = async function patchedFetch(url, options = {}) {
-      const token = AuthStorage.getToken();
-      const tokenType = AuthStorage.getTokenType();
       const method = (options.method || "GET").toUpperCase();
       const requestUrl = typeof url === "string" ? url : url?.url || "";
-      const noAuthEndpoints = ["/token", "/api/auth/login"];
-      const isLoginEndpoint = noAuthEndpoints.some((endpoint) =>
-        requestUrl.includes(endpoint),
-      );
 
       options.headers = {
         Accept: "application/json",
         ...options.headers,
       };
 
-      if (token && !isLoginEndpoint) {
-        options.headers.Authorization = `${tokenType} ${token}`;
-      }
+      // Authorization header removed: session is carried by the HttpOnly kinjo_session
+      // cookie which the browser sends automatically with every same-origin request.
+      // Do not inject the JWT into an Authorization header; that would reintroduce
+      // XSS-token-theft exposure.
 
       if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
         const csrfToken = readCsrfToken();
@@ -211,7 +203,12 @@ class HttpInterceptor {
       }
 
       const response = await originalFetch(url, options);
-      if (response.status === 401 && !requestUrl.includes(AUTH_CONFIG.mfaVerifyEndpoint)) {
+      if (
+        response.status === 401 &&
+        !requestUrl.includes(AUTH_CONFIG.mfaVerifyEndpoint)
+      ) {
+        // Server has invalidated the session (cookie expired/revoked).
+        // Clear any local state and redirect to login.
         AuthStorage.clearAll();
         if (!window.location.pathname.startsWith("/login")) {
           window.location.href = "/login?expired=true";
@@ -260,7 +257,9 @@ class AuthGuard {
   }
 
   static getSafeRedirectFromQuery() {
-    const redirectUrl = new URLSearchParams(window.location.search).get("redirect");
+    const redirectUrl = new URLSearchParams(window.location.search).get(
+      "redirect",
+    );
     if (!redirectUrl) {
       return null;
     }
@@ -301,17 +300,23 @@ class AuthGuard {
       }
       if (AuthStorage.isAuthenticated() && currentPath === "/login") {
         const hasCookie = await AuthStorage.ensureServerSession();
-        const verifiedUser = await this.verifySession();
-        if (verifiedUser && hasCookie) {
-          const redirectUrl = this.getSafeRedirectFromQuery();
-          if (redirectUrl) {
-            window.location.href = redirectUrl;
-          } else {
-            this.redirectToDashboard(verifiedUser);
+        if (hasCookie) {
+          const verifiedUser = await this.verifySession();
+          if (verifiedUser) {
+            const redirectUrl = this.getSafeRedirectFromQuery();
+            if (redirectUrl) {
+              window.location.href = redirectUrl;
+            } else {
+              this.redirectToDashboard(verifiedUser);
+            }
+            return false;
           }
-          return false;
         }
         AuthStorage.clearAll();
+      }
+      // Not redirecting — reveal the page now
+      if (typeof window.__kinjoRevealPage === "function") {
+        window.__kinjoRevealPage();
       }
       return true;
     }
@@ -335,16 +340,21 @@ function persistLanguage(userLang) {
 }
 
 function persistAuthenticatedSession(data, rememberMe = false) {
-  if (!data || !data.access_token) {
+  if (!data) {
     return;
   }
+  // The backend sets the HttpOnly kinjo_session cookie in its response headers.
+  // We intentionally do NOT write the access_token to web storage here.
   const storage = new AuthStorage(rememberMe);
-  storage.setToken(data.access_token, data.token_type || "bearer");
-  storage.setUser(data.user);
+  if (data.user) {
+    storage.setUser(data.user);
+  }
   persistLanguage(data.user_lang);
   AuthStorage.clearPendingMfa();
+  // Legacy: if a window.api wrapper exists, signal that authentication succeeded
+  // but do not hand it a raw JWT string anymore.
   if (window.api && typeof window.api.setToken === "function") {
-    window.api.setToken(data.access_token);
+    window.api.setToken(null);
   }
 }
 
@@ -377,39 +387,42 @@ class AuthService {
     return data;
   }
 
-  static async beginMfaSetup(ticket) {
+  static async beginMfaSetup() {
     const response = await fetch(AUTH_CONFIG.mfaSetupEndpoint, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${ticket}`,
-      },
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.detail || t("تعذر تهيئة المصادقة الثنائية.", "Unable to start MFA setup."));
+      throw new Error(
+        data.detail ||
+          t("تعذر تهيئة المصادقة الثنائية.", "Unable to start MFA setup."),
+      );
     }
     return data;
   }
 
-  static async verifyMfa(ticket, code) {
+  static async verifyMfa(code) {
     const response = await fetch(AUTH_CONFIG.mfaVerifyEndpoint, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${ticket}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ code }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.detail || t("رمز التحقق غير صحيح.", "Invalid verification code."));
+      throw new Error(
+        data.detail || t("رمز التحقق غير صحيح.", "Invalid verification code."),
+      );
     }
     return data;
   }
 
   static async logout() {
     try {
-      await fetch(AUTH_CONFIG.logoutEndpoint, { method: "POST" }).catch(() => {});
+      await fetch(AUTH_CONFIG.logoutEndpoint, { method: "POST" }).catch(
+        () => {},
+      );
     } finally {
       AuthStorage.clearAll();
       if (window.api && typeof window.api.setToken === "function") {
@@ -422,24 +435,27 @@ class AuthService {
   static async getCurrentUser() {
     const response = await fetch(AUTH_CONFIG.meEndpoint);
     if (!response.ok) {
-      throw new Error(t("تعذر جلب بيانات المستخدم.", "Unable to fetch user profile."));
+      throw new Error(
+        t("تعذر جلب بيانات المستخدم.", "Unable to fetch user profile."),
+      );
     }
     return response.json();
   }
 
   static async refreshToken() {
     try {
-      const response = await fetch(AUTH_CONFIG.refreshEndpoint, { method: "POST" });
+      // The backend renews the HttpOnly cookie in its response Set-Cookie headers.
+      // We only need to update the cached user profile if the server returns one.
+      const response = await fetch(AUTH_CONFIG.refreshEndpoint, {
+        method: "POST",
+      });
       if (!response.ok) {
         return false;
       }
       const data = await response.json().catch(() => ({}));
-      if (!data.access_token) {
-        return false;
-      }
-      const storage = AuthStorage.getActiveStorage();
-      storage.setItem(AUTH_CONFIG.tokenKey, data.access_token);
+      // Update the cached user profile in sessionStorage (non-sensitive metadata only).
       if (data.user) {
+        const storage = AuthStorage.getActiveStorage();
         storage.setItem(AUTH_CONFIG.userKey, JSON.stringify(data.user));
       }
       return true;
@@ -493,11 +509,11 @@ async function handleLogin(event) {
     persistLanguage(data.user_lang);
 
     if (data.mfa_required) {
-      AuthStorage.setPendingMfa(
-        data.mfa_ticket,
+      AuthStorage.setPendingMfaMode(
         data.mfa_setup_required ? "setup" : "challenge",
       );
-      window.location.href = data.mfa_redirect || `${AUTH_CONFIG.mfaSetupPage}?mode=setup`;
+      window.location.href =
+        data.mfa_redirect || `${AUTH_CONFIG.mfaSetupPage}?mode=setup`;
       return;
     }
 
@@ -535,8 +551,10 @@ async function initMfaPage() {
     return;
   }
 
-  const ticket = AuthStorage.getMfaTicket();
-  const mode = AuthStorage.getMfaMode() || new URLSearchParams(window.location.search).get("mode") || "setup";
+  const mode =
+    AuthStorage.getMfaMode() ||
+    new URLSearchParams(window.location.search).get("mode") ||
+    "setup";
   const errorBox = document.getElementById("mfaError");
   const errorText = document.getElementById("mfaErrorMessage");
   const form = document.getElementById("mfaVerifyForm");
@@ -547,15 +565,13 @@ async function initMfaPage() {
   const heading = document.getElementById("mfaHeading");
   const intro = document.getElementById("mfaIntro");
 
-  if (!ticket) {
-    window.location.href = "/login";
-    return;
-  }
-
   if (mode === "challenge") {
     setupPanel?.classList.add("d-none");
     if (heading) {
-      heading.textContent = t("أدخل رمز التحقق", "Enter your verification code");
+      heading.textContent = t(
+        "أدخل رمز التحقق",
+        "Enter your verification code",
+      );
     }
     if (intro) {
       intro.textContent = t(
@@ -565,7 +581,7 @@ async function initMfaPage() {
     }
   } else {
     try {
-      const setupData = await AuthService.beginMfaSetup(ticket);
+      const setupData = await AuthService.beginMfaSetup();
       const spinner = document.getElementById("mfaQrSpinner");
       if (qrImage) {
         qrImage.src = setupData.qr_code_data_url;
@@ -597,7 +613,7 @@ async function initMfaPage() {
     }
     errorBox?.classList.add("d-none");
     try {
-      const data = await AuthService.verifyMfa(ticket, code);
+      const data = await AuthService.verifyMfa(code);
       persistAuthenticatedSession(data, false);
       if (data.user?.must_change_password) {
         window.location.href = "/change-password";
@@ -617,7 +633,11 @@ function handleLogout(event) {
   if (event) {
     event.preventDefault();
   }
-  if (confirm(t("هل أنت متأكد من تسجيل الخروج؟", "Are you sure you want to sign out?"))) {
+  if (
+    confirm(
+      t("هل أنت متأكد من تسجيل الخروج؟", "Are you sure you want to sign out?"),
+    )
+  ) {
     AuthService.logout();
   }
 }
@@ -664,7 +684,9 @@ async function initAuth() {
   if (loginForm) {
     loginForm.addEventListener("submit", handleLogin);
     if (new URLSearchParams(window.location.search).get("expired") === "true") {
-      document.getElementById("sessionExpiredAlert")?.classList.remove("d-none");
+      document
+        .getElementById("sessionExpiredAlert")
+        ?.classList.remove("d-none");
     }
   }
 
@@ -675,9 +697,12 @@ async function initAuth() {
     if (user) {
       updateUserUI(user);
     }
-    window.setInterval(() => {
-      AuthService.refreshToken().catch(() => {});
-    }, 25 * 60 * 1000);
+    window.setInterval(
+      () => {
+        AuthService.refreshToken().catch(() => {});
+      },
+      25 * 60 * 1000,
+    );
   }
 }
 

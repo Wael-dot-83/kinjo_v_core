@@ -3,10 +3,10 @@
 {% block title %}{% if ui_lang == 'en' %}Health and Safety{% else %}الصحة والسلامة{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2 mb-1">
-            <i class="bi bi-shield-check me-2 text-danger"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-shield-check text-danger me-2" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Health & Safety{% else %}الصحة والسلامة{% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
@@ -16,9 +16,9 @@
             </ol>
         </nav>
     </div>
-    <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="page-header-actions">
         <a href="/safety/incidents/new" class="btn btn-danger">
-            <i class="bi bi-plus-lg me-1"></i>
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Report Incident{% else %}تسجيل حادث{% endif %}
         </a>
     </div>

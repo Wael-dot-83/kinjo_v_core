@@ -16,21 +16,21 @@ show_export=False
 ) }}
 {% endset %}
 {# Note: drilldownTitle and breadcrumbDimension IDs are set via JS, so we keep a custom header here #}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2" id="drilldownTitle">
-            <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
+        <h1 class="page-header-title" id="drilldownTitle">
+            <i class="bi bi-graph-up-arrow text-primary me-2" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
                 <li class="breadcrumb-item"><a href="/admin/analytics">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a></li>
                 <li class="breadcrumb-item active" id="breadcrumbDimension">...</li>
             </ol>
         </nav>
     </div>
-    <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="page-header-actions">
         {{ filter_actions }}
     </div>
 </div>

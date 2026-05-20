@@ -30,15 +30,15 @@
         <div class="card-body">
             <div class="row g-3 align-items-end">
                 <div class="col-lg-2 col-md-4">
-                    <label class="form-label">{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}</label>
+                    <label for="periodStart" class="form-label">{% if ui_lang == 'en' %}Period Start{% else %}بداية الفترة{% endif %}</label>
                     <input id="periodStart" type="date" class="form-control">
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label class="form-label">{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}</label>
+                    <label for="periodEnd" class="form-label">{% if ui_lang == 'en' %}Period End{% else %}نهاية الفترة{% endif %}</label>
                     <input id="periodEnd" type="date" class="form-control">
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <label class="form-label">{% if ui_lang == 'en' %}Comparison Level{% else %}مستوى المقارنة{% endif %}</label>
+                    <label for="levelSelect" class="form-label">{% if ui_lang == 'en' %}Comparison Level{% else %}مستوى المقارنة{% endif %}</label>
                     <select id="levelSelect" class="form-select"></select>
                 </div>
                 <div class="col-lg-2 col-md-4">

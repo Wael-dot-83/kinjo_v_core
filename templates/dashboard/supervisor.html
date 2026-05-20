@@ -197,14 +197,10 @@
             : (document.documentElement.lang === 'en' ? 'en-US' : 'ar-JO'));
 
     function authHeaders() {
-        const headers = { 'Content-Type': 'application/json' };
-        const token = (window.AuthService && typeof window.AuthService.getToken === 'function')
-            ? window.AuthService.getToken()
-            : (localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token'));
-        if (token) {
-            headers.Authorization = `Bearer ${token}`;
-        }
-        return headers;
+        // Session is carried by the HttpOnly kinjo_session cookie sent automatically
+        // by the browser. Never put the CSRF token (or any non-JWT value) into an
+        // Authorization header — the server would reject it with 401.
+        return { 'Content-Type': 'application/json' };
     }
 
     function escapeHtml(value) {

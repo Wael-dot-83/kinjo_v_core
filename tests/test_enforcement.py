@@ -216,7 +216,7 @@ class TestEnrollmentReviewEnforcement:
             headers=auth_headers_manager,
         )
         assert resp.status_code == 400
-        assert "سبب الرفض" in resp.json().get("detail", "")
+        assert "Rejection reason is required" in resp.json().get("detail", "")
 
     def test_reject_with_reason_succeeds(
         self, client, auth_headers_manager, pending_enrollment

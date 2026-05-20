@@ -320,7 +320,7 @@
                                 <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
                             </div>
                             <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}</p>
-                            <h2 class="display-5 fw-bold mb-3" id="presentTodayValue">--</h2>
+                            <h2 class="display-5 fw-bold mb-3" id="presentTodayValue"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>
                             <div class="mb-4">
                                 <div class="progress" style="height: 6px;">
                                     <div class="progress-bar bg-success" role="progressbar" style="width: 85%"
@@ -346,7 +346,7 @@
                                 <small class="text-muted">{% if ui_lang == 'en' %}This Month{% else %}هذا الشهر{% endif %}</small>
                             </div>
                             <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Pending Enrollment Requests{% else %}طلبات تسجيل معلقة{% endif %}</p>
-                            <h2 class="display-5 fw-bold mb-4" id="pendingEnrollmentsValue">--</h2>
+                            <h2 class="display-5 fw-bold mb-4" id="pendingEnrollmentsValue"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>
                             <a href="/enrollments" class="btn btn-warning w-100 rounded-pill py-2 fw-bold">
                                 {% if ui_lang == 'en' %}Review Requests{% else %}مراجعة الطلبات{% endif %} <i class="bi bi-arrow-left ms-1"></i>
                             </a>
@@ -364,7 +364,7 @@
                                 <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
                             </div>
                             <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Pending Daily Reports{% else %}التقارير اليومية المعلقة{% endif %}</p>
-                            <h2 class="display-5 fw-bold mb-4" id="pendingReportsValue">--</h2>
+                            <h2 class="display-5 fw-bold mb-4" id="pendingReportsValue"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>
                             <a href="/daily-reports" class="btn btn-info text-white w-100 rounded-pill py-2 fw-bold">
                                 {% if ui_lang == 'en' %}Review Reports{% else %}مراجعة التقارير{% endif %} <i class="bi bi-arrow-left ms-1"></i>
                             </a>
@@ -382,7 +382,7 @@
                                 <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
                             </div>
                             <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Reported Incidents{% else %}الحوادث المبلغ عنها{% endif %}</p>
-                            <h2 class="display-5 fw-bold mb-4" id="incidentsTodayValue">--</h2>
+                            <h2 class="display-5 fw-bold mb-4" id="incidentsTodayValue"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>
                             <a href="/safety" class="btn btn-danger w-100 rounded-pill py-2 fw-bold">
                                 {% if ui_lang == 'en' %}Safety Management{% else %}إدارة السلامة{% endif %} <i class="bi bi-arrow-left ms-1"></i>
                             </a>
@@ -409,25 +409,25 @@
                 <div class="row text-center g-4">
                     <div class="col-6 col-md-3">
                         <div class="system-stat">
-                            <div class="system-value text-primary" id="totalKindergartens">--</div>
+                            <div class="system-value text-primary" id="totalKindergartens"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;</span></div>
                             <div class="system-label">{% if ui_lang == 'en' %}Total Kindergartens{% else %}إجمالي الروضات{% endif %}</div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="system-stat">
-                            <div class="system-value text-success" id="activeKindergartens">--</div>
+                            <div class="system-value text-success" id="activeKindergartens"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;</span></div>
                             <div class="system-label">{% if ui_lang == 'en' %}Active Kindergartens{% else %}الروضات النشطة{% endif %}</div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="system-stat">
-                            <div class="system-value text-info" id="totalUsers">--</div>
+                            <div class="system-value text-info" id="totalUsers"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;</span></div>
                             <div class="system-label">{% if ui_lang == 'en' %}Total Users{% else %}إجمالي المستخدمين{% endif %}</div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="system-stat">
-                            <div class="system-value text-warning" id="systemHealth">--</div>
+                            <div class="system-value text-warning" id="systemHealth"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;</span></div>
                             <div class="system-label">{% if ui_lang == 'en' %}System Health{% else %}حالة النظام{% endif %}</div>
                         </div>
                     </div>
@@ -1558,8 +1558,8 @@
     // Custom date range picker
     function showCustomDateRange() {
         const html = `<div class="p-3 text-start">
-            <div class="mb-3"><label class="form-label">${dashboardInlineText('common.from_date', 'من تاريخ', 'From date')}</label><input type="date" class="form-control" id="customDateFrom"></div>
-            <div class="mb-3"><label class="form-label">${dashboardInlineText('common.to_date', 'إلى تاريخ', 'To date')}</label><input type="date" class="form-control" id="customDateTo"></div>
+            <div class="mb-3"><label for="customDateFrom" class="form-label">${dashboardInlineText('common.from_date', 'من تاريخ', 'From date')}</label><input type="date" class="form-control" id="customDateFrom"></div>
+            <div class="mb-3"><label for="customDateTo" class="form-label">${dashboardInlineText('common.to_date', 'إلى تاريخ', 'To date')}</label><input type="date" class="form-control" id="customDateTo"></div>
         </div>`;
         if (typeof Swal !== 'undefined') {
             Swal.fire({

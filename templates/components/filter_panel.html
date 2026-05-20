@@ -3,40 +3,40 @@
     <div class="card-body p-4">
         <div class="row g-3 align-items-end">
             <div class="col-lg-3">
-                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
+                <label for="periodStart" class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية {% endif %}</label>
                 <div class="input-group">
-                    <input type="date" id="periodStart" class="form-control border-end-0" />
+                    <input type="date" id="periodStart" class="form-control border-end-0" aria-label="{% if ui_lang == 'en' %}From date{% else %}من تاريخ{% endif %}" />
                     <span class="input-group-text bg-white border-start-0 border-end-0">{% if ui_lang == 'en' %}to{% else %}إلى{% endif %}</span>
-                    <input type="date" id="periodEnd" class="form-control border-start-0" />
+                    <input type="date" id="periodEnd" class="form-control border-start-0" aria-label="{% if ui_lang == 'en' %}To date{% else %}إلى تاريخ{% endif %}" />
                 </div>
             </div>
             <div class="col-lg-2" id="kgFilterCol">
-                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                <label for="kindergartenSelect" class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
                 <select id="kindergartenSelect" class="form-select">
                     <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
                 </select>
                 <div id="kindergartenHint" class="form-text text-muted"></div>
             </div>
             <div class="col-lg-2" id="govFilterCol">
-                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                <label for="governorateSelect" class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
                 <select id="governorateSelect" class="form-select">
                     <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
                 </select>
             </div>
             <div class="col-lg-2" id="cityFilterCol">
-                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
+                <label for="citySelect" class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
                 <select id="citySelect" class="form-select">
                     <option value="">{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}</option>
                 </select>
             </div>
             <div class="col-lg-2" id="areaFilterCol">
-                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</label>
+                <label for="areaSelect" class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</label>
                 <select id="areaSelect" class="form-select">
                     <option value="">{% if ui_lang == 'en' %}All Areas{% else %}جميع المناطق{% endif %}</option>
                 </select>
             </div>
             <div class="col-lg-1">
-                <label class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Frequency{% else %}الدورية{% endif %}</label>
+                <label for="granularitySelect" class="form-label fw-bold text-dark">{% if ui_lang == 'en' %}Frequency{% else %}الدورية{% endif %}</label>
                 <select id="granularitySelect" class="form-select">
                     <option value="daily">{% if ui_lang == 'en' %}Daily{% else %}يومي{% endif %}</option>
                     <option value="weekly" selected>{% if ui_lang == 'en' %}Weekly{% else %}أسبوعي{% endif %}</option>

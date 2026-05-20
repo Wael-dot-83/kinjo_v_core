@@ -4,6 +4,10 @@
   if (window.__kinjoPageLoadTimerInstalled) return;
   window.__kinjoPageLoadTimerInstalled = true;
 
+  // Auth pages are simple forms — no need for a loading timer.
+  const _authPages = ["/login", "/register", "/mfa", "/change-password", "/forgot-password", "/reset-password"];
+  if (_authPages.some(function (p) { return window.location.pathname.startsWith(p); })) return;
+
   const QUIET_PERIOD_MS = 350;
   const SHOW_DELAY_MS = 180;
   const REFRESH_MS = 100;
@@ -95,7 +99,12 @@
         line-height: 1;
         box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
         backdrop-filter: blur(10px);
-        transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        transition: background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.5s ease;
+        pointer-events: none;
+        opacity: 1;
+      }
+      .page-load-timer.is-hidden {
+        opacity: 0;
         pointer-events: none;
       }
       .page-load-timer__bar {
@@ -247,6 +256,9 @@
     state.lastActivity = startAt;
     state.finished = false;
     state.progress = 0.08;
+    // Re-show badge when a new load cycle starts.
+    const root = document.getElementById("pageLoadTimer");
+    if (root) root.classList.remove("is-hidden");
     updateElement();
   }
 
@@ -259,6 +271,12 @@
     state.finished = true;
     state.progress = 1;
     updateElement();
+
+    // Auto-hide: show "done" briefly, then fade out entirely.
+    window.setTimeout(function () {
+      const root = document.getElementById("pageLoadTimer");
+      if (root) root.classList.add("is-hidden");
+    }, 1400);
   }
 
   function startPendingWork(setter) {

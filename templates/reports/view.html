@@ -3,21 +3,21 @@
 {% block title %}{% if ui_lang == 'en' %}Daily Report Details{% else %}تفاصيل التقرير اليومي{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-journal-check me-2 text-primary"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-journal-check text-primary me-2" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Daily Report: {{ report.child_name }}{% else %}تقرير يومي: {{ report.child_name }}{% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
                 <li class="breadcrumb-item"><a href="/reports">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</a></li>
                 <li class="breadcrumb-item active">{{ report.date }}</li>
             </ol>
         </nav>
     </div>
-    <div class="btn-toolbar">
+    <div class="page-header-actions">
         <button class="btn btn-outline-primary" onclick="window.print()">
             <i class="bi bi-printer me-2"></i>{% if ui_lang == 'en' %}Print{% else %}طباعة{% endif %}
         </button>

@@ -181,7 +181,6 @@ def create_kindergarten(
             status_code=400,
             detail=DUPLICATE_ERROR_MAP.get(duplicate_field, {"code": "error_duplicate_entry", "message": "Duplicate record found."})
         )
-        raise HTTPException(status_code=400, detail="روضة بنفس الاسم أو رقم الهاتف أو البريد الإلكتروني موجودة بالفعل")
 
     kindergarten = models.Kindergarten(
         **kindergarten_data.model_dump(),
@@ -350,7 +349,7 @@ def delete_kindergarten(
     ).first()
 
     if not kindergarten:
-        raise HTTPException(status_code=404, detail="الروضة غير موجودة")
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
 
     # Check permissions
     if current_user.role != models.UserRole.ADMIN:
@@ -358,7 +357,7 @@ def delete_kindergarten(
             # Managers can archive their own kindergarten
             pass
         else:
-            raise HTTPException(status_code=403, detail="غير مصرح لك بحذف هذه الروضة")
+            raise HTTPException(status_code=403, detail="Access denied.")
 
     # Check for dependent records
     active_children = db.query(models.EnrollmentApplication).filter(
@@ -380,18 +379,18 @@ def delete_kindergarten(
         if current_user.role != models.UserRole.ADMIN:
             raise HTTPException(
                 status_code=409,
-                detail="لا يمكن حذف الروضة لأنها تحتوي على بيانات نشطة. يرجى أرشفتها بدلاً من ذلك."
+                detail="Cannot delete kindergarten with active data. Please archive it instead."
             )
         # Admin can force archive even with dependencies
         kindergarten.status = models.KindergartenStatus.INACTIVE
         action = "archived"
-        message = "تم أرشفة الروضة بنجاح"
+        message = "Kindergarten archived successfully"
         audit_action = "KINDERGARTEN_ARCHIVED"
     else:
         # No dependencies - allow hard delete
         db.delete(kindergarten)
         action = "deleted"
-        message = "تم حذف الروضة نهائياً"
+        message = "Kindergarten permanently deleted"
         audit_action = "KINDERGARTEN_DELETED"
 
     db.commit()
@@ -425,7 +424,7 @@ def archive_kindergarten(
     ).first()
 
     if not kindergarten:
-        raise HTTPException(status_code=404, detail="الروضة غير موجودة")
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
 
     # Check permissions
     if current_user.role != models.UserRole.ADMIN:
@@ -433,10 +432,10 @@ def archive_kindergarten(
             # Managers can archive their own kindergarten
             pass
         else:
-            raise HTTPException(status_code=403, detail="غير مصرح لك بأرشفة هذه الروضة")
+            raise HTTPException(status_code=403, detail="Access denied.")
 
     if kindergarten.status == models.KindergartenStatus.INACTIVE:
-        raise HTTPException(status_code=400, detail="الروضة مأرشفة بالفعل")
+        raise HTTPException(status_code=400, detail="Kindergarten is already archived.")
 
     kindergarten.status = models.KindergartenStatus.INACTIVE
     db.commit()
@@ -452,7 +451,7 @@ def archive_kindergarten(
 
     return {
         "action": "archived",
-        "message": "تم أرشفة الروضة بنجاح",
+        "message": "Kindergarten archived successfully",
         "kindergarten_id": kindergarten_id
     }
 
@@ -465,17 +464,17 @@ def restore_kindergarten(
 ):
     """Restore archived kindergarten"""
     if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="فقط المدير يمكنه استعادة الروضات المأرشفة")
+        raise HTTPException(status_code=403, detail="Admin access only")
 
     kindergarten = db.query(models.Kindergarten).filter(
         models.Kindergarten.id == kindergarten_id
     ).first()
 
     if not kindergarten:
-        raise HTTPException(status_code=404, detail="الروضة غير موجودة")
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
 
     if kindergarten.status != models.KindergartenStatus.INACTIVE:
-        raise HTTPException(status_code=400, detail="الروضة غير مأرشفة")
+        raise HTTPException(status_code=400, detail="Kindergarten is not archived.")
 
     kindergarten.status = models.KindergartenStatus.ACTIVE
     db.commit()
@@ -491,7 +490,7 @@ def restore_kindergarten(
 
     return {
         "action": "restored",
-        "message": "تم استعادة الروضة بنجاح",
+        "message": "Kindergarten restored successfully",
         "kindergarten_id": kindergarten_id
     }
 

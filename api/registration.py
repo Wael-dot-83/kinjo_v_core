@@ -14,6 +14,14 @@ import validators
 from config import settings
 from database import get_db
 from dependencies import get_current_user
+from i18n import gettext as _api
+
+
+def _req_lang(request: Request) -> str:
+    """Detect language from Accept-Language header, defaulting to Arabic."""
+    accept = request.headers.get("Accept-Language", "ar")
+    return "en" if accept.startswith("en") else "ar"
+
 
 router = APIRouter(tags=["Registration"])
 
@@ -51,6 +59,7 @@ class ParentRegistrationRequest(BaseModel):
 
 @router.post("/register/parent", status_code=status.HTTP_201_CREATED)
 def register_parent(
+    request: Request,
     registration_data: ParentRegistrationRequest,
     db: Session = Depends(get_db)
 ):
@@ -67,14 +76,15 @@ def register_parent(
     existing_user = db.query(models.User).filter(
         models.User.email == registration_data.email
     ).first()
+    lang = _req_lang(request)
     if existing_user:
-        raise HTTPException(status_code=400, detail="البريد الإلكتروني مسجل مسبقاً")
+        raise HTTPException(status_code=400, detail=_api("Email is already registered.", lang))
 
     # Validate identification: either national_id or passport_number required
     if not registration_data.national_id and not registration_data.passport_number:
         raise HTTPException(
             status_code=400,
-            detail="يجب إدخال الرقم الوطني أو رقم جواز السفر"
+            detail=_api("national_id or passport_number is required", lang)
         )
 
     # Validate password strength (complexity policy)

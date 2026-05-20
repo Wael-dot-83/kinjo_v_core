@@ -3,10 +3,10 @@
 {% block title %}{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-journal-text me-2 text-primary"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-journal-text text-primary me-2" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
@@ -17,9 +17,9 @@
         </nav>
     </div>
     {% if current_user.role.value in ['ADMIN', 'MANAGER', 'SUPERVISOR'] %}
-    <div class="btn-toolbar">
+    <div class="page-header-actions">
         <a href="/reports/create" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
+            <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
         </a>
     </div>
     {% endif %}

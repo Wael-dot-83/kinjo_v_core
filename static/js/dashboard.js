@@ -10,8 +10,7 @@ const DASHBOARD_API = {
   },
   manager: {
     classes: "/api/manager/classes",
-    accounts: "/api/manager/accounts",
-    reports: "/api/daily-reports/submitted",
+    reports: "/api/manager/daily-reports",
     supervisors: "/api/users?role=SUPERVISOR&limit=100",
     parents: "/api/users?role=PARENT&limit=200",
     kpis: "/api/kpi/dashboard-data",
@@ -507,6 +506,8 @@ function renderValidationDetails() {
 function updateElementText(id, value) {
   const element = document.getElementById(id);
   if (element) {
+    // Remove shimmer placeholder and set real value
+    element.querySelectorAll(".kj-stat-pending").forEach((el) => el.remove());
     element.textContent = value;
   }
 }
@@ -1254,21 +1255,6 @@ function renderManagerUsersTable(tableId, users, type) {
 }
 
 async function loadManagerAccounts() {
-  try {
-    const managerAccounts = await dashboardFetch(DASHBOARD_API.manager.accounts);
-    const supervisors = Array.isArray(managerAccounts?.supervisors)
-      ? managerAccounts.supervisors
-      : [];
-    const parents = Array.isArray(managerAccounts?.parents) ? managerAccounts.parents : [];
-
-    renderManagerUsersTable("supervisorsTable", supervisors, "supervisor");
-    DASHBOARD_STATE.managerSummary.parents = parents.length;
-    renderManagerUsersTable("parentsTable", parents, "parent");
-    return;
-  } catch (error) {
-    console.error("Error loading manager accounts endpoint:", error);
-  }
-
   const [supervisorsResult, parentsResult] = await Promise.allSettled([
     dashboardFetch(DASHBOARD_API.manager.supervisors),
     dashboardFetch(DASHBOARD_API.manager.parents),
@@ -1636,6 +1622,7 @@ function renderAdminSystemOverview(overview) {
 
   const health = document.getElementById("systemHealth");
   if (health) {
+    health.querySelectorAll(".kj-stat-pending").forEach((el) => el.remove());
     const activeRate =
       totalKindergartens > 0 ? (activeKindergartens / totalKindergartens) * 100 : 0;
     if (activeRate >= 90) health.textContent = dashboardLiteral("ممتاز");

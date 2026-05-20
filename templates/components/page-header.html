@@ -1,12 +1,15 @@
-{% macro page_header(title, icon=None, icon_color="text-primary", breadcrumbs=None, actions=None) %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-4">
+{% macro page_header(title, icon=None, icon_color="text-primary", breadcrumbs=None, actions=None, subtitle=None) %}
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2 mb-1">
+        <h1 class="page-header-title">
             {% if icon %}
-            <i class="bi {{ icon }} me-2 {{ icon_color }}"></i>
+            <i class="bi {{ icon }} {{ icon_color }} me-2" aria-hidden="true"></i>
             {% endif %}
             {{ title }}
         </h1>
+        {% if subtitle %}
+        <p class="text-muted mb-1 small">{{ subtitle }}</p>
+        {% endif %}
         {% if breadcrumbs %}
         <nav aria-label="{{ 'Breadcrumb' if ui_lang == 'en' else 'مسار التنقل' }}">
             <ol class="breadcrumb mb-0">
@@ -24,7 +27,7 @@
         {% endif %}
     </div>
     {% if actions %}
-    <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="page-header-actions">
         {{ actions }}
     </div>
     {% endif %}

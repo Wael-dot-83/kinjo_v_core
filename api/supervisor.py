@@ -163,6 +163,20 @@ def create_observation(
     child = db.query(models.Child).filter(models.Child.id == observation_data.child_id).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
+
+    enrollment = (
+        db.query(models.EnrollmentApplication)
+        .filter(
+            models.EnrollmentApplication.child_id == child.id,
+            models.EnrollmentApplication.status.in_(tuple(models.ACTIVE_ENROLLMENT_STATUSES)),
+        )
+        .order_by(models.EnrollmentApplication.updated_at.desc(), models.EnrollmentApplication.id.desc())
+        .first()
+    )
+    if not enrollment:
+        raise HTTPException(status_code=400, detail="Child has no active enrollment")
+
+    validators.validate_kindergarten_scope(current_user, enrollment.kindergarten_id)
     
     # Map domain string to enum (case-insensitive)
     domain_str = observation_data.domain.upper().replace("-", "_")

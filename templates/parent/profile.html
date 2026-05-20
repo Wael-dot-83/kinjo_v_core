@@ -1,689 +1,984 @@
-{% extends 'base.html' %}
-
-{% block title %}{{ _('My Profile') }}{% endblock %}
-
+{% extends 'base.html' %} {% block title %}{{ _('My Profile') }}{% endblock %}
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-person-circle me-2 text-primary"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-person-circle text-primary me-2" aria-hidden="true"></i>
             {{ _('My Profile') }}
         </h1>
         <nav aria-label="{{ _('Breadcrumb') }}">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{{ _('Dashboard') }}</a></li>
                 <li class="breadcrumb-item active">{{ _('My Profile') }}</li>
             </ol>
         </nav>
     </div>
 </div>
-{% endblock %}
-
-{% block content %}
+{% endblock %} {% block content %}
 <!-- Profile Completion Alert -->
 <div id="profileAlert" class="alert alert-warning d-none" role="alert">
-    <i class="bi bi-exclamation-triangle me-2"></i>
-    <strong>{{ _('Your profile is incomplete.') }}</strong>
-    {{ _('You must complete all required fields to submit enrollment requests.') }}
+  <i class="bi bi-exclamation-triangle me-2"></i>
+  <strong>{{ _('Your profile is incomplete.') }}</strong>
+  {{ _('You must complete all required fields to submit enrollment requests.')
+  }}
 </div>
 
 <div class="row g-4">
-    <!-- Profile Info Card -->
-    <div class="col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-person me-2 text-primary"></i>{{ _('Personal Information') }}
-                </h5>
-                <button class="btn btn-sm btn-outline-primary" id="btnEditProfile" onclick="toggleEditMode()">
-                    <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
-                </button>
+  <!-- Profile Info Card -->
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div
+        class="card-header bg-transparent d-flex justify-content-between align-items-center"
+      >
+        <h5 class="card-title mb-0">
+          <i class="bi bi-person me-2 text-primary"></i>{{ _('Personal
+          Information') }}
+        </h5>
+        <button
+          class="btn btn-sm btn-outline-primary"
+          id="btnEditProfile"
+          onclick="toggleEditMode()"
+        >
+          <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
+        </button>
+      </div>
+      <div class="card-body">
+        <!-- View Mode -->
+        <div id="viewMode">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="text-muted small">{{ _('First Name') }}</label>
+              <div class="fw-semibold" id="viewFirstName">—</div>
             </div>
-            <div class="card-body">
-                <!-- View Mode -->
-                <div id="viewMode">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('First Name') }}</label>
-                            <div class="fw-semibold" id="viewFirstName">—</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('Middle Name') }}</label>
-                            <div class="fw-semibold" id="viewSecondName">—</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('Last Name') }}</label>
-                            <div class="fw-semibold" id="viewLastName">—</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">{{ _('Phone Number') }}</label>
-                            <div class="fw-semibold" id="viewPhone">—</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">{{ _('Email') }}</label>
-                            <div class="fw-semibold" id="viewEmail">—</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('Gender') }}</label>
-                            <div class="fw-semibold" id="viewGender">—</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('Nationality') }}</label>
-                            <div class="fw-semibold" id="viewNationality">—</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('Relationship to Child') }}</label>
-                            <div class="fw-semibold" id="viewRelationship">—</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">{{ _('National ID') }}</label>
-                            <div class="fw-semibold" id="viewNationalId">—</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">{{ _('Passport Number') }}</label>
-                            <div class="fw-semibold" id="viewPassport">—</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Edit Mode -->
-                <form id="editMode" class="d-none">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label for="editFirstName" class="form-label">{{ _('First Name') }} <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="editFirstName" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="editSecondName" class="form-label">{{ _('Middle Name') }}</label>
-                            <input type="text" class="form-control" id="editSecondName">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="editLastName" class="form-label">{{ _('Last Name') }} <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="editLastName" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="editPhone" class="form-label">{{ _('Phone Number') }} <span class="text-danger">*</span></label>
-                            <input type="tel" class="form-control" id="editPhone" dir="ltr" placeholder="+962..." required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="editRelationship" class="form-label">{{ _('Relationship to Child') }}</label>
-                            <select class="form-select" id="editRelationship">
-                                <option value="">{{ _('Select...') }}</option>
-                                <option value="FATHER">{{ _('Father') }}</option>
-                                <option value="MOTHER">{{ _('Mother') }}</option>
-                                <option value="GUARDIAN">{{ _('Guardian') }}</option>
-                                <option value="OTHER">{{ _('Other') }}</option>
-                            </select>
-                        </div>
-                        <div class="col-12 mt-3">
-                            <button type="submit" class="btn btn-primary px-4">
-                                <i class="bi bi-save me-1"></i>{{ _('Save Changes') }}
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary me-2" onclick="cancelEdit()">
-                                {{ _('Cancel') }}
-                            </button>
-                        </div>
-                    </div>
-                </form>
+            <div class="col-md-4">
+              <label class="text-muted small">{{ _('Middle Name') }}</label>
+              <div class="fw-semibold" id="viewSecondName">—</div>
             </div>
+            <div class="col-md-4">
+              <label class="text-muted small">{{ _('Last Name') }}</label>
+              <div class="fw-semibold" id="viewLastName">—</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">{{ _('Phone Number') }}</label>
+              <div class="fw-semibold" id="viewPhone">—</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">{{ _('Email') }}</label>
+              <div class="fw-semibold" id="viewEmail">—</div>
+            </div>
+            <div class="col-md-4">
+              <label class="text-muted small">{{ _('Gender') }}</label>
+              <div class="fw-semibold" id="viewGender">—</div>
+            </div>
+            <div class="col-md-4">
+              <label class="text-muted small">{{ _('Nationality') }}</label>
+              <div class="fw-semibold" id="viewNationality">—</div>
+            </div>
+            <div class="col-md-4">
+              <label class="text-muted small"
+                >{{ _('Relationship to Child') }}</label
+              >
+              <div class="fw-semibold" id="viewRelationship">—</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">{{ _('National ID') }}</label>
+              <div class="fw-semibold" id="viewNationalId">—</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">{{ _('Passport Number') }}</label>
+              <div class="fw-semibold" id="viewPassport">—</div>
+            </div>
+          </div>
         </div>
 
-        <!-- Address Card -->
-        <div class="card shadow-sm mt-4">
-            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-geo-alt me-2 text-success"></i>{{ _('Address') }}
-                </h5>
-                <button class="btn btn-sm btn-outline-success" id="btnEditAddress" onclick="toggleAddressEdit()">
-                    <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
-                </button>
+        <!-- Edit Mode -->
+        <form id="editMode" class="d-none">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="editFirstName" class="form-label"
+                >{{ _('First Name') }} <span class="text-danger">*</span></label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="editFirstName"
+                required
+              />
             </div>
-            <div class="card-body">
-                <!-- View Mode -->
-                <div id="addressViewMode">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('Governorate') }}</label>
-                            <div class="fw-semibold" id="viewGovernorate">—</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('City') }}</label>
-                            <div class="fw-semibold" id="viewCity">—</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('Area') }}</label>
-                            <div class="fw-semibold" id="viewArea">—</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">{{ _('Home Address') }}</label>
-                            <div class="fw-semibold" id="viewAddressLine">—</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">{{ _('Work Address') }}</label>
-                            <div class="fw-semibold" id="viewWorkAddress">—</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Edit Mode -->
-                <form id="addressEditMode" class="d-none">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label for="editGovernorate" class="form-label">{{ _('Governorate') }} <span class="text-danger">*</span></label>
-                            <select class="form-select" id="editGovernorate" required>
-                                <option value="">{{ _('Select governorate') }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="editCity" class="form-label">{{ _('City') }} <span class="text-danger">*</span></label>
-                            <select class="form-select" id="editCity" required>
-                                <option value="">{{ _('Select governorate first') }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="editArea" class="form-label">{{ _('Area') }} <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="editArea" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="editAddressLine" class="form-label">{{ _('Home Address') }} <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="editAddressLine" rows="2" required></textarea>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="editWorkAddress" class="form-label">{{ _('Work Address') }}</label>
-                            <textarea class="form-control" id="editWorkAddress" rows="2"></textarea>
-                        </div>
-                        <div class="col-12 mt-3">
-                            <button type="submit" class="btn btn-success px-4">
-                                <i class="bi bi-save me-1"></i>{{ _('Save Address') }}
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary me-2" onclick="cancelAddressEdit()">
-                                {{ _('Cancel') }}
-                            </button>
-                        </div>
-                    </div>
-                </form>
+            <div class="col-md-4">
+              <label for="editSecondName" class="form-label"
+                >{{ _('Middle Name') }}</label
+              >
+              <input type="text" class="form-control" id="editSecondName" />
             </div>
-        </div>
-
-        <!-- Emergency Contact Card -->
-        <div class="card shadow-sm mt-4">
-            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-telephone-fill me-2 text-danger"></i>{{ _('Emergency Contact') }}
-                </h5>
-                <button class="btn btn-sm btn-outline-danger" id="btnEditEmergency" onclick="toggleEmergencyEdit()">
-                    <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
-                </button>
+            <div class="col-md-4">
+              <label for="editLastName" class="form-label"
+                >{{ _('Last Name') }} <span class="text-danger">*</span></label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="editLastName"
+                required
+              />
             </div>
-            <div class="card-body">
-                <!-- View Mode -->
-                <div id="emergencyViewMode">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('Contact Name') }}</label>
-                            <div class="fw-semibold" id="viewEmergencyName">—</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('Contact Phone') }}</label>
-                            <div class="fw-semibold" id="viewEmergencyPhone">—</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="text-muted small">{{ _('Relationship') }}</label>
-                            <div class="fw-semibold" id="viewEmergencyRelationship">—</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Edit Mode -->
-                <form id="emergencyEditMode" class="d-none">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label for="editEmergencyName" class="form-label">{{ _('Contact Name') }} <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="editEmergencyName" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="editEmergencyPhone" class="form-label">{{ _('Contact Phone') }} <span class="text-danger">*</span></label>
-                            <input type="tel" class="form-control" id="editEmergencyPhone" dir="ltr" placeholder="+962..." required>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="editEmergencyRelationship" class="form-label">{{ _('Relationship') }}</label>
-                            <input type="text" class="form-control" id="editEmergencyRelationship">
-                        </div>
-                        <div class="col-12 mt-3">
-                            <button type="submit" class="btn btn-danger px-4">
-                                <i class="bi bi-save me-1"></i>{{ _('Save Emergency Contact') }}
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary me-2" onclick="cancelEmergencyEdit()">
-                                {{ _('Cancel') }}
-                            </button>
-                        </div>
-                    </div>
-                </form>
+            <div class="col-md-6">
+              <label for="editPhone" class="form-label"
+                >{{ _('Phone Number') }}
+                <span class="text-danger">*</span></label
+              >
+              <input
+                type="tel"
+                class="form-control"
+                id="editPhone"
+                dir="ltr"
+                placeholder="+962..."
+                required
+              />
             </div>
-        </div>
+            <div class="col-md-6">
+              <label for="editRelationship" class="form-label"
+                >{{ _('Relationship to Child') }}</label
+              >
+              <select class="form-select" id="editRelationship">
+                <option value="">{{ _('Select...') }}</option>
+                <option value="FATHER">{{ _('Father') }}</option>
+                <option value="MOTHER">{{ _('Mother') }}</option>
+                <option value="GUARDIAN">{{ _('Guardian') }}</option>
+                <option value="OTHER">{{ _('Other') }}</option>
+              </select>
+            </div>
+            <div class="col-12 mt-3">
+              <button type="submit" class="btn btn-primary px-4">
+                <i class="bi bi-save me-1"></i>{{ _('Save Changes') }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary me-2"
+                onclick="cancelEdit()"
+              >
+                {{ _('Cancel') }}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
 
-    <!-- Side Panel -->
-    <div class="col-lg-4">
-        <!-- Profile Status Card -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body text-center">
-                <div class="avatar-lg bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
-                    style="width: 80px; height: 80px;">
-                    <i class="bi bi-person-fill text-primary fs-1"></i>
-                </div>
-                <h5 class="mb-1" id="profileFullName">—</h5>
-                <p class="text-muted mb-3" id="profileRole">{{ _('Parent') }}</p>
-                <div id="profileStatusBadge">
-                    <span class="badge bg-secondary">{{ _('Loading...') }}</span>
-                </div>
+    <!-- Address Card -->
+    <div class="card shadow-sm mt-4">
+      <div
+        class="card-header bg-transparent d-flex justify-content-between align-items-center"
+      >
+        <h5 class="card-title mb-0">
+          <i class="bi bi-geo-alt me-2 text-success"></i>{{ _('Address') }}
+        </h5>
+        <button
+          class="btn btn-sm btn-outline-success"
+          id="btnEditAddress"
+          onclick="toggleAddressEdit()"
+        >
+          <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
+        </button>
+      </div>
+      <div class="card-body">
+        <!-- View Mode -->
+        <div id="addressViewMode">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="text-muted small">{{ _('Governorate') }}</label>
+              <div class="fw-semibold" id="viewGovernorate">—</div>
             </div>
+            <div class="col-md-4">
+              <label class="text-muted small">{{ _('City') }}</label>
+              <div class="fw-semibold" id="viewCity">—</div>
+            </div>
+            <div class="col-md-4">
+              <label class="text-muted small">{{ _('Area') }}</label>
+              <div class="fw-semibold" id="viewArea">—</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">{{ _('Home Address') }}</label>
+              <div class="fw-semibold" id="viewAddressLine">—</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">{{ _('Work Address') }}</label>
+              <div class="fw-semibold" id="viewWorkAddress">—</div>
+            </div>
+          </div>
         </div>
 
-        <!-- Quick Links Card -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-transparent">
-                <h5 class="card-title mb-0"><i class="bi bi-link-45deg me-2"></i>{{ _('Quick Links') }}</h5>
+        <!-- Edit Mode -->
+        <form id="addressEditMode" class="d-none">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="editGovernorate" class="form-label"
+                >{{ _('Governorate') }}
+                <span class="text-danger">*</span></label
+              >
+              <select class="form-select" id="editGovernorate" required>
+                <option value="">{{ _('Select governorate') }}</option>
+              </select>
             </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="/parent/children" class="btn btn-outline-primary">
-                        <i class="bi bi-people me-2"></i>{{ _('My Children') }}
-                    </a>
-                    <a href="/enroll" class="btn btn-outline-success">
-                        <i class="bi bi-person-plus me-2"></i>{{ _('Register New Child') }}
-                    </a>
-                    <a href="/parent/enrollments" class="btn btn-outline-info">
-                        <i class="bi bi-clipboard-check me-2"></i>{{ _('Enrollment Requests') }}
-                    </a>
-                    <a href="/my-reports" class="btn btn-outline-warning">
-                        <i class="bi bi-journal-text me-2"></i>{{ _('My Reports') }}
-                    </a>
-                    <a href="/absence-requests" class="btn btn-outline-secondary">
-                        <i class="bi bi-calendar-x me-2"></i>{{ _('Absence Requests') }}
-                    </a>
-                </div>
+            <div class="col-md-4">
+              <label for="editCity" class="form-label"
+                >{{ _('City') }} <span class="text-danger">*</span></label
+              >
+              <select class="form-select" id="editCity" required>
+                <option value="">{{ _('Select governorate first') }}</option>
+              </select>
             </div>
-        </div>
-
-        <!-- Preferences -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-transparent">
-                <h5 class="card-title mb-0"><i class="bi bi-sliders me-2"></i>{{ _('Preferences') }}</h5>
+            <div class="col-md-4">
+              <label for="editArea" class="form-label"
+                >{{ _('Area') }} <span class="text-danger">*</span></label
+              >
+              <input type="text" class="form-control" id="editArea" required />
             </div>
-            <div class="card-body">
-                <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" id="correspondenceSwitch" checked>
-                    <label class="form-check-label" for="correspondenceSwitch">
-                        {{ _('Receive correspondence') }}
-                    </label>
-                </div>
+            <div class="col-md-6">
+              <label for="editAddressLine" class="form-label"
+                >{{ _('Home Address') }}
+                <span class="text-danger">*</span></label
+              >
+              <textarea
+                class="form-control"
+                id="editAddressLine"
+                rows="2"
+                required
+              ></textarea>
             </div>
-        </div>
+            <div class="col-md-6">
+              <label for="editWorkAddress" class="form-label"
+                >{{ _('Work Address') }}</label
+              >
+              <textarea
+                class="form-control"
+                id="editWorkAddress"
+                rows="2"
+              ></textarea>
+            </div>
+            <div class="col-12 mt-3">
+              <button type="submit" class="btn btn-success px-4">
+                <i class="bi bi-save me-1"></i>{{ _('Save Address') }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary me-2"
+                onclick="cancelAddressEdit()"
+              >
+                {{ _('Cancel') }}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
+
+    <!-- Emergency Contact Card -->
+    <div class="card shadow-sm mt-4">
+      <div
+        class="card-header bg-transparent d-flex justify-content-between align-items-center"
+      >
+        <h5 class="card-title mb-0">
+          <i class="bi bi-telephone-fill me-2 text-danger"></i>{{ _('Emergency
+          Contact') }}
+        </h5>
+        <button
+          class="btn btn-sm btn-outline-danger"
+          id="btnEditEmergency"
+          onclick="toggleEmergencyEdit()"
+        >
+          <i class="bi bi-pencil me-1"></i>{{ _('Edit') }}
+        </button>
+      </div>
+      <div class="card-body">
+        <!-- View Mode -->
+        <div id="emergencyViewMode">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="text-muted small">{{ _('Contact Name') }}</label>
+              <div class="fw-semibold" id="viewEmergencyName">—</div>
+            </div>
+            <div class="col-md-4">
+              <label class="text-muted small">{{ _('Contact Phone') }}</label>
+              <div class="fw-semibold" id="viewEmergencyPhone">—</div>
+            </div>
+            <div class="col-md-4">
+              <label class="text-muted small">{{ _('Relationship') }}</label>
+              <div class="fw-semibold" id="viewEmergencyRelationship">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edit Mode -->
+        <form id="emergencyEditMode" class="d-none">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="editEmergencyName" class="form-label"
+                >{{ _('Contact Name') }}
+                <span class="text-danger">*</span></label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="editEmergencyName"
+                required
+              />
+            </div>
+            <div class="col-md-4">
+              <label for="editEmergencyPhone" class="form-label"
+                >{{ _('Contact Phone') }}
+                <span class="text-danger">*</span></label
+              >
+              <input
+                type="tel"
+                class="form-control"
+                id="editEmergencyPhone"
+                dir="ltr"
+                placeholder="+962..."
+                required
+              />
+            </div>
+            <div class="col-md-4">
+              <label for="editEmergencyRelationship" class="form-label"
+                >{{ _('Relationship') }}</label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="editEmergencyRelationship"
+              />
+            </div>
+            <div class="col-12 mt-3">
+              <button type="submit" class="btn btn-danger px-4">
+                <i class="bi bi-save me-1"></i>{{ _('Save Emergency Contact') }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary me-2"
+                onclick="cancelEmergencyEdit()"
+              >
+                {{ _('Cancel') }}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Side Panel -->
+  <div class="col-lg-4">
+    <!-- Profile Status Card -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-body text-center">
+        <div
+          class="avatar-lg bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+          style="width: 80px; height: 80px"
+        >
+          <i class="bi bi-person-fill text-primary fs-1"></i>
+        </div>
+        <h5 class="mb-1" id="profileFullName">—</h5>
+        <p class="text-muted mb-3" id="profileRole">{{ _('Parent') }}</p>
+        <div id="profileStatusBadge">
+          <span class="badge bg-secondary">{{ _('Loading...') }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Links Card -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-transparent">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-link-45deg me-2"></i>{{ _('Quick Links') }}
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <a href="/parent/children" class="btn btn-outline-primary">
+            <i class="bi bi-people me-2"></i>{{ _('My Children') }}
+          </a>
+          <a href="/enroll" class="btn btn-outline-success">
+            <i class="bi bi-person-plus me-2"></i>{{ _('Register New Child') }}
+          </a>
+          <a href="/parent/enrollments" class="btn btn-outline-info">
+            <i class="bi bi-clipboard-check me-2"></i>{{ _('Enrollment
+            Requests') }}
+          </a>
+          <a href="/my-reports" class="btn btn-outline-warning">
+            <i class="bi bi-journal-text me-2"></i>{{ _('My Reports') }}
+          </a>
+          <a href="/absence-requests" class="btn btn-outline-secondary">
+            <i class="bi bi-calendar-x me-2"></i>{{ _('Absence Requests') }}
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preferences -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-transparent">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-sliders me-2"></i>{{ _('Preferences') }}
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="form-check form-switch mb-3">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="correspondenceSwitch"
+            checked
+          />
+          <label class="form-check-label" for="correspondenceSwitch">
+            {{ _('Receive correspondence') }}
+          </label>
+        </div>
+        <!-- Language Preference -->
+        <div class="mb-0">
+          <label class="form-label text-muted small mb-1">
+            <i class="bi bi-translate me-1"></i>{{ _('Interface Language') }}
+          </label>
+          <div
+            class="btn-group w-100"
+            role="group"
+            aria-label="{{ _('Language') }}"
+          >
+            <button
+              type="button"
+              id="langBtnAr"
+              class="btn btn-sm btn-outline-primary"
+              onclick="switchLanguage('ar')"
+            >
+              عربي
+            </button>
+            <button
+              type="button"
+              id="langBtnEn"
+              class="btn btn-sm btn-outline-primary"
+              onclick="switchLanguage('en')"
+            >
+              English
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
+{% endblock %} {% block extra_js %}
 <script>
-    const IS_EN = '{{ ui_lang }}' === 'en';
-    const T = (ar, en) => IS_EN ? en : ar;
+  const IS_EN = "{{ ui_lang }}" === "en";
+  const T = (ar, en) => (IS_EN ? en : ar);
+  // Mark the active language button
+  document.addEventListener("DOMContentLoaded", function () {
+    const activeId = IS_EN ? "langBtnEn" : "langBtnAr";
+    const btn = document.getElementById(activeId);
+    if (btn) {
+      btn.classList.replace("btn-outline-primary", "btn-primary");
+    }
+  });
 
-    const RELATIONSHIP_LABELS = {
-        'FATHER': T('أب', 'Father'),
-        'MOTHER': T('أم', 'Mother'),
-        'GUARDIAN': T('ولي أمر', 'Guardian'),
-        'OTHER': T('أخرى', 'Other'),
+  const RELATIONSHIP_LABELS = {
+    FATHER: T("أب", "Father"),
+    MOTHER: T("أم", "Mother"),
+    GUARDIAN: T("ولي أمر", "Guardian"),
+    OTHER: T("أخرى", "Other"),
+  };
+
+  let _govData = [];
+  const GOVERNORATE_AR = {};
+
+  let profileData = null;
+
+  function getHeaders() {
+    if (!window.AuthService || !AuthService.isAuthenticated()) {
+      return { "Content-Type": "application/json" };
+    }
+    const token = AuthService.getToken();
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    await loadGovernorates();
+    await loadProfile();
+  });
+
+  async function loadGovernorates() {
+    try {
+      const res = await fetch("/api/reference/governorates");
+      const data = await res.json();
+      _govData = data.governorates || [];
+      _govData.forEach((g) => {
+        GOVERNORATE_AR[g.name_ar] = g.name_ar;
+        GOVERNORATE_AR[g.name_en] = g.name_ar;
+      });
+      populateGovernorates();
+    } catch (e) {
+      console.error("Failed to load governorates", e);
+    }
+  }
+
+  function populateGovernorates() {
+    const sel = document.getElementById("editGovernorate");
+    sel.innerHTML = `<option value="">${T("اختر...", "Select...")}</option>`;
+    _govData.forEach((g) => {
+      const opt = document.createElement("option");
+      opt.value = g.name_ar;
+      opt.textContent = IS_EN ? g.name_en || g.name_ar : g.name_ar;
+      sel.appendChild(opt);
+    });
+  }
+
+  function populateCities(govName, selectedCity) {
+    const sel = document.getElementById("editCity");
+    const gov = _govData.find(
+      (g) => g.name_ar === govName || g.name_en === govName,
+    );
+    if (!gov || !gov.cities || !gov.cities.length) {
+      sel.innerHTML = `<option value="">${T("لا توجد مدن", "No cities")}</option>`;
+      return;
+    }
+    sel.innerHTML = `<option value="">${T("اختر المدينة...", "Select city...")}</option>`;
+    gov.cities.forEach((c) => {
+      const opt = document.createElement("option");
+      opt.value = c;
+      opt.textContent = c;
+      if (c === selectedCity) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  document
+    .getElementById("editGovernorate")
+    .addEventListener("change", function () {
+      populateCities(this.value, "");
+    });
+
+  async function loadProfile() {
+    try {
+      const resp = await fetch("/api/parent/profile", {
+        headers: getHeaders(),
+      });
+      if (!resp.ok) {
+        if (resp.status === 404) {
+          document.getElementById("profileAlert").classList.remove("d-none");
+          document.getElementById("profileAlert").innerHTML =
+            `<i class="bi bi-exclamation-triangle me-2"></i><strong>${T("لم يتم العثور على ملفك الشخصي.", "Profile not found.")}</strong> ${T("يرجى التواصل مع الإدارة.", "Please contact administration.")}`;
+          return;
+        }
+        throw new Error("Failed to load profile");
+      }
+
+      profileData = await resp.json();
+      renderProfile(profileData);
+    } catch (error) {
+      console.error("Error loading profile:", error);
+      Swal.fire({
+        icon: "error",
+        title: T("خطأ", "Error"),
+        text: T("تعذر تحميل الملف الشخصي", "Failed to load profile"),
+      });
+    }
+  }
+
+  function renderProfile(p) {
+    // Top card
+    document.getElementById("profileFullName").textContent =
+      `${p.first_name} ${p.second_name || ""} ${p.last_name}`.trim();
+    document.getElementById("profileStatusBadge").innerHTML = p.profile_complete
+      ? `<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>${T("مكتمل", "Complete")}</span>`
+      : `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>${T("غير مكتمل", "Incomplete")}</span>`;
+
+    if (!p.profile_complete) {
+      document.getElementById("profileAlert").classList.remove("d-none");
+    }
+
+    // Personal Info
+    document.getElementById("viewFirstName").textContent =
+      IS_EN && p.first_name_en ? p.first_name_en : p.first_name || "—";
+    document.getElementById("viewSecondName").textContent =
+      p.second_name || "—";
+    document.getElementById("viewLastName").textContent =
+      IS_EN && p.last_name_en ? p.last_name_en : p.last_name || "—";
+    document.getElementById("viewPhone").textContent = p.phone_number || "—";
+    document.getElementById("viewEmail").textContent = p.email || "—";
+    document.getElementById("viewGender").textContent =
+      p.gender === "MALE"
+        ? T("ذكر", "Male")
+        : p.gender === "FEMALE"
+          ? T("أنثى", "Female")
+          : "—";
+    document.getElementById("viewNationality").textContent =
+      p.nationality || "—";
+    document.getElementById("viewRelationship").textContent =
+      RELATIONSHIP_LABELS[p.relationship_to_child] ||
+      p.relationship_to_child ||
+      "—";
+    document.getElementById("viewNationalId").textContent =
+      p.national_id || "—";
+    document.getElementById("viewPassport").textContent =
+      p.passport_number || "—";
+
+    // Address
+    document.getElementById("viewGovernorate").textContent =
+      GOVERNORATE_AR[p.home_governorate] || p.home_governorate || "—";
+    document.getElementById("viewCity").textContent = p.home_city || "—";
+    document.getElementById("viewArea").textContent = p.home_area || "—";
+    document.getElementById("viewAddressLine").textContent =
+      p.home_address_line || "—";
+    document.getElementById("viewWorkAddress").textContent =
+      p.work_address || "—";
+
+    // Emergency Contact
+    document.getElementById("viewEmergencyName").textContent =
+      p.emergency_contact_name || "—";
+    document.getElementById("viewEmergencyPhone").textContent =
+      p.emergency_contact_phone || "—";
+    document.getElementById("viewEmergencyRelationship").textContent =
+      p.emergency_contact_relationship || "—";
+
+    // Preferences
+    document.getElementById("correspondenceSwitch").checked =
+      p.correspondence_preference !== false;
+
+    // Fill edit forms
+    document.getElementById("editFirstName").value = p.first_name || "";
+    document.getElementById("editSecondName").value = p.second_name || "";
+    document.getElementById("editLastName").value = p.last_name || "";
+    document.getElementById("editPhone").value = p.phone_number || "";
+    document.getElementById("editRelationship").value =
+      p.relationship_to_child || "";
+
+    // Address edit
+    const govSelect = document.getElementById("editGovernorate");
+    const govValue = p.home_governorate || "";
+    const matchedGov = _govData.find(
+      (g) => g.name_ar === govValue || g.name_en === govValue,
+    );
+    govSelect.value = matchedGov ? matchedGov.name_ar : govValue;
+    if (matchedGov) {
+      populateCities(matchedGov.name_ar, p.home_city || "");
+    }
+    document.getElementById("editArea").value = p.home_area || "";
+    document.getElementById("editAddressLine").value =
+      p.home_address_line || "";
+    document.getElementById("editWorkAddress").value = p.work_address || "";
+
+    // Emergency edit
+    document.getElementById("editEmergencyName").value =
+      p.emergency_contact_name || "";
+    document.getElementById("editEmergencyPhone").value =
+      p.emergency_contact_phone || "";
+    document.getElementById("editEmergencyRelationship").value =
+      p.emergency_contact_relationship || "";
+  }
+
+  // Toggle personal info edit
+  function toggleEditMode() {
+    document.getElementById("viewMode").classList.toggle("d-none");
+    document.getElementById("editMode").classList.toggle("d-none");
+    const btn = document.getElementById("btnEditProfile");
+    btn.innerHTML = document
+      .getElementById("editMode")
+      .classList.contains("d-none")
+      ? `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`
+      : `<i class="bi bi-x me-1"></i>${T("إلغاء", "Cancel")}`;
+  }
+
+  function cancelEdit() {
+    if (profileData) renderProfile(profileData);
+    document.getElementById("viewMode").classList.remove("d-none");
+    document.getElementById("editMode").classList.add("d-none");
+    document.getElementById("btnEditProfile").innerHTML =
+      `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`;
+  }
+
+  // Toggle address edit
+  function toggleAddressEdit() {
+    document.getElementById("addressViewMode").classList.toggle("d-none");
+    document.getElementById("addressEditMode").classList.toggle("d-none");
+    const btn = document.getElementById("btnEditAddress");
+    btn.innerHTML = document
+      .getElementById("addressEditMode")
+      .classList.contains("d-none")
+      ? `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`
+      : `<i class="bi bi-x me-1"></i>${T("إلغاء", "Cancel")}`;
+  }
+
+  function cancelAddressEdit() {
+    if (profileData) renderProfile(profileData);
+    document.getElementById("addressViewMode").classList.remove("d-none");
+    document.getElementById("addressEditMode").classList.add("d-none");
+    document.getElementById("btnEditAddress").innerHTML =
+      `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`;
+  }
+
+  // Toggle emergency contact edit
+  function toggleEmergencyEdit() {
+    document.getElementById("emergencyViewMode").classList.toggle("d-none");
+    document.getElementById("emergencyEditMode").classList.toggle("d-none");
+    const btn = document.getElementById("btnEditEmergency");
+    btn.innerHTML = document
+      .getElementById("emergencyEditMode")
+      .classList.contains("d-none")
+      ? `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`
+      : `<i class="bi bi-x me-1"></i>${T("إلغاء", "Cancel")}`;
+  }
+
+  function cancelEmergencyEdit() {
+    if (profileData) renderProfile(profileData);
+    document.getElementById("emergencyViewMode").classList.remove("d-none");
+    document.getElementById("emergencyEditMode").classList.add("d-none");
+    document.getElementById("btnEditEmergency").innerHTML =
+      `<i class="bi bi-pencil me-1"></i>${T("تعديل", "Edit")}`;
+  }
+
+  // Save personal info
+  document.getElementById("editMode").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!profileData) return;
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn.disabled) return;
+    submitBtn.disabled = true;
+    const origHtml = submitBtn.innerHTML;
+    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${T("جاري الحفظ...", "Saving...")}`;
+
+    const payload = {
+      first_name: document.getElementById("editFirstName").value.trim(),
+      second_name:
+        document.getElementById("editSecondName").value.trim() || null,
+      last_name: document.getElementById("editLastName").value.trim(),
+      phone_number: document.getElementById("editPhone").value.trim(),
+      relationship_to_child:
+        document.getElementById("editRelationship").value || null,
     };
 
-    let _govData = [];
-    const GOVERNORATE_AR = {};
-
-    let profileData = null;
-
-    function getHeaders() {
-        if (!window.AuthService || !AuthService.isAuthenticated()) {
-            return { 'Content-Type': 'application/json' };
-        }
-        const token = AuthService.getToken();
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        return headers;
+    if (!payload.first_name || !payload.last_name || !payload.phone_number) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = origHtml;
+      Swal.fire({
+        icon: "warning",
+        title: T("تنبيه", "Warning"),
+        text: T(
+          "يرجى تعبئة جميع الحقول المطلوبة",
+          "Please fill all required fields",
+        ),
+      });
+      return;
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        await loadGovernorates();
+    try {
+      const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
+        method: "PUT",
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) throw new Error("Update failed");
+
+      Swal.fire({
+        icon: "success",
+        title: T("تم", "Done"),
+        text: T(
+          "تم تحديث البيانات الشخصية بنجاح",
+          "Personal information updated successfully",
+        ),
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      await loadProfile();
+      cancelEdit();
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: T("خطأ", "Error"),
+        text: T("تعذر حفظ التغييرات", "Failed to save changes"),
+      });
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = origHtml;
+    }
+  });
+
+  // Save address
+  document
+    .getElementById("addressEditMode")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!profileData) return;
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn.disabled) return;
+      submitBtn.disabled = true;
+      const origHtml = submitBtn.innerHTML;
+      submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${T("جاري الحفظ...", "Saving...")}`;
+
+      const payload = {
+        home_governorate: document.getElementById("editGovernorate").value,
+        home_city: document.getElementById("editCity").value.trim(),
+        home_area: document.getElementById("editArea").value.trim(),
+        home_address_line: document
+          .getElementById("editAddressLine")
+          .value.trim(),
+        work_address:
+          document.getElementById("editWorkAddress").value.trim() || null,
+      };
+
+      if (
+        !payload.home_governorate ||
+        !payload.home_city ||
+        !payload.home_area ||
+        !payload.home_address_line
+      ) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origHtml;
+        Swal.fire({
+          icon: "warning",
+          title: T("تنبيه", "Warning"),
+          text: T(
+            "يرجى تعبئة جميع حقول العنوان المطلوبة",
+            "Please fill all required address fields",
+          ),
+        });
+        return;
+      }
+
+      try {
+        const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
+          method: "PUT",
+          headers: getHeaders(),
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) throw new Error("Update failed");
+
+        Swal.fire({
+          icon: "success",
+          title: T("تم", "Done"),
+          text: T("تم تحديث العنوان بنجاح", "Address updated successfully"),
+          timer: 1500,
+          showConfirmButton: false,
+        });
         await loadProfile();
-    });
-
-    async function loadGovernorates() {
-        try {
-            const res = await fetch('/api/reference/governorates');
-            const data = await res.json();
-            _govData = data.governorates || [];
-            _govData.forEach(g => {
-                GOVERNORATE_AR[g.name_ar] = g.name_ar;
-                GOVERNORATE_AR[g.name_en] = g.name_ar;
-            });
-            populateGovernorates();
-        } catch (e) {
-            console.error('Failed to load governorates', e);
-        }
-    }
-
-    function populateGovernorates() {
-        const sel = document.getElementById('editGovernorate');
-        sel.innerHTML = `<option value="">${T('اختر...', 'Select...')}</option>`;
-        _govData.forEach(g => {
-            const opt = document.createElement('option');
-            opt.value = g.name_ar;
-            opt.textContent = IS_EN ? (g.name_en || g.name_ar) : g.name_ar;
-            sel.appendChild(opt);
+        cancelAddressEdit();
+      } catch (err) {
+        console.error(err);
+        Swal.fire({
+          icon: "error",
+          title: T("خطأ", "Error"),
+          text: T("تعذر حفظ العنوان", "Failed to save address"),
         });
-    }
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origHtml;
+      }
+    });
 
-    function populateCities(govName, selectedCity) {
-        const sel = document.getElementById('editCity');
-        const gov = _govData.find(g => g.name_ar === govName || g.name_en === govName);
-        if (!gov || !gov.cities || !gov.cities.length) {
-            sel.innerHTML = `<option value="">${T('لا توجد مدن', 'No cities')}</option>`;
-            return;
-        }
-        sel.innerHTML = `<option value="">${T('اختر المدينة...', 'Select city...')}</option>`;
-        gov.cities.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c;
-            opt.textContent = c;
-            if (c === selectedCity) opt.selected = true;
-            sel.appendChild(opt);
+  // Save emergency contact
+  document
+    .getElementById("emergencyEditMode")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!profileData) return;
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn.disabled) return;
+      submitBtn.disabled = true;
+      const origHtml = submitBtn.innerHTML;
+      submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${T("جاري الحفظ...", "Saving...")}`;
+
+      const payload = {
+        emergency_contact_name: document
+          .getElementById("editEmergencyName")
+          .value.trim(),
+        emergency_contact_phone: document
+          .getElementById("editEmergencyPhone")
+          .value.trim(),
+        emergency_contact_relationship:
+          document.getElementById("editEmergencyRelationship").value.trim() ||
+          null,
+      };
+
+      if (!payload.emergency_contact_name || !payload.emergency_contact_phone) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origHtml;
+        Swal.fire({
+          icon: "warning",
+          title: T("تنبيه", "Warning"),
+          text: T(
+            "يرجى تعبئة اسم ورقم جهة الطوارئ",
+            "Please fill emergency contact name and phone",
+          ),
         });
-    }
+        return;
+      }
 
-    document.getElementById('editGovernorate').addEventListener('change', function () {
-        populateCities(this.value, '');
+      try {
+        const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
+          method: "PUT",
+          headers: getHeaders(),
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) throw new Error("Update failed");
+
+        Swal.fire({
+          icon: "success",
+          title: T("تم", "Done"),
+          text: T(
+            "تم تحديث جهة الطوارئ بنجاح",
+            "Emergency contact updated successfully",
+          ),
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        await loadProfile();
+        cancelEmergencyEdit();
+      } catch (err) {
+        console.error(err);
+        Swal.fire({
+          icon: "error",
+          title: T("خطأ", "Error"),
+          text: T("تعذر حفظ جهة الطوارئ", "Failed to save emergency contact"),
+        });
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origHtml;
+      }
     });
 
-    async function loadProfile() {
-        try {
-            const resp = await fetch('/api/parent/profile', { headers: getHeaders() });
-            if (!resp.ok) {
-                if (resp.status === 404) {
-                    document.getElementById('profileAlert').classList.remove('d-none');
-                    document.getElementById('profileAlert').innerHTML =
-                        `<i class="bi bi-exclamation-triangle me-2"></i><strong>${T('لم يتم العثور على ملفك الشخصي.', 'Profile not found.')}</strong> ${T('يرجى التواصل مع الإدارة.', 'Please contact administration.')}`;
-                    return;
-                }
-                throw new Error("Failed to load profile");
-            }
-
-            profileData = await resp.json();
-            renderProfile(profileData);
-        } catch (error) {
-            console.error('Error loading profile:', error);
-            Swal.fire({ icon: 'error', title: T('خطأ', 'Error'), text: T('تعذر تحميل الملف الشخصي', 'Failed to load profile') });
-        }
-    }
-
-    function renderProfile(p) {
-        // Top card
-        document.getElementById('profileFullName').textContent = `${p.first_name} ${p.second_name || ''} ${p.last_name}`.trim();
-        document.getElementById('profileStatusBadge').innerHTML = p.profile_complete
-            ? `<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>${T('مكتمل', 'Complete')}</span>`
-            : `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>${T('غير مكتمل', 'Incomplete')}</span>`;
-
-        if (!p.profile_complete) {
-            document.getElementById('profileAlert').classList.remove('d-none');
-        }
-
-        // Personal Info
-        document.getElementById('viewFirstName').textContent = (IS_EN && p.first_name_en) ? p.first_name_en : (p.first_name || '—');
-        document.getElementById('viewSecondName').textContent = p.second_name || '—';
-        document.getElementById('viewLastName').textContent = (IS_EN && p.last_name_en) ? p.last_name_en : (p.last_name || '—');
-        document.getElementById('viewPhone').textContent = p.phone_number || '—';
-        document.getElementById('viewEmail').textContent = p.email || '—';
-        document.getElementById('viewGender').textContent = p.gender === 'MALE' ? T('ذكر', 'Male') : p.gender === 'FEMALE' ? T('أنثى', 'Female') : '—';
-        document.getElementById('viewNationality').textContent = p.nationality || '—';
-        document.getElementById('viewRelationship').textContent = RELATIONSHIP_LABELS[p.relationship_to_child] || p.relationship_to_child || '—';
-        document.getElementById('viewNationalId').textContent = p.national_id || '—';
-        document.getElementById('viewPassport').textContent = p.passport_number || '—';
-
-        // Address
-        document.getElementById('viewGovernorate').textContent = GOVERNORATE_AR[p.home_governorate] || p.home_governorate || '—';
-        document.getElementById('viewCity').textContent = p.home_city || '—';
-        document.getElementById('viewArea').textContent = p.home_area || '—';
-        document.getElementById('viewAddressLine').textContent = p.home_address_line || '—';
-        document.getElementById('viewWorkAddress').textContent = p.work_address || '—';
-
-        // Emergency Contact
-        document.getElementById('viewEmergencyName').textContent = p.emergency_contact_name || '—';
-        document.getElementById('viewEmergencyPhone').textContent = p.emergency_contact_phone || '—';
-        document.getElementById('viewEmergencyRelationship').textContent = p.emergency_contact_relationship || '—';
-
-        // Preferences
-        document.getElementById('correspondenceSwitch').checked = p.correspondence_preference !== false;
-
-        // Fill edit forms
-        document.getElementById('editFirstName').value = p.first_name || '';
-        document.getElementById('editSecondName').value = p.second_name || '';
-        document.getElementById('editLastName').value = p.last_name || '';
-        document.getElementById('editPhone').value = p.phone_number || '';
-        document.getElementById('editRelationship').value = p.relationship_to_child || '';
-
-        // Address edit
-        const govSelect = document.getElementById('editGovernorate');
-        const govValue = p.home_governorate || '';
-        const matchedGov = _govData.find(g => g.name_ar === govValue || g.name_en === govValue);
-        govSelect.value = matchedGov ? matchedGov.name_ar : govValue;
-        if (matchedGov) {
-            populateCities(matchedGov.name_ar, p.home_city || '');
-        }
-        document.getElementById('editArea').value = p.home_area || '';
-        document.getElementById('editAddressLine').value = p.home_address_line || '';
-        document.getElementById('editWorkAddress').value = p.work_address || '';
-
-        // Emergency edit
-        document.getElementById('editEmergencyName').value = p.emergency_contact_name || '';
-        document.getElementById('editEmergencyPhone').value = p.emergency_contact_phone || '';
-        document.getElementById('editEmergencyRelationship').value = p.emergency_contact_relationship || '';
-    }
-
-    // Toggle personal info edit
-    function toggleEditMode() {
-        document.getElementById('viewMode').classList.toggle('d-none');
-        document.getElementById('editMode').classList.toggle('d-none');
-        const btn = document.getElementById('btnEditProfile');
-        btn.innerHTML = document.getElementById('editMode').classList.contains('d-none')
-            ? `<i class="bi bi-pencil me-1"></i>${T('تعديل', 'Edit')}`
-            : `<i class="bi bi-x me-1"></i>${T('إلغاء', 'Cancel')}`;
-    }
-
-    function cancelEdit() {
-        if (profileData) renderProfile(profileData);
-        document.getElementById('viewMode').classList.remove('d-none');
-        document.getElementById('editMode').classList.add('d-none');
-        document.getElementById('btnEditProfile').innerHTML = `<i class="bi bi-pencil me-1"></i>${T('تعديل', 'Edit')}`;
-    }
-
-    // Toggle address edit
-    function toggleAddressEdit() {
-        document.getElementById('addressViewMode').classList.toggle('d-none');
-        document.getElementById('addressEditMode').classList.toggle('d-none');
-        const btn = document.getElementById('btnEditAddress');
-        btn.innerHTML = document.getElementById('addressEditMode').classList.contains('d-none')
-            ? `<i class="bi bi-pencil me-1"></i>${T('تعديل', 'Edit')}`
-            : `<i class="bi bi-x me-1"></i>${T('إلغاء', 'Cancel')}`;
-    }
-
-    function cancelAddressEdit() {
-        if (profileData) renderProfile(profileData);
-        document.getElementById('addressViewMode').classList.remove('d-none');
-        document.getElementById('addressEditMode').classList.add('d-none');
-        document.getElementById('btnEditAddress').innerHTML = `<i class="bi bi-pencil me-1"></i>${T('تعديل', 'Edit')}`;
-    }
-
-    // Toggle emergency contact edit
-    function toggleEmergencyEdit() {
-        document.getElementById('emergencyViewMode').classList.toggle('d-none');
-        document.getElementById('emergencyEditMode').classList.toggle('d-none');
-        const btn = document.getElementById('btnEditEmergency');
-        btn.innerHTML = document.getElementById('emergencyEditMode').classList.contains('d-none')
-            ? `<i class="bi bi-pencil me-1"></i>${T('تعديل', 'Edit')}`
-            : `<i class="bi bi-x me-1"></i>${T('إلغاء', 'Cancel')}`;
-    }
-
-    function cancelEmergencyEdit() {
-        if (profileData) renderProfile(profileData);
-        document.getElementById('emergencyViewMode').classList.remove('d-none');
-        document.getElementById('emergencyEditMode').classList.add('d-none');
-        document.getElementById('btnEditEmergency').innerHTML = `<i class="bi bi-pencil me-1"></i>${T('تعديل', 'Edit')}`;
-    }
-
-    // Save personal info
-    document.getElementById('editMode').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!profileData) return;
-
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        if (submitBtn.disabled) return;
-        submitBtn.disabled = true;
-        const origHtml = submitBtn.innerHTML;
-        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${T('جاري الحفظ...', 'Saving...')}`;
-
-        const payload = {
-            first_name: document.getElementById('editFirstName').value.trim(),
-            second_name: document.getElementById('editSecondName').value.trim() || null,
-            last_name: document.getElementById('editLastName').value.trim(),
-            phone_number: document.getElementById('editPhone').value.trim(),
-            relationship_to_child: document.getElementById('editRelationship').value || null,
-        };
-
-        if (!payload.first_name || !payload.last_name || !payload.phone_number) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = origHtml;
-            Swal.fire({ icon: 'warning', title: T('تنبيه', 'Warning'), text: T('يرجى تعبئة جميع الحقول المطلوبة', 'Please fill all required fields') });
-            return;
-        }
-
-        try {
-            const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify(payload)
-            });
-            if (!resp.ok) throw new Error('Update failed');
-
-            Swal.fire({ icon: 'success', title: T('تم', 'Done'), text: T('تم تحديث البيانات الشخصية بنجاح', 'Personal information updated successfully'), timer: 1500, showConfirmButton: false });
-            await loadProfile();
-            cancelEdit();
-        } catch (err) {
-            console.error(err);
-            Swal.fire({ icon: 'error', title: T('خطأ', 'Error'), text: T('تعذر حفظ التغييرات', 'Failed to save changes') });
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = origHtml;
-        }
+  // Correspondence preference toggle
+  document
+    .getElementById("correspondenceSwitch")
+    .addEventListener("change", async function () {
+      if (!profileData) return;
+      try {
+        await fetch(`/api/parent-profiles/${profileData.id}`, {
+          method: "PUT",
+          headers: getHeaders(),
+          body: JSON.stringify({ correspondence_preference: this.checked }),
+        });
+      } catch (e) {
+        console.error(e);
+      }
     });
 
-    // Save address
-    document.getElementById('addressEditMode').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!profileData) return;
-
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        if (submitBtn.disabled) return;
-        submitBtn.disabled = true;
-        const origHtml = submitBtn.innerHTML;
-        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${T('جاري الحفظ...', 'Saving...')}`;
-
-        const payload = {
-            home_governorate: document.getElementById('editGovernorate').value,
-            home_city: document.getElementById('editCity').value.trim(),
-            home_area: document.getElementById('editArea').value.trim(),
-            home_address_line: document.getElementById('editAddressLine').value.trim(),
-            work_address: document.getElementById('editWorkAddress').value.trim() || null,
-        };
-
-        if (!payload.home_governorate || !payload.home_city || !payload.home_area || !payload.home_address_line) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = origHtml;
-            Swal.fire({ icon: 'warning', title: T('تنبيه', 'Warning'), text: T('يرجى تعبئة جميع حقول العنوان المطلوبة', 'Please fill all required address fields') });
-            return;
-        }
-
-        try {
-            const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify(payload)
-            });
-            if (!resp.ok) throw new Error('Update failed');
-
-            Swal.fire({ icon: 'success', title: T('تم', 'Done'), text: T('تم تحديث العنوان بنجاح', 'Address updated successfully'), timer: 1500, showConfirmButton: false });
-            await loadProfile();
-            cancelAddressEdit();
-        } catch (err) {
-            console.error(err);
-            Swal.fire({ icon: 'error', title: T('خطأ', 'Error'), text: T('تعذر حفظ العنوان', 'Failed to save address') });
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = origHtml;
-        }
-    });
-
-    // Save emergency contact
-    document.getElementById('emergencyEditMode').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!profileData) return;
-
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        if (submitBtn.disabled) return;
-        submitBtn.disabled = true;
-        const origHtml = submitBtn.innerHTML;
-        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${T('جاري الحفظ...', 'Saving...')}`;
-
-        const payload = {
-            emergency_contact_name: document.getElementById('editEmergencyName').value.trim(),
-            emergency_contact_phone: document.getElementById('editEmergencyPhone').value.trim(),
-            emergency_contact_relationship: document.getElementById('editEmergencyRelationship').value.trim() || null,
-        };
-
-        if (!payload.emergency_contact_name || !payload.emergency_contact_phone) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = origHtml;
-            Swal.fire({ icon: 'warning', title: T('تنبيه', 'Warning'), text: T('يرجى تعبئة اسم ورقم جهة الطوارئ', 'Please fill emergency contact name and phone') });
-            return;
-        }
-
-        try {
-            const resp = await fetch(`/api/parent-profiles/${profileData.id}`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify(payload)
-            });
-            if (!resp.ok) throw new Error('Update failed');
-
-            Swal.fire({ icon: 'success', title: T('تم', 'Done'), text: T('تم تحديث جهة الطوارئ بنجاح', 'Emergency contact updated successfully'), timer: 1500, showConfirmButton: false });
-            await loadProfile();
-            cancelEmergencyEdit();
-        } catch (err) {
-            console.error(err);
-            Swal.fire({ icon: 'error', title: T('خطأ', 'Error'), text: T('تعذر حفظ جهة الطوارئ', 'Failed to save emergency contact') });
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = origHtml;
-        }
-    });
-
-    // Correspondence preference toggle
-    document.getElementById('correspondenceSwitch').addEventListener('change', async function () {
-        if (!profileData) return;
-        try {
-            await fetch(`/api/parent-profiles/${profileData.id}`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify({ correspondence_preference: this.checked })
-            });
-        } catch (e) { console.error(e); }
-    });
+  // Language preference switcher
+  async function switchLanguage(lang) {
+    try {
+      // Persist to server via new PUT /api/parent/profile endpoint
+      await fetch("/api/parent/profile", {
+        method: "PUT",
+        headers: getHeaders(),
+        body: JSON.stringify({ language: lang }),
+      });
+    } catch (e) {
+      console.error("Language switch error:", e);
+    }
+    // Set cookie and reload to apply new language across the UI
+    document.cookie = `kinjo_lang=${lang};path=/;max-age=31536000`;
+    window.location.reload();
+  }
 </script>
 {% endblock %}

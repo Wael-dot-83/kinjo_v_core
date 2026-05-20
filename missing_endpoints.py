@@ -219,7 +219,7 @@ def update_current_user_info(
                     models.ParentProfile.deleted_at.is_(None)
                 ).first()
                 if existing_nid:
-                    raise HTTPException(status_code=400, detail="الرقم الوطني مستخدم من قِبل مستخدم آخر")
+                    raise HTTPException(status_code=400, detail="National ID already used by another user")
             parent_profile.national_id = stripped_nid or None
         if update_data.nationality is not None:
             parent_profile.nationality = update_data.nationality.strip()
@@ -1441,7 +1441,7 @@ def delete_kindergarten(
     ).first()
 
     if not kindergarten:
-        raise HTTPException(status_code=404, detail="الروضة غير موجودة")
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
 
     # Check permissions
     if current_user.role != models.UserRole.ADMIN:
@@ -1449,7 +1449,7 @@ def delete_kindergarten(
             # Managers can archive their own kindergarten
             pass
         else:
-            raise HTTPException(status_code=403, detail="غير مصرح لك بحذف هذه الروضة")
+            raise HTTPException(status_code=403, detail="Not authorized to delete this kindergarten")
 
     # Check for dependent records
     active_children = db.query(models.Child).filter(models.Child.kindergarten_id == kindergarten_id).count()
@@ -1468,18 +1468,18 @@ def delete_kindergarten(
         if current_user.role != models.UserRole.ADMIN:
             raise HTTPException(
                 status_code=409,
-                detail="لا يمكن حذف الروضة لأنها تحتوي على بيانات نشطة. يرجى أرشفتها بدلاً من ذلك."
+                detail="Cannot delete kindergarten with active data. Please archive it instead."
             )
         # Admin can force archive even with dependencies
         kindergarten.status = models.KindergartenStatus.INACTIVE
         action = "archived"
-        message = "تم أرشفة الروضة بنجاح"
+        message = "Kindergarten archived"
         audit_action = "KINDERGARTEN_ARCHIVED"
     else:
         # No dependencies - allow hard delete
         db.delete(kindergarten)
         action = "deleted"
-        message = "تم حذف الروضة نهائياً"
+        message = "Kindergarten permanently deleted"
         audit_action = "KINDERGARTEN_DELETED"
 
     db.commit()
@@ -1513,7 +1513,7 @@ def archive_kindergarten(
     ).first()
 
     if not kindergarten:
-        raise HTTPException(status_code=404, detail="الروضة غير موجودة")
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
 
     # Check permissions
     if current_user.role != models.UserRole.ADMIN:
@@ -1521,10 +1521,10 @@ def archive_kindergarten(
             # Managers can archive their own kindergarten
             pass
         else:
-            raise HTTPException(status_code=403, detail="غير مصرح لك بأرشفة هذه الروضة")
+            raise HTTPException(status_code=403, detail="Not authorized to archive this kindergarten")
 
     if kindergarten.status == models.KindergartenStatus.INACTIVE:
-        raise HTTPException(status_code=400, detail="الروضة مأرشفة بالفعل")
+        raise HTTPException(status_code=400, detail="Kindergarten is already archived")
 
     kindergarten.status = models.KindergartenStatus.INACTIVE
     db.commit()
@@ -1540,7 +1540,7 @@ def archive_kindergarten(
 
     return {
         "action": "archived",
-        "message": "تم أرشفة الروضة بنجاح",
+        "message": "Kindergarten archived",
         "kindergarten_id": kindergarten_id
     }
 
@@ -1553,17 +1553,17 @@ def restore_kindergarten(
 ):
     """Restore archived kindergarten"""
     if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="فقط المدير يمكنه استعادة الروضات المأرشفة")
+        raise HTTPException(status_code=403, detail="Only admin can restore archived kindergartens")
 
     kindergarten = db.query(models.Kindergarten).filter(
         models.Kindergarten.id == kindergarten_id
     ).first()
 
     if not kindergarten:
-        raise HTTPException(status_code=404, detail="الروضة غير موجودة")
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
 
     if kindergarten.status != models.KindergartenStatus.INACTIVE:
-        raise HTTPException(status_code=400, detail="الروضة غير مأرشفة")
+        raise HTTPException(status_code=400, detail="Kindergarten is not archived")
 
     kindergarten.status = models.KindergartenStatus.ACTIVE
     db.commit()
@@ -1579,7 +1579,7 @@ def restore_kindergarten(
 
     return {
         "action": "restored",
-        "message": "تم استعادة الروضة بنجاح",
+        "message": "Kindergarten restored successfully",
         "kindergarten_id": kindergarten_id
     }
 
@@ -1944,10 +1944,10 @@ def get_children_in_class(
     """Return children actively enrolled in the given class — used for incident form dropdowns."""
     cls = db.query(models.Class).filter(models.Class.id == class_id).first()
     if not cls:
-        raise HTTPException(status_code=404, detail="الصف غير موجود")
+        raise HTTPException(status_code=404, detail="Class not found")
     if current_user.role != models.UserRole.ADMIN:
         if cls.kindergarten_id != current_user.kindergarten_id:
-            raise HTTPException(status_code=403, detail="غير مصرح")
+            raise HTTPException(status_code=403, detail="Access denied")
 
     enrollments = db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.class_id == class_id,
@@ -1977,10 +1977,10 @@ def get_supervisors_in_class(
     """Return supervisors assigned to the given class — used for incident form dropdowns."""
     cls = db.query(models.Class).filter(models.Class.id == class_id).first()
     if not cls:
-        raise HTTPException(status_code=404, detail="الصف غير موجود")
+        raise HTTPException(status_code=404, detail="Class not found")
     if current_user.role != models.UserRole.ADMIN:
         if cls.kindergarten_id != current_user.kindergarten_id:
-            raise HTTPException(status_code=403, detail="غير مصرح")
+            raise HTTPException(status_code=403, detail="Access denied")
 
     from datetime import date as _date
     today = _date.today()
@@ -3242,7 +3242,7 @@ def register_parent(
     if not registration_data.national_id and not registration_data.passport_number:
         raise HTTPException(
             status_code=400,
-            detail="يجب إدخال الرقم الوطني أو رقم جواز السفر"
+            detail="national_id or passport_number is required"
         )
 
     # Validate national_id uniqueness
@@ -3252,7 +3252,7 @@ def register_parent(
             models.ParentProfile.deleted_at.is_(None)
         ).first()
         if existing_national_id:
-            raise HTTPException(status_code=400, detail="الرقم الوطني مسجل مسبقاً")
+            raise HTTPException(status_code=400, detail="National ID is already registered")
 
     is_valid_password, password_error = PasswordValidator.validate(registration_data.password)
     if not is_valid_password:
@@ -3432,12 +3432,12 @@ def create_enrollment_application(
     if not parent_profile.parent_type:
         raise HTTPException(
             status_code=400,
-            detail="يرجى إكمال بيانات ولي الأمر (نوع ولي الأمر) في الملف الشخصي قبل التسجيل"
+            detail="Please complete guardian type in your profile before registering"
         )
     if not parent_profile.national_id:
         raise HTTPException(
             status_code=400,
-            detail="يرجى إضافة رقمك الوطني في الملف الشخصي قبل التسجيل"
+            detail="Please add your national ID to your profile before registering"
         )
 
     # Validate kindergarten exists
@@ -3472,27 +3472,27 @@ def create_enrollment_application(
     else:
         # MOTHER or OTHER must supply father name
         if not enrollment_data.father_name:
-            raise HTTPException(status_code=400, detail="اسم الأب مطلوب")
+            raise HTTPException(status_code=400, detail="Father's name is required")
         father_name = enrollment_data.father_name
 
     # Validate conditional required fields
     if ptype == "FATHER":
         # Must supply mother details
         if not enrollment_data.mother_first_name or not enrollment_data.mother_last_name:
-            raise HTTPException(status_code=400, detail="اسم الأم مطلوب")
+            raise HTTPException(status_code=400, detail="Mother's name is required")
         if not enrollment_data.mother_nationality:
-            raise HTTPException(status_code=400, detail="جنسية الأم مطلوبة")
+            raise HTTPException(status_code=400, detail="Mother's nationality is required")
     elif ptype == "MOTHER":
         # Must supply father details
         if not enrollment_data.father_national_id:
-            raise HTTPException(status_code=400, detail="رقم الأب الوطني مطلوب")
+            raise HTTPException(status_code=400, detail="Father's national ID is required")
         if not enrollment_data.father_nationality:
-            raise HTTPException(status_code=400, detail="جنسية الأب مطلوبة")
+            raise HTTPException(status_code=400, detail="Father's nationality is required")
     else:  # OTHER
         if not enrollment_data.mother_first_name or not enrollment_data.mother_last_name:
-            raise HTTPException(status_code=400, detail="اسم الأم مطلوب")
+            raise HTTPException(status_code=400, detail="Mother's name is required")
         if not enrollment_data.father_national_id:
-            raise HTTPException(status_code=400, detail="رقم الأب الوطني مطلوب")
+            raise HTTPException(status_code=400, detail="Father's national ID is required")
 
     # Validate mother_national_id uniqueness: prevent same mother being used by a different parent
     if enrollment_data.mother_national_id:
@@ -3504,7 +3504,7 @@ def create_enrollment_application(
         if existing_mother_nid:
             raise HTTPException(
                 status_code=400,
-                detail="الرقم الوطني للأم مسجل مسبقاً لدى حساب ولي أمر آخر"
+                detail="Mother's national ID already registered to another guardian account"
             )
 
     # Validate mother_phone uniqueness: prevent same mother phone used by a different parent
@@ -3517,7 +3517,7 @@ def create_enrollment_application(
         if existing_mother_phone:
             raise HTTPException(
                 status_code=400,
-                detail="هاتف الأم مسجل مسبقاً لدى حساب ولي أمر آخر"
+                detail="Mother's phone already registered to another guardian account"
             )
 
     # Create child record
@@ -3673,7 +3673,7 @@ def assign_corresponding(
     except Exception:
         norm_phone = payload.contact_phone.strip()
     if not validators.validate_jordan_phone(norm_phone):
-        raise HTTPException(status_code=400, detail="رقم الهاتف غير صالح")
+        raise HTTPException(status_code=400, detail="Invalid phone number")
 
     child.corresponding_type = "GUARDIAN"
     child.corresponding_phone = norm_phone
@@ -4094,7 +4094,7 @@ def create_absence_request(
         }
     ).fetchone()
     if overlap:
-        raise HTTPException(status_code=409, detail="يوجد طلب غياب متداخل في نفس الفترة")
+        raise HTTPException(status_code=409, detail="Overlapping absence request exists for the same period")
 
     result = db.execute(
         text(
@@ -4651,14 +4651,14 @@ def create_incident_json(
     if current_user.role == models.UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="المشرف العام لا يُسجّل الحوادث التشغيلية. هذا الإجراء مخصص للمدير والمشرف."
+            detail="Admin cannot log operational incidents. This action is for manager and supervisor only."
         )
     if current_user.role == models.UserRole.PARENT:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="غير مصرح")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     kindergarten_id = incident_data.kindergarten_id or current_user.kindergarten_id
     if not kindergarten_id:
-        raise HTTPException(status_code=400, detail="معرّف الروضة مطلوب")
+        raise HTTPException(status_code=400, detail="kindergarten_id is required")
 
     validators.validate_kindergarten_scope(current_user, kindergarten_id)
 
@@ -4667,7 +4667,7 @@ def create_incident_json(
         if not incident_data.parent_not_informed_reason or not incident_data.parent_not_informed_reason.strip():
             raise HTTPException(
                 status_code=400,
-                detail="يجب ذكر سبب عدم إبلاغ ولي الأمر"
+                detail="Reason for not notifying parent is required"
             )
 
     # Verify child belongs to this kindergarten (active enrollment)
@@ -4680,8 +4680,8 @@ def create_incident_json(
     if not child_enrollment:
         child_exists = db.query(models.Child).filter(models.Child.id == incident_data.child_id).first()
         if not child_exists:
-            raise HTTPException(status_code=404, detail="الطفل غير موجود")
-        raise HTTPException(status_code=403, detail="الطفل غير مسجّل بصورة نشطة في هذه الروضة")
+            raise HTTPException(status_code=404, detail="Child not found")
+        raise HTTPException(status_code=403, detail="Child is not actively enrolled in this kindergarten")
 
     # Validate class belongs to kindergarten if provided
     if incident_data.class_id:
@@ -4690,18 +4690,18 @@ def create_incident_json(
             models.Class.kindergarten_id == kindergarten_id
         ).first()
         if not cls:
-            raise HTTPException(status_code=400, detail="الصف غير موجود أو لا ينتمي لهذه الروضة")
+            raise HTTPException(status_code=400, detail="Class not found or does not belong to this kindergarten")
 
     # Parse enums safely
     try:
         incident_type = models.IncidentType(incident_data.type.upper())
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"نوع الحادث غير صحيح: {incident_data.type}")
+        raise HTTPException(status_code=400, detail=f"Invalid incident type: {incident_data.type}")
 
     try:
         severity = models.SeverityLevel(incident_data.severity_level.upper())
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"درجة الخطورة غير صحيحة: {incident_data.severity_level}")
+        raise HTTPException(status_code=400, detail=f"Invalid severity level: {incident_data.severity_level}")
 
     occurred_at = datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00'))
 

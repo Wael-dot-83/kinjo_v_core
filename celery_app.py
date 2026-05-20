@@ -27,6 +27,8 @@ celery_app.conf.update(
     task_always_eager=settings.TESTING,
     task_eager_propagates=settings.TESTING,
     beat_schedule={
+        # Production requirement: run exactly one Celery Beat scheduler instance
+        # per environment for this schedule to avoid duplicate dispatch triggers.
         "dispatch-scheduled-messages": {
             "task": "messaging_tasks.dispatch_scheduled_messages",
             "schedule": 60.0,

@@ -165,6 +165,7 @@ static/imports/
 pytest_out.txt
 test_results.txt
 seed_output.txt
+reports/imports/
 
 # Root-level diagnostic duplicates
 diag_*.py

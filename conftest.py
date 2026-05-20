@@ -77,6 +77,10 @@ def client(test_db):
         finally:
             pass
 
+    # Clear any stale overrides left by prior tests (e.g. module-scoped fixtures
+    # in test_frontend_integration.py that override get_current_user), then set
+    # only the db override for this test.
+    app.dependency_overrides.clear()
     app.dependency_overrides[get_db] = override_get_db
 
     with TestClient(app) as test_client:

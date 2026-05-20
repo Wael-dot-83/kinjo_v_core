@@ -242,6 +242,7 @@
                                 </div>
                             </div>
 
+                            {% if current_user and current_user.role.value not in ['ADMIN', 'MANAGER'] %}
                             <!-- Direct Message Section -->
                             <div id="directMessageSection" style="display:none;">
                                 <!-- Role Filter -->
@@ -288,7 +289,9 @@
                                     <input type="hidden" id="msgRecipient">
                                 </div>
                             </div>
+                            {% endif %}
 
+                            {% if current_user and current_user.role.value not in ['ADMIN', 'MANAGER'] %}
                             <!-- Group Message Section (Non-Admin) -->
                             <div id="groupMessageSection" style="display:none;">
                                 <div class="mb-3">
@@ -321,6 +324,7 @@
                                     </div>
                                 </div>
                             </div>
+                            {% endif %}
 
                             <!-- Reply Settings -->
                             <div class="form-check mt-3">
@@ -331,8 +335,9 @@
                             </div>
                         </div>
                     </div>
+                    {% if current_user and current_user.role.value in ['ADMIN', 'MANAGER'] %}
                     <div class="mb-3" id="recipientField" style="display:none;">
-                        <label class="form-label">{% if ui_lang == 'en' %}Recipient{% else %}المستلم{% endif %}</label>
+                        <p class="form-label mb-1 fw-semibold">{% if ui_lang == 'en' %}Recipient{% else %}المستلم{% endif %}</p>
                         <div id="directRecipientLookup" style="display:none;">
                             <div class="row g-2">
                                 <div class="col-12 col-md-4">
@@ -365,7 +370,8 @@
                                 <button type="button" class="btn btn-outline-secondary btn-sm"
                                     id="directUserResetBtn">{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</button>
                             </div>
-                            <select class="form-select mt-2" id="directRecipientSelect">
+                            <label for="directRecipientSelect" class="form-label mt-2">{% if ui_lang == 'en' %}Select Recipient{% else %}اختر المستلم{% endif %}</label>
+                            <select class="form-select" id="directRecipientSelect">
                                 <option value="">{% if ui_lang == 'en' %}-- Select a recipient --{% else %}-- اختر مستلمًا --{% endif %}</option>
                             </select>
                             <input type="hidden" id="msgRecipient">
@@ -380,6 +386,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
                     <!-- محتوى الرسالة Section -->
                     <div class="card mb-4 border-0 bg-light">
                         <div class="card-header bg-white border-bottom-0">
@@ -1260,23 +1267,30 @@
             if (currentUserRole === 'SUPERVISOR') {
                 if (supervisorSection) supervisorSection.style.display = 'block';
                 if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'none';
-                directSection.style.display = 'none';
+                if (directSection) directSection.style.display = 'none';
             } else {
                 if (supervisorSection) supervisorSection.style.display = 'none';
                 if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'block';
-                directSection.style.display = 'block';
+                // Non-admin roles use directMessageSection; admin/manager use recipientField
+                if (directSection) directSection.style.display = 'block';
+                const recipField = document.getElementById('recipientField');
+                if (recipField) {
+                    recipField.style.display = 'block';
+                    const lookup = document.getElementById('directRecipientLookup');
+                    if (lookup) lookup.style.display = 'block';
+                }
                 updateDirectRecipientControls();
             }
-            groupSection.style.display = 'none';
-            if (adminSection) {
-                adminSection.style.display = 'none';
-            }
+            if (groupSection) groupSection.style.display = 'none';
+            if (adminSection) adminSection.style.display = 'none';
             return;
         }
 
         if (type === 'group') {
             if (supervisorSection) supervisorSection.style.display = 'none';
-            directSection.style.display = 'none';
+            if (directSection) directSection.style.display = 'none';
+            const recipField = document.getElementById('recipientField');
+            if (recipField) recipField.style.display = 'none';
             const isAdmin = currentUserRole === 'ADMIN';
             if (adminSection) {
                 adminSection.style.display = isAdmin ? 'block' : 'none';
@@ -1296,14 +1310,20 @@
         if (currentUserRole === 'SUPERVISOR') {
             if (supervisorSection) supervisorSection.style.display = 'block';
             if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'none';
-            directSection.style.display = 'none';
+            if (directSection) directSection.style.display = 'none';
         } else {
             if (supervisorSection) supervisorSection.style.display = 'none';
             if (recipientsSectionHeader) recipientsSectionHeader.style.display = 'block';
-            directSection.style.display = 'block';
+            if (directSection) directSection.style.display = 'block';
+            const recipField = document.getElementById('recipientField');
+            if (recipField) {
+                recipField.style.display = 'block';
+                const lookup = document.getElementById('directRecipientLookup');
+                if (lookup) lookup.style.display = 'block';
+            }
             updateDirectRecipientControls();
         }
-        groupSection.style.display = 'none';
+        if (groupSection) groupSection.style.display = 'none';
     }
 
     function updateDirectRecipientControls() {

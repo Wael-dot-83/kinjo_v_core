@@ -3,14 +3,14 @@
 {% block title %}{% if ui_lang == 'en' %}Attendance History{% else %}سجل الحضور التاريخي{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-clock-history me-2 text-primary"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-clock-history text-primary me-2" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Attendance Archive{% else %}أرشيف الحضور والغياب{% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
                 <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Attendance History{% else %}سجل الحضور التاريخي{% endif %}</li>
             </ol>

@@ -9,10 +9,10 @@
 {% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-building me-2 text-primary"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-building text-primary me-2" aria-hidden="true"></i>
             {% if current_user.role.value == 'ADMIN' %}
             {% if ui_lang == 'en' %}Kindergarten Management{% else %}إدارة الروضات{% endif %}
             {% else %}
@@ -20,7 +20,7 @@
             {% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
                 <li class="breadcrumb-item active">
                     {% if current_user.role.value == 'ADMIN' %}
@@ -33,15 +33,15 @@
         </nav>
     </div>
     {% if current_user.role.value == 'ADMIN' %}
-    <div class="btn-toolbar">
+    <div class="page-header-actions">
         <a href="/kindergartens/create" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-2"></i>{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة روضة جديدة{% endif %}
+            <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة روضة جديدة{% endif %}
         </a>
     </div>
     {% elif current_user.role.value == 'MANAGER' and kindergartens %}
-    <div class="btn-toolbar">
+    <div class="page-header-actions">
         <a href="/kindergartens/{{ kindergartens[0].id }}/edit" class="btn btn-primary">
-            <i class="bi bi-pencil-square me-2"></i>{% if ui_lang == 'en' %}Edit Information{% else %}تعديل المعلومات{% endif %}
+            <i class="bi bi-pencil-square me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Edit Information{% else %}تعديل المعلومات{% endif %}
         </a>
     </div>
     {% endif %}

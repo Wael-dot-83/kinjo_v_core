@@ -11,6 +11,7 @@ import logging
 from datetime import datetime, timezone
 
 from celery_app import celery_app
+from config import settings
 from database import SessionLocal
 import models
 
@@ -33,17 +34,35 @@ def dispatch_scheduled_messages_now(db=None) -> int:
     try:
         now = datetime.now(timezone.utc)
 
-        due = (
+        _query = (
             db.query(models.Message)
             .filter(
                 models.Message.queue_status == models.MessageQueueStatus.SCHEDULED,
                 models.Message.scheduled_at <= now,
             )
-            .all()
         )
+        # Use SELECT FOR UPDATE SKIP LOCKED so that, when two Celery Beat workers
+        # overlap, each worker claims a disjoint set of rows and no message is
+        # dispatched twice.  SKIP LOCKED is PostgreSQL-specific; it is disabled
+        # in test mode where SQLite is used.
+        if not settings.TESTING:
+            _query = _query.with_for_update(skip_locked=True)
+        due = _query.all()
 
         for msg in due:
-            msg.queue_status = models.MessageQueueStatus.SENT
+            updated_rows = (
+                db.query(models.Message)
+                .filter(
+                    models.Message.id == msg.id,
+                    models.Message.queue_status == models.MessageQueueStatus.SCHEDULED,
+                )
+                .update({"queue_status": models.MessageQueueStatus.SENT}, synchronize_session=False)
+            )
+            # Idempotency guard: if another worker already transitioned this row,
+            # skip side-effects (recipient delivery timestamp updates/logging).
+            if updated_rows == 0:
+                continue
+
             dispatched += 1
             logger.info(
                 "Dispatching scheduled message id=%s sender_id=%s recipient_id=%s scheduled_at=%s",

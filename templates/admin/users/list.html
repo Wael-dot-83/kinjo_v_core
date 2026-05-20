@@ -74,10 +74,11 @@ actions=toolbar_actions
         <!-- Filters -->
         <div class="row g-3 mb-4">
             <div class="col-md-4">
-                <div class="input-group">
-                    <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                <div class="input-group input-group-icon">
+                    <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
                     <input type="text" class="form-control" id="searchUser"
-                        placeholder="{% if ui_lang == 'en' %}Search by name or email...{% else %}بحث بالاسم أو البريد الإلكتروني...{% endif %}">
+                        placeholder="{% if ui_lang == 'en' %}Search by name or email...{% else %}بحث بالاسم أو البريد الإلكتروني...{% endif %}"
+                        aria-label="{% if ui_lang == 'en' %}Search users{% else %}بحث عن مستخدمين{% endif %}">
                 </div>
             </div>
             <div class="col-md-3">

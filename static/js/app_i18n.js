@@ -98,7 +98,8 @@ class AppI18n {
         "بحث بالاسم": "Search by name",
         "اكتب اسم الروضة": "Type kindergarten name",
         "مسح عوامل التصفية": "Clear filters",
-        "يرجى اختيار الروضة من القائمة": "Please select a kindergarten from the list",
+        "يرجى اختيار الروضة من القائمة":
+          "Please select a kindergarten from the list",
         "اختر المحافظة أو اكتب اسم الروضة للبحث":
           "Select governorate or type kindergarten name to search",
         "يمكنك تصفية النتائج حسب المحافظة والمدينة والاسم":
@@ -119,8 +120,10 @@ class AppI18n {
         حضوري: "Walk-in",
         إلكتروني: "Online",
         "تسجيل مدير": "Manager entry",
-        "يرجى مراجعة البيانات قبل إرسال الطلب": "Please review data before submitting",
-        "أؤكد صحة جميع البيانات المدخلة": "I confirm all entered data is correct",
+        "يرجى مراجعة البيانات قبل إرسال الطلب":
+          "Please review data before submitting",
+        "أؤكد صحة جميع البيانات المدخلة":
+          "I confirm all entered data is correct",
         "إرسال الطلب": "Submit request",
         "جاري الإرسال": "Submitting",
         "تفاصيل الروضة": "Kindergarten details",
@@ -134,7 +137,8 @@ class AppI18n {
         "الروضة المخصصة": "Assigned kindergarten",
         "يرجى ملء جميع الحقول المطلوبة": "Please fill all required fields",
         "يرجى تأكيد صحة البيانات": "Please confirm data accuracy",
-        "عمر الطفل غير مؤهل للتسجيل": "Child age is not eligible for enrollment",
+        "عمر الطفل غير مؤهل للتسجيل":
+          "Child age is not eligible for enrollment",
         "لا يمكن إرسال الطلب: عمر الطفل غير مؤهل":
           "Cannot submit request: child age is not eligible",
         "يوجد طلب تسجيل لهذا الطفل في هذه الروضة بالفعل":
@@ -239,14 +243,16 @@ class AppI18n {
         "فشل في تحديث الموظف": "Failed to update staff",
         "فشل في تحديث حالة الموظف": "Failed to update staff status",
         "فشل في إعادة تعيين كلمة المرور": "Failed to reset password",
-        "نهائياً؟ لا يمكن التراجع عن هذا الإجراء": "Permanently? This action cannot be undone",
+        "نهائياً؟ لا يمكن التراجع عن هذا الإجراء":
+          "Permanently? This action cannot be undone",
         "هل أنت متأكد من حذف هذه الروضة نهائياً؟ لا يمكن التراجع عن هذا الإجراء وستفقد جميع البيانات المرتبطة":
           "Are you sure you want to permanently delete this kindergarten? This cannot be undone and all related data will be lost",
         "هل أنت متأكد من أرشفة هذه الروضة؟ سيتم إخفاؤها من القوائم النشطة ولكن يمكن استعادتها لاحقاً":
           "Are you sure you want to archive this kindergarten? It will be hidden from active lists but can be restored later",
         "هل أنت متأكد من حذف الخدمة/المرفق":
           "Are you sure you want to delete this service/facility",
-        "هل أنت متأكد من إلغاء تفعيل الشعبة": "Are you sure you want to deactivate this class",
+        "هل أنت متأكد من إلغاء تفعيل الشعبة":
+          "Are you sure you want to deactivate this class",
         "هل أنت متأكد من إلغاء تفعيل الموظف":
           "Are you sure you want to deactivate this staff member",
         "هل أنت متأكد من إعادة تفعيل الموظف":
@@ -294,11 +300,13 @@ class AppI18n {
         "طلبات تسجيل معلقة": "Pending enrollment requests",
         "جاري التحقق": "Checking",
         "تعذر تحميل المحافظات": "Unable to load governorates",
-        "تعذر العثور على نافذة تفاصيل التحقق": "Validation details modal was not found",
+        "تعذر العثور على نافذة تفاصيل التحقق":
+          "Validation details modal was not found",
         "تفاصيل التحقق من البيانات": "Data validation details",
         "جاري تحميل تفاصيل التحقق": "Loading validation details",
         "شرح المؤشرات": "Indicator definitions",
-        "شرح المؤشرات: الميزة قيد التطوير": "Indicator explanation: feature under development",
+        "شرح المؤشرات: الميزة قيد التطوير":
+          "Indicator explanation: feature under development",
         "شرح مؤشرات الأداء الرئيسية": "KPI definitions",
         "لوحة مؤشرات الأداء الرئيسية": "KPI dashboard",
         "مؤشرات الأداء الرئيسية": "Key performance indicators",
@@ -346,7 +354,8 @@ class AppI18n {
         "جاري تحميل الإحصائيات": "Loading statistics",
         "جاري تحميل التقارير": "Loading reports",
         "جاري تحميل الفصول": "Loading classes",
-        "متابعة التقارير غير المعتمدة مع تحديد الأولوية": "Track unapproved reports with priority",
+        "متابعة التقارير غير المعتمدة مع تحديد الأولوية":
+          "Track unapproved reports with priority",
         "متابعة الغياب المتكرر": "Track recurrent absences",
         "تسريع مراجعة التسجيلات": "Speed up enrollment reviews",
         "راجع الطلبات الآن": "Review requests now",
@@ -363,7 +372,8 @@ class AppI18n {
         "إضافة روضة جديدة": "Add new kindergarten",
         الجنس: "Gender",
         "إنشاء تقرير يومي": "Create daily report",
-        "تاريخ البداية يجب أن يكون قبل تاريخ النهاية": "Start date must be before end date",
+        "تاريخ البداية يجب أن يكون قبل تاريخ النهاية":
+          "Start date must be before end date",
         تعديل: "Edit",
         "تعديل الخدمة/المرفق": "Edit service/facility",
         "تعديل الموظف": "Edit staff",
@@ -391,7 +401,8 @@ class AppI18n {
         "يحتاج تحسين": "Needs improvement",
         "يرجى اختيار روضة": "Please select a kindergarten",
         "يرجى اختيار شعبة واحدة على الأقل": "Please select at least one class",
-        "يرجى تحديد تاريخ البداية والنهاية": "Please select start and end dates",
+        "يرجى تحديد تاريخ البداية والنهاية":
+          "Please select start and end dates",
         "أحمد محمد - منذ 5 دقائق": "Ahmad Mohammad - 5 minutes ago",
         "سارة أحمد - منذ 15 دقيقة": "Sara Ahmad - 15 minutes ago",
         "طفلاً - منذ 30 دقيقة": "15 children - 30 minutes ago",
@@ -416,7 +427,8 @@ class AppI18n {
         الغائبون: "Absent",
         المشرفون: "Supervisors",
         "المشرفون النشطون": "Active supervisors",
-        "تاريخ البداية يجب أن يكون قبل تاريخ النهاية.": "Start date must be before end date.",
+        "تاريخ البداية يجب أن يكون قبل تاريخ النهاية.":
+          "Start date must be before end date.",
         "تحديث البيانات": "Refresh data",
         "تحديث بيانات لوحة التحكم": "Refresh dashboard data",
         "تسجيل حضور اليوم": "Record today's attendance",
@@ -449,7 +461,8 @@ class AppI18n {
         "مراجعة طلبات التسجيل": "Review enrollment requests",
         "مشرف جديد": "New supervisor",
         "من إجمالي الأطفال": "of total children",
-        "ميزة التاريخ المخصص قيد التطوير": "Custom date feature is under development",
+        "ميزة التاريخ المخصص قيد التطوير":
+          "Custom date feature is under development",
         "نسبة الحضور": "Attendance rate",
         "نسبة الحضور الأسبوعية": "Weekly attendance rate",
         "نظرة عامة على الروضات -": "Kindergartens overview -",
@@ -458,7 +471,8 @@ class AppI18n {
           "There are 5 requests pending review for more than two days.",
         "وصول سريع:": "Quick access:",
         "يحتاج إجراء": "Action required",
-        "يرجى تحديد تاريخ البداية والنهاية.": "Please select start and end dates.",
+        "يرجى تحديد تاريخ البداية والنهاية.":
+          "Please select start and end dates.",
         "اختر الأطفال:": "Select children:",
         "اختر الشعب:": "Select classes:",
         "اختر روضة...": "Select a kindergarten...",
@@ -474,7 +488,8 @@ class AppI18n {
         "خطأ في تحميل الشعب": "Error loading classes",
         "رقم الهاتف...": "Phone number...",
         "روضتك المسؤول عنها:": "Your assigned kindergarten:",
-        "ستعمل جميع العمليات على هذه الروضة فقط": "All actions will run only for this kindergarten",
+        "ستعمل جميع العمليات على هذه الروضة فقط":
+          "All actions will run only for this kindergarten",
         "لا يوجد لديك شعب مخصصة. تواصل مع المدير.":
           "You have no assigned classes. Contact the manager.",
         "لم يتم العثور على روضات مطابقة": "No matching kindergartens found",
@@ -507,7 +522,8 @@ class AppI18n {
         "حالة الروضة": "Kindergarten status",
         "رقم الترخيص": "License number",
         "عرض التفاصيل الكاملة": "View full details",
-        "؟ سيتم إخفاؤها من القوائم النشطة.": "? It will be hidden from active lists.",
+        "؟ سيتم إخفاؤها من القوائم النشطة.":
+          "? It will be hidden from active lists.",
         "؟ سيتم إرسال كلمة مرور مؤقتة إلى بريده الإلكتروني.":
           "? A temporary password will be sent to the email address.",
         "إلغاء تفعيل": "Deactivate",
@@ -527,14 +543,18 @@ class AppI18n {
         "خطأ:": "Error:",
         "فشل في إلغاء التفعيل": "Failed to deactivate",
         "لا يوجد مشرفين متاحين": "No supervisors available",
-        "نهائياً؟ لا يمكن التراجع عن هذا الإجراء.": "Permanently? This action cannot be undone.",
+        "نهائياً؟ لا يمكن التراجع عن هذا الإجراء.":
+          "Permanently? This action cannot be undone.",
         "هل أنت متأكد من أرشفة هذه الروضة؟ سيتم إخفاؤها من القوائم النشطة ولكن يمكن استعادتها لاحقاً.":
           "Are you sure you want to archive this kindergarten? It will be hidden from active lists but can be restored later.",
-        "هل أنت متأكد من حذف الشعبة": "Are you sure you want to delete the class",
-        "هل أنت متأكد من حذف الموظف": "Are you sure you want to delete the staff member",
+        "هل أنت متأكد من حذف الشعبة":
+          "Are you sure you want to delete the class",
+        "هل أنت متأكد من حذف الموظف":
+          "Are you sure you want to delete the staff member",
         "هل أنت متأكد من حذف هذه الروضة نهائياً؟ لا يمكن التراجع عن هذا الإجراء وستفقد جميع البيانات المرتبطة.":
           "Are you sure you want to permanently delete this kindergarten? This cannot be undone and all related data will be lost.",
-        "والنص التالي يوضح الشعبة المعينة.": "The following text indicates the assigned class.",
+        "والنص التالي يوضح الشعبة المعينة.":
+          "The following text indicates the assigned class.",
         "ينتهي في:": "Expires on:",
         "أعلى 5 روضات أداءً": "Top 5 performing kindergartens",
         "إجراءات مقترحة للتحسين:": "Suggested improvement actions:",
@@ -546,8 +566,10 @@ class AppI18n {
         "اكتمال التدريب": "Training completion",
         الأداء: "Performance",
         "الاستيعاب والتحققات": "Capacity and validations",
-        "البيانات المستلمة غير صالحة للعرض.": "Received data is not valid for display.",
-        "البيانات مقصورة على الروضة المرتبطة بك.": "Data is limited to your assigned kindergarten.",
+        "البيانات المستلمة غير صالحة للعرض.":
+          "Received data is not valid for display.",
+        "البيانات مقصورة على الروضة المرتبطة بك.":
+          "Data is limited to your assigned kindergarten.",
         "التصنيف والمقارنات": "Classification and benchmarking",
         التغطية: "Coverage",
         "الحوادث الخطرة": "Serious incidents",
@@ -586,7 +608,8 @@ class AppI18n {
         "تنبيهات الأداء:": "Performance alerts:",
         "تنبيهات النظام": "System alerts",
         "توزيع الطلاب حسب سنة الميلاد": "Student distribution by birth year",
-        "جارٍ تحليل البيانات لتقديم التوصيات...": "Analyzing data to provide recommendations...",
+        "جارٍ تحليل البيانات لتقديم التوصيات...":
+          "Analyzing data to provide recommendations...",
         "جارٍ تطبيق المرشحات...": "Applying filters...",
         "جارٍ جلب البيانات...": "Fetching data...",
         "جميع المدن": "All cities",
@@ -613,7 +636,8 @@ class AppI18n {
         "مؤشرات السلامة والمخاطر": "Safety and risk indicators",
         "مؤشرات العمليات والجودة": "Operations and quality indicators",
         "متابعة الحوادث": "Incident follow-up",
-        "مخطط توزيع الطلاب حسب الروضات": "Student distribution by kindergarten chart",
+        "مخطط توزيع الطلاب حسب الروضات":
+          "Student distribution by kindergarten chart",
         "مدى الالتزام بنسبة (معلم لكل عدد معين من الطلاب) حسب المعايير.":
           "Compliance with ratio standards (teacher per defined number of students).",
         "مدى الانتظام في إرسال التقارير اليومية والأسبوعية لرئاسة الروضة.":
@@ -645,7 +669,9 @@ class AppI18n {
       },
     };
     this.literalTranslationEntries = {
-      en: Object.entries(this.literalTranslations.en).sort((a, b) => b[0].length - a[0].length),
+      en: Object.entries(this.literalTranslations.en).sort(
+        (a, b) => b[0].length - a[0].length,
+      ),
     };
     this.literalObserver = null;
     this.isApplyingLiteral = false;
@@ -683,21 +709,28 @@ class AppI18n {
   }
 
   resolveInitialLanguage() {
-    const stored = localStorage.getItem("kinjo_lang");
-    if (stored && this.supported.includes(stored)) {
-      return stored;
-    }
-    const cookieMatch = document.cookie.match(/(?:^|;\s*)kinjo_lang=(ar|en)(?:;|$)/i);
+    // Cookie is the server-authoritative source of truth; read it first.
+    const cookieMatch = document.cookie.match(
+      /(?:^|;\s*)kinjo_lang=(ar|en)(?:;|$)/i,
+    );
     const cookieLang = cookieMatch ? cookieMatch[1].toLowerCase() : "";
     if (cookieLang && this.supported.includes(cookieLang)) {
       return cookieLang;
+    }
+    const stored = localStorage.getItem("kinjo_lang");
+    if (stored && this.supported.includes(stored)) {
+      return stored;
     }
     const htmlLang = document.documentElement.lang || "ar";
     return this.supported.includes(htmlLang) ? htmlLang : "ar";
   }
 
   resolveAuthToken() {
-    return localStorage.getItem("kinjo_token") || sessionStorage.getItem("kinjo_token") || "";
+    return (
+      localStorage.getItem("kinjo_token") ||
+      sessionStorage.getItem("kinjo_token") ||
+      ""
+    );
   }
 
   async loadServerLanguagePreference() {
@@ -721,7 +754,8 @@ class AppI18n {
       }
       this.setServerLanguageApiState("available");
       const data = await response.json();
-      const userLang = typeof data?.user_lang === "string" ? data.user_lang.toLowerCase() : "";
+      const userLang =
+        typeof data?.user_lang === "string" ? data.user_lang.toLowerCase() : "";
       return this.supported.includes(userLang) ? userLang : null;
     } catch (_error) {
       return null;
@@ -769,7 +803,9 @@ class AppI18n {
       return this.translations[lang];
     }
     try {
-      const response = await fetch(`/static/i18n/app_${lang}.json`, { cache: "force-cache" });
+      const response = await fetch(`/static/i18n/app_${lang}.json`, {
+        cache: "force-cache",
+      });
       if (!response.ok) {
         throw new Error(`Failed to load app_${lang}.json`);
       }
@@ -824,7 +860,9 @@ class AppI18n {
 
     // Add tolerant variants for common punctuation suffixes.
     if (!normalizedAr.endsWith(":")) {
-      this.literalTranslations.en[`${normalizedAr}:`] = normalizedEn.endsWith(":")
+      this.literalTranslations.en[`${normalizedAr}:`] = normalizedEn.endsWith(
+        ":",
+      )
         ? normalizedEn
         : `${normalizedEn}:`;
     } else {
@@ -848,7 +886,9 @@ class AppI18n {
 
   rebuildLiteralTranslationEntries() {
     this.literalTranslationEntries = {
-      en: Object.entries(this.literalTranslations.en).sort((a, b) => b[0].length - a[0].length),
+      en: Object.entries(this.literalTranslations.en).sort(
+        (a, b) => b[0].length - a[0].length,
+      ),
     };
   }
 
@@ -859,7 +899,12 @@ class AppI18n {
         return false;
       }
       const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== "object" || !parsed.en || typeof parsed.en !== "object") {
+      if (
+        !parsed ||
+        typeof parsed !== "object" ||
+        !parsed.en ||
+        typeof parsed.en !== "object"
+      ) {
         return false;
       }
       this.literalTranslations.en = parsed.en;
@@ -875,7 +920,7 @@ class AppI18n {
     try {
       sessionStorage.setItem(
         this.literalCacheKey,
-        JSON.stringify({ en: this.literalTranslations.en })
+        JSON.stringify({ en: this.literalTranslations.en }),
       );
     } catch (_error) {
       // Ignore cache persistence failures (quota/security).
@@ -947,7 +992,7 @@ class AppI18n {
         } catch (_error) {
           // Ignore literal harvest failures to avoid blocking i18n startup.
         }
-      })
+      }),
     );
 
     document.querySelectorAll("script:not([src])").forEach((script) => {
@@ -967,7 +1012,10 @@ class AppI18n {
       if (this.restoreLiteralPairsCache()) {
         return;
       }
-      this.ingestCatalogLiteralPairs(this.translations.ar || {}, this.translations.en || {});
+      this.ingestCatalogLiteralPairs(
+        this.translations.ar || {},
+        this.translations.en || {},
+      );
 
       const [adminAr, adminEn] = await Promise.all([
         this.loadJsonCatalog("/static/i18n/admin_ar.json"),
@@ -983,9 +1031,11 @@ class AppI18n {
       Object.entries(literalOverrides || {}).forEach(([arText, enText]) => {
         this.addLiteralTranslationPair(arText, enText);
       });
-      Object.entries(literalQualityOverrides || {}).forEach(([arText, enText]) => {
-        this.addLiteralTranslationPair(arText, enText);
-      });
+      Object.entries(literalQualityOverrides || {}).forEach(
+        ([arText, enText]) => {
+          this.addLiteralTranslationPair(arText, enText);
+        },
+      );
 
       await this.loadScriptLiteralPairs();
       this.rebuildLiteralTranslationEntries();
@@ -1001,7 +1051,10 @@ class AppI18n {
   }
 
   scheduleDynamicLiteralPairsBuild() {
-    if (this.dynamicLiteralPairsLoaded || this.dynamicLiteralPairsPreloadScheduled) {
+    if (
+      this.dynamicLiteralPairsLoaded ||
+      this.dynamicLiteralPairsPreloadScheduled
+    ) {
       return;
     }
 
@@ -1139,18 +1192,26 @@ class AppI18n {
 
     try {
       const disallowedTags = new Set(["SCRIPT", "STYLE", "NOSCRIPT"]);
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-        acceptNode: (node) => {
-          const parentTag = node.parentElement?.tagName;
-          if (!node.nodeValue || !parentTag || disallowedTags.has(parentTag)) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          if (node.parentElement?.closest("[data-i18n]")) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          return NodeFilter.FILTER_ACCEPT;
+      const walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        {
+          acceptNode: (node) => {
+            const parentTag = node.parentElement?.tagName;
+            if (
+              !node.nodeValue ||
+              !parentTag ||
+              disallowedTags.has(parentTag)
+            ) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            if (node.parentElement?.closest("[data-i18n]")) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            return NodeFilter.FILTER_ACCEPT;
+          },
         },
-      });
+      );
 
       const textNodes = [];
       let current = walker.nextNode();
@@ -1170,7 +1231,7 @@ class AppI18n {
         document.querySelectorAll(`[${attributeName}]`).forEach((element) => {
           if (
             element.hasAttribute(
-              `data-i18n-${attributeName === "aria-label" ? "aria" : attributeName}`
+              `data-i18n-${attributeName === "aria-label" ? "aria" : attributeName}`,
             )
           ) {
             return;
@@ -1264,7 +1325,11 @@ class AppI18n {
 
   translateExistingCharts() {
     const chartLib = window.Chart;
-    if (!chartLib || typeof chartLib.getChart !== "function" || this.currentLang !== "en") {
+    if (
+      !chartLib ||
+      typeof chartLib.getChart !== "function" ||
+      this.currentLang !== "en"
+    ) {
       return;
     }
     document.querySelectorAll("canvas").forEach((canvas) => {
@@ -1289,14 +1354,17 @@ class AppI18n {
       !swal.__kinjoLiteralI18nPatched
     ) {
       const originalFire = swal.fire.bind(swal);
-      const originalShowValidationMessage = swal.showValidationMessage.bind(swal);
+      const originalShowValidationMessage =
+        swal.showValidationMessage.bind(swal);
       const appI18n = this;
 
       swal.fire = (...args) => {
         if (appI18n.currentLang !== "en") {
           return originalFire(...args);
         }
-        const translatedArgs = args.map((arg) => appI18n.translateObjectLiterals(arg));
+        const translatedArgs = args.map((arg) =>
+          appI18n.translateObjectLiterals(arg),
+        );
         return originalFire(...translatedArgs);
       };
 
@@ -1313,10 +1381,15 @@ class AppI18n {
     const controls = document.querySelectorAll("input, select, textarea");
     controls.forEach((element) => {
       const inputType = (element.getAttribute("type") || "").toLowerCase();
-      if (["hidden", "submit", "button", "image", "reset"].includes(inputType)) {
+      if (
+        ["hidden", "submit", "button", "image", "reset"].includes(inputType)
+      ) {
         return;
       }
-      if (element.hasAttribute("aria-label") || element.hasAttribute("aria-labelledby")) {
+      if (
+        element.hasAttribute("aria-label") ||
+        element.hasAttribute("aria-labelledby")
+      ) {
         return;
       }
 
@@ -1324,7 +1397,9 @@ class AppI18n {
       const controlId = element.getAttribute("id");
       if (controlId) {
         const escapedId = controlId.replace(/"/g, '\\"');
-        const explicitLabel = document.querySelector(`label[for="${escapedId}"]`);
+        const explicitLabel = document.querySelector(
+          `label[for="${escapedId}"]`,
+        );
         if (explicitLabel && explicitLabel.textContent) {
           labelText = explicitLabel.textContent;
         }

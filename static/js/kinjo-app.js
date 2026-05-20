@@ -34,7 +34,10 @@ function appText(key, arText, enText) {
  */
 function showLoading() {
   const overlay = document.getElementById("loadingOverlay");
-  if (window.PageLoadTimer && typeof window.PageLoadTimer.startTask === "function") {
+  if (
+    window.PageLoadTimer &&
+    typeof window.PageLoadTimer.startTask === "function"
+  ) {
     if (!window.__kinjoLoadingTaskEnd) {
       window.__kinjoLoadingTaskEnd = window.PageLoadTimer.startTask();
     }
@@ -68,7 +71,8 @@ function hideLoading() {
  * Show toast notification
  */
 function showToast(message, type = "info") {
-  const container = document.getElementById("toastContainer") || createToastContainer();
+  const container =
+    document.getElementById("toastContainer") || createToastContainer();
   const closeLabel = appText("common.close", "إغلاق", "Close");
 
   const toastId = `toast-${Date.now()}`;
@@ -304,31 +308,31 @@ function buildPageGuide() {
       appText(
         "guide.steps.fill_required",
         "املأ الحقول المطلوبة بعناية",
-        "Fill in the required fields carefully"
-      )
+        "Fill in the required fields carefully",
+      ),
     );
     if (document.querySelector('input[type="file"]')) {
       steps.push(
         appText(
           "guide.steps.attach_files",
           "أرفق الملفات المطلوبة إن وجدت",
-          "Attach required files if available"
-        )
+          "Attach required files if available",
+        ),
       );
     }
     steps.push(
       appText(
         "guide.steps.review",
         "راجع البيانات قبل الإرسال",
-        "Review the data before submission"
-      )
+        "Review the data before submission",
+      ),
     );
     steps.push(
       appText(
         "guide.steps.submit",
         "اضغط حفظ أو إرسال لإكمال العملية",
-        "Click Save or Submit to complete the process"
-      )
+        "Click Save or Submit to complete the process",
+      ),
     );
   }
 
@@ -337,15 +341,15 @@ function buildPageGuide() {
       appText(
         "guide.steps.use_search",
         "استخدم البحث أو التصفية للوصول بسرعة إلى النتائج",
-        "Use search or filters to quickly reach results"
-      )
+        "Use search or filters to quickly reach results",
+      ),
     );
     steps.push(
       appText(
         "guide.steps.open_details",
         "انقر على الصف أو زر الإجراء لعرض التفاصيل",
-        "Click a row or action button to view details"
-      )
+        "Click a row or action button to view details",
+      ),
     );
   }
 
@@ -354,16 +358,16 @@ function buildPageGuide() {
       appText(
         "guide.steps.browse_info",
         "استعرض المعلومات المعروضة في الصفحة",
-        "Browse the information shown on this page"
-      )
+        "Browse the information shown on this page",
+      ),
     );
     if (document.querySelector("a.btn, button.btn")) {
       steps.push(
         appText(
           "guide.steps.use_buttons",
           "استخدم الأزرار للانتقال أو تنفيذ الإجراءات",
-          "Use the buttons to navigate or perform actions"
-        )
+          "Use the buttons to navigate or perform actions",
+        ),
       );
     }
   }
@@ -372,28 +376,34 @@ function buildPageGuide() {
     appText(
       "guide.tips.required",
       "الحقول التي تحمل علامة * إلزامية.",
-      "Fields marked with * are required."
-    )
+      "Fields marked with * are required.",
+    ),
   );
-  if (document.querySelector('input[type="search"], .filter-row, .filter-bar')) {
+  if (
+    document.querySelector('input[type="search"], .filter-row, .filter-bar')
+  ) {
     tips.push(
       appText(
         "guide.tips.search_filter",
         "استخدم البحث والتصفية لتضييق النتائج.",
-        "Use search and filters to narrow the results."
-      )
+        "Use search and filters to narrow the results.",
+      ),
     );
   }
   tips.push(
     appText(
       "guide.tips.hover_icons",
       "مرّر المؤشر فوق الأيقونات لعرض التلميحات.",
-      "Hover over icons to view hints."
-    )
+      "Hover over icons to view hints.",
+    ),
   );
 
   return {
-    title: appText("guide.title", "كيف تستخدم هذه الصفحة", "How to use this page"),
+    title: appText(
+      "guide.title",
+      "كيف تستخدم هذه الصفحة",
+      "How to use this page",
+    ),
     steps: uniqueItems(steps).slice(0, 6),
     tips: uniqueItems(tips),
   };
@@ -430,7 +440,11 @@ function syncHelpModalContent(guide) {
 
   helpContent.setAttribute("data-help-title", guide.title);
   const stepsHtml = renderGuideSteps(guide.steps, escapeHtml);
-  const tipsHtml = renderGuideTips(guide.tips, escapeHtml, "alert alert-light border mt-3 mb-0");
+  const tipsHtml = renderGuideTips(
+    guide.tips,
+    escapeHtml,
+    "alert alert-light border mt-3 mb-0",
+  );
 
   helpContent.innerHTML = `
         ${stepsHtml}
@@ -440,7 +454,9 @@ function syncHelpModalContent(guide) {
 
 function guideStepNumber(index) {
   const arabicIndic = ["١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
-  return appCurrentLang() === "ar" ? arabicIndic[index] || String(index + 1) : String(index + 1);
+  return appCurrentLang() === "ar"
+    ? arabicIndic[index] || String(index + 1)
+    : String(index + 1);
 }
 
 function renderGuideSteps(steps, escapeFn) {
@@ -451,7 +467,7 @@ function renderGuideSteps(steps, escapeFn) {
         <li class="guide-step d-flex align-items-start gap-2 mb-1">
           <span class="guide-step-number flex-shrink-0">${guideStepNumber(index)}.</span>
           <span>${escapeFn(step)}</span>
-        </li>`
+        </li>`,
     )
     .join("");
   return `<ol class="guide-steps list-unstyled mb-2" dir="${dir}">${items}</ol>`;
@@ -466,7 +482,7 @@ function renderGuideTips(tips, escapeFn, className) {
         <li class="d-flex align-items-start gap-2 mb-1">
           <span aria-hidden="true" class="flex-shrink-0">•</span>
           <span>${escapeFn(tip)}</span>
-        </li>`
+        </li>`,
     )
     .join("");
   return `<ul class="guide-tips list-unstyled ${className}" dir="${dir}">${items}</ul>`;
@@ -474,11 +490,15 @@ function renderGuideTips(tips, escapeFn, className) {
 
 function injectRequiredFieldHints() {
   const requiredFields = document.querySelectorAll(
-    "form input[required], form select[required], form textarea[required]"
+    "form input[required], form select[required], form textarea[required]",
   );
   requiredFields.forEach((field) => {
     if (field.type === "hidden") return;
-    const wrapper = field.closest(".mb-3, .form-group, .col-12, .col-md-6") || field.parentElement;
+    // Skip fields inside custom auth input wrappers (they have their own validation UI)
+    if (field.closest(".auth-input-wrap")) return;
+    const wrapper =
+      field.closest(".mb-3, .form-group, .col-12, .col-md-6") ||
+      field.parentElement;
     if (!wrapper || wrapper.querySelector(".field-hint")) return;
     if (wrapper.querySelector(".form-text")) return;
 
@@ -487,14 +507,18 @@ function injectRequiredFieldHints() {
     hint.textContent = appText(
       "forms.required_hint",
       "هذا الحقل مطلوب لإكمال النموذج.",
-      "This field is required to complete the form."
+      "This field is required to complete the form.",
     );
     field.insertAdjacentElement("afterend", hint);
 
     if (!field.getAttribute("title")) {
       field.setAttribute(
         "title",
-        appText("forms.required_title", "هذا الحقل مطلوب", "This field is required")
+        appText(
+          "forms.required_title",
+          "هذا الحقل مطلوب",
+          "This field is required",
+        ),
       );
     }
     field.setAttribute("data-bs-toggle", "tooltip");
@@ -508,7 +532,9 @@ function initTooltips() {
       el.setAttribute("data-bs-toggle", "tooltip");
     }
   });
-  const triggers = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  const triggers = [].slice.call(
+    document.querySelectorAll('[data-bs-toggle="tooltip"]'),
+  );
   triggers.forEach((el) => new bootstrap.Tooltip(el));
 }
 
@@ -529,7 +555,7 @@ function initSidebarInteractions() {
     const isOpen = isMobile && sidebar.classList.contains("show");
     document.body.classList.toggle("sidebar-open", isOpen);
     toggleButtons.forEach((button) =>
-      button.setAttribute("aria-expanded", isOpen ? "true" : "false")
+      button.setAttribute("aria-expanded", isOpen ? "true" : "false"),
     );
     if (backdrop) {
       backdrop.classList.toggle("show", isOpen);
@@ -592,7 +618,7 @@ function initFormValidation() {
         }
         form.classList.add("was-validated");
       },
-      false
+      false,
     );
   });
 }
@@ -657,7 +683,11 @@ function createAttendanceChart(canvasId, data) {
       labels: data.labels,
       datasets: [
         {
-          label: appText("charts.attendance_rate", "نسبة الحضور %", "Attendance rate %"),
+          label: appText(
+            "charts.attendance_rate",
+            "نسبة الحضور %",
+            "Attendance rate %",
+          ),
           data: data.values,
           borderColor: "#0d6efd",
           backgroundColor: "rgba(13, 110, 253, 0.1)",
@@ -698,7 +728,13 @@ function createEnrollmentPieChart(canvasId, data) {
       datasets: [
         {
           data: data.values,
-          backgroundColor: ["#198754", "#ffc107", "#0dcaf0", "#dc3545", "#6c757d"],
+          backgroundColor: [
+            "#198754",
+            "#ffc107",
+            "#0dcaf0",
+            "#dc3545",
+            "#6c757d",
+          ],
         },
       ],
     },
@@ -780,9 +816,9 @@ async function initDashboard() {
       appText(
         "dashboard.error_load",
         "حدث خطأ في تحميل لوحة التحكم",
-        "An error occurred while loading the dashboard"
+        "An error occurred while loading the dashboard",
       ),
-      "error"
+      "error",
     );
     console.error("Dashboard error:", error);
   }
@@ -811,7 +847,7 @@ function renderSupervisorDashboard(data) {
                         <small class="text-muted">${appText("reports.requires_report", "يتطلب تقرير", "Report required")}</small>
                     </div>
                 </a>
-            `
+            `,
         )
         .join("");
     }
@@ -865,7 +901,9 @@ function initEnrollmentForm() {
 
   // Mother nationality handler
   const motherNationalitySelect = document.getElementById("motherNationality");
-  const motherNationalIdGroup = document.getElementById("motherNationalIdGroup");
+  const motherNationalIdGroup = document.getElementById(
+    "motherNationalIdGroup",
+  );
   const motherPassportGroup = document.getElementById("motherPassportGroup");
 
   if (motherNationalitySelect) {
@@ -899,9 +937,9 @@ async function submitEnrollmentForm(form) {
       appText(
         "enrollment.submit_success",
         "تم تقديم طلب التسجيل بنجاح",
-        "Enrollment request submitted successfully"
+        "Enrollment request submitted successfully",
       ),
-      "success"
+      "success",
     );
 
     setTimeout(() => {
@@ -914,9 +952,9 @@ async function submitEnrollmentForm(form) {
         appText(
           "enrollment.submit_error",
           "حدث خطأ في تقديم الطلب",
-          "An error occurred while submitting the request"
+          "An error occurred while submitting the request",
         ),
-      "error"
+      "error",
     );
   }
 }
@@ -942,9 +980,9 @@ async function initAttendancePage() {
       appText(
         "attendance.load_error",
         "حدث خطأ في تحميل بيانات الحضور",
-        "An error occurred while loading attendance data"
+        "An error occurred while loading attendance data",
       ),
-      "error"
+      "error",
     );
   }
 }
@@ -963,11 +1001,13 @@ function renderAttendanceGrid(data) {
              data-child-id="${child.child_id}"
              onclick="toggleAttendance(${child.child_id})">
             <i class="bi bi-${
-              child.is_present ? "check-circle-fill text-success" : "circle text-muted"
+              child.is_present
+                ? "check-circle-fill text-success"
+                : "circle text-muted"
             } fs-4"></i>
             <div class="mt-2 small">${escapeHtml(child.first_name)}</div>
         </div>
-    `
+    `,
     )
     .join("");
 }
@@ -990,15 +1030,27 @@ async function toggleAttendance(childId) {
 
     showToast(
       isPresent
-        ? appText("attendance.checkout_success", "تم تسجيل الخروج", "Check-out recorded")
-        : appText("attendance.checkin_success", "تم تسجيل الحضور", "Check-in recorded"),
-      "success"
+        ? appText(
+            "attendance.checkout_success",
+            "تم تسجيل الخروج",
+            "Check-out recorded",
+          )
+        : appText(
+            "attendance.checkin_success",
+            "تم تسجيل الحضور",
+            "Check-in recorded",
+          ),
+      "success",
     );
   } catch (error) {
     showToast(
       error.message ||
-        appText("common.unexpected_error", "حدث خطأ", "An unexpected error occurred"),
-      "error"
+        appText(
+          "common.unexpected_error",
+          "حدث خطأ",
+          "An unexpected error occurred",
+        ),
+      "error",
     );
   }
 }
@@ -1062,9 +1114,9 @@ async function submitDailyReport(form) {
       appText(
         "reports.daily_save_success",
         "تم حفظ التقرير اليومي بنجاح",
-        "Daily report saved successfully"
+        "Daily report saved successfully",
       ),
-      "success"
+      "success",
     );
 
     setTimeout(() => {
@@ -1077,9 +1129,9 @@ async function submitDailyReport(form) {
         appText(
           "reports.daily_save_error",
           "حدث خطأ في حفظ التقرير",
-          "An error occurred while saving the daily report"
+          "An error occurred while saving the daily report",
         ),
-      "error"
+      "error",
     );
   }
 }
@@ -1136,8 +1188,14 @@ document.addEventListener("DOMContentLoaded", () => {
     initDailyReportForm();
   }
 
-  // Load stored language preference
-  const storedLang = localStorage.getItem("kinjo_lang");
+  // Load stored language preference — cookie takes priority over localStorage
+  const _kjLangCookieMatch = document.cookie.match(
+    /(?:^|;\s*)kinjo_lang=(ar|en)(?:;|$)/i,
+  );
+  const _kjCookieLang = _kjLangCookieMatch
+    ? _kjLangCookieMatch[1].toLowerCase()
+    : null;
+  const storedLang = _kjCookieLang || localStorage.getItem("kinjo_lang");
   if (storedLang && storedLang !== document.documentElement.lang) {
     document.documentElement.lang = storedLang;
     document.documentElement.dir = storedLang === "ar" ? "rtl" : "ltr";
@@ -1165,9 +1223,9 @@ document.addEventListener("visibilitychange", () => {
         appText(
           "auth.login.session_expired",
           "انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى",
-          "Your session has expired. Please sign in again."
+          "Your session has expired. Please sign in again.",
         ),
-        "warning"
+        "warning",
       );
       setTimeout(() => api.logout(), 2000);
     });

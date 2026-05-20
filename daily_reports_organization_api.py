@@ -133,10 +133,10 @@ def _parse_kindergarten_ids(raw_value: Optional[str]) -> List[int]:
         if not item:
             continue
         if not item.isdigit():
-            raise HTTPException(status_code=400, detail="قيمة معرفات الروضات غير صحيحة")
+            raise HTTPException(status_code=400, detail="Invalid kindergarten ID values")
         parsed = int(item)
         if parsed <= 0:
-            raise HTTPException(status_code=400, detail="معرف الروضة يجب أن يكون رقمًا موجبًا")
+            raise HTTPException(status_code=400, detail="Kindergarten ID must be a positive integer")
         ids.append(parsed)
 
     return sorted(set(ids))

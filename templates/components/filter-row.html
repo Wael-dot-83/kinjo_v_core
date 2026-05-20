@@ -5,11 +5,12 @@ apply_text=None) %}
 {% set _apply_text = apply_text or ('تطبيق' if ui_lang != 'en' else 'Apply') %}
 <div class="row mb-3 g-3">
     <div class="col-md-4">
-        <input type="text" class="form-control" id="{{ search_id }}" placeholder="{{ _search_placeholder }}">
+        <input type="text" class="form-control" id="{{ search_id }}" placeholder="{{ _search_placeholder }}"
+               aria-label="{{ _search_placeholder }}">
     </div>
     {% for field in fields %}
     <div class="col-md-2">
-        <select class="form-select" id="{{ field.id }}">
+        <select class="form-select" id="{{ field.id }}" aria-label="{{ field.label }}">
             <option value="">{{ field.label }}</option>
             {% for option in field.options %}
             <option value="{{ option.value }}">{{ option.label }}</option>

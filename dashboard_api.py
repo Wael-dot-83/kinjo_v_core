@@ -27,10 +27,10 @@ async def get_user_widgets(
         return {"widgets": widgets}
     except SQLAlchemyError as e:
         logger.error("Database error fetching dashboard widgets for user_id=%s: %s", current_user.id, str(e), exc_info=True)
-        raise HTTPException(status_code=500, detail="تعذر جلب إعدادات لوحة التحكم")
+        raise HTTPException(status_code=500, detail="Failed to fetch dashboard widget configuration")
     except (json.JSONDecodeError, TypeError, ValueError) as e:
         logger.warning("Invalid dashboard widget configuration for user_id=%s: %s", current_user.id, str(e))
-        raise HTTPException(status_code=500, detail="تعذر جلب إعدادات لوحة التحكم")
+        raise HTTPException(status_code=500, detail="Failed to fetch dashboard widget configuration")
 
 
 @router.put("/widgets")
@@ -43,14 +43,14 @@ async def update_user_widgets(
     try:
         success = dashboard_customization.update_user_widgets(current_user.id, widgets)
         if not success:
-            raise HTTPException(status_code=400, detail="إعداد عناصر اللوحة غير صالح")
+            raise HTTPException(status_code=400, detail="Invalid widget configuration")
 
-        return {"message": "تم تحديث إعدادات لوحة التحكم بنجاح"}
+        return {"message": "Dashboard widget configuration updated"}
     except HTTPException:
         raise
     except (TypeError, ValueError) as e:
         logger.warning("Invalid dashboard widget update request for user_id=%s: %s", current_user.id, str(e))
-        raise HTTPException(status_code=500, detail="تعذر تحديث إعدادات لوحة التحكم")
+        raise HTTPException(status_code=500, detail="Failed to update dashboard widget configuration")
 
 
 @router.post("/widgets/reset")
@@ -62,12 +62,12 @@ async def reset_user_widgets(
     try:
         success = dashboard_customization.reset_user_widgets(current_user.id, current_user.role.value.lower())
         if not success:
-            raise HTTPException(status_code=500, detail="تعذر إعادة ضبط إعدادات لوحة التحكم")
+            raise HTTPException(status_code=500, detail="Failed to reset dashboard widget configuration")
 
-        return {"message": "تمت إعادة ضبط إعدادات لوحة التحكم إلى الوضع الافتراضي"}
+        return {"message": "Dashboard widgets reset to role defaults"}
     except (TypeError, ValueError) as e:
         logger.warning("Invalid dashboard reset request for user_id=%s: %s", current_user.id, str(e))
-        raise HTTPException(status_code=500, detail="تعذر إعادة ضبط إعدادات لوحة التحكم")
+        raise HTTPException(status_code=500, detail="Failed to reset dashboard widget configuration")
 
 
 @router.patch("/widgets/{widget_id}/toggle")
@@ -81,14 +81,14 @@ async def toggle_widget(
     try:
         success = dashboard_customization.toggle_widget(current_user.id, widget_id, enabled)
         if not success:
-            raise HTTPException(status_code=404, detail="العنصر غير موجود أو العملية غير صالحة")
+            raise HTTPException(status_code=404, detail="Widget not found or operation invalid")
 
-        return {"message": f"تم {'تفعيل' if enabled else 'تعطيل'} العنصر بنجاح"}
+        return {"message": f"Widget {'enabled' if enabled else 'disabled'}"}
     except HTTPException:
         raise
     except (TypeError, ValueError) as e:
         logger.warning("Invalid dashboard toggle request for user_id=%s widget_id=%s: %s", current_user.id, widget_id, str(e))
-        raise HTTPException(status_code=500, detail="تعذر تغيير حالة العنصر")
+        raise HTTPException(status_code=500, detail="Failed to update widget state")
 
 
 @router.put("/widgets/reorder")
@@ -101,14 +101,14 @@ async def reorder_widgets(
     try:
         success = dashboard_customization.reorder_widgets(current_user.id, widget_order)
         if not success:
-            raise HTTPException(status_code=400, detail="ترتيب العناصر غير صالح")
+            raise HTTPException(status_code=400, detail="Invalid widget order")
 
-        return {"message": "تم تحديث ترتيب العناصر بنجاح"}
+        return {"message": "Widget order updated"}
     except HTTPException:
         raise
     except (TypeError, ValueError) as e:
         logger.warning("Invalid dashboard reorder request for user_id=%s: %s", current_user.id, str(e))
-        raise HTTPException(status_code=500, detail="تعذر تحديث ترتيب العناصر")
+        raise HTTPException(status_code=500, detail="Failed to update widget order")
 
 
 @router.get("/widgets/available")
@@ -122,4 +122,4 @@ async def get_available_widgets(
         return {"widgets": widgets}
     except (TypeError, ValueError) as e:
         logger.warning("Invalid role while fetching available dashboard widgets for user_id=%s: %s", current_user.id, str(e))
-        raise HTTPException(status_code=500, detail="تعذر جلب العناصر المتاحة")
+        raise HTTPException(status_code=500, detail="Failed to fetch available widgets")

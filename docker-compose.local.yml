@@ -1,0 +1,102 @@
+# =============================================================================
+# KinJo — Local Development Docker Compose Override
+# Usage:  docker compose -f docker-compose.yml -f docker-compose.local.yml up
+#
+# What this file changes vs the base docker-compose.yml:
+#  - Maps .env.local (instead of .env) for the web container
+#  - Enables hot-reload via --reload flag on uvicorn
+#  - Exposes postgres on 5433 (avoids clashing with a local postgres install)
+#  - Adds a pgAdmin service for database inspection
+#  - Disables resource limits so the dev machine isn't throttled
+# =============================================================================
+
+services:
+  db:
+    # Override port to avoid conflicts with a locally installed postgres.
+    # Bound to 127.0.0.1 so the port is NOT accessible from other hosts on the network.
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_USER: kinjo
+      POSTGRES_PASSWORD: kinjo_dev_password
+      POSTGRES_DB: kinjo_db
+
+  redis:
+    # Bound to 127.0.0.1 — not exposed outside localhost.
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.local
+    environment:
+      DATABASE_URL: postgresql+psycopg2://kinjo:kinjo_dev_password@db:5432/kinjo_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      SECRET_KEY: dev-only-secret-key-change-for-production
+      ENVIRONMENT: development
+      DEBUG: "true"
+      API_DOCS_ENABLED: "true"
+      CORS_ALLOWED_ORIGINS: "http://127.0.0.1:8000,http://localhost:8000"
+      TRUSTED_HOSTS: "127.0.0.1,localhost,testserver"
+    # Hot-reload: the source is mounted and uvicorn reloads on file changes
+    command: >
+      python -m uvicorn main:app
+        --host 0.0.0.0
+        --port 8000
+        --reload
+        --reload-dir /app
+        --log-level debug
+    volumes:
+      - .:/app # source code hot-reload bind-mount (dev only)
+      - ./data:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # pgAdmin — optional web UI for PostgreSQL
+  # Access at http://localhost:5050  (admin@kinjo.local / admin)
+  # ---------------------------------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: kinjo_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@kinjo.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    profiles:
+      - tools # only started when: docker compose ... --profile tools up
+
+  # ---------------------------------------------------------------------------
+  # Redis Commander — optional web UI for Redis
+  # Access at http://localhost:8081
+  # ---------------------------------------------------------------------------
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: kinjo_redis_commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    profiles:
+      - tools
+
+volumes:
+  kinjo_pgdata:

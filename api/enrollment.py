@@ -14,6 +14,13 @@ import validators
 from config import settings
 from database import get_db
 from dependencies import get_current_user
+from i18n import gettext as _api
+
+
+def _ulang(user) -> str:
+    """Return the user's preferred UI language, defaulting to Arabic."""
+    return getattr(user, "preferred_language", None) or "ar"
+
 
 router = APIRouter(tags=["Enrollment"])
 
@@ -113,14 +120,14 @@ def create_enrollment_application(
 ):
     """Create a new enrollment application (Parent only)"""
     if current_user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Only parents can apply for enrollment")
-    
+        raise HTTPException(status_code=403, detail=_api("Only parents can apply for enrollment", _ulang(current_user)))
+
     # Get parent profile
     parent_profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id
     ).first()
     if not parent_profile:
-        raise HTTPException(status_code=400, detail="Parent profile not found")
+        raise HTTPException(status_code=400, detail=_api("Parent profile not found", _ulang(current_user)))
     
     # Validate kindergarten exists
     kindergarten = db.query(models.Kindergarten).filter(
@@ -135,13 +142,13 @@ def create_enrollment_application(
         if not enrollment_data.national_id:
             raise HTTPException(
                 status_code=400,
-                detail="الرقم الوطني مطلوب للأطفال الأردنيين / national_id required for Jordanian children"
+                detail=_api("national_id required for Jordanian children", _ulang(current_user))
             )
     else:
         if child_nationality and not enrollment_data.passport_number:
             raise HTTPException(
                 status_code=400,
-                detail="رقم جواز السفر مطلوب للأطفال غير الأردنيين / passport number required for non-Jordanian children"
+                detail=_api("passport_number required for non-Jordanian children", _ulang(current_user))
             )
     
     # Check for duplicate enrollment (same child + same KG)
@@ -159,7 +166,7 @@ def create_enrollment_application(
         if dup_enrollment:
             raise HTTPException(
                 status_code=400,
-                detail="يوجد طلب تسجيل سابق لهذا الطفل في نفس الروضة / Duplicate enrollment exists"
+                detail=_api("Duplicate enrollment exists for this child at the same kindergarten", _ulang(current_user))
             )
         # Check for active enrollment at any KG
         active = db.query(models.EnrollmentApplication).filter(
@@ -169,7 +176,7 @@ def create_enrollment_application(
         if active:
             raise HTTPException(
                 status_code=400,
-                detail="هذا الطفل مسجل حالياً في روضة أخرى / Child already enrolled elsewhere"
+                detail=_api("Child is already enrolled at another kindergarten", _ulang(current_user))
             )
 
     # Validate child age (70 days to 56 months)
@@ -177,12 +184,12 @@ def create_enrollment_application(
     today = date.today()
     age_days = (today - dob).days
     age_months = age_days / 30.44  # Average days per month
-    
+
     if age_days < 70:
-        raise HTTPException(status_code=400, detail="Child must be at least 70 days old")
+        raise HTTPException(status_code=400, detail=_api("Child must be at least 70 days old", _ulang(current_user)))
     if age_months > 56:
-        raise HTTPException(status_code=400, detail="Child must be under 56 months old")
-    
+        raise HTTPException(status_code=400, detail=_api("Child must be under 56 months old", _ulang(current_user)))
+
     # Create child record (or reuse existing)
     if existing_child:
         child = existing_child
@@ -191,12 +198,12 @@ def create_enrollment_application(
         if parent_profile.last_name and enrollment_data.last_name != parent_profile.last_name:
             raise HTTPException(
                 status_code=400,
-                detail="اسم العائلة لا يتطابق / Child last name does not match parent's last name"
+                detail=_api("Child last name does not match parent's last name", _ulang(current_user))
             )
         if parent_profile.second_name and enrollment_data.second_name and enrollment_data.second_name != parent_profile.second_name:
             raise HTTPException(
                 status_code=400,
-                detail="الاسم الثاني لا يتطابق / Child second name does not match parent's second name"
+                detail=_api("Child second name does not match parent's second name", _ulang(current_user))
             )
         child = models.Child(
             parent_id=parent_profile.id,
@@ -264,8 +271,8 @@ def submit_enrollment(
         ).first()
         child = enrollment.child
         if child.parent_id != parent_profile.id:
-            raise HTTPException(status_code=403, detail="Not authorized to submit this enrollment")
-    
+            raise HTTPException(status_code=403, detail=_api("Not authorized to submit this enrollment", _ulang(current_user)))
+
     # Check if child has active enrollment elsewhere
     active_elsewhere = db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.child_id == enrollment.child_id,
@@ -275,7 +282,7 @@ def submit_enrollment(
     if active_elsewhere:
         raise HTTPException(
             status_code=400,
-            detail="هذا الطفل مسجل حالياً في روضة أخرى / Child already enrolled elsewhere"
+            detail=_api("Child is already enrolled at another kindergarten", _ulang(current_user))
         )
 
     enrollment.status = models.EnrollmentStatus.SUBMITTED
@@ -318,7 +325,7 @@ def review_enrollment(
 
     if decision == "reject":
         if not reason or not reason.strip():
-            raise HTTPException(status_code=400, detail="سبب الرفض مطلوب")
+            raise HTTPException(status_code=400, detail="Rejection reason is required.")
         enrollment.status = models.EnrollmentStatus.REJECTED
         enrollment.rejected_at = datetime.now(timezone.utc)
         audit_action = "REJECT"
@@ -332,6 +339,36 @@ def review_enrollment(
         docs_ok, missing_docs = validators.validate_required_documents(db, child.id)
         if not docs_ok:
             raise HTTPException(status_code=400, detail={"missing_documents": missing_docs})
+
+        # Class capacity guard — row-level lock prevents double-booking
+        if enrollment.class_id:
+            class_obj = (
+                db.query(models.Class)
+                .filter(models.Class.id == enrollment.class_id)
+                .with_for_update()
+                .first()
+            )
+            if class_obj:
+                active_count = (
+                    db.query(func.count(models.EnrollmentApplication.id))
+                    .filter(
+                        models.EnrollmentApplication.class_id == enrollment.class_id,
+                        models.EnrollmentApplication.status.in_(
+                            [models.EnrollmentStatus.ACTIVE, models.EnrollmentStatus.ACCEPTED]
+                        ),
+                        models.EnrollmentApplication.id != enrollment.id,
+                    )
+                    .scalar()
+                ) or 0
+                if active_count >= class_obj.capacity_total:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=_api(
+                            "Class is at full capacity. Place the child on the waitlist.",
+                            _ulang(current_user),
+                        ),
+                    )
+
         enrollment.status = models.EnrollmentStatus.ACCEPTED
         enrollment.accepted_at = datetime.now(timezone.utc)
         audit_action = "ACCEPT"

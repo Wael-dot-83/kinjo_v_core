@@ -89,7 +89,7 @@ from admin_security import CorrelationIdMiddleware, APIError, api_error_handler
 from rate_limiter import limiter, rate_limit_exceeded_handler
 from performance_monitor import PerformanceMiddleware, setup_database_monitoring, start_system_monitoring
 from backup_manager import backup_scheduler
-from daily_report_scheduler import daily_report_scheduler
+from daily_report_scheduler import daily_report_scheduler, waitlist_expiry_scheduler
 from monitoring_service import performance_monitor, health_checker, auto_scaler
 from predictive_analytics import predictive_analytics
 from language_integrity import enforce_english_html_integrity
@@ -205,6 +205,9 @@ async def lifespan(app: FastAPI):
         # Start daily report scheduler
         daily_report_scheduler.start_scheduler()
 
+        # Start waitlist expiry scheduler (every 15 min)
+        waitlist_expiry_scheduler.start_scheduler()
+
         # Start monitoring services
         performance_monitor.start_monitoring()
         auto_scaler.start_auto_scaling()
@@ -225,6 +228,7 @@ async def lifespan(app: FastAPI):
         # Stop schedulers
         backup_scheduler.stop_scheduler()
         daily_report_scheduler.stop_scheduler()
+        waitlist_expiry_scheduler.stop_scheduler()
 
         auto_scaler.stop_auto_scaling()
 
@@ -557,6 +561,27 @@ def _set_no_store_headers(response: Response) -> None:
     response.headers["Pragma"] = "no-cache"
 
 
+def _set_mfa_ticket_cookie(response: Response, ticket: str) -> None:
+    response.set_cookie(
+        key="kinjo_mfa_ticket",
+        value=ticket,
+        max_age=settings.MFA_TICKET_EXPIRE_MINUTES * 60,
+        path="/",
+        samesite="strict",
+        secure=settings.secure_cookies,
+        httponly=True,
+        domain=settings.COOKIE_DOMAIN or None,
+    )
+
+
+def _clear_mfa_ticket_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key="kinjo_mfa_ticket",
+        path="/",
+        domain=settings.COOKIE_DOMAIN or None,
+    )
+
+
 def _set_authenticated_session(
     response: Response,
     *,
@@ -575,8 +600,8 @@ def _set_authenticated_session(
         value=access_token,
         max_age=max_age,
         path="/",
-        samesite=settings.SESSION_COOKIE_SAMESITE,
-        secure=settings.ENVIRONMENT.lower() == "production",
+        samesite="strict",
+        secure=settings.secure_cookies,
         httponly=True,
         domain=settings.COOKIE_DOMAIN or None,
     )
@@ -586,7 +611,7 @@ def _set_authenticated_session(
         max_age=max_age,
         path="/",
         samesite="strict",
-        secure=settings.ENVIRONMENT.lower() == "production",
+        secure=settings.secure_cookies,
         httponly=False,
         domain=settings.COOKIE_DOMAIN or None,
     )
@@ -594,7 +619,12 @@ def _set_authenticated_session(
 
 
 def _clear_authenticated_session(response: Response) -> None:
-    for cookie_name in (settings.SESSION_COOKIE_NAME, settings.CSRF_COOKIE_NAME, "kinjo_token"):
+    for cookie_name in (
+        settings.SESSION_COOKIE_NAME,
+        settings.CSRF_COOKIE_NAME,
+        "kinjo_token",
+        "kinjo_mfa_ticket",
+    ):
         response.delete_cookie(
             key=cookie_name,
             path="/",
@@ -660,7 +690,8 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
         )
         raise build_generic_auth_exception()
 
-    user_lang = _resolve_user_language(db, user.id)
+    _stored_lang = getattr(user, "preferred_language", None)
+    user_lang = _stored_lang if _stored_lang in ("ar", "en") else _resolve_user_language(db, user.id)
     base_payload = {
         "user_lang": user_lang,
         "remember_me": remember_me,
@@ -733,17 +764,31 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
 def _issue_auth_response(payload: dict, *, status_code: int = 200) -> JSONResponse:
     response_payload = sanitize_response_payload(dict(payload))
     response_payload.pop("remember_me", None)
+    mfa_ticket = response_payload.pop("mfa_ticket", None)
     response = JSONResponse(content=response_payload, status_code=status_code)
     if payload.get("access_token"):
+        _clear_mfa_ticket_cookie(response)
         _set_authenticated_session(
             response,
             access_token=payload["access_token"],
             remember_me=bool(payload.get("remember_me")),
         )
+    elif payload.get("mfa_required") and mfa_ticket:
+        _set_mfa_ticket_cookie(response, mfa_ticket)
     else:
         _set_no_store_headers(response)
     _set_ui_language_cookie(response, payload.get("user_lang", "ar"))
     return response
+
+
+def _resolve_mfa_ticket_from_request(request: Request) -> str:
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.lower().startswith("bearer "):
+        return auth_header[7:].strip()
+    cookie_ticket = request.cookies.get("kinjo_mfa_ticket", "")
+    if cookie_ticket:
+        return cookie_ticket
+    raise HTTPException(status_code=401, detail="MFA session expired.")
 
 
 def _decode_mfa_ticket(token: str, db: Session, *, expected_purposes: set[str]) -> tuple[models.User, str, bool]:
@@ -816,17 +861,14 @@ async def logout(
 
 
 @app.post("/api/auth/mfa/setup")
+@limiter.limit("5/minute")
 async def mfa_setup(
     request: Request,
     db: Session = Depends(get_db),
 ):
     """Generate or return the TOTP setup payload for a privileged user."""
-    auth_header = request.headers.get("authorization", "")
-    if not auth_header.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="MFA session expired.")
-
     user, purpose, _remember_me = _decode_mfa_ticket(
-        auth_header[7:].strip(),
+        _resolve_mfa_ticket_from_request(request),
         db,
         expected_purposes={"mfa_setup"},
     )
@@ -855,18 +897,15 @@ async def mfa_setup(
 
 
 @app.post("/api/auth/mfa/verify")
+@limiter.limit("5/minute")
 async def mfa_verify(
     request: Request,
     payload: MFACodeRequest,
     db: Session = Depends(get_db),
 ):
     """Complete privileged MFA setup or challenge and issue the real session."""
-    auth_header = request.headers.get("authorization", "")
-    if not auth_header.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="MFA session expired.")
-
     user, purpose, remember_me = _decode_mfa_ticket(
-        auth_header[7:].strip(),
+        _resolve_mfa_ticket_from_request(request),
         db,
         expected_purposes={"mfa_setup", "mfa_challenge"},
     )
@@ -919,10 +958,12 @@ async def mfa_verify(
         sensitivity_level=2,
     )
 
+    _mfa_stored_lang = getattr(user, "preferred_language", None)
+    _mfa_user_lang = _mfa_stored_lang if _mfa_stored_lang in ("ar", "en") else _resolve_user_language(db, user.id)
     auth_payload = {
         "access_token": access_token,
         "token_type": "bearer",
-        "user_lang": _resolve_user_language(db, user.id),
+        "user_lang": _mfa_user_lang,
         "remember_me": remember_me,
         "mfa_required": False,
         "user": {

@@ -3,22 +3,24 @@
 {% block title %}{{ _('Absence Requests') }}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-calendar-x me-2 text-primary"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-calendar-x text-primary me-2" aria-hidden="true"></i>
             {{ _('Absence Requests') }}
         </h1>
         <nav aria-label="{{ _('Breadcrumb') }}">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{{ _('Dashboard') }}</a></li>
                 <li class="breadcrumb-item active">{{ _('Absence Requests') }}</li>
             </ol>
         </nav>
     </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAbsenceModal">
-        <i class="bi bi-plus-circle me-1"></i> {{ _('New Absence Request') }}
-    </button>
+    <div class="page-header-actions">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAbsenceModal">
+            <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>{{ _('New Absence Request') }}
+        </button>
+    </div>
 </div>
 {% endblock %}
 

@@ -44,22 +44,22 @@ DEFAULT_COUNTRY_NAME = "الأردن"
 
 def _ensure_admin(user: models.User) -> None:
     if user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="صلاحية المدير مطلوبة")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access only")
 
 
 def _ensure_manager_only(user: models.User) -> None:
     if user.role != models.UserRole.MANAGER:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="صلاحية مدير الروضة مطلوبة")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager access only")
 
 
 def _ensure_supervisor_only(user: models.User) -> None:
     if user.role != models.UserRole.SUPERVISOR:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="صلاحية المشرف مطلوبة")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Supervisor access only")
 
 
 def _ensure_parent_only(user: models.User) -> None:
     if user.role != models.UserRole.PARENT:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="صلاحية ولي الأمر مطلوبة")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Parent access only")
 
 
 def _normalize_period(period_start: Optional[date], period_end: Optional[date]) -> Tuple[date, date]:
@@ -69,7 +69,7 @@ def _normalize_period(period_start: Optional[date], period_end: Optional[date]) 
     if period_start is None:
         period_start = period_end - timedelta(days=29)
     if period_start > period_end:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="تاريخ البداية يجب أن يسبق تاريخ النهاية")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="period_start must be before period_end")
     return period_start, period_end
 
 
@@ -300,7 +300,7 @@ class BenchmarkingService:
                 try:
                     query = query.filter(models.Kindergarten.id == int(level_value))
                 except ValueError as exc:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="معرف الروضة غير صحيح") from exc
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid kindergarten ID") from exc
 
         if country:
             if has_country_column:
@@ -1110,11 +1110,11 @@ class BenchmarkingService:
 
 def _validate_common_filters(level: str, size_mode: str, size_band: Optional[str]) -> None:
     if level not in SUPPORTED_LEVELS:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="مستوى المقارنة غير مدعوم")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported comparison level")
     if size_mode not in SUPPORTED_SIZE_MODES:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="نوع شريحة الحجم غير مدعوم")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported size_mode")
     if size_band and size_band not in SUPPORTED_SIZE_BANDS:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="شريحة الحجم غير مدعومة")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported size_band")
 
 
 def _row_by_entity_id(rows: List[ClassificationRow], entity_id: int) -> Optional[ClassificationRow]:
@@ -1492,7 +1492,7 @@ def get_admin_classification_detail(
 
     row = _row_by_entity_id(response.rows, entity_id)
     if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الكيان غير موجود ضمن نطاق الفلاتر")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found within filter scope")
 
     trend_points = _build_trend_points(
         db,
@@ -1582,12 +1582,12 @@ def get_manager_benchmarking_summary(
     _ensure_manager_only(current_user)
     _validate_common_filters("GOVERNORATE", size_mode, size_band)
     if not current_user.kindergarten_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="لا يوجد نطاق روضة مرتبط بالمستخدم")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No kindergarten scope associated with this user")
 
     period_start, period_end = _normalize_period(period_start, period_end)
     manager_kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == current_user.kindergarten_id).first()
     if manager_kg is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الروضة المرتبطة بالمدير غير موجودة")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Manager's associated kindergarten not found")
 
     result = BenchmarkingService.get_manager_leaderboard(
         db,
@@ -1605,7 +1605,7 @@ def get_manager_benchmarking_summary(
     )
     row = _row_by_entity_id(result.rows, current_user.id)
     if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="لا يوجد تصنيف متاح للمدير ضمن نطاق المقارنة")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No classification available for manager within comparison scope")
 
     peer_rows = [
         item for item in result.rows
@@ -1657,7 +1657,7 @@ def get_supervisor_performance_summary(
 ):
     _ensure_supervisor_only(current_user)
     if not current_user.kindergarten_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="لا يوجد نطاق روضة مرتبط بالمستخدم")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No kindergarten scope associated with this user")
     _validate_common_filters("KINDERGARTEN", size_mode, size_band)
     period_start, period_end = _normalize_period(period_start, period_end)
 
@@ -1677,7 +1677,7 @@ def get_supervisor_performance_summary(
     )
     row = _row_by_entity_id(result.rows, current_user.id)
     if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="لا يوجد تقييم متاح للمشرف")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No evaluation available for supervisor")
 
     return SupervisorPerformanceSummaryResponse(
         period_start=period_start,
@@ -1708,7 +1708,7 @@ def get_parent_kindergarten_quality_band(
         models.ParentProfile.user_id == current_user.id
     ).first()
     if parent_profile is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ملف ولي الأمر غير موجود")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent profile not found")
 
     enrollment = db.query(models.EnrollmentApplication).join(
         models.Child,
@@ -1722,13 +1722,13 @@ def get_parent_kindergarten_quality_band(
         ]),
     ).order_by(models.EnrollmentApplication.created_at.desc()).first()
     if enrollment is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="لا يوجد تسجيل نشط مرتبط بولي الأمر")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active enrollment found for parent")
 
     kindergarten = db.query(models.Kindergarten).filter(
         models.Kindergarten.id == enrollment.kindergarten_id
     ).first()
     if kindergarten is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="الروضة غير موجودة")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kindergarten not found")
 
     bundle = BenchmarkingService._bundle(db, kindergarten.id, period_start, period_end)
     governance_score = float(bundle.get("governance_score", 0.0))

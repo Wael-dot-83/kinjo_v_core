@@ -1,5 +1,5 @@
 <!-- Footer -->
-<footer class="footer mt-auto py-3 border-top" style="background-color: var(--kinjo-surface-muted, #f8fafc);">
+<footer class="footer mt-auto py-3 border-top bg-surface-muted">
     <div class="container-fluid">
         <div class="row align-items-center">
             <div class="col-md-6 text-center text-md-start">
@@ -10,17 +10,17 @@
                     &copy; 2026 <strong>KinJo</strong> &mdash; منصة إدارة الروضات
                     {% endif %}
                 </span>
-                <span class="text-muted small ms-2 d-none d-md-inline" style="opacity: 0.6;">v2.0</span>
+                <span class="text-muted small ms-2 d-none d-md-inline footer-version">v2.0</span>
             </div>
             <div class="col-md-6 text-center text-md-end mt-2 mt-md-0">
-                <a href="/help" class="text-muted small text-decoration-none me-3" style="transition: color 0.15s;">
-                    <i class="bi bi-question-circle me-1"></i>{% if ui_lang == 'en' %}Help{% else %}المساعدة{% endif %}
+                <a href="/help" class="footer-link me-3">
+                    <i class="bi bi-question-circle me-1" aria-hidden="true"></i>{% if ui_lang == 'en' %}Help{% else %}المساعدة{% endif %}
                 </a>
-                <a href="/privacy" class="text-muted small text-decoration-none me-3" style="transition: color 0.15s;">
-                    <i class="bi bi-shield-lock me-1"></i>{% if ui_lang == 'en' %}Privacy{% else %}الخصوصية{% endif %}
+                <a href="/privacy" class="footer-link me-3">
+                    <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>{% if ui_lang == 'en' %}Privacy{% else %}الخصوصية{% endif %}
                 </a>
-                <a href="/terms" class="text-muted small text-decoration-none" style="transition: color 0.15s;">
-                    <i class="bi bi-file-text me-1"></i>{% if ui_lang == 'en' %}Terms{% else %}الشروط{% endif %}
+                <a href="/terms" class="footer-link">
+                    <i class="bi bi-file-text me-1" aria-hidden="true"></i>{% if ui_lang == 'en' %}Terms{% else %}الشروط{% endif %}
                 </a>
             </div>
         </div>

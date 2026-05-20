@@ -3,14 +3,14 @@
 {% block title %}{% if ui_lang == 'en' %}Enrollment Request Details{% else %}تفاصيل طلب التسجيل{% endif %}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="page-header-wrap">
     <div>
-        <h1 class="h2">
-            <i class="bi bi-file-text me-2 text-primary"></i>
+        <h1 class="page-header-title">
+            <i class="bi bi-file-text text-primary me-2" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Enrollment: {{ enrollment.child_name }}{% else %}طلب تسجيل: {{ enrollment.child_name }}{% endif %}
         </h1>
         <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb">
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
                 <li class="breadcrumb-item"><a href="/enrollments">{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}</a></li>
                 <li class="breadcrumb-item active">{{ enrollment.child_name }}</li>
@@ -19,7 +19,7 @@
     </div>
 
     {% if current_user.role.value in ['ADMIN', 'MANAGER'] and enrollment.status in ['submitted', 'pending_review'] %}
-    <div class="btn-toolbar gap-2">
+    <div class="page-header-actions">
         <button class="btn btn-success" onclick="updateStatus('accepted')">
             <i class="bi bi-check-circle me-2"></i>{% if ui_lang == 'en' %}Accept{% else %}قبول{% endif %}
         </button>

@@ -34,6 +34,8 @@ def _security_csp() -> str:
         "http://127.0.0.1:8000",
         "ws://localhost:8000",
         "ws://127.0.0.1:8000",
+        "https://cdn.jsdelivr.net",
+        "https://cdnjs.cloudflare.com",
     ]
     return "; ".join(
         [

@@ -17,11 +17,10 @@ import validators
 from config import settings
 from database import get_db
 from dependencies import get_current_user
+from rate_limiter import limiter
 
 logger = logging.getLogger(__name__)
 
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from api.auth.password_reset_service import (
     issue_password_reset_token,
     resolve_valid_token,
@@ -30,9 +29,7 @@ from api.auth.password_reset_service import (
 
 router = APIRouter(tags=["Users"])
 
-limiter = Limiter(key_func=get_remote_address)
-if settings.TESTING:
-    limiter.enabled = False
+MAX_USER_EXPORT_ROWS = 10_000
 
 def _log_access_denied(
     db: Session,
@@ -125,6 +122,14 @@ def update_user_language(
     if payload.user_lang not in ("ar", "en"):
         raise HTTPException(status_code=400, detail="Supported languages: ar, en")
     current_user.preferred_language = payload.user_lang
+    # Sync notification_language on parent_profiles so notifications use the
+    # same language as the UI preference.
+    if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        if parent_profile:
+            parent_profile.notification_language = payload.user_lang
     db.commit()
     db.refresh(current_user)
     return {"user_lang": current_user.preferred_language}
@@ -141,7 +146,9 @@ class ChangePasswordRequest(BaseModel):
 
 
 @router.post("/users/change-password")
+@limiter.limit("10/minute")
 def change_password(
+    request: Request,
     payload: ChangePasswordRequest,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -333,7 +340,7 @@ def export_users(
     if status_filter:
         query = query.filter(models.User.status == status_filter)
 
-    users = query.all()
+    users = query.limit(MAX_USER_EXPORT_ROWS).all()
 
     import csv
     import io
@@ -787,7 +794,9 @@ def request_password_reset(
     return {"message": "If the email exists, a reset link has been sent"}
 
 @router.post("/users/reset-password")
+@limiter.limit("10/hour")
 def reset_password(
+    request: Request,
     reset_data: PasswordResetConfirm,
     db: Session = Depends(get_db)
 ):
@@ -820,16 +829,18 @@ def reset_password(
 
 # Bulk Operations Endpoints
 class BulkStatusUpdate(BaseModel):
-    user_ids: List[int]
+    user_ids: List[int] = Field(..., min_length=1, max_length=settings.MAX_BULK_UPDATE)
     new_status: models.UserStatus
 
 class BulkDeleteRequest(BaseModel):
-    user_ids: List[int]
+    user_ids: List[int] = Field(..., min_length=1, max_length=settings.MAX_BULK_DELETE)
+    confirmation_text: Optional[str] = None
 
 class BulkCreateRequest(BaseModel):
-    users: List[UserCreate]
+    users: List[UserCreate] = Field(..., min_length=1, max_length=settings.MAX_BULK_CREATE)
 
 @router.post("/users/bulk-status-update")
+@limiter.limit(settings.RATE_LIMIT_BULK_UPDATE)
 def bulk_update_status(
     request: Request,
     bulk_data: BulkStatusUpdate,
@@ -843,6 +854,12 @@ def bulk_update_status(
 
     if not bulk_data.user_ids:
         raise HTTPException(status_code=400, detail="No user IDs provided")
+
+    if len(bulk_data.user_ids) > settings.MAX_BULK_UPDATE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot update more than {settings.MAX_BULK_UPDATE} users at once",
+        )
 
     # Check for admin users in the list - cannot update admin status
     admin_users = db.query(models.User).filter(
@@ -878,6 +895,7 @@ def bulk_update_status(
     return {"message": f"Updated {updated_count} users successfully"}
 
 @router.post("/users/bulk-delete")
+@limiter.limit(settings.RATE_LIMIT_BULK_DELETE)
 def bulk_delete_users(
     request: Request,
     bulk_data: BulkDeleteRequest,
@@ -891,6 +909,21 @@ def bulk_delete_users(
 
     if not bulk_data.user_ids:
         raise HTTPException(status_code=400, detail="No user IDs provided")
+
+    if len(bulk_data.user_ids) > settings.MAX_BULK_DELETE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete more than {settings.MAX_BULK_DELETE} users at once",
+        )
+
+    if current_user.id in bulk_data.user_ids:
+        raise HTTPException(status_code=400, detail="Cannot delete your own admin account")
+
+    if bulk_data.confirmation_text != "DELETE":
+        raise HTTPException(
+            status_code=400,
+            detail="Bulk delete requires confirmation_text='DELETE'",
+        )
 
     # Prevent deleting admin accounts
     admin_users = db.query(models.User).filter(
@@ -925,6 +958,7 @@ def bulk_delete_users(
     return {"message": f"Deleted {deleted_count} users successfully"}
 
 @router.post("/users/bulk-create")
+@limiter.limit(settings.RATE_LIMIT_BULK_CREATE)
 def bulk_create_users(
     request: Request,
     bulk_data: BulkCreateRequest,
@@ -938,6 +972,12 @@ def bulk_create_users(
 
     if not bulk_data.users:
         raise HTTPException(status_code=400, detail="No users provided")
+
+    if len(bulk_data.users) > settings.MAX_BULK_CREATE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot create more than {settings.MAX_BULK_CREATE} users at once",
+        )
 
     created_users = []
     errors = []
