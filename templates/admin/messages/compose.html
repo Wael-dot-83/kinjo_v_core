@@ -102,10 +102,10 @@
                     <!-- Kindergarten Filter -->
                     <div id="kindergartenFilter" class="mb-3 d-none">
                         <label for="kindergartenSelect" class="form-label">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</label>
-                        <div class="input-group mb-2">
+                        <div class="input-group input-group-icon mb-2">
+                            <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
                             <input type="text" class="form-control form-control-sm" id="kgSearch"
                                 placeholder="{% if ui_lang == 'en' %}Search kindergarten...{% else %}بحث عن روضة...{% endif %}" onkeyup="filterKgList()">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
                         </div>
                         <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;"
                             id="kgListContainer">
