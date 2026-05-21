@@ -41,7 +41,7 @@
                 <div>
                     <h5 class="mb-1">{% if ui_lang == 'en' %}Request Status{% else %}حالة الطلب{% endif %}</h5>
                     <div class="d-flex align-items-center">
-                        <span class="badge rounded-pill bg-{{ enrollment.status | status_color }} fs-6 px-3 py-2 me-2">
+                        <span class="badge badge-soft badge-soft-{{ enrollment.status | status_color }} rounded-pill fs-6 px-3 py-2 me-2">
                             {{ enrollment.status_ar }}
                         </span>
                         <span class="text-muted small">

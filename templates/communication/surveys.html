@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Surveys{% else %}الاستبيانات{% endif %}{% endblock %}
 
@@ -31,7 +31,7 @@
         <div id="surveysContainer">
             <!-- Loading -->
             <div class="text-center py-5">
-                <div class="spinner-border text-info" role="status"></div>
+                <div class="spinner-border text-info" role="status"><span class="visually-hidden">Loading...</span></div>
             </div>
         </div>
     </div>
