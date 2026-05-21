@@ -60,51 +60,6 @@ def _require_supervisor(current_user: User = Depends(get_current_user)) -> User:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/my-classes")
-def get_my_classes(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_supervisor),
-):
-    from models import Class, SupervisorAssignment
-    rows = (
-        db.query(SupervisorAssignment)
-        .filter(
-            SupervisorAssignment.supervisor_id == current_user.id,
-            SupervisorAssignment.deleted_at.is_(None),
-        )
-        .all()
-    )
-    result = []
-    for r in rows:
-        c = r.class_
-        if c:
-            result.append({"id": c.id, "name_ar": c.name_ar, "name_en": c.name_en, "is_primary": r.is_primary})
-    return {"classes": result}
-
-
-@router.get("/children")
-def get_my_children(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_supervisor),
-):
-    from models import Child, EnrollmentApplication, EnrollmentStatus
-    child_ids = get_supervisor_child_ids(current_user.id, db)
-    if not child_ids:
-        return {"children": []}
-    children = db.query(Child).filter(Child.id.in_(child_ids)).all()
-    return {
-        "children": [
-            {
-                "id": c.id,
-                "first_name": c.first_name,
-                "last_name": c.last_name,
-                "gender": c.gender.value if c.gender else None,
-            }
-            for c in children
-        ]
-    }
-
-
 # ---------------------------------------------------------------------------
 # Attendance
 # ---------------------------------------------------------------------------
@@ -248,72 +203,6 @@ def record_attendance(
 # ---------------------------------------------------------------------------
 # Daily Reports
 # ---------------------------------------------------------------------------
-
-
-@router.get("/daily-reports")
-def get_daily_reports(
-    from_date: Optional[str] = Query(None, alias="from"),
-    to_date: Optional[str] = Query(None, alias="to"),
-    status_filter: Optional[str] = Query(None, alias="status"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_supervisor),
-):
-    child_ids = get_supervisor_child_ids(current_user.id, db)
-    if not child_ids:
-        return {"reports": [], "stats": {"submitted": 0, "pending": 0, "draft": 0, "sent_to_parent": 0}}
-
-    q = db.query(DailyReport).filter(DailyReport.child_id.in_(child_ids))
-    if from_date:
-        q = q.filter(DailyReport.date >= date.fromisoformat(from_date))
-    if to_date:
-        q = q.filter(DailyReport.date <= date.fromisoformat(to_date))
-    if status_filter:
-        try:
-            q = q.filter(DailyReport.status == DailyReportStatus(status_filter.upper()))
-        except ValueError:
-            pass
-
-    reports = q.order_by(DailyReport.date.desc()).all()
-    from models import Child, Class, EnrollmentApplication, EnrollmentStatus
-    child_map = {c.id: c for c in db.query(Child).filter(Child.id.in_(child_ids)).all()}
-
-    # Build class_name map for all children
-    enrollments = (
-        db.query(EnrollmentApplication)
-        .filter(EnrollmentApplication.child_id.in_(child_ids), EnrollmentApplication.status == EnrollmentStatus.ACTIVE)
-        .all()
-    )
-    class_ids = {e.child_id: e.class_id for e in enrollments}
-    classes = {c.id: c for c in db.query(Class).filter(Class.id.in_(class_ids.values())).all()}
-    class_name_map = {
-        cid: (classes[class_ids[cid]].name_ar or classes[class_ids[cid]].name_en or "")
-        for cid in class_ids if class_ids[cid] in classes
-    }
-
-    report_list = [
-        {
-            "id": r.id,
-            "child_id": r.child_id,
-            "child_name": f"{child_map[r.child_id].first_name} {child_map[r.child_id].last_name}" if r.child_id in child_map else "",
-            "class_name": class_name_map.get(r.child_id, ""),
-            "date": str(r.date),
-            "status": r.status.value if r.status else None,
-            "submitted_at": r.submitted_at.isoformat() if r.submitted_at else None,
-            "notes": r.notes,
-        }
-        for r in reports
-    ]
-
-    # Stats over ALL reports for this supervisor (not just the filtered set)
-    all_reports = db.query(DailyReport).filter(DailyReport.child_id.in_(child_ids)).all()
-    stats = {
-        "submitted": sum(1 for r in all_reports if r.status == DailyReportStatus.SUBMITTED),
-        "pending": sum(1 for r in all_reports if r.status in (DailyReportStatus.SUBMITTED, DailyReportStatus.DRAFT)),
-        "draft": sum(1 for r in all_reports if r.status == DailyReportStatus.DRAFT),
-        "sent_to_parent": sum(1 for r in all_reports if r.status == DailyReportStatus.SENT_TO_PARENT),
-    }
-
-    return {"reports": report_list, "stats": stats}
 
 
 class DailyReportIn(BaseModel):
@@ -861,8 +750,6 @@ def get_supervisor_kpi(
         pass
 
     return result
-
-
 
 
 # ---------------------------------------------------------------------------

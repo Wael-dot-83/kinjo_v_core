@@ -80,42 +80,6 @@ def _write_audit(
 
 
 # ---------------------------------------------------------------------------
-# List managers (for the picker UI on /admin/impersonate page)
-# ---------------------------------------------------------------------------
-
-@router.get("/admin/managers")
-def list_managers(
-    _admin: User = Depends(_require_admin),
-    db: Session = Depends(get_db),
-):
-    managers = (
-        db.query(User)
-        .filter(User.role == UserRole.MANAGER, User.deleted_at.is_(None))
-        .order_by(User.full_name)
-        .all()
-    )
-    kg_map: dict[int, str] = {}
-    kg_ids = [m.kindergarten_id for m in managers if m.kindergarten_id]
-    if kg_ids:
-        rows = db.query(Kindergarten.id, Kindergarten.name_ar).filter(Kindergarten.id.in_(kg_ids)).all()
-        kg_map = {r.id: r.name_ar for r in rows}
-
-    return {
-        "managers": [
-            {
-                "id": m.id,
-                "username": m.username,
-                "name": m.full_name or m.username,
-                "email": m.email,
-                "kindergarten_id": m.kindergarten_id,
-                "kindergarten_name": kg_map.get(m.kindergarten_id, "") if m.kindergarten_id else "",
-            }
-            for m in managers
-        ]
-    }
-
-
-# ---------------------------------------------------------------------------
 # Start impersonation
 # ---------------------------------------------------------------------------
 
