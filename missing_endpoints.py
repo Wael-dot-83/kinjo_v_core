@@ -174,63 +174,6 @@ def get_current_user_info(
     )
 
 
-@router.put("/users/me", response_model=UserResponse)
-def update_current_user_info(
-    update_data: CurrentUserUpdate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Update the current user's basic profile fields."""
-    if update_data.email and update_data.email != current_user.email:
-        normalized_email = normalize_email(str(update_data.email))
-        existing = db.query(models.User).filter(
-            func.lower(models.User.email) == normalized_email,
-            models.User.id != current_user.id
-        ).first()
-        if existing:
-            raise HTTPException(status_code=400, detail="Email already used")
-        current_user.email = normalized_email
-
-    parent_profile = db.query(models.ParentProfile).filter(
-        models.ParentProfile.user_id == current_user.id
-    ).first()
-    if parent_profile:
-        if update_data.first_name is not None:
-            parent_profile.first_name = update_data.first_name.strip()
-        if update_data.last_name is not None:
-            parent_profile.last_name = update_data.last_name.strip()
-        if update_data.phone is not None:
-            duplicate_phone = db.query(models.ParentProfile).filter(
-                models.ParentProfile.phone_number.in_(jordan_phone_login_variants(update_data.phone)),
-                models.ParentProfile.user_id != current_user.id,
-                models.ParentProfile.deleted_at.is_(None)
-            ).first()
-            if duplicate_phone:
-                raise HTTPException(status_code=400, detail="Phone number already used")
-            parent_profile.phone_number = update_data.phone
-        if update_data.parent_type is not None:
-            parent_profile.parent_type = update_data.parent_type
-        if update_data.national_id is not None:
-            stripped_nid = update_data.national_id.strip()
-            if stripped_nid:
-                existing_nid = db.query(models.ParentProfile).filter(
-                    models.ParentProfile.national_id == stripped_nid,
-                    models.ParentProfile.user_id != current_user.id,
-                    models.ParentProfile.deleted_at.is_(None)
-                ).first()
-                if existing_nid:
-                    raise HTTPException(status_code=400, detail="National ID already used by another user")
-            parent_profile.national_id = stripped_nid or None
-        if update_data.nationality is not None:
-            parent_profile.nationality = update_data.nationality.strip()
-        parent_profile.updated_at = datetime.now()
-
-    db.commit()
-    db.refresh(current_user)
-
-    return get_current_user_info(current_user=current_user, db=db)
-
-
 @router.put("/users/me/password")
 def change_current_user_password(
     password_data: CurrentPasswordChange,
@@ -3604,10 +3547,14 @@ def submit_enrollment(
     
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
-    
+
+    # Only parents (who own the child) or admins may submit enrollment applications
+    if current_user.role not in {models.UserRole.PARENT, models.UserRole.ADMIN}:
+        raise HTTPException(status_code=403, detail="Only parents can submit enrollment applications")
+
     if enrollment.status != models.EnrollmentStatus.DRAFT:
         raise HTTPException(status_code=400, detail="Only draft applications can be submitted")
-    
+
     # Verify parent owns this enrollment
     if current_user.role == models.UserRole.PARENT:
         parent_profile = db.query(models.ParentProfile).filter(

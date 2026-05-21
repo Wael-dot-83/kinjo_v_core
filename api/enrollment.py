@@ -97,7 +97,7 @@ class EnrollmentApplicationRequest(BaseModel):
     second_name: Optional[str] = None
     last_name: str
     gender: str
-    date_of_birth: str  # ISO format date
+    date_of_birth: date  # validated by Pydantic → 422 for bad strings
     nationality: Optional[str] = None
     national_id: Optional[str] = None
     passport_number: Optional[str] = None
@@ -156,7 +156,7 @@ def create_enrollment_application(
         models.Child.parent_id == parent_profile.id,
         models.Child.first_name == enrollment_data.first_name,
         models.Child.last_name == enrollment_data.last_name,
-        models.Child.date_of_birth == date.fromisoformat(enrollment_data.date_of_birth),
+        models.Child.date_of_birth == enrollment_data.date_of_birth,
     ).first()
     if existing_child:
         dup_enrollment = db.query(models.EnrollmentApplication).filter(
@@ -180,7 +180,7 @@ def create_enrollment_application(
             )
 
     # Validate child age (70 days to 56 months)
-    dob = date.fromisoformat(enrollment_data.date_of_birth)
+    dob = enrollment_data.date_of_birth
     today = date.today()
     age_days = (today - dob).days
     age_months = age_days / 30.44  # Average days per month
@@ -260,10 +260,13 @@ def submit_enrollment(
     
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
-    
+
+    if current_user.role not in {models.UserRole.PARENT, models.UserRole.ADMIN}:
+        raise HTTPException(status_code=403, detail="Only parents can submit enrollment applications")
+
     if enrollment.status != models.EnrollmentStatus.DRAFT:
         raise HTTPException(status_code=400, detail="Only draft applications can be submitted")
-    
+
     # Verify parent owns this enrollment
     if current_user.role == models.UserRole.PARENT:
         parent_profile = db.query(models.ParentProfile).filter(

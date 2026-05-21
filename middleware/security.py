@@ -10,6 +10,7 @@ from typing import Callable, Optional
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 from jose import JWTError, jwt
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette.concurrency import iterate_in_threadpool
 
@@ -169,7 +170,7 @@ async def audit_state_changes_middleware(request: Request, call_next: Callable):
             ip_address=request.client.host if request.client else None,
             sensitivity_level=1,
         )
-    except (RuntimeError, AttributeError, TypeError, ValueError) as exc:
+    except (RuntimeError, AttributeError, TypeError, ValueError, SQLAlchemyError) as exc:
         logger.warning("Failed to write generic audit log for %s: %s", path, exc)
     finally:
         try:

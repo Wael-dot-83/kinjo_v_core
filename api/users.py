@@ -177,6 +177,91 @@ class UserCreate(BaseModel):
     role: models.UserRole
     kindergarten_id: Optional[int] = None
 
+class ParentProfileUpdate(BaseModel):
+    first_name: Optional[str] = Field(default=None, max_length=100)
+    last_name: Optional[str] = Field(default=None, max_length=100)
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(default=None, max_length=20)
+    parent_type: Optional[str] = Field(default=None, pattern="^(FATHER|MOTHER|OTHER)$")
+    national_id: Optional[str] = Field(default=None, max_length=50)
+    nationality: Optional[str] = Field(default=None, max_length=100)
+
+
+@router.put("/users/me")
+def update_current_user_profile(
+    update_data: ParentProfileUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update the current user's profile (parent fields: name, phone, parent_type, etc.)."""
+    from auth import normalize_email, normalize_jordan_phone, jordan_phone_login_variants
+
+    if update_data.email and update_data.email != current_user.email:
+        normalized_email = normalize_email(str(update_data.email))
+        existing = db.query(models.User).filter(
+            func.lower(models.User.email) == normalized_email,
+            models.User.id != current_user.id,
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already used")
+        current_user.email = normalized_email
+
+    parent_profile = db.query(models.ParentProfile).filter(
+        models.ParentProfile.user_id == current_user.id
+    ).first()
+
+    if parent_profile:
+        if update_data.first_name is not None:
+            parent_profile.first_name = update_data.first_name.strip()
+        if update_data.last_name is not None:
+            parent_profile.last_name = update_data.last_name.strip()
+        if update_data.phone is not None:
+            phone = update_data.phone.strip()
+            if phone:
+                normalized_phone = normalize_jordan_phone(phone)
+                dup = db.query(models.ParentProfile).filter(
+                    models.ParentProfile.phone_number.in_(jordan_phone_login_variants(phone)),
+                    models.ParentProfile.user_id != current_user.id,
+                    models.ParentProfile.deleted_at.is_(None),
+                ).first()
+                if dup:
+                    raise HTTPException(status_code=400, detail="Phone number already used")
+                parent_profile.phone_number = normalized_phone
+        if update_data.parent_type is not None:
+            parent_profile.parent_type = update_data.parent_type
+        if update_data.national_id is not None:
+            stripped_nid = update_data.national_id.strip()
+            if stripped_nid:
+                dup_nid = db.query(models.ParentProfile).filter(
+                    models.ParentProfile.national_id == stripped_nid,
+                    models.ParentProfile.user_id != current_user.id,
+                    models.ParentProfile.deleted_at.is_(None),
+                ).first()
+                if dup_nid:
+                    raise HTTPException(status_code=400, detail="National ID already used by another user")
+            parent_profile.national_id = stripped_nid or None
+        if update_data.nationality is not None:
+            parent_profile.nationality = update_data.nationality.strip()
+
+    db.commit()
+    db.refresh(current_user)
+    if parent_profile:
+        db.refresh(parent_profile)
+
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "role": current_user.role.value,
+        "status": current_user.status.value,
+        "first_name": parent_profile.first_name if parent_profile else None,
+        "last_name": parent_profile.last_name if parent_profile else None,
+        "parent_type": parent_profile.parent_type if parent_profile else None,
+        "national_id": parent_profile.national_id if parent_profile else None,
+        "nationality": parent_profile.nationality if parent_profile else None,
+    }
+
+
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     password: Optional[str] = None

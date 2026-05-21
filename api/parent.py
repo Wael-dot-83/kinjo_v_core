@@ -190,7 +190,8 @@ def get_parent_children(
         raise HTTPException(status_code=404, detail=_api("Parent profile not found", _ulang(current_user)))
 
     children = db.query(models.Child).filter(
-        models.Child.parent_id == profile.id
+        models.Child.parent_id == profile.id,
+        models.Child.deleted_at.is_(None),
     ).all()
 
     children_data = []
@@ -248,7 +249,8 @@ def get_parent_enrollments(
 
     child_ids = [
         cid for (cid,) in db.query(models.Child.id).filter(
-            models.Child.parent_id == profile.id
+            models.Child.parent_id == profile.id,
+            models.Child.deleted_at.is_(None),
         ).all()
     ]
 

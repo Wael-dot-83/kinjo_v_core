@@ -457,6 +457,7 @@ class ParentProfile(Base):
     emergency_contact_phone = Column(String(20), nullable=True)
     emergency_contact_relationship = Column(String(100), nullable=True)  # e.g. uncle, grandmother
     relationship_to_child = Column(String(100), nullable=True)  # father, mother, guardian
+    parent_type = Column(String(20), nullable=True)  # FATHER, MOTHER, OTHER — structured enum for UI
     correspondence_preference = Column(Boolean, nullable=False, default=True)
     notification_language = Column(String(10), nullable=False, server_default="ar", default="ar")
     profile_complete = Column(Boolean, nullable=False, default=False)
