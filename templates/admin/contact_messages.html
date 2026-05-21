@@ -19,7 +19,7 @@
             <input type="text" name="q" value="{{ filters.q or '' }}"
                    class="form-control" placeholder="{{ _('بحث بالاسم أو الموضوع...') }}">
         </div>
-        <select name="status_filter" class="form-select form-select-sm" style="width:auto;">
+        <select name="status_filter" class="form-select form-select-sm w-auto">
             <option value="">{{ _('الكل') }}</option>
             <option value="open" {% if filters.status_filter == 'open' %}selected{% endif %}>{{ _('مفتوحة') }}</option>
             <option value="resolved" {% if filters.status_filter == 'resolved' %}selected{% endif %}>{{ _('مُغلقة') }}</option>

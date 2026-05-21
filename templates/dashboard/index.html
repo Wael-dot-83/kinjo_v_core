@@ -15,8 +15,8 @@
                 <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</li>
             </ol>
         </nav>
-        <div id="validationStatusIndicator" class="validation-status-indicator status-unknown mt-2"
-            onclick="showValidationDetails()" style="cursor: pointer;" role="button" tabindex="0"
+        <div id="validationStatusIndicator" class="validation-status-indicator status-unknown mt-2 cursor-pointer"
+            onclick="showValidationDetails()" role="button" tabindex="0"
             aria-label="{% if ui_lang == 'en' %}View data validation details{% else %}عرض تفاصيل التحقق من البيانات{% endif %}">
             <i class="bi bi-question-circle-fill me-1"></i>
             <span>{% if ui_lang == 'en' %}Validating...{% else %}جاري التحقق...{% endif %}</span>
@@ -187,7 +187,7 @@
         <div class="col-12 col-lg-8 order-lg-1">
             <!-- Unified KPI Dashboard Block -->
             {% if current_user.role.value not in ['ADMIN', 'MANAGER'] %}
-            <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
+            <div class="card border-0 shadow-sm mb-4 rounded-xl">
                 <div
                     class="card-header bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
                     <h4 class="fw-bold mb-0">{% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}</h4>
@@ -237,7 +237,7 @@
             {% endif %}
 
             <!-- Proposed Actions Section -->
-            <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
+            <div class="card border-0 shadow-sm mb-4 rounded-xl">
                 <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
                     <h5 class="fw-bold mb-0">{% if ui_lang == 'en' %}Suggested Improvement Actions{% else %}إجراءات مقترحة للتحسين{% endif %}</h5>
                 </div>
@@ -277,7 +277,7 @@
             </div>
 
             <!-- Recent Activity Table -->
-            <div class="card border-0 shadow-sm" style="border-radius: 20px;">
+            <div class="card border-0 shadow-sm rounded-xl">
                 <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
                     <h5 class="fw-bold mb-0">{% if ui_lang == 'en' %}Class Overview{% else %}نظرة عامة على الفصول{% endif %}</h5>
                 </div>
