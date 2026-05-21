@@ -148,7 +148,7 @@ function renderSupervisors(supervisors) {
     }
     container.innerHTML = supervisors.map(sup => {
         const classBadges = sup.classes && sup.classes.length
-            ? sup.classes.map(c => `<span class="badge rounded-pill me-1" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">${escHtml(c.name_ar)}${c.is_primary ? ' ★' : ''}</span>`).join('')
+            ? sup.classes.map(c => `<span class="badge badge-soft badge-soft-primary rounded-pill me-1">${escHtml(c.name_ar)}${c.is_primary ? ' ★' : ''}</span>`).join('')
             : `<span class="text-muted small">بدون تعيين</span>`;
         return `
         <div class="col-12 col-md-6 col-xl-4">
