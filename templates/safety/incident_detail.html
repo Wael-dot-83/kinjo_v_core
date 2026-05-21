@@ -61,7 +61,7 @@
                     <span class="detail-label">{{ _('الوصف') }}</span>
                     <span class="detail-value">{{ incident.description or '—' }}</span>
                 </div>
-                <div class="detail-row" style="border-bottom:none;">
+                <div class="detail-row border-bottom-0">
                     <span class="detail-label">{{ _('تم إبلاغ ولي الأمر') }}</span>
                     <span class="detail-value">
                         {% if incident.parent_informed %}
@@ -83,12 +83,12 @@
             <div class="card-body">
                 {% if reporter %}
                 <div class="d-flex align-items-center gap-2">
-                    <div style="width:38px;height:38px;border-radius:50%;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);display:flex;align-items:center;justify-content:center;">
-                        <i class="bi bi-person-fill"></i>
+                    <div class="child-avatar-sm flex-shrink-0">
+                        <i class="bi bi-person-fill" aria-hidden="true"></i>
                     </div>
                     <div>
                         <div class="fw-700 small">{{ reporter.full_name or reporter.username }}</div>
-                        <div class="text-muted" style="font-size:0.78rem;">{{ reporter.role.value }}</div>
+                        <div class="text-muted text-xs">{{ reporter.role.value }}</div>
                     </div>
                 </div>
                 {% else %}
@@ -112,7 +112,7 @@
                         {% endif %}
                     </span>
                 </div>
-                <div class="detail-row" style="border-bottom:none;">
+                <div class="detail-row border-bottom-0">
                     <span class="detail-label">{{ _('الموعد النهائي') }}</span>
                     <span class="detail-value small">
                         {{ incident.followup_sla_deadline.strftime('%Y-%m-%d') if incident.followup_sla_deadline else '—' }}

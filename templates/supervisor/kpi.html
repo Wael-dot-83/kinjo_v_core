@@ -34,10 +34,10 @@
 <div class="card mb-4">
     <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
         <span class="fw-700 small text-nowrap">{{ _('الفترة الزمنية:') }}</span>
-        <input type="date" id="dateFrom" class="form-control form-control-sm" style="width:auto;"
+        <input type="date" id="dateFrom" class="form-control form-control-sm w-auto"
                aria-label="{{ _('من تاريخ') }}">
         <span class="text-muted small">{{ _('إلى') }}</span>
-        <input type="date" id="dateTo" class="form-control form-control-sm" style="width:auto;"
+        <input type="date" id="dateTo" class="form-control form-control-sm w-auto"
                aria-label="{{ _('إلى تاريخ') }}">
         <button class="btn btn-primary btn-sm" onclick="loadKPI()">
             <i class="bi bi-bar-chart me-1"></i>{{ _('عرض') }}
@@ -87,7 +87,7 @@
                         <i class="bi bi-journal-check"></i>
                     </div>
                 </div>
-                <div class="progress mt-2" style="height:4px;border-radius:0;margin:-1px -1px 0;">
+                <div class="progress progress-sm mt-2">
                     <div class="progress-bar bg-success" id="kpiCompletionBar" style="width:0%;transition:width 1s;"></div>
                 </div>
             </div>
@@ -103,8 +103,8 @@
                         <i class="bi bi-clock-history"></i>
                     </div>
                 </div>
-                <div class="progress mt-2" style="height:4px;border-radius:0;margin:-1px -1px 0;">
-                    <div class="progress-bar" id="kpiOnTimeBar" style="width:0%;background:var(--kinjo-primary);transition:width 1s;"></div>
+                <div class="progress progress-sm mt-2">
+                    <div class="progress-bar bg-primary" id="kpiOnTimeBar" style="width:0%;transition:width 1s;"></div>
                 </div>
             </div>
         </div>

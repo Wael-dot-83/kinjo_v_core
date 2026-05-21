@@ -4,8 +4,8 @@
 {% block page_header %}
 <div class="page-header-wrap">
     <div>
-        <div class="page-header-eyebrow" style="color:var(--kinjo-danger,#ef4444);">
-            <i class="bi bi-shield-exclamation"></i>
+        <div class="page-header-eyebrow text-danger">
+            <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
             تقارير وتحليلات
         </div>
         <h1 class="page-header-title">لوحة تحليلات الحوادث</h1>
@@ -28,9 +28,9 @@
 {% block content %}
 
 <!-- Admin notice -->
-<div class="alert alert-primary d-flex gap-3 align-items-start mb-4" style="border-radius:var(--kinjo-radius-lg);">
-    <i class="bi bi-info-circle-fill flex-shrink-0 fs-5 mt-1"></i>
-    <div style="font-size:0.875rem;">
+<div class="alert alert-primary d-flex gap-3 align-items-start mb-4 rounded-3">
+    <i class="bi bi-info-circle-fill flex-shrink-0 fs-5 mt-1" aria-hidden="true"></i>
+    <div class="small">
         <span class="fw-700">لوحة المراقبة والتحليل — </span>
         هذه اللوحة مخصصة للمشرف العام لمراجعة إحصائيات الحوادث عبر الروضات.
         لا يمكن للمشرف العام تسجيل حوادث جديدة.
@@ -238,9 +238,9 @@
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
-                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">الروضة</th>
-                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">عدد الحوادث</th>
-                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">المستوى</th>
+                                <th class="th-sm">الروضة</th>
+                                <th class="th-sm">عدد الحوادث</th>
+                                <th class="th-sm">المستوى</th>
                             </tr>
                         </thead>
                         <tbody id="kgTable"><tr><td colspan="3" class="text-center text-muted py-3">جاري التحميل...</td></tr></tbody>
@@ -253,9 +253,9 @@
     <!-- Repeated Children Alert -->
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header" style="background:rgba(239,68,68,0.06);">
-                <h6 class="card-title-sm mb-0" style="color:var(--kinjo-danger);">
-                    <i class="bi bi-person-exclamation me-2"></i>أطفال بحوادث متكررة
+            <div class="card-header bg-danger-subtle">
+                <h6 class="card-title-sm mb-0 text-danger">
+                    <i class="bi bi-person-exclamation me-2" aria-hidden="true"></i>أطفال بحوادث متكررة
                 </h6>
             </div>
             <div class="card-body p-0">
@@ -263,9 +263,9 @@
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
-                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">معرّف الطفل</th>
-                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">عدد الحوادث</th>
-                                <th style="font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);">الإجراء</th>
+                                <th class="th-sm">معرّف الطفل</th>
+                                <th class="th-sm">عدد الحوادث</th>
+                                <th class="th-sm">الإجراء</th>
                             </tr>
                         </thead>
                         <tbody id="repeatedTable"><tr><td colspan="3" class="text-center text-muted py-3">جاري التحميل...</td></tr></tbody>
@@ -360,7 +360,7 @@
         const el = document.getElementById(containerId);
         const entries = Object.entries(dataObj);
         if (!entries.length) {
-            el.innerHTML = '<p class="text-muted text-center py-3 mb-0" style="font-size:0.85rem;">لا توجد بيانات</p>';
+            el.innerHTML = '<p class="text-muted text-center py-3 mb-0 small">لا توجد بيانات</p>';
             return;
         }
         const max = Math.max(...entries.map(([, v]) => v), 1);
@@ -409,11 +409,11 @@
             const isHigh = highRisk[kgId];
             const safeKgId = parseInt(kgId, 10) || 0;
             return `<tr>
-                <td style="font-size:0.84rem;">روضة #${safeKgId}</td>
-                <td style="font-size:0.84rem;font-weight:700;">${count}</td>
+                <td class="small">روضة #${safeKgId}</td>
+                <td class="small fw-bold">${count}</td>
                 <td>${isHigh
-                    ? '<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--kinjo-danger);font-size:0.72rem;">خطر مرتفع</span>'
-                    : '<span class="badge" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);font-size:0.72rem;">طبيعي</span>'
+                    ? '<span class="badge badge-soft badge-soft-danger badge-xs">خطر مرتفع</span>'
+                    : '<span class="badge badge-soft badge-soft-success badge-xs">طبيعي</span>'
                 }</td>
             </tr>`;
         }).join('');
@@ -429,9 +429,9 @@
         tbody.innerHTML = entries.map(([childId, count]) => {
             const safeId = parseInt(childId, 10) || 0;
             return `<tr>
-                <td style="font-size:0.84rem;">طفل #${safeId}</td>
-                <td style="font-size:0.84rem;font-weight:700;color:var(--kinjo-danger);">${parseInt(count, 10) || 0}</td>
-                <td><a href="/children/${safeId}" class="btn btn-ghost btn-sm px-2" style="font-size:0.75rem;">عرض الملف</a></td>
+                <td class="small">طفل #${safeId}</td>
+                <td class="small fw-bold text-danger">${parseInt(count, 10) || 0}</td>
+                <td><a href="/children/${safeId}" class="btn btn-ghost btn-sm px-2">عرض الملف</a></td>
             </tr>`;
         }).join('');
     }

@@ -4,8 +4,8 @@
 {% block page_header %}
 <div class="page-header-wrap">
     <div>
-        <div class="page-header-eyebrow" style="color:var(--kinjo-danger,#ef4444);">
-            <i class="bi bi-shield-exclamation"></i>
+        <div class="page-header-eyebrow text-danger">
+            <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
             {{ _('المشرف') }}
         </div>
         <h1 class="page-header-title">{{ _('السلامة والحوادث') }}</h1>
@@ -79,7 +79,7 @@
 <div class="card mb-3">
     <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
         <span class="fw-700 small text-nowrap">{{ _('تصفية:') }}</span>
-        <select id="filterSeverity" class="form-select form-select-sm" style="width:auto;"
+        <select id="filterSeverity" class="form-select form-select-sm w-auto"
                 aria-label="{{ _('تصفية حسب الخطورة') }}">
             <option value="">{{ _('— جميع الخطورات —') }}</option>
             <option value="LOW">{{ _('منخفض') }}</option>
@@ -87,7 +87,7 @@
             <option value="HIGH">{{ _('عالٍ') }}</option>
             <option value="CRITICAL">{{ _('حرج') }}</option>
         </select>
-        <select id="filterType" class="form-select form-select-sm" style="width:auto;"
+        <select id="filterType" class="form-select form-select-sm w-auto"
                 aria-label="{{ _('تصفية حسب النوع') }}">
             <option value="">{{ _('— جميع الأنواع —') }}</option>
             <option value="INJURY">{{ _('إصابة جسدية') }}</option>
@@ -96,7 +96,7 @@
             <option value="BEHAVIOR">{{ _('سلوكي') }}</option>
             <option value="OTHER">{{ _('أخرى') }}</option>
         </select>
-        <select id="filterStatus" class="form-select form-select-sm" style="width:auto;"
+        <select id="filterStatus" class="form-select form-select-sm w-auto"
                 aria-label="{{ _('تصفية حسب الحالة') }}">
             <option value="">{{ _('— جميع الحالات —') }}</option>
             <option value="OPEN">{{ _('مفتوح') }}</option>
@@ -128,7 +128,7 @@
     </div>
 
     <div id="tableEmpty" class="card-body text-center py-5 text-muted d-none">
-        <i class="bi bi-shield-check d-block fs-1 mb-3 opacity-25" style="color:var(--kinjo-success);"></i>
+        <i class="bi bi-shield-check d-block fs-1 mb-3 opacity-25 text-success" aria-hidden="true"></i>
         <p class="fw-600">{{ _('لا توجد حوادث مسجلة') }}</p>
         <p class="small text-muted">{{ _('الروضة آمنة — لا توجد حوادث لهذه الفترة') }}</p>
     </div>
@@ -169,10 +169,10 @@
     'use strict';
 
     const SEVERITY_BADGE = {
-        'LOW':      `<span class="badge" style="background:rgba(6,182,212,0.15);color:#0891b2;">{{ _('منخفض') }}</span>`,
+        'LOW':      `<span class="badge badge-soft badge-soft-info">{{ _('منخفض') }}</span>`,
         'MEDIUM':   `<span class="badge badge-soft badge-soft-warning">{{ _('متوسط') }}</span>`,
         'HIGH':     `<span class="badge badge-soft badge-soft-danger">{{ _('عالٍ') }}</span>`,
-        'CRITICAL': `<span class="badge" style="background:rgba(124,58,237,0.15);color:#7c3aed;">{{ _('حرج') }}</span>`,
+        'CRITICAL': `<span class="badge badge-soft badge-soft-purple">{{ _('حرج') }}</span>`,
     };
 
     const STATUS_BADGE = {

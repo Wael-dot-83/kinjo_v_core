@@ -30,10 +30,10 @@
 <div class="card mb-4">
     <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
         <span class="fw-700 small text-nowrap">{{ _('الفترة:') }}</span>
-        <input type="date" id="dateFrom" class="form-control form-control-sm" style="width:auto;"
+        <input type="date" id="dateFrom" class="form-control form-control-sm w-auto"
                aria-label="{{ _('من تاريخ') }}">
         <span class="text-muted small">{{ _('إلى') }}</span>
-        <input type="date" id="dateTo" class="form-control form-control-sm" style="width:auto;"
+        <input type="date" id="dateTo" class="form-control form-control-sm w-auto"
                aria-label="{{ _('إلى تاريخ') }}">
         <button class="btn btn-primary btn-sm" onclick="loadKPI()">
             <i class="bi bi-bar-chart me-1"></i>{{ _('عرض') }}
@@ -68,7 +68,7 @@
 
     <!-- Section 1: Children -->
     <div class="section-title mb-3">
-        <i class="bi bi-people-fill me-2" style="color:var(--kinjo-primary);"></i>
+        <i class="bi bi-people-fill me-2 text-primary" aria-hidden="true"></i>
         {{ _('الأطفال') }}
     </div>
     <div class="row g-3 mb-4">
@@ -122,7 +122,7 @@
 
     <!-- Section 2: Supervisors -->
     <div class="section-title mb-3">
-        <i class="bi bi-person-badge-fill me-2" style="color:#d97706;"></i>
+        <i class="bi bi-person-badge-fill me-2 text-amber" aria-hidden="true"></i>
         {{ _('المشرفون') }}
     </div>
     <div class="row g-3 mb-4">
@@ -156,7 +156,7 @@
 
     <!-- Section 3: Operational -->
     <div class="section-title mb-3">
-        <i class="bi bi-gear-wide-connected me-2" style="color:var(--kinjo-success);"></i>
+        <i class="bi bi-gear-wide-connected me-2 text-success" aria-hidden="true"></i>
         {{ _('التشغيل') }}
     </div>
     <div class="row g-3 mb-4">
@@ -171,7 +171,7 @@
                         <i class="bi bi-calendar-check-fill"></i>
                     </div>
                 </div>
-                <div class="progress mt-2" style="height:4px;border-radius:0;margin:-1px -1px 0;">
+                <div class="progress progress-sm mt-2">
                     <div class="progress-bar bg-success" id="kpiAttBar" style="width:0%;transition:width 1s;"></div>
                 </div>
             </div>
@@ -187,8 +187,8 @@
                         <i class="bi bi-journal-check"></i>
                     </div>
                 </div>
-                <div class="progress mt-2" style="height:4px;border-radius:0;margin:-1px -1px 0;">
-                    <div class="progress-bar" id="kpiReportBar" style="width:0%;background:var(--kinjo-primary);transition:width 1s;"></div>
+                <div class="progress progress-sm mt-2">
+                    <div class="progress-bar bg-primary" id="kpiReportBar" style="width:0%;transition:width 1s;"></div>
                 </div>
             </div>
         </div>
@@ -219,7 +219,7 @@
 
     <!-- Section 4: Messaging -->
     <div class="section-title mb-3">
-        <i class="bi bi-chat-dots-fill me-2" style="color:#0891b2;"></i>
+        <i class="bi bi-chat-dots-fill me-2 text-info" aria-hidden="true"></i>
         {{ _('التواصل') }}
     </div>
     <div class="row g-4 mb-4">

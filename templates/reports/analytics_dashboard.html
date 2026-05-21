@@ -54,14 +54,16 @@
 
     <!-- Loading Spinner -->
     <div id="loadingSpinner" class="text-center py-5 d-none">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+        <div class="spinner-border spinner-border-lg text-primary" role="status">
+            <span class="visually-hidden">{% if ui_lang == 'en' %}Loading data...{% else %}جارٍ تحميل البيانات...{% endif %}</span>
+        </div>
         <p class="mt-3 text-muted">{% if ui_lang == 'en' %}Loading data...{% else %}جارٍ تحميل البيانات...{% endif %}</p>
     </div>
 
     <!-- KPI Cards -->
     <div id="kpiCards" class="row g-3 mb-4 d-none">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100" style="border-right: 4px solid #0d6efd !important;">
+            <div class="card border-0 shadow-sm h-100 card-band-primary">
                 <div class="card-body text-center">
                     <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Total Reports{% else %}إجمالي التقارير{% endif %}</div>
                     <h2 class="mb-0 text-primary" id="kpiTotal">0</h2>
@@ -73,7 +75,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100" style="border-right: 4px solid #198754 !important;">
+            <div class="card border-0 shadow-sm h-100 card-band-success">
                 <div class="card-body text-center">
                     <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Meal Rate{% else %}نسبة الوجبات{% endif %}</div>
                     <h2 class="mb-0 text-success" id="kpiMealRate">0%</h2>
@@ -85,10 +87,10 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100" style="border-right: 4px solid #6f42c1 !important;">
+            <div class="card border-0 shadow-sm h-100 card-band-purple">
                 <div class="card-body text-center">
                     <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Average Nap{% else %}متوسط القيلولة{% endif %}</div>
-                    <h2 class="mb-0" style="color: #6f42c1;" id="kpiNapAvg">0</h2>
+                    <h2 class="mb-0 text-purple" id="kpiNapAvg">0</h2>
                     <div class="text-muted small mt-1">
                         {% if ui_lang == 'en' %}min | Sleep rate{% else %}دقيقة | نسبة النوم{% endif %} <span id="kpiNapRate">0</span>%
                     </div>
@@ -96,7 +98,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100" style="border-right: 4px solid #dc3545 !important;">
+            <div class="card border-0 shadow-sm h-100 card-band-danger">
                 <div class="card-body text-center">
                     <div class="text-muted small mb-1">{% if ui_lang == 'en' %}Health Cases{% else %}حالات صحية{% endif %}</div>
                     <h2 class="mb-0 text-danger" id="kpiSickCount">0</h2>

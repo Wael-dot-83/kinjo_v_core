@@ -125,7 +125,7 @@
             </div>
             <div class="modal-body">
                 <div class="text-muted small mb-3" id="msgModalMeta"></div>
-                <div id="msgModalBody" style="white-space:pre-line;"></div>
+                <div id="msgModalBody" class="ws-pre-line"></div>
                 <div id="msgModalAttachment" class="mt-3"></div>
             </div>
             <div class="modal-footer border-0">
@@ -211,8 +211,8 @@
                 : '—';
             const unread = !msg.is_read ? 'unread' : '';
             const readBadge = msg.is_read
-                ? `<span class="badge bg-light text-muted border" style="font-size:0.65rem;">{{ _('مقروء') }}</span>`
-                : `<span class="badge badge-soft badge-soft-primary" style="font-size:0.65rem;">{{ _('جديد') }}</span>`;
+                ? `<span class="badge bg-light text-muted border badge-xs">{{ _('مقروء') }}</span>`
+                : `<span class="badge badge-soft badge-soft-primary badge-xs">{{ _('جديد') }}</span>`;
             const preview = (msg.body || '').slice(0, 80);
             return `
             <div class="msg-item ${unread}" onclick="openMessage(${msg.id})">

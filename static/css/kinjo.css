@@ -1915,6 +1915,7 @@ body.sidebar-open .sidebar-backdrop {
 .badge-soft-danger    { background: var(--kinjo-danger-light);    color: #991b1b; }
 .badge-soft-info      { background: var(--kinjo-info-light);      color: #155e75; }
 .badge-soft-secondary { background: #f1f5f9;                      color: var(--kinjo-text-secondary); }
+.badge-soft-purple    { background: rgba(124,58,237,0.12);        color: #6d28d9; }
 
 /* ============================================================================
    Table — Sticky header + skeleton loading rows
@@ -2095,3 +2096,39 @@ body.sidebar-open .sidebar-backdrop {
 /* Small avatar circles used in child/attendance list rows */
 .child-avatar-sm { width:30px;height:30px;border-radius:50%;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0; }
 .att-avatar-sm { width:32px;height:32px;border-radius:50%;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0; }
+
+/* ============================================================================
+   Card band — RTL-safe coloured inline-start border for stat/KPI cards
+   ============================================================================ */
+.card-band-primary { border-inline-start: 4px solid var(--kinjo-primary) !important; }
+.card-band-success { border-inline-start: 4px solid var(--kinjo-success) !important; }
+.card-band-danger  { border-inline-start: 4px solid var(--kinjo-danger)  !important; }
+.card-band-warning { border-inline-start: 4px solid var(--kinjo-warning) !important; }
+.card-band-info    { border-inline-start: 4px solid var(--kinjo-info)    !important; }
+.card-band-purple  { border-inline-start: 4px solid #6f42c1 !important; }
+
+/* ============================================================================
+   Additional text-colour utilities (non-Bootstrap colours)
+   ============================================================================ */
+.text-purple { color: #6f42c1 !important; }
+.text-amber  { color: #d97706 !important; }
+
+/* ============================================================================
+   Badge size variant
+   ============================================================================ */
+.badge-xs { font-size: 0.65rem; }
+
+/* ============================================================================
+   Progress bar size variant
+   ============================================================================ */
+.progress-sm { height: 4px !important; border-radius: 0 !important; margin: 0 !important; }
+
+/* ============================================================================
+   Table header compact style
+   ============================================================================ */
+.th-sm { font-size: 0.75rem; font-weight: 700; color: var(--kinjo-text-muted); }
+
+/* ============================================================================
+   Whitespace utility
+   ============================================================================ */
+.ws-pre-line { white-space: pre-line; }
