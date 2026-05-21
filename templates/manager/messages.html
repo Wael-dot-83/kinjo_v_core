@@ -76,15 +76,6 @@
     </div>
 </div>
 
-<style>
-.msg-item { display:flex;align-items:flex-start;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--kinjo-border-light);transition:background 0.15s;cursor:pointer; }
-.msg-item:hover { background:var(--kinjo-primary-xlight); }
-.msg-item.unread .msg-subject { font-weight:800; }
-.msg-avatar { width:38px;height:38px;border-radius:50%;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0; }
-.msg-subject { font-weight:700;font-size:0.9rem;color:var(--kinjo-text-primary); }
-.msg-preview { font-size:0.82rem;color:var(--kinjo-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px; }
-.msg-meta { font-size:0.75rem;color:var(--kinjo-text-muted);white-space:nowrap; }
-</style>
 {% endblock %}
 
 {% block extra_js %}

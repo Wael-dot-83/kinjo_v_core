@@ -10,7 +10,7 @@
         </div>
         <h1 class="page-header-title">{{ _('الرسائل') }}</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+            <ol class="breadcrumb mb-0 breadcrumb-sm">
                 <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
                 <li class="breadcrumb-item active">{{ _('الرسائل') }}</li>
             </ol>
@@ -58,7 +58,7 @@
                                   placeholder="{{ _('اكتب رسالتك هنا...') }}"
                                   aria-label="{{ _('نص الرسالة') }}" aria-required="true"></textarea>
                         <div class="d-flex justify-content-end mt-1">
-                            <span class="text-muted" style="font-size:0.72rem;" id="bodyCount">0 / 2000</span>
+                            <span class="form-counter" id="bodyCount">0 / 2000</span>
                         </div>
                     </div>
                     <div class="mb-4">
@@ -136,33 +136,9 @@
 </div>
 
 <style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
 .field-label { font-size:0.78rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:0.35rem; }
-.fw-600 { font-weight:600; }
-.fw-700 { font-weight:700; }
-
-.msg-item {
-    display:flex;align-items:flex-start;gap:0.875rem;
-    padding:0.875rem 1.25rem;
-    border-bottom:1px solid var(--kinjo-border);
-    cursor:pointer;transition:background 0.15s;
-}
-.msg-item:hover { background:var(--kinjo-surface); }
 .msg-item:last-child { border-bottom:none; }
-.msg-item.unread { background:rgba(10,92,142,0.04); }
 .msg-item.unread .msg-subject { font-weight:800; }
-.msg-avatar {
-    width:38px;height:38px;border-radius:50%;
-    background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
-    display:flex;align-items:center;justify-content:center;
-    font-size:0.9rem;flex-shrink:0;
-}
-.msg-subject { font-size:0.875rem;font-weight:600;color:var(--kinjo-text-primary);margin-bottom:0.2rem; }
-.msg-preview { font-size:0.78rem;color:var(--kinjo-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px; }
-.msg-date { font-size:0.72rem;color:var(--kinjo-text-muted);white-space:nowrap; }
 </style>
 {% endblock %}
 
