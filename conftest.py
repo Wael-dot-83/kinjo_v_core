@@ -15,6 +15,8 @@ from datetime import date, datetime, timedelta
 
 # Set testing environment BEFORE importing app
 os.environ["TESTING"] = "true"
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+os.environ.setdefault("SECRET_KEY", "kinjo-ci-testing-secret-key-not-for-production-use-9x7z")
 
 from database import Base, get_db
 from main import app
