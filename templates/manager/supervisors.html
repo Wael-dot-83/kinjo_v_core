@@ -72,7 +72,7 @@
 <!-- Supervisor Cards -->
 <div class="row g-3" id="supervisorsContainer">
     <div class="col-12 text-center py-5 text-muted" id="loadingState">
-        <div class="spinner-border text-primary" role="status"></div>
+        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
         <p class="mt-2">{{ _('جاري التحميل...') }}</p>
     </div>
 </div>
@@ -162,7 +162,7 @@ function renderSupervisors(supervisors) {
                         <div class="flex-grow-1 min-w-0">
                             <div class="fw-semibold text-truncate">${escHtml(sup.full_name)}</div>
                             <div class="text-muted small">@${escHtml(sup.username)}</div>
-                            <span class="badge ${sup.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary'} rounded-pill mt-1" style="font-size:0.7rem;">${sup.status === 'ACTIVE' ? 'نشط' : 'غير نشط'}</span>
+                            <span class="badge ${sup.status === 'ACTIVE' ? 'badge-soft badge-soft-success' : 'badge-soft badge-soft-secondary'} rounded-pill mt-1">${sup.status === 'ACTIVE' ? 'نشط' : 'غير نشط'}</span>
                         </div>
                     </div>
                     <div class="mb-2 small"><i class="bi bi-envelope me-1 text-muted"></i>${escHtml(sup.email || '—')}</div>

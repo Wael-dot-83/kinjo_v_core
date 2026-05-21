@@ -105,7 +105,7 @@
                 </div>
                 <div class="attendance-grid" id="attendanceGrid">
                     <div class="text-center py-4">
-                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                         <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                     </div>
                 </div>
@@ -374,7 +374,7 @@
                 <div class="small fw-semibold text-truncate w-100">${escapeHtml(child.first_name || '')}</div>
                 <div class="small text-muted text-truncate w-100">${escapeHtml(child.last_name || '')}</div>
                 <div class="small mt-1">${escapeHtml(meta.label)}</div>
-                ${timeLabel ? `<div class="small text-muted mt-1" style="font-size:0.72rem">${timeLabel}</div>` : ''}
+                ${timeLabel ? `<div class="form-counter mt-1">${timeLabel}</div>` : ''}
             </button>
             `;
         }).join('');
@@ -470,7 +470,7 @@
                             <i class="bi bi-door-open text-primary fs-1 mb-2"></i>
                             <h5 class="card-title mb-1">${escapeHtml(className)}</h5>
                             <div class="mt-3">
-                                <span class="badge ${cls.is_primary ? 'bg-primary' : 'bg-secondary'}">
+                                <span class="badge ${cls.is_primary ? 'badge-soft badge-soft-primary' : 'badge-soft badge-soft-secondary'}">
                                     ${cls.is_primary
                         ? supervisorText('roles.lead_supervisor', 'مشرف رئيسي', 'Lead supervisor')
                         : supervisorText('roles.assistant_supervisor', 'مشرف مساعد', 'Assistant supervisor')}

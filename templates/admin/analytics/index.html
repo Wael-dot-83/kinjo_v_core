@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% from 'components/page-header.html' import page_header %}
 {% from 'components/card-wrapper.html' import metric_card, chart_card, summary_card, loading_spinner_inline,
 analytics_tab_pane %}
@@ -295,7 +295,7 @@ actions=export_buttons
             </div>
             <div class="modal-body" id="drilldownModalBody">
                 <div class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
                 </div>
             </div>
         </div>

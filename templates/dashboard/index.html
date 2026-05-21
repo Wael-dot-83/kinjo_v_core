@@ -703,7 +703,7 @@
                 <div class="validation-report">
                     <!-- Validation details will be loaded here by JavaScript -->
                     <div class="text-center py-4">
-                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                         <span class="ms-2">{% if ui_lang == 'en' %}Loading validation details...{% else %}جاري تحميل تفاصيل التحقق...{% endif %}</span>
                     </div>
                 </div>
@@ -997,7 +997,7 @@
                         <tbody id="reportsTable">
                             <tr>
                                 <td colspan="5" class="text-center py-4">
-                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                                     <span class="ms-2">{% if ui_lang == 'en' %}Loading reports...{% else %}جاري تحميل التقارير...{% endif %}</span>
                                 </td>
                             </tr>
@@ -1023,7 +1023,7 @@
             <div class="card-body">
                 <div id="supervisorStatsContainer">
                     <div class="text-center py-4">
-                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                         <span class="ms-2">{% if ui_lang == 'en' %}Loading statistics...{% else %}جاري تحميل الإحصائيات...{% endif %}</span>
                     </div>
                 </div>
@@ -1065,7 +1065,7 @@
                         <tbody id="classesTable">
                             <tr>
                                 <td colspan="7" class="text-center py-4">
-                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                                     <span class="ms-2">{% if ui_lang == 'en' %}Loading classes...{% else %}جاري تحميل الفصول...{% endif %}</span>
                                 </td>
                             </tr>
@@ -1128,7 +1128,7 @@
                                 <tbody id="supervisorsTable">
                                     <tr>
                                         <td colspan="4" class="text-center py-4">
-                                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                                            <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                                             <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                                         </td>
                                     </tr>
@@ -1151,7 +1151,7 @@
                                 <tbody id="parentsTable">
                                     <tr>
                                         <td colspan="5" class="text-center py-4">
-                                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                                            <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                                             <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                                         </td>
                                     </tr>
@@ -1215,7 +1215,7 @@
                             <tr>
                                 <td colspan="{% if current_user.role.value == 'ADMIN' %}8{% else %}7{% endif %}"
                                     class="text-center py-4">
-                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                                     <span class="ms-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                                 </td>
                             </tr>
@@ -1245,7 +1245,7 @@
             </div>
             <div class="card-body">
                 <div id="dsNetworkSummary" class="row row-cols-2 row-cols-md-5 g-3">
-                    <div class="col text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div></div>
+                    <div class="col text-center py-3"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>
                 </div>
             </div>
         </div>
@@ -1264,7 +1264,7 @@
             </div>
             <div class="card-body">
                 <div id="dsPredictions" class="row g-3">
-                    <div class="col text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div></div>
+                    <div class="col text-center py-3"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>
                 </div>
             </div>
         </div>
@@ -1302,7 +1302,7 @@
                         </thead>
                         <tbody id="dsGeoTable">
                             <tr><td colspan="8" class="text-center py-3">
-                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                                <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                             </td></tr>
                         </tbody>
                     </table>
@@ -1407,7 +1407,7 @@
                         </thead>
                         <tbody id="dsRiskTable">
                             <tr><td colspan="4" class="text-center py-3">
-                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                                <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                             </td></tr>
                         </tbody>
                     </table>

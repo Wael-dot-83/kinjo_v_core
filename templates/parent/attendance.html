@@ -115,9 +115,9 @@
     };
 
     const STATUS_CLASS = {
-        'PRESENT': 'bg-success', 'ABSENT': 'bg-danger',
-        'LATE': 'bg-warning text-dark', 'EXCUSED': 'bg-info',
-        'SICK': 'bg-secondary'
+        'PRESENT': 'badge-soft badge-soft-success', 'ABSENT': 'badge-soft badge-soft-danger',
+        'LATE': 'badge-soft badge-soft-warning', 'EXCUSED': 'badge-soft badge-soft-info',
+        'SICK': 'badge-soft badge-soft-secondary'
     };
 
     function getHeaders() {
@@ -210,7 +210,7 @@
                     <td class="fw-semibold">${escHtml(r.child_name || '—')}</td>
                     <td>${formatDate(r.date)}</td>
                     <td>
-                        <span class="badge ${STATUS_CLASS[r.status] || 'bg-secondary'}">
+                        <span class="badge ${STATUS_CLASS[r.status] || 'badge-soft badge-soft-secondary'}">
                             ${STATUS_LABEL[r.status] || escHtml(r.status)}
                         </span>
                     </td>

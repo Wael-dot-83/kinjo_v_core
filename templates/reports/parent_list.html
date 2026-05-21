@@ -66,7 +66,7 @@ _('Under Review'), 'SENT_TO_PARENT': _('Sent'), 'RETURNED': _('Rejected'), } %}
             </div>
           </div>
           <span
-            class="badge {% if report.status.value == 'APPROVED' %}bg-success{% elif report.status.value == 'REJECTED' or report.status.value == 'RETURNED' %}bg-danger{% elif report.status.value == 'SUBMITTED' %}bg-info{% elif report.status.value == 'SENT_TO_PARENT' %}bg-primary{% elif report.status.value == 'DRAFT' %}bg-warning text-dark{% else %}bg-secondary{% endif %}"
+            class="badge badge-soft {% if report.status.value == 'APPROVED' %}badge-soft-success{% elif report.status.value == 'REJECTED' or report.status.value == 'RETURNED' %}badge-soft-danger{% elif report.status.value == 'SUBMITTED' %}badge-soft-info{% elif report.status.value == 'SENT_TO_PARENT' %}badge-soft-primary{% elif report.status.value == 'DRAFT' %}badge-soft-warning{% else %}badge-soft-secondary{% endif %}"
           >
             {{ STATUS_LABELS[report.status.value] if report.status.value in
             STATUS_LABELS else report.status.value }}

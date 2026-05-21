@@ -52,14 +52,14 @@
     };
 
     const STATUS_CLASS = {
-        'DRAFT': 'bg-secondary',
-        'SUBMITTED': 'bg-info',
-        'PENDING_REVIEW': 'bg-warning text-dark',
-        'ACCEPTED': 'bg-success',
-        'REJECTED': 'bg-danger',
-        'WITHDRAWN': 'bg-dark',
-        'WAITLISTED': 'bg-info',
-        'ACTIVE': 'bg-success'
+        'DRAFT': 'badge-soft badge-soft-secondary',
+        'SUBMITTED': 'badge-soft badge-soft-info',
+        'PENDING_REVIEW': 'badge-soft badge-soft-warning',
+        'ACCEPTED': 'badge-soft badge-soft-success',
+        'REJECTED': 'badge-soft badge-soft-danger',
+        'WITHDRAWN': 'badge-soft badge-soft-secondary',
+        'WAITLISTED': 'badge-soft badge-soft-info',
+        'ACTIVE': 'badge-soft badge-soft-success'
     };
 
     function getHeaders() {
@@ -138,7 +138,7 @@
                             <small class="text-muted text-truncate" style="max-width: 60%;" title="${escHtml(e.kindergarten_name)}">
                                 <i class="bi bi-building me-1"></i>${escHtml(e.kindergarten_name)}
                             </small>
-                            <span class="badge ${STATUS_CLASS[e.status] || 'bg-secondary'}">
+                            <span class="badge ${STATUS_CLASS[e.status] || 'badge-soft badge-soft-secondary'}">
                                 ${STATUS_LABEL[e.status] || e.status}
                             </span>
                         </div>
