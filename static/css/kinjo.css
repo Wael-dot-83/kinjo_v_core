@@ -2114,9 +2114,10 @@ body.sidebar-open .sidebar-backdrop {
 .text-amber  { color: #d97706 !important; }
 
 /* ============================================================================
-   Badge size variant
+   Badge size variants
    ============================================================================ */
 .badge-xs { font-size: 0.65rem; }
+.badge-lg { font-size: 1.1rem; padding: 0.375rem 1rem; border-radius: 50px; }
 
 /* ============================================================================
    Progress bar size variant

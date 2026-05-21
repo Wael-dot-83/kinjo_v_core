@@ -152,10 +152,9 @@
             const cc = document.getElementById('classesContainer');
             if (p.classes && p.classes.length) {
                 cc.innerHTML = p.classes.map(c => `
-                    <span class="badge rounded-pill px-3 py-2"
-                          style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
+                    <span class="badge badge-soft badge-soft-primary rounded-pill px-3 py-2">
                         ${escHtml(c.name_ar || c.name_en)}
-                        ${c.is_primary ? '<i class="bi bi-star-fill ms-1" style="font-size:0.7rem;"></i>' : ''}
+                        ${c.is_primary ? '<i class="bi bi-star-fill ms-1 text-xs" aria-hidden="true"></i>' : ''}
                     </span>`).join('');
             } else {
                 cc.innerHTML = '<span class="text-muted small">لا توجد شعب مُعيَّنة</span>';
