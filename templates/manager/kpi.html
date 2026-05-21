@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('لوحة مؤشرات الأداء') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -10,7 +10,7 @@
         </div>
         <h1 class="page-header-title">{{ _('لوحة مؤشرات الأداء') }}</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+            <ol class="breadcrumb mb-0 breadcrumb-sm">
                 <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
                 <li class="breadcrumb-item active">{{ _('مؤشرات الأداء') }}</li>
             </ol>
@@ -79,7 +79,7 @@
                         <div class="stat-label">{{ _('إجمالي الأطفال') }}</div>
                         <div class="stat-value" id="kpiChildrenTotal">—</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
+                    <div class="stat-icon-wrap" class="stat-icon-primary">
                         <i class="bi bi-people-fill"></i>
                     </div>
                 </div>
@@ -92,7 +92,7 @@
                         <div class="stat-label">{{ _('مُلتحقون') }}</div>
                         <div class="stat-value" id="kpiChildrenEnrolled">—</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                    <div class="stat-icon-wrap" class="stat-icon-success">
                         <i class="bi bi-person-check-fill"></i>
                     </div>
                 </div>
@@ -105,7 +105,7 @@
                         <div class="stat-label">{{ _('نشطون') }}</div>
                         <div class="stat-value" id="kpiChildrenActive">—</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:rgba(6,182,212,0.12);color:#0891b2;">
+                    <div class="stat-icon-wrap" class="stat-icon-info">
                         <i class="bi bi-activity"></i>
                     </div>
                 </div>
@@ -133,7 +133,7 @@
                         <div class="stat-label">{{ _('عدد المشرفين') }}</div>
                         <div class="stat-value" id="kpiSupCount">—</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
+                    <div class="stat-icon-wrap" class="stat-icon-warning">
                         <i class="bi bi-person-badge-fill"></i>
                     </div>
                 </div>
@@ -167,7 +167,7 @@
                         <div class="stat-label">{{ _('معدل الحضور') }}</div>
                         <div class="stat-value" id="kpiAttRate">—%</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                    <div class="stat-icon-wrap" class="stat-icon-success">
                         <i class="bi bi-calendar-check-fill"></i>
                     </div>
                 </div>
@@ -183,7 +183,7 @@
                         <div class="stat-label">{{ _('معدل إكمال التقارير') }}</div>
                         <div class="stat-value" id="kpiReportRate">—%</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
+                    <div class="stat-icon-wrap" class="stat-icon-primary">
                         <i class="bi bi-journal-check"></i>
                     </div>
                 </div>
@@ -199,7 +199,7 @@
                         <div class="stat-label">{{ _('تكرار الحوادث') }}</div>
                         <div class="stat-value" id="kpiIncidentRate">—</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
+                    <div class="stat-icon-wrap" class="stat-icon-danger">
                         <i class="bi bi-shield-exclamation"></i>
                     </div>
                 </div>
@@ -230,7 +230,7 @@
                         <div class="stat-label">{{ _('رسائل مُرسَلة') }}</div>
                         <div class="stat-value" id="kpiMsgSent">—</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:rgba(6,182,212,0.12);color:#0891b2;">
+                    <div class="stat-icon-wrap" class="stat-icon-info">
                         <i class="bi bi-send-fill"></i>
                     </div>
                 </div>
@@ -243,7 +243,7 @@
                         <div class="stat-label">{{ _('معدل القراءة') }}</div>
                         <div class="stat-value" id="kpiMsgReadRate">—%</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                    <div class="stat-icon-wrap" class="stat-icon-success">
                         <i class="bi bi-envelope-open-fill"></i>
                     </div>
                 </div>
@@ -261,17 +261,7 @@
 </div><!-- /kpiContent -->
 
 <style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-actions { display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap; }
-.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
-.fw-700 { font-weight:700; }
-
-.section-title {
-    font-size:0.88rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;
-    color:var(--kinjo-text-muted);display:flex;align-items:center;
-}
+.section-title { font-size:0.88rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--kinjo-text-muted);display:flex;align-items:center; }
 </style>
 {% endblock %}
 

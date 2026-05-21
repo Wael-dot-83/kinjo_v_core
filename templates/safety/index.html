@@ -95,7 +95,7 @@
     function renderIncidents(incidents) {
         const tbody = document.getElementById('incidentsTableBody');
         if (incidents.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">${T('لا توجد حوادث مسجلة', 'No incidents recorded')}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state py-5"><i class="bi bi-shield-check fs-1 text-muted d-block mb-3"></i><p class="text-muted mb-0">${T('لا توجد حوادث مسجلة', 'No incidents recorded')}</p></div></td></tr>`;
             return;
         }
 

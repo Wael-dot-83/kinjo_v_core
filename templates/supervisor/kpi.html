@@ -10,7 +10,7 @@
         </div>
         <h1 class="page-header-title">{{ _('مؤشرات أدائي') }}</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+            <ol class="breadcrumb mb-0 breadcrumb-sm">
                 <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
                 <li class="breadcrumb-item active">{{ _('مؤشرات الأداء') }}</li>
             </ol>
@@ -83,7 +83,7 @@
                         <div class="stat-label">{{ _('معدل إكمال التقارير') }}</div>
                         <div class="stat-value" id="kpiCompletionRate">—%</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                    <div class="stat-icon-wrap" class="stat-icon-success">
                         <i class="bi bi-journal-check"></i>
                     </div>
                 </div>
@@ -99,7 +99,7 @@
                         <div class="stat-label">{{ _('معدل الالتزام بالمواعيد') }}</div>
                         <div class="stat-value" id="kpiOnTimeRate">—%</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
+                    <div class="stat-icon-wrap" class="stat-icon-primary">
                         <i class="bi bi-clock-history"></i>
                     </div>
                 </div>
@@ -115,7 +115,7 @@
                         <div class="stat-label">{{ _('متوسط طول التقرير') }}</div>
                         <div class="stat-value" id="kpiAvgLength">—</div>
                     </div>
-                    <div class="stat-icon-wrap" style="background:rgba(6,182,212,0.12);color:#0891b2;">
+                    <div class="stat-icon-wrap" class="stat-icon-info">
                         <i class="bi bi-file-text"></i>
                     </div>
                 </div>
@@ -201,7 +201,7 @@
                     <div id="heatmapGrid" class="heatmap-grid" aria-label="{{ _('خريطة نشاط آخر 28 يوم') }}">
                         <!-- 7 cols × 4 rows = 28 cells rendered by JS -->
                     </div>
-                    <div class="d-flex align-items-center gap-2 mt-3" style="font-size:0.72rem;color:var(--kinjo-text-muted);">
+                    <div class="d-flex align-items-center gap-2 mt-3 form-counter">
                         <span>{{ _('لا نشاط') }}</span>
                         <div class="heatmap-cell level-0"></div>
                         <div class="heatmap-cell level-1"></div>
@@ -217,34 +217,12 @@
 </div><!-- /kpiContent -->
 
 <style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-actions { display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap; }
-.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
-.fw-600 { font-weight:600; }
-.fw-700 { font-weight:700; }
-
-.section-title {
-    font-size:0.88rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;
-    color:var(--kinjo-text-muted);display:flex;align-items:center;
-}
-
+.section-title { font-size:0.88rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--kinjo-text-muted);display:flex;align-items:center; }
 .summary-row { display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1.25rem;border-bottom:1px solid var(--kinjo-border); }
 .summary-label { font-size:0.85rem;color:var(--kinjo-text-secondary); }
 .summary-value { font-size:0.875rem;font-weight:700;color:var(--kinjo-text-primary); }
-
-/* Heatmap */
-.heatmap-grid {
-    display:grid;
-    grid-template-columns:repeat(7,1fr);
-    gap:4px;
-}
-.heatmap-cell {
-    aspect-ratio:1;border-radius:4px;
-    background:var(--kinjo-border);
-    transition:background 0.2s;
-}
+.heatmap-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:4px; }
+.heatmap-cell { aspect-ratio:1;border-radius:4px;background:var(--kinjo-border);transition:background 0.2s; }
 .heatmap-cell.level-0 { background:var(--kinjo-border); }
 .heatmap-cell.level-1 { background:rgba(10,92,142,0.25); }
 .heatmap-cell.level-2 { background:rgba(10,92,142,0.55); }
@@ -454,12 +432,4 @@
 })();
 </script>
 
-<style>
-.child-avatar-sm {
-    width:30px;height:30px;border-radius:50%;
-    background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
-    display:flex;align-items:center;justify-content:center;
-    font-size:0.8rem;flex-shrink:0;
-}
-</style>
 {% endblock %}

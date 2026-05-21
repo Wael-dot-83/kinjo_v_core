@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{{ _('تقرير يومي جديد') }} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -10,7 +10,7 @@
         </div>
         <h1 class="page-header-title">{{ _('تقرير يومي جديد') }}</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+            <ol class="breadcrumb mb-0 breadcrumb-sm">
                 <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
                 <li class="breadcrumb-item"><a href="/daily-reports" class="text-decoration-none">{{ _('التقارير اليومية') }}</a></li>
                 <li class="breadcrumb-item active">{{ _('جديد') }}</li>
@@ -173,7 +173,7 @@
                               placeholder="{{ _('مثال: رسم وتلوين، ألعاب تجميع، نشاط خارجي...') }}"
                               aria-label="{{ _('أنشطة الطفل') }}"></textarea>
                     <div class="d-flex justify-content-end mt-1">
-                        <span class="text-muted" style="font-size:0.72rem;" id="activitiesCount">0 / 500</span>
+                        <span class="form-counter" id="activitiesCount">0 / 500</span>
                     </div>
                 </div>
             </div>
@@ -192,7 +192,7 @@
                               placeholder="{{ _('أي ملاحظات إضافية حول الطفل اليوم...') }}"
                               aria-label="{{ _('ملاحظات إضافية') }}"></textarea>
                     <div class="d-flex justify-content-end mt-1">
-                        <span class="text-muted" style="font-size:0.72rem;" id="notesCount">0 / 1000</span>
+                        <span class="form-counter" id="notesCount">0 / 1000</span>
                     </div>
                 </div>
             </div>

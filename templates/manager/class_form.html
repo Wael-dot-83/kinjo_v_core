@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}{% if class_id %}{{ _('تعديل شعبة') }}{% else %}{{ _('إنشاء شعبة') }}{% endif %} — KinJo{% endblock %}
 
 {% block page_header %}
@@ -12,7 +12,7 @@
             {% if class_id %}{{ _('تعديل شعبة') }}{% else %}{{ _('إنشاء شعبة جديدة') }}{% endif %}
         </h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+            <ol class="breadcrumb mb-0 breadcrumb-sm">
                 <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
                 <li class="breadcrumb-item"><a href="/classes" class="text-decoration-none">{{ _('الشعب') }}</a></li>
                 <li class="breadcrumb-item active">{% if class_id %}{{ _('تعديل') }}{% else %}{{ _('جديدة') }}{% endif %}</li>

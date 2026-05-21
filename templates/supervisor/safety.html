@@ -10,7 +10,7 @@
         </div>
         <h1 class="page-header-title">{{ _('السلامة والحوادث') }}</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+            <ol class="breadcrumb mb-0 breadcrumb-sm">
                 <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
                 <li class="breadcrumb-item active">{{ _('السلامة') }}</li>
             </ol>
@@ -37,7 +37,7 @@
                         <span class="spinner-border spinner-border-sm" role="status"></span>
                     </div>
                 </div>
-                <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
+                <div class="stat-icon-wrap" class="stat-icon-danger">
                     <i class="bi bi-shield-exclamation"></i>
                 </div>
             </div>
@@ -52,7 +52,7 @@
                         <span class="spinner-border spinner-border-sm" role="status"></span>
                     </div>
                 </div>
-                <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);color:#d97706;">
+                <div class="stat-icon-wrap" class="stat-icon-warning">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                 </div>
             </div>
@@ -67,7 +67,7 @@
                         <span class="spinner-border spinner-border-sm" role="status"></span>
                     </div>
                 </div>
-                <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                <div class="stat-icon-wrap" class="stat-icon-success">
                     <i class="bi bi-shield-check"></i>
                 </div>
             </div>
@@ -161,15 +161,6 @@
     </div>
 </div>
 
-<style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-actions { display:flex;align-items:center;gap:0.5rem; }
-.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
-.fw-600 { font-weight:600; }
-.fw-700 { font-weight:700; }
-</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -297,11 +288,6 @@
 </script>
 
 <style>
-.child-avatar-sm {
-    width:30px;height:30px;border-radius:50%;
-    background:rgba(239,68,68,0.1);color:var(--kinjo-danger);
-    display:flex;align-items:center;justify-content:center;
-    font-size:0.8rem;flex-shrink:0;
-}
+.child-avatar-sm { background:rgba(239,68,68,0.1);color:var(--kinjo-danger); }
 </style>
 {% endblock %}

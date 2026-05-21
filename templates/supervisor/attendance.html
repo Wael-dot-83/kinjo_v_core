@@ -10,7 +10,7 @@
         </div>
         <h1 class="page-header-title">{{ _('تسجيل الحضور') }}</h1>
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0" style="font-size:0.82rem;">
+            <ol class="breadcrumb mb-0 breadcrumb-sm">
                 <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
                 <li class="breadcrumb-item active">{{ _('الحضور') }}</li>
             </ol>
@@ -39,7 +39,7 @@
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                     </div>
                 </div>
-                <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);color:var(--kinjo-success);">
+                <div class="stat-icon-wrap" class="stat-icon-success">
                     <i class="bi bi-check-circle-fill"></i>
                 </div>
             </div>
@@ -54,7 +54,7 @@
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                     </div>
                 </div>
-                <div class="stat-icon-wrap" style="background:rgba(239,68,68,0.12);color:var(--kinjo-danger);">
+                <div class="stat-icon-wrap" class="stat-icon-danger">
                     <i class="bi bi-person-dash-fill"></i>
                 </div>
             </div>
@@ -69,7 +69,7 @@
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                     </div>
                 </div>
-                <div class="stat-icon-wrap" style="background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);">
+                <div class="stat-icon-wrap" class="stat-icon-primary">
                     <i class="bi bi-people-fill"></i>
                 </div>
             </div>
@@ -160,19 +160,10 @@
 </div>
 
 <style>
-.page-header-wrap { display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem; }
-.page-header-eyebrow { display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-weight:700;color:var(--kinjo-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem; }
-.page-header-title { font-size:1.5rem;font-weight:800;margin:0 0 0.25rem;color:var(--kinjo-text-primary); }
-.page-header-actions { display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap; }
-.fw-600 { font-weight:600; }
-.fw-700 { font-weight:700; }
-.card-title-sm { font-size:0.9rem;font-weight:700;color:var(--kinjo-text-primary); }
-
 .status-present { color:var(--kinjo-success);font-weight:700; }
 .status-absent  { color:var(--kinjo-danger);font-weight:700; }
 .status-checked-out { color:#64748b;font-weight:700; }
 .status-not-arrived { color:var(--kinjo-text-muted); }
-
 .bg-success-subtle { background:rgba(16,185,129,0.1); }
 </style>
 {% endblock %}
@@ -394,12 +385,4 @@
 })();
 </script>
 
-<style>
-.att-avatar-sm {
-    width:32px;height:32px;border-radius:50%;
-    background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
-    display:flex;align-items:center;justify-content:center;
-    font-size:0.85rem;flex-shrink:0;
-}
-</style>
 {% endblock %}

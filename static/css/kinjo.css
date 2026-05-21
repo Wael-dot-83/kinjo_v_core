@@ -2019,3 +2019,79 @@ body.sidebar-open .sidebar-backdrop {
 .kpi-card.band-green  { border-inline-start: 3px solid var(--kinjo-success) !important; }
 .kpi-card.band-amber  { border-inline-start: 3px solid var(--kinjo-warning) !important; }
 .kpi-card.band-red    { border-inline-start: 3px solid var(--kinjo-danger)  !important; }
+
+/* ============================================================================
+   Breadcrumb size utility
+   ============================================================================ */
+.breadcrumb-sm { font-size: 0.82rem; }
+
+/* ============================================================================
+   Form counter / tiny label utilities
+   ============================================================================ */
+.form-counter { font-size: 0.72rem; color: var(--kinjo-text-muted); }
+.text-xs      { font-size: 0.78rem; }
+
+/* ============================================================================
+   Stat icon wrappers — replaces repeated inline background+color styles
+   ============================================================================ */
+.stat-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--kinjo-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+.stat-icon-success { background: rgba(16, 185, 129, 0.12); color: var(--kinjo-success); }
+.stat-icon-danger  { background: rgba(239, 68, 68, 0.12);  color: var(--kinjo-danger);  }
+.stat-icon-warning { background: rgba(245, 158, 11, 0.12); color: var(--kinjo-warning); }
+.stat-icon-info    { background: rgba(6, 182, 212, 0.12);  color: var(--kinjo-info);    }
+.stat-icon-primary { background: var(--kinjo-primary-light); color: var(--kinjo-primary); }
+.stat-icon-secondary { background: rgba(100,116,139,0.12); color: #64748b; }
+
+/* ============================================================================
+   Message list — shared across supervisor/manager messaging pages
+   ============================================================================ */
+.msg-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--kinjo-border-light);
+  transition: background 0.15s;
+  cursor: pointer;
+}
+.msg-item:hover { background: var(--kinjo-bg-light); }
+.msg-item.unread {
+  background: var(--kinjo-primary-50);
+  border-inline-start: 3px solid var(--kinjo-primary);
+}
+.msg-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--kinjo-primary-light);
+  color: var(--kinjo-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.msg-preview {
+  font-size: 0.8rem;
+  color: var(--kinjo-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.msg-time { font-size: 0.72rem; color: var(--kinjo-text-muted); white-space: nowrap; }
+.msg-body-content { white-space: pre-line; line-height: 1.7; }
+
+/* Small avatar circles used in child/attendance list rows */
+.child-avatar-sm { width:30px;height:30px;border-radius:50%;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0; }
+.att-avatar-sm { width:32px;height:32px;border-radius:50%;background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0; }
