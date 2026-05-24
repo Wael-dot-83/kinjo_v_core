@@ -12,8 +12,12 @@ from auth import get_password_hash
 
 @pytest.fixture(scope="module")
 def test_client():
-    """Create a test client"""
-    return TestClient(app)
+    """Create a test client and setup database tables"""
+    from database import Base, engine
+    Base.metadata.create_all(bind=engine)
+    yield TestClient(app)
+    Base.metadata.drop_all(bind=engine)
+
 
 
 @pytest.fixture(scope="module", autouse=True)
