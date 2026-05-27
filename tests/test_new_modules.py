@@ -9,7 +9,8 @@ Comprehensive tests for the new modules:
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+from io import BytesIO
 
 import pytest
 
@@ -167,11 +168,129 @@ class TestSupervisorScoping:
         ids = [c["id"] for c in r.json().get("children", [])]
         assert other_child.id not in ids
 
+    def test_children_payload_includes_attendance_and_class_context(
+        self,
+        client,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+    ):
+        """Canonical supervisor children payload includes fields consumed by supervisor pages."""
+        r = client.get("/api/supervisor/children", headers=_hdr(supervisor_token))
+        assert r.status_code == 200
+
+        children = r.json().get("children", [])
+        child = next(item for item in children if item["id"] == sample_child.id)
+        assert child["name"] == f"{sample_child.first_name} {sample_child.last_name}"
+        assert child["class_id"] == sample_enrollment.class_id
+        assert "attendance_status" in child
+
     def test_non_supervisor_gets_403_from_supervisor_endpoint(
         self, client, test_db, manager_user, manager_token
     ):
         """Manager calling supervisor endpoint gets 403."""
         r = client.get("/api/supervisor/my-classes", headers=_hdr(manager_token))
+        assert r.status_code == 403
+
+
+class TestSupervisorSafetyAndObservations:
+    def test_supervisor_can_create_safety_incident_with_supported_fields(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+    ):
+        payload = {
+            "child_id": sample_child.id,
+            "type": "INJURY",
+            "severity_level": "LOW",
+            "description": "Child slipped during play.",
+            "occurred_at": datetime.now(timezone.utc).isoformat(),
+            "parent_informed": True,
+        }
+
+        r = client.post("/api/supervisor/safety-incidents", json=payload, headers=_hdr(supervisor_token))
+        assert r.status_code == 201, r.text
+
+        incident = test_db.query(models.Incident).filter(models.Incident.id == r.json()["id"]).first()
+        assert incident is not None
+        assert incident.reported_by == supervisor_user.id
+        assert incident.parent_informed is True
+
+    def test_resolve_incident_persists_resolution_notes_and_attachment(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_supervisor_assignment,
+        sample_child,
+        sample_enrollment,
+        supervisor_token,
+    ):
+        incident = models.Incident(
+            child_id=sample_child.id,
+            kindergarten_id=supervisor_user.kindergarten_id,
+            reported_by=supervisor_user.id,
+            type=models.IncidentType.INJURY,
+            severity_level=models.SeverityLevel.MEDIUM,
+            description="Needs follow-up.",
+            occurred_at=datetime.now(timezone.utc),
+            parent_informed=False,
+        )
+        test_db.add(incident)
+        test_db.commit()
+        test_db.refresh(incident)
+
+        r = client.post(
+            f"/api/supervisor/safety-incidents/{incident.id}/resolve",
+            data={"resolution_notes": "Resolved after first aid."},
+            files={"attachment": ("evidence.jpg", BytesIO(b"incident evidence"), "image/jpeg")},
+            headers=_hdr(supervisor_token),
+        )
+        assert r.status_code == 200, r.text
+
+        test_db.refresh(incident)
+        assert incident.closed_by == supervisor_user.id
+        assert incident.resolution_notes == "Resolved after first aid."
+        assert incident.attachment_url is not None
+        assert incident.attachment_url.startswith("/static/uploads/incidents/")
+
+    def test_supervisor_cannot_upload_photo_for_out_of_scope_observation(
+        self,
+        client,
+        test_db,
+        supervisor_user,
+        sample_kindergarten,
+        sample_class,
+        sample_supervisor_assignment,
+        parent_user,
+        supervisor_token,
+    ):
+        other_class = _make_class(test_db, sample_kindergarten.id, "Other Class")
+        other_child = _make_child(test_db, parent_user.parent_profile.id, "Omar", "Outside")
+        _make_enrollment(test_db, other_child.id, sample_kindergarten.id, other_class.id)
+        observation = models.Observation(
+            child_id=other_child.id,
+            observed_by=supervisor_user.id,
+            domain=models.LearningDomain.COGNITIVE,
+            observation_text="Out of scope observation",
+            observed_at=datetime.now(timezone.utc),
+        )
+        test_db.add(observation)
+        test_db.commit()
+        test_db.refresh(observation)
+
+        r = client.post(
+            f"/api/supervisor/observations/{observation.id}/photo",
+            files={"file": ("obs.png", BytesIO(b"fake-image"), "image/png")},
+            headers=_hdr(supervisor_token),
+        )
         assert r.status_code == 403
 
     def test_attendance_post_rejects_out_of_scope_child(
@@ -230,13 +349,14 @@ class TestManagerClassCRUD:
         ids = [c["id"] for c in r.json().get("classes", [])]
         assert sample_class.id in ids
 
-    def test_create_class(self, client, manager_user, sample_kindergarten, manager_token):
+    def test_create_class(self, client, manager_user, sample_kindergarten, supervisor_user, manager_token):
         payload = {
             "name_ar": "صف جديد",
             "name_en": "New Class",
-            "capacity_total": 18,
+            "capacity_total": 10,
             "min_age_months": 36,
             "max_age_months": 60,
+            "supervisor_id": supervisor_user.id,
         }
         r = client.post("/api/manager/classes", json=payload, headers=_hdr(manager_token))
         assert r.status_code in (200, 201), r.text
@@ -249,8 +369,8 @@ class TestManagerClassCRUD:
         assert r.status_code == 403
 
     def test_update_class(self, client, manager_user, sample_class, manager_token):
-        payload = {"name_ar": "اسم محدّث", "name_en": "Updated", "capacity_total": 20,
-                   "min_age_months": 24, "max_age_months": 60}
+        payload = {"name_ar": "اسم محدّث", "name_en": "Updated", "capacity_total": 10,
+                   "min_age_months": 24, "max_age_months": 60, "is_active": False}
         r = client.put(f"/api/manager/classes/{sample_class.id}", json=payload, headers=_hdr(manager_token))
         assert r.status_code == 200
         assert r.json()["name_en"] == "Updated"
