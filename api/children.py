@@ -183,6 +183,111 @@ class IncidentCreateRequest(BaseModel):
     followup_required_flag: Optional[bool] = False
 
 
+@router.post("/incidents", status_code=status.HTTP_201_CREATED)
+def create_incident_json(
+    incident_data: IncidentCreateRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create incident report with JSON body"""
+    validators.validate_supervisor_role(current_user)
+    
+    # Use user's kindergarten if not provided
+    kindergarten_id = incident_data.kindergarten_id or current_user.kindergarten_id
+    if not kindergarten_id:
+        raise HTTPException(status_code=400, detail="Kindergarten ID required")
+    
+    validators.validate_kindergarten_scope(current_user, kindergarten_id)
+
+    # Verify child belongs to this kindergarten
+    child_enrollment = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.child_id == incident_data.child_id,
+        models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    ).first()
+
+    if not child_enrollment:
+        # Check if child exists at all first to give better error
+        child_exists = db.query(models.Child).filter(models.Child.id == incident_data.child_id).first()
+        if not child_exists:
+            raise HTTPException(status_code=404, detail="Child not found")
+        raise HTTPException(status_code=403, detail="Child is not enrolled in this kindergarten")
+
+    incident = models.Incident(
+        child_id=incident_data.child_id,
+        kindergarten_id=kindergarten_id,
+        type=models.IncidentType(incident_data.type.upper()),
+        severity_level=models.SeverityLevel(incident_data.severity_level.upper()),
+        description=incident_data.description,
+        occurred_at=datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00')),
+        followup_required_flag=incident_data.followup_required_flag or False,
+        notify_parent_at=datetime.now(timezone.utc),
+        reported_by=current_user.id,
+        class_id=child_enrollment.class_id if child_enrollment else None,
+    )
+    
+    if incident.followup_required_flag:
+        # Set 48 hour SLA
+        incident.followup_sla_deadline = datetime.now(timezone.utc) + timedelta(hours=48)
+    
+    db.add(incident)
+    db.commit()
+    db.refresh(incident)
+    
+    return {
+        "id": incident.id,
+        "child_id": incident.child_id,
+        "kindergarten_id": incident.kindergarten_id,
+        "type": incident.type.value,
+        "severity_level": incident.severity_level.value,
+        "followup_required_flag": incident.followup_required_flag
+    }
+
+
+@router.get("/incidents")
+def list_incidents(
+    child_id: Optional[int] = None,
+    kindergarten_id: Optional[int] = None,
+    severity: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List incidents with optional filtering"""
+    query = db.query(models.Incident)
+    
+    # Filter by kindergarten for non-admins
+    if current_user.role != models.UserRole.ADMIN:
+        query = query.filter(models.Incident.kindergarten_id == current_user.kindergarten_id)
+    elif kindergarten_id:
+        query = query.filter(models.Incident.kindergarten_id == kindergarten_id)
+    
+    if child_id:
+        query = query.filter(models.Incident.child_id == child_id)
+    
+    if severity:
+        try:
+            severity_enum = models.SeverityLevel(severity.upper())
+            query = query.filter(models.Incident.severity_level == severity_enum)
+        except ValueError:
+            logger.warning("INVALID_FILTER severity=%r ignored — not a valid SeverityLevel", severity)
+    
+    incidents = query.order_by(models.Incident.occurred_at.desc()).all()
+    
+    return [
+        {
+            "id": i.id,
+            "child_id": i.child_id,
+            "kindergarten_id": i.kindergarten_id,
+            "type": i.type.value,
+            "severity_level": i.severity_level.value,
+            "description": i.description,
+            "occurred_at": i.occurred_at.isoformat() if i.occurred_at else None,
+            "followup_required_flag": i.followup_required_flag
+        }
+        for i in incidents
+    ]
+
+
 @router.post("/incidents/create", status_code=status.HTTP_201_CREATED)
 def create_incident(
     kindergarten_id: int,
@@ -240,6 +345,32 @@ def create_incident(
 
 ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"}
 
+# Maps content-type to safe extension — never trust client-supplied filename extension
+_IMAGE_TYPE_TO_EXT = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+}
+
+ALLOWED_DOCUMENT_TYPES_MIME = {
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+_DOC_TYPE_TO_EXT = {
+    "application/pdf": ".pdf",
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+}
+
 
 @router.post("/children/{child_id}/photo")
 def upload_child_photo(
@@ -263,17 +394,18 @@ def upload_child_photo(
     if file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="Invalid image type. Allowed: png, jpeg, gif, webp")
 
-    # Save file
-    upload_dir = os.path.join(settings.UPLOADS_DIR, "photos")
+    # Save file — under static/ so the existing /static mount serves it.
+    # Derive extension from validated content-type, never from client filename.
+    upload_dir = os.path.join("static", "uploads", "photos")
     os.makedirs(upload_dir, exist_ok=True)
-    ext = os.path.splitext(file.filename or "photo.png")[1] or ".png"
+    ext = _IMAGE_TYPE_TO_EXT.get(file.content_type or "", ".png")
     filename = f"{child_id}_{uuid.uuid4().hex}{ext}"
     filepath = os.path.join(upload_dir, filename)
     content = file.file.read()
     with open(filepath, "wb") as f:
         f.write(content)
 
-    photo_url = f"/uploads/photos/{filename}"
+    photo_url = f"/static/uploads/photos/{filename}"
     child.photo_url = photo_url
     db.commit()
 
@@ -312,10 +444,13 @@ def upload_child_document(
     if document_type not in VALID_DOCUMENT_TYPES:
         raise HTTPException(status_code=400, detail=f"Invalid document type. Allowed: {', '.join(sorted(VALID_DOCUMENT_TYPES))}")
 
-    # Save file
+    if file.content_type not in ALLOWED_DOCUMENT_TYPES_MIME:
+        raise HTTPException(status_code=400, detail="Invalid file type. Allowed: PDF, image (png/jpeg), Word document")
+
+    # Save file — derive extension from validated content-type, never from client filename
     upload_dir = os.path.join(settings.UPLOADS_DIR, "documents")
     os.makedirs(upload_dir, exist_ok=True)
-    ext = os.path.splitext(file.filename or "doc")[1] or ""
+    ext = _DOC_TYPE_TO_EXT.get(file.content_type or "", ".bin")
     filename = f"{child_id}_{document_type}_{uuid.uuid4().hex}{ext}"
     filepath = os.path.join(upload_dir, filename)
     content = file.file.read()
@@ -354,6 +489,13 @@ def list_child_documents(
     child = db.query(models.Child).filter(models.Child.id == child_id).first()
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
+
+    if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        if not parent_profile or child.parent_id != parent_profile.id:
+            raise HTTPException(status_code=403, detail="Not your child")
 
     query = db.query(models.ChildDocument).filter(models.ChildDocument.child_id == child_id)
     if document_type:

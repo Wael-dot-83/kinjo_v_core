@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -171,7 +171,7 @@ def create_portfolio_entry(
         title=portfolio_data.title,
         description=portfolio_data.description,
         status=status_value,
-        published_at=datetime.now() if status_value == models.PortfolioStatus.PUBLISHED else None
+        published_at=datetime.now(timezone.utc) if status_value == models.PortfolioStatus.PUBLISHED else None
     )
 
     db.add(portfolio)
@@ -199,11 +199,17 @@ def publish_portfolio_entry(
     if not portfolio:
         raise HTTPException(status_code=404, detail="Portfolio not found")
 
+    # Cross-KG scope check: managers cannot publish portfolios outside their kindergarten
+    if current_user.role != models.UserRole.ADMIN:
+        child = db.query(models.Child).filter(models.Child.id == portfolio.child_id).first()
+        if not child or child.kindergarten_id != current_user.kindergarten_id:
+            raise HTTPException(status_code=403, detail="Portfolio not in your kindergarten scope")
+
     if portfolio.status == models.PortfolioStatus.PUBLISHED:
         raise HTTPException(status_code=400, detail="Portfolio already published")
 
     portfolio.status = models.PortfolioStatus.PUBLISHED
-    portfolio.published_at = datetime.now()
+    portfolio.published_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(portfolio)
@@ -225,6 +231,91 @@ class HealthAlertCreateRequest(BaseModel):
     severity: str
 
 
+@router.get("/children/{child_id}/health-alerts")
+def get_child_health_alerts(
+    child_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all health alerts for a child"""
+    # Verify access
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    # Parents can only see their own child's alerts
+    if current_user.role == models.UserRole.PARENT:
+        parent_profile = db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == current_user.id
+        ).first()
+        
+        if not parent_profile or child.parent_id != parent_profile.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    alerts = db.query(models.HealthAlert).filter(
+        models.HealthAlert.child_id == child_id
+    ).order_by(models.HealthAlert.created_at.desc()).all()
+
+    # Return list directly (backwards compatible with tests)
+    return [
+        {
+            "id": a.id,
+            "child_id": a.child_id,
+            "alert_type": a.alert_type,
+            "description": a.description,
+            "severity": a.severity,
+            "created_at": a.created_at.isoformat() if a.created_at else None
+        }
+        for a in alerts
+    ]
+
+
+@router.post("/children/{child_id}/health-alerts", status_code=status.HTTP_201_CREATED)
+def create_health_alert(
+    child_id: int,
+    alert_data: HealthAlertCreateRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a health alert for a child (Manager/Supervisor only)"""
+    if current_user.role not in [models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Only staff can create health alerts")
+
+    # Verify child exists
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    # Scope Check: Ensure child is active in user's KG
+    if current_user.role != models.UserRole.ADMIN:
+        enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == child_id,
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        ).first()
+
+        if not enrollment:
+             raise HTTPException(status_code=403, detail="Child is not active in your kindergarten")
+
+    alert = models.HealthAlert(
+        child_id=child_id,
+        alert_type=alert_data.alert_type,
+        description=alert_data.description,
+        severity=alert_data.severity
+    )
+
+    db.add(alert)
+    db.commit()
+    db.refresh(alert)
+
+    return {
+        "id": alert.id,
+        "child_id": alert.child_id,
+        "alert_type": alert.alert_type,
+        "severity": alert.severity
+    }
+
+
 @router.delete("/health-alerts/{alert_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_health_alert(
     alert_id: int,
@@ -237,6 +328,12 @@ def delete_health_alert(
     alert = db.query(models.HealthAlert).filter(models.HealthAlert.id == alert_id).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Health alert not found")
+
+    # Cross-KG scope check: managers cannot delete alerts outside their kindergarten
+    if current_user.role != models.UserRole.ADMIN:
+        child = db.query(models.Child).filter(models.Child.id == alert.child_id).first()
+        if not child or child.kindergarten_id != current_user.kindergarten_id:
+            raise HTTPException(status_code=403, detail="Alert not in your kindergarten scope")
 
     db.delete(alert)
     db.commit()

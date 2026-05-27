@@ -2,8 +2,10 @@
 Supervisor domain endpoints
 """
 import logging
+import os
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Body, UploadFile, File, Response
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
@@ -19,6 +21,15 @@ from dependencies import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Supervisor"])
+
+_OBSERVATION_IMAGE_TYPE_TO_EXT = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+}
+_ALLOWED_OBSERVATION_IMAGE_TYPES = set(_OBSERVATION_IMAGE_TYPE_TO_EXT)
 
 class SupervisorAssignmentRequest(BaseModel):
     supervisor_id: int
@@ -149,6 +160,47 @@ class ObservationRecordRequest(BaseModel):
     mastery_level: Optional[str] = None
 
 
+class SupervisorChildDailyReportRequest(BaseModel):
+    reportDate: str
+    meals: Optional[str] = None
+    sleep: Optional[str] = None
+    activities: Optional[str] = None
+    behavior: Optional[str] = None
+    healthNotes: Optional[str] = None
+    generalNotes: Optional[str] = None
+
+
+def _get_supervisor_active_class_ids(db: Session, supervisor_id: int, on_date: date) -> set[int]:
+    rows = db.query(models.SupervisorAssignment).filter(
+        models.SupervisorAssignment.supervisor_id == supervisor_id,
+        models.SupervisorAssignment.start_date <= on_date,
+        or_(
+            models.SupervisorAssignment.end_date.is_(None),
+            models.SupervisorAssignment.end_date >= on_date,
+        ),
+    ).all()
+    class_ids = {row.class_id for row in rows}
+
+    direct_classes = db.query(models.Class.id).filter(
+        models.Class.supervisor_id == supervisor_id,
+        models.Class.is_active == True,
+    ).all()
+    class_ids.update(cid for (cid,) in direct_classes)
+
+    return class_ids
+
+
+def _get_supervisor_child_enrollment(db: Session, supervisor_id: int, child_id: int):
+    class_ids = _get_supervisor_active_class_ids(db, supervisor_id, date.today())
+    if not class_ids:
+        return None
+    return db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.child_id == child_id,
+        models.EnrollmentApplication.class_id.in_(class_ids),
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+    ).first()
+
+
 @router.post("/observations", status_code=status.HTTP_201_CREATED)
 def create_observation(
     observation_data: ObservationRecordRequest,
@@ -233,6 +285,9 @@ def create_observation(
 @router.get("/children/{child_id}/observations")
 def get_child_observations(
     child_id: int,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    response: Response = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -270,9 +325,16 @@ def get_child_observations(
         else:
             raise HTTPException(status_code=403, detail="Child not enrolled in any active class")
 
-    observations = db.query(models.Observation).filter(
+    observations_query = db.query(models.Observation).filter(
         models.Observation.child_id == child_id
-    ).order_by(models.Observation.observed_at.desc()).all()
+    )
+    total_count = observations_query.count()
+    observations = observations_query.order_by(models.Observation.observed_at.desc()).offset(offset).limit(limit).all()
+
+    if response is not None:
+        response.headers["X-Total-Count"] = str(total_count)
+        response.headers["X-Limit"] = str(limit)
+        response.headers["X-Offset"] = str(offset)
 
     # Return list directly (backwards compatible with tests)
     return [
@@ -287,6 +349,43 @@ def get_child_observations(
         }
         for o in observations
     ]
+
+
+@router.post("/supervisor/observations/{observation_id}/photo")
+def upload_observation_photo(
+    observation_id: int,
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role not in [models.UserRole.SUPERVISOR, models.UserRole.MANAGER, models.UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Only staff can upload observation photo")
+
+    observation = db.query(models.Observation).filter(models.Observation.id == observation_id).first()
+    if not observation:
+        raise HTTPException(status_code=404, detail="Observation not found")
+
+    if current_user.role == models.UserRole.SUPERVISOR:
+        enrollment = _get_supervisor_child_enrollment(db, current_user.id, observation.child_id)
+        if not enrollment:
+            raise HTTPException(status_code=403, detail="Not assigned to child's class")
+
+    content_type = (file.content_type or "").lower()
+    if content_type not in _ALLOWED_OBSERVATION_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="Only image uploads are allowed (png, jpeg, gif, webp)")
+
+    upload_dir = os.path.join("static", "uploads", "observations")
+    os.makedirs(upload_dir, exist_ok=True)
+    ext = _OBSERVATION_IMAGE_TYPE_TO_EXT[content_type]
+    file_name = f"obs_{observation_id}_{uuid.uuid4().hex}{ext}"
+    out_path = os.path.join(upload_dir, file_name)
+    with open(out_path, "wb") as out:
+        out.write(file.file.read())
+
+    photo_url = f"/{out_path.replace(os.sep, '/')}"
+    observation.photo_url = photo_url
+    db.commit()
+    return {"status": "ok", "photo_url": photo_url}
 
 
 class ObservationRecordRequest(BaseModel):
@@ -394,12 +493,12 @@ def record_observation(
     }
 
 
-@router.get("/supervisor/children")
+@router.get("/supervisor/children/detailed")
 def get_supervisor_children(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all children in classes assigned to current supervisor"""
+    """Legacy detailed supervisor children listing retained on a non-canonical path."""
     if current_user.role != models.UserRole.SUPERVISOR:
         raise HTTPException(status_code=403, detail="Only supervisors can access this endpoint")
 
@@ -438,6 +537,17 @@ def get_supervisor_children(
             "gender": child.gender.value,
             "photo_url": child.photo_url,
             "class_id": enrollment.class_id if enrollment else None,
+            "class_name": (enrollment.class_.name_ar if enrollment and enrollment.class_ else None),
+            "kindergarten_id": enrollment.kindergarten_id if enrollment else None,
+            "kindergarten_name": (
+                enrollment.kindergarten.name_ar if enrollment and enrollment.kindergarten else None
+            ),
+            "parent": {
+                "id": child.parent.id if child.parent else None,
+                "first_name": child.parent.first_name if child.parent else None,
+                "last_name": child.parent.last_name if child.parent else None,
+                "phone_number": child.parent.phone_number if child.parent else None,
+            },
             "attendance_status": status,
             "check_in_time": check_in_time,
             "check_out_time": check_out_time,
@@ -445,6 +555,171 @@ def get_supervisor_children(
         })
         
     return {"children": results}
+
+
+@router.get("/supervisor/children/{child_id}")
+def get_supervisor_child_details(
+    child_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != models.UserRole.SUPERVISOR:
+        raise HTTPException(status_code=403, detail="Only supervisors can access this endpoint")
+
+    enrollment = _get_supervisor_child_enrollment(db, current_user.id, child_id)
+    if not enrollment:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    child = db.query(models.Child).filter(models.Child.id == child_id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+
+    reports = db.query(models.DailyReport).filter(
+        models.DailyReport.child_id == child_id
+    ).order_by(models.DailyReport.date.desc()).limit(30).all()
+
+    return {
+        "child": {
+            "id": child.id,
+            "first_name": child.first_name,
+            "last_name": child.last_name,
+            "full_name": f"{child.first_name} {child.last_name}".strip(),
+            "date_of_birth": child.date_of_birth.isoformat() if child.date_of_birth else None,
+            "gender": child.gender.value if child.gender else None,
+            "medical_notes": child.medical_notes or child.health_notes,
+            "class": {
+                "id": enrollment.class_id,
+                "name": enrollment.class_.name_ar if enrollment.class_ else None,
+            },
+            "kindergarten": {
+                "id": enrollment.kindergarten_id,
+                "name": enrollment.kindergarten.name_ar if enrollment.kindergarten else None,
+            },
+            "parent": {
+                "id": child.parent.id if child.parent else None,
+                "first_name": child.parent.first_name if child.parent else None,
+                "last_name": child.parent.last_name if child.parent else None,
+                "phone_number": child.parent.phone_number if child.parent else None,
+            },
+        },
+        "daily_reports": [
+            {
+                "id": report.id,
+                "reportDate": report.date.isoformat(),
+                "meals": report.meals,
+                "sleep": report.sleep,
+                "activities": report.activities,
+                "behavior": report.behavior,
+                "healthNotes": report.health_notes,
+                "generalNotes": report.general_notes or report.notes,
+                "status": report.status.value,
+            }
+            for report in reports
+        ],
+    }
+
+
+@router.post("/supervisor/children/{child_id}/daily-reports", status_code=status.HTTP_201_CREATED)
+def create_supervisor_child_daily_report(
+    child_id: int,
+    payload: SupervisorChildDailyReportRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != models.UserRole.SUPERVISOR:
+        raise HTTPException(status_code=403, detail="Only supervisors can create daily reports")
+
+    enrollment = _get_supervisor_child_enrollment(db, current_user.id, child_id)
+    if not enrollment:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    try:
+        report_date = date.fromisoformat(payload.reportDate)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid reportDate")
+
+    existing = db.query(models.DailyReport).filter(
+        models.DailyReport.child_id == child_id,
+        models.DailyReport.date == report_date,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Daily report already exists for this date")
+
+    report = models.DailyReport(
+        child_id=child_id,
+        class_id=enrollment.class_id,
+        supervisor_id=current_user.id,
+        kindergarten_id=enrollment.kindergarten_id,
+        date=report_date,
+        status=models.DailyReportStatus.SUBMITTED,
+        submitted_by=current_user.id,
+        submitted_at=datetime.now(timezone.utc),
+        arrival_time="08:00",
+        leave_time="14:00",
+        meals=payload.meals,
+        sleep=payload.sleep,
+        activities=payload.activities,
+        behavior=payload.behavior,
+        health_notes=payload.healthNotes,
+        general_notes=payload.generalNotes,
+        notes=payload.generalNotes,
+    )
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+
+    return {
+        "id": report.id,
+        "childId": report.child_id,
+        "classId": report.class_id,
+        "supervisorId": report.supervisor_id,
+        "kindergartenId": report.kindergarten_id,
+        "reportDate": report.date.isoformat(),
+        "meals": report.meals,
+        "sleep": report.sleep,
+        "activities": report.activities,
+        "behavior": report.behavior,
+        "healthNotes": report.health_notes,
+        "generalNotes": report.general_notes,
+    }
+
+
+@router.get("/supervisor/children/{child_id}/daily-reports")
+def list_supervisor_child_daily_reports(
+    child_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != models.UserRole.SUPERVISOR:
+        raise HTTPException(status_code=403, detail="Only supervisors can view daily reports")
+
+    enrollment = _get_supervisor_child_enrollment(db, current_user.id, child_id)
+    if not enrollment:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    reports = db.query(models.DailyReport).filter(
+        models.DailyReport.child_id == child_id
+    ).order_by(models.DailyReport.date.desc()).all()
+
+    return {
+        "reports": [
+            {
+                "id": report.id,
+                "reportDate": report.date.isoformat(),
+                "classId": report.class_id,
+                "supervisorId": report.supervisor_id,
+                "kindergartenId": report.kindergarten_id,
+                "meals": report.meals,
+                "sleep": report.sleep,
+                "activities": report.activities,
+                "behavior": report.behavior,
+                "healthNotes": report.health_notes,
+                "generalNotes": report.general_notes or report.notes,
+                "status": report.status.value,
+            }
+            for report in reports
+        ]
+    }
 
 
 @router.get("/children")

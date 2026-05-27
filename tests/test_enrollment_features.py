@@ -322,7 +322,7 @@ class TestPhotoUpload:
         )
         assert resp.status_code == 200
         assert "photo_url" in resp.json()
-        assert resp.json()["photo_url"].startswith("/uploads/photos/")
+        assert resp.json()["photo_url"].startswith("/static/uploads/photos/")
 
     def test_upload_photo_invalid_type_rejected(self, client, test_db, auth_headers_parent,
                                                   parent_user, sample_child):

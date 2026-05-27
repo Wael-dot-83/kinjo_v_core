@@ -192,10 +192,15 @@ def approve_daily_report(
     validators.validate_manager_role(current_user)
     
     report = db.query(models.DailyReport).filter(models.DailyReport.id == report_id).first()
-    
+
     if not report:
         raise HTTPException(status_code=404, detail="Daily report not found")
-    
+
+    # Cross-KG scope: managers cannot approve reports outside their kindergarten
+    if current_user.role != models.UserRole.ADMIN:
+        if report.kindergarten_id != current_user.kindergarten_id:
+            raise HTTPException(status_code=403, detail="Report not in your kindergarten scope")
+
     if report.status != models.DailyReportStatus.SUBMITTED:
         raise HTTPException(status_code=400, detail="Only submitted reports can be approved")
     
@@ -229,6 +234,10 @@ def get_child_daily_reports(
         parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
         if not parent_profile or parent_profile.id != child.parent_id:
             raise HTTPException(status_code=403, detail="Forbidden")
+    elif current_user.role != models.UserRole.ADMIN:
+        # Supervisors and managers are scoped to their kindergarten
+        if child.kindergarten_id != current_user.kindergarten_id:
+            raise HTTPException(status_code=403, detail="Child not in your kindergarten scope")
 
     query = db.query(models.DailyReport).filter(models.DailyReport.child_id == child_id)
     
