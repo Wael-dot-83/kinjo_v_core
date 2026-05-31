@@ -61,9 +61,13 @@ def list_enrollments(
     else:
         raise HTTPException(status_code=403, detail="Not authorized to view enrollments")
 
-    # Filter by status if provided
+    # Filter by status if provided — validate against enum first
     if status:
-        query = query.filter(models.EnrollmentApplication.status == status)
+        try:
+            status_enum = models.EnrollmentStatus(status.upper())
+            query = query.filter(models.EnrollmentApplication.status == status_enum)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {[s.value for s in models.EnrollmentStatus]}")
 
     # Get total count
     total = query.count()

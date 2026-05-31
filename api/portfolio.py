@@ -201,8 +201,12 @@ def publish_portfolio_entry(
 
     # Cross-KG scope check: managers cannot publish portfolios outside their kindergarten
     if current_user.role != models.UserRole.ADMIN:
-        child = db.query(models.Child).filter(models.Child.id == portfolio.child_id).first()
-        if not child or child.kindergarten_id != current_user.kindergarten_id:
+        enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == portfolio.child_id,
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+        ).first()
+        if not enrollment:
             raise HTTPException(status_code=403, detail="Portfolio not in your kindergarten scope")
 
     if portfolio.status == models.PortfolioStatus.PUBLISHED:
@@ -243,14 +247,22 @@ def get_child_health_alerts(
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
 
-    # Parents can only see their own child's alerts
+    # Role-based scope enforcement
     if current_user.role == models.UserRole.PARENT:
         parent_profile = db.query(models.ParentProfile).filter(
             models.ParentProfile.user_id == current_user.id
         ).first()
-        
         if not parent_profile or child.parent_id != parent_profile.id:
             raise HTTPException(status_code=403, detail="Access denied")
+    elif current_user.role != models.UserRole.ADMIN:
+        # Supervisors and managers are scoped to their own kindergarten
+        enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == child_id,
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+        ).first()
+        if not enrollment:
+            raise HTTPException(status_code=403, detail="Child not in your kindergarten scope")
 
     alerts = db.query(models.HealthAlert).filter(
         models.HealthAlert.child_id == child_id
@@ -331,8 +343,12 @@ def delete_health_alert(
 
     # Cross-KG scope check: managers cannot delete alerts outside their kindergarten
     if current_user.role != models.UserRole.ADMIN:
-        child = db.query(models.Child).filter(models.Child.id == alert.child_id).first()
-        if not child or child.kindergarten_id != current_user.kindergarten_id:
+        enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == alert.child_id,
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+        ).first()
+        if not enrollment:
             raise HTTPException(status_code=403, detail="Alert not in your kindergarten scope")
 
     db.delete(alert)

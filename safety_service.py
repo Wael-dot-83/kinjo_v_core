@@ -46,69 +46,8 @@ class HealthAlertCreate(BaseModel):
 # Incidents
 # -----------------------------------------------------------------------------
 
-@router.post("/incidents", status_code=status.HTTP_201_CREATED)
-def report_incident(
-    incident_data: IncidentCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Report a new incident. Only Manager and Supervisor can create incidents."""
-    if current_user.role not in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager or Supervisor role required")
-
-    if not incident_data.parent_informed and not (incident_data.parent_not_informed_reason or "").strip():
-        raise HTTPException(status_code=400, detail="Reason required when parent is not informed")
-
-    child = validators.ensure_child_in_range(db, incident_data.child_id)
-
-    enrollment = db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.child_id == child.id,
-        models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-    ).first()
-
-    if not enrollment:
-        raise HTTPException(status_code=400, detail="Child is not currently enrolled in your kindergarten")
-
-    incident = models.Incident(
-        child_id=incident_data.child_id,
-        kindergarten_id=current_user.kindergarten_id,
-        type=incident_data.type,
-        severity_level=incident_data.severity_level,
-        description=incident_data.description,
-        occurred_at=incident_data.occurred_at,
-        notify_parent_at=incident_data.notify_parent_at,
-        followup_required_flag=incident_data.followup_required_flag,
-        reported_by=current_user.id,
-        class_id=enrollment.class_id if enrollment else None,
-    )
-
-    db.add(incident)
-    db.commit()
-    db.refresh(incident)
-    return incident
-
-@router.get("/incidents")
-def list_incidents(
-    child_id: Optional[int] = None,
-    unresolved_only: bool = False,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """List incidents for the kindergarten"""
-    validators.validate_supervisor_role(current_user)
-    
-    query = db.query(models.Incident).filter(
-        models.Incident.kindergarten_id == current_user.kindergarten_id
-    )
-    
-    if child_id:
-        query = query.filter(models.Incident.child_id == child_id)
-        
-    if unresolved_only:
-        query = query.filter(models.Incident.closed_at == None)
-        
-    return query.order_by(desc(models.Incident.occurred_at)).all()
+# POST /incidents and GET /incidents are now handled by api/children.py
+# (create_incident_json and list_incidents) with improved scope checks.
 
 @router.put("/incidents/{incident_id}")
 def update_incident(
@@ -140,66 +79,8 @@ def update_incident(
     db.refresh(incident)
     return incident
 
-# -----------------------------------------------------------------------------
-# Health Alerts
-# -----------------------------------------------------------------------------
-
-@router.post("/children/{child_id}/health-alerts", status_code=status.HTTP_201_CREATED)
-def create_health_alert(
-    child_id: int,
-    alert_data: HealthAlertCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Add a health alert to a child (Allergy, etc.)"""
-    # Parent can add? OR Manager? Let's say Manager/Supervisor + Parent (if they own the child)
-    # For now, implementing for Staff side.
-    validators.validate_supervisor_role(current_user)
-
-    # Verify child exists and is within global age bounds
-    child = validators.ensure_child_in_range(db, child_id)
-
-    # Kindergarten scope check
-    validators.validate_child_kindergarten_scope(db, current_user, child_id)
-
-    alert = models.HealthAlert(
-        child_id=child_id,
-        alert_type=alert_data.alert_type,
-        description=alert_data.description,
-        severity=alert_data.severity
-    )
-    
-    db.add(alert)
-    db.commit()
-    db.refresh(alert)
-    return alert
-
-@router.get("/children/{child_id}/health-alerts")
-def get_health_alerts(
-    child_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get health alerts for a child."""
-    # Verify child exists and is within global age bounds
-    child = validators.ensure_child_in_range(db, child_id)
-
-    # Access control
-    if current_user.role == models.UserRole.PARENT:
-        parent_profile = db.query(models.ParentProfile).filter(
-            models.ParentProfile.user_id == current_user.id
-        ).first()
-        if not parent_profile or child.parent_id != parent_profile.id:
-            raise HTTPException(status_code=403, detail="Access denied")
-    else:
-        validators.validate_child_kindergarten_scope(db, current_user, child_id)
-
-    return db.query(models.HealthAlert).filter(
-        models.HealthAlert.child_id == child_id
-    ).order_by(
-        models.HealthAlert.created_at.desc(),
-        models.HealthAlert.id.desc(),
-    ).all()
+# Health alert endpoints are now handled by api/portfolio.py
+# (create_health_alert and get_child_health_alerts) with improved scope checks.
 
 # -----------------------------------------------------------------------------
 # Safeguarding Cases

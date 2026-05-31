@@ -2,7 +2,11 @@
 Configuration management for KinJo platform
 """
 import logging
+import os
 from typing import Any, Dict, List, Tuple, Type
+
+# Absolute path to the project root (directory containing this file)
+_PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 from pydantic import ConfigDict, field_validator
 from pydantic.fields import FieldInfo
@@ -120,6 +124,7 @@ class Settings(BaseSettings):
     AUDIT_LOG_MAX_DETAILS_SIZE: int = 10000  # 10KB
 
     # Storage (attachments)
+    BASE_DIR: str = _PROJECT_ROOT  # absolute project root; all relative paths resolve from here
     STORAGE_PROVIDER: str = "local"  # local or s3
     ATTACHMENTS_DIR: str = "data/attachments"
     MAX_ATTACHMENT_SIZE_MB: int = 10

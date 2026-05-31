@@ -125,8 +125,15 @@ def update_child_profile(
         parent_profile = db.query(models.ParentProfile).filter(models.ParentProfile.user_id == current_user.id).first()
         if not parent_profile or child.parent_id != parent_profile.id:
             raise HTTPException(status_code=403, detail="Not authorized to update this child")
-
-    if current_user.role not in [models.UserRole.PARENT, models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR]:
+    elif current_user.role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == child_id,
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+        ).first()
+        if not enrollment:
+            raise HTTPException(status_code=403, detail="Child not in your kindergarten scope")
+    elif current_user.role != models.UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized to update child profiles")
 
     # Apply updates
@@ -394,18 +401,19 @@ def upload_child_photo(
     if file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="Invalid image type. Allowed: png, jpeg, gif, webp")
 
-    # Save file — under static/ so the existing /static mount serves it.
-    # Derive extension from validated content-type, never from client filename.
-    upload_dir = os.path.join("static", "uploads", "photos")
+    # Save file — derive extension from validated content-type, never from client filename.
+    upload_dir = os.path.join(settings.BASE_DIR, settings.STATIC_DIR, "uploads", "photos")
     os.makedirs(upload_dir, exist_ok=True)
     ext = _IMAGE_TYPE_TO_EXT.get(file.content_type or "", ".png")
     filename = f"{child_id}_{uuid.uuid4().hex}{ext}"
     filepath = os.path.join(upload_dir, filename)
     content = file.file.read()
+    if len(content) > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+        raise HTTPException(status_code=413, detail=f"File too large. Max {settings.MAX_UPLOAD_SIZE_MB} MB.")
     with open(filepath, "wb") as f:
         f.write(content)
 
-    photo_url = f"/static/uploads/photos/{filename}"
+    photo_url = f"/{settings.STATIC_DIR}/uploads/photos/{filename}"
     child.photo_url = photo_url
     db.commit()
 
@@ -448,12 +456,14 @@ def upload_child_document(
         raise HTTPException(status_code=400, detail="Invalid file type. Allowed: PDF, image (png/jpeg), Word document")
 
     # Save file — derive extension from validated content-type, never from client filename
-    upload_dir = os.path.join(settings.UPLOADS_DIR, "documents")
+    upload_dir = os.path.join(settings.BASE_DIR, settings.UPLOADS_DIR, "documents")
     os.makedirs(upload_dir, exist_ok=True)
     ext = _DOC_TYPE_TO_EXT.get(file.content_type or "", ".bin")
     filename = f"{child_id}_{document_type}_{uuid.uuid4().hex}{ext}"
     filepath = os.path.join(upload_dir, filename)
     content = file.file.read()
+    if len(content) > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+        raise HTTPException(status_code=413, detail=f"File too large. Max {settings.MAX_UPLOAD_SIZE_MB} MB.")
     with open(filepath, "wb") as f:
         f.write(content)
 
@@ -529,6 +539,16 @@ def verify_child_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    # Non-admin staff can only verify documents for children enrolled in their kindergarten
+    if current_user.role != models.UserRole.ADMIN:
+        enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == doc.child_id,
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+        ).first()
+        if not enrollment:
+            raise HTTPException(status_code=403, detail="Document not in your kindergarten scope")
+
     doc.verified = True
     doc.verified_by = current_user.id
     doc.verified_at = datetime.now(timezone.utc)
@@ -593,11 +613,18 @@ def export_children(
     if current_user.role == models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail="Parents cannot export children data")
 
-    # Get active children
+    # Get active children scoped to the caller's kindergarten (admins see all)
+    enrollment_q = db.query(models.EnrollmentApplication).filter(
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    )
+    if current_user.role != models.UserRole.ADMIN:
+        enrollment_q = enrollment_q.filter(
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id
+        )
+    child_ids = [e.child_id for e in enrollment_q.all()]
     children = (
         db.query(models.Child)
-        .join(models.EnrollmentApplication, models.Child.id == models.EnrollmentApplication.child_id)
-        .filter(models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
+        .filter(models.Child.id.in_(child_ids))
         .limit(MAX_CHILD_EXPORT_ROWS)
         .all()
     )

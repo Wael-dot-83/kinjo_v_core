@@ -197,7 +197,7 @@ def _get_supervisor_child_enrollment(db: Session, supervisor_id: int, child_id: 
     return db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.child_id == child_id,
         models.EnrollmentApplication.class_id.in_(class_ids),
-        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
     ).first()
 
 
@@ -369,20 +369,32 @@ def upload_observation_photo(
         enrollment = _get_supervisor_child_enrollment(db, current_user.id, observation.child_id)
         if not enrollment:
             raise HTTPException(status_code=403, detail="Not assigned to child's class")
+    elif current_user.role == models.UserRole.MANAGER:
+        # Managers are scoped to their own kindergarten
+        enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == observation.child_id,
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+        ).first()
+        if not enrollment:
+            raise HTTPException(status_code=403, detail="Observation not in your kindergarten scope")
 
     content_type = (file.content_type or "").lower()
     if content_type not in _ALLOWED_OBSERVATION_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="Only image uploads are allowed (png, jpeg, gif, webp)")
 
-    upload_dir = os.path.join("static", "uploads", "observations")
+    upload_dir = os.path.join(settings.BASE_DIR, settings.STATIC_DIR, "uploads", "observations")
     os.makedirs(upload_dir, exist_ok=True)
     ext = _OBSERVATION_IMAGE_TYPE_TO_EXT[content_type]
     file_name = f"obs_{observation_id}_{uuid.uuid4().hex}{ext}"
     out_path = os.path.join(upload_dir, file_name)
+    content = file.file.read()
+    if len(content) > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+        raise HTTPException(status_code=413, detail=f"File too large. Max {settings.MAX_UPLOAD_SIZE_MB} MB.")
     with open(out_path, "wb") as out:
-        out.write(file.file.read())
+        out.write(content)
 
-    photo_url = f"/{out_path.replace(os.sep, '/')}"
+    photo_url = f"/{settings.STATIC_DIR}/uploads/observations/{file_name}"
     observation.photo_url = photo_url
     db.commit()
     return {"status": "ok", "photo_url": photo_url}
@@ -827,35 +839,8 @@ def list_children(
     }
 
 
-@router.get("/supervisor/my-classes")
-def get_supervisor_classes(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get classes assigned to current supervisor"""
-    if current_user.role != models.UserRole.SUPERVISOR:
-        raise HTTPException(status_code=403, detail="Only supervisors can access this endpoint")
-    
-    assignments = db.query(models.SupervisorAssignment).filter(
-        models.SupervisorAssignment.supervisor_id == current_user.id,
-        or_(
-            models.SupervisorAssignment.end_date.is_(None),
-            models.SupervisorAssignment.end_date >= date.today()
-        )
-    ).all()
-    
-    classes = []
-    for assignment in assignments:
-        class_obj = assignment.class_
-        classes.append({
-            "id": class_obj.id,
-            "name_ar": class_obj.name_ar,
-            "name_en": class_obj.name_en,
-            "kindergarten_id": class_obj.kindergarten_id,
-            "is_primary": assignment.is_primary
-        })
-    
-    return {"classes": classes}
+# GET /supervisor/my-classes is now handled by routers/supervisor.py:get_my_classes
+# with improved filtering (deleted_at check).
 
 
 @router.get("/supervisor/dashboard")

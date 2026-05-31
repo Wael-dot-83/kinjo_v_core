@@ -23,6 +23,7 @@ from sqlalchemy import func, and_, or_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from config import settings
 from database import get_db
 from dependencies import get_current_user
 from mfa_service import (
@@ -129,8 +130,7 @@ def _generate_backup_codes() -> list[str]:
 
 def _sync_totp_secret(user: User, encrypted_secret: Optional[str]) -> None:
     user.mfa_secret = encrypted_secret
-    if hasattr(user, "totp_secret"):
-        user.totp_secret = encrypted_secret
+    user.totp_secret = encrypted_secret
 
 
 # ---------------------------------------------------------------------------
@@ -613,9 +613,15 @@ def get_daily_reports(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format.")
     if from_date:
-        q = q.filter(DailyReport.date >= date.fromisoformat(from_date))
+        try:
+            q = q.filter(DailyReport.date >= date.fromisoformat(from_date))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid from date format.")
     if to_date:
-        q = q.filter(DailyReport.date <= date.fromisoformat(to_date))
+        try:
+            q = q.filter(DailyReport.date <= date.fromisoformat(to_date))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid to date format.")
     if status_filter:
         try:
             q = q.filter(DailyReport.status == DailyReportStatus(status_filter.upper()))
@@ -1047,13 +1053,16 @@ def resolve_safety_incident(
         if ct not in _ALLOWED_UPLOAD_TYPES:
             raise HTTPException(status_code=400, detail="Unsupported attachment type")
         ext = _UPLOAD_TYPE_TO_EXT[ct]
-        upload_dir = os.path.join("static", "uploads", "incidents")
+        upload_dir = os.path.join(settings.BASE_DIR, settings.STATIC_DIR, "uploads", "incidents")
         os.makedirs(upload_dir, exist_ok=True)
         file_name = f"incident_{incident_id}_{uuid.uuid4().hex}{ext}"
         out_path = os.path.join(upload_dir, file_name)
+        raw = attachment.file.read()
+        if len(raw) > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+            raise HTTPException(status_code=413, detail=f"Attachment too large. Max {settings.MAX_UPLOAD_SIZE_MB} MB.")
         with open(out_path, "wb") as f:
-            f.write(attachment.file.read())
-        attachment_url = f"/{out_path.replace(os.sep, '/')}"
+            f.write(raw)
+        attachment_url = f"/{settings.STATIC_DIR}/uploads/incidents/{file_name}"
 
     incident.closed_at = datetime.now(timezone.utc)
     incident.closed_by = current_user.id
@@ -1162,26 +1171,37 @@ def get_unread_count(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_supervisor),
 ):
-    deleted_state_subq = db.query(MessageUserState.message_id).filter(
-        MessageUserState.user_id == current_user.id,
-        MessageUserState.deleted_at.isnot(None),
-    )
-    unread_count = (
-        db.query(func.count(Message.id))
-        .filter(
-            Message.recipient_id == current_user.id,
-            Message.message_status != "deleted",
-            ~Message.id.in_(deleted_state_subq),
-            Message.id.notin_(
-                db.query(MessageRecipient.message_id).filter(
-                    MessageRecipient.recipient_user_id == current_user.id,
-                    MessageRecipient.read_at.isnot(None),
-                )
-            ),
+    try:
+        deleted_state_subq = db.query(MessageUserState.message_id).filter(
+            MessageUserState.user_id == current_user.id,
+            MessageUserState.deleted_at.isnot(None),
         )
-        .scalar()
-        or 0
-    )
+        unread_count = (
+            db.query(func.count(Message.id))
+            .filter(
+                Message.recipient_id == current_user.id,
+                Message.message_status != "deleted",
+                ~Message.id.in_(deleted_state_subq),
+                Message.id.notin_(
+                    db.query(MessageRecipient.message_id).filter(
+                        MessageRecipient.recipient_user_id == current_user.id,
+                        MessageRecipient.read_at.isnot(None),
+                    )
+                ),
+            )
+            .scalar()
+            or 0
+        )
+    except OperationalError:
+        unread_count = (
+            db.query(func.count(Message.id))
+            .filter(
+                Message.recipient_id == current_user.id,
+                Message.message_status != "deleted",
+            )
+            .scalar()
+            or 0
+        )
     return {"unread": unread_count, "unread_count": unread_count}
 
 
@@ -1263,10 +1283,11 @@ def send_message_to_manager(
         if ct not in _ALLOWED_UPLOAD_TYPES:
             raise HTTPException(status_code=400, detail="Unsupported attachment type")
         ext = _UPLOAD_TYPE_TO_EXT[ct]
-        uploads_dir = os.path.join("static", "uploads", "messages")
+        uploads_dir = os.path.join(settings.BASE_DIR, settings.STATIC_DIR, "uploads", "messages")
         os.makedirs(uploads_dir, exist_ok=True)
         safe_name = f"{uuid.uuid4().hex}{ext}"
         file_path = os.path.join(uploads_dir, safe_name)
+        web_url = f"/{settings.STATIC_DIR}/uploads/messages/{safe_name}"
         with open(file_path, "wb") as f:
             f.write(attachment.file.read())
         from models import MessageAttachment
@@ -1280,7 +1301,7 @@ def send_message_to_manager(
                 file_size=os.path.getsize(file_path),
                 storage_provider="local",
                 storage_key=file_path,
-                url=f"/{file_path.replace(os.sep, '/')}",
+                url=web_url,
             )
         )
 
@@ -1344,8 +1365,14 @@ def get_supervisor_kpi(
     current_user: User = Depends(_require_supervisor),
 ):
     today = date.today()
-    date_from = date.fromisoformat(from_date) if from_date else today - timedelta(days=6)
-    date_to = date.fromisoformat(to_date) if to_date else today
+    try:
+        date_from = date.fromisoformat(from_date) if from_date else today - timedelta(days=6)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid from_date format.")
+    try:
+        date_to = date.fromisoformat(to_date) if to_date else today
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid to_date format.")
 
     lang = current_user.preferred_language or "ar"
     cache_key = f"supervisor_kpi:{current_user.id}:{date_from}:{date_to}:{lang}:{int(compare)}"
@@ -1410,7 +1437,7 @@ def get_supervisor_kpi(
     on_time_reports = [
         report
         for report in submitted_reports
-        if report.submitted_at and report.submitted_at.date() <= report.date
+        if report.submitted_at and report.submitted_at.astimezone(KSA_TZ).date() <= report.date
     ]
     on_time_rate = round(len(on_time_reports) / total_submitted * 100, 1) if total_submitted else 0
     report_lengths = [
@@ -1478,7 +1505,7 @@ def get_supervisor_kpi(
         previous_on_time = [
             report
             for report in previous_submitted
-            if report.submitted_at and report.submitted_at.date() <= report.date
+            if report.submitted_at and report.submitted_at.astimezone(KSA_TZ).date() <= report.date
         ]
         previous_on_time_rate = round(len(previous_on_time) / len(previous_submitted) * 100, 1) if previous_submitted else 0
 
@@ -1607,7 +1634,6 @@ class SettingsIn(BaseModel):
     phone_number: Optional[str] = None
     email: Optional[str] = None
     preferred_language: Optional[str] = None
-    mfa_enabled: Optional[bool] = None
 
 
 @router.put("/settings")
@@ -1624,8 +1650,6 @@ def update_supervisor_settings(
         if body.preferred_language not in ("ar", "en"):
             raise HTTPException(status_code=400, detail="preferred_language must be 'ar' or 'en'.")
         current_user.preferred_language = body.preferred_language
-    if body.mfa_enabled is not None:
-        current_user.mfa_enabled = bool(body.mfa_enabled)
     db.commit()
     return {"status": "ok", "mfa_enabled": current_user.mfa_enabled}
 
@@ -1747,17 +1771,18 @@ def upload_supervisor_profile_picture(
     if ct not in _IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="Only image uploads are allowed (png, jpeg, gif, webp)")
 
-    uploads_dir = os.path.join("static", "uploads", "profiles")
+    uploads_dir = os.path.join(settings.BASE_DIR, settings.STATIC_DIR, "uploads", "profiles")
     os.makedirs(uploads_dir, exist_ok=True)
     ext = _IMAGE_EXT[ct]
     file_name = f"{current_user.id}_{uuid.uuid4().hex}{ext}"
     out_path = os.path.join(uploads_dir, file_name)
+    web_url = f"/{settings.STATIC_DIR}/uploads/profiles/{file_name}"
     with open(out_path, "wb") as f:
         f.write(file.file.read())
 
-    current_user.address = f"profile_image:{out_path.replace(os.sep, '/')}"
+    current_user.address = f"profile_image:{web_url}"
     db.commit()
-    return {"status": "ok", "picture_url": f"/{out_path.replace(os.sep, '/')}"}
+    return {"status": "ok", "picture_url": web_url}
 
 
 @router.get("/kpi/export")

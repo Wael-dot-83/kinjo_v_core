@@ -236,7 +236,12 @@ def get_child_daily_reports(
             raise HTTPException(status_code=403, detail="Forbidden")
     elif current_user.role != models.UserRole.ADMIN:
         # Supervisors and managers are scoped to their kindergarten
-        if child.kindergarten_id != current_user.kindergarten_id:
+        enrollment = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id == child_id,
+            models.EnrollmentApplication.kindergarten_id == current_user.kindergarten_id,
+            models.EnrollmentApplication.status.in_(models.ACTIVE_ENROLLMENT_STATUSES),
+        ).first()
+        if not enrollment:
             raise HTTPException(status_code=403, detail="Child not in your kindergarten scope")
 
     query = db.query(models.DailyReport).filter(models.DailyReport.child_id == child_id)
@@ -303,38 +308,8 @@ def get_daily_report_by_id(
     }
 
 
-@router.get("/supervisor/daily-reports")
-def list_supervisor_daily_reports(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """List daily reports accessible to the current supervisor/manager/admin"""
-    if current_user.role == models.UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Parents cannot access this endpoint")
-
-    query = db.query(models.DailyReport)
-
-    # Scope to kindergarten for non-admins
-    if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id:
-        query = query.filter(models.DailyReport.kindergarten_id == current_user.kindergarten_id)
-
-    reports = query.order_by(models.DailyReport.date.desc()).all()
-
-    return [
-        {
-            "id": r.id,
-            "child_id": r.child_id,
-            "kindergarten_id": r.kindergarten_id,
-            "date": r.date.isoformat(),
-            "status": r.status.value,
-            "arrival_time": r.arrival_time,
-            "leave_time": r.leave_time,
-            "activities": getattr(r, "activities", None),
-            "notes": getattr(r, "notes", None),
-            "submitted_by": r.submitted_by,
-        }
-        for r in reports
-    ]
+# GET /supervisor/daily-reports is now handled by routers/supervisor.py:get_daily_reports
+# with improved per-child scoping, date filtering, and stats.
 
 
 @router.post("/daily-reports/{report_id}/view")
