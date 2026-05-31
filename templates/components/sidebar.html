@@ -1,26 +1,25 @@
 <!-- Sidebar Navigation -->
-<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar app-sidebar collapse">
+<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar app-sidebar collapse">
     <div class="position-sticky pt-3">
-        <!-- User Info -->
-        <div class="px-3 pb-3 mb-3 border-bottom sidebar-user-card">
-            <div class="d-flex align-items-center">
-                <div
-                    class="avatar-md bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3">
-                    <i class="bi bi-person text-primary fs-4"></i>
+        <!-- User Card -->
+        <div class="px-3 pb-3 mb-2 sidebar-user-card">
+            <div class="d-flex align-items-center gap-2 pt-2 pb-1">
+                <div class="avatar-md rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:2.5rem;height:2.5rem;background:rgba(59,130,246,0.18);border:2px solid rgba(59,130,246,0.28)">
+                    <i class="bi bi-person" style="color:#93c5fd;font-size:1.1rem;"></i>
                 </div>
-                <div>
-                    <h6 class="mb-0">{{ current_user.username }}</h6>
-                    <small class="text-muted">
+                <div style="min-width:0">
+                    <div style="color:#f9fafb;font-weight:700;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ current_user.username }}</div>
+                    <div class="mt-1">
                         {% if current_user.role.value == 'ADMIN' %}
-                        <span data-i18n="roles.admin">{% if ui_lang == 'en' %}System admin{% else %}مدير النظام{% endif %}</span>
+                        <span class="sidebar-role-badge role-admin" data-i18n="roles.admin"><i class="bi bi-shield-fill"></i>{% if ui_lang == 'en' %}Admin{% else %}مدير النظام{% endif %}</span>
                         {% elif current_user.role.value == 'MANAGER' %}
-                        <span data-i18n="roles.manager">{% if ui_lang == 'en' %}Kindergarten manager{% else %}مدير الروضة{% endif %}</span>
+                        <span class="sidebar-role-badge role-manager" data-i18n="roles.manager"><i class="bi bi-building"></i>{% if ui_lang == 'en' %}Manager{% else %}مدير الروضة{% endif %}</span>
                         {% elif current_user.role.value == 'SUPERVISOR' %}
-                        <span data-i18n="roles.supervisor">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</span>
+                        <span class="sidebar-role-badge role-supervisor" data-i18n="roles.supervisor"><i class="bi bi-person-badge"></i>{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</span>
                         {% else %}
-                        <span data-i18n="roles.parent">{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</span>
+                        <span class="sidebar-role-badge role-parent" data-i18n="roles.parent"><i class="bi bi-heart"></i>{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</span>
                         {% endif %}
-                    </small>
+                    </div>
                 </div>
             </div>
         </div>

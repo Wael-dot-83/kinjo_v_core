@@ -32,48 +32,68 @@
 {% endblock %}
 
 {% block content %}
-<div class="alert alert-primary d-flex align-items-center mb-4" role="alert">
-    <i class="bi bi-sun fs-4 me-3"></i>
-    <div>
-        <strong>{% if ui_lang == 'en' %}Hello {{ current_user.username }}{% else %}مرحباً {{ current_user.username }}{% endif %}</strong>
-        <span class="d-block small">{% if ui_lang == 'en' %}You have <span id="taskCount">0</span> tasks that need your attention today.{% else %}لديك <span id="taskCount">0</span> مهام تحتاج اهتمامك اليوم.{% endif %}</span>
+<!-- Welcome Banner -->
+<div class="welcome-banner mb-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2" style="position:relative;z-index:1">
+        <div>
+            <h5 class="mb-1">
+                <i class="bi bi-sun me-2" style="color:rgba(255,255,255,0.8)"></i>
+                {% if ui_lang == 'en' %}Good morning, {{ current_user.username }}{% else %}صباح الخير، {{ current_user.username }}{% endif %}
+            </h5>
+            <p class="mb-0 small">
+                {% if ui_lang == 'en' %}You have <strong id="taskCount" style="color:#fde68a">0</strong> tasks needing attention today.{% else %}لديك <strong id="taskCount" style="color:#fde68a">0</strong> مهام تحتاج اهتمامك اليوم.{% endif %}
+            </p>
+        </div>
+        <div class="text-end">
+            <small style="color:rgba(255,255,255,0.7)"><i class="bi bi-calendar3 me-1"></i>{{ today }}</small>
+            <small class="d-block" style="color:rgba(255,255,255,0.5)" id="dashboardLastUpdatedBanner">{% if ui_lang == 'en' %}Last updated: --{% else %}آخر تحديث: --{% endif %}</small>
+        </div>
     </div>
 </div>
 
+<!-- KPI Stats Row -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
-        <div class="card stat-card h-100">
-            <div class="card-body text-center">
-                <i class="bi bi-people text-primary fs-2 mb-2"></i>
-                <h3 class="mb-1" id="myChildrenCount">--</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Class Children{% else %}أطفال الفصل{% endif %}</small>
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-card-icon primary"><i class="bi bi-people-fill"></i></div>
+                <div class="stat-card-body-text">
+                    <div class="stat-value stat-value-animate" id="myChildrenCount">--</div>
+                    <span class="stat-label">{% if ui_lang == 'en' %}Class Children{% else %}أطفال الفصل{% endif %}</span>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card success h-100">
-            <div class="card-body text-center">
-                <i class="bi bi-check-circle text-success fs-2 mb-2"></i>
-                <h3 class="mb-1" id="presentCount">--</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Present Today{% else %}حضور اليوم{% endif %}</small>
+        <div class="card stat-card success">
+            <div class="card-body">
+                <div class="stat-card-icon success"><i class="bi bi-check-circle-fill"></i></div>
+                <div class="stat-card-body-text">
+                    <div class="stat-value" id="presentCount">--</div>
+                    <span class="stat-label">{% if ui_lang == 'en' %}Present Today{% else %}حضور اليوم{% endif %}</span>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card danger h-100">
-            <div class="card-body text-center">
-                <i class="bi bi-x-circle text-danger fs-2 mb-2"></i>
-                <h3 class="mb-1" id="absentCount">--</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Absent Today{% else %}غياب اليوم{% endif %}</small>
+        <div class="card stat-card danger">
+            <div class="card-body">
+                <div class="stat-card-icon danger"><i class="bi bi-x-circle-fill"></i></div>
+                <div class="stat-card-body-text">
+                    <div class="stat-value" id="absentCount">--</div>
+                    <span class="stat-label">{% if ui_lang == 'en' %}Absent Today{% else %}غياب اليوم{% endif %}</span>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card stat-card warning h-100">
-            <div class="card-body text-center">
-                <i class="bi bi-journal-text text-warning fs-2 mb-2"></i>
-                <h3 class="mb-1" id="pendingReportsCount">--</h3>
-                <small class="text-muted">{% if ui_lang == 'en' %}Draft Reports{% else %}تقارير مسودة{% endif %}</small>
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <div class="stat-card-icon warning"><i class="bi bi-file-earmark-text-fill"></i></div>
+                <div class="stat-card-body-text">
+                    <div class="stat-value" id="pendingReportsCount">--</div>
+                    <span class="stat-label">{% if ui_lang == 'en' %}Draft Reports{% else %}تقارير مسودة{% endif %}</span>
+                </div>
             </div>
         </div>
     </div>
@@ -124,22 +144,26 @@
                     {% if ui_lang == 'en' %}Quick Actions{% else %}إجراءات سريعة{% endif %}
                 </h5>
             </div>
-            <div class="card-body d-grid gap-2">
-                <a href="/attendance/check-in" class="btn btn-success btn-lg">
-                    <i class="bi bi-box-arrow-in-left me-2"></i>
-                    {% if ui_lang == 'en' %}Record Attendance{% else %}تسجيل حضور{% endif %}
+            <div class="card-body d-flex flex-column gap-2 p-3">
+                <a href="/attendance/check-in" class="quick-action-btn qa-success">
+                    <span class="qa-icon"><i class="bi bi-box-arrow-in-left"></i></span>
+                    <span>{% if ui_lang == 'en' %}Record Attendance{% else %}تسجيل حضور{% endif %}</span>
+                    <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
-                <a href="/daily-reports/create" class="btn btn-primary btn-lg">
-                    <i class="bi bi-journal-plus me-2"></i>
-                    {% if ui_lang == 'en' %}Create Daily Report{% else %}إنشاء تقرير يومي{% endif %}
+                <a href="/daily-reports/create" class="quick-action-btn qa-primary">
+                    <span class="qa-icon"><i class="bi bi-journal-plus"></i></span>
+                    <span>{% if ui_lang == 'en' %}Create Daily Report{% else %}إنشاء تقرير يومي{% endif %}</span>
+                    <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
-                <a href="/supervisor/observations" class="btn btn-info btn-lg">
-                    <i class="bi bi-eye me-2"></i>
-                    {% if ui_lang == 'en' %}Record Observation{% else %}تسجيل ملاحظة{% endif %}
+                <a href="/supervisor/observations" class="quick-action-btn qa-info">
+                    <span class="qa-icon"><i class="bi bi-eye"></i></span>
+                    <span>{% if ui_lang == 'en' %}Record Observation{% else %}تسجيل ملاحظة{% endif %}</span>
+                    <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
-                <a href="/incidents/create" class="btn btn-warning btn-lg">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    {% if ui_lang == 'en' %}Report Incident{% else %}إبلاغ عن حادث{% endif %}
+                <a href="/incidents/create" class="quick-action-btn qa-warning">
+                    <span class="qa-icon"><i class="bi bi-exclamation-triangle"></i></span>
+                    <span>{% if ui_lang == 'en' %}Report Incident{% else %}إبلاغ عن حادث{% endif %}</span>
+                    <i class="bi bi-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                 </a>
             </div>
         </div>
@@ -354,27 +378,25 @@
         grid.innerHTML = children.map((child) => {
             const status = String(child.attendance_status || 'not_recorded').toLowerCase();
             const meta = statusMeta[status] || statusMeta.not_recorded;
+            const firstName = escapeHtml(child.first_name || '');
+            const lastName  = escapeHtml(child.last_name  || '');
+            const initials  = (child.first_name || '?')[0].toUpperCase();
             const timeLabel = child.check_out_time
-                ? `${supervisorText('attendance.checked_out_label', 'انصرف', 'Checked out')}: ${escapeHtml(child.check_out_time)}`
-                : (child.check_in_time ? `${supervisorText('attendance.checked_in_label', 'حضر', 'Checked in')}: ${escapeHtml(child.check_in_time)}` : '');
+                ? `<span style="font-size:0.65rem;opacity:0.7">${escapeHtml(child.check_out_time)}</span>`
+                : (child.check_in_time ? `<span style="font-size:0.65rem;opacity:0.7">${escapeHtml(child.check_in_time)}</span>` : '');
 
             return `
             <button
                 type="button"
-                class="text-center p-2 m-1 border rounded bg-white attendance-card-btn"
-                style="width: 118px; display: inline-block;"
+                class="attendance-cell ${escapeHtml(status)}"
                 data-child-id="${Number(child.id)}"
                 data-status="${escapeHtml(status)}"
-                aria-label="${supervisorText('attendance.update_child_attendance', 'تحديث حضور', 'Update attendance for')} ${escapeHtml(child.first_name || '')} ${escapeHtml(child.last_name || '')}"
+                aria-label="${supervisorText('attendance.update_child_attendance', 'تحديث حضور', 'Update attendance for')} ${firstName} ${lastName}"
             >
-                <div class="avatar-md mx-auto mb-2 rounded-circle ${meta.badge}
-                            d-flex align-items-center justify-content-center" style="width:48px;height:48px">
-                    <i class="bi bi-${meta.icon} fs-5"></i>
-                </div>
-                <div class="small fw-semibold text-truncate w-100">${escapeHtml(child.first_name || '')}</div>
-                <div class="small text-muted text-truncate w-100">${escapeHtml(child.last_name || '')}</div>
-                <div class="small mt-1">${escapeHtml(meta.label)}</div>
-                ${timeLabel ? `<div class="form-counter mt-1">${timeLabel}</div>` : ''}
+                <div class="att-avatar">${initials}</div>
+                <div class="att-name">${firstName}${lastName ? ' ' + lastName : ''}</div>
+                <div class="att-status-dot"></div>
+                ${timeLabel}
             </button>
             `;
         }).join('');

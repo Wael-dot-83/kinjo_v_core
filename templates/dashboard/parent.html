@@ -28,30 +28,35 @@
 <div class="row g-3 mb-4">
     <div class="col-12">
         <div class="card">
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <a href="/enroll" class="btn btn-primary btn-lg w-100 py-3">
-                            <i class="bi bi-person-plus fs-3 d-block mb-2"></i>
-                            {{ _('Register New Child') }}
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-lightning-fill me-2 text-warning"></i>{{ _('Quick Actions') }}</h5>
+            </div>
+            <div class="card-body d-flex flex-column gap-2 p-3">
+                <div class="row g-2">
+                    <div class="col-6 col-md-3">
+                        <a href="/enroll" class="quick-action-btn qa-primary">
+                            <span class="qa-icon"><i class="bi bi-person-plus"></i></span>
+                            <span class="d-none d-sm-inline">{{ _('Register New Child') }}</span>
+                            <span class="d-sm-none">{{ _('Register') }}</span>
                         </a>
                     </div>
-                    <div class="col-md-3">
-                        <a href="/my-reports" class="btn btn-success btn-lg w-100 py-3">
-                            <i class="bi bi-journal-text fs-3 d-block mb-2"></i>
-                            {{ _('Daily Reports') }}
+                    <div class="col-6 col-md-3">
+                        <a href="/my-reports" class="quick-action-btn qa-success">
+                            <span class="qa-icon"><i class="bi bi-journal-text"></i></span>
+                            <span class="d-none d-sm-inline">{{ _('Daily Reports') }}</span>
+                            <span class="d-sm-none">{{ _('Reports') }}</span>
                         </a>
                     </div>
-                    <div class="col-md-3">
-                        <a href="/messages" class="btn btn-info btn-lg w-100 py-3">
-                            <i class="bi bi-chat-dots fs-3 d-block mb-2"></i>
-                            {{ _('Messages') }}
+                    <div class="col-6 col-md-3">
+                        <a href="/messages" class="quick-action-btn qa-info">
+                            <span class="qa-icon"><i class="bi bi-chat-dots"></i></span>
+                            <span>{{ _('Messages') }}</span>
                         </a>
                     </div>
-                    <div class="col-md-3">
-                        <a href="/parent/profile" class="btn btn-secondary btn-lg w-100 py-3">
-                            <i class="bi bi-person-circle fs-3 d-block mb-2"></i>
-                            {{ _('My Profile') }}
+                    <div class="col-6 col-md-3">
+                        <a href="/parent/profile" class="quick-action-btn" style="border-color:#e2e8f0">
+                            <span class="qa-icon" style="background:#f1f5f9;color:#64748b"><i class="bi bi-person-circle"></i></span>
+                            <span>{{ _('My Profile') }}</span>
                         </a>
                     </div>
                 </div>
