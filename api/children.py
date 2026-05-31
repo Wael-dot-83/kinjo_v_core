@@ -188,6 +188,8 @@ class IncidentCreateRequest(BaseModel):
     description: str
     occurred_at: str
     followup_required_flag: Optional[bool] = False
+    parent_informed: Optional[bool] = True
+    parent_not_informed_reason: Optional[str] = None
 
 
 @router.post("/incidents", status_code=status.HTTP_201_CREATED)
@@ -197,13 +199,28 @@ def create_incident_json(
     db: Session = Depends(get_db)
 ):
     """Create incident report with JSON body"""
-    validators.validate_supervisor_role(current_user)
-    
+    if current_user.role not in (models.UserRole.SUPERVISOR, models.UserRole.MANAGER):
+        raise HTTPException(status_code=403, detail="Only supervisors and managers can report incidents")
+
+    # Validate enum values early so callers get 422 instead of 500
+    try:
+        incident_type = models.IncidentType(incident_data.type.upper())
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Invalid incident type: {incident_data.type}")
+    try:
+        severity = models.SeverityLevel(incident_data.severity_level.upper())
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Invalid severity level: {incident_data.severity_level}")
+
+    # If parent was not informed, a reason is required
+    if not incident_data.parent_informed and not (incident_data.parent_not_informed_reason or "").strip():
+        raise HTTPException(status_code=400, detail="Reason required when parent is not informed")
+
     # Use user's kindergarten if not provided
     kindergarten_id = incident_data.kindergarten_id or current_user.kindergarten_id
     if not kindergarten_id:
         raise HTTPException(status_code=400, detail="Kindergarten ID required")
-    
+
     validators.validate_kindergarten_scope(current_user, kindergarten_id)
 
     # Verify child belongs to this kindergarten
@@ -223,14 +240,16 @@ def create_incident_json(
     incident = models.Incident(
         child_id=incident_data.child_id,
         kindergarten_id=kindergarten_id,
-        type=models.IncidentType(incident_data.type.upper()),
-        severity_level=models.SeverityLevel(incident_data.severity_level.upper()),
+        type=incident_type,
+        severity_level=severity,
         description=incident_data.description,
         occurred_at=datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00')),
         followup_required_flag=incident_data.followup_required_flag or False,
         notify_parent_at=datetime.now(timezone.utc),
         reported_by=current_user.id,
         class_id=child_enrollment.class_id if child_enrollment else None,
+        parent_informed=incident_data.parent_informed if incident_data.parent_informed is not None else True,
+        parent_not_informed_reason=incident_data.parent_not_informed_reason,
     )
     
     if incident.followup_required_flag:

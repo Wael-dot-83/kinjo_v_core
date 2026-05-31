@@ -1008,8 +1008,9 @@ class TestDailyReportEndpoints:
         response = client.get("/api/supervisor/daily-reports")
         assert response.status_code == 200
         data = response.json()
-        # API returns a list directly
-        assert isinstance(data, list)
+        # API returns {"reports": [...], "stats": {...}}
+        assert "reports" in data
+        assert isinstance(data["reports"], list)
 
         app.dependency_overrides.clear()
 

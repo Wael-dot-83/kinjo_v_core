@@ -35,6 +35,7 @@ from mfa_service import (
     verify_code,
 )
 from models import (
+    ACTIVE_ENROLLMENT_STATUSES,
     AttendanceLog,
     AuditLog,
     DailyReport,
@@ -85,6 +86,12 @@ def _require_supervisor(current_user: User = Depends(get_current_user)) -> User:
 def _require_supervisor_or_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role not in (UserRole.SUPERVISOR, UserRole.ADMIN):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Supervisor/Admin access only.")
+    return current_user
+
+
+def _require_staff(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in (UserRole.SUPERVISOR, UserRole.MANAGER, UserRole.ADMIN):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Staff access only.")
     return current_user
 
 
@@ -598,9 +605,20 @@ def get_daily_reports(
     child_id: Optional[int] = Query(None),
     exact_date: Optional[str] = Query(None, alias="date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(_require_supervisor),
+    current_user: User = Depends(_require_staff),
 ):
-    child_ids = get_supervisor_child_ids(current_user.id, db)
+    # Managers and admins see all children in their KG; supervisors see their assigned children
+    if current_user.role == UserRole.SUPERVISOR:
+        child_ids = get_supervisor_child_ids(current_user.id, db)
+    else:
+        from models import Child, EnrollmentApplication, EnrollmentStatus
+        child_ids = [
+            e.child_id for e in db.query(EnrollmentApplication).filter(
+                EnrollmentApplication.status.in_(ACTIVE_ENROLLMENT_STATUSES),
+                *([] if current_user.role == UserRole.ADMIN else
+                  [EnrollmentApplication.kindergarten_id == current_user.kindergarten_id])
+            ).all()
+        ]
     if not child_ids:
         return {"reports": [], "stats": {"submitted": 0, "pending": 0, "draft": 0, "sent_to_parent": 0}}
 
@@ -1180,7 +1198,6 @@ def get_unread_count(
             db.query(func.count(Message.id))
             .filter(
                 Message.recipient_id == current_user.id,
-                Message.message_status != "deleted",
                 ~Message.id.in_(deleted_state_subq),
                 Message.id.notin_(
                     db.query(MessageRecipient.message_id).filter(
@@ -1197,7 +1214,7 @@ def get_unread_count(
             db.query(func.count(Message.id))
             .filter(
                 Message.recipient_id == current_user.id,
-                Message.message_status != "deleted",
+                Message.is_read.is_(False),
             )
             .scalar()
             or 0
@@ -1337,7 +1354,7 @@ def delete_message_for_supervisor(
             db.add(state)
         state.deleted_at = datetime.now(timezone.utc)
     except OperationalError:
-        msg.message_status = "deleted"
+        msg.is_read = True  # fallback: mark as read when soft-delete table is unavailable
     db.add(
         AuditLog(
             user_id=current_user.id,
