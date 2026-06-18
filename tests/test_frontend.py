@@ -2095,6 +2095,14 @@ class TestFrontendRoutes:
         assert response.status_code in (302, 307)
         app.dependency_overrides.clear()
 
+    def test_kpi_dashboard_supervisor_redirect(self, client, supervisor_user):
+        """Supervisor is redirected from KPI dashboard because KPI API is admin/manager-only"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get("/kpi/dashboard", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert response.headers.get("location") == "/dashboard"
+        app.dependency_overrides.clear()
+
     def test_tasks_parent_redirect(self, client, parent_user):
         """Parent is redirected from /tasks"""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user

@@ -774,8 +774,8 @@ async def view_report(request: Request, report_id: int, current_user: User = Dep
 @router.get("/kpi/dashboard", response_class=HTMLResponse)
 async def kpi_dashboard_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
-    if user_role == 'PARENT':
-        return RedirectResponse(url="/parent/dashboard")
+    if user_role not in ('ADMIN', 'MANAGER'):
+        return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="kpi/dashboard.html", context={"current_user": current_user})
 
 # -----------------------------------------------------------------------------

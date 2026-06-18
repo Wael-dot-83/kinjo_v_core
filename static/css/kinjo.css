@@ -1368,7 +1368,7 @@ body.sidebar-open .sidebar-backdrop {
 }
 
 .chart-container.position-relative {
-  height: min(62vh, 320px);
+  height: var(--chart-height, min(62vh, 320px));
 }
 
 .card .chart-container {

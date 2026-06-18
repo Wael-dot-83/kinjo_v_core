@@ -1180,24 +1180,32 @@ from realtime_service import websocket_endpoint as realtime_ws_endpoint
 
 @app.websocket("/ws/dashboard")
 async def dashboard_websocket(websocket: WebSocket):
-    """Real-time dashboard WebSocket endpoint with JWT authentication"""
+    """Real-time dashboard WebSocket endpoint with JWT or session-cookie authentication"""
     from jose import JWTError, jwt as _jwt
 
-    # Extract token from query parameter or first message
-    token = websocket.query_params.get("token")
-    if not token:
-        await websocket.close(code=4001, reason="Missing authentication token")
-        return
-
-    try:
-        payload = _jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    def decode_token(value: str):
+        payload = _jwt.decode(value, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         username = payload.get("sub")
-        role = payload.get("role", "")
         if not username:
-            await websocket.close(code=4001, reason="Invalid token")
-            return
+            raise JWTError("missing subject")
+        return username, payload
+
+    token = websocket.query_params.get("token")
+    session_token = websocket.cookies.get(settings.SESSION_COOKIE_NAME)
+    try:
+        username, payload = decode_token(token) if token else (None, None)
     except JWTError:
-        await websocket.close(code=4001, reason="Invalid or expired token")
+        if not session_token:
+            await websocket.close(code=4001, reason="Invalid or expired token")
+            return
+        try:
+            username, payload = decode_token(session_token)
+        except JWTError:
+            await websocket.close(code=4001, reason="Invalid or expired token")
+            return
+
+    if not username:
+        await websocket.close(code=4001, reason="Missing authentication token")
         return
 
     # Verify user still exists and is active

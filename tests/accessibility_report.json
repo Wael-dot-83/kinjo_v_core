@@ -1,0 +1,1727 @@
+{
+  "timestamp": "2026-06-18T02:02:57.451844",
+  "summary": {
+    "pages_tested": 4,
+    "total_violations": 9,
+    "critical": 0,
+    "serious": 0
+  },
+  "results": [
+    {
+      "page": "Home/Login",
+      "url": "http://127.0.0.1:8000/",
+      "violations": [
+        {
+          "description": "Ensures all page content is contained by landmarks",
+          "help": "All page content must be contained by landmarks",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/3.1/region?application=axeAPI",
+          "id": "region",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": null,
+                  "id": "region",
+                  "impact": "moderate",
+                  "message": "Some page content is not contained by landmarks",
+                  "relatedNodes": [
+                    {
+                      "html": "<button type=\"button\" id=\"a11yToggleBtn\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"a11yPanel\" aria-label=\"خيارات إمكانية الوصول\">\n          <i class=\"bi bi-universal-access\" aria-hidden=\"true\"></i>\n        </button>",
+                      "target": [
+                        "#a11yToggleBtn"
+                      ]
+                    },
+                    {
+                      "html": "<span class=\"page-load-timer__label\">جاهز</span>",
+                      "target": [
+                        ".page-load-timer__label"
+                      ]
+                    },
+                    {
+                      "html": "<span class=\"page-load-timer__value\">0.50 ثانية</span>",
+                      "target": [
+                        ".page-load-timer__value"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks",
+              "html": "<html lang=\"ar\" dir=\"rtl\" style=\"\">",
+              "impact": "moderate",
+              "none": [],
+              "target": [
+                "html"
+              ]
+            }
+          ],
+          "tags": [
+            "cat.keyboard",
+            "best-practice"
+          ]
+        }
+      ],
+      "passes": 33,
+      "violation_count": 1,
+      "critical": 0,
+      "serious": 0,
+      "moderate": 1,
+      "minor": 0
+    },
+    {
+      "page": "Dashboard",
+      "url": "http://127.0.0.1:8000/dashboard",
+      "violations": [
+        {
+          "description": "Ensures every id attribute value is unique",
+          "help": "id attribute value must be unique",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/3.1/duplicate-id?application=axeAPI",
+          "id": "duplicate-id",
+          "impact": "minor",
+          "nodes": [
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": "classOverviewTable",
+                  "id": "duplicate-id",
+                  "impact": "minor",
+                  "message": "Document has multiple static elements with the same id attribute",
+                  "relatedNodes": [
+                    {
+                      "html": "<tbody id=\"classOverviewTable\">",
+                      "target": [
+                        ".g-3.row:nth-child(13) > .col-12 > .card > .card-body > .table-responsive > .table-hover > tbody"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Document has multiple static elements with the same id attribute",
+              "html": "<tbody id=\"classOverviewTable\">",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                ".table-borderless > tbody"
+              ]
+            }
+          ],
+          "tags": [
+            "cat.parsing",
+            "wcag2a",
+            "wcag411"
+          ]
+        },
+        {
+          "description": "Ensures headings have discernible text",
+          "help": "Headings must not be empty",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/3.1/empty-heading?application=axeAPI",
+          "id": "empty-heading",
+          "impact": "minor",
+          "nodes": [
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": null,
+                  "id": "has-visible-text",
+                  "impact": "minor",
+                  "message": "Element does not have text that is visible to screen readers",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Element does not have text that is visible to screen readers",
+              "html": "<h2 class=\"display-5 fw-bold mb-3\" id=\"presentTodayValue\"><span class=\"kj-stat-pending\">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#presentTodayValue"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": null,
+                  "id": "has-visible-text",
+                  "impact": "minor",
+                  "message": "Element does not have text that is visible to screen readers",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Element does not have text that is visible to screen readers",
+              "html": "<h2 class=\"display-5 fw-bold mb-4\" id=\"pendingEnrollmentsValue\"><span class=\"kj-stat-pending\">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#pendingEnrollmentsValue"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": null,
+                  "id": "has-visible-text",
+                  "impact": "minor",
+                  "message": "Element does not have text that is visible to screen readers",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Element does not have text that is visible to screen readers",
+              "html": "<h2 class=\"display-5 fw-bold mb-4\" id=\"pendingReportsValue\"><span class=\"kj-stat-pending\">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#pendingReportsValue"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": null,
+                  "id": "has-visible-text",
+                  "impact": "minor",
+                  "message": "Element does not have text that is visible to screen readers",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Element does not have text that is visible to screen readers",
+              "html": "<h2 class=\"display-5 fw-bold mb-4\" id=\"incidentsTodayValue\"><span class=\"kj-stat-pending\">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#incidentsTodayValue"
+              ]
+            }
+          ],
+          "tags": [
+            "cat.name-role-value",
+            "best-practice"
+          ]
+        },
+        {
+          "description": "Ensures the order of headings is semantically correct",
+          "help": "Heading levels should only increase by one",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/3.1/heading-order?application=axeAPI",
+          "id": "heading-order",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": 6,
+                  "id": "heading-order",
+                  "impact": "moderate",
+                  "message": "Heading order invalid",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Heading order invalid",
+              "html": "<h6 class=\"mb-0\" id=\"pageGuideTitle\" data-i18n=\"guide.title\">How to use this page</h6>",
+              "impact": "moderate",
+              "none": [],
+              "target": [
+                "#pageGuideTitle"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": 5,
+                  "id": "heading-order",
+                  "impact": "moderate",
+                  "message": "Heading order invalid",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Heading order invalid",
+              "html": "<h5 class=\"card-title mb-0\">\n                    <i class=\"bi bi-graph-up me-2\"></i>\n                    Weekly Attendance Rate\n                </h5>",
+              "impact": "moderate",
+              "none": [],
+              "target": [
+                ".col-lg-8.col-12 > .h-100.card > .card-header.justify-content-between.align-items-center > .card-title"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": 5,
+                  "id": "heading-order",
+                  "impact": "moderate",
+                  "message": "Heading order invalid",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Heading order invalid",
+              "html": "<h5 class=\"card-title mb-1\">\n                        <i class=\"bi bi-house-door me-2\"></i>\n                        Class Management\n                    </h5>",
+              "impact": "moderate",
+              "none": [],
+              "target": [
+                ".g-3.mb-4.row:nth-child(4) > .col-12 > .manager-section-card.shadow-sm.border-0 > .card-header.justify-content-between.align-items-center > div > .card-title"
+              ]
+            }
+          ],
+          "tags": [
+            "cat.semantics",
+            "best-practice"
+          ]
+        },
+        {
+          "description": "Ensures all page content is contained by landmarks",
+          "help": "All page content must be contained by landmarks",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/3.1/region?application=axeAPI",
+          "id": "region",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": null,
+                  "id": "region",
+                  "impact": "moderate",
+                  "message": "Some page content is not contained by landmarks",
+                  "relatedNodes": [
+                    {
+                      "html": "<span class=\"page-load-timer__label\">Loading data</span>",
+                      "target": [
+                        ".page-load-timer__label"
+                      ]
+                    },
+                    {
+                      "html": "<span class=\"page-load-timer__value\">3.31s</span>",
+                      "target": [
+                        ".page-load-timer__value"
+                      ]
+                    },
+                    {
+                      "html": "<button type=\"button\" id=\"a11yToggleBtn\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"a11yPanel\" aria-label=\"Accessibility options\">\n          <i class=\"bi bi-universal-access\" aria-hidden=\"true\"></i>\n        </button>",
+                      "target": [
+                        "#a11yToggleBtn"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks",
+              "html": "<html lang=\"en\" dir=\"ltr\" style=\"\">",
+              "impact": "moderate",
+              "none": [],
+              "target": [
+                "html"
+              ]
+            }
+          ],
+          "tags": [
+            "cat.keyboard",
+            "best-practice"
+          ]
+        }
+      ],
+      "passes": 39,
+      "violation_count": 4,
+      "critical": 0,
+      "serious": 0,
+      "moderate": 2,
+      "minor": 2
+    },
+    {
+      "page": "Users Admin",
+      "url": "http://127.0.0.1:8000/admin/users",
+      "violations": [
+        {
+          "description": "Ensures role attribute has an appropriate value for the element",
+          "help": "ARIA role must be appropriate for the element",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/3.1/aria-allowed-role?application=axeAPI",
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "nodes": [
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "list"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role list  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role list  is not allowed for given element",
+              "html": "<ul class=\"sidebar-menu\" role=\"list\">",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                ".sidebar-menu"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "list"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role list  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role list  is not allowed for given element",
+              "html": "<ul id=\"dashboard-submenu\" class=\"submenu\" role=\"list\" style=\"display: none;\">",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#dashboard-submenu"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/dashboard\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-house\" aria-hidden=\"true\"></i> <span data-i18n=\"dashboard.overview\">نظرة عامة</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#dashboard-submenu > li"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/dashboard\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-house\" aria-hidden=\"true\"></i> <span data-i18n=\"dashboard.overview\">نظرة عامة</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                ".nav-link[href$=\"dashboard\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "list"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role list  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role list  is not allowed for given element",
+              "html": "<ul id=\"users-submenu\" class=\"submenu\" role=\"list\" style=\"display: block;\">",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#users-submenu"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/users\" class=\"nav-link active\" role=\"listitem\">\n                  <i class=\"bi bi-list-ul\" aria-hidden=\"true\"></i> <span data-i18n=\"users.user_list\">قائمة المستخدمين</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#users-submenu > li:nth-child(1)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/users\" class=\"nav-link active\" role=\"listitem\">\n                  <i class=\"bi bi-list-ul\" aria-hidden=\"true\"></i> <span data-i18n=\"users.user_list\">قائمة المستخدمين</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"users\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/users/create\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-person-plus\" aria-hidden=\"true\"></i> <span data-i18n=\"users.add_user\">إضافة مستخدم</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#users-submenu > li:nth-child(2)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/users/create\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-person-plus\" aria-hidden=\"true\"></i> <span data-i18n=\"users.add_user\">إضافة مستخدم</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"create\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/users/import\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-file-earmark-arrow-down\" aria-hidden=\"true\"></i> <span data-i18n=\"users.import_users\">استيراد المستخدمين</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#users-submenu > li:nth-child(3)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/users/import\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-file-earmark-arrow-down\" aria-hidden=\"true\"></i> <span data-i18n=\"users.import_users\">استيراد المستخدمين</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"import\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "list"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role list  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role list  is not allowed for given element",
+              "html": "<ul id=\"communication-submenu\" class=\"submenu\" role=\"list\" style=\"display: none;\">",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#communication-submenu"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/messages\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-inbox\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.messages\">الرسائل</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#communication-submenu > li:nth-child(1)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/messages\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-inbox\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.messages\">الرسائل</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "li:nth-child(1) > a[href$=\"messages\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/messages/compose\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-pencil-square\" aria-hidden=\"true\"></i> <span data-i18n=\"communication.compose_message\">كتابة رسالة</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#communication-submenu > li:nth-child(2)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/messages/compose\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-pencil-square\" aria-hidden=\"true\"></i> <span data-i18n=\"communication.compose_message\">كتابة رسالة</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"compose\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/contact-messages\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-chat-dots\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.contact_messages\">رسائل التواصل</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#communication-submenu > li:nth-child(3)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/contact-messages\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-chat-dots\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.contact_messages\">رسائل التواصل</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"contact-messages\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "list"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role list  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role list  is not allowed for given element",
+              "html": "<ul id=\"analytics-submenu\" class=\"submenu\" role=\"list\" style=\"display: none;\">",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#analytics-submenu"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/analytics\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-graph-up\" aria-hidden=\"true\"></i> <span data-i18n=\"nav.dashboard\">لوحة التحكم</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#analytics-submenu > li:nth-child(1)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/analytics\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-graph-up\" aria-hidden=\"true\"></i> <span data-i18n=\"nav.dashboard\">لوحة التحكم</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "li:nth-child(1) > a[href$=\"analytics\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/analytics/reports\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-file-text\" aria-hidden=\"true\"></i> <span data-i18n=\"analytics.detailed_reports\">تقارير مفصلة</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#analytics-submenu > li:nth-child(2)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/analytics/reports\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-file-text\" aria-hidden=\"true\"></i> <span data-i18n=\"analytics.detailed_reports\">تقارير مفصلة</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "li:nth-child(2) > a[href$=\"reports\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/analytics/daily-reports\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-calendar-day\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.daily_reports\">التقارير اليومية</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#analytics-submenu > li:nth-child(3)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/analytics/daily-reports\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-calendar-day\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.daily_reports\">التقارير اليومية</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"daily-reports\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/daily-reports-organization\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-clipboard-check\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.report_organization\">تنظيم التقارير</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#analytics-submenu > li:nth-child(4)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/daily-reports-organization\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-clipboard-check\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.report_organization\">تنظيم التقارير</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#analytics-submenu > li:nth-child(4) > .nav-link"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/reports/incidents\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-list-check\" aria-hidden=\"true\"></i>\n                  <span data-i18n=\"sidebar.incident_list\">قائمة الحوادث</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#analytics-submenu > li:nth-child(5)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/reports/incidents\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-list-check\" aria-hidden=\"true\"></i>\n                  <span data-i18n=\"sidebar.incident_list\">قائمة الحوادث</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"incidents\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/reports/incidents/generate\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-file-medical\" aria-hidden=\"true\"></i>\n                  <span data-i18n=\"sidebar.incident_reports\">تقارير الحوادث</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#analytics-submenu > li:nth-child(6)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/reports/incidents/generate\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-file-medical\" aria-hidden=\"true\"></i>\n                  <span data-i18n=\"sidebar.incident_reports\">تقارير الحوادث</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "li:nth-child(6) > .nav-link"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "list"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role list  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role list  is not allowed for given element",
+              "html": "<ul id=\"heatmap-submenu\" class=\"submenu\" role=\"list\" style=\"display: none;\">",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#heatmap-submenu"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/heatmap\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-globe\" aria-hidden=\"true\"></i> <span data-i18n=\"dashboard.overview\">نظرة عامة</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#heatmap-submenu > li:nth-child(1)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/heatmap\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-globe\" aria-hidden=\"true\"></i> <span data-i18n=\"dashboard.overview\">نظرة عامة</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"heatmap\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/heatmap#governorates\" class=\"nav-link\" role=\"listitem\">\n                  <i class=\"bi bi-geo-alt\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.governorates\">المحافظات</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#heatmap-submenu > li:nth-child(2)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/heatmap#governorates\" class=\"nav-link\" role=\"listitem\">\n                  <i class=\"bi bi-geo-alt\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.governorates\">المحافظات</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"heatmap#governorates\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "list"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role list  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role list  is not allowed for given element",
+              "html": "<ul id=\"governance-submenu\" class=\"submenu\" role=\"list\" style=\"display: none;\">",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#governance-submenu"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/governance-reports\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-clipboard-data\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.governance_reports\">التقارير</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#governance-submenu > li:nth-child(1)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/governance-reports\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-clipboard-data\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.governance_reports\">التقارير</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"governance-reports\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/classification\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-trophy\" aria-hidden=\"true\"></i> <span data-i18n=\"governance.leaderboard\">لوحة الصدارة</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#governance-submenu > li:nth-child(2)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/classification\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-trophy\" aria-hidden=\"true\"></i> <span data-i18n=\"governance.leaderboard\">لوحة الصدارة</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"classification\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/governance/reminders\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-bell\" aria-hidden=\"true\"></i> <span data-i18n=\"governance.reminders\">التذكيرات</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#governance-submenu > li:nth-child(3)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/governance/reminders\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-bell\" aria-hidden=\"true\"></i> <span data-i18n=\"governance.reminders\">التذكيرات</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"reminders\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "list"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role list  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role list  is not allowed for given element",
+              "html": "<ul id=\"data-management-submenu\" class=\"submenu\" role=\"list\" style=\"display: none;\">",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#data-management-submenu"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/import-kindergartens\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-upload\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.import_kindergartens\">استيراد الروضات</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#data-management-submenu > li:nth-child(1)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/import-kindergartens\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-upload\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.import_kindergartens\">استيراد الروضات</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"import-kindergartens\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/imported-kindergartens\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-building\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.imported_kindergartens\">الروضات المستوردة</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#data-management-submenu > li:nth-child(2)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/imported-kindergartens\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-building\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.imported_kindergartens\">الروضات المستوردة</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"imported-kindergartens\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/import-logs\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-clock-history\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.import_logs\">سجلات الاستيراد</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#data-management-submenu > li:nth-child(3)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/import-logs\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-clock-history\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.import_logs\">سجلات الاستيراد</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"import-logs\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "list"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role list  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role list  is not allowed for given element",
+              "html": "<ul id=\"security-submenu\" class=\"submenu\" role=\"list\" style=\"display: none;\">",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#security-submenu"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/audit-logs\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-clock-history\" aria-hidden=\"true\"></i> <span data-i18n=\"security.audit_logs\">سجلات التدقيق</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#security-submenu > li:nth-child(1)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/audit-logs\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-clock-history\" aria-hidden=\"true\"></i> <span data-i18n=\"security.audit_logs\">سجلات التدقيق</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"audit-logs\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/alerts\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-exclamation-triangle\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.alerts\">التنبيهات</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#security-submenu > li:nth-child(2)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/alerts\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-exclamation-triangle\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.alerts\">التنبيهات</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"alerts\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/safety-analytics\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-shield-check\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.safety_analytics\">تحليلات السلامة</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#security-submenu > li:nth-child(3)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/safety-analytics\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-shield-check\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.safety_analytics\">تحليلات السلامة</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"safety-analytics\"]"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<li class=\"nav-item\" role=\"listitem\"><a href=\"/admin/impersonate\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-incognito\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.impersonation\">انتحال الهوية</span>\n                </a></li>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "#security-submenu > li:nth-child(4)"
+              ]
+            },
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": [
+                    "listitem"
+                  ],
+                  "id": "aria-allowed-role",
+                  "impact": "minor",
+                  "message": "role listitem  is not allowed for given element",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  role listitem  is not allowed for given element",
+              "html": "<a href=\"/admin/impersonate\" class=\"nav-link \" role=\"listitem\">\n                  <i class=\"bi bi-incognito\" aria-hidden=\"true\"></i> <span data-i18n=\"sidebar.impersonation\">انتحال الهوية</span>\n                </a>",
+              "impact": "minor",
+              "none": [],
+              "target": [
+                "a[href$=\"impersonate\"]"
+              ]
+            }
+          ],
+          "tags": [
+            "cat.aria",
+            "best-practice"
+          ]
+        },
+        {
+          "description": "Ensure that the page, or at least one of its frames contains a level-one heading",
+          "help": "Page must contain a level-one heading",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/3.1/page-has-heading-one?application=axeAPI",
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "all": [
+                {
+                  "data": null,
+                  "id": "page-has-heading-one",
+                  "impact": "moderate",
+                  "message": "Page must have a level-one heading",
+                  "relatedNodes": []
+                }
+              ],
+              "any": [],
+              "failureSummary": "Fix all of the following:\n  Page must have a level-one heading",
+              "html": "<html lang=\"ar\" dir=\"rtl\" class=\"rtl\" style=\"--admin-direction: rtl; --admin-text-align-start: right; --admin-text-align-end: left; --admin-float-start: right; --admin-float-end: left; --admin-margin-start: margin-right; --admin-margin-end: margin-left; --admin-padding-start: padding-right; --admin-padding-end: padding-left;\">",
+              "impact": "moderate",
+              "none": [],
+              "target": [
+                "html"
+              ]
+            }
+          ],
+          "tags": [
+            "cat.semantics",
+            "best-practice"
+          ]
+        }
+      ],
+      "passes": 34,
+      "violation_count": 2,
+      "critical": 0,
+      "serious": 0,
+      "moderate": 1,
+      "minor": 1
+    },
+    {
+      "page": "Enrollments",
+      "url": "http://127.0.0.1:8000/enrollments",
+      "violations": [
+        {
+          "description": "Ensures the order of headings is semantically correct",
+          "help": "Heading levels should only increase by one",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/3.1/heading-order?application=axeAPI",
+          "id": "heading-order",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": 6,
+                  "id": "heading-order",
+                  "impact": "moderate",
+                  "message": "Heading order invalid",
+                  "relatedNodes": []
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Heading order invalid",
+              "html": "<h6 class=\"mb-0\" id=\"pageGuideTitle\" data-i18n=\"guide.title\">كيف تستخدم هذه الصفحة</h6>",
+              "impact": "moderate",
+              "none": [],
+              "target": [
+                "#pageGuideTitle"
+              ]
+            }
+          ],
+          "tags": [
+            "cat.semantics",
+            "best-practice"
+          ]
+        },
+        {
+          "description": "Ensures all page content is contained by landmarks",
+          "help": "All page content must be contained by landmarks",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/3.1/region?application=axeAPI",
+          "id": "region",
+          "impact": "moderate",
+          "nodes": [
+            {
+              "all": [],
+              "any": [
+                {
+                  "data": null,
+                  "id": "region",
+                  "impact": "moderate",
+                  "message": "Some page content is not contained by landmarks",
+                  "relatedNodes": [
+                    {
+                      "html": "<span class=\"page-load-timer__label\">جاهز</span>",
+                      "target": [
+                        ".page-load-timer__label"
+                      ]
+                    },
+                    {
+                      "html": "<span class=\"page-load-timer__value\">0.30 ثانية</span>",
+                      "target": [
+                        ".page-load-timer__value"
+                      ]
+                    },
+                    {
+                      "html": "<button type=\"button\" id=\"a11yToggleBtn\" aria-haspopup=\"true\" aria-expanded=\"false\" aria-controls=\"a11yPanel\" aria-label=\"خيارات إمكانية الوصول\">\n          <i class=\"bi bi-universal-access\" aria-hidden=\"true\"></i>\n        </button>",
+                      "target": [
+                        "#a11yToggleBtn"
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks",
+              "html": "<html lang=\"ar\" dir=\"rtl\" style=\"\">",
+              "impact": "moderate",
+              "none": [],
+              "target": [
+                "html"
+              ]
+            }
+          ],
+          "tags": [
+            "cat.keyboard",
+            "best-practice"
+          ]
+        }
+      ],
+      "passes": 39,
+      "violation_count": 2,
+      "critical": 0,
+      "serious": 0,
+      "moderate": 2,
+      "minor": 0
+    }
+  ]
+}
