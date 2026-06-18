@@ -46,6 +46,10 @@
 </div>
 {% endif %}
 
+<div id="pageHelpContent" class="d-none visually-hidden"
+     data-help-title="{% if ui_lang == 'en' %}Analytics Dashboard Help{% else %}مساعدة لوحة التحليلات{% endif %}">
+  <p>{% if ui_lang == 'en' %}This dashboard shows network-wide KPI metrics, trends and incident analytics.{% else %}تعرض هذه اللوحة مؤشرات الأداء على مستوى الشبكة والاتجاهات وتحليلات الحوادث.{% endif %}</p>
+</div>
 
 <div class="analytics-dashboard">
     <!-- Network Overview Cards -->

@@ -147,7 +147,7 @@ def get_analytics_metadata(lang: str = Query("ar", pattern="^(ar|en)$")):
     ]
     metrics = [
         {"id": "attendance_rate", "label_ar": "نسبة الحضور", "label_en": "Attendance Rate", "aggregation": "ratio"},
-        {"id": "incident_rate_per_100", "label_ar": "معدل الحوادث لكل ١٠٠", "label_en": "Incidents per 100", "aggregation": "rate"},
+        {"id": "incident_rate_per_100", "label_ar": "الحوادث لكل 100 يوم-طفل", "label_en": "Incidents per 100 child-days", "aggregation": "rate"},
         {"id": "serious_incident_rate", "label_ar": "حوادث خطيرة", "label_en": "Serious Incident Rate", "aggregation": "rate"},
         {"id": "ratio_compliance_rate", "label_ar": "التزام النِسَب", "label_en": "Ratio Compliance", "aggregation": "ratio"},
         {"id": "report_completion_rate", "label_ar": "إكمال التقارير", "label_en": "Report Completion", "aggregation": "ratio"},
@@ -2139,9 +2139,22 @@ def get_kpi_analytics(
             incidents_query = incidents_query.filter(models.Incident.kindergarten_id == kg_id)
         incident_count = incidents_query.count()
         
-        total_children = children_query.count() if 'children_query' in dir() else 0
-        if total_children > 0:
-            incident_rate = round((incident_count / total_children) * 100, 2)
+        attended_logs_q = db.query(models.AttendanceLog).join(
+            models.Class, models.AttendanceLog.class_id == models.Class.id
+        ).filter(
+            func.date(models.AttendanceLog.check_in_at) >= period_start,
+            func.date(models.AttendanceLog.check_in_at) <= period_end,
+            models.AttendanceLog.status.in_([
+                models.AttendanceStatus.PRESENT,
+                models.AttendanceStatus.LATE,
+                models.AttendanceStatus.EXCUSED,
+            ])
+        )
+        if kg_id:
+            attended_logs_q = attended_logs_q.filter(models.Class.kindergarten_id == kg_id)
+        attended_child_days = attended_logs_q.count()
+        if attended_child_days > 0:
+            incident_rate = round((incident_count / attended_child_days) * 100, 2)
     except SQLAlchemyError as e:
         logger.error(
             "Failed to compute incident rate KPI for kg_id=%s period=[%s,%s]: %s",
@@ -2338,7 +2351,21 @@ def get_analytics_dashboard(
         if kg_id:
             incidents = incidents.filter(models.Incident.kindergarten_id == kg_id)
         incident_count = incidents.count()
-        kpis["incident_rate"] = round((incident_count / total_children * 100) if total_children > 0 else 0, 2)
+        attended_q = db.query(models.AttendanceLog).join(
+            models.Class, models.AttendanceLog.class_id == models.Class.id
+        ).filter(
+            func.date(models.AttendanceLog.check_in_at) >= period_start,
+            func.date(models.AttendanceLog.check_in_at) <= period_end,
+            models.AttendanceLog.status.in_([
+                models.AttendanceStatus.PRESENT,
+                models.AttendanceStatus.LATE,
+                models.AttendanceStatus.EXCUSED,
+            ])
+        )
+        if kg_id:
+            attended_q = attended_q.filter(models.Class.kindergarten_id == kg_id)
+        attended_child_days_gov = attended_q.count()
+        kpis["incident_rate"] = round((incident_count / attended_child_days_gov * 100) if attended_child_days_gov > 0 else 0, 2)
         
         # Report completion
         reports = db.query(models.DailyReport).filter(

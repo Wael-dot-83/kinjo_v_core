@@ -269,6 +269,20 @@ def get_indicators() -> List[Dict]:
     return out
 
 
+_ESTIMATED_SUB_INDICATORS: frozenset = frozenset({
+    "inactive_nurseries",
+    "unregistered_children",
+    "health_absences",
+    "repeated_health",
+    "protection_cases",
+    "incident_severity",
+    "delayed_tasks",
+    "registration_rate",
+    "training_completion",
+    "compliance_status",
+})
+
+
 def _compute_sub_indicators(db: Session, slug: str) -> Dict[str, Any]:
     """Compute the 25 sub-indicator values for a single governorate."""
     active_kg = _query_kindergarten_count(db, slug)
@@ -330,6 +344,7 @@ def _compute_sub_indicators(db: Session, slug: str) -> Dict[str, Any]:
         "governance_score": round(governance, 1),
         "training_completion": training_completion,
         "compliance_status": compliance_status,
+        "_estimated_keys": sorted(_ESTIMATED_SUB_INDICATORS),
     }
     return sub
 

@@ -466,9 +466,7 @@ endblock %} {% block page_header %}
   </h5>
   <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 mb-5">
     {% set safety = [ ('incident_rate', ('معدل الحوادث' if ui_lang != 'en' else
-    'Incident Rate'), 'danger','bi-exclamation-triangle', ('عدد الحوادث البسيطة
-    لكل 100 طفل في اليوم.' if ui_lang != 'en' else 'Number of minor incidents
-    per 100 children per day.')), ('serious_incident_rate', ('الحوادث الخطرة' if
+    'Incident Rate'), 'danger','bi-exclamation-triangle', ('عدد الحوادث لكل 100 يوم-طفل.' if ui_lang != 'en' else 'Number of incidents per 100 child-days.')), ('serious_incident_rate', ('الحوادث الخطرة' if
     ui_lang != 'en' else 'Serious Incidents'), 'danger','bi-radioactive', ('عدد
     الحوادث الجسيمة التي تتطلب تدخل إجراء فورياً.' if ui_lang != 'en' else
     'Number of serious incidents requiring immediate action.')),
@@ -1433,12 +1431,22 @@ endblock %} {% block page_header %}
     function initCharts() {
       // Main GCEI Gauge
       const gaugeCanvas = document.getElementById("gceiGauge");
-      if (!gaugeCanvas || typeof Chart === "undefined") {
-        console.warn(
+      if (!gaugeCanvas) {
+        showAlert(
           kpiText(
             "charts.init_failed",
             "تعذر تهيئة الرسوم البيانية: عناصر الرسم غير متوفرة.",
             "Unable to initialize charts: chart elements are unavailable.",
+          ),
+        );
+        return;
+      }
+      if (typeof Chart === "undefined") {
+        showAlert(
+          kpiText(
+            "charts.library_missing",
+            "تعذر تحميل مكتبة الرسوم البيانية. تحقق من اتصال الإنترنت أو موارد المكتبة.",
+            "Unable to load the chart library. Check network access to chart resources.",
           ),
         );
         return;
@@ -1560,9 +1568,16 @@ endblock %} {% block page_header %}
       }
 
       try {
-        const response = await window.api.get(
-          `${endpoint}?${params.toString()}`,
-        );
+        if (!window.api || typeof window.api.get !== "function") {
+          throw new Error(
+            kpiText(
+              "charts.api_unavailable",
+              "تعذر تحميل واجهة البيانات.",
+              "Data API client is unavailable.",
+            ),
+          );
+        }
+        const response = await window.api.get(endpoint, Object.fromEntries(params));
         if (!response) {
           throw new Error(
             kpiText(

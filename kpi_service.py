@@ -1048,8 +1048,8 @@ class KPIService:
             if cursor in explicit_map:
                 is_open = explicit_map[cursor]
             else:
-                # Default policy: Friday (weekday 4) is closed unless explicitly opened.
-                is_open = cursor.weekday() != 4
+                # Jordan school week is Sun–Thu; Friday (4) and Saturday (5) are closed.
+                is_open = cursor.weekday() not in (4, 5)
             if is_open:
                 working_days.append(cursor)
             cursor += timedelta(days=1)

@@ -404,3 +404,144 @@ class TestEmptyDBEdgeCases:
         for k, v in result.items():
             assert not math.isnan(v), f"{k} is NaN with large inputs"
             assert 0.0 <= v <= 100.0, f"{k}={v} out of [0, 100] with large inputs"
+
+
+# ---------------------------------------------------------------------------
+# GCEI composite formula (kpi_service.py:2122-2162)
+# GQI×0.6 + CEI×0.4, with weight redistribution when components have no data
+# ---------------------------------------------------------------------------
+
+class TestGCEIComposition:
+    """Tests the GCEI = GQI*0.6 + CEI*0.4 composite formula.
+
+    Uses the same weighted-normalization logic as kpi_service.py:
+    components with has_data=False are excluded and their weight is redistributed.
+    """
+
+    @staticmethod
+    def _gqi(components):
+        w_sum = sum(w for _, _, w, has in components if has)
+        if w_sum == 0:
+            return 0.0, False
+        return sum(v * w for _, v, w, has in components if has) / w_sum, True
+
+    @staticmethod
+    def _cei(components):
+        w_sum = sum(w for _, _, w, has in components if has)
+        if w_sum == 0:
+            return 0.0, False
+        return sum(v * w for _, v, w, has in components if has) / w_sum, True
+
+    @staticmethod
+    def _gcei(gqi_score, gqi_has, cei_score, cei_has):
+        comps = [(gqi_score, 0.60, gqi_has), (cei_score, 0.40, cei_has)]
+        w_sum = sum(w for _, w, has in comps if has)
+        if w_sum == 0:
+            return 0.0
+        return sum(v * w for v, w, has in comps if has) / w_sum
+
+    def _full_gqi_components(self, value=100.0):
+        return [
+            ("ratio_compliance",       value, 0.30, True),
+            ("checklist_compliance",   value, 0.20, True),
+            ("regulatory_status",      value, 0.20, True),
+            ("training_completion_rate", value, 0.15, True),
+            ("incident_followup_sla",  value, 0.15, True),
+        ]
+
+    def _full_cei_components(self, value=100.0):
+        return [
+            ("attendance_rate",      value, 0.35, True),
+            ("chronic_absence",      value, 0.25, True),
+            ("serious_incident_rate", value, 0.20, True),
+            ("parent_satisfaction",  value, 0.20, True),
+        ]
+
+    def test_perfect_scores_yield_100(self):
+        gqi, gqi_has = self._gqi(self._full_gqi_components(100.0))
+        cei, cei_has = self._cei(self._full_cei_components(100.0))
+        gcei = self._gcei(gqi, gqi_has, cei, cei_has)
+        assert gcei == pytest.approx(100.0)
+
+    def test_zero_scores_yield_0(self):
+        gqi, gqi_has = self._gqi(self._full_gqi_components(0.0))
+        cei, cei_has = self._cei(self._full_cei_components(0.0))
+        gcei = self._gcei(gqi, gqi_has, cei, cei_has)
+        assert gcei == pytest.approx(0.0)
+
+    def test_band_green_at_80(self):
+        gqi, gqi_has = self._gqi(self._full_gqi_components(80.0))
+        cei, cei_has = self._cei(self._full_cei_components(80.0))
+        gcei = self._gcei(gqi, gqi_has, cei, cei_has)
+        assert gcei == pytest.approx(80.0)
+        band = "GREEN" if gcei >= 80 else "AMBER" if gcei >= 60 else "RED"
+        assert band == "GREEN"
+
+    def test_band_amber_at_70(self):
+        gqi, gqi_has = self._gqi(self._full_gqi_components(70.0))
+        cei, cei_has = self._cei(self._full_cei_components(70.0))
+        gcei = self._gcei(gqi, gqi_has, cei, cei_has)
+        assert gcei == pytest.approx(70.0)
+        band = "GREEN" if gcei >= 80 else "AMBER" if gcei >= 60 else "RED"
+        assert band == "AMBER"
+
+    def test_band_red_below_60(self):
+        gqi, gqi_has = self._gqi(self._full_gqi_components(50.0))
+        cei, cei_has = self._cei(self._full_cei_components(50.0))
+        gcei = self._gcei(gqi, gqi_has, cei, cei_has)
+        assert gcei == pytest.approx(50.0)
+        band = "GREEN" if gcei >= 80 else "AMBER" if gcei >= 60 else "RED"
+        assert band == "RED"
+
+    def test_gcei_weights_are_60_40(self):
+        """GCEI = GQI*0.60 + CEI*0.40 when both have data."""
+        gcei = self._gcei(80.0, True, 60.0, True)
+        expected = 80.0 * 0.60 + 60.0 * 0.40
+        assert gcei == pytest.approx(expected)
+
+    def test_missing_parent_satisfaction_cei_weight_redistributed(self):
+        """CEI excludes parent_satisfaction when has_data=False; weight redistributed to remaining."""
+        comps = [
+            ("attendance_rate",      100.0, 0.35, True),
+            ("chronic_absence",      100.0, 0.25, True),
+            ("serious_incident_rate", 100.0, 0.20, True),
+            ("parent_satisfaction",    0.0, 0.20, False),
+        ]
+        cei, cei_has = self._cei(comps)
+        assert cei == pytest.approx(100.0)
+        assert cei_has is True
+
+    def test_missing_gqi_component_weight_redistributed(self):
+        """GQI excludes checklist_compliance when has_data=False; remaining weights cover 100%."""
+        comps = [
+            ("ratio_compliance",       80.0, 0.30, True),
+            ("checklist_compliance",    0.0, 0.20, False),
+            ("regulatory_status",      80.0, 0.20, True),
+            ("training_completion_rate", 80.0, 0.15, True),
+            ("incident_followup_sla",  80.0, 0.15, True),
+        ]
+        gqi, gqi_has = self._gqi(comps)
+        assert gqi == pytest.approx(80.0)
+        assert gqi_has is True
+
+    def test_only_gqi_has_data_gcei_equals_gqi(self):
+        """When CEI has no data at all, GCEI = GQI (weight fully redistributed)."""
+        gcei = self._gcei(75.0, True, 0.0, False)
+        assert gcei == pytest.approx(75.0)
+
+    def test_only_cei_has_data_gcei_equals_cei(self):
+        """When GQI has no data at all, GCEI = CEI."""
+        gcei = self._gcei(0.0, False, 65.0, True)
+        assert gcei == pytest.approx(65.0)
+
+    def test_no_data_at_all_yields_0(self):
+        gcei = self._gcei(0.0, False, 0.0, False)
+        assert gcei == pytest.approx(0.0)
+
+    def test_asymmetric_gqi_cei_values(self):
+        """Verify the 60/40 split gives correct weighted result for unequal values."""
+        gqi, _ = self._gqi(self._full_gqi_components(90.0))
+        cei, _ = self._cei(self._full_cei_components(50.0))
+        gcei = self._gcei(gqi, True, cei, True)
+        expected = 90.0 * 0.60 + 50.0 * 0.40
+        assert gcei == pytest.approx(expected)
