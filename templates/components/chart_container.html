@@ -1,21 +1,18 @@
 {% macro chart_container(title, chart_id, height='300px', tooltip='') %}
-<div class="chart-container card border-0 shadow-sm">
+<div class="chart-card card border-0 shadow-sm h-100">
     <div class="card-header bg-white border-0 pb-0">
         <div class="d-flex align-items-center justify-content-between">
             <h6 class="mb-0 fw-bold text-dark">{{ title }}</h6>
             {% if tooltip %}
-            <i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip" title="{{ tooltip }}"></i>
+            <i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip" title="{{ tooltip }}" aria-label="{{ _('معلومات إضافية') }}"></i>
             {% endif %}
         </div>
     </div>
-    <div class="card-body">
-        <div class="position-relative chart-container chart-container--macro" style="--chart-height: {{ height }};">
-            <canvas id="{{ chart_id }}" width="100%" height="100%"></canvas>
-            <div
-                class="skeleton-container position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center d-none">
-                <div class="skeleton-text w-75"></div>
-                <div class="skeleton-text w-50 mt-2"></div>
-                <div class="skeleton-text w-25 mt-2"></div>
+    <div class="card-body p-2">
+        <div class="chart-container" style="--chart-height: {{ height }};">
+            <canvas id="{{ chart_id }}" aria-label="{{ title }}" role="img"></canvas>
+            <div class="no-data-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center d-none">
+                <span class="text-muted small px-3 text-center">{{ _('لا توجد بيانات للفترة المحددة') }}</span>
             </div>
         </div>
     </div>

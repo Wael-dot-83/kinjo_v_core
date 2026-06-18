@@ -930,7 +930,10 @@ class KPIService:
         value: float,
         unit: str = "%",
         last_updated: datetime = None,
-        period_days: int = 30
+        period_days: int = 30,
+        has_data: bool = True,
+        no_data_reason: Optional[str] = None,
+        data_coverage: Optional[float] = None,
     ) -> EnhancedKPICard:
         """Create an enhanced KPI card with all metadata"""
         if last_updated is None:
@@ -953,7 +956,9 @@ class KPIService:
                 manager_note=KPIManagerNote(ar="", en=""),
                 action_items=[],
                 last_updated=last_updated,
-                period_days=period_days
+                period_days=period_days,
+                has_data=has_data,
+                no_data_reason=no_data_reason,
             )
 
         # Determine status based on thresholds
@@ -993,7 +998,10 @@ class KPIService:
             manager_note=definition["manager_note"],
             action_items=definition["action_items"],
             last_updated=last_updated,
-            period_days=period_days
+            period_days=period_days,
+            has_data=has_data,
+            no_data_reason=no_data_reason,
+            data_coverage=data_coverage,
         )
 
     @staticmethod
@@ -2103,16 +2111,22 @@ class KPIService:
 
         chronic_absence_count = 0
         chronic_denominator = 0
+        has_attendance_data = False
         for child_id in child_ids:
             expected_days = int(expected_by_child.get(child_id, 0))
             if expected_days <= 0:
                 continue
             chronic_denominator += 1
             attended_days = int(attended_by_child.get(child_id, 0))
+            if attended_days > 0:
+                has_attendance_data = True
             absence_rate = ((expected_days - attended_days) / expected_days) * 100
             if absence_rate >= 10.0:
                 chronic_absence_count += 1
-        chronic_absence_rate = round((chronic_absence_count / chronic_denominator) * 100, 2) if chronic_denominator > 0 else 0.0
+        if chronic_denominator > 0 and has_attendance_data:
+            chronic_absence_rate = round((chronic_absence_count / chronic_denominator) * 100, 2)
+        else:
+            chronic_absence_rate = 0.0
 
         attendance_rate = round((attended_child_days / expected_child_days) * 100, 2) if expected_child_days > 0 else 0.0
         incident_rate = round((incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
@@ -2134,7 +2148,7 @@ class KPIService:
 
         cei_components = [
             ("attendance_rate", attendance_rate, 0.35, expected_child_days > 0),
-            ("chronic_absence", 100 - chronic_absence_rate, 0.25, chronic_denominator > 0),
+            ("chronic_absence", 100 - chronic_absence_rate, 0.25, chronic_denominator > 0 and has_attendance_data),
             ("serious_incident_rate", 100 - min(serious_incident_rate, 100), 0.20, attended_child_days > 0),
             ("parent_satisfaction", parent_satisfaction, 0.20, survey_responses > 0),
         ]
@@ -2236,9 +2250,9 @@ class KPIService:
                     "reason": "No expected child-days for report submission denominator" if expected_child_days == 0 else None,
                 },
                 "chronic_absence_rate": {
-                    "has_data": chronic_denominator > 0,
+                    "has_data": chronic_denominator > 0 and has_attendance_data,
                     "coverage_pct": 100.0 if chronic_denominator > 0 else 0.0,
-                    "reason": "No children with expected attendance days in period" if chronic_denominator == 0 else None,
+                    "reason": "Missing attendance data for children in period" if chronic_denominator > 0 and not has_attendance_data else ("No children with expected attendance days in period" if chronic_denominator == 0 else None),
                 },
                 "checklist_compliance": {
                     "has_data": checklist_any > 0 and checklist_required > 0,

@@ -1,4 +1,4 @@
-{% macro kpi_card(title, value, unit, band='GREEN', tooltip='', icon='') %}
+{% macro kpi_card(title, value, unit, band='GREEN', tooltip='', icon='', has_data=true) %}
 {% if ui_lang == 'en' %}
   {% set band_label = 'Excellent' if band == 'GREEN' else 'Average' if band == 'AMBER' else 'Poor' %}
 {% else %}
@@ -14,16 +14,18 @@
                 {{ title }}
             </h6>
             {% if tooltip %}
-            <i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip" title="{{ tooltip }}" aria-hidden="true"></i>
+            <i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip" title="{{ tooltip }}" aria-label="{{ _('معلومات إضافية') }}"></i>
             {% endif %}
         </div>
         <div class="d-flex align-items-baseline">
             <span class="display-6 fw-bold text-dark me-2">{{ value }}</span>
-            {% if unit %}<span class="text-muted small">{{ unit }}</span>{% endif %}
+            {% if unit and value != '--' %}<span class="text-muted small">{{ unit }}</span>{% endif %}
         </div>
+        {% if has_data and value != '--' and value != 'غير متاح' %}
         <div class="mt-2">
             <span class="badge badge-soft badge-soft-{{ badge_variant }}">{{ band_label }}</span>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endmacro %}
