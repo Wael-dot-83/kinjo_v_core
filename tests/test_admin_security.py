@@ -1338,3 +1338,200 @@ def test_admin_incident_report_permissions_enforced(client, test_db, admin_token
     # Manager cannot generate ALL scope reports (assuming they don't have permission)
     response = client.post("/api/admin/reports/incidents/generate", data=report_data_all, headers=headers_manager)
     assert response.status_code == 403
+
+
+# =============================================================================
+# SQL injection resistance in admin search and filter params
+# =============================================================================
+
+class TestAdminSearchSQLInjection:
+    """Verify that admin search/filter parameters are parameterised and never cause 500."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, client, test_db, admin_user, auth_headers_admin):
+        self.client = client
+        self.headers = auth_headers_admin
+
+    @pytest.mark.parametrize("payload", [
+        "' OR '1'='1",
+        "'; DROP TABLE users; --",
+        "\" OR \"1\"=\"1",
+        "1; SELECT * FROM users",
+        "admin'--",
+        "' UNION SELECT NULL, NULL, NULL --",
+        "%27 OR %271%27=%271",
+    ])
+    def test_user_search_sqli_never_500(self, payload):
+        r = self.client.get(
+            "/api/admin/users",
+            params={"search": payload, "page": 1, "page_size": 25},
+            headers=self.headers,
+        )
+        assert r.status_code != 500, f"Search payload caused 500: {payload!r}"
+        assert r.status_code in (200, 400, 422), (
+            f"Unexpected status {r.status_code} for search payload {payload!r}"
+        )
+
+    @pytest.mark.parametrize("payload", [
+        "' OR '1'='1",
+        "'; DROP TABLE users; --",
+    ])
+    def test_governance_kpi_date_sqli_never_500(self, payload):
+        r = self.client.get(
+            "/api/admin/governance/kpis",
+            params={"start_date": payload, "end_date": "2026-06-01"},
+            headers=self.headers,
+        )
+        assert r.status_code != 500, f"Date param SQLi caused 500: {payload!r}"
+        assert r.status_code in (200, 400, 422)
+
+    @pytest.mark.parametrize("bad_id", ["../etc/passwd", "' OR 1=1", "-1", "0; DROP TABLE users"])
+    def test_user_id_path_sqli_never_500(self, bad_id):
+        r = self.client.get(f"/api/admin/users/{bad_id}", headers=self.headers)
+        assert r.status_code != 500, f"Path param caused 500: {bad_id!r}"
+
+
+# =============================================================================
+# Admin-specific IDOR: roles cannot access admin user detail via /api/admin/*
+# =============================================================================
+
+class TestAdminIDOR:
+    """Manager/supervisor/parent must not read or modify users through admin endpoints."""
+
+    def test_manager_cannot_read_admin_user_via_admin_endpoint(
+        self, client, test_db, admin_user, manager_user, auth_headers_manager
+    ):
+        r = client.get(
+            f"/api/admin/users/{admin_user.id}",
+            headers=auth_headers_manager,
+        )
+        assert r.status_code in (403, 404), (
+            f"Manager accessed admin user detail via admin endpoint — IDOR! status={r.status_code}"
+        )
+
+    def test_manager_cannot_update_admin_user_via_admin_endpoint(
+        self, client, test_db, admin_user, manager_user, auth_headers_manager
+    ):
+        r = client.put(
+            f"/api/admin/users/{admin_user.id}",
+            json={"role": "PARENT"},
+            headers=auth_headers_manager,
+        )
+        assert r.status_code in (403, 404, 405, 422), (
+            f"Manager updated admin user via admin endpoint — IDOR! status={r.status_code}"
+        )
+
+    def test_bulk_delete_above_threshold_requires_confirmation(
+        self, client, test_db, admin_user, auth_headers_admin
+    ):
+        """Bulk deleting > BULK_CONFIRMATION_THRESHOLD users must require a confirmation token."""
+        r = client.post(
+            "/api/admin/users/bulk-delete",
+            json={"user_ids": list(range(900000, 900025))},  # 25 non-existent IDs
+            headers=auth_headers_admin,
+        )
+        if r.status_code == 200:
+            body = r.json()
+            assert body.get("requires_confirmation") is True, (
+                "Bulk delete of 25 users succeeded without a confirmation token — dangerous!"
+            )
+        else:
+            assert r.status_code in (400, 404, 422, 429)
+
+
+# =============================================================================
+# CSP Header Validation Tests
+# =============================================================================
+
+class TestCSPHeaders:
+    """Verify that security_headers_middleware emits the required CSP directives.
+
+    These tests guard against accidental removal of directives that were added
+    to harden the Content-Security-Policy during the 2026-06-17 audit.
+    """
+
+    # Any endpoint that returns an HTTP response is sufficient — we just need
+    # the middleware to fire so we can inspect the CSP header.
+    _PROBE_PATH = "/"
+
+    def _get_csp(self, client) -> str:
+        r = client.get(self._PROBE_PATH, follow_redirects=False)
+        csp = r.headers.get("content-security-policy", "")
+        assert csp, "Content-Security-Policy header is missing from the response"
+        return csp
+
+    def test_object_src_none(self, client):
+        """object-src 'none' must be present (blocks Flash/Java legacy plugins)."""
+        csp = self._get_csp(client)
+        assert "object-src 'none'" in csp, (
+            f"object-src 'none' not found in CSP.\nFull CSP: {csp}"
+        )
+
+    def test_worker_src_self_blob(self, client):
+        """worker-src 'self' blob: must be present (deck.gl WebGL workers need blob:)."""
+        csp = self._get_csp(client)
+        assert "worker-src" in csp, f"worker-src directive missing.\nFull CSP: {csp}"
+        assert "blob:" in csp, (
+            f"blob: missing from CSP; deck.gl workers will break.\nFull CSP: {csp}"
+        )
+
+    def test_frame_ancestors_none(self, client):
+        """frame-ancestors 'none' must be present (blocks clickjacking)."""
+        csp = self._get_csp(client)
+        assert "frame-ancestors 'none'" in csp, (
+            f"frame-ancestors 'none' not found in CSP.\nFull CSP: {csp}"
+        )
+
+    def test_base_uri_self(self, client):
+        """base-uri 'self' must be present (prevents base-tag hijacking)."""
+        csp = self._get_csp(client)
+        assert "base-uri 'self'" in csp, (
+            f"base-uri 'self' not found in CSP.\nFull CSP: {csp}"
+        )
+
+    def test_form_action_self(self, client):
+        """form-action 'self' must be present (prevents form submission hijacking)."""
+        csp = self._get_csp(client)
+        assert "form-action 'self'" in csp, (
+            f"form-action 'self' not found in CSP.\nFull CSP: {csp}"
+        )
+
+    def test_default_src_self(self, client):
+        """default-src 'self' must be present (catch-all fallback)."""
+        csp = self._get_csp(client)
+        assert "default-src 'self'" in csp, (
+            f"default-src 'self' not found in CSP.\nFull CSP: {csp}"
+        )
+
+    def test_x_frame_options_header(self, client):
+        """X-Frame-Options: DENY must be set alongside frame-ancestors."""
+        r = client.get(self._PROBE_PATH, follow_redirects=False)
+        xfo = r.headers.get("x-frame-options", "")
+        assert xfo.upper() == "DENY", (
+            f"X-Frame-Options should be DENY, got: {xfo!r}"
+        )
+
+    def test_x_content_type_options(self, client):
+        """X-Content-Type-Options: nosniff must be set."""
+        r = client.get(self._PROBE_PATH, follow_redirects=False)
+        assert r.headers.get("x-content-type-options", "").lower() == "nosniff"
+
+    def test_referrer_policy(self, client):
+        """Referrer-Policy must be set (any value is acceptable, absence is not)."""
+        r = client.get(self._PROBE_PATH, follow_redirects=False)
+        assert r.headers.get("referrer-policy"), "Referrer-Policy header is missing"
+
+    def test_permissions_policy(self, client):
+        """Permissions-Policy restricting camera/mic/geo must be present."""
+        r = client.get(self._PROBE_PATH, follow_redirects=False)
+        pp = r.headers.get("permissions-policy", "")
+        assert pp, "Permissions-Policy header is missing"
+        for feature in ("camera", "microphone", "geolocation"):
+            assert feature in pp, f"Permissions-Policy missing {feature} restriction"
+
+    def test_script_src_includes_unpkg(self, client):
+        """script-src must allow unpkg.com — deck.gl is loaded from there."""
+        csp = self._get_csp(client)
+        assert "unpkg.com" in csp, (
+            f"unpkg.com missing from CSP script-src; deck.gl will be blocked.\nFull CSP: {csp}"
+        )

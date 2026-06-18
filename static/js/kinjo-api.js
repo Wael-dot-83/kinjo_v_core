@@ -79,6 +79,14 @@ class KinJoAPI {
    * Generic request method using centralized auth
    */
   async request(endpoint, options = {}) {
+    options.headers = { ...(options.headers || {}) };
+    const hasContentType = Object.keys(options.headers).some(
+      (key) => key.toLowerCase() === "content-type"
+    );
+    if (typeof options.body === "string" && !hasContentType) {
+      options.headers["Content-Type"] = "application/json";
+    }
+
     const response = await fetchWithAuth(`${this.baseURL}${endpoint}`, options);
 
     // fetchWithAuth already throws on non-OK responses and redirects on 401,
@@ -622,8 +630,7 @@ class KinJoAPI {
     formData.append("file", file);
 
     const url = `/api/admin/users/import-csv?dry_run=${dryRun}`;
-    const token = AuthStorage.getToken();
-    if (!token) {
+    if (!this.isAuthenticated()) {
       window.location.href = "/login";
       throw new Error(
         kinjoApiText("auth.login.required", "يتطلب تسجيل الدخول", "Sign-in is required")
@@ -632,9 +639,6 @@ class KinJoAPI {
 
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
       body: formData,
     });
 
@@ -653,6 +657,36 @@ class KinJoAPI {
   }
 
   /**
+   * Download CSV import error report.
+   * @param {Array} errors - Error list returned by importUsersCSV
+   */
+  async downloadCSVErrorReport(errors) {
+    if (!this.isAuthenticated()) {
+      window.location.href = "/login";
+      throw new Error("Sign-in is required");
+    }
+    const response = await fetch("/api/admin/users/import-csv/error-report", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ errors }),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to download error report");
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `import_errors_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
    * Export users to CSV/JSON
    * @param {string} format - 'csv' or 'json'
    * @param {Object} filters - Optional filters (role, status, kindergarten_id)
@@ -662,19 +696,14 @@ class KinJoAPI {
     // This returns a file, handle differently
     const queryString = new URLSearchParams(params).toString();
     const url = `/api/admin/users/export?${queryString}`;
-    const token = AuthStorage.getToken();
-    if (!token) {
+    if (!this.isAuthenticated()) {
       window.location.href = "/login";
       throw new Error(
         kinjoApiText("auth.login.required", "يتطلب تسجيل الدخول", "Sign-in is required")
       );
     }
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(kinjoApiText("common.export_failed", "فشل التصدير", "Export failed"));

@@ -1,21 +1,23 @@
-{% extends 'base.html' %}
-{% from 'components/page-header.html' import page_header %}
+﻿{% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Incident Report Details{% else %}تفاصيل تقرير الحوادث{% endif %}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Incident Report Details{% else %}تفاصيل تقرير الحوادث{% endif %} — KinJo{% endblock %}
 
-{% block page_header %}
-{{ page_header(
-title="Incident Report Details" if ui_lang == 'en' else "تفاصيل تقرير الحوادث",
-icon="bi-file-earmark-text",
-breadcrumbs=[
-{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
-{"label": "Daily Reports" if ui_lang == 'en' else "التقارير اليومية", "url": "/daily-reports"},
-{"label": "Report Details" if ui_lang == 'en' else "تفاصيل التقرير", "url": None}
-]
-) }}
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="admin-breadcrumb-separator">/</span>
+<a href="/admin/reports/incidents" class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Report Details{% else %}تفاصيل التقرير{% endif %}</span>
 {% endblock %}
 
 {% block content %}
+<div class="admin-page-header mb-4">
+  <h1 class="admin-page-title">
+    <i class="bi bi-file-earmark-text me-2"></i>
+    {% if ui_lang == 'en' %}Incident Report Details{% else %}تفاصيل تقرير الحوادث{% endif %}
+  </h1>
+</div>
+
 <div class="row">
     <div class="col-12">
         <div class="card shadow-sm">
@@ -111,7 +113,7 @@ breadcrumbs=[
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
     integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
     crossorigin="anonymous"></script>

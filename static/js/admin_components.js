@@ -107,9 +107,12 @@ class AdminComponents {
       onClose = null,
     } = options;
 
+    const titleId = `admin-modal-title-${Date.now()}`;
+
     // Create modal overlay
     const overlay = document.createElement("div");
     overlay.className = "admin-modal-overlay";
+    overlay.setAttribute("role", "presentation");
     overlay.style.cssText = `
       position: fixed;
       top: 0;
@@ -125,9 +128,13 @@ class AdminComponents {
       transition: opacity 0.25s ease;
     `;
 
-    // Create modal dialog
+    // Create modal dialog with proper ARIA roles
     const modal = document.createElement("div");
     modal.className = `admin-modal admin-modal-${size}`;
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    if (title) modal.setAttribute("aria-labelledby", titleId);
+    modal.tabIndex = -1;
     modal.style.cssText = `
       background: white;
       border-radius: 12px;
@@ -139,6 +146,7 @@ class AdminComponents {
       transition: transform 0.25s ease;
       display: flex;
       flex-direction: column;
+      outline: none;
     `;
 
     // Modal header
@@ -155,6 +163,7 @@ class AdminComponents {
 
       if (title) {
         const titleElement = document.createElement("h3");
+        titleElement.id = titleId;
         titleElement.className = "admin-modal-title";
         titleElement.textContent = title;
         titleElement.style.cssText = `
@@ -224,35 +233,46 @@ class AdminComponents {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    // Animate in
+    // Animate in and shift focus into the modal
     requestAnimationFrame(() => {
       overlay.style.opacity = "1";
       modal.style.transform = "scale(1)";
+      modal.focus();
     });
 
-    // Store modal data
-    modal._adminModal = {
-      overlay,
-      onClose,
+    // Focus trap: keep Tab/Shift+Tab inside the modal
+    const FOCUSABLE = 'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])';
+    const trapFocus = (e) => {
+      if (e.key !== "Tab") return;
+      const focusable = Array.from(modal.querySelectorAll(FOCUSABLE));
+      if (!focusable.length) { e.preventDefault(); return; }
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      }
     };
+    modal.addEventListener("keydown", trapFocus);
+
+    // Store modal data
+    modal._adminModal = { overlay, onClose, trapFocus };
 
     return modal;
   }
 
   closeModal(modal) {
-    const { overlay, onClose } = modal._adminModal;
+    const { overlay, onClose, trapFocus } = modal._adminModal;
+
+    // Remove focus trap listener
+    if (trapFocus) modal.removeEventListener("keydown", trapFocus);
 
     // Animate out
     overlay.style.opacity = "0";
     modal.style.transform = "scale(0.9)";
 
     setTimeout(() => {
-      if (overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
-      }
-      if (onClose) {
-        onClose();
-      }
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      if (onClose) onClose();
     }, 250);
   }
 
@@ -275,12 +295,16 @@ class AdminComponents {
     // Create notification container if it doesn't exist
     let container = document.querySelector(".admin-notifications");
     if (!container) {
+      const isRtl = document.documentElement.dir === "rtl";
       container = document.createElement("div");
       container.className = "admin-notifications";
+      container.setAttribute("role", "region");
+      container.setAttribute("aria-live", "polite");
+      container.setAttribute("aria-label", isRtl ? "الإشعارات" : "Notifications");
       container.style.cssText = `
         position: fixed;
         top: 24px;
-        right: 24px;
+        ${isRtl ? "left" : "right"}: 24px;
         z-index: 1070;
         display: flex;
         flex-direction: column;
@@ -293,6 +317,8 @@ class AdminComponents {
     // Create notification
     const notification = document.createElement("div");
     notification.className = `admin-notification admin-notification-${type}`;
+    const isRtl = document.documentElement.dir === "rtl";
+    const slideOut = isRtl ? "translateX(-100%)" : "translateX(100%)";
     notification.style.cssText = `
       background: white;
       border-radius: 8px;
@@ -301,9 +327,9 @@ class AdminComponents {
       display: flex;
       align-items: flex-start;
       gap: 12px;
-      transform: translateX(100%);
+      transform: ${slideOut};
       transition: transform 0.3s ease;
-      border-left: 4px solid;
+      border-${isRtl ? "right" : "left"}: 4px solid;
     `;
 
     // Set border color based on type
@@ -391,7 +417,8 @@ class AdminComponents {
   }
 
   removeNotification(notification) {
-    notification.style.transform = "translateX(100%)";
+    const isRtl = document.documentElement.dir === "rtl";
+    notification.style.transform = isRtl ? "translateX(-100%)" : "translateX(100%)";
     setTimeout(() => {
       if (notification.parentNode) {
         notification.parentNode.removeChild(notification);
@@ -429,24 +456,19 @@ class AdminComponents {
 
     if (!trigger || !menu) return;
 
+    // Set ARIA attributes
+    trigger.setAttribute("aria-haspopup", "true");
+    trigger.setAttribute("aria-expanded", "false");
+
     trigger.addEventListener("click", (e) => {
       e.stopPropagation();
       this.toggleDropdown(dropdown);
+      trigger.setAttribute("aria-expanded", dropdown.classList.contains("open") ? "true" : "false");
     });
 
-    // Close on outside click
-    document.addEventListener("click", (e) => {
-      if (!dropdown.contains(e.target)) {
-        this.closeDropdown(dropdown);
-      }
-    });
-
-    // Close on escape
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        this.closeDropdown(dropdown);
-      }
-    });
+    // Outside-click and Escape are handled by the shared global listeners in
+    // setupEventListeners / handleGlobalClick / handleGlobalKeydown — no extra
+    // document listeners needed here to avoid listener accumulation.
   }
 
   toggleDropdown(dropdown) {
@@ -484,25 +506,34 @@ class AdminComponents {
 
   setupTabs(tabs) {
     const tabButtons = tabs.querySelectorAll(".admin-tab-button");
+    const tabPanels  = tabs.querySelectorAll(".admin-tab-panel");
 
+    // Wire up ARIA roles on first setup
+    tabs.setAttribute("role", "tablist");
     tabButtons.forEach((button, index) => {
-      button.addEventListener("click", () => {
-        this.activateTab(tabs, index);
-      });
+      const panelId = `admin-tab-panel-${Date.now()}-${index}`;
+      const btnId   = `admin-tab-btn-${Date.now()}-${index}`;
+      button.setAttribute("role", "tab");
+      button.id = btnId;
+      button.setAttribute("aria-selected", index === 0 ? "true" : "false");
+      if (tabPanels[index]) {
+        tabPanels[index].setAttribute("role", "tabpanel");
+        tabPanels[index].id = panelId;
+        tabPanels[index].setAttribute("aria-labelledby", btnId);
+      }
+      button.addEventListener("click", () => this.activateTab(tabs, index));
     });
   }
 
   activateTab(tabs, index) {
     const tabButtons = tabs.querySelectorAll(".admin-tab-button");
-    const tabPanels = tabs.querySelectorAll(".admin-tab-panel");
+    const tabPanels  = tabs.querySelectorAll(".admin-tab-panel");
 
-    // Deactivate all tabs
-    tabButtons.forEach((button) => button.classList.remove("active"));
-    tabPanels.forEach((panel) => panel.classList.remove("active"));
-
-    // Activate selected tab
-    tabButtons[index].classList.add("active");
-    tabPanels[index].classList.add("active");
+    tabButtons.forEach((button, i) => {
+      button.classList.toggle("active", i === index);
+      button.setAttribute("aria-selected", i === index ? "true" : "false");
+    });
+    tabPanels.forEach((panel, i) => panel.classList.toggle("active", i === index));
   }
 
   // ============================================================================
@@ -678,3 +709,218 @@ document.addEventListener("DOMContentLoaded", () => {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = AdminComponents;
 }
+
+// ============================================================================
+// OFFLINE BANNER
+// Displays a non-dismissible banner when the browser loses connectivity.
+// Retries connectivity automatically every 10 seconds.
+// ============================================================================
+
+(function initOfflineBanner() {
+  const BANNER_ID = "kinjo-offline-banner";
+  const RETRY_INTERVAL_MS = 10_000;
+
+  function _createBanner() {
+    const banner = document.createElement("div");
+    banner.id = BANNER_ID;
+    banner.setAttribute("role", "alert");
+    banner.setAttribute("aria-live", "assertive");
+    banner.style.cssText = [
+      "position:fixed",
+      "top:0",
+      "left:0",
+      "right:0",
+      "z-index:99999",
+      "background:#b91c1c",
+      "color:#fff",
+      "text-align:center",
+      "padding:10px 16px",
+      "font-size:14px",
+      "font-weight:600",
+      "display:none",
+      "align-items:center",
+      "justify-content:center",
+      "gap:12px",
+    ].join(";");
+
+    const msg = document.createElement("span");
+    msg.textContent = window.AdminI18n
+      ? window.AdminI18n.translate("components.connectivity_error", "Cannot connect to server. Retrying…")
+      : "Cannot connect to server. Retrying…";
+
+    const retryBtn = document.createElement("button");
+    retryBtn.textContent = window.AdminI18n
+      ? window.AdminI18n.translate("components.retry_now", "Retry now")
+      : "Retry now";
+    retryBtn.style.cssText =
+      "background:rgba(255,255,255,0.25);border:1px solid #fff;border-radius:4px;" +
+      "color:#fff;cursor:pointer;font-size:13px;padding:2px 10px;";
+    retryBtn.addEventListener("click", () => _checkConnectivity());
+
+    banner.appendChild(msg);
+    banner.appendChild(retryBtn);
+    document.body.prepend(banner);
+    return banner;
+  }
+
+  function _getBanner() {
+    return document.getElementById(BANNER_ID) || _createBanner();
+  }
+
+  function _showBanner() {
+    const b = _getBanner();
+    b.style.display = "flex";
+  }
+
+  function _hideBanner() {
+    const b = document.getElementById(BANNER_ID);
+    if (b) b.style.display = "none";
+  }
+
+  function _checkConnectivity() {
+    fetch("/api/health", { method: "HEAD", cache: "no-store" })
+      .then((r) => {
+        if (r.ok) _hideBanner();
+        else _showBanner();
+      })
+      .catch(() => _showBanner());
+  }
+
+  window.addEventListener("offline", _showBanner);
+  window.addEventListener("online", _checkConnectivity);
+
+  if (!navigator.onLine) {
+    _showBanner();
+  }
+
+  setInterval(_checkConnectivity, RETRY_INTERVAL_MS);
+})();
+
+// ============================================================================
+// SESSION TIMEOUT
+// After SESSION_TIMEOUT_MINUTES minutes of inactivity, redirect to /login.
+// The timeout resets on any mouse/keyboard/touch event.
+// ============================================================================
+
+(function initSessionTimeout() {
+  // Server-side setting injected via a meta tag:
+  //   <meta name="session-timeout-minutes" content="30">
+  // Falls back to 30 minutes if not present.
+  const metaEl = document.querySelector('meta[name="session-timeout-minutes"]');
+  const TIMEOUT_MS = parseInt(metaEl ? metaEl.getAttribute("content") : "30", 10) * 60 * 1000;
+  const WARNING_BEFORE_MS = 60_000; // show warning 60 s before logout
+  const WARNING_BANNER_ID = "kinjo-session-warning";
+
+  let _logoutTimer = null;
+  let _warningTimer = null;
+
+  function _clearTimers() {
+    if (_logoutTimer) clearTimeout(_logoutTimer);
+    if (_warningTimer) clearTimeout(_warningTimer);
+  }
+
+  function _hideWarning() {
+    const el = document.getElementById(WARNING_BANNER_ID);
+    if (el) el.style.display = "none";
+  }
+
+  function _showWarning() {
+    let el = document.getElementById(WARNING_BANNER_ID);
+    if (!el) {
+      el = document.createElement("div");
+      el.id = WARNING_BANNER_ID;
+      el.setAttribute("role", "alert");
+      el.style.cssText = [
+        "position:fixed",
+        "bottom:24px",
+        "right:24px",
+        "z-index:99998",
+        "background:#92400e",
+        "color:#fff",
+        "border-radius:8px",
+        "padding:14px 20px",
+        "font-size:14px",
+        "font-weight:600",
+        "box-shadow:0 4px 12px rgba(0,0,0,0.3)",
+        "display:flex",
+        "align-items:center",
+        "gap:12px",
+      ].join(";");
+
+      const msg = document.createElement("span");
+      msg.textContent = window.AdminI18n
+        ? window.AdminI18n.translate("components.session_warning", "Your session will expire in 1 minute due to inactivity.")
+        : "Your session will expire in 1 minute due to inactivity.";
+
+      const stayBtn = document.createElement("button");
+      stayBtn.textContent = window.AdminI18n
+        ? window.AdminI18n.translate("components.stay_logged_in", "Stay logged in")
+        : "Stay logged in";
+      stayBtn.style.cssText =
+        "background:rgba(255,255,255,0.2);border:1px solid #fff;border-radius:4px;" +
+        "color:#fff;cursor:pointer;font-size:13px;padding:4px 12px;";
+      stayBtn.addEventListener("click", () => {
+        _resetTimer();
+        _hideWarning();
+      });
+
+      el.appendChild(msg);
+      el.appendChild(stayBtn);
+      document.body.appendChild(el);
+    }
+    el.style.display = "flex";
+  }
+
+  async function _doLogout() {
+    _hideWarning();
+    sessionStorage.setItem("kinjo_session_expired", "1");
+    try {
+      if (window.AuthService && typeof AuthService.logout === "function") {
+        await AuthService.logout();
+      } else {
+        await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
+      }
+    } catch (e) {
+      // best-effort: proceed regardless
+    }
+    window.location.href = "/login?reason=timeout";
+  }
+
+  function _resetTimer() {
+    _clearTimers();
+    _warningTimer = setTimeout(_showWarning, TIMEOUT_MS - WARNING_BEFORE_MS);
+    _logoutTimer = setTimeout(_doLogout, TIMEOUT_MS);
+  }
+
+  // Throttle activity handling: high-frequency events (mousemove, scroll) would
+  // otherwise clear and recreate timers hundreds of times per second.
+  let _lastActivity = 0;
+  const _ACTIVITY_THROTTLE_MS = 1000;
+  function _onActivity() {
+    const now = Date.now();
+    if (now - _lastActivity < _ACTIVITY_THROTTLE_MS) return;
+    _lastActivity = now;
+    _resetTimer();
+  }
+
+  const ACTIVITY_EVENTS = ["mousedown", "mousemove", "keydown", "touchstart", "scroll"];
+  ACTIVITY_EVENTS.forEach((evt) => {
+    document.addEventListener(evt, _onActivity, { passive: true });
+  });
+
+  _resetTimer();
+
+  // Show "session expired" message if we were redirected here after timeout.
+  if (sessionStorage.getItem("kinjo_session_expired") === "1") {
+    sessionStorage.removeItem("kinjo_session_expired");
+    const notice = document.createElement("div");
+    notice.textContent = window.AdminI18n
+      ? window.AdminI18n.translate("components.session_expired", "Your session expired due to inactivity. Please sign in again.")
+      : "Your session expired due to inactivity. Please sign in again.";
+    notice.style.cssText =
+      "position:fixed;top:0;left:0;right:0;z-index:99999;background:#1e40af;" +
+      "color:#fff;text-align:center;padding:10px;font-size:14px;font-weight:600;";
+    document.body.prepend(notice);
+    setTimeout(() => notice.remove(), 5000);
+  }
+})();

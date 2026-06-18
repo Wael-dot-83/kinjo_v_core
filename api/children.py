@@ -20,6 +20,8 @@ from config import settings
 from database import get_db
 from dependencies import get_current_user
 from i18n import gettext as _api
+from storage_service import compress_image_in_place
+from virus_scan_service import VirusFoundError, VirusScanUnavailable, scan_bytes, scan_error_message
 
 
 def _ulang(user) -> str:
@@ -237,13 +239,31 @@ def create_incident_json(
             raise HTTPException(status_code=404, detail="Child not found")
         raise HTTPException(status_code=403, detail="Child is not enrolled in this kindergarten")
 
+    occurred_dt = datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00'))
+    if occurred_dt > datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="occurred_at cannot be in the future")
+
+    # Duplicate incident detection (same child, type, day)
+    incident_date = occurred_dt.date()
+    existing_incident = db.query(models.Incident).filter(
+        models.Incident.child_id == incident_data.child_id,
+        models.Incident.kindergarten_id == kindergarten_id,
+        func.date(models.Incident.occurred_at) == incident_date,
+        models.Incident.type == incident_type,
+    ).first()
+    if existing_incident:
+        raise HTTPException(
+            status_code=409,
+            detail=f"An incident of this type for this child already exists for {incident_date}"
+        )
+
     incident = models.Incident(
         child_id=incident_data.child_id,
         kindergarten_id=kindergarten_id,
         type=incident_type,
         severity_level=severity,
         description=incident_data.description,
-        occurred_at=datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00')),
+        occurred_at=occurred_dt,
         followup_required_flag=incident_data.followup_required_flag or False,
         notify_parent_at=datetime.now(timezone.utc),
         reported_by=current_user.id,
@@ -323,40 +343,77 @@ def create_incident(
     description: str,
     occurred_at: str,
     followup_required: bool = False,
+    parent_informed: bool = False,
+    parent_not_informed_reason: Optional[str] = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create incident report (Manager only)"""
     validators.validate_manager_role(current_user)
     validators.validate_kindergarten_scope(current_user, kindergarten_id)
-    
+
+    # Parse and validate occurred_at is not in the future
+    try:
+        occurred_dt = datetime.fromisoformat(occurred_at)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid occurred_at format. Use ISO 8601.")
+    if occurred_dt > datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="occurred_at cannot be in the future")
+
+    # Enforce parent_informed business rule
+    if not parent_informed and not (parent_not_informed_reason or "").strip():
+        raise HTTPException(status_code=400, detail="Reason required when parent is not informed")
+
     active_enrollment = db.query(models.EnrollmentApplication).filter(
         models.EnrollmentApplication.child_id == child_id,
         models.EnrollmentApplication.kindergarten_id == kindergarten_id,
         models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
     ).first()
+    if not active_enrollment:
+        raise HTTPException(status_code=400, detail="Child is not actively enrolled in this kindergarten")
+
+    # Duplicate incident detection (same child, type, day)
+    incident_date = occurred_dt.date()
+    existing_incident = db.query(models.Incident).filter(
+        models.Incident.child_id == child_id,
+        models.Incident.kindergarten_id == kindergarten_id,
+        func.date(models.Incident.occurred_at) == incident_date,
+        models.Incident.type == models.IncidentType(incident_type.upper()),
+    ).first()
+    if existing_incident:
+        raise HTTPException(
+            status_code=409,
+            detail=f"An incident of this type for this child already exists for {incident_date}"
+        )
+
+    try:
+        inc_type = models.IncidentType(incident_type.upper())
+        sev_level = models.SeverityLevel(severity_level.upper())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
 
     incident = models.Incident(
         child_id=child_id,
         kindergarten_id=kindergarten_id,
-        type=models.IncidentType(incident_type.upper()),
-        severity_level=models.SeverityLevel(severity_level.upper()),
+        type=inc_type,
+        severity_level=sev_level,
         description=description,
-        occurred_at=datetime.fromisoformat(occurred_at),
+        occurred_at=occurred_dt,
         followup_required_flag=followup_required,
         notify_parent_at=datetime.now(timezone.utc),
         reported_by=current_user.id,
-        class_id=active_enrollment.class_id if active_enrollment else None,
+        class_id=active_enrollment.class_id,
+        parent_informed=parent_informed,
+        parent_not_informed_reason=parent_not_informed_reason,
     )
-    
+
     if followup_required:
-        # Set 48 hour SLA
         incident.followup_sla_deadline = datetime.now(timezone.utc) + timedelta(hours=48)
-    
+
     db.add(incident)
     db.commit()
     db.refresh(incident)
-    
+
     return {
         "id": incident.id,
         "type": incident.type.value,
@@ -429,8 +486,18 @@ def upload_child_photo(
     content = file.file.read()
     if len(content) > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
         raise HTTPException(status_code=413, detail=f"File too large. Max {settings.MAX_UPLOAD_SIZE_MB} MB.")
+
+    lang = _ulang(current_user)
+    try:
+        scan_bytes(content)
+    except VirusFoundError:
+        raise HTTPException(status_code=400, detail=scan_error_message(lang, infected=True))
+    except VirusScanUnavailable:
+        raise HTTPException(status_code=503, detail=scan_error_message(lang, infected=False))
+
     with open(filepath, "wb") as f:
         f.write(content)
+    compress_image_in_place(filepath, ext)
 
     photo_url = f"/{settings.STATIC_DIR}/uploads/photos/{filename}"
     child.photo_url = photo_url
@@ -483,6 +550,15 @@ def upload_child_document(
     content = file.file.read()
     if len(content) > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
         raise HTTPException(status_code=413, detail=f"File too large. Max {settings.MAX_UPLOAD_SIZE_MB} MB.")
+
+    lang = _ulang(current_user)
+    try:
+        scan_bytes(content)
+    except VirusFoundError:
+        raise HTTPException(status_code=400, detail=scan_error_message(lang, infected=True))
+    except VirusScanUnavailable:
+        raise HTTPException(status_code=503, detail=scan_error_message(lang, infected=False))
+
     with open(filepath, "wb") as f:
         f.write(content)
 

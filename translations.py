@@ -143,5 +143,5 @@ def setup_translator(language: str = "en") -> Callable:
 
 
 def get_translation(key: str, language: str = "en") -> str:
-    """Get translation for a key"""
-    return key
+    """Get translation for a key, falling back to the key itself when missing."""
+    return setup_translator(language)(key)

@@ -17,35 +17,44 @@
         </button>
         {% endif %}
 
+        <!-- Mobile-only language toggle: always visible in the header, not hidden inside the collapsed menu -->
+        <button class="btn btn-link d-lg-none navbar-icon-btn order-2 ms-auto" type="button" onclick="toggleLanguage()"
+            aria-label="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}" data-i18n-aria="nav.language_toggle">
+            <i class="bi bi-translate fs-5"></i>
+        </button>
+
         <!-- Mobile Toggle -->
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
             aria-controls="navbarMain" aria-expanded="false" aria-label="{% if ui_lang == 'en' %}Toggle navigation{% else %}تبديل التنقل{% endif %}" data-i18n-aria="nav.toggle_menu">
             <span class="navbar-toggler-icon"></span>
         </button>
 
+        <!-- Search Bar (for staff) — lives in the header itself, never inside
+             the collapsible hamburger menu, so it stays visible at every
+             width (GWS R.4.1-011: "obvious and consistent on the header"). -->
+        {% if current_user and current_user.role.value != 'PARENT' %}
+        <form class="d-flex navbar-search-form" role="search" id="globalSearchForm">
+            <div class="input-group">
+                <input type="search" class="form-control" placeholder="{% if ui_lang == 'en' %}Search for child, parent...{% else %}البحث عن طفل، ولي أمر...{% endif %}"
+                    data-i18n-placeholder="nav.search_placeholder" aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}" data-i18n-aria="common.search"
+                    id="globalSearchInput">
+                <button class="btn btn-light" type="submit" aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}" data-i18n-aria="common.search">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </form>
+        {% endif %}
+
         <!-- Navbar Content -->
         <div class="collapse navbar-collapse" id="navbarMain">
-            <!-- Search Bar (for staff) -->
-            {% if current_user and current_user.role.value != 'PARENT' %}
-            <form class="d-flex mx-auto navbar-search-form" role="search" id="globalSearchForm" style="max-width: 400px;">
-                <div class="input-group">
-                    <input type="search" class="form-control" placeholder="{% if ui_lang == 'en' %}Search for child, parent...{% else %}البحث عن طفل، ولي أمر...{% endif %}"
-                        data-i18n-placeholder="nav.search_placeholder" aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}" data-i18n-aria="common.search"
-                        id="globalSearchInput">
-                    <button class="btn btn-light" type="submit" aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}" data-i18n-aria="common.search">
-                        <i class="bi bi-search"></i>
-                    </button>
-                </div>
-            </form>
-            {% endif %}
-
             <!-- Right Side Navigation -->
             {% if current_user %}
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
                 <!-- Notifications -->
                 <li class="nav-item dropdown">
                     <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown"
-                        aria-expanded="false" id="notificationsDropdown">
+                        aria-expanded="false" id="notificationsDropdown"
+                        aria-label="{% if ui_lang == 'en' %}Notifications{% else %}الإشعارات{% endif %}" data-i18n-aria="nav.notifications">
                         <i class="bi bi-bell fs-5"></i>
                         <span
                             class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge"
@@ -79,12 +88,40 @@
                     </a>
                 </li>
 
-                <!-- Language Toggle -->
+                <!-- Home -->
                 <li class="nav-item">
+                    <a class="nav-link" href="/dashboard"
+                        title="{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}" data-i18n-title="nav.home">
+                        <i class="bi bi-house fs-5"></i>
+                        <span class="d-none d-lg-inline ms-1" data-i18n="nav.home">{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}</span>
+                    </a>
+                </li>
+
+                <!-- FAQ -->
+                <li class="nav-item">
+                    <a class="nav-link" href="/faq"
+                        title="{% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}" data-i18n-title="nav.faq">
+                        <i class="bi bi-patch-question fs-5"></i>
+                        <span class="d-none d-lg-inline ms-1" data-i18n="nav.faq">{% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}</span>
+                    </a>
+                </li>
+
+                <!-- Sitemap -->
+                <li class="nav-item">
+                    <a class="nav-link" href="/sitemap"
+                        title="{% if ui_lang == 'en' %}Sitemap{% else %}خريطة الموقع{% endif %}" data-i18n-title="nav.sitemap">
+                        <i class="bi bi-diagram-3 fs-5"></i>
+                        <span class="d-none d-lg-inline ms-1" data-i18n="nav.sitemap">{% if ui_lang == 'en' %}Sitemap{% else %}خريطة الموقع{% endif %}</span>
+                    </a>
+                </li>
+
+                <!-- Language Toggle (desktop only — a mobile-always-visible copy lives in the header above) -->
+                <li class="nav-item d-none d-lg-block">
                     <button class="nav-link navbar-action-btn" type="button" onclick="toggleLanguage()"
                         title="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}"
                         data-i18n-title="nav.language_toggle" aria-label="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}" data-i18n-aria="nav.language_toggle">
                         <i class="bi bi-translate fs-5"></i>
+                        <span class="d-none d-lg-inline ms-1">{% if ui_lang == 'en' %}العربية{% else %}English{% endif %}</span>
                     </button>
                 </li>
 

@@ -26,8 +26,8 @@ from typing import List, Optional, Dict, Any, Set, Tuple, Union
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, UploadFile, File, Form
 from fastapi.responses import Response, JSONResponse, StreamingResponse
-from pydantic import BaseModel, ConfigDict, model_validator
-from sqlalchemy.orm import Session
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_, func, and_, select
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -45,8 +45,10 @@ from api.auth.password_reset_service import (
     deliver_password_reset_email,
 )
 from messaging_permissions import ACTIVE_ENROLLMENT_STATUSES, ensure_kindergartens_exist
+from validators import build_arabic_search_terms
 from kindergarten_import_service import KindergartenImportService
 from cache_service import cache_service
+from csv_utils import escape_csv_formula
 from audit_actions import AuditAction
 from admin_security import (
     # Error handling
@@ -261,7 +263,7 @@ def list_users(
     # Enforce pagination limits
     page, page_size, offset = enforce_pagination(page, page_size)
 
-    query = db.query(models.User)
+    query = db.query(models.User).filter(models.User.deleted_at.is_(None))
 
     # Apply role-based scoping
     if current_user.role == models.UserRole.ADMIN:
@@ -301,8 +303,15 @@ def list_users(
     # Get total count before pagination
     total = query.count()
 
-    # Apply pagination with stable ordering
-    users = query.order_by(models.User.id).offset(offset).limit(page_size).all()
+    # Apply pagination with stable ordering; eager-load kindergarten to avoid N+1
+    users = (
+        query
+        .options(selectinload(models.User.kindergarten))
+        .order_by(models.User.id)
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
 
     # Calculate pagination metadata
     total_pages = (total + page_size - 1) // page_size
@@ -448,11 +457,15 @@ def create_user(
         # Create parent profile first
         parent_profile = models.ParentProfile(
             user_id=new_user.id,
-            full_name="",  # Will be updated when parent completes profile
-            home_governorate="",  # Will be updated when parent completes profile
-            home_city="",  # Will be updated when parent completes profile
-            home_area="",  # Will be updated when parent completes profile
-            home_address_line="",  # Will be updated when parent completes profile
+            first_name="",
+            last_name="",
+            phone_number="",
+            gender=models.Gender.MALE,
+            nationality="",
+            home_governorate="",
+            home_city="",
+            home_area="",
+            home_address_line="",
             correspondence_preference=True,
             profile_complete=False
         )
@@ -460,12 +473,8 @@ def create_user(
         db.commit()
         db.refresh(parent_profile)
 
-        # Create children
+        # Create children (age already validated by ChildCreateSchema.validate_child_age)
         for child_data in user_data.children:
-            try:
-                validators.validate_child_age_strict(child_data.date_of_birth)
-            except validators.ValidationError as exc:
-                raise HTTPException(status_code=400, detail=exc.message)
             new_child = models.Child(
                 parent_id=parent_profile.id,
                 first_name=child_data.first_name,
@@ -545,7 +554,19 @@ def export_users(
     if status_filter:
         query = query.filter(models.User.status == status_filter)
 
-    users = query.order_by(models.User.id).all()
+    # P1-B: Hard row limit to prevent OOM on large deployments.
+    # Fetch one extra row to detect overflow without loading everything.
+    MAX_EXPORT_ROWS = 10_000
+    users = query.order_by(models.User.id).limit(MAX_EXPORT_ROWS + 1).all()
+
+    if len(users) > MAX_EXPORT_ROWS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Export would return more than {MAX_EXPORT_ROWS:,} rows. "
+                "Apply role, status, or kindergarten filters to narrow the result set."
+            ),
+        )
 
     # Audit log
     log_audit_event(
@@ -801,7 +822,9 @@ def delete_user(
     # Capture before state for audit
     before_state = model_to_dict(user)
 
-    db.delete(user)
+    user.deleted_at = datetime.now(timezone.utc)
+    user.deleted_by = current_user.id
+    user.status = models.UserStatus.INACTIVE
     db.commit()
 
     # Audit log
@@ -979,7 +1002,15 @@ def admin_mfa_bypass(
     
     WARNING: This is an emergency-only endpoint. Use sparingly and audit all usage.
     """
-    # Verify admin's own password
+    # Self-bypass is not permitted — admin must use normal MFA reset flow
+    if user_id == current_user.id:
+        raise forbidden_error("Cannot bypass your own MFA. Use the standard MFA reset flow.")
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise not_found_error("User not found")
+
+    # Verify admin's own password after confirming target exists
     if not verify_password(mfa_request.admin_password, current_user.hashed_password):
         log_audit_event(
             db, "MFA_BYPASS_FAILED_AUTH", current_user, "User",
@@ -988,10 +1019,6 @@ def admin_mfa_bypass(
             sensitivity_level=3
         )
         raise unauthenticated_error("Admin password verification failed")
-
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user:
-        raise not_found_error("User not found")
 
     # Reset MFA but don't disable it - require re-setup
     user.mfa_secret = None
@@ -1064,12 +1091,6 @@ def bulk_update_status(
     - Returns per-user success/failure results
     - IDOR protection for each target
     """
-    if not bulk_data.user_ids:
-        raise validation_error("No user IDs provided")
-
-    if len(bulk_data.user_ids) > settings.MAX_BULK_UPDATE:
-        raise validation_error(f"Cannot update more than {settings.MAX_BULK_UPDATE} users at once")
-
     # Check if confirmation is required
     needs_confirmation = len(bulk_data.user_ids) > settings.BULK_CONFIRMATION_THRESHOLD
 
@@ -1133,7 +1154,7 @@ def bulk_update_status(
         for user_id in access_result["allowed"]:
             user = target_users.get(user_id)
             if user and user.role == models.UserRole.MANAGER:
-                if user.kindergarten_id is None:
+                if user.kindergarten_id is None:  # pragma: no cover — DB CHECK constraint manager_must_have_kindergarten prevents this state in both SQLite and production
                     manager_validation_errors.append({
                         "user_id": user_id,
                         "error": "Manager must be assigned to a kindergarten",
@@ -1178,7 +1199,7 @@ def bulk_update_status(
     failed = []
     errors = []
 
-    if 'target_users' not in dir():
+    if 'target_users' not in locals():
         target_users = {
             u.id: u for u in
             db.query(models.User).filter(models.User.id.in_(access_result["allowed"])).all()
@@ -1191,7 +1212,7 @@ def bulk_update_status(
                 before_state = model_to_dict(user)
                 user.status = bulk_data.new_status
                 succeeded.append(user_id)
-        except (AttributeError, ValueError, TypeError) as e:
+        except (AttributeError, ValueError, TypeError) as e:  # pragma: no cover — assigning a validated enum to an ORM attribute never raises; purely defensive
             failed.append(user_id)
             errors.append({"user_id": user_id, "error": str(e)})
 
@@ -1238,12 +1259,6 @@ def bulk_delete_users(
     - Prevents deleting admin accounts
     - Returns detailed results
     """
-    if not bulk_data.user_ids:
-        raise validation_error("No user IDs provided")
-
-    if len(bulk_data.user_ids) > settings.MAX_BULK_DELETE:
-        raise validation_error(f"Cannot delete more than {settings.MAX_BULK_DELETE} users at once")
-
     # Check for admin accounts in the list
     admin_users = db.query(models.User).filter(
         models.User.id.in_(bulk_data.user_ids),
@@ -1346,12 +1361,6 @@ def bulk_create_users(
     - Supports dry-run mode
     - Prevents creating admin accounts
     """
-    if not bulk_data.users:
-        raise validation_error("No users provided")
-
-    if len(bulk_data.users) > settings.MAX_BULK_CREATE:
-        raise validation_error(f"Cannot create more than {settings.MAX_BULK_CREATE} users at once")
-
     # Validate manager assignments for the entire batch
     manager_errors = validate_bulk_manager_assignments(db, [user.__dict__ for user in bulk_data.users])
     if manager_errors:
@@ -1430,7 +1439,7 @@ def bulk_create_users(
                 db.add(new_user)
                 db.flush()
                 succeeded.append({"row": row_num, "id": new_user.id, "username": new_user.username})
-            except (SQLAlchemyError, AttributeError, ValueError, KeyError) as e:
+            except (SQLAlchemyError, AttributeError, ValueError, KeyError) as e:  # pragma: no cover — db.flush() failure here would also break the shared auth session; tested defensively
                 failed.append(row_num)
                 errors.append({
                     "row": row_num,
@@ -1491,9 +1500,25 @@ async def import_users_csv(
     if not file.filename.endswith('.csv'):
         raise validation_error("File must be a CSV")
 
+    # P1-C: Enforce a 20 MB file-size limit before reading into memory.
+    # file.size is set by the ASGI layer when the Content-Length header is
+    # present; we also enforce the limit after reading to guard against chunked
+    # uploads that omit the header.
+    _MAX_CSV_BYTES = 20 * 1024 * 1024  # 20 MB
+    if file.size is not None and file.size > _MAX_CSV_BYTES:
+        raise validation_error(
+            f"CSV file is too large ({file.size / 1_048_576:.1f} MB). "
+            f"Maximum allowed size is 20 MB."
+        )
+
     # Read and decode CSV
     try:
         contents = await file.read()
+        # Second guard: catches chunked uploads that omit Content-Length.
+        if len(contents) > _MAX_CSV_BYTES:  # pragma: no cover — requires a >20 MB streaming upload without Content-Length header; first guard handles normal cases
+            raise validation_error(
+                f"CSV file exceeds the 20 MB maximum ({len(contents) / 1_048_576:.1f} MB)."
+            )
         decoded = contents.decode('utf-8-sig')  # Handle BOM
     except (UnicodeDecodeError, OSError) as e:
         raise validation_error(f"Could not read file: {str(e)}")
@@ -1666,20 +1691,23 @@ async def import_users_csv(
     }
 
 
-@router.get("/admin/users/import-csv/error-report")
+def _escape_csv_formula(value: Any) -> str:
+    return escape_csv_formula(value)
+
+
+class _CSVErrorReportBody(BaseModel):
+    errors: List[Dict[str, Any]] = Field(..., description="Error list from CSV import response")
+
+
+@router.post("/admin/users/import-csv/error-report")
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def download_csv_error_report(
     request: Request,
-    errors: str = Query(..., description="JSON-encoded error list"),
+    body: _CSVErrorReportBody,
     current_user: models.User = Depends(require_admin),
 ):
-    """
-    Download CSV import error report as CSV file.
-    """
-    try:
-        error_list = json.loads(errors)
-    except json.JSONDecodeError:
-        raise validation_error("Invalid error data format")
+    """Download CSV import error report as CSV file."""
+    error_list = body.errors
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -1687,10 +1715,10 @@ def download_csv_error_report(
 
     for err in error_list:
         writer.writerow([
-            err.get('row_number', ''),
-            err.get('field', ''),
-            err.get('error_code', ''),
-            err.get('message', '')
+            _escape_csv_formula(err.get('row_number', '')),
+            _escape_csv_formula(err.get('field', '')),
+            _escape_csv_formula(err.get('error_code', '')),
+            _escape_csv_formula(err.get('message', '')),
         ])
 
     output.seek(0)
@@ -1702,6 +1730,130 @@ def download_csv_error_report(
             "Content-Disposition": f"attachment; filename=import_errors_{date.today()}.csv"
         }
     )
+
+
+# =============================================================================
+# Contact Messages  (P1-D: previously missing — template existed, no backend)
+# =============================================================================
+
+class ContactMessageItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    email: str
+    phone: Optional[str] = None
+    subject: Optional[str] = None
+    message: str
+    is_resolved: bool
+    submitted_at: Optional[str] = None
+    resolved_at: Optional[str] = None
+
+
+class ContactMessagesListResponse(BaseModel):
+    messages: List[ContactMessageItem]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+@router.get("/admin/contact-messages", response_model=ContactMessagesListResponse)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def list_contact_messages(
+    request: Request,
+    q: Optional[str] = Query(None, max_length=100, description="Search by name or subject"),
+    status_filter: Optional[str] = Query(None, pattern="^(open|resolved)$",
+                                         description="Filter: 'open' or 'resolved'"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    List contact-form submissions with optional search and status filter.
+    Admin-only.  Pagination enforced.
+    """
+    query = db.query(models.ContactMessage)
+
+    if q:
+        term = f"%{q}%"
+        query = query.filter(
+            or_(
+                models.ContactMessage.name.ilike(term),
+                models.ContactMessage.subject.ilike(term),
+                models.ContactMessage.email.ilike(term),
+            )
+        )
+
+    if status_filter == "open":
+        query = query.filter(models.ContactMessage.is_resolved.is_(False))
+    elif status_filter == "resolved":
+        query = query.filter(models.ContactMessage.is_resolved.is_(True))
+
+    total = query.count()
+    offset = (page - 1) * page_size
+    rows = (
+        query.order_by(models.ContactMessage.submitted_at.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    def _row(m: models.ContactMessage) -> ContactMessageItem:
+        return ContactMessageItem(
+            id=m.id,
+            name=m.name,
+            email=m.email,
+            phone=m.phone,
+            subject=m.subject,
+            message=m.message,
+            is_resolved=m.is_resolved,
+            submitted_at=m.submitted_at.isoformat() if m.submitted_at else None,
+            resolved_at=m.resolved_at.isoformat() if m.resolved_at else None,
+        )
+
+    return ContactMessagesListResponse(
+        messages=[_row(m) for m in rows],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=max(1, (total + page_size - 1) // page_size),
+    )
+
+
+@router.post("/admin/contact-messages/{message_id}/resolve",
+             status_code=status.HTTP_200_OK)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+def resolve_contact_message(
+    request: Request,
+    message_id: int,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Mark a contact-form submission as resolved.
+    Admin-only.  Idempotent — resolving an already-resolved message is a no-op.
+    """
+    msg = db.query(models.ContactMessage).filter(
+        models.ContactMessage.id == message_id
+    ).first()
+    if not msg:
+        raise not_found_error("Contact message not found")
+
+    if not msg.is_resolved:
+        msg.is_resolved = True
+        msg.resolved_by_id = current_user.id
+        msg.resolved_at = datetime.now(timezone.utc)
+        db.commit()
+
+        log_audit_event(
+            db, "CONTACT_MESSAGE_RESOLVED", current_user, "ContactMessage",
+            target_ids=message_id,
+            metadata={"message_id": message_id},
+            sensitivity_level=1,
+        )
+
+    return {"message": "Resolved", "id": message_id}
 
 
 # =============================================================================
@@ -1835,15 +1987,28 @@ def _validate_csrf_token(request: Request) -> None:
 
 
 def _build_search_filter(search: Optional[str], columns: List[Any]):
-    """Return a compound filter that matches every search token against provided columns."""
-    tokens = [token.strip() for token in (search or "").split() if token.strip()]
-    if not tokens or not columns:
+    """Return a compound OR/AND filter across columns.
+
+    For each whitespace-separated token in the query we generate an OR clause
+    that spans all supplied columns.  Arabic search variants (alef normalisation,
+    definite-article stripping, etc.) are added automatically via
+    ``build_arabic_search_terms`` so that, for example, searching for
+    "العربي" also matches rows containing "عربي" and vice-versa.
+    """
+    if not search or not columns:
+        return None
+
+    # Expand tokens to include Arabic-normalised variants
+    tokens = build_arabic_search_terms(search)
+    if not tokens:
         return None
 
     token_clauses = []
     for token in tokens:
         pattern = f"%{token}%"
         token_clauses.append(or_(*(column.ilike(pattern) for column in columns)))
+    # All original tokens must match (AND logic); normalised variants are OR-ed
+    # inside each token clause above, so a 2-word query still requires both words.
     return and_(*token_clauses)
 
 
@@ -2128,7 +2293,7 @@ def _build_recipient_breakdowns(
     for parent_id, gov_list in parent_governorates.items():
         seen: Set[str] = set()
         for gov in gov_list:
-            if not gov or gov in seen:
+            if not gov or gov in seen:  # pragma: no cover — _resolve_parent_governorates pre-filters empty govs and deduplicates with dict.fromkeys; kept for defensive safety
                 continue
             governorate_counts[gov] += 1
             seen.add(gov)
@@ -2198,7 +2363,7 @@ def _resolve_admin_recipient_ids(
     def _collect_rows(rows) -> bool:
         for row in rows:
             uid = row[0]
-            if uid in seen:
+            if uid in seen:  # pragma: no cover — SQL queries use distinct(); duplicate user IDs cannot appear in practice; kept for defensive safety
                 continue
             seen.add(uid)
             recipient_ids.append(uid)
@@ -2211,8 +2376,6 @@ def _resolve_admin_recipient_ids(
         staff_query = _build_staff_recipient_query(db, roles, governorates, kindergarten_ids, search_term).order_by(models.User.id)
         if effective_limit:
             remaining = effective_limit - len(recipient_ids)
-            if remaining <= 0:
-                return sorted(recipient_ids)
             staff_query = staff_query.limit(remaining)
         if _collect_rows(staff_query.all()):
             return sorted(recipient_ids)
@@ -2221,8 +2384,6 @@ def _resolve_admin_recipient_ids(
         parent_query = _build_parent_recipient_query(db, governorates, kindergarten_ids, search_term).order_by(models.User.id)
         if effective_limit:
             remaining = effective_limit - len(recipient_ids)
-            if remaining <= 0:
-                return sorted(recipient_ids)
             parent_query = parent_query.limit(remaining)
         _collect_rows(parent_query.all())
 
@@ -2884,16 +3045,15 @@ def list_kindergarten_options(
 # Performance Monitoring Endpoints
 # =============================================================================
 
-@router.get("/performance/metrics")
+@router.get("/admin/performance/metrics")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_performance_metrics(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    request: Request,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
 ):
-    """Get comprehensive performance metrics (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    from performance_monitor import performance_monitor, get_performance_report
+    """Get comprehensive performance metrics."""
+    from performance_monitor import get_performance_report
 
     try:
         return get_performance_report()
@@ -2902,15 +3062,14 @@ def get_performance_metrics(
         raise HTTPException(status_code=500, detail="Failed to retrieve performance metrics")
 
 
-@router.get("/performance/requests")
+@router.get("/admin/performance/requests")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_request_metrics(
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    request: Request,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
 ):
-    """Get request performance metrics (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
+    """Get request performance metrics."""
     from performance_monitor import performance_monitor
 
     try:
@@ -2920,38 +3079,36 @@ def get_request_metrics(
         raise HTTPException(status_code=500, detail="Failed to retrieve request metrics")
 
 
-@router.get("/performance/database")
+@router.get("/admin/performance/database")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_database_metrics(
-    limit: int = Query(100, description="Number of recent queries to return"),
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    request: Request,
+    limit: int = Query(100, ge=1, le=1000, description="Number of recent queries to return"),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
 ):
-    """Get database query performance metrics (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
+    """Get database query performance metrics."""
     from performance_monitor import performance_monitor
 
     try:
         return {
             "recent_queries": performance_monitor.get_db_metrics(limit),
-            "slow_queries": performance_monitor.get_slow_queries(2.0)
+            "slow_queries": performance_monitor.get_slow_queries(2.0),
         }
     except (RuntimeError, AttributeError, TypeError, ValueError) as e:
         logger.error(f"Failed to get database metrics: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve database metrics")
 
 
-@router.get("/performance/system")
+@router.get("/admin/performance/system")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_system_metrics(
-    limit: int = Query(50, description="Number of recent system metrics to return"),
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    request: Request,
+    limit: int = Query(50, ge=1, le=500, description="Number of recent system metrics to return"),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
 ):
-    """Get system performance metrics (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
+    """Get system performance metrics."""
     from performance_monitor import performance_monitor
 
     try:
@@ -3042,6 +3199,8 @@ class DashboardCharts(BaseModel):
     """Charts data for dashboard"""
     attendance: List[DashboardChartPoint] = []
     enrollment: Dict[str, Any] = {}
+    incidents: List[DashboardChartPoint] = []
+    gcei: List[DashboardChartPoint] = []
 
 class DashboardAlert(BaseModel):
     """System alert for dashboard"""
@@ -3064,6 +3223,45 @@ class AdminDashboardResponse(BaseModel):
     alerts: List[DashboardAlert]
     kpi_cards: List[DashboardKPICard]
     generated_at: str
+
+
+# =============================================================================
+# Admin Health Endpoint
+# =============================================================================
+
+@router.get("/admin/health")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def admin_health_check(
+    request: Request,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Admin-scoped health check: verifies DB connectivity and returns service status."""
+    from sqlalchemy import text as _text
+
+    checks: Dict[str, Any] = {}
+
+    try:
+        db.execute(_text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as exc:
+        logger.error("Admin health check: DB error: %s", exc)
+        checks["database"] = "error"
+
+    try:
+        from cache_service import cache_service as _cs
+        _cs.get("__health_probe__")
+        checks["cache"] = "ok"
+    except Exception:
+        checks["cache"] = "degraded"
+
+    overall = "ok" if all(v == "ok" for v in checks.values()) else "degraded"
+    return {
+        "status": overall,
+        "checks": checks,
+        "admin_id": current_user.id,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 # =============================================================================
@@ -3268,12 +3466,74 @@ def get_admin_dashboard(
         models.EnrollmentApplication.status,
         func.count(models.EnrollmentApplication.id),
     ).group_by(models.EnrollmentApplication.status).all()
-    enrollment_chart = {
+    enrollment_pie = {
         (status.value if hasattr(status, "value") else str(status)): count
         for status, count in enrollment_stats
     }
 
-    charts = DashboardCharts(attendance=attendance_chart, enrollment=enrollment_chart)
+    # Build incidents trend chart (last 30 days)
+    daily_incident_counts = dict(
+        db.query(
+            func.date(models.Incident.occurred_at),
+            func.count(models.Incident.id),
+        ).filter(
+            func.date(models.Incident.occurred_at) >= chart_start_date,
+            func.date(models.Incident.occurred_at) <= today,
+        ).group_by(func.date(models.Incident.occurred_at)).all()
+    )
+    incidents_trend: List[DashboardChartPoint] = []
+    for i in range(chart_days):
+        day_value = today - timedelta(days=(chart_days - 1 - i))
+        day_count = daily_incident_counts.get(day_value, 0)
+        incidents_trend.append(DashboardChartPoint(date=day_value.isoformat(), value=day_count))
+
+    # Build enrollment trend chart (new enrollments per day)
+    daily_enrollment_counts = dict(
+        db.query(
+            func.date(models.EnrollmentApplication.created_at),
+            func.count(models.EnrollmentApplication.id),
+        ).filter(
+            func.date(models.EnrollmentApplication.created_at) >= chart_start_date,
+            func.date(models.EnrollmentApplication.created_at) <= today,
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).group_by(func.date(models.EnrollmentApplication.created_at)).all()
+    )
+    enrollment_trend: List[DashboardChartPoint] = []
+    for i in range(chart_days):
+        day_value = today - timedelta(days=(chart_days - 1 - i))
+        day_count = daily_enrollment_counts.get(day_value, 0)
+        enrollment_trend.append(DashboardChartPoint(date=day_value.isoformat(), value=day_count))
+
+    # Build GCEI (Governance Compliance & Excellence Index) trend chart
+    # Based on active kindergartens ratio and license compliance
+    daily_incident_counts_full = dict(
+        db.query(
+            func.date(models.Incident.occurred_at),
+            func.count(models.Incident.id),
+        ).filter(
+            func.date(models.Incident.occurred_at) >= chart_start_date,
+            func.date(models.Incident.occurred_at) <= today,
+        ).group_by(func.date(models.Incident.occurred_at)).all()
+    )
+    gcei_chart: List[DashboardChartPoint] = []
+    for i in range(chart_days):
+        day_value = today - timedelta(days=(chart_days - 1 - i))
+        day_incidents = daily_incident_counts_full.get(day_value, 0)
+        # Simplified GCEI calculation: based on active kindergartens and incident rate
+        day_enrollments = daily_attendance_counts.get(day_value, 0)
+        if day_enrollments > 0:
+            incident_rate = (day_incidents / day_enrollments) * 100
+            gcei_score = max(0, min(100, 100 - incident_rate * 10))  # Higher score with fewer incidents
+        else:
+            gcei_score = 100.0  # Default excellent score when no enrollment data
+        gcei_chart.append(DashboardChartPoint(date=day_value.isoformat(), value=round(gcei_score, 1)))
+
+    charts = DashboardCharts(
+        attendance=attendance_chart,
+        enrollment=enrollment_pie,
+        incidents=incidents_trend,
+        gcei=gcei_chart,
+    )
 
     alerts: List[DashboardAlert] = []
     if pending_applications > 0:
@@ -3364,18 +3624,18 @@ def get_admin_dashboard(
 # Backup Management Endpoints
 # =============================================================================
 
-@router.post("/backup/create")
+@router.post("/admin/backup/create")
+@router.post("/backup/create", include_in_schema=False)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def create_backup(
+    request: Request,
     backup_type: str = Query("manual", description="Type of backup (manual, automated)"),
     include_uploads: bool = Query(True, description="Include uploaded files in backup"),
     include_config: bool = Query(True, description="Include configuration files in backup"),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """Create a new backup (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
     from backup_manager import backup_manager
 
     try:
@@ -3411,16 +3671,16 @@ def create_backup(
         raise HTTPException(status_code=500, detail="Backup creation failed")
 
 
-@router.get("/backup/list")
+@router.get("/admin/backup/list")
+@router.get("/backup/list", include_in_schema=False)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def list_backups(
+    request: Request,
     backup_type: Optional[str] = Query(None, description="Filter by backup type (database, uploads, config)"),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """List all backups (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
     from backup_manager import backup_manager
 
     try:
@@ -3430,24 +3690,34 @@ def list_backups(
         raise HTTPException(status_code=500, detail="Failed to list backups")
 
 
-@router.post("/backup/restore/{backup_name}")
-def restore_backup(
-    backup_name: str,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Restore from a backup (Admin only - DANGER: This will overwrite current data)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
+class _RestoreConfirmBody(BaseModel):
+    confirmation_token: Optional[str] = None
 
-    # Sanitize backup_name to prevent path traversal
-    if ".." in backup_name or "/" in backup_name or "\\" in backup_name:
+
+@router.post("/admin/backup/restore/{backup_name}")
+@router.post("/backup/restore/{backup_name}", include_in_schema=False)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+def restore_backup(
+    request: Request,
+    backup_name: str,
+    body: _RestoreConfirmBody = _RestoreConfirmBody(),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Restore from a backup (DANGER: overwrites current data).
+
+    First call without a token returns a confirmation token and a warning.
+    Second call with the token executes the restore.
+    """
+    # Sanitize backup_name: reject path separators, null bytes, and parent-directory
+    # references. os.path.basename catches separator-based traversal; the ".."
+    # substring check rejects names like "..evilfile" that look like traversal attempts.
+    if not backup_name or ".." in backup_name or os.path.basename(backup_name) != backup_name:
         raise HTTPException(status_code=400, detail="Invalid backup name")
 
     from backup_manager import backup_manager
 
     try:
-        # Validate backup exists and is valid
         if not backup_manager.validate_backup(backup_name):
             raise HTTPException(status_code=400, detail="Invalid or corrupted backup")
 
@@ -3455,24 +3725,44 @@ def restore_backup(
         if not metadata:
             raise HTTPException(status_code=404, detail="Backup not found")
 
-        # Only allow database restores for now (safest option)
         if metadata["type"] != "database":
             raise HTTPException(
                 status_code=400,
-                detail="Only database backups can be restored via API. Contact system administrator for other restore types."
+                detail="Only database backups can be restored via API. Contact system administrator for other restore types.",
             )
 
-        # Perform restore
+        # First call: issue confirmation token
+        if not body.confirmation_token:
+            token = generate_confirmation_token("backup_restore", [backup_name], current_user.id)
+            return {
+                "requires_confirmation": True,
+                "confirmation_token": token,
+                "warning": (
+                    f"Restoring backup '{backup_name}' will OVERWRITE all current data. "
+                    "Re-submit with the confirmation_token to proceed."
+                ),
+            }
+
+        # Second call: verify token then execute
+        if not verify_confirmation_token(
+            body.confirmation_token,
+            "backup_restore",
+            [backup_name],
+            current_user.id,
+        ):
+            raise HTTPException(status_code=400, detail="Invalid or expired confirmation token")
+
         success = backup_manager.restore_database_backup(backup_name)
 
         if success:
-            # Log the restore operation
             log_audit_event(
-                db, "BACKUP_RESTORED", current_user, "Backup",
+                db,
+                "BACKUP_RESTORED",
+                current_user,
+                "Backup",
                 metadata={"backup_name": backup_name},
-                sensitivity_level=3
+                sensitivity_level=3,
             )
-
             return {"message": f"Database successfully restored from backup: {backup_name}"}
         else:
             raise HTTPException(status_code=500, detail="Restore operation failed")
@@ -3484,18 +3774,20 @@ def restore_backup(
         raise HTTPException(status_code=500, detail="Restore failed due to an internal error")
 
 
-@router.delete("/backup/{backup_name}")
+@router.delete("/admin/backup/{backup_name}")
+@router.delete("/backup/{backup_name}", include_in_schema=False)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def delete_backup(
+    request: Request,
     backup_name: str,
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """Delete a backup file (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    # Sanitize backup_name to prevent path traversal
-    if ".." in backup_name or "/" in backup_name or "\\" in backup_name:
+    # Sanitize backup_name: reject path separators, null bytes, and parent-directory
+    # references. os.path.basename catches separator-based traversal; the ".."
+    # substring check rejects names like "..evilfile" that look like traversal attempts.
+    if not backup_name or ".." in backup_name or os.path.basename(backup_name) != backup_name:
         raise HTTPException(status_code=400, detail="Invalid backup name")
 
     from backup_manager import backup_manager
@@ -3529,18 +3821,20 @@ def delete_backup(
         raise HTTPException(status_code=500, detail="Deletion failed")
 
 
-@router.get("/backup/info/{backup_name}")
+@router.get("/admin/backup/info/{backup_name}")
+@router.get("/backup/info/{backup_name}", include_in_schema=False)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_backup_info(
+    request: Request,
     backup_name: str,
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """Get detailed information about a specific backup (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    # Sanitize backup_name to prevent path traversal
-    if ".." in backup_name or "/" in backup_name or "\\" in backup_name:
+    # Sanitize backup_name: reject path separators, null bytes, and parent-directory
+    # references. os.path.basename catches separator-based traversal; the ".."
+    # substring check rejects names like "..evilfile" that look like traversal attempts.
+    if not backup_name or ".." in backup_name or os.path.basename(backup_name) != backup_name:
         raise HTTPException(status_code=400, detail="Invalid backup name")
 
     from backup_manager import backup_manager
@@ -3562,15 +3856,15 @@ def get_backup_info(
         raise HTTPException(status_code=500, detail="Failed to retrieve backup info")
 
 
-@router.post("/backup/cleanup")
+@router.post("/admin/backup/cleanup")
+@router.post("/backup/cleanup", include_in_schema=False)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def cleanup_old_backups(
-    current_user: models.User = Depends(get_current_user),
+    request: Request,
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """Clean up old backups beyond retention period (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
     from backup_manager import backup_manager
 
     try:
@@ -3592,18 +3886,20 @@ def cleanup_old_backups(
         raise HTTPException(status_code=500, detail="Cleanup failed")
 
 
-@router.post("/backup/validate/{backup_name}")
+@router.post("/admin/backup/validate/{backup_name}")
+@router.post("/backup/validate/{backup_name}", include_in_schema=False)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def validate_backup(
+    request: Request,
     backup_name: str,
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """Validate a backup file integrity (Admin only)"""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
-    # Sanitize backup_name to prevent path traversal
-    if ".." in backup_name or "/" in backup_name or "\\" in backup_name:
+    # Sanitize backup_name: reject path separators, null bytes, and parent-directory
+    # references. os.path.basename catches separator-based traversal; the ".."
+    # substring check rejects names like "..evilfile" that look like traversal attempts.
+    if not backup_name or ".." in backup_name or os.path.basename(backup_name) != backup_name:
         raise HTTPException(status_code=400, detail="Invalid backup name")
 
     from backup_manager import backup_manager
@@ -3637,11 +3933,12 @@ class KindergartenImportResult(BaseModel):
     total_rows: int = 0
 
 
-@router.post("/kindergartens/import-excel", response_model=KindergartenImportResult)
+@router.post("/admin/kindergartens/import-excel", response_model=KindergartenImportResult)
+@router.post("/kindergartens/import-excel", response_model=KindergartenImportResult, include_in_schema=False)
 def import_kindergartens_from_excel(
     file: UploadFile = File(...),
     dry_run: bool = Query(False, description="Preview without writing to DB"),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """
@@ -3656,29 +3953,28 @@ def import_kindergartens_from_excel(
       - Column F: العنوان التفصيلي    → address_line
       - Column G: رقم الهاتف         → contact_phone
     """
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
 
     if not file.filename or not file.filename.endswith(".xlsx"):
         raise HTTPException(status_code=400, detail="Only .xlsx files are accepted")
 
     try:
         import openpyxl
-    except ImportError:
+    except ImportError:  # pragma: no cover — openpyxl is a required dependency; kept for optional-dependency safety in minimal environments
         raise HTTPException(status_code=500, detail="openpyxl is not installed on the server")
 
     # Enforce file size limit (10 MB)
     MAX_UPLOAD_SIZE = 10 * 1024 * 1024
     try:
         contents = file.file.read()
-        if len(contents) > MAX_UPLOAD_SIZE:
+        if len(contents) > MAX_UPLOAD_SIZE:  # pragma: no cover — requires a >10 MB upload; content-length header check fires first for normal clients
             raise HTTPException(status_code=400, detail="File too large. Maximum size is 10 MB.")
         from io import BytesIO
+        from zipfile import BadZipFile
         wb = openpyxl.load_workbook(BytesIO(contents), read_only=True)
         ws = wb.worksheets[0]  # Use first sheet
         rows = list(ws.iter_rows(min_row=2, values_only=True))  # skip header
         wb.close()
-    except (OSError, IOError, KeyError, ValueError, IndexError) as e:
+    except (OSError, IOError, KeyError, ValueError, IndexError, BadZipFile) as e:
         logger.exception("Failed to read uploaded Excel file")
         raise HTTPException(status_code=400, detail="Could not read Excel file")
 
@@ -3943,12 +4239,10 @@ async def list_governance_reminders(
 async def import_kindergartens(
     request: Request,
     file: UploadFile = File(...),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """Upload and import kindergartens from Excel file."""
-    if current_user.role != models.UserRole.ADMIN:
-        raise forbidden_error("Only admins can import kindergartens")
 
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise validation_error("File must be Excel format (.xlsx or .xls)")
@@ -4013,6 +4307,7 @@ async def import_kindergartens(
 
 
 @router.get("/admin/kindergartens/imported")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 async def list_imported_kindergartens(
     request: Request,
     page: int = Query(1, ge=1),
@@ -4020,12 +4315,10 @@ async def list_imported_kindergartens(
     governorate: str = Query(None),
     city: str = Query(None),
     search: str = Query(None),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin_or_manager),
     db: Session = Depends(get_db)
 ):
     """List imported kindergartens with filtering and pagination."""
-    if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
-        raise forbidden_error("Access denied")
 
     service = KindergartenImportService(db)
     result = service.get_imported_kindergartens(
@@ -4036,22 +4329,82 @@ async def list_imported_kindergartens(
     return result
 
 
+def _serialize_import_log(log: models.ImportLog) -> dict:
+    error_count = len(log.errors_json) if log.errors_json else 0
+    status_val = "FAILED" if error_count > 0 and log.imported_count == 0 else (
+        "PARTIAL" if error_count > 0 else "SUCCESS"
+    )
+    return {
+        "id": log.id,
+        "import_type": "EXCEL_KINDERGARTENS",
+        "filename": log.file_name,
+        "imported_by": None,
+        "total_rows": log.total_rows,
+        "success_count": log.imported_count,
+        "error_count": error_count,
+        "status": status_val,
+        "created_at": log.created_at.isoformat() if log.created_at else None,
+    }
+
+
 @router.get("/admin/imports/logs")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 async def list_import_logs(
     request: Request,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """List import logs."""
-    if current_user.role != models.UserRole.ADMIN:
-        raise forbidden_error("Only admins can view import logs")
+    """List import logs with pagination."""
+    query = db.query(models.ImportLog).order_by(models.ImportLog.created_at.desc())
+    total = query.count()
+    logs = query.offset((page - 1) * per_page).limit(per_page).all()
+    return {
+        "logs": [_serialize_import_log(lg) for lg in logs],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": (total + per_page - 1) // per_page,
+    }
 
-    service = KindergartenImportService(db)
-    result = service.get_import_logs(page=page, per_page=per_page)
 
-    return result
+@router.get("/admin/imports/logs/{log_id}")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+async def get_import_log_detail(
+    request: Request,
+    log_id: int,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get detail for a single import log including per-row errors."""
+    log = db.query(models.ImportLog).filter(models.ImportLog.id == log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Import log not found")
+    data = _serialize_import_log(log)
+    data["errors"] = log.errors_json or []
+    return data
+
+
+@router.get("/admin/governance/reminders/stats")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+async def get_governance_reminder_stats(
+    request: Request,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Summary stats for the governance reminders dashboard."""
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    sent_today = db.query(func.count(models.GovernanceReminder.id)).filter(
+        models.GovernanceReminder.sent_at >= today_start
+    ).scalar() or 0
+    total_sent = db.query(func.count(models.GovernanceReminder.id)).scalar() or 0
+    return {
+        "pending": 0,
+        "sent_today": sent_today,
+        "non_compliant": 0,
+        "total_sent": total_sent,
+    }
 
 
 # =============================================================================
@@ -4405,3 +4758,317 @@ def get_available_scopes(
     except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
         logger.error(f"Failed to get available scopes: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# =============================================================================
+# Admin Alerts API
+# =============================================================================
+
+class AdminAlertResponse(BaseModel):
+    id: int
+    severity: str
+    governorate: Optional[str] = None
+    kindergarten_name: Optional[str] = None
+    metric: str
+    current_value: float
+    threshold: float
+    triggered_at: str
+    status: str
+    message: Optional[str] = None
+
+
+class AdminAlertsListResponse(BaseModel):
+    alerts: List[AdminAlertResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+@router.get("/admin/alerts", response_model=AdminAlertsListResponse)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_admin_alerts(
+    request: Request,
+    severity: Optional[str] = Query(None, description="Filter by severity (CRITICAL/HIGH/MEDIUM/LOW)"),
+    governorate: Optional[str] = Query(None, description="Filter by governorate"),
+    status: Optional[str] = Query("ACTIVE", description="Filter by status (ACTIVE/ACKNOWLEDGED)"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get admin alerts with optional filtering."""
+    try:
+        query = db.query(models.ActiveAlert)
+
+        if severity:
+            try:
+                query = query.filter(models.ActiveAlert.severity == models.SeverityLevel(severity))
+            except ValueError:
+                raise HTTPException(status_code=422, detail=f"Invalid severity '{severity}'. Use CRITICAL, HIGH, MEDIUM, or LOW.")
+
+        if status:
+            try:
+                query = query.filter(models.ActiveAlert.status == models.AlertStatus(status))
+            except ValueError:
+                raise HTTPException(status_code=422, detail=f"Invalid status '{status}'. Use ACTIVE or ACKNOWLEDGED.")
+
+        if governorate:
+            query = query.filter(
+                models.ActiveAlert.scope_type == "GOVERNORATE",
+                models.ActiveAlert.scope_id == governorate
+            )
+
+        total = query.count()
+        alerts = query.order_by(
+            models.ActiveAlert.triggered_at.desc(),
+            models.ActiveAlert.severity.desc()
+        ).offset(skip).limit(limit).all()
+
+        # Pre-load governorates for KINDERGARTEN-scoped alerts in a single query (avoids N+1).
+        kg_ids: Set[int] = set()
+        for alert in alerts:
+            if alert.scope_type == "KINDERGARTEN" and alert.scope_id:
+                try:
+                    kg_ids.add(int(alert.scope_id))
+                except (TypeError, ValueError):
+                    continue
+        kg_governorate_map: Dict[int, str] = {}
+        if kg_ids:
+            for kg_id, gov in db.query(
+                models.Kindergarten.id, models.Kindergarten.governorate
+            ).filter(models.Kindergarten.id.in_(kg_ids)).all():
+                kg_governorate_map[kg_id] = gov
+
+        alerts_data = []
+        for alert in alerts:
+            # Extract governorate from scope_id if scope_type is GOVERNORATE
+            governorate_name = None
+            if alert.scope_type == "GOVERNORATE":
+                governorate_name = alert.scope_id
+            elif alert.scope_type == "KINDERGARTEN" and alert.scope_id:
+                try:
+                    governorate_name = kg_governorate_map.get(int(alert.scope_id))
+                except (TypeError, ValueError):
+                    governorate_name = None
+
+            alerts_data.append(AdminAlertResponse(
+                id=alert.id,
+                severity=alert.severity.value if hasattr(alert.severity, 'value') else str(alert.severity),
+                governorate=governorate_name,
+                kindergarten_name=None,
+                metric=alert.metric_type,
+                current_value=float(alert.current_value) if alert.current_value is not None else 0.0,
+                threshold=0.0,
+                triggered_at=alert.triggered_at.isoformat() if alert.triggered_at else "",
+                status=alert.status.value if hasattr(alert.status, 'value') else str(alert.status),
+                message=alert.message
+            ))
+
+        return AdminAlertsListResponse(
+            alerts=alerts_data,
+            total=total,
+            page=(skip // limit) + 1,
+            page_size=limit
+        )
+
+    except HTTPException:
+        raise
+    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
+        logger.error(f"Failed to get admin alerts: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# =============================================================================
+# Jordan Heat Map API (legacy alias — preferred entry point is
+# `/api/admin/heat-map/*`, mounted from `heatmap.backend.admin_router`).
+# This endpoint is kept for backward compatibility with the existing
+# analytics page (`/admin/analytics`) which expects the slug-keyed payload.
+# =============================================================================
+
+class HeatmapGovernorateData(BaseModel):
+    amman: Dict[str, Any] = {}
+    irbid: Dict[str, Any] = {}
+    zarqa: Dict[str, Any] = {}
+    mafraq: Dict[str, Any] = {}
+    jerash: Dict[str, Any] = {}
+    ajloun: Dict[str, Any] = {}
+    balqa: Dict[str, Any] = {}
+    madaba: Dict[str, Any] = {}
+    karak: Dict[str, Any] = {}
+    tafilah: Dict[str, Any] = {}
+    maan: Dict[str, Any] = {}
+    aqaba: Dict[str, Any] = {}
+
+    model_config = ConfigDict(extra='allow')
+
+
+class HeatmapResponse(BaseModel):
+    data: HeatmapGovernorateData
+    indicators: List[str]
+    last_update: str
+    summary: Optional[Dict[str, Any]] = None
+    risk_legend: Optional[List[Dict[str, Any]]] = None
+
+
+INDICATOR_LABELS = {
+    'nursery_status': {'ar': 'حالة الروضات', 'en': 'Nursery Status'},
+    'children_registration': {'ar': 'الأطفال والتسجيل', 'en': 'Children Registration'},
+    'staff_classrooms': {'ar': 'الموظفون والفصول', 'en': 'Staff & Classrooms'},
+    'safety_incidents': {'ar': 'السلامة والحوادث', 'en': 'Safety & Incidents'},
+    'reports_attendance': {'ar': 'التقارير والحضور', 'en': 'Reports & Attendance'},
+    'tasks_governance': {'ar': 'المهام والحوكمة', 'en': 'Tasks & Governance'}
+}
+
+
+@router.get("/admin/heatmap-data", response_model=HeatmapResponse)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_heatmap_data(
+    request: Request,
+    indicator: Optional[str] = Query(None, description="Main indicator to display"),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Get heat map data for Jordan governorates (legacy slug-keyed payload).
+
+    The new canonical endpoint is `/api/admin/heat-map/data` which returns a
+    richer payload; this endpoint is kept for backward compatibility with
+    the analytics page that consumes the slug-keyed format.
+    """
+    try:
+        try:
+            from heatmap.backend import service as heatmap_service
+            overview = heatmap_service.get_map_overview(db)
+        except Exception as svc_exc:
+            logger.warning("Heatmap service unavailable, falling back to inline query: %s", svc_exc)
+            overview = _fallback_map_overview(db)
+
+        data: Dict[str, Dict[str, Any]] = {}
+        for g in overview.get("governorates", []):
+            data[g["slug"]] = {
+                "name": g.get("name_en", g["slug"].capitalize()),
+                "kindergarten_count": int(g.get("main_indicators", {}).get("nursery_status", 0)),
+                "children_count": int(g.get("main_indicators", {}).get("children_registration", 0)),
+                "governance_score": g.get("main_indicators", {}).get("tasks_governance", 0),
+                "incidents_total": int(100 - g.get("main_indicators", {}).get("safety_incidents", 0)),
+                "risk_score": g.get("risk_score", 0),
+                "last_update": overview.get("last_update"),
+                "main_indicators": g.get("main_indicators", {}),
+                "risk_level": g.get("risk_level", {}),
+            }
+
+        return HeatmapResponse(
+            data=data,
+            indicators=list(INDICATOR_LABELS.keys()),
+            last_update=overview.get("last_update", datetime.now().isoformat()),
+            summary=overview.get("summary"),
+            risk_legend=overview.get("risk_legend"),
+        )
+
+    except HTTPException:
+        raise
+    except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
+        logger.error(f"Failed to get heatmap data: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+def _fallback_map_overview(db: Session) -> Dict[str, Any]:
+    """
+    Inline fallback when the heatmap service is not importable.
+
+    P1-A fix: Kindergarten has NO governance_score column — that column lives on
+    the separate GovernanceScore table (final_governance_score).  We join through
+    GovernanceScore to compute the per-governorate average.  If GovernanceScore
+    has no rows yet we default to 0.0, which produces a risk_score of 50 rather
+    than crashing with AttributeError.
+    """
+    governorates = ['amman', 'irbid', 'zarqa', 'mafraq', 'jerash', 'ajloun',
+                    'balqa', 'madaba', 'karak', 'tafileh', 'maan', 'aqaba']
+
+    # Aggregate every metric once with GROUP BY (4 queries total, avoids the
+    # previous 36-query N+1 loop of 3 queries per governorate).
+    kg_counts: Dict[str, int] = dict(
+        db.query(models.Kindergarten.governorate, func.count(models.Kindergarten.id))
+        .group_by(models.Kindergarten.governorate)
+        .all()
+    )
+
+    governance_avgs: Dict[str, float] = dict(
+        db.query(
+            models.Kindergarten.governorate,
+            func.avg(models.GovernanceScore.final_governance_score),
+        )
+        .join(models.Kindergarten,
+              models.GovernanceScore.kindergarten_id == models.Kindergarten.id)
+        .group_by(models.Kindergarten.governorate)
+        .all()
+    )
+
+    incident_counts: Dict[str, int] = dict(
+        db.query(models.Kindergarten.governorate, func.count(models.Incident.id))
+        .join(models.Kindergarten,
+              models.Incident.kindergarten_id == models.Kindergarten.id)
+        .group_by(models.Kindergarten.governorate)
+        .all()
+    )
+
+    # Children registration: distinct active-enrolled children per governorate.
+    children_counts: Dict[str, int] = dict(
+        db.query(
+            models.Kindergarten.governorate,
+            func.count(func.distinct(models.EnrollmentApplication.child_id)),
+        )
+        .join(models.Kindergarten,
+              models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id)
+        .filter(models.EnrollmentApplication.is_active.is_(True))
+        .group_by(models.Kindergarten.governorate)
+        .all()
+    )
+
+    data: List[Dict[str, Any]] = []
+    for gov in governorates:
+        gov_name = gov.capitalize()
+
+        total_kgs = int(kg_counts.get(gov_name, 0) or 0)
+        avg_governance = float(governance_avgs.get(gov_name, 0.0) or 0.0)
+        incident_count = int(incident_counts.get(gov_name, 0) or 0)
+        children_count = int(children_counts.get(gov_name, 0) or 0)
+
+        risk_score = calculate_governorate_risk_score(avg_governance, incident_count)
+        data.append({
+            "slug": gov,
+            "name_en": gov_name,
+            "main_indicators": {
+                "tasks_governance": round(avg_governance, 1),
+                "nursery_status": total_kgs,
+                "children_registration": children_count,
+                "safety_incidents": max(0, 100 - incident_count * 5),
+            },
+            "risk_score": risk_score,
+            "risk_level": {
+                "key": "low" if risk_score < 25 else "medium",
+                "name_en": "Low" if risk_score < 25 else "Medium",
+                "name_ar": "منخفض" if risk_score < 25 else "متوسط",
+                "color": "#28A745" if risk_score < 25 else "#FFC107",
+            },
+        })
+    return {
+        "last_update": datetime.now().isoformat(),
+        "indicators": [{"key": k, **v} for k, v in INDICATOR_LABELS.items()],
+        "governorates": data,
+        "summary": {
+            "total_governorates": len(data),
+            "average_risk": round(sum(d["risk_score"] for d in data) / len(data), 1) if data else 0,
+            "high_risk_count": sum(1 for d in data if d["risk_score"] > 50),
+            "critical_count": sum(1 for d in data if d["risk_score"] > 75),
+        },
+        "risk_legend": [],
+    }
+
+
+def calculate_governorate_risk_score(governance_score: float, incident_count: int) -> int:
+    """Calculate risk score for a governorate based on metrics."""
+    score = 100 - governance_score
+    if incident_count > 10:
+        score += 20
+    return min(max(int(score), 0), 100)

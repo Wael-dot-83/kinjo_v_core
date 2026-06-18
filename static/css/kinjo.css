@@ -49,7 +49,7 @@
   --kinjo-bg-dark: #0f172a;
   --kinjo-text-primary: #1e293b;
   --kinjo-text-secondary: #64748b;
-  --kinjo-text-muted: #94a3b8;
+  --kinjo-text-muted: #64748b;
   --kinjo-border-color: #e2e8f0;
   --kinjo-border-light: #f1f5f9;
   --kinjo-surface: #ffffff;
@@ -988,6 +988,13 @@ body.sidebar-open .sidebar-backdrop {
   }
 }
 
+/* Spinning icon glyph (e.g. <i class="bi bi-arrow-repeat bi-spin">), the
+   Bootstrap-Icons equivalent of Font Awesome's fa-spin utility. */
+.bi-spin {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
 /* Skeleton Loading */
 .skeleton {
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
@@ -1287,9 +1294,236 @@ body.sidebar-open .sidebar-backdrop {
   }
 }
 
-/* ============================================================================
-   Print Styles
-   ============================================================================ */
+/* Responsive layout refinements */
+.app-main {
+  min-width: 0;
+}
+
+.container-fluid {
+  max-width: 100%;
+}
+
+.page-header-wrap {
+  align-items: flex-start;
+}
+
+.page-header-actions {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.alert-container {
+  inset-inline-end: 1rem;
+  inset-inline-start: 1rem;
+  max-width: min(420px, calc(100vw - 2rem));
+}
+
+/* Search form lives directly in the navbar header (not inside the
+   collapsible menu) so it's always visible. Below `lg` it drops to its own
+   full-width row under the brand/toggler row; at `lg`+ it sits inline,
+   centered, with a sensible max width. */
+.navbar-search-form {
+  order: 5;
+  flex: 1 0 100%;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 992px) {
+  .navbar-search-form {
+    order: 0;
+    flex: 0 1 400px;
+    width: auto;
+    max-width: 400px;
+    margin-top: 0;
+    margin-inline: auto;
+  }
+}
+
+.navbar-search-form .input-group {
+  width: 100%;
+}
+
+.table-responsive {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chart-container {
+  position: relative;
+  width: 100%;
+  min-height: 280px;
+  height: min(62vh, 320px);
+}
+
+.chart-container--macro {
+  height: var(--chart-height, min(62vh, 320px));
+}
+
+.chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.chart-container.position-relative {
+  height: min(62vh, 320px);
+}
+
+.card .chart-container {
+  min-height: 260px;
+}
+
+.kpi-card {
+  min-width: 0;
+}
+
+.kpi-value,
+.system-value,
+.stat-value,
+.display-5 {
+  overflow-wrap: anywhere;
+}
+
+.msg-preview {
+  white-space: normal;
+  line-height: 1.55;
+}
+
+.text-truncate-2,
+.text-truncate-3 {
+  max-width: 100%;
+}
+
+.avatar-lg {
+  width: clamp(3.5rem, 14vw, 5.5rem);
+  height: clamp(3.5rem, 14vw, 5.5rem);
+}
+
+@media (max-width: 991.98px) {
+  .chart-container {
+    height: min(54vh, 300px);
+  }
+
+  .chart-container--macro {
+    height: min(54vh, 300px);
+  }
+
+  .chart-container.position-relative {
+    height: min(54vh, 300px);
+  }
+
+  .card .chart-container {
+    min-height: 240px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .app-main-with-sidebar,
+  .app-main-full {
+    padding-inline: 0.75rem;
+  }
+
+  .page-header-wrap {
+    gap: 1rem;
+  }
+
+  .page-header-actions {
+    flex-direction: column;
+  }
+
+  .page-header-actions .btn,
+  .page-header-actions .btn-group,
+  .page-header-actions .dropdown {
+    width: 100%;
+  }
+
+  .page-header-actions .btn-group,
+  .page-header-actions .btn-group .btn,
+  .page-header-actions .dropdown .btn {
+    justify-content: center;
+  }
+
+  .chart-container {
+    min-height: 230px;
+    height: 230px;
+  }
+
+  .chart-container--macro {
+    height: 230px;
+  }
+
+  .chart-container.position-relative {
+    height: 230px;
+  }
+
+  .card .chart-container {
+    min-height: 220px;
+  }
+
+  .modal-dialog {
+    margin: 0.75rem;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-inline: 1rem;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  .notification-dropdown {
+    min-width: min(300px, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+  }
+
+  .msg-preview {
+    max-height: 4.8em;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .chart-container {
+    min-height: 210px;
+    height: 210px;
+  }
+
+  .chart-container--macro {
+    height: 210px;
+  }
+
+  .chart-container.position-relative {
+    height: 210px;
+  }
+
+  .card .chart-container {
+    min-height: 210px;
+  }
+
+  .kpi-value {
+    font-size: 1.75rem;
+  }
+
+  .metric-value {
+    font-size: 1.75rem;
+  }
+
+  .status-widget,
+  .manager-stat-card,
+  .system-stat {
+    min-height: 0;
+  }
+}
+
+/* Print Styles */
 @media print {
   .sidebar,
   .navbar,
@@ -1415,6 +1649,15 @@ body.sidebar-open .sidebar-backdrop {
 
 .breadcrumb-item.active {
   color: var(--kinjo-text-secondary);
+}
+
+/* Hide breadcrumbs on small screens — GWS responsive guidance: secondary
+   navigation aids should not compete for space on mobile. */
+@media (max-width: 767.98px) {
+  nav[aria-label="Breadcrumb"],
+  nav[aria-label="مسار التنقل"] {
+    display: none;
+  }
 }
 
 /* ============================================================================
@@ -2153,7 +2396,7 @@ body.sidebar-open .sidebar-backdrop {
 :root {
   --kinjo-sidebar-bg:       #111827;
   --kinjo-sidebar-text:     #d1d5db;
-  --kinjo-sidebar-muted:    #6b7280;
+  --kinjo-sidebar-muted:    #cbd5e1;
   --kinjo-sidebar-border:   rgba(255,255,255,0.06);
   --kinjo-sidebar-hover:    rgba(255,255,255,0.07);
   --kinjo-sidebar-active-bg:#1e3a8a;

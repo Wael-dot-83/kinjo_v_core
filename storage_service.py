@@ -1,7 +1,9 @@
 """
 Attachment storage helpers (local and S3).
 """
+import logging
 import os
+import re
 import shutil
 import tempfile
 import uuid
@@ -11,6 +13,15 @@ from typing import Tuple
 from fastapi import UploadFile
 
 from config import settings
+from virus_scan_service import VirusFoundError, VirusScanUnavailable, scan_bytes
+
+logger = logging.getLogger(__name__)
+
+# Images are re-encoded on upload to cap dimensions/size (GWS web-performance
+# guidance: keep page weight down). GIFs are skipped to avoid breaking animation.
+COMPRESSIBLE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_IMAGE_DIMENSION_PX = 1920
+JPEG_WEBP_QUALITY = 82
 
 # Allowed file extensions and their MIME types for upload validation
 ALLOWED_EXTENSIONS: dict[str, set[str]] = {
@@ -29,9 +40,28 @@ ALLOWED_EXTENSIONS: dict[str, set[str]] = {
 }
 
 
+def _sanitize_filename(name: str) -> str:
+    """Return a filesystem-safe version of an upload filename.
+
+    GWS C.3.3-069 requires that uploaded file names are free from spaces
+    (spaces must be replaced with underscores).  Additionally strips any
+    path-separator characters to prevent directory traversal via filename.
+    """
+    # Replace spaces with underscores
+    name = name.replace(" ", "_")
+    # Strip path separators and null bytes
+    name = re.sub(r'[/\\:\x00]', "_", name)
+    return name
+
+
 def _validate_upload(upload: UploadFile) -> str:
     """Validate file extension and content-type. Returns the safe extension."""
-    ext = Path(upload.filename or "").suffix.lower()
+    raw_name = upload.filename or ""
+    safe_name = _sanitize_filename(raw_name)
+    if safe_name != raw_name:
+        # Update the filename on the upload object so callers see the sanitised name
+        upload.filename = safe_name
+    ext = Path(safe_name).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise ValueError(
             f"File type '{ext}' is not allowed. "
@@ -67,11 +97,74 @@ def _save_to_temp(upload: UploadFile, max_bytes: int) -> Tuple[str, int]:
     return tmp_path, size
 
 
+def compress_image_in_place(path: str, ext: str) -> int:
+    """Re-encode an oversized image in place to cap dimensions and file weight.
+
+    Returns the file's size after the attempt (unchanged on failure).
+    Best-effort: any failure (corrupt image, unsupported mode, Pillow
+    unavailable) leaves the original file untouched and is logged, never
+    raised — a compression problem must not block a valid upload.
+    """
+    ext = ext.lower()
+    if ext not in COMPRESSIBLE_IMAGE_EXTENSIONS:
+        return os.path.getsize(path)
+    try:
+        from PIL import Image
+    except ImportError:
+        logger.warning("Pillow not available; skipping image compression for %s", ext)
+        return os.path.getsize(path)
+
+    try:
+        with Image.open(path) as img:
+            img.load()
+            original_format = img.format
+            if img.mode in ("RGBA", "P") and ext in (".jpg", ".jpeg"):
+                img = img.convert("RGB")
+
+            if max(img.size) > MAX_IMAGE_DIMENSION_PX:
+                img.thumbnail((MAX_IMAGE_DIMENSION_PX, MAX_IMAGE_DIMENSION_PX), Image.LANCZOS)
+
+            save_kwargs = {}
+            if original_format in ("JPEG", "WEBP"):
+                save_kwargs = {"quality": JPEG_WEBP_QUALITY, "optimize": True}
+            elif original_format == "PNG":
+                save_kwargs = {"optimize": True}
+
+            img.save(path, format=original_format, **save_kwargs)
+        return os.path.getsize(path)
+    except Exception as exc:  # noqa: BLE001 - never let a compression bug block an upload
+        logger.warning("Image compression skipped for upload (%s): %s", ext, exc)
+        return os.path.getsize(path)
+
+
+def _maybe_compress_image(temp_path: str, ext: str, size: int) -> int:
+    if ext not in COMPRESSIBLE_IMAGE_EXTENSIONS:
+        return size
+    return compress_image_in_place(temp_path, ext)
+
+
+def _scan_or_reject(temp_path: str) -> None:
+    """Virus-scan a saved temp file; raise ValueError (caught by callers
+    the same way as any other upload-validation failure) if it's infected
+    or if scanning is enabled but the scanner can't be reached."""
+    try:
+        with open(temp_path, "rb") as f:
+            scan_bytes(f.read())
+    except VirusFoundError as exc:
+        os.remove(temp_path)
+        raise ValueError(f"File rejected: malicious content detected ({exc.signature})") from exc
+    except VirusScanUnavailable as exc:
+        os.remove(temp_path)
+        raise ValueError("File could not be scanned for viruses; please try again later") from exc
+
+
 def save_attachment(upload: UploadFile) -> Tuple[str, str, int]:
     ext = _validate_upload(upload)
     provider = (settings.STORAGE_PROVIDER or "local").lower()
     max_bytes = settings.MAX_ATTACHMENT_SIZE_MB * 1024 * 1024
     temp_path, size = _save_to_temp(upload, max_bytes)
+    _scan_or_reject(temp_path)
+    size = _maybe_compress_image(temp_path, ext, size)
 
     if provider == "s3":
         return _save_to_s3(upload, temp_path, size, ext)
@@ -124,4 +217,4 @@ def resolve_attachment_path(storage_key: str) -> Path:
     return file_path
 
 
-__all__ = ["save_attachment", "resolve_attachment_path"]
+__all__ = ["save_attachment", "resolve_attachment_path", "compress_image_in_place"]

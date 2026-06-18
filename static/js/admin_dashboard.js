@@ -1,7 +1,18 @@
 /**
  * Admin Dashboard JavaScript
  * Handles dashboard data fetching, KPI rendering, and interactive functionality
+ * safeChartData() is provided globally by chart_utils.js (loaded before this script).
  */
+
+/** Shared HTML escaping — used to safely insert API strings into innerHTML */
+function escapeHtml(str) {
+  return String(str == null ? "" : str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 class AdminDashboard {
   constructor() {
@@ -11,28 +22,19 @@ class AdminDashboard {
     this.charts = {};
     this.isLoading = false;
 
-    // Initialize dashboard when DOM is ready
     document.addEventListener("DOMContentLoaded", () => {
       this.init();
     });
   }
 
   init() {
-    console.log("Initializing Admin Dashboard...");
-
-    // Initialize components
     this.initEventListeners();
     this.initCharts();
-
-    // Load initial data
     this.loadDashboardData();
-
-    // Start auto-refresh
     this.startAutoRefresh();
   }
 
   initEventListeners() {
-    // Refresh button
     const refreshBtn = document.getElementById("refresh-dashboard");
     if (refreshBtn) {
       refreshBtn.addEventListener("click", () => {
@@ -40,7 +42,6 @@ class AdminDashboard {
       });
     }
 
-    // Retry button
     const retryBtn = document.getElementById("retry-dashboard");
     if (retryBtn) {
       retryBtn.addEventListener("click", () => {
@@ -48,7 +49,6 @@ class AdminDashboard {
       });
     }
 
-    // Handle window visibility change for auto-refresh
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         this.stopAutoRefresh();
@@ -59,7 +59,7 @@ class AdminDashboard {
   }
 
   initCharts() {
-    // Initialize Chart.js defaults
+    if (typeof Chart === "undefined") return;
     Chart.defaults.responsive = true;
     Chart.defaults.maintainAspectRatio = false;
     Chart.defaults.plugins.legend.display = true;
@@ -100,23 +100,11 @@ class AdminDashboard {
   }
 
   renderDashboard(data) {
-    console.log("Rendering dashboard with data:", data);
-
     const normalized = this.normalizePayload(data || {});
-
-    // Render KPI cards
     this.renderKPICards(normalized.kpis);
-
-    // Render charts
     this.renderCharts(normalized.charts);
-
-    // Render activity feed
     this.renderActivityFeed(normalized.recent_activity);
-
-    // Render alerts
     this.renderAlerts(normalized.alerts);
-
-    // Show dashboard content
     this.showDashboardContent();
   }
 
@@ -125,7 +113,6 @@ class AdminDashboard {
     const systemOverview = data.system_overview || {};
     const alerts = Array.isArray(data.alerts) ? data.alerts : [];
 
-    // Backward compatibility: keep supporting legacy "kpis" shape.
     const kpis = data.kpis || {
       total_users: this.toNumber(systemOverview.total_users),
       active_users: this.toNumber(summary.attendance_today),
@@ -169,10 +156,7 @@ class AdminDashboard {
   }
 
   buildRecentActivityFromAlerts(alerts) {
-    if (!Array.isArray(alerts) || alerts.length === 0) {
-      return [];
-    }
-
+    if (!Array.isArray(alerts) || alerts.length === 0) return [];
     return alerts.slice(0, 5).map((alert) => ({
       type: "system_update",
       message: alert.title || alert.message || "System update",
@@ -186,62 +170,34 @@ class AdminDashboard {
 
     container.innerHTML = "";
 
+    // All icons use Bootstrap Icons (bi bi-*) — Font Awesome is NOT loaded
     const kpiConfig = [
-      {
-        key: "total_users",
-        icon: "fas fa-users",
-        color: "primary",
-        format: "number",
-      },
-      {
-        key: "active_users",
-        icon: "fas fa-user-check",
-        color: "success",
-        format: "number",
-      },
-      {
-        key: "total_kindergartens",
-        icon: "fas fa-school",
-        color: "info",
-        format: "number",
-      },
-      {
-        key: "active_kindergartens",
-        icon: "fas fa-school-circle-check",
-        color: "success",
-        format: "number",
-      },
-      {
-        key: "total_submissions",
-        icon: "fas fa-file-alt",
-        color: "warning",
-        format: "number",
-      },
-      {
-        key: "pending_submissions",
-        icon: "fas fa-clock",
-        color: "danger",
-        format: "number",
-      },
-      {
-        key: "page_load_time",
-        icon: "fas fa-stopwatch",
-        color: "secondary",
-        format: "duration",
-      },
-      {
-        key: "data_quality_score",
-        icon: "fas fa-chart-line",
-        color: "primary",
-        format: "percentage",
-      },
+      { key: "total_users",          icon: "bi bi-people-fill",       color: "primary",   format: "number" },
+      { key: "active_users",         icon: "bi bi-person-check-fill", color: "success",   format: "number" },
+      { key: "total_kindergartens",  icon: "bi bi-house-fill",        color: "info",      format: "number" },
+      { key: "active_kindergartens", icon: "bi bi-house-check-fill",  color: "success",   format: "number" },
+      { key: "total_submissions",    icon: "bi bi-file-earmark-fill", color: "warning",   format: "number" },
+      { key: "pending_submissions",  icon: "bi bi-clock-fill",        color: "danger",    format: "number" },
+      { key: "page_load_time",       icon: "bi bi-stopwatch-fill",    color: "secondary", format: "duration" },
+      { key: "data_quality_score",   icon: "bi bi-graph-up-arrow",    color: "primary",   format: "percentage" },
     ];
+
+    // English fallbacks for every KPI key — used only when i18n has not loaded
+    this._kpiFallbacks = {
+      total_users:          "Total Users",
+      active_users:         "Active Users",
+      total_kindergartens:  "Total Kindergartens",
+      active_kindergartens: "Active Kindergartens",
+      total_submissions:    "Total Submissions",
+      pending_submissions:  "Pending Submissions",
+      page_load_time:       "Page Load Time",
+      data_quality_score:   "Data Quality",
+    };
 
     kpiConfig.forEach((config) => {
       const value = kpis[config.key];
       if (value !== undefined) {
-        const card = this.createKPICard(config, value);
-        container.appendChild(card);
+        container.appendChild(this.createKPICard(config, value));
       }
     });
   }
@@ -249,6 +205,8 @@ class AdminDashboard {
   createKPICard(config, value) {
     const card = document.createElement("div");
     card.className = "admin-kpi-card";
+    card.setAttribute("role", "region");
+    card.setAttribute("aria-label", this.formatTitle(config.key));
 
     let formattedValue = value;
     let subtitle = "";
@@ -258,87 +216,86 @@ class AdminDashboard {
         formattedValue = `${value}%`;
         break;
       case "duration":
+        // Capture page-load duration once at construction time, not on every auto-refresh
         formattedValue = `${this.getPageLoadDuration().toFixed(2)}s`;
-        subtitle = "Measured from this page load";
+        subtitle = this.t("dashboard.page_load_subtitle", "System performance");
         break;
       case "number":
         formattedValue = this.formatNumber(value);
         break;
       default:
-        formattedValue = value;
+        formattedValue = String(value);
     }
 
-    card.innerHTML = `
-            <div class="admin-kpi-card-icon admin-kpi-card-${config.color}">
-                <i class="${config.icon}"></i>
-            </div>
-            <div class="admin-kpi-card-content">
-                <div class="admin-kpi-card-value">${formattedValue}</div>
-                <div class="admin-kpi-card-title" data-i18n="dashboard.${config.key}">${this.formatTitle(config.key)}</div>
-                ${subtitle ? `<div class="admin-kpi-card-subtitle">${subtitle}</div>` : ""}
-            </div>
-        `;
+    // Build card using DOM methods to avoid innerHTML XSS risk on value
+    const iconDiv = document.createElement("div");
+    iconDiv.className = `admin-kpi-card-icon admin-kpi-card-${config.color}`;
+    const iconEl = document.createElement("i");
+    iconEl.className = config.icon;
+    iconEl.setAttribute("aria-hidden", "true");
+    iconDiv.appendChild(iconEl);
 
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "admin-kpi-card-content";
+
+    const valueDiv = document.createElement("div");
+    valueDiv.className = "admin-kpi-card-value";
+    valueDiv.textContent = formattedValue;
+
+    const titleDiv = document.createElement("div");
+    titleDiv.className = "admin-kpi-card-title";
+    titleDiv.setAttribute("data-i18n", `dashboard.${config.key}`);
+    const fallback = (this._kpiFallbacks || {})[config.key] || this.formatTitle(config.key);
+    titleDiv.textContent = this.t(`dashboard.${config.key}`, fallback);
+
+    contentDiv.appendChild(valueDiv);
+    contentDiv.appendChild(titleDiv);
+
+    if (subtitle) {
+      const subDiv = document.createElement("div");
+      subDiv.className = "admin-kpi-card-subtitle";
+      subDiv.textContent = subtitle;
+      contentDiv.appendChild(subDiv);
+    }
+
+    card.appendChild(iconDiv);
+    card.appendChild(contentDiv);
     return card;
   }
 
   renderCharts(charts) {
-    // User Activity Chart
-    if (charts.user_activity) {
-      this.renderUserActivityChart(charts.user_activity);
-    }
-
-    // Data Submissions Chart
-    if (charts.data_submissions) {
-      this.renderDataSubmissionsChart(charts.data_submissions);
-    }
+    if (typeof Chart === "undefined") return;
+    if (charts.user_activity) this.renderUserActivityChart(charts.user_activity);
+    if (charts.data_submissions) this.renderDataSubmissionsChart(charts.data_submissions);
   }
 
   renderUserActivityChart(data) {
     const ctx = document.getElementById("user-activity-chart");
     if (!ctx) return;
 
-    // Destroy existing chart
-    if (this.charts.userActivity) {
-      this.charts.userActivity.destroy();
-    }
+    if (this.charts.userActivity) this.charts.userActivity.destroy();
 
     this.charts.userActivity = new Chart(ctx, {
       type: "line",
       data: {
-        labels: data.labels,
-        datasets: [
-          {
-            label: this.t("dashboard.active_users", "Active users"),
-            data: data.values,
-            borderColor: "rgb(54, 162, 235)",
-            backgroundColor: "rgba(54, 162, 235, 0.1)",
-            tension: 0.4,
-            fill: true,
-          },
-        ],
+        labels: safeChartData(data.labels),
+        datasets: [{
+          label: this.t("dashboard.active_users", "Active users"),
+          data: safeChartData(data.values),
+          borderColor: "rgb(54, 162, 235)",
+          backgroundColor: "rgba(54, 162, 235, 0.1)",
+          tension: 0.4,
+          fill: true,
+        }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {
-            display: true,
-            position: "top",
-          },
-          tooltip: {
-            mode: "index",
-            intersect: false,
-          },
+          legend: { display: true, position: "top" },
+          tooltip: { mode: "index", intersect: false },
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              precision: 0,
-            },
-          },
-        },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
       },
     });
   }
@@ -347,42 +304,25 @@ class AdminDashboard {
     const ctx = document.getElementById("data-submissions-chart");
     if (!ctx) return;
 
-    // Destroy existing chart
-    if (this.charts.dataSubmissions) {
-      this.charts.dataSubmissions.destroy();
-    }
+    if (this.charts.dataSubmissions) this.charts.dataSubmissions.destroy();
 
     this.charts.dataSubmissions = new Chart(ctx, {
       type: "bar",
       data: {
-        labels: data.labels,
-        datasets: [
-          {
-            label: this.t("dashboard.total_submissions", "Total submissions"),
-            data: data.values,
-            backgroundColor: "rgba(255, 159, 64, 0.8)",
-            borderColor: "rgb(255, 159, 64)",
-            borderWidth: 1,
-          },
-        ],
+        labels: safeChartData(data.labels),
+        datasets: [{
+          label: this.t("dashboard.total_submissions", "Total submissions"),
+          data: safeChartData(data.values),
+          backgroundColor: "rgba(255, 159, 64, 0.8)",
+          borderColor: "rgb(255, 159, 64)",
+          borderWidth: 1,
+        }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: "top",
-          },
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              precision: 0,
-            },
-          },
-        },
+        plugins: { legend: { display: true, position: "top" } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
       },
     });
   }
@@ -394,14 +334,27 @@ class AdminDashboard {
     container.innerHTML = "";
 
     if (!activities || activities.length === 0) {
-      container.innerHTML =
-        '<p class="admin-no-data" data-i18n="dashboard.no_recent_activity">No recent activity</p>';
+      const wrapper = document.createElement("div");
+      wrapper.className = "admin-empty-state";
+
+      const p = document.createElement("p");
+      p.className = "admin-no-data";
+      p.setAttribute("data-i18n", "dashboard.no_recent_activity");
+      p.textContent = this.t("dashboard.no_recent_activity", "No recent activity");
+
+      const hint = document.createElement("p");
+      hint.className = "admin-no-data-hint";
+      hint.setAttribute("data-i18n", "dashboard.no_activity_hint");
+      hint.textContent = this.t("dashboard.no_activity_hint", "Add users or monitor operations to see activity here");
+
+      wrapper.appendChild(p);
+      wrapper.appendChild(hint);
+      container.appendChild(wrapper);
       return;
     }
 
     activities.forEach((activity) => {
-      const item = this.createActivityItem(activity);
-      container.appendChild(item);
+      container.appendChild(this.createActivityItem(activity));
     });
   }
 
@@ -409,18 +362,28 @@ class AdminDashboard {
     const item = document.createElement("div");
     item.className = "admin-activity-item";
 
-    const timeAgo = this.formatTimeAgo(activity.timestamp);
+    const iconDiv = document.createElement("div");
+    iconDiv.className = "admin-activity-icon";
+    const icon = document.createElement("i");
+    icon.className = this.getActivityIcon(activity.type);
+    icon.setAttribute("aria-hidden", "true");
+    iconDiv.appendChild(icon);
 
-    item.innerHTML = `
-            <div class="admin-activity-icon">
-                <i class="${this.getActivityIcon(activity.type)}"></i>
-            </div>
-            <div class="admin-activity-content">
-                <div class="admin-activity-message">${escapeHtml(activity.message)}</div>
-                <div class="admin-activity-time">${timeAgo}</div>
-            </div>
-        `;
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "admin-activity-content";
 
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "admin-activity-message";
+    msgDiv.textContent = activity.message || ""; // textContent — never innerHTML
+
+    const timeDiv = document.createElement("div");
+    timeDiv.className = "admin-activity-time";
+    timeDiv.textContent = this.formatTimeAgo(activity.timestamp);
+
+    contentDiv.appendChild(msgDiv);
+    contentDiv.appendChild(timeDiv);
+    item.appendChild(iconDiv);
+    item.appendChild(contentDiv);
     return item;
   }
 
@@ -431,37 +394,55 @@ class AdminDashboard {
     container.innerHTML = "";
 
     if (!alerts || alerts.length === 0) {
-      container.innerHTML =
-        '<p class="admin-no-data" data-i18n="dashboard.no_alerts">No active alerts</p>';
+      const p = document.createElement("p");
+      p.className = "admin-no-data";
+      p.setAttribute("data-i18n", "dashboard.no_alerts");
+      p.textContent = this.t("dashboard.no_alerts", "No active alerts");
+      container.appendChild(p);
       return;
     }
 
+
     alerts.forEach((alert) => {
-      const alertItem = this.createAlertItem(alert);
-      container.appendChild(alertItem);
+      container.appendChild(this.createAlertItem(alert));
     });
   }
 
   createAlertItem(alert) {
     const item = document.createElement("div");
-    item.className = `admin-alert-item admin-alert-${alert.severity}`;
+    item.className = `admin-alert-item admin-alert-${alert.severity || "info"}`;
+    item.setAttribute("role", "listitem");
 
-    item.innerHTML = `
-            <div class="admin-alert-icon">
-                <i class="${this.getAlertIcon(alert.severity)}"></i>
-            </div>
-            <div class="admin-alert-content">
-                <div class="admin-alert-message">${escapeHtml(alert.message)}</div>
-                <div class="admin-alert-time">${this.formatTimeAgo(alert.timestamp)}</div>
-            </div>
-        `;
+    const iconDiv = document.createElement("div");
+    iconDiv.className = "admin-alert-icon";
+    const icon = document.createElement("i");
+    icon.className = this.getAlertIcon(alert.severity);
+    icon.setAttribute("aria-hidden", "true");
+    iconDiv.appendChild(icon);
 
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "admin-alert-content";
+
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "admin-alert-message";
+    msgDiv.textContent = alert.message || ""; // textContent — never innerHTML
+
+    const timeDiv = document.createElement("div");
+    timeDiv.className = "admin-alert-time";
+    timeDiv.textContent = this.formatTimeAgo(alert.timestamp);
+
+    contentDiv.appendChild(msgDiv);
+    contentDiv.appendChild(timeDiv);
+    item.appendChild(iconDiv);
+    item.appendChild(contentDiv);
     return item;
   }
 
-  // Utility methods
+  // ── Utilities ────────────────────────────────────────────────────────────────
+
   formatNumber(num) {
-    return new Intl.NumberFormat().format(num);
+    const locale = this.t("common.locale", "en-US");
+    return new Intl.NumberFormat(locale).format(num);
   }
 
   toNumber(value) {
@@ -474,27 +455,36 @@ class AdminDashboard {
   }
 
   getPageLoadDuration() {
-    if (window.performance?.timing?.navigationStart) {
-      const elapsed = Date.now() - window.performance.timing.navigationStart;
-      return Math.max(elapsed / 1000, 0);
+    try {
+      // Prefer the modern PerformanceNavigationTiming API
+      const entries = performance.getEntriesByType("navigation");
+      if (entries.length > 0) {
+        return Math.max(entries[0].loadEventEnd / 1000, 0);
+      }
+      // Fallback for older browsers
+      if (window.performance?.timing?.navigationStart) {
+        return Math.max((Date.now() - window.performance.timing.navigationStart) / 1000, 0);
+      }
+    } catch (_) {
+      // Performance API unavailable
     }
     return 0;
   }
 
   formatTimeAgo(timestamp) {
+    if (!timestamp) return "";
     const now = new Date();
     const time = new Date(timestamp);
+    if (isNaN(time.getTime())) return "";
+
     const diff = now - time;
-
     const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    const hours   = Math.floor(diff / 3600000);
+    const days    = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return this.t("common.just_now", "just now");
-    if (minutes < 60)
-      return `${minutes} ${this.t("common.minutes_ago", "minutes ago")}`;
-    if (hours < 24)
-      return `${hours} ${this.t("common.hours_ago", "hours ago")}`;
+    if (minutes < 1)  return this.t("common.just_now",     "just now");
+    if (minutes < 60) return `${minutes} ${this.t("common.minutes_ago", "minutes ago")}`;
+    if (hours   < 24) return `${hours} ${this.t("common.hours_ago",   "hours ago")}`;
     return `${days} ${this.t("common.days_ago", "days ago")}`;
   }
 
@@ -507,35 +497,37 @@ class AdminDashboard {
   }
 
   getActivityIcon(type) {
+    // Bootstrap Icons only — bi bi-* class names
     const icons = {
-      user_login: "fas fa-sign-in-alt",
-      user_logout: "fas fa-sign-out-alt",
-      data_submit: "fas fa-upload",
-      user_create: "fas fa-user-plus",
-      system_update: "fas fa-cog",
+      user_login:    "bi bi-box-arrow-in-right",
+      user_logout:   "bi bi-box-arrow-left",
+      data_submit:   "bi bi-upload",
+      user_create:   "bi bi-person-plus-fill",
+      system_update: "bi bi-gear-fill",
     };
-    return icons[type] || "fas fa-info-circle";
+    return icons[type] || "bi bi-info-circle-fill";
   }
 
   getAlertIcon(severity) {
+    // Bootstrap Icons only
     const icons = {
-      critical: "fas fa-exclamation-triangle",
-      warning: "fas fa-exclamation-circle",
-      info: "fas fa-info-circle",
-      success: "fas fa-check-circle",
+      critical: "bi bi-exclamation-triangle-fill",
+      warning:  "bi bi-exclamation-circle-fill",
+      info:     "bi bi-info-circle-fill",
+      success:  "bi bi-check-circle-fill",
     };
-    return icons[severity] || "fas fa-info-circle";
+    return icons[severity] || "bi bi-info-circle-fill";
   }
 
-  // UI state management
+  // ── UI State ─────────────────────────────────────────────────────────────────
+
   showLoading() {
     const loading = document.getElementById("dashboard-loading");
     const content = document.getElementById("dashboard-content");
-    const error = document.getElementById("dashboard-error");
-
+    const error   = document.getElementById("dashboard-error");
     if (loading) loading.style.display = "flex";
     if (content) content.style.display = "none";
-    if (error) error.style.display = "none";
+    if (error)   error.style.display   = "none";
   }
 
   hideLoading() {
@@ -549,13 +541,12 @@ class AdminDashboard {
   }
 
   showError(message) {
-    const error = document.getElementById("dashboard-error");
-    const errorMsg = document.getElementById("error-message");
+    const error   = document.getElementById("dashboard-error");
+    const errMsg  = document.getElementById("error-message");
     const content = document.getElementById("dashboard-content");
     const loading = document.getElementById("dashboard-loading");
-
-    if (error) error.style.display = "flex";
-    if (errorMsg) errorMsg.textContent = message;
+    if (error)   error.style.display   = "flex";
+    if (errMsg)  errMsg.textContent    = message;
     if (content) content.style.display = "none";
     if (loading) loading.style.display = "none";
   }
@@ -566,9 +557,9 @@ class AdminDashboard {
   }
 
   startAutoRefresh() {
-    this.stopAutoRefresh(); // Clear any existing interval
+    this.stopAutoRefresh();
     this.intervalId = setInterval(() => {
-      this.loadDashboardData();
+      this.loadDashboardData(); // isLoading guard inside loadDashboardData prevents overlap
     }, this.refreshInterval);
   }
 
@@ -581,16 +572,10 @@ class AdminDashboard {
 
   destroy() {
     this.stopAutoRefresh();
-    // Destroy charts
-    Object.values(this.charts).forEach((chart) => {
-      if (chart) chart.destroy();
-    });
+    Object.values(this.charts).forEach((chart) => { if (chart) chart.destroy(); });
     this.charts = {};
   }
 }
 
-// Initialize dashboard when script loads
 window.adminDashboard = new AdminDashboard();
-
-// Export for global access if needed
 window.AdminDashboard = AdminDashboard;

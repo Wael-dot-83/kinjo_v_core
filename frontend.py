@@ -49,6 +49,14 @@ def language_context_processor(request: Request) -> dict:
             request.cookies.get(settings.CSRF_COOKIE_NAME, ""),
         ),
         "impersonation": impersonation,
+        "current_year": date.today().year,
+        "support_contact_email": settings.SUPPORT_CONTACT_EMAIL,
+        "support_contact_phone": settings.SUPPORT_CONTACT_PHONE,
+        # CAPTCHA_SITE_KEY is the public key — safe to expose to templates/JS.
+        # CAPTCHA_SECRET_KEY never leaves the server.
+        "captcha_enabled": settings.CAPTCHA_ENABLED,
+        "captcha_provider": settings.CAPTCHA_PROVIDER,
+        "captcha_site_key": settings.CAPTCHA_SITE_KEY,
     }
 
 
@@ -58,6 +66,9 @@ templates = Jinja2Templates(
     context_processors=[language_context_processor],
 )
 templates.env.globals['encoding'] = 'utf-8'
+# Expose only the single non-sensitive value templates need (never the full settings object).
+templates.env.globals['session_timeout_minutes'] = settings.SESSION_TIMEOUT_MINUTES
+templates.env.globals['max_attachment_size_mb'] = settings.MAX_ATTACHMENT_SIZE_MB
 
 
 @pass_context
@@ -103,7 +114,7 @@ router = APIRouter(include_in_schema=False)
 async def index(request: Request, current_user: typing.Optional[User] = Depends(get_current_user_optional)):
     if current_user:
         return RedirectResponse(url="/dashboard")
-    return RedirectResponse(url="/login")
+    return templates.TemplateResponse(request=request, name="public/home.html", context={"current_user": None})
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
@@ -126,6 +137,121 @@ async def register_page(request: Request):
             "registration_open": settings.PUBLIC_REGISTRATION_ENABLED or settings.TESTING,
         },
     )
+
+
+# -----------------------------------------------------------------------------
+# Public pages (no authentication required)
+# -----------------------------------------------------------------------------
+
+@router.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request):
+    return templates.TemplateResponse(request=request, name="public/about.html", context={"current_user": None})
+
+
+@router.get("/services", response_class=HTMLResponse)
+async def service_guide_page(request: Request):
+    """Public Service Guide / Service Card for the kindergarten enrollment service."""
+    return templates.TemplateResponse(
+        request=request,
+        name="public/service_guide.html",
+        context={
+            "current_user": None,
+            "required_documents": settings.REQUIRED_ENROLLMENT_DOCUMENTS,
+            "min_child_age_days": settings.MIN_CHILD_AGE_DAYS,
+            "max_child_age_months": settings.MAX_CHILD_AGE_MONTHS,
+        },
+    )
+
+
+@router.get("/faq", response_class=HTMLResponse)
+async def faq_page(request: Request):
+    return templates.TemplateResponse(request=request, name="public/faq.html", context={"current_user": None})
+
+
+@router.get("/contact", response_class=HTMLResponse)
+async def contact_page(request: Request):
+    return templates.TemplateResponse(request=request, name="public/contact.html", context={"current_user": None})
+
+
+@router.get("/sitemap", response_class=HTMLResponse)
+async def sitemap_page(request: Request):
+    return templates.TemplateResponse(request=request, name="public/sitemap.html", context={"current_user": None})
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(request: Request):
+    return templates.TemplateResponse(
+        request=request, name="public/legal.html", context={"current_user": None, "doc_type": "privacy"}
+    )
+
+
+@router.get("/terms", response_class=HTMLResponse)
+async def terms_page(request: Request):
+    return templates.TemplateResponse(
+        request=request, name="public/legal.html", context={"current_user": None, "doc_type": "terms"}
+    )
+
+
+@router.get("/disclaimer", response_class=HTMLResponse)
+async def disclaimer_page(request: Request):
+    return templates.TemplateResponse(
+        request=request, name="public/legal.html", context={"current_user": None, "doc_type": "disclaimer"}
+    )
+
+
+@router.get("/copyright", response_class=HTMLResponse)
+async def copyright_page(request: Request):
+    return templates.TemplateResponse(
+        request=request, name="public/legal.html", context={"current_user": None, "doc_type": "copyright"}
+    )
+
+
+@router.get("/robots.txt", include_in_schema=False)
+async def robots_txt():
+    lines = [
+        "User-agent: *",
+        "Allow: /$",
+        "Allow: /about",
+        "Allow: /services",
+        "Allow: /faq",
+        "Allow: /contact",
+        "Allow: /sitemap",
+        "Allow: /privacy",
+        "Allow: /terms",
+        "Allow: /disclaimer",
+        "Allow: /copyright",
+        "Allow: /login",
+        "Allow: /register",
+        "Disallow: /api/",
+        "Disallow: /admin",
+        "Disallow: /dashboard",
+        "Disallow: /parent/",
+        "Disallow: /supervisor/",
+        "Disallow: /manager/",
+        "Sitemap: /sitemap.xml",
+        "",
+    ]
+    return Response(content="\n".join(lines), media_type="text/plain")
+
+
+@router.get("/sitemap.xml", include_in_schema=False)
+async def sitemap_xml(request: Request):
+    public_paths = [
+        "/", "/about", "/services", "/faq", "/contact", "/sitemap",
+        "/privacy", "/terms", "/disclaimer", "/copyright",
+        "/login", "/register",
+    ]
+    base = str(request.base_url).rstrip("/")
+    entries = "".join(
+        f"<url><loc>{base}{path}</loc></url>" for path in public_paths
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        f"{entries}"
+        "</urlset>"
+    )
+    return Response(content=xml, media_type="application/xml")
 
 
 @router.get("/mfa/setup", response_class=HTMLResponse)
@@ -830,18 +956,30 @@ async def daily_reports_list(request: Request, current_user: User = Depends(get_
     """List all daily reports"""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role == "ADMIN":
-        return templates.TemplateResponse(
-            request=request,
-            name="admin/daily_reports_organization.html",
-            context={
-                "current_user": current_user,
-                "today": date.today(),
-            },
-        )
+        return RedirectResponse(url="/admin/daily-reports-organization", status_code=302)
     return templates.TemplateResponse(
         request=request,
         name="reports/list.html",
         context={"current_user": current_user, "today": date.today()},
+    )
+
+
+@router.get("/admin/daily-reports-organization", response_class=HTMLResponse)
+async def admin_daily_reports_organization_page(
+    request: Request,
+    current_user: User = Depends(get_current_user_or_redirect),
+):
+    """Admin daily reports organization page."""
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != "ADMIN":
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/daily_reports_organization.html",
+        context={
+            "current_user": current_user,
+            "today": date.today(),
+        },
     )
 
 
@@ -868,7 +1006,7 @@ async def incidents_list(request: Request, current_user: User = Depends(get_curr
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="admin/incident_reports_list.html", context={"current_user": current_user})
+    return RedirectResponse(url="/admin/reports/incidents", status_code=302)
 
 
 @router.get("/incidents/create", response_class=HTMLResponse)
@@ -1074,12 +1212,6 @@ async def parent_reports(
     )
 
 
-@router.get("/contact", response_class=HTMLResponse)
-async def contact_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Contact page"""
-    return templates.TemplateResponse(request=request, name="static/contact.html", context={"current_user": current_user})
-
-
 
 
 @router.get("/audit-logs", response_class=HTMLResponse)
@@ -1089,6 +1221,12 @@ async def audit_logs_page(request: Request, current_user: User = Depends(get_cur
         from fastapi.responses import RedirectResponse
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="admin/audit_logs.html", context={"current_user": current_user})
+
+
+@router.get("/admin/audit-logs", response_class=HTMLResponse, include_in_schema=False)
+async def admin_audit_logs_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin-namespaced alias for the audit logs page."""
+    return await audit_logs_page(request, current_user)
 
 # -----------------------------------------------------------------------------
 # Admin User Management
@@ -1189,6 +1327,12 @@ async def list_imported_kindergartens_page(request: Request, current_user: User 
 # -----------------------------------------------------------------------------
 # Admin Analytics & Reporting
 # -----------------------------------------------------------------------------
+
+@router.get("/admin", response_class=HTMLResponse)
+async def admin_root(request: Request):
+    """Redirect /admin to /admin/dashboard"""
+    return RedirectResponse(url="/admin/dashboard", status_code=302)
+
 
 @router.get("/admin/dashboard", response_class=HTMLResponse)
 async def admin_dashboard_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
@@ -1397,26 +1541,6 @@ async def manager_absence_requests(
     )
 
 
-# ----------------------------------------------------------------------------- 
-# Public Pages
-# -----------------------------------------------------------------------------
-
-@router.get("/help", response_class=HTMLResponse)
-async def help_page(request: Request):
-    """Help center page"""
-    return templates.TemplateResponse(request=request, name="help.html", context={"current_user": None})
-
-@router.get("/privacy", response_class=HTMLResponse)
-async def privacy_page(request: Request):
-    """Privacy policy page"""
-    return templates.TemplateResponse(request=request, name="privacy.html", context={"current_user": None})
-
-@router.get("/terms", response_class=HTMLResponse)
-async def terms_page(request: Request):
-    """Terms of service page"""
-    return templates.TemplateResponse(request=request, name="terms.html", context={"current_user": None})
-
-
 # =============================================================================
 # Admin Incident Reporting Pages
 # =============================================================================
@@ -1428,6 +1552,15 @@ async def generate_incident_report_page(request: Request, current_user: User = D
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="admin/analytics/incident_reports_generate.html", context={"current_user": current_user})
+
+
+@router.get("/admin/reports/incidents", response_class=HTMLResponse)
+async def admin_incident_reports_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin incident report list page."""
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/incident_reports_list.html", context={"current_user": current_user})
 
 
 @router.get("/admin/analytics/daily-reports", response_class=HTMLResponse)
@@ -1466,4 +1599,152 @@ async def admin_safety_analytics_page(request: Request, current_user: User = Dep
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="admin/safety_analytics.html", context={"current_user": current_user})
+
+
+# -----------------------------------------------------------------------------
+# Admin Contact Messages  (P1-D: page route was missing)
+# -----------------------------------------------------------------------------
+
+@router.get("/admin/contact-messages", response_class=HTMLResponse)
+async def admin_contact_messages_page(
+    request: Request,
+    q: Optional[str] = None,
+    status_filter: Optional[str] = None,
+    page: int = 1,
+    current_user: User = Depends(get_current_user_or_redirect),
+    db: Session = Depends(get_db),
+):
+    """
+    Server-side rendered contact-messages list for admin.
+    Queries the DB directly so the template has all data without a JS round-trip.
+    """
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+
+    page_size = 25
+    query = db.query(models.ContactMessage)
+
+    if q:
+        q = q[:100]
+        term = f"%{q}%"
+        query = query.filter(
+            or_(
+                models.ContactMessage.name.ilike(term),
+                models.ContactMessage.subject.ilike(term),
+                models.ContactMessage.email.ilike(term),
+            )
+        )
+
+    if status_filter == "open":
+        query = query.filter(models.ContactMessage.is_resolved.is_(False))
+    elif status_filter == "resolved":
+        query = query.filter(models.ContactMessage.is_resolved.is_(True))
+
+    total = query.count()
+    page = max(1, page)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    offset = (page - 1) * page_size
+    contact_messages = (
+        query.order_by(models.ContactMessage.submitted_at.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/contact_messages.html",
+        context={
+            "current_user": current_user,
+            "contact_messages": contact_messages,
+            "filters": {"q": q or "", "status_filter": status_filter or ""},
+            "pagination": {"total": total, "page": page, "total_pages": total_pages},
+        },
+    )
+
+
+# -----------------------------------------------------------------------------
+# Admin Alerts
+# -----------------------------------------------------------------------------
+
+@router.get("/admin/alerts", response_class=HTMLResponse)
+async def admin_alerts_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/alerts.html", context={"current_user": current_user, "today": date.today()})
+
+
+# -----------------------------------------------------------------------------
+# Admin Heat Map
+# -----------------------------------------------------------------------------
+
+@router.get("/admin/heatmap", response_class=HTMLResponse)
+async def admin_heatmap_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/heatmap.html", context={"current_user": current_user, "today": date.today()})
+
+
+# -----------------------------------------------------------------------------
+# Admin Data Management — Import Logs
+# -----------------------------------------------------------------------------
+
+@router.get("/admin/import-logs", response_class=HTMLResponse)
+async def admin_import_logs_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin import logs page — history of CSV/Excel import jobs"""
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/import_logs.html", context={"current_user": current_user, "today": date.today()})
+
+
+# -----------------------------------------------------------------------------
+# Admin User Management — Import Users
+# -----------------------------------------------------------------------------
+
+@router.get("/admin/users/import", response_class=HTMLResponse)
+async def admin_import_users_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin import users page — bulk CSV import of user accounts"""
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/import_users.html", context={"current_user": current_user, "today": date.today()})
+
+
+# -----------------------------------------------------------------------------
+# Admin Governance — Reminders
+# -----------------------------------------------------------------------------
+
+@router.get("/admin/governance/reminders", response_class=HTMLResponse)
+async def admin_governance_reminders_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin governance reminders page — manage compliance reminders sent to supervisors"""
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/governance_reminders.html", context={"current_user": current_user, "today": date.today()})
+
+
+# -----------------------------------------------------------------------------
+# Admin Profile & Settings
+# -----------------------------------------------------------------------------
+
+@router.get("/admin/profile", response_class=HTMLResponse)
+async def admin_profile_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin profile page — view account details and change password"""
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/profile.html", context={"current_user": current_user})
+
+
+@router.get("/admin/settings", response_class=HTMLResponse)
+async def admin_settings_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin settings page — view system configuration"""
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role != 'ADMIN':
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/settings.html", context={"current_user": current_user})
 

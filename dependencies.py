@@ -90,6 +90,13 @@ async def get_current_user(
             detail="User account is not active"
         )
 
+    # Cache resolved id on request.state so middleware (e.g. structured access log)
+    # can read it without re-decoding the JWT.
+    try:
+        request.state.user_id = user.id
+    except Exception:
+        pass
+
     return user
 
 
@@ -257,6 +264,12 @@ async def get_current_user_or_redirect(
 
     if user.status != models.UserStatus.ACTIVE:
         raise RedirectToLogin("/login?inactive=true")
+
+    # Cache resolved id on request.state so middleware can read it without re-decoding the JWT.
+    try:
+        request.state.user_id = user.id
+    except Exception:
+        pass
 
     # Enforce server-side must_change_password — redirect to /change-password
     # unless the user is already on that page (prevents infinite redirect loop).

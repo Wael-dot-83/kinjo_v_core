@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+﻿{% extends "admin_base.html" %}
 {% from 'components/page-header.html' import page_header %}
 {% from 'components/filter-row.html' import filter_row %}
 {% from 'components/data-table.html' import pagination %}
@@ -8,8 +8,8 @@
 {% block page_header %}
 {% set toolbar_actions %}
 <div class="btn-group me-2" id="bulkActions" style="display: none;">
-    <button class="btn btn-outline-danger" onclick="bulkDelete()">
-        <i class="bi bi-trash"></i> {% if ui_lang == 'en' %}Delete Selected{% else %}حذف المحدد{% endif %} ({% raw %}{{ selectedCount }}{% endraw %})
+    <button class="btn btn-outline-danger" onclick="bulkDelete()" id="bulkDeleteBtn">
+        <i class="bi bi-trash"></i> <span id="bulkDeleteLabel">{% if ui_lang == 'en' %}Delete Selected{% else %}حذف المحدد{% endif %}</span>
     </button>
     <button class="btn btn-outline-warning" onclick="bulkStatusUpdate('SUSPENDED')">
         <i class="bi bi-pause-circle"></i> {% if ui_lang == 'en' %}Suspend{% else %}تعليق{% endif %}
@@ -39,33 +39,6 @@ breadcrumbs=[
 actions=toolbar_actions
 ) }}
 
-<!-- Page Help Content -->
-<div id="pageHelpContent" class="d-none" data-help-title="{% if ui_lang == 'en' %}User Management Guide{% else %}دليل إدارة المستخدمين{% endif %}">
-    <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-people me-2"></i>{% if ui_lang == 'en' %}Account Management{% else %}إدارة الحسابات{% endif %}</h6>
-        <p>{% if ui_lang == 'en' %}This page allows you to manage all system users with various roles (managers, supervisors, parents).{% else %}تيح لك هذه الصفحة إدارة جميع مستخدمي النظام بمختلف أدوارهم (مدراء، مشرفين، أولياء أمور).{% endif %}</p>
-    </div>
-
-    <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-gear me-2"></i>{% if ui_lang == 'en' %}Available Operations{% else %}العمليات المتاحة{% endif %}</h6>
-        <ul class="list-unstyled">
-            <li class="mb-2"><strong>{% if ui_lang == 'en' %}Search & Filter:{% else %}البحث والفلترة:{% endif %}</strong> {% if ui_lang == 'en' %}Use the search bar or dropdowns to filter users by role or status.{% else %}استخدم شريط البحث أو القوائم المنسدلة لتصنيف المستخدمين
-                حسب الدور أو الحالة.{% endif %}</li>
-            <li class="mb-2"><strong>{% if ui_lang == 'en' %}Row Actions:{% else %}إجراءات السطر:{% endif %}</strong> {% if ui_lang == 'en' %}Use the buttons next to each user to edit, delete, or reset password.{% else %}استخدم الأزرار بجانب كل مستخدم للتعديل، الحذف، أو إعادة
-                تعيين كلمة المرور.{% endif %}</li>
-            <li class="mb-2"><strong>{% if ui_lang == 'en' %}Bulk Actions:{% else %}الإجراءات الجماعية:{% endif %}</strong> {% if ui_lang == 'en' %}Select multiple users to activate/deactivate or delete them at once.{% else %}حدد عدة مستخدمين لتفعيل/تعطيل حساباتهم أو حذفهم دفعة
-                واحدة.{% endif %}</li>
-            <li class="mb-2"><strong>{% if ui_lang == 'en' %}Import & Export:{% else %}الاستيراد والتصدير:{% endif %}</strong> {% if ui_lang == 'en' %}Use the buttons above to add users from a CSV file or download the current list.{% else %}استخدم الأزرار في الأعلى لإضافة مستخدمين من ملف CSV أو
-                تحميل القائمة الحالية.{% endif %}</li>
-        </ul>
-    </div>
-
-    <div class="alert alert-warning small">
-        <i class="bi bi-exclamation-circle me-1"></i>
-        <strong>{% if ui_lang == 'en' %}Important Note:{% else %}ملاحظة هامة:{% endif %}</strong> {% if ui_lang == 'en' %}Deleting a user permanently removes their associated records. Use the "Suspend" option instead of deletion if you want to temporarily block access.{% else %}حذف المستخدم يؤدي إلى حذف سجلاته المرتبطة بشكل دائم. استخدم خيار "التعليق"
-        (Suspend) بدلاً من الحذف إذا كنت تريد منع الدخول مؤقتاً.{% endif %}
-    </div>
-</div>
 {% endblock %}
 
 {% block content %}
@@ -82,7 +55,8 @@ actions=toolbar_actions
                 </div>
             </div>
             <div class="col-md-3">
-                <select class="form-select" id="roleFilter">
+                <label id="roleFilterLabel" class="form-label small fw-semibold mb-1" for="roleFilter">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</label>
+                <select name="roleFilter" class="form-select" id="roleFilter" title="{% if ui_lang == 'en' %}Filter by role{% else %}تصفية حسب الدور{% endif %}" aria-labelledby="roleFilterLabel">
                     <option value="">{% if ui_lang == 'en' %}All Roles{% else %}كل الأدوار{% endif %}</option>
                     <option value="MANAGER">{% if ui_lang == 'en' %}Kindergarten Manager{% else %}مدير روضة{% endif %}</option>
                     <option value="SUPERVISOR">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
@@ -90,7 +64,8 @@ actions=toolbar_actions
                 </select>
             </div>
             <div class="col-md-3">
-                <select class="form-select" id="statusFilter">
+                <label id="statusFilterLabel" class="form-label small fw-semibold mb-1" for="statusFilter">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+                <select name="statusFilter" class="form-select" id="statusFilter" title="{% if ui_lang == 'en' %}Filter by status{% else %}تصفية حسب الحالة{% endif %}" aria-labelledby="statusFilterLabel">
                     <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
                     <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
                     <option value="SUSPENDED">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}</option>
@@ -105,6 +80,11 @@ actions=toolbar_actions
         </div>
 
         <!-- Users Table -->
+        <!-- Results count (GWS U.2.3-068) -->
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <small class="text-muted" id="resultCount" aria-live="polite" aria-atomic="true"></small>
+        </div>
+
         <div class="table-responsive">
             <table class="table table-hover align-middle" id="usersTable" aria-label="{% if ui_lang == 'en' %}Users Table{% else %}جدول المستخدمين{% endif %}">
                 <thead class="table-light">
@@ -397,10 +377,14 @@ actions=toolbar_actions
             return;
         }
 
-        // Update results count
+        // Update results count (GWS U.2.3-068)
         const resultCount = document.getElementById('resultCount');
         if (resultCount) {
-            resultCount.textContent = `${users.length} ${T('مستخدم', 'user(s)')}`;
+            const totalCount = allUsers.length;
+            resultCount.textContent = T(
+                `عرض ${totalCount} مستخدم`,
+                `Showing ${totalCount} user(s)`
+            );
         }
 
         tbody.innerHTML = users.map(user => {
@@ -528,9 +512,9 @@ actions=toolbar_actions
         if (selectedCount > 0) {
             bulkActions.style.display = 'block';
             // Update count in buttons
-            const deleteBtn = bulkActions.querySelector('button[onclick*="bulkDelete"]');
-            if (deleteBtn) {
-                deleteBtn.innerHTML = `<i class="bi bi-trash"></i> ${T('حذف المحدد', 'Delete selected')} (${selectedCount})`;
+            const deleteLbl = document.getElementById('bulkDeleteLabel');
+            if (deleteLbl) {
+                deleteLbl.textContent = `${T('حذف المحدد', 'Delete selected')} (${selectedCount})`;
             }
         } else {
             bulkActions.style.display = 'none';
@@ -635,7 +619,7 @@ actions=toolbar_actions
         const previewRows = lines.slice(1, 6);
         let previewHTML = '<table class="table table-sm"><thead><tr>';
         headers.forEach(header => {
-            previewHTML += `<th>${header}</th>`;
+            previewHTML += `<th>${escapeHtml(header)}</th>`;
         });
         previewHTML += '</tr></thead><tbody>';
 
@@ -643,7 +627,7 @@ actions=toolbar_actions
             const cells = row.split(',').map(cell => cell.trim());
             previewHTML += '<tr>';
             cells.forEach(cell => {
-                previewHTML += `<td>${cell}</td>`;
+                previewHTML += `<td>${escapeHtml(cell)}</td>`;
             });
             previewHTML += '</tr>';
         });
@@ -698,43 +682,39 @@ actions=toolbar_actions
             // Show results
             document.getElementById('importResults').classList.remove('d-none');
 
-            if (response.created_users && response.created_users.length > 0) {
+            // API returns { succeeded: [...], errors: [...] }
+            const createdCount = (response.succeeded || []).length;
+            if (createdCount > 0) {
                 document.getElementById('importSuccess').classList.remove('d-none');
-                document.getElementById('importSuccess').innerHTML = `
-                    <i class="bi bi-check-circle me-2"></i>
-                    ${T(`تم إنشاء ${response.created_users.length} مستخدم بنجاح`, `Successfully created ${response.created_users.length} user(s)`)}
-                `;
+                document.getElementById('importSuccess').textContent =
+                    T(`تم إنشاء ${createdCount} مستخدم بنجاح`, `Successfully created ${createdCount} user(s)`);
             }
 
             if (response.errors && response.errors.length > 0) {
                 const formattedErrors = response.errors.map((error) => {
-                    if (typeof error === 'string') {
-                        return escapeHtml(error);
-                    }
-                    const row = error.row ? `Row ${error.row}` : 'Row';
-                    const field = error.field ? ` (${escapeHtml(error.field)})` : '';
+                    if (typeof error === 'string') return escapeHtml(error);
+                    const row     = error.row     ? `Row ${error.row}` : 'Row';
+                    const field   = error.field   ? ` (${escapeHtml(error.field)})` : '';
                     const message = error.message ? escapeHtml(error.message) : 'Unknown error';
                     return `${row}${field}: ${message}`;
                 });
-                document.getElementById('importErrors').classList.remove('d-none');
-                document.getElementById('importErrors').innerHTML = `
+                const errEl = document.getElementById('importErrors');
+                errEl.classList.remove('d-none');
+                errEl.innerHTML = `
                     <i class="bi bi-exclamation-triangle me-2"></i>
                     <strong>${T('أخطاء:', 'Errors:')}</strong><br>
                     ${formattedErrors.map(err => `- ${err}`).join('<br>')}
                 `;
             }
 
-            // Refresh user list if successful
-            if (response.created_users && response.created_users.length > 0) {
-                loadUsers();
-            }
+            if (createdCount > 0) loadUsers();
 
         } catch (error) {
             document.getElementById('importResults').classList.remove('d-none');
             document.getElementById('importErrors').classList.remove('d-none');
             document.getElementById('importErrors').innerHTML = `
                 <i class="bi bi-exclamation-triangle me-2"></i>
-                <strong>${T('خطأ:', 'Error:')}</strong> ${error.message || T('حدث خطأ غير متوقع', 'An unexpected error occurred')}
+                <strong>${T('خطأ:', 'Error:')}</strong> ${escapeHtml(error.message || T('حدث خطأ غير متوقع', 'An unexpected error occurred'))}
             `;
         } finally {
             btn.disabled = false;
@@ -758,11 +738,7 @@ actions=toolbar_actions
             if (role) params.append('role', role);
             if (status) params.append('status', status);
 
-            const token = AuthStorage.getToken();
-            if (!token) { window.location.href = '/login'; return; }
-            const response = await fetch(`/api/admin/users/export?${params.toString()}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await fetch(`/api/admin/users/export?${params.toString()}`);
             if (!response || !response.ok) throw new Error(T('فشل التصدير', 'Export failed'));
 
             const blob = await response.blob();

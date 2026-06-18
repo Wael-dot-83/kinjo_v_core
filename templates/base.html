@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 {% if ui_lang == 'en' %}
 <html lang="en" dir="{{ ui_dir | default('ltr') }}" style="visibility:hidden">
   {% else %}
@@ -12,17 +12,38 @@
       <noscript><style>html{visibility:visible!important}</style></noscript>
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
+      <!-- Accessibility preferences: applied before CSS loads to avoid a flash of unstyled content -->
+      <script>
+        (function () {
+          try {
+            var prefs = JSON.parse(localStorage.getItem('kinjo_a11y') || '{}');
+            var root = document.documentElement;
+            if (prefs.textSize === 'lg' || prefs.textSize === 'xl') {
+              root.classList.add('a11y-text-' + prefs.textSize);
+            }
+            if (prefs.contrast) root.classList.add('a11y-contrast');
+            if (prefs.dim) root.classList.add('a11y-dim');
+          } catch (e) {}
+        })();
+      </script>
+      {% block meta_description %}
       <meta
         name="description"
-        content="{% if ui_lang == 'en' %}KinJo - Kindergarten and child care management platform{% else %}KinJo - منصة إدارة الروضات ورعاية الأطفال{% endif %}"
+        content="{% if ui_lang == 'en' %}KinJo - Kindergarten and child care management platform{% else %}KinJo - Ù…Ù†ØµØ© Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø±ÙˆØ¶Ø§Øª ÙˆØ±Ø¹Ø§ÙŠØ© Ø§Ù„Ø£Ø·ÙØ§Ù„{% endif %}"
       />
+      {% endblock %}
+
+      {% block meta_keywords %}
+      <meta
+        name="keywords"
+        content="{% if ui_lang == 'en' %}KinJo, kindergarten, Jordan, child care, enrollment, daily reports, attendance{% else %}كينجو, روضة, الأردن, رعاية الأطفال, تسجيل, تقارير يومية, حضور{% endif %}"
+      />
+      {% endblock %}
       <meta name="author" content="KinJo" />
       <meta name="theme-color" content="#2563eb" />
       <meta name="color-scheme" content="light" />
       <title>
-        {% block title %}KinJo{% endblock %} {% if ui_lang == 'en' %}|
-        Kindergarten Management Platform{% else %}| منصة إدارة الروضات{% endif
-        %}
+        {% block title %}KinJo{% endblock %} &ndash; KinJo
       </title>
 
       <!-- Favicon -->
@@ -119,14 +140,37 @@
         }
       </style>
 
+      <style>
+        /* Accessibility preferences (toggled by #a11yToggleBtn, persisted in localStorage) */
+        html.a11y-text-lg { font-size: 112.5%; }
+        html.a11y-text-xl { font-size: 125%; }
+        html.a11y-contrast body {
+          filter: contrast(1.18) saturate(0.75);
+        }
+        html.a11y-contrast a:not(.btn) {
+          text-decoration: underline;
+        }
+        html.a11y-dim body {
+          filter: brightness(0.88) sepia(0.06);
+        }
+      </style>
+
+      {% if captcha_enabled %}
+      {% if captcha_provider == 'recaptcha' %}
+      <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+      {% else %}
+      <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+      {% endif %}
+      {% endif %}
+
       {% block extra_css %}{% endblock %}
     </head>
 
     <body class="kinjo-app {% block body_class %}{% endblock %}">
       {% include 'components/impersonation_banner.html' %} {% block body %}
       <a href="#mainContent" class="skip-link"
-        >{% if ui_lang == 'en' %}Skip to main content{% else %}تخطي إلى المحتوى
-        الرئيسي{% endif %}</a
+        >{% if ui_lang == 'en' %}Skip to main content{% else %}ØªØ®Ø·ÙŠ Ø¥Ù„Ù‰ Ø§Ù„Ù…Ø­ØªÙˆÙ‰
+        Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ{% endif %}</a
       >
 
       <!-- Navigation -->
@@ -158,7 +202,7 @@
                   type="button"
                   class="btn-close"
                   data-bs-dismiss="alert"
-                  aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"
+                  aria-label="{% if ui_lang == 'en' %}Close{% else %}Ø¥ØºÙ„Ø§Ù‚{% endif %}"
                   data-i18n-aria="common.close"
                 ></button>
               </div>
@@ -178,14 +222,14 @@
                 <div class="d-flex align-items-center gap-2">
                   <i class="bi bi-compass text-primary"></i>
                   <h6 class="mb-0" id="pageGuideTitle" data-i18n="guide.title">
-                    {% if ui_lang == 'en' %}How to use this page{% else %}كيف
-                    تستخدم هذه الصفحة{% endif %}
+                    {% if ui_lang == 'en' %}How to use this page{% else %}ÙƒÙŠÙ
+                    ØªØ³ØªØ®Ø¯Ù… Ù‡Ø°Ù‡ Ø§Ù„ØµÙØ­Ø©{% endif %}
                   </h6>
                   <span
-                    class="badge bg-light text-primary border ms-auto"
+                    class="badge bg-white text-dark border ms-auto"
                     id="pageGuideBadge"
                     data-i18n="guide.badge"
-                    >{% if ui_lang == 'en' %}Quick guide{% else %}دليل سريع{%
+                    >{% if ui_lang == 'en' %}Quick guide{% else %}Ø¯Ù„ÙŠÙ„ Ø³Ø±ÙŠØ¹{%
                     endif %}</span
                   >
                 </div>
@@ -201,6 +245,153 @@
 
       <!-- Footer -->
       {% include 'components/footer.html' %}
+
+      <!-- Accessibility toolbar -->
+      <div id="a11yWidget">
+        <button
+          type="button"
+          id="a11yToggleBtn"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="a11yPanel"
+          aria-label="{% if ui_lang == 'en' %}Accessibility options{% else %}خيارات إمكانية الوصول{% endif %}"
+        >
+          <i class="bi bi-universal-access" aria-hidden="true"></i>
+        </button>
+        <div id="a11yPanel" class="d-none" role="dialog" aria-label="{% if ui_lang == 'en' %}Accessibility options{% else %}خيارات إمكانية الوصول{% endif %}">
+          <div class="a11y-panel-title">{% if ui_lang == 'en' %}Accessibility{% else %}إمكانية الوصول{% endif %}</div>
+
+          <div class="a11y-panel-row">
+            <span>{% if ui_lang == 'en' %}Text size{% else %}حجم النص{% endif %}</span>
+            <div class="a11y-btn-group" role="group">
+              <button type="button" class="a11y-opt-btn" data-a11y-text="md">A</button>
+              <button type="button" class="a11y-opt-btn" data-a11y-text="lg">A+</button>
+              <button type="button" class="a11y-opt-btn" data-a11y-text="xl">A++</button>
+            </div>
+          </div>
+
+          <div class="a11y-panel-row">
+            <label class="a11y-switch-label" for="a11yContrastSwitch">
+              {% if ui_lang == 'en' %}High contrast{% else %}تباين عالٍ{% endif %}
+            </label>
+            <input type="checkbox" id="a11yContrastSwitch" class="form-check-input">
+          </div>
+
+          <div class="a11y-panel-row">
+            <label class="a11y-switch-label" for="a11yDimSwitch">
+              {% if ui_lang == 'en' %}Night mode{% else %}الوضع الليلي{% endif %}
+            </label>
+            <input type="checkbox" id="a11yDimSwitch" class="form-check-input">
+          </div>
+
+          <button type="button" id="a11yResetBtn" class="a11y-reset-btn">
+            {% if ui_lang == 'en' %}Reset{% else %}إعادة ضبط{% endif %}
+          </button>
+        </div>
+      </div>
+      <style>
+        #a11yWidget {
+          position: fixed;
+          inset-block-end: 1.5rem;
+          inset-inline-end: 5.25rem;
+          z-index: 1040;
+        }
+        #a11yToggleBtn {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #fff;
+          color: var(--kinjo-primary, #2563eb);
+          border: 1.5px solid var(--kinjo-primary, #2563eb);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+          cursor: pointer;
+          font-size: 1.1rem;
+        }
+        #a11yPanel {
+          position: absolute;
+          inset-block-end: 3.25rem;
+          inset-inline-end: 0;
+          width: 230px;
+          background: #fff;
+          border-radius: 0.75rem;
+          box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+          padding: 0.9rem;
+        }
+        .a11y-panel-title {
+          font-weight: 700;
+          font-size: 0.9rem;
+          margin-bottom: 0.6rem;
+        }
+        .a11y-panel-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.6rem;
+          font-size: 0.85rem;
+        }
+        .a11y-btn-group {
+          display: flex;
+          gap: 0.25rem;
+        }
+        .a11y-opt-btn {
+          border: 1px solid #cbd5e1;
+          background: #f8fafc;
+          border-radius: 0.4rem;
+          font-size: 0.75rem;
+          padding: 0.15rem 0.4rem;
+          cursor: pointer;
+        }
+        .a11y-opt-btn.active {
+          background: var(--kinjo-primary, #2563eb);
+          color: #fff;
+          border-color: var(--kinjo-primary, #2563eb);
+        }
+        .a11y-reset-btn {
+          width: 100%;
+          border: none;
+          background: #f1f5f9;
+          border-radius: 0.4rem;
+          padding: 0.3rem;
+          font-size: 0.8rem;
+          cursor: pointer;
+        }
+      </style>
+
+      <!-- Scroll to top -->
+      <button
+        type="button"
+        id="scrollToTopBtn"
+        aria-label="{% if ui_lang == 'en' %}Scroll to top{% else %}الرجوع لأعلى الصفحة{% endif %}"
+      >
+        <i class="bi bi-arrow-up" aria-hidden="true"></i>
+      </button>
+      <style>
+        /* Scroll-to-top button */
+        #scrollToTopBtn {
+          position: fixed;
+          inset-block-end: 1.5rem;
+          inset-inline-end: 1.5rem;
+          z-index: 1040;
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background: var(--kinjo-primary, #2563eb);
+          color: #fff;
+          border: none;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+          cursor: pointer;
+        }
+        #scrollToTopBtn.visible {
+          display: flex;
+        }
+      </style>
+
 
       <!-- Help Express Modal -->
       {% include 'components/help_modal.html' %} {% endblock %}
@@ -220,12 +411,12 @@
       ></script>
 
       <!-- Custom JavaScript -->
-      <script src="/static/js/auth.js?v=2.0"></script>
-      <script src="/static/js/kinjo-api.js?v=2.0"></script>
+      <script src="/static/js/auth.js?v=2.1"></script>
+      <script src="/static/js/kinjo-api.js?v=2.1"></script>
       <script src="/static/js/app_i18n.js?v=2.1"></script>
       <script src="/static/js/kinjo-app.js?v=2.1"></script>
 
-      <!-- SweetAlert2 — loaded after page scripts to avoid render-blocking -->
+      <!-- SweetAlert2 â€” loaded after page scripts to avoid render-blocking -->
       <link
         href="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css"
         rel="stylesheet"
@@ -240,6 +431,128 @@
 
       {% block extra_js %}{% endblock %} {% block scripts %}{% endblock %}
 
+
+      <script>
+        (function () {
+          var btn = document.getElementById('scrollToTopBtn');
+          if (!btn) return;
+          window.addEventListener('scroll', function () {
+            if (window.scrollY > 400) {
+              btn.classList.add('visible');
+            } else {
+              btn.classList.remove('visible');
+            }
+          });
+          btn.addEventListener('click', function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+        })();
+      </script>
+
+      <script>
+        (function () {
+          var STORAGE_KEY = 'kinjo_a11y';
+          var toggleBtn = document.getElementById('a11yToggleBtn');
+          var panel = document.getElementById('a11yPanel');
+          var contrastSwitch = document.getElementById('a11yContrastSwitch');
+          var dimSwitch = document.getElementById('a11yDimSwitch');
+          var resetBtn = document.getElementById('a11yResetBtn');
+          var textBtns = document.querySelectorAll('.a11y-opt-btn');
+          if (!toggleBtn || !panel) return;
+
+          function loadPrefs() {
+            try {
+              return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            } catch (e) {
+              return {};
+            }
+          }
+
+          function savePrefs(prefs) {
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+            } catch (e) {}
+          }
+
+          function applyPrefs(prefs) {
+            var root = document.documentElement;
+            root.classList.remove('a11y-text-lg', 'a11y-text-xl', 'a11y-contrast', 'a11y-dim');
+            if (prefs.textSize === 'lg' || prefs.textSize === 'xl') {
+              root.classList.add('a11y-text-' + prefs.textSize);
+            }
+            if (prefs.contrast) root.classList.add('a11y-contrast');
+            if (prefs.dim) root.classList.add('a11y-dim');
+
+            textBtns.forEach(function (b) {
+              b.classList.toggle('active', (prefs.textSize || 'md') === b.getAttribute('data-a11y-text'));
+            });
+            if (contrastSwitch) contrastSwitch.checked = !!prefs.contrast;
+            if (dimSwitch) dimSwitch.checked = !!prefs.dim;
+          }
+
+          var prefs = loadPrefs();
+          applyPrefs(prefs);
+
+          toggleBtn.addEventListener('click', function () {
+            var hidden = panel.classList.toggle('d-none');
+            toggleBtn.setAttribute('aria-expanded', String(!hidden));
+          });
+
+          document.addEventListener('click', function (e) {
+            if (!panel.contains(e.target) && e.target !== toggleBtn && !panel.classList.contains('d-none')) {
+              panel.classList.add('d-none');
+              toggleBtn.setAttribute('aria-expanded', 'false');
+            }
+          });
+
+          textBtns.forEach(function (b) {
+            b.addEventListener('click', function () {
+              prefs.textSize = b.getAttribute('data-a11y-text');
+              savePrefs(prefs);
+              applyPrefs(prefs);
+            });
+          });
+
+          if (contrastSwitch) {
+            contrastSwitch.addEventListener('change', function () {
+              prefs.contrast = contrastSwitch.checked;
+              savePrefs(prefs);
+              applyPrefs(prefs);
+            });
+          }
+
+          if (dimSwitch) {
+            dimSwitch.addEventListener('change', function () {
+              prefs.dim = dimSwitch.checked;
+              savePrefs(prefs);
+              applyPrefs(prefs);
+            });
+          }
+
+          if (resetBtn) {
+            resetBtn.addEventListener('click', function () {
+              prefs = {};
+              savePrefs(prefs);
+              applyPrefs(prefs);
+            });
+          }
+        })();
+      </script>
+
+      <script>
+        // Shared CAPTCHA helper — safe no-op when CAPTCHA is disabled
+        // (hcaptcha/grecaptcha simply won't be defined, so this returns '').
+        window.getCaptchaToken = function () {
+          try {
+            if (typeof hcaptcha !== 'undefined') return hcaptcha.getResponse() || '';
+          } catch (e) {}
+          try {
+            if (typeof grecaptcha !== 'undefined') return grecaptcha.getResponse() || '';
+          } catch (e) {}
+          return '';
+        };
+      </script>
+
       <!-- FOUC reveal: make page visible now that CSS + JS are ready -->
       <script>
         (function () {
@@ -249,7 +562,7 @@
             return window.location.pathname === p ||
                    window.location.pathname.startsWith(p + '/');
           });
-          var hasSession = document.cookie.indexOf('kinjo_csrf_token=') !== -1;
+          var hasSession = document.cookie.indexOf('kinjo_csrf_token=') !== -1 || document.cookie.indexOf('kinjo_mfa_ticket=') !== -1;
 
           function reveal() {
             document.documentElement.style.visibility = '';
@@ -270,4 +583,4 @@
       </script>
     </body>
   </html>
-</html>
+

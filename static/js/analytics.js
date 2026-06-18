@@ -62,7 +62,6 @@ const Analytics = {
       this.loadOverview();
       this.setupTabHandlers();
     } else {
-      console.warn("User not authenticated, waiting for authentication...");
       // Wait for authentication and then load data
       this.waitForAuthentication();
     }
@@ -79,11 +78,9 @@ const Analytics = {
     const checkAuth = function () {
       attempts++;
       if (api.isAuthenticated()) {
-        console.log("User authenticated, loading analytics data...");
         self.loadOverview();
         self.setupTabHandlers();
       } else if (attempts >= maxAttempts) {
-        console.warn("Authentication timeout - redirecting to login");
         window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname);
       } else {
         // Check again in 500ms
@@ -117,7 +114,6 @@ const Analytics = {
   onTabChange: function (tabId) {
     // Check authentication before loading tab data
     if (!api.isAuthenticated()) {
-      console.warn("User not authenticated, cannot load tab data");
       showToast(analyticsText("يجب تسجيل الدخول أولاً", "Please sign in first"), "warning");
       return;
     }
@@ -361,7 +357,6 @@ const Analytics = {
   loadTrendChart: async function () {
     // Check authentication before loading data
     if (!api.isAuthenticated()) {
-      console.warn("User not authenticated, cannot load trend chart");
       return;
     }
 
@@ -471,7 +466,6 @@ const Analytics = {
   loadRankings: async function () {
     // Check authentication before loading data
     if (!api.isAuthenticated()) {
-      console.warn("User not authenticated, cannot load rankings");
       return;
     }
 
@@ -795,7 +789,6 @@ const Analytics = {
   loadEnrollmentData: async function () {
     // Check authentication before loading data
     if (!api.isAuthenticated()) {
-      console.warn("User not authenticated, cannot load enrollment data");
       return;
     }
 
@@ -913,7 +906,6 @@ const Analytics = {
   loadAttendanceData: async function () {
     // Check authentication before loading data
     if (!api.isAuthenticated()) {
-      console.warn("User not authenticated, cannot load attendance data");
       return;
     }
 
@@ -996,7 +988,6 @@ const Analytics = {
   loadReportsData: async function () {
     // Check authentication before loading data
     if (!api.isAuthenticated()) {
-      console.warn("User not authenticated, cannot load reports data");
       return;
     }
 
@@ -1089,7 +1080,6 @@ const Analytics = {
   loadSafetyData: async function () {
     // Check authentication before loading data
     if (!api.isAuthenticated()) {
-      console.warn("User not authenticated, cannot load safety data");
       return;
     }
 
@@ -1250,7 +1240,6 @@ const Analytics = {
   loadStaffingData: async function () {
     // Check authentication before loading data
     if (!api.isAuthenticated()) {
-      console.warn("User not authenticated, cannot load staffing data");
       return;
     }
 

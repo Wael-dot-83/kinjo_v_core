@@ -1,8 +1,17 @@
-{% extends 'base.html' %}
+﻿{% extends 'admin_base.html' %}
 
 {% block title %}{% if ui_lang == 'en' %}Daily Reports Governance{% else %}حوكمة التقارير اليومية{% endif %}{% endblock %}
 
-{% block extra_css %}
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item">
+    <i class="bi bi-house"></i>
+    <span data-i18n="nav.dashboard">Dashboard</span>
+</a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Reports Governance{% else %}حوكمة التقارير{% endif %}</span>
+{% endblock %}
+
+{% block extra_head %}
 <style>
     .kpi-card {
         border-radius: 12px;
@@ -62,16 +71,11 @@
 </style>
 {% endblock %}
 
-{% block page_header %}
+{% block content %}
+<!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="mb-1"><i class="bi bi-clipboard2-data me-2"></i>{% if ui_lang == 'en' %}Daily Reports Governance{% else %}حوكمة التقارير اليومية{% endif %}</h4>
-        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
-                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Reports Governance{% else %}حوكمة التقارير{% endif %}</li>
-            </ol>
-        </nav>
     </div>
     <div class="d-flex gap-2 align-items-center">
         <input type="date" id="startDate" class="form-control form-control-sm w-auto">
@@ -82,9 +86,7 @@
         </button>
     </div>
 </div>
-{% endblock %}
 
-{% block content %}
 <!-- KPI Cards Row -->
 <div class="row g-3 mb-4" id="kpiCards">
     <div class="col-md-3">
@@ -255,9 +257,6 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
-    integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
-    crossorigin="anonymous"></script>
+{% block extra_scripts %}
 <script src="/static/js/admin_governance.js" charset="utf-8"></script>
 {% endblock %}

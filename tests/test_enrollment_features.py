@@ -334,6 +334,48 @@ class TestPhotoUpload:
         )
         assert resp.status_code == 400
 
+    def test_upload_photo_rejected_when_virus_scan_finds_malware(
+        self, client, test_db, auth_headers_parent, parent_user, sample_child, monkeypatch
+    ):
+        """When virus scanning is enabled, an infected upload must be rejected
+        before it's ever written to disk (Round 3: S.5.7-017)."""
+        import api.children as children_api
+        from virus_scan_service import VirusFoundError
+
+        def _fake_scan(content):
+            raise VirusFoundError("Eicar-Test-Signature")
+
+        monkeypatch.setattr(children_api, "scan_bytes", _fake_scan)
+
+        fake_image = io.BytesIO(b"\x89PNG\r\n" + b"\x00" * 100)
+        resp = client.post(
+            f"/api/children/{sample_child.id}/photo",
+            files={"file": ("photo.png", fake_image, "image/png")},
+            headers=auth_headers_parent,
+        )
+        assert resp.status_code == 400
+
+    def test_upload_photo_rejected_when_scanner_unavailable(
+        self, client, test_db, auth_headers_parent, parent_user, sample_child, monkeypatch
+    ):
+        """A scanner that can't be reached must fail closed (reject), not be
+        silently treated as clean."""
+        import api.children as children_api
+        from virus_scan_service import VirusScanUnavailable
+
+        def _fake_scan(content):
+            raise VirusScanUnavailable("connection refused")
+
+        monkeypatch.setattr(children_api, "scan_bytes", _fake_scan)
+
+        fake_image = io.BytesIO(b"\x89PNG\r\n" + b"\x00" * 100)
+        resp = client.post(
+            f"/api/children/{sample_child.id}/photo",
+            files={"file": ("photo.png", fake_image, "image/png")},
+            headers=auth_headers_parent,
+        )
+        assert resp.status_code == 503
+
 
 # ══════════════════════════════════════════════════════════════════
 # 5. Document Management

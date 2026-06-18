@@ -1,26 +1,23 @@
-{% extends 'base.html' %}
+﻿{% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %} — KinJo{% endblock %}
 
-{% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <h1 class="page-header-title">
-            <i class="bi bi-envelope-plus text-primary me-2" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %}
-        </h1>
-        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
-                <li class="breadcrumb-item"><a href="/admin/messages">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</a></li>
-                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Compose{% else %}إنشاء رسالة{% endif %}</li>
-            </ol>
-        </nav>
-    </div>
-</div>
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="admin-breadcrumb-separator">/</span>
+<a href="/admin/messages" class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Compose{% else %}إنشاء رسالة{% endif %}</span>
 {% endblock %}
 
 {% block content %}
+<div class="admin-page-header mb-4">
+  <h1 class="admin-page-title">
+    <i class="bi bi-envelope-plus me-2" aria-hidden="true"></i>
+    {% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %}
+  </h1>
+</div>
+
 <div class="row g-4">
     <!-- Message Form -->
     <div class="col-12 col-lg-8">
@@ -179,7 +176,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body d-flex justify-content-end gap-2">
-                <a href="/dashboard" class="btn btn-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
+                <a href="/admin/messages" class="btn btn-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
                 <button type="button" class="btn btn-primary px-4" onclick="sendMessage()" id="sendBtn">
                     <i class="bi bi-send me-2"></i> {% if ui_lang == 'en' %}Send Message{% else %}إرسال الرسالة{% endif %}
                 </button>
@@ -189,7 +186,7 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_scripts %}
 <script>
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
@@ -249,10 +246,7 @@
         try {
             while (true) {
                 const params = new URLSearchParams({ page, page_size: KG_PAGE_SIZE });
-                const token = (window.AuthService && AuthService.getToken()) || (window.AuthStorage && AuthStorage.getToken()) || '';
-                const response = await fetch(`/api/admin/options/kindergartens?${params}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await fetch(`/api/admin/options/kindergartens?${params}`);
                 if (!response.ok) throw new Error(T('فشل في تحميل الروضات', 'Failed to load kindergartens'));
                 const data = await response.json();
                 accumulated.push(...(data.kindergartens || []));
@@ -331,10 +325,9 @@
     }
 
     async function safeRequest(url, options = {}, retries = 2) {
-        const token = (window.AuthService && AuthService.getToken()) || (window.AuthStorage && AuthStorage.getToken()) || '';
         for (let attempt = 0; attempt <= retries; attempt++) {
             try {
-                const headers = { 'Authorization': `Bearer ${token}`, ...options.headers };
+                const headers = { ...options.headers };
                 const response = await fetch(url, { ...options, headers });
                 const payload = await response.json().catch(() => null);
                 if (!response.ok) {

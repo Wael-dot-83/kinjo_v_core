@@ -1,0 +1,370 @@
+{
+  "type": "FeatureCollection",
+  "name": "jordan_governorates",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-AM", "name": "Amman", "name_ar": "عمان",
+        "level": "governorate", "admin_code": "JO-AM", "population": 4007526
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.65,31.50],[36.30,31.48],[36.35,31.55],[36.38,31.80],[36.30,32.00],[35.90,32.05],[35.65,31.95],[35.58,31.75],[35.65,31.50]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-IR", "name": "Irbid", "name_ar": "إربد",
+        "level": "governorate", "admin_code": "JO-IR", "population": 1153000
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.53,32.40],[36.20,32.38],[36.25,32.55],[36.22,33.05],[36.00,33.15],[35.70,33.18],[35.55,33.00],[35.50,32.70],[35.53,32.40]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-ZA", "name": "Zarqa", "name_ar": "الزرقاء",
+        "level": "governorate", "admin_code": "JO-ZA", "population": 1365396
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.90,31.90],[36.60,31.88],[36.65,32.00],[36.62,32.45],[36.25,32.48],[35.92,32.42],[35.90,32.20],[35.90,31.90]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-BA", "name": "Balqa", "name_ar": "البلقاء",
+        "level": "governorate", "admin_code": "JO-BA", "population": 428700
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.48,31.88],[35.90,31.88],[35.92,32.05],[35.88,32.40],[35.58,32.42],[35.45,32.25],[35.40,32.00],[35.48,31.88]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-MD", "name": "Madaba", "name_ar": "مادبا",
+        "level": "governorate", "admin_code": "JO-MD", "population": 178000
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.52,31.25],[36.12,31.22],[36.18,31.45],[36.10,31.65],[35.65,31.70],[35.50,31.60],[35.48,31.42],[35.52,31.25]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-JA", "name": "Jerash", "name_ar": "جرش",
+        "level": "governorate", "admin_code": "JO-JA", "population": 201000
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.88,32.18],[36.18,32.16],[36.22,32.38],[35.95,32.42],[35.85,32.30],[35.88,32.18]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-AJ", "name": "Ajloun", "name_ar": "عجلون",
+        "level": "governorate", "admin_code": "JO-AJ", "population": 176000
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.60,32.22],[35.88,32.20],[35.88,32.40],[35.62,32.42],[35.55,32.32],[35.60,32.22]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-MA", "name": "Mafraq", "name_ar": "المفرق",
+        "level": "governorate", "admin_code": "JO-MA", "population": 590700
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[36.00,32.05],[36.65,32.00],[37.50,31.80],[39.30,31.75],[39.30,33.35],[36.25,33.38],[36.00,33.20],[36.00,32.42],[36.00,32.05]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-KA", "name": "Karak", "name_ar": "الكرك",
+        "level": "governorate", "admin_code": "JO-KA", "population": 328600
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.38,30.72],[36.50,30.68],[36.60,30.90],[36.55,31.30],[36.20,31.45],[35.55,31.40],[35.38,31.20],[35.35,30.95],[35.38,30.72]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-TA", "name": "Tafilah", "name_ar": "الطفيلة",
+        "level": "governorate", "admin_code": "JO-TA", "population": 96400
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.25,30.38],[36.20,30.35],[36.25,30.58],[36.15,30.75],[35.55,30.78],[35.30,30.65],[35.22,30.52],[35.25,30.38]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-MN", "name": "Ma'an", "name_ar": "معان",
+        "level": "governorate", "admin_code": "JO-MN", "population": 150800
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.05,29.55],[37.00,29.50],[38.50,29.48],[38.50,30.42],[36.30,30.45],[35.55,30.40],[35.30,30.38],[35.25,30.35],[35.08,30.00],[35.05,29.55]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-AQ", "name": "Aqaba", "name_ar": "العقبة",
+        "level": "governorate", "admin_code": "JO-AQ", "population": 199000
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[34.95,29.18],[36.15,29.15],[36.20,29.55],[35.30,29.60],[35.10,29.40],[34.95,29.28],[34.95,29.18]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-AM-01", "name": "Amman First (القصبة)", "name_ar": "عمان الأولى",
+        "level": "qada", "admin_code": "JO-AM-01", "parent_id": "JO-AM"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.88,31.94],[35.96,31.93],[35.98,32.02],[35.90,32.05],[35.85,31.98],[35.88,31.94]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-AM-02", "name": "Amman Second (الشرق)", "name_ar": "عمان الثانية",
+        "level": "qada", "admin_code": "JO-AM-02", "parent_id": "JO-AM"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.98,31.93],[36.10,31.90],[36.15,32.00],[36.05,32.05],[35.98,32.02],[35.98,31.93]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-AM-03", "name": "Amman Third (الغرب)", "name_ar": "عمان الثالثة",
+        "level": "qada", "admin_code": "JO-AM-03", "parent_id": "JO-AM"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.75,31.88],[35.90,31.85],[35.92,31.95],[35.85,31.98],[35.75,31.95],[35.75,31.88]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-AM-04", "name": "Naour", "name_ar": "ناعور",
+        "level": "qada", "admin_code": "JO-AM-04", "parent_id": "JO-AM"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.68,31.78],[35.78,31.76],[35.80,31.88],[35.70,31.90],[35.65,31.82],[35.68,31.78]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-AM-05", "name": "Muwaqqar", "name_ar": "الموقر",
+        "level": "qada", "admin_code": "JO-AM-05", "parent_id": "JO-AM"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[36.15,31.72],[36.30,31.70],[36.38,31.80],[36.28,31.90],[36.15,31.88],[36.10,31.78],[36.15,31.72]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-IR-01", "name": "Irbid (القصبة)", "name_ar": "إربد",
+        "level": "qada", "admin_code": "JO-IR-01", "parent_id": "JO-IR"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.80,32.50],[35.92,32.48],[35.95,32.60],[35.88,32.68],[35.78,32.64],[35.75,32.54],[35.80,32.50]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-IR-02", "name": "Ramtha", "name_ar": "الرمثا",
+        "level": "qada", "admin_code": "JO-IR-02", "parent_id": "JO-IR"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[36.00,32.55],[36.20,32.52],[36.22,32.65],[36.10,32.72],[35.98,32.68],[36.00,32.55]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-IR-03", "name": "Koura", "name_ar": "الكورة",
+        "level": "qada", "admin_code": "JO-IR-03", "parent_id": "JO-IR"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.58,32.45],[35.75,32.43],[35.78,32.55],[35.68,32.60],[35.55,32.56],[35.55,32.48],[35.58,32.45]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-ZA-01", "name": "Zarqa (القصبة)", "name_ar": "الزرقاء",
+        "level": "qada", "admin_code": "JO-ZA-01", "parent_id": "JO-ZA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[36.05,32.02],[36.18,32.00],[36.20,32.12],[36.10,32.18],[36.00,32.12],[36.05,32.02]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-ZA-02", "name": "Russeifa", "name_ar": "الرصيفة",
+        "level": "qada", "admin_code": "JO-ZA-02", "parent_id": "JO-ZA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.98,32.02],[36.08,32.00],[36.10,32.12],[36.00,32.15],[35.95,32.08],[35.98,32.02]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-KA-01", "name": "Karak (القصبة)", "name_ar": "الكرك",
+        "level": "qada", "admin_code": "JO-KA-01", "parent_id": "JO-KA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.68,31.05],[35.85,31.02],[35.88,31.18],[35.78,31.25],[35.65,31.20],[35.62,31.10],[35.68,31.05]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-KA-02", "name": "Qatrana", "name_ar": "القطرانة",
+        "level": "qada", "admin_code": "JO-KA-02", "parent_id": "JO-KA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[36.00,30.92],[36.18,30.90],[36.22,31.05],[36.10,31.12],[35.98,31.08],[36.00,30.92]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-MA-01", "name": "Mafraq (القصبة)", "name_ar": "المفرق",
+        "level": "qada", "admin_code": "JO-MA-01", "parent_id": "JO-MA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[36.18,32.32],[36.40,32.28],[36.45,32.45],[36.30,32.52],[36.15,32.45],[36.18,32.32]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-MA-02", "name": "Ruwaished", "name_ar": "الرويشد",
+        "level": "qada", "admin_code": "JO-MA-02", "parent_id": "JO-MA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[38.00,32.40],[38.50,32.38],[38.52,32.62],[38.20,32.65],[38.00,32.55],[38.00,32.40]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-MN-01", "name": "Ma'an (القصبة)", "name_ar": "معان",
+        "level": "qada", "admin_code": "JO-MN-01", "parent_id": "JO-MN"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.68,30.15],[35.88,30.12],[35.92,30.28],[35.80,30.35],[35.65,30.30],[35.62,30.20],[35.68,30.15]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-AQ-01", "name": "Aqaba (القصبة)", "name_ar": "العقبة",
+        "level": "qada", "admin_code": "JO-AQ-01", "parent_id": "JO-AQ"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.00,29.30],[35.15,29.28],[35.18,29.42],[35.08,29.50],[34.98,29.44],[35.00,29.30]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-BA-01", "name": "Salt", "name_ar": "السلط",
+        "level": "qada", "admin_code": "JO-BA-01", "parent_id": "JO-BA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.70,32.02],[35.85,32.00],[35.88,32.15],[35.78,32.22],[35.65,32.15],[35.68,32.05],[35.70,32.02]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-MD-01", "name": "Madaba (القصبة)", "name_ar": "مادبا",
+        "level": "qada", "admin_code": "JO-MD-01", "parent_id": "JO-MD"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.75,31.58],[35.88,31.55],[35.92,31.68],[35.82,31.75],[35.70,31.70],[35.70,31.62],[35.75,31.58]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-TA-01", "name": "Tafilah (القصبة)", "name_ar": "الطفيلة",
+        "level": "qada", "admin_code": "JO-TA-01", "parent_id": "JO-TA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.58,30.52],[35.70,30.50],[35.72,30.62],[35.62,30.68],[35.52,30.62],[35.55,30.55],[35.58,30.52]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-AJ-01", "name": "Ajloun (القصبة)", "name_ar": "عجلون",
+        "level": "qada", "admin_code": "JO-AJ-01", "parent_id": "JO-AJ"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.68,32.28],[35.80,32.26],[35.82,32.36],[35.72,32.40],[35.62,32.36],[35.65,32.30],[35.68,32.28]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "JO-JA-01", "name": "Jerash (القصبة)", "name_ar": "جرش",
+        "level": "qada", "admin_code": "JO-JA-01", "parent_id": "JO-JA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[35.90,32.22],[36.02,32.20],[36.05,32.32],[35.95,32.38],[35.85,32.32],[35.88,32.25],[35.90,32.22]]]
+      }
+    }
+  ]
+}

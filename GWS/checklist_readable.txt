@@ -1,0 +1,300 @@
+A.1.1-001 | Component 1 - Accessibility | A.1.1 Domain Naming Conventions and Uniform Resource Locators | #1 | Does the domain name end with.gov.jo? Are the departments and functions reflected as sub-domains? For example:
+A.1.1-002 | Component 1 - Accessibility | A.1.1 Domain Naming Conventions and Uniform Resource Locators | #2 | eservices.modee.gov.jo, intranet.Modee.gov.jo”, “hr.modee.gov.jo”.
+A.1.1-003 | Component 1 - Accessibility | A.1.1 Domain Naming Conventions and Uniform Resource Locators | #3 | Does the entity have short domain name convention? For example: www.modee.gov.jo.
+A.1.1-004 | Component 1 - Accessibility | A.1.1 Domain Naming Conventions and Uniform Resource Locators | #4 | Does the entity have a long domain name convention? For example: www.digitaleconomic.gov.jo
+A.1.1-005 | Component 1 - Accessibility | A.1.1 Domain Naming Conventions and Uniform Resource Locators | #5 | Does the entity have an Arabic domain name convention? For example: ‫ياألردن‬.‫الريادة‬-‫و‬-‫الرقمي‬-‫االقتصاد‬
+A.1.1-006 | Component 1 - Accessibility | A.1.1 Domain Naming Conventions and Uniform Resource Locators | #6 | Is the domain name accessible through https? For example: https://modee.gov.jo
+A.1.1-007 | Component 1 - Accessibility | A.1.1 Domain Naming Conventions and Uniform Resource Locators | #7 | Can the domain name be accessed with and without “www” prefix? For example: www.modee.gov.jo and modee.gov.jo
+A.1.1-008 | Component 1 - Accessibility | A.1.1 Domain Naming Conventions and Uniform Resource Locators | #8 | Does the URL clearly reflect directories and webpages in Arabic and English? For example: www.modee.gov.jo/news, www.modee.gov.jo/‫االخبار‬
+A.1.2-009 | Component 1 - Accessibility | A.1.2 Discoverability and Search Engine Optimization | #9 | Are website pages well linked, where each website page leads to where it is supposed to lead?
+A.1.2-010 | Component 1 - Accessibility | A.1.2 Discoverability and Search Engine Optimization | #10 | Does the website have an XML sitemap?
+A.1.2-011 | Component 1 - Accessibility | A.1.2 Discoverability and Search Engine Optimization | #11 | Do webpages contain Description Tags, Title Tags and Keywords Tags?
+A.1.2-012 | Component 1 - Accessibility | A.1.2 Discoverability and Search Engine Optimization | #12 | Are Meta tags unique, meaningful, and relevant?
+A.1.2-013 | Component 1 - Accessibility | A.1.2 Discoverability and Search Engine Optimization | #13 | Does graphical content have proper ALT-values?
+A.1.2-014 | Component 1 - Accessibility | A.1.2 Discoverability and Search Engine Optimization | #14 | Are the page titles and headings easy-to-read and clear?
+A.1.3-015 | Component 1 - Accessibility | A.1.3 Cross Browsing and Screen Resolution | #15 | Does the website support the below browsers at minimum? - Internet Explorer 11.0 and above - Microsoft Edge 40.0 and above - Firefox 60.0 and above - Safari 11.0 and above - Google Chrome 70.0 and above - Opera 57.0 and above
+A.1.3-016 | Component 1 - Accessibility | A.1.3 Cross Browsing and Screen Resolution | #16 | Is the website best viewed at 1366x768 screen resolution?
+A.1.4-017 | Component 1 - Accessibility | A.1.4 Access to Language | #17 | Is the website bilingual (Arabic and English) at minimum?
+A.1.4-018 | Component 1 - Accessibility | A.1.4 Access to Language | #18 | Is Arabic the default language of the website?
+A.1.4-019 | Component 1 - Accessibility | A.1.4 Access to Language | #19 | Is the change-language button located consistently in the header?
+A.1.4-020 | Component 1 - Accessibility | A.1.4 Access to Language | #20 | Does the change-language button appear as a full word, “English” to switch to the English version, "‫ "عربي‬to switch to the Arabic version?
+A.1.4-021 | Component 1 - Accessibility | A.1.4 Access to Language | #21 | Will changing the language redirect the user to the opposite content in the other language?
+A.1.4-022 | Component 1 - Accessibility | A.1.4 Access to Language | #22 | If the content doesn’t exist in the selected language, does the site mention that the content isn’t available in the selected language?
+A.1.4-023 | Component 1 - Accessibility | A.1.4 Access to Language | #23 | Do files and links match the language the visitor is using? For example, in the English version, all downloadable files are in English.
+A.1.5-024 | Component 1 - Accessibility | A.1.5 Accessibility Actions | #24 | Is the accessibility bar easily found, clear, and consistent?
+A.1.5-025 | Component 1 - Accessibility | A.1.5 Accessibility Actions | #25 | Does the website support text resizing?
+A.1.5-026 | Component 1 - Accessibility | A.1.5 Accessibility Actions | #26 | Does the website support color blindness?
+A.1.5-027 | Component 1 - Accessibility | A.1.5 Accessibility Actions | #27 | Does the website support night mood?
+A.1.5-028 | Component 1 - Accessibility | A.1.5 Accessibility Actions | #28 | Is the page navigation keyboard-friendly, where the user can access major webpage functionalities using the keyboard?
+A.1.5-029 | Component 1 - Accessibility | A.1.5 Accessibility Actions | #29 | Does the website have a scroll-up button to quickly reach the top of the page?
+A.1.6-030 | Component 1 - Accessibility | A.1.6 Enable Social Media | #30 | Does the website have social media buttons linked to the entity social media pages?
+A.1.6-031 | Component 1 - Accessibility | A.1.6 Enable Social Media | #31 | Are the social media buttons placed at the footer of the website pages?
+A.1.6-032 | Component 1 - Accessibility | A.1.6 Enable Social Media | #32 | Does the “Contact Us “page contain the social media buttons?
+A.1.6-033 | Component 1 - Accessibility | A.1.6 Enable Social Media | #33 | Does clicking on the social media buttons opens a new tab?
+A.1.6-034 | Component 1 - Accessibility | A.1.6 Enable Social Media | #34 | Do webpages contain social media sharing buttons?
+A.1.6-035 | Component 1 - Accessibility | A.1.6 Enable Social Media | #35 | Are the social media sharing buttons displayed in the top of each webpage, where in Arabic it should be shown on the left side of the page and in English on the right side of the page?
+A.1.6-036 | Component 1 - Accessibility | A.1.6 Enable Social Media | #36 | Is the label “Share “, "‫ "شارك‬placed next to the sharing buttons?
+A.1.7-037 | Component 1 - Accessibility | A.1.7 RSS Feeds Subscription | #37 | Is RSS Feeds Subscription supported?
+A.1.7-038 | Component 1 - Accessibility | A.1.7 RSS Feeds Subscription | #38 | Is RSS icon visible, consistent, and clickable?
+A.1.7-039 | Component 1 - Accessibility | A.1.7 RSS Feeds Subscription | #39 | Is the news covered in the RSS?
+A.1.8-040 | Component 1 - Accessibility | A.1.8 Web Performance | #40 | Is webpages load time equal or less than 9 seconds?
+A.1.8-041 | Component 1 - Accessibility | A.1.8 Web Performance | #41 | Is webpages’ size equal or less than 5 MB?
+A.1.8-042 | Component 1 - Accessibility | A.1.8 Web Performance | #42 | Are HTTP requests at their minimum, with no unnecessary redirects or broken links?
+A.1.8-043 | Component 1 - Accessibility | A.1.8 Web Performance | #43 | Is the time to First Byte (TTFB) equal or less than 800ms?
+A.1.8-044 | Component 1 - Accessibility | A.1.8 Web Performance | #44 | Is the size of large images equal or less than 150KB?
+A.1.8-045 | Component 1 - Accessibility | A.1.8 Web Performance | #45 | Is the size of small images equal or less than 40K?
+U.2.1-001 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #1 | Is the navigation structure from the users’ point-of-view simple and predictable?
+U.2.1-002 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #2 | Does the navigation structure comply with the “Three Clicks Principle”?
+U.2.1-003 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #3 | Are the navigation menus located in a consistent location across all website pages?
+U.2.1-004 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #4 | Do navigation menus contain links to all website pages?
+U.2.1-005 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #5 | Does navigation menus support transitional effects such as hover or mouseover effect?
+U.2.1-006 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #6 | Are navigation menus flash free?
+U.2.1-007 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #7 | Is the website’s main menu displayed horizontally?
+U.2.1-008 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #8 | Are there no external links in the main navigation menu?
+U.2.1-009 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #9 | Are main menu items equal or less than nine items?
+U.2.1-010 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #10 | Does the main menu follow the serial position effect, where the most important items are placed at the beginning and the ending of the menu?
+U.2.1-011 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #11 | Is “About us” the first item in the main menu?
+U.2.1-012 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #12 | Is “Contact us” the last item in the main menu?
+U.2.1-013 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #13 | Are the main menu labels short and familiar?
+U.2.1-014 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #14 | In the English site, are all menu items labels capitalized? For example: “About Us” not “about us”.
+U.2.1-015 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #15 | Are main menu labels easily recognized?
+U.2.1-016 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #16 | Do menu items expand on click, with no expansion on mouse hover?
+U.2.1-017 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #17 | Does the secondary menu contain a maximum of seven items?
+U.2.1-018 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #18 | In the English site, are all menu items labels capitalized? For example: “Home” not “home”.
+U.2.1-019 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #19 | Are secondary menu labels short and familiar?
+U.2.1-020 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #20 | Does the secondary menu contain Home, FAQ, and Sitemap at minimum?
+U.2.1-021 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #21 | Is the page side menu displayed vertically?
+U.2.1-022 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #22 | Does the page side menu location depend on the site’s language; Left in Arabic pages and Right in English pages?
+U.2.1-023 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #23 | Do webpages contain breadcrumb?
+U.2.1-024 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #24 | Does the breadcrumb reflect the true hierarchy of the website and not the path site visitors have chosen?
+U.2.1-025 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #25 | Does the breadcrumb start with the Homepage link?
+U.2.1-026 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #26 | Are the breadcrumb levels equal or less than five-levels?
+U.2.1-027 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #27 | Is the horizontal tab navigation ordered depending on language; left-to-right in English, and right-to-left in Arabic?
+U.2.1-028 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #28 | Are the tab navigation items equal or less than five-tabs?
+U.2.1-029 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #29 | Are tab navigation labels short and meaningful?
+U.2.1-030 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #30 | Does clicking on the logo direct the site visitor to the homepage?
+U.2.1-031 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #31 | Does the secondary menu contain a link to the homepage?
+U.2.1-032 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #32 | Does Breadcrumb start with the homepage link?
+U.2.1-033 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #33 | Is there a sitemap?
+U.2.1-034 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #34 | Can visitors reach the sitemap from the secondary menu?
+U.2.1-035 | Component 2 - Usability and Design | U.2.1 Site Navigation and Effective Sitemap | #35 | Does the sitemap list down pages in a clear, hierarchical order?
+U.2.2-036 | Component 2 - Usability and Design | U.2.2 Homepage | #36 | Are the homepage design and organization of elements based on the users’ needs and expectations?
+U.2.2-037 | Component 2 - Usability and Design | U.2.2 Homepage | #37 | Does the homepage consist of a Header, Body, and Footer?
+U.2.2-038 | Component 2 - Usability and Design | U.2.2 Homepage | #38 | Are homepage components organized in horizontal sections?
+U.2.2-039 | Component 2 - Usability and Design | U.2.2 Homepage | #39 | Is the homepage design consistent and user-friendly?
+U.2.2-040 | Component 2 - Usability and Design | U.2.2 Homepage | #40 | Does the ratio between the graphics and user interface colors equal 3:1 or more?
+U.2.2-041 | Component 2 - Usability and Design | U.2.2 Homepage | #41 | Does the ratio between the normal text foreground and background colors equal 4.5:1 or more?
+U.2.2-042 | Component 2 - Usability and Design | U.2.2 Homepage | #42 | Does the ratio between the large text foreground and background colors equal 3:1 or more?
+U.2.2-043 | Component 2 - Usability and Design | U.2.2 Homepage | #43 | Is the entity’s logo placed at the header in the upper-right corner of the Arabic version of the website?
+U.2.2-044 | Component 2 - Usability and Design | U.2.2 Homepage | #44 | Is the entity’s logo placed at the header in the upper-left corner of the English version of the website?
+U.2.2-045 | Component 2 - Usability and Design | U.2.2 Homepage | #45 | Is the accessibility bar easily found, clear, and consistent at the header?
+U.2.2-046 | Component 2 - Usability and Design | U.2.2 Homepage | #46 | Does the header contain the main menu?
+U.2.2-047 | Component 2 - Usability and Design | U.2.2 Homepage | #47 | Does the header contain the secondary menu?
+U.2.2-048 | Component 2 - Usability and Design | U.2.2 Homepage | #48 | Are urgent and important announcements found in the “highlight ticker”?
+U.2.2-049 | Component 2 - Usability and Design | U.2.2 Homepage | #49 | Does the Arabic “highlight ticker” text move from left to right?
+U.2.2-050 | Component 2 - Usability and Design | U.2.2 Homepage | #50 | Does the English “highlight ticker” text move from right to left?
+U.2.2-051 | Component 2 - Usability and Design | U.2.2 Homepage | #51 | Can the site visitor control the “highlight ticker” text movement, where it can be moved back and forth, and pause on mouse hover?
+U.2.2-052 | Component 2 - Usability and Design | U.2.2 Homepage | #52 | Does the homepage clearly highlight the entities’ services?
+U.2.2-053 | Component 2 - Usability and Design | U.2.2 Homepage | #53 | Are Services categorized based on the site visitor perspective? For example: Investors, citizens, etc.
+U.2.2-054 | Component 2 - Usability and Design | U.2.2 Homepage | #54 | Does the homepage highlight the entity’s core business information? For example: Financial websites highlight the currency prices.
+U.2.2-055 | Component 2 - Usability and Design | U.2.2 Homepage | #55 | Are the entity’s news highlighted properly in a “news section” that is visible at the homepage?
+U.2.2-056 | Component 2 - Usability and Design | U.2.2 Homepage | #56 | Can visitors easily access important pages from the “browse the site section”?
+U.2.2-057 | Component 2 - Usability and Design | U.2.2 Homepage | #57 | Are cross browsing compatibility and ideal screen resolution statements placed at the website footer?
+U.2.2-058 | Component 2 - Usability and Design | U.2.2 Homepage | #58 | Does the website footer contain links to the software that is necessary to open files? For example: Adobe PDF Reader.
+U.2.2-059 | Component 2 - Usability and Design | U.2.2 Homepage | #59 | Does the footer mention policies statements? - Privacy Policy. - Terms of Use. - Disclaimer. - Copyright.
+U.2.2-060 | Component 2 - Usability and Design | U.2.2 Homepage | #60 | Does the footer display the Headquarter Contact information? - Phone Numbers. - Working Hours. - Location. - Fax.
+U.2.2-061 | Component 2 - Usability and Design | U.2.2 Homepage | #61 | Does the website footer contain Governments’ shared banners?
+U.2.2-062 | Component 2 - Usability and Design | U.2.2 Homepage | #62 | Does the website footer contain Last Update Date?
+U.2.2-063 | Component 2 - Usability and Design | U.2.2 Homepage | #63 | Does the website footer display social media buttons?
+U.2.3-064 | Component 2 - Usability and Design | U.2.3 Search Functionality | #64 | Is search facility visible and consistent?
+U.2.3-065 | Component 2 - Usability and Design | U.2.3 Search Functionality | #65 | Does search neglect Arabic special characters? For example: ‫ العربي‬and ‫عربي‬ bring the same results with and without (‫)ال‬.
+U.2.3-066 | Component 2 - Usability and Design | U.2.3 Search Functionality | #66 | Is English search case insensitive? For example: Searching for “HOMEPAGE” is the same as searching for “homepage”.
+U.2.3-067 | Component 2 - Usability and Design | U.2.3 Search Functionality | #67 | Do search results appear in a new page?
+U.2.3-068 | Component 2 - Usability and Design | U.2.3 Search Functionality | #68 | Does search facility show the total number of results?
+U.2.3-069 | Component 2 - Usability and Design | U.2.3 Search Functionality | #69 | Does search facility shows a maximum of 15 results per page?
+U.2.4-070 | Component 2 - Usability and Design | U.2.4 The Use of Icons (Iconography) | #70 | Are “Support Icons” used to draw attention to certain content? For example, Services, menus or features.
+U.2.4-071 | Component 2 - Usability and Design | U.2.4 The Use of Icons (Iconography) | #71 | Do “Support Icons” have visible text describing their meaning?
+U.2.4-072 | Component 2 - Usability and Design | U.2.4 The Use of Icons (Iconography) | #72 | Do “Action Icons” accurately represent the actions and perform them when visitors choose them?
+U.2.4-073 | Component 2 - Usability and Design | U.2.4 The Use of Icons (Iconography) | #73 | Do “Action Icons” have a tool tip on mouse hover that mention the icon function? For example: When mouse hover is on YouTube icon, a label appears with the word “YouTube”.
+U.2.4-074 | Component 2 - Usability and Design | U.2.4 The Use of Icons (Iconography) | #74 | Do website icons follow a consistent style; round edges or sharp, light border or bold, black and white or colored icons?
+U.2.4-075 | Component 2 - Usability and Design | U.2.4 The Use of Icons (Iconography) | #75 | Are the icons simple and classic?
+U.2.4-076 | Component 2 - Usability and Design | U.2.4 The Use of Icons (Iconography) | #76 | Do the icons have simple on-hover effect with no motions?
+U.2.4-077 | Component 2 - Usability and Design | U.2.4 The Use of Icons (Iconography) | #77 | Are icons formats Scalable Vector Graphics (SVG), Portable Network Graphic (PNG)?
+U.2.5-078 | Component 2 - Usability and Design | U.2.5 Images for Web | #78 | Does removing “design-images” have no effect on the website’s functionality? Does it reduce the site visitor’s understanding of the content?
+U.2.5-079 | Component 2 - Usability and Design | U.2.5 Images for Web | #79 | Does the website display “content-images”? For example: News images, photo gallery, ad banner, etc.
+U.2.5-080 | Component 2 - Usability and Design | U.2.5 Images for Web | #80 | Are all images used in the website copyrighted to the government entity itself or free to use?
+U.2.5-081 | Component 2 - Usability and Design | U.2.5 Images for Web | #81 | Are image files that are displayed at full widths optimized to 300KB at maximum?
+U.2.5-082 | Component 2 - Usability and Design | U.2.5 Images for Web | #82 | Are images in the content optimized to 300KB at maximum?
+U.2.5-083 | Component 2 - Usability and Design | U.2.5 Images for Web | #83 | Are images displayed in high-resolution; not pixelated, stretched, or shrunk?
+U.2.6-084 | Component 2 - Usability and Design | U.2.6 Web Forms | #84 | Does the web form introduction comply with GWS? Containing: - Title - Brief Description - Form Purpose
+U.2.6-085 | Component 2 - Usability and Design | U.2.6 Web Forms | #85 | Does the Introduction mention the approximated time needed to finish filling the form?
+U.2.6-086 | Component 2 - Usability and Design | U.2.6 Web Forms | #86 | Does the introduction define any pre-request documents or processes to complete a web form before the site visitor starts filling the form?
+U.2.6-087 | Component 2 - Usability and Design | U.2.6 Web Forms | #87 | Is the web form kept simple, asking the site visitor to enter the needed information only?
+U.2.6-088 | Component 2 - Usability and Design | U.2.6 Web Forms | #88 | Are web forms keyboard-friendly? Can the visitor move through the form using the keyboard?
+U.2.6-089 | Component 2 - Usability and Design | U.2.6 Web Forms | #89 | Do fields and value choices follow logical sequencing? For example: Credit- card number, Expiration date, Security code for fields and a drop-down list of nationality in non-criminal service starts with Jordanian for value choices.
+U.2.6-090 | Component 2 - Usability and Design | U.2.6 Web Forms | #90 | Are mandatory fields kept minimum?
+U.2.6-091 | Component 2 - Usability and Design | U.2.6 Web Forms | #91 | Are mandatory fields clearly labeled or marked with (*) symbol?
+U.2.6-092 | Component 2 - Usability and Design | U.2.6 Web Forms | #92 | Do web form fields provide examples and hints to help the visitor enter the proper information? For example: In credit card data form, give a hint where the visitor can find the CVV code.
+U.2.6-093 | Component 2 - Usability and Design | U.2.6 Web Forms | #93 | Do fields support default values? For example, same day date for date entry fields.
+U.2.6-094 | Component 2 - Usability and Design | U.2.6 Web Forms | #94 | Does the web form have pre-defined inputs? For example: Drop-down lists and radio buttons.
+U.2.6-095 | Component 2 - Usability and Design | U.2.6 Web Forms | #95 | Do web forms mention require types, units, or data formats? For example, JOD, Meters, phone number 07XXXXXXXX, etc.
+U.2.6-096 | Component 2 - Usability and Design | U.2.6 Web Forms | #96 | Do fields that require attachments indicate acceptable sizes?
+U.2.6-097 | Component 2 - Usability and Design | U.2.6 Web Forms | #97 | Is accepted attachments’ format clearly indicated?
+U.2.6-098 | Component 2 - Usability and Design | U.2.6 Web Forms | #98 | Does the form contain reCAPTCHA?
+U.2.6-099 | Component 2 - Usability and Design | U.2.6 Web Forms | #99 | Are web forms’ action buttons (submit + cancel) displayed clearly?
+U.2.6-100 | Component 2 - Usability and Design | U.2.6 Web Forms | #100 | Do buttons alignment depend on the language? Are the primary action buttons on the right in Arabic forms, and on the left in English forms?
+U.2.6-101 | Component 2 - Usability and Design | U.2.6 Web Forms | #101 | Does the site visitor get a confirmation message after submitting the form?
+U.2.6-102 | Component 2 - Usability and Design | U.2.6 Web Forms | #102 | Does the site visitor receive additional contact information after submitting a web form? - Reference number. - Email and/or SMS with additional details. - Duration needed to complete the request. - Facility to print the confirmation message.
+U.2.6-103 | Component 2 - Usability and Design | U.2.6 Web Forms | #103 | Is the site visitor redirected to the homepage after submitting the form?
+U.2.7-104 | Component 2 - Usability and Design | U.2.7 Animations | #104 | Are the website’s animations flash free?
+U.2.7-105 | Component 2 - Usability and Design | U.2.7 Animations | #105 | Are animations kept simple, avoiding animating several elements at once?
+U.2.7-106 | Component 2 - Usability and Design | U.2.7 Animations | #106 | Are animations meaningful?
+U.2.7-107 | Component 2 - Usability and Design | U.2.7 Animations | #107 | Do the duration and speed of the animation comply with GWS?
+U.2.7-108 | Component 2 - Usability and Design | U.2.7 Animations | #108 | Does animations’ motion depend on the language? For example, Arabic news ticker movement is from left to right, English news ticker movement from right to left.
+U.2.8-109 | Component 2 - Usability and Design | U.2.8 Web Design | #109 | is the web design based on the GWS Design Kit?
+C.3.1-001 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #1 | Does the website have a Sitemap?
+C.3.1-002 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #2 | Does the Government Website have an “About Us” page?
+C.3.1-003 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #3 | Does the Government Website have a “Welcome Message”?
+C.3.1-004 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #4 | Does the Government Website have an “Organization Structure” page?
+C.3.1-005 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #5 | Does the Government Website have a “Directorates” page?
+C.3.1-006 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #6 | Does the Government Website have a “Ministers” page?
+C.3.1-007 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #7 | Does the Government Website have a “General Secretaries” page?
+C.3.1-008 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #8 | Does the Government Website have a “Service Guide” page?
+C.3.1-009 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #9 | Does the Government Website have a “Services” page?
+C.3.1-010 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #10 | Does the Government Website have a “Forms Guide” page?
+C.3.1-011 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #11 | Does the Government Website have an “Entity News” page?
+C.3.1-012 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #12 | Does the Government Website have an “Annual reports page”?
+C.3.1-013 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #13 | Does the Government Website have a “Contact Us” page?
+C.3.1-014 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #14 | Does the Government Website have a “Useful Links” page?
+C.3.1-015 | Component 3 - Content and Site Architecture | C.3.1 Sitemap | #15 | Does the Government Website have an “FAQ” page?
+C.3.2-016 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #16 | Is there a clear delineation in web-content?
+C.3.2-017 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #17 | Do informative pages contain Page Titles?
+C.3.2-018 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #18 | Do informative pages contain Headings?
+C.3.2-019 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #19 | Do informative pages contain Headlines?
+C.3.2-020 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #20 | Do informative pages contain Content?
+C.3.2-021 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #21 | Do pages titles properly describe the webpage content? For example, About Us, Contact Us, Organization Structure, etc.
+C.3.2-022 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #22 | Does the page title match the tab title?
+C.3.2-023 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #23 | Is the tab title formatted as “Page Title – Website name “. For example, About Us - Ministry of Digital Transformation Entrepreneurship, .‫عن الوزارة – وزارة االقتصاد الرقمي والريادة‬
+C.3.2-024 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #24 | Does the heading describe the overall point of the page content?
+C.3.2-025 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #25 | Does each page contain one heading only?
+C.3.2-026 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #26 | Are headings kept short, consisting of a maximum of 10 words?
+C.3.2-027 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #27 | Are headlines meaningful, describing the upcoming part of the content?
+C.3.2-028 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #28 | Are English headlines capitalized?
+C.3.2-029 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #29 | Does the website describe the main point of the article in details?
+C.3.2-030 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #30 | Does the website start with a conclusion?
+C.3.2-031 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #31 | Are paragraph lines separated by 1.5 px to 3.0 px space?
+C.3.2-032 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #32 | Are different paragraphs separated by 3.0 px to 5.0 px space?
+C.3.2-033 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #33 | Is the text aligned based on the language; left to right for English content and right to left for Arabic content?
+C.3.2-034 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #34 | Are Italic and Underline text styles avoided?
+C.3.2-035 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #35 | Is Information presented as if it is from a third-party? For example, “The Ministry of Digital Economics will manage the process”, instead of “we will manage the process”.
+C.3.2-036 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #36 | Is the content free from spelling, grammar, and wording mistakes?
+C.3.2-037 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #37 | Do dates on the website follow the format dd/mm/yyyy?
+C.3.2-038 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #38 | Do website pages provide a printer-friendly feature?
+C.3.2-039 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #39 | Does the website provide rating for the content?
+C.3.2-040 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #40 | Does the external link open in a new tab?
+C.3.2-041 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #41 | Does the website provide lists? For example: List of news, list of services, list of annual reports.
+C.3.2-042 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #42 | Are “Lists” categorized based on the visitors’ point of view?
+C.3.2-043 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #43 | Do “Lists” that contain more than 10 items have a search functionality?
+C.3.2-044 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #44 | Does searching in “Lists” neglect Arabic special letters?
+C.3.2-045 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #45 | Does searching in English “Lists” satisfy case insensitivity?
+C.3.2-046 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #46 | Are “Lists” items titled clearly?
+C.3.2-047 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #47 | Does “List” item title consist of 70 characters at most?
+C.3.2-048 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #48 | Does the “List” page show the whole item title?
+C.3.2-049 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #49 | Do “Lists” items show briefs under their titles?
+C.3.2-050 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #50 | Are details links for “Lists” items expressed using the term (view or read more)?
+C.3.2-051 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #51 | Are “List” items sorted based on its content? For example, Priority, date, alphabetical, etc.
+C.3.2-052 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #52 | Does the website provide a Service Guide?
+C.3.2-053 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #53 | Are services in the Service Guide categorized based on the site visitors’ point of view? For example, categorized in terms of service type, not in terms of the department that provides the service.
+C.3.2-054 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #54 | Does the Service Guide support search functionality in case the list contains more than 10 services?
+C.3.2-055 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #55 | Does searching in the Service Guide neglect Arabic special letters?
+C.3.2-056 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #56 | Does searching in the English Service Guide satisfy case insensitivity?
+C.3.2-057 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #57 | If services in the Service Guide are categorized, are they categorized based on the visitors’ point of view?
+C.3.2-058 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #58 | In case of subcategorized lists, are all items displayed by default?
+C.3.2-059 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #59 | Does clicking on a certain search result lead the visitor to the related Service Card page?
+C.3.2-060 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #60 | Does the Service Card contain important service information? - Name - Description - Requirements - Procedures - Needed Forms - Expected Completion Time - Fees - Centers - eService Option
+C.3.2-061 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #61 | Does the website provide a Branches Guide?
+C.3.2-062 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #62 | Does the search facility in the Branches Guide provide searching by branch name?
+C.3.2-063 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #63 | Does search facility in the Branches Guide provide searching by branch location )‫?(المحافظة‬
+C.3.2-064 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #64 | Does clicking on a certain search result lead the visitor to the related Branch Card page?
+C.3.2-065 | Component 3 - Content and Site Architecture | C.3.2 Site Pages | #65 | Does the Branch Card contain important branch information? - Name - Location Description with Map URL - Services Provided - Contact Information - Working Hours
+C.3.3-066 | Component 3 - Content and Site Architecture | C.3.3 Downloadable Files | #66 | Are downloadable files clearly named?
+C.3.3-067 | Component 3 - Content and Site Architecture | C.3.3 Downloadable Files | #67 | Are files formats and sizes clearly mentioned? For example: PFD, Word, Excel.
+C.3.3-068 | Component 3 - Content and Site Architecture | C.3.3 Downloadable Files | #68 | Are files sizes optimized to the minimum?
+C.3.3-069 | Component 3 - Content and Site Architecture | C.3.3 Downloadable Files | #69 | Are uploaded file names free from spaces where spaces replaced with underscores?
+C.3.3-070 | Component 3 - Content and Site Architecture | C.3.3 Downloadable Files | #70 | Does the website show “download” "‫ "تحميل‬label clearly next to the downloadable file?
+C.3.3-071 | Component 3 - Content and Site Architecture | C.3.3 Downloadable Files | #71 | Are files that require purchasing licensed-software avoided?
+C.3.4-072 | Component 3 - Content and Site Architecture | C.3.4 Contact Information | #72 | Does contact information comply with GWS? Including: - Entity Phone Numbers - Fax Numbers - P.O. Box Address - Email - Location Description - Location on Google Maps - National Call Center Numbers - Working Hours - Branches Directory Link - Social Media Channels
+C.3.4-073 | Component 3 - Content and Site Architecture | C.3.4 Contact Information | #73 | Does the contact information section have a “Contact Us” form?
+C.3.4-074 | Component 3 - Content and Site Architecture | C.3.4 Contact Information | #74 | Does the Contact Us form contain at minimum: - Contact Type - Subject - Name - Phone Number - Email
+C.3.4-075 | Component 3 - Content and Site Architecture | C.3.4 Contact Information | #75 | Does the visitor receive a confirmation message after submitting the form?
+C.3.5-076 | Component 3 - Content and Site Architecture | C.3.5 Cross Government Information | #76 | Does the website footer contain links to cross government information? - Amman Message Website - Human Rights National Plan - Right to Obtain Information - ‫مدونة السلوك الوظيفي‬ - ‫ بوابة الحكومة االلكترونية‬- ‫حكومتي بخدمتي‬ - ‫بخدمتكم‬
+C.3.6-077 | Component 3 - Content and Site Architecture | C.3.6 FAQ | #77 | Does the website provide an FAQ page?
+C.3.6-078 | Component 3 - Content and Site Architecture | C.3.6 FAQ | #78 | Is the FAQ page located in the secondary menu?
+C.3.6-079 | Component 3 - Content and Site Architecture | C.3.6 FAQ | #79 | Are the questions clear and short?
+C.3.6-080 | Component 3 - Content and Site Architecture | C.3.6 FAQ | #80 | Are FAQ categorized? For example, Digital transformation questions, entrepreneurship
+C.3.6-081 | Component 3 - Content and Site Architecture | C.3.6 FAQ | #81 | Does FAQs provide a facility for visitors to ask new questions?
+C.3.7-082 | Component 3 - Content and Site Architecture | C.3.7 Website Policies | #82 | Does the website have a Privacy Policy?
+C.3.7-083 | Component 3 - Content and Site Architecture | C.3.7 Website Policies | #83 | Does the website have a Copyrights Statement?
+C.3.7-084 | Component 3 - Content and Site Architecture | C.3.7 Website Policies | #84 | Does the website have Terms of Use?
+C.3.7-085 | Component 3 - Content and Site Architecture | C.3.7 Website Policies | #85 | Does the website have a Disclaimer section?
+C.3.8-086 | Component 3 - Content and Site Architecture | C.3.8 Content Management System | #86 | Is the website supported by a Content Management System (CMS)?
+C.3.8-087 | Component 3 - Content and Site Architecture | C.3.8 Content Management System | #87 | Is the CMS user-friendly? Can non-technical users carry out administrative tasks on the CMS?
+C.3.8-088 | Component 3 - Content and Site Architecture | C.3.8 Content Management System | #88 | Does the CMS support an unlimited number of users and groups?
+C.3.8-089 | Component 3 - Content and Site Architecture | C.3.8 Content Management System | #89 | Does the CMS support user roles and privileges in terms of what pages can be controlled and what actions can be done on a page?
+C.3.8-090 | Component 3 - Content and Site Architecture | C.3.8 Content Management System | #90 | Does the CMS support workflow creation?
+C.3.8-091 | Component 3 - Content and Site Architecture | C.3.8 Content Management System | #91 | Does the CMS support content versioning?
+C.3.8-092 | Component 3 - Content and Site Architecture | C.3.8 Content Management System | #92 | Does the CMS support content scheduling?
+C.3.8-093 | Component 3 - Content and Site Architecture | C.3.8 Content Management System | #93 | Does the CMS support administration transactions logging?
+C.3.8-094 | Component 3 - Content and Site Architecture | C.3.8 Content Management System | #94 | Does the CMS carry out an SEO Module?
+C.3.8-095 | Component 3 - Content and Site Architecture | C.3.8 Content Management System | #95 | Does the CMS support multi-language websites?
+C.3.8-096 | Component 3 - Content and Site Architecture | C.3.8 Content Management System | #96 | Does the CMS provide out of the box modules? For example, News, calendar, etc.
+R.4.1-001 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #1 | Is the website designed in a responsive manner?
+R.4.1-002 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #2 | Do webpages in mobile view show component based on priorities?
+R.4.1-003 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #3 | Is the logo designed using responsive frameworks and variable sizes? - Logo resizes itself to fit whatever available space has been provided for it. - Logo does not stretch.
+R.4.1-004 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #4 | Is the logo in the mobile version displayed at the header’s center?
+R.4.1-005 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #5 | Does the “Switch Language” button appear consistently in the header; and isn’t placed in the menu?
+R.4.1-006 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #6 | Does the website mobile version convert regular menus to hamburger menus?
+R.4.1-007 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #7 | In case of removing the secondary menu, are secondary menu items moved to the main hamburger menu?
+R.4.1-008 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #8 | Does the main menu appear on the right-side of the header, for both English and Arabic versions of the website?
+R.4.1-009 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #9 | Does the secondary menu appear on the left-side of the header, for both English and Arabic versions of the website?
+R.4.1-010 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #10 | Are menus consistent throughout the pages?
+R.4.1-011 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #11 | Is the search bar obvious and consistent on the header, not in the menus?
+R.4.1-012 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #12 | Are unnecessary images removed?
+R.4.1-013 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #13 | Are images properly resized; images are not stretched or shrunk?
+R.4.1-014 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #14 | Does resizing or cropping keep content images meaningful and properly displayed?
+R.4.1-015 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #15 | Are the buttons large enough to be tapped with a finger?
+R.4.1-016 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #16 | Do buttons have enough space between them, providing accurate clicking?
+R.4.1-017 | Component 4 - Responsive Web Design | R.4.1 Design for Mobile | #17 | Does the buttons placement follow the Thumb-Zone Rule?
+R.4.2-018 | Component 4 - Responsive Web Design | R.4.2 Content | #18 | Is the breadcrumb removed from all responsive design pages?
+R.4.2-019 | Component 4 - Responsive Web Design | R.4.2 Content | #19 | Are page side menus removed from all responsive design pages?
+R.4.2-020 | Component 4 - Responsive Web Design | R.4.2 Content | #20 | Are ads banners removed from all responsive design pages?
+R.4.2-021 | Component 4 - Responsive Web Design | R.4.2 Content | #21 | Are empty spaces within the content increased for more text readability?
+R.4.2-001 | Component 5 - Security | R.4.2 Content | #1 | Is a vulnerability assessment performed on the websites annually?
+S.5.1-002 | Component 5 - Security | S.5.1 OWASP Top 10 | #2 | Is the website protected and secured against OWASP Top 10? - Injection Attacks - Broken Authentication - Sensitive Data Exposure - Broken Access Control - Security Misconfiguration - Cross-Site Scripting - Insecure Deserialization - Using Components with Known Vulnerabilities - Insufficient Logging and Monitoring
+S.5.2-003 | Component 5 - Security | S.5.2 HTTPS protocol | #3 | Does the website use HTTPS protocol?
+S.5.2-004 | Component 5 - Security | S.5.2 HTTPS protocol | #4 | Is HTTPS certificate renewed annually?
+S.5.3-005 | Component 5 - Security | S.5.3 Software Updates | #5 | Is the Content Management System constantly updated?
+S.5.3-006 | Component 5 - Security | S.5.3 Software Updates | #6 | Are CMS plugins and 3rd party components always updated?
+S.5.3-007 | Component 5 - Security | S.5.3 Software Updates | #7 | Are hosting services updates and patches installed once they’re released?
+S.5.4-008 | Component 5 - Security | S.5.4 Restrict File Uploads | #8 | Regarding files uploaded by visitors, does the website impose extension restrictions?
+S.5.4-009 | Component 5 - Security | S.5.4 Restrict File Uploads | #9 | Are files uploaded by visitors stored in separated folders and databases?
+S.5.4-010 | Component 5 - Security | S.5.4 Restrict File Uploads | #10 | Are executable files banned?
+S.5.4-011 | Component 5 - Security | S.5.4 Restrict File Uploads | #11 | Are double extension files banned?
+S.5.5-012 | Component 5 - Security | S.5.5 Using Captcha | #12 | Do forms contain reCAPTCHA v2.0 by Google?
+S.5.5-013 | Component 5 - Security | S.5.5 Using Captcha | #13 | Is passing reCAPTCHA mandatory before submission?
+S.5.6-014 | Component 5 - Security | S.5.6 Users Passwords | #14 | Does the website configure a strong password policy and provide strong password setting guides? For example, 8 4 Rule.
+S.5.6-015 | Component 5 - Security | S.5.6 Users Passwords | #15 | Are passwords stored as encrypted values?
+S.5.6-016 | Component 5 - Security | S.5.6 Users Passwords | #16 | Does the account get periodically locked after three failed logins?
+S.5.7-017 | Component 5 - Security | S.5.7 Viruses and Malware | #17 | Are the website and hosting environment protected from viruses and malwares?
+S.5.8-018 | Component 5 - Security | S.5.8 Adjust Default Settings | #18 | Are account configuration default settings changed for both the hosting environment and content management system?
+S.5.9-019 | Component 5 - Security | S.5.9 Error Messages | #19 | Does the error message display information that the visitor actually need, without revealing the structure of any component of the website?
+S.5.9-020 | Component 5 - Security | S.5.9 Error Messages | #20 | Are detailed errors kept in the server log?
+S.5.10-021 | Component 5 - Security | S.5.10. Secure APIs | #21 | Do APIs use HTTPS?
+S.5.10-022 | Component 5 - Security | S.5.10. Secure APIs | #22 | Does the API Use OAuth?
+S.5.10-023 | Component 5 - Security | S.5.10. Secure APIs | #23 | Does the tokens have an expiration time?
+S.5.10-024 | Component 5 - Security | S.5.10. Secure APIs | #24 | Does the API have a limitation on how many times the client is allowed to call it?
+S.5.10-025 | Component 5 - Security | S.5.10. Secure APIs | #25 | Are parameters always validated?
+S.5.10-026 | Component 5 - Security | S.5.10. Secure APIs | #26 | Are IDs opaque and globally unique? For example, rather than using the ID “1002 “and “1003 “use “r5t844fsg6fssf2vfrb9bd8”.
+S.5.10-027 | Component 5 - Security | S.5.10. Secure APIs | #27 | Is the IP address filtered, where the API IP address can be only accessed for certain IPs?
+S.5.10-028 | Component 5 - Security | S.5.10. Secure APIs | #28 | Is Timestamp added in the Request, where it only accepts requests within a reasonable timeframe?
+S.5.10-029 | Component 5 - Security | S.5.10. Secure APIs | #29 | Is the URL free of exposed information? For example: Usernames, passwords, session tokens, API keys, etc...

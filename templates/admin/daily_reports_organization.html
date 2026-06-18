@@ -1,20 +1,14 @@
-{% extends 'base.html' %}
-{% from 'components/page-header.html' import page_header %}
+﻿{% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Daily Reports Organisation{% else %}تنظيم التقارير اليومية{% endif %}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Daily Reports Organization{% else %}تنظيم التقارير اليومية{% endif %} — KinJo{% endblock %}
 
-{% block page_header %}
-{{ page_header(
-title="Daily Reports Organisation" if ui_lang == 'en' else "تنظيم التقارير اليومية",
-icon="bi-journal-check",
-breadcrumbs=[
-{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
-{"label": "Daily Reports Organisation" if ui_lang == 'en' else "تنظيم التقارير اليومية", "url": None}
-]
-) }}
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Daily Reports Organization{% else %}تنظيم التقارير اليومية{% endif %}</span>
 {% endblock %}
 
-{% block extra_css %}
+{% block extra_head %}
 <style>
   .daily-reports-org-page .filter-card {
     border: 1px solid #e8ebf0;
@@ -73,6 +67,13 @@ breadcrumbs=[
 {% endblock %}
 
 {% block content %}
+<div class="admin-page-header mb-4">
+  <h1 class="admin-page-title">
+    <i class="bi bi-journal-check me-2"></i>
+    {% if ui_lang == 'en' %}Daily Reports Organization{% else %}تنظيم التقارير اليومية{% endif %}
+  </h1>
+</div>
+
 <div class="daily-reports-org-page" dir="{{ ui_dir }}" lang="{{ ui_lang }}">
   <div class="card filter-card mb-4">
     <div class="card-body">
@@ -175,6 +176,6 @@ breadcrumbs=[
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_scripts %}
 <script src="/static/js/admin_daily_reports_organization.js"></script>
 {% endblock %}

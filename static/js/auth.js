@@ -1,4 +1,4 @@
-/**
+﻿/**
  * KinJo authentication runtime.
  * Handles login, logout, MFA, session refresh, and authenticated fetch helpers.
  */
@@ -228,9 +228,6 @@ class AuthGuard {
     "/change-password",
     "/forgot-password",
     "/reset-password",
-    "/help",
-    "/privacy",
-    "/terms",
   ];
 
   static isValidRedirectUrl(url) {
@@ -294,7 +291,7 @@ class AuthGuard {
   static async check() {
     const currentPath = window.location.pathname;
     if (this.publicRoutes.includes(currentPath)) {
-      if (currentPath === "/mfa/setup" && !AuthStorage.getMfaTicket()) {
+      if (currentPath === "/mfa/setup" && !(AuthStorage.getCookie("kinjo_mfa_ticket") || inMemoryMfaState.mode)) {
         window.location.href = "/login";
         return false;
       }
@@ -314,7 +311,7 @@ class AuthGuard {
         }
         AuthStorage.clearAll();
       }
-      // Not redirecting — reveal the page now
+      // Not redirecting â€” reveal the page now
       if (typeof window.__kinjoRevealPage === "function") {
         window.__kinjoRevealPage();
       }
@@ -365,6 +362,9 @@ class AuthService {
     formData.append("password", password);
     formData.append("grant_type", "password");
     formData.append("remember_me", rememberMe ? "true" : "false");
+    if (typeof window.getCaptchaToken === "function") {
+      formData.append("captcha_token", window.getCaptchaToken());
+    }
 
     const response = await fetch(AUTH_CONFIG.loginEndpoint, {
       method: "POST",
@@ -379,7 +379,7 @@ class AuthService {
       throw new Error(
         data.detail ||
           t(
-            "تعذر تسجيل الدخول بالبيانات المدخلة.",
+            "ØªØ¹Ø°Ø± ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø¯Ø®Ù„Ø©.",
             "Unable to sign in with the provided credentials.",
           ),
       );
@@ -395,7 +395,7 @@ class AuthService {
     if (!response.ok) {
       throw new Error(
         data.detail ||
-          t("تعذر تهيئة المصادقة الثنائية.", "Unable to start MFA setup."),
+          t("ØªØ¹Ø°Ø± ØªÙ‡ÙŠØ¦Ø© Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø© Ø§Ù„Ø«Ù†Ø§Ø¦ÙŠØ©.", "Unable to start MFA setup."),
       );
     }
     return data;
@@ -412,7 +412,7 @@ class AuthService {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(
-        data.detail || t("رمز التحقق غير صحيح.", "Invalid verification code."),
+        data.detail || t("Ø±Ù…Ø² Ø§Ù„ØªØ­Ù‚Ù‚ ØºÙŠØ± ØµØ­ÙŠØ­.", "Invalid verification code."),
       );
     }
     return data;
@@ -436,7 +436,7 @@ class AuthService {
     const response = await fetch(AUTH_CONFIG.meEndpoint);
     if (!response.ok) {
       throw new Error(
-        t("تعذر جلب بيانات المستخدم.", "Unable to fetch user profile."),
+        t("ØªØ¹Ø°Ø± Ø¬Ù„Ø¨ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….", "Unable to fetch user profile."),
       );
     }
     return response.json();
@@ -569,13 +569,13 @@ async function initMfaPage() {
     setupPanel?.classList.add("d-none");
     if (heading) {
       heading.textContent = t(
-        "أدخل رمز التحقق",
+        "Ø£Ø¯Ø®Ù„ Ø±Ù…Ø² Ø§Ù„ØªØ­Ù‚Ù‚",
         "Enter your verification code",
       );
     }
     if (intro) {
       intro.textContent = t(
-        "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة لإكمال تسجيل الدخول.",
+        "Ø£Ø¯Ø®Ù„ Ø§Ù„Ø±Ù…Ø² Ø§Ù„Ù…ÙƒÙˆÙ† Ù…Ù† 6 Ø£Ø±Ù‚Ø§Ù… Ù…Ù† ØªØ·Ø¨ÙŠÙ‚ Ø§Ù„Ù…ØµØ§Ø¯Ù‚Ø© Ù„Ø¥ÙƒÙ…Ø§Ù„ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„.",
         "Enter the 6-digit code from your authenticator app to finish signing in.",
       );
     }
@@ -635,7 +635,7 @@ function handleLogout(event) {
   }
   if (
     confirm(
-      t("هل أنت متأكد من تسجيل الخروج؟", "Are you sure you want to sign out?"),
+      t("Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬ØŸ", "Are you sure you want to sign out?"),
     )
   ) {
     AuthService.logout();
@@ -718,3 +718,6 @@ document.addEventListener("DOMContentLoaded", () => {
     console.error("Auth initialization failed:", error);
   });
 });
+
+
+

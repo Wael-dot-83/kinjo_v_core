@@ -1,13 +1,6 @@
-"""
-Local development seed script for KinJo platform.
-Creates all tables and populates demo data for manual testing.
+# seed_local.py - Development seed script with enhanced auto-auth support
+# Run this before starting the server to prepare the testing environment.
 
-Users created:
-  ADMIN    : admin / Admin@1234
-  MANAGER  : manager1 / Manager@1234
-  SUPERVISOR: supervisor1 / Super@1234
-  PARENT   : parent1 / Parent@1234
-"""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -27,6 +20,25 @@ from models import (
     ParentProfile, AuditLog
 )
 from auth import get_password_hash, create_user
+from config import settings
+
+if settings.ENVIRONMENT.lower() == "production" and not settings.TESTING:
+    raise RuntimeError(
+        "seed_local.py is a development/test fixture script (creates known, "
+        "non-expiring passwords) and must not be run against a production "
+        "environment. Refusing to continue."
+    )
+
+# Credentials for easy reference (used by launcher scripts)
+CREDENTIALS = {
+    "admin":       {"password": "Admin@1234",   "role": "ADMIN"},
+    "manager1":    {"password": "Manager@1234", "role": "MANAGER"},
+    "manager2":    {"password": "Manager@1234", "role": "MANAGER"},
+    "supervisor1": {"password": "Super@1234",   "role": "SUPERVISOR"},
+    "supervisor2": {"password": "Super@1234",   "role": "SUPERVISOR"},
+    "parent1":     {"password": "Parent@1234",  "role": "PARENT"},
+    "parent2":     {"password": "Parent@1234",  "role": "PARENT"},
+}
 
 def run():
     init_db()
@@ -74,13 +86,17 @@ def run():
             if not u:
                 hashed = get_password_hash(password)
                 db.execute(text(
-                    "INSERT INTO users (username, email, hashed_password, role, status, kindergarten_id, must_change_password, failed_login_count) "
-                    "VALUES (:u, :e, :h, :r, 'ACTIVE', :kg, 0, 0)"
+                    "INSERT INTO users (username, email, hashed_password, role, status, kindergarten_id, must_change_password, failed_login_count, mfa_enabled) "
+                    "VALUES (:u, :e, :h, :r, 'ACTIVE', :kg, 0, 0, 0)"
                 ), {"u": username, "e": email, "h": hashed, "r": role.value, "kg": kg_id})
                 db.commit()
                 u = db.query(User).filter(User.username == username).first()
                 print(f"  Created {role} : {username} / {password}")
             else:
+                # Ensure mfa_enabled is False for existing users in dev
+                if hasattr(u, 'mfa_enabled') and u.mfa_enabled:
+                    u.mfa_enabled = False
+                    db.commit()
                 print(f"  Exists  {role} : {username}")
             return u
 
@@ -113,19 +129,6 @@ def run():
                 db.commit()
                 db.refresh(c)
                 print(f"  Created class: {name_en} (kg_id={kg_id})")
-            else:
-                changed = False
-                if not c.class_code:
-                    c.class_code = class_code
-                    changed = True
-                if not c.age_group:
-                    c.age_group = "AGE_2_4"
-                    changed = True
-                if c.max_age_months < 84:
-                    c.max_age_months = 84
-                    changed = True
-                if changed:
-                    db.commit()
             return c
 
         class_a = upsert_class(kg1.id, "الصف الأول أ",  "Class A", "KG1-A")
@@ -193,9 +196,6 @@ def run():
                 db.add(e)
                 db.commit()
                 db.refresh(e)
-            elif e.class_id is None:
-                e.class_id = class_id
-                db.commit()
             return e
 
         enroll1 = upsert_enrollment(child1.id, kg1.id, class_a.id)
@@ -267,7 +267,6 @@ def run():
         # ── Attendance ────────────────────────────────────────────────────────
         today = date.today()
         for child in [child1, child2]:
-            # find class for this child's kg
             kg_class = db.execute(text("SELECT id FROM classes WHERE kindergarten_id=:kg LIMIT 1"), {"kg": kg1.id}).fetchone()
             cls_id = kg_class[0] if kg_class else None
             for delta in range(10):
@@ -279,8 +278,8 @@ def run():
                 if not exists and cls_id:
                     checkin = datetime.combine(d, datetime.min.time()).replace(hour=8)
                     db.execute(text(
-                        "INSERT INTO attendance_logs (child_id, class_id, date, status, check_in_at, check_out_at, recorded_by, picked_by_name) "
-                        "VALUES (:cid, :clsid, :d, :status, :cin, :cout, :recorded_by, :picked_by)"
+                        "INSERT INTO attendance_logs (child_id, class_id, date, status, check_in_at, check_out_at, recorded_by, picked_by_name, method) "
+                        "VALUES (:cid, :clsid, :d, :status, :cin, :cout, :recorded_by, :picked_by, :method)"
                     ), {
                         "cid": child.id,
                         "clsid": cls_id,
@@ -290,6 +289,7 @@ def run():
                         "cout": str(checkin.replace(hour=13)),
                         "recorded_by": sup.id,
                         "picked_by": "سامي الخالد",
+                        "method": "manual",
                     })
         db.commit()
         print("Attendance records created")
@@ -313,7 +313,7 @@ def run():
         print("Incidents created")
 
         print("\n" + "="*60)
-        print("SEED COMPLETE — Test credentials:")
+        print("SEED COMPLETE — Test credentials (use with TESTING=true):")
         print("  ADMIN      : admin       / Admin@1234")
         print("  MANAGER    : manager1    / Manager@1234   (kg1)")
         print("  SUPERVISOR : supervisor1 / Super@1234     (kg1)")

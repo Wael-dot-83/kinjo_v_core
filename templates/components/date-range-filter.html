@@ -40,6 +40,20 @@ refresh_btn_id=None, on_refresh=None, show_export=True, governorate_id=None, exp
                     <i class="bi bi-calendar-month me-1"></i>{% if ui_lang == 'en' %}Last Month{% else %}الشهر الماضي{% endif %}
                 </button>
             </div>
+            {% if show_governorate and governorate_id %}
+            <div class="col-md-2">
+                <select class="form-select" id="{{ governorate_id }}" data-user-role="{{ user_role or '' }}">
+                    <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
+                </select>
+            </div>
+            {% endif %}
+            {% if show_export and export_modal_id %}
+            <div class="col-md-auto">
+                <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#{{ export_modal_id }}">
+                    <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
+                </button>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

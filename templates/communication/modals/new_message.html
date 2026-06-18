@@ -417,7 +417,10 @@
                             <!-- Attachments -->
                             <div class="mb-0">
                                 <label for="msgAttachments" class="form-label fw-semibold">{% if ui_lang == 'en' %}Attachments{% else %}المرفقات{% endif %}</label>
-                                <input type="file" class="form-control" id="msgAttachments" multiple>
+                                <input type="file" class="form-control" id="msgAttachments" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx">
+                                <div class="form-text">
+                                    {% if ui_lang == 'en' %}Accepted formats: PDF, JPG, PNG, WEBP, DOC, DOCX. Max file size: {{ max_attachment_size_mb }} MB per file.{% else %}الصيغ المقبولة: PDF, JPG, PNG, WEBP, DOC, DOCX. الحد الأقصى لحجم الملف: {{ max_attachment_size_mb }} ميغابايت لكل ملف.{% endif %}
+                                </div>
                                 <div class="form-text" id="attachmentHint" style="display:none;">
                                     {% if ui_lang == 'en' %}Attachments are available for admins and managers only.{% else %}المرفقات متاحة للمسؤولين والمديرين فقط.{% endif %}
                                 </div>

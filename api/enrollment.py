@@ -163,14 +163,19 @@ def create_enrollment_application(
         models.Child.date_of_birth == enrollment_data.date_of_birth,
     ).first()
     if existing_child:
+        # Only block duplicate if there is a non-terminal enrollment for this child at this KG
         dup_enrollment = db.query(models.EnrollmentApplication).filter(
             models.EnrollmentApplication.child_id == existing_child.id,
             models.EnrollmentApplication.kindergarten_id == enrollment_data.kindergarten_id,
+            models.EnrollmentApplication.status.notin_([
+                models.EnrollmentStatus.REJECTED,
+                models.EnrollmentStatus.WITHDRAWN,
+            ]),
         ).first()
         if dup_enrollment:
             raise HTTPException(
                 status_code=400,
-                detail=_api("Duplicate enrollment exists for this child at the same kindergarten", _ulang(current_user))
+                detail=_api("An active or pending enrollment already exists for this child at the same kindergarten", _ulang(current_user))
             )
         # Check for active enrollment at any KG
         active = db.query(models.EnrollmentApplication).filter(
@@ -323,6 +328,8 @@ def review_enrollment(
     if enrollment.status != models.EnrollmentStatus.SUBMITTED:
         raise HTTPException(status_code=400, detail="Only submitted applications can be reviewed")
 
+    before_state = {"status": enrollment.status.value, "class_id": enrollment.class_id}
+
     # Only managers or admins can review
     if current_user.role not in [models.UserRole.MANAGER, models.UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Only managers can review applications")
@@ -346,6 +353,13 @@ def review_enrollment(
         docs_ok, missing_docs = validators.validate_required_documents(db, child.id)
         if not docs_ok:
             raise HTTPException(status_code=400, detail={"missing_documents": missing_docs})
+
+        # Require class assignment before acceptance
+        if not enrollment.class_id:
+            raise HTTPException(
+                status_code=400,
+                detail=_api("Child must be assigned to a class before the enrollment can be accepted", _ulang(current_user))
+            )
 
         # Class capacity guard — row-level lock prevents double-booking
         if enrollment.class_id:
@@ -392,7 +406,9 @@ def review_enrollment(
         entity_type="EnrollmentApplication",
         entity_id=enrollment.id,
         details=reason if reason else None,
-        sensitivity_level=2
+        sensitivity_level=2,
+        old_data=before_state,
+        new_data={"status": enrollment.status.value, "class_id": enrollment.class_id}
     )
 
     return {

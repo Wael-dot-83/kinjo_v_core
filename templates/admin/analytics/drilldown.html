@@ -1,42 +1,33 @@
-{% extends 'base.html' %}
-{% from 'components/page-header.html' import page_header %}
+﻿{% extends "admin_base.html" %}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 
-{% block title %}{% if ui_lang == 'en' %}Detailed Analysis: {{ dimension_id }}{% else %}تحليل تفصيلي: {{ dimension_id }}{% endif %} {% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Detailed Analysis: {{ dimension_id }}{% else %}تحليل تفصيلي: {{ dimension_id }}{% endif %} — KinJo{% endblock %}
 
-{% block page_header %}
-{% set filter_actions %}
-{{ date_range_filter(
-start_id="periodStart",
-end_id="periodEnd",
-show_governorate=False,
-refresh_btn_id="refreshBtn",
-on_refresh="loadDrilldownData",
-show_export=False
-) }}
-{% endset %}
-{# Note: drilldownTitle and breadcrumbDimension IDs are set via JS, so we keep a custom header here #}
-<div class="page-header-wrap">
-    <div>
-        <h1 class="page-header-title" id="drilldownTitle">
-            <i class="bi bi-graph-up-arrow text-primary me-2" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}
-        </h1>
-        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
-                <li class="breadcrumb-item"><a href="/admin/analytics">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a></li>
-                <li class="breadcrumb-item active" id="breadcrumbDimension">...</li>
-            </ol>
-        </nav>
-    </div>
-    <div class="page-header-actions">
-        {{ filter_actions }}
-    </div>
-</div>
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="admin-breadcrumb-separator">/</span>
+<a href="/admin/analytics" class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active" id="breadcrumbDimension">{% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}</span>
 {% endblock %}
 
 {% block content %}
+<div class="admin-page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="admin-page-title mb-0" id="drilldownTitle">
+    <i class="bi bi-graph-up me-2"></i>
+    {% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}
+  </h1>
+  <div>
+    {{ date_range_filter(
+      start_id="periodStart",
+      end_id="periodEnd",
+      show_governorate=False,
+      refresh_btn_id="refreshBtn",
+      on_refresh="loadDrilldownData",
+      show_export=False
+    ) }}
+  </div>
+</div>
 <div id="loading" class="text-center py-5">
     <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
@@ -69,7 +60,7 @@ show_export=False
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
     integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
     crossorigin="anonymous"></script>

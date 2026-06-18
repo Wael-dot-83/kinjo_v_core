@@ -1,0 +1,122 @@
+"""
+Validation layer for daily kindergarten payload.
+Enforces schema, ranges, and date format per spec.
+"""
+from __future__ import annotations
+import re
+from datetime import datetime
+from typing import Any
+
+import pandas as pd
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+VALID_ADMIN_IDS = {
+    "JO-AM", "JO-IR", "JO-ZA", "JO-BA", "JO-MD",
+    "JO-JA", "JO-AJ", "JO-MA", "JO-KA", "JO-TA",
+    "JO-MN", "JO-AQ",
+    # qaḍāʼ level
+    "JO-AM-01","JO-AM-02","JO-AM-03","JO-AM-04","JO-AM-05",
+    "JO-IR-01","JO-IR-02","JO-IR-03",
+    "JO-ZA-01","JO-ZA-02",
+    "JO-KA-01","JO-KA-02",
+    "JO-MA-01","JO-MA-02",
+    "JO-MN-01","JO-AQ-01",
+    "JO-BA-01","JO-MD-01","JO-TA-01","JO-AJ-01","JO-JA-01",
+}
+
+
+class DailyPayload(BaseModel):
+    date: str
+    admin_id: str
+    kindergartens_active: int = Field(ge=0)
+    kindergartens_inactive: int = Field(ge=0)
+    enrolled_children: int = Field(ge=0)
+    unregistered_children: int = Field(ge=0)
+    supervisors_count: int = Field(ge=0)
+    classes_count: int = Field(ge=0)
+    classes_without_supervisor: int = Field(ge=0)
+    critical_incidents: int = Field(ge=0)
+    protection_issues: int = Field(ge=0)
+    daily_reports_count: int = Field(ge=0)
+    absences_total: int = Field(ge=0)
+    absences_health_alerts: int = Field(ge=0)
+    tasks_overdue: int = Field(ge=0)
+    governance_score: float = Field(ge=0.0, le=100.0)
+    training_completion_pct: float = Field(ge=0.0, le=100.0)
+
+    @field_validator("date")
+    @classmethod
+    def validate_date(cls, v: str) -> str:
+        if not DATE_RE.match(v):
+            raise ValueError(f"date must be YYYY-MM-DD, got: {v!r}")
+        try:
+            datetime.strptime(v, "%Y-%m-%d")
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
+        return v
+
+    @field_validator("admin_id")
+    @classmethod
+    def validate_admin_id(cls, v: str) -> str:
+        if v not in VALID_ADMIN_IDS:
+            raise ValueError(f"Unknown admin_id: {v!r}")
+        return v
+
+    @model_validator(mode="after")
+    def cross_field_checks(self) -> "DailyPayload":
+        if self.classes_without_supervisor > self.classes_count:
+            raise ValueError("classes_without_supervisor cannot exceed classes_count")
+        if self.absences_health_alerts > self.absences_total:
+            raise ValueError("absences_health_alerts cannot exceed absences_total")
+        total_kg = self.kindergartens_active + self.kindergartens_inactive
+        if total_kg > 0 and self.supervisors_count > total_kg * 10:
+            raise ValueError("supervisors_count looks implausibly high relative to kindergartens")
+        return self
+
+
+def validate_dataframe(df: pd.DataFrame) -> tuple[pd.DataFrame, list[dict[str, Any]]]:
+    """
+    Validates every row; returns (clean_df, error_log).
+    Rows that fail validation are excluded from clean_df.
+    """
+    errors: list[dict] = []
+    valid_rows: list[dict] = []
+
+    for idx, row in df.iterrows():
+        data = row.to_dict()
+        # cast integer-like floats that pandas may infer
+        int_cols = [
+            "kindergartens_active","kindergartens_inactive","enrolled_children",
+            "unregistered_children","supervisors_count","classes_count",
+            "classes_without_supervisor","critical_incidents","protection_issues",
+            "daily_reports_count","absences_total","absences_health_alerts","tasks_overdue",
+        ]
+        for col in int_cols:
+            if col in data and data[col] is not None:
+                try:
+                    data[col] = int(data[col])
+                except (ValueError, TypeError):
+                    pass
+
+        try:
+            payload = DailyPayload(**data)
+            valid_rows.append(payload.model_dump())
+        except Exception as exc:
+            errors.append({"row_index": idx, "admin_id": data.get("admin_id"), "error": str(exc)})
+
+    clean_df = pd.DataFrame(valid_rows) if valid_rows else pd.DataFrame()
+    return clean_df, errors
+
+
+def validate_records(records: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Validates a list of dicts; returns (valid_records, errors)."""
+    valid, errors = [], []
+    for i, rec in enumerate(records):
+        try:
+            payload = DailyPayload(**rec)
+            valid.append(payload.model_dump())
+        except Exception as exc:
+            errors.append({"index": i, "admin_id": rec.get("admin_id"), "error": str(exc)})
+    return valid, errors

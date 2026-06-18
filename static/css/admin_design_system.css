@@ -46,10 +46,46 @@
   --admin-info-light: #dbeafe;
   --admin-info-dark: #1d4ed8;
 
+  /* Sidebar dimensions */
+  --admin-sidebar-width: 240px;
+  --admin-sidebar-width-collapsed: 64px;
+
+  /* Text colors */
+  --admin-text-primary: #1e293b;
+  --admin-text-secondary: #475569;
+  --admin-text-muted: #64748b;
+
+  /* Background colors */
+  --admin-bg-primary: #ffffff;
+  --admin-bg-sidebar: #0f172a;
+  --admin-bg-hover: #f1f5f9;
+  --admin-bg-card-header: #f8fafc;
+  --admin-bg-card-footer: #f8fafc;
+  --admin-bg-table-header: #f1f5f9;
+  --admin-bg-white: #ffffff;
+  --admin-bg-gray-50: #f8fafc;
+  --admin-bg-disabled: #f1f5f9;
+
+  /* Text disabled */
+  --admin-text-disabled: #94a3b8;
+
+  /* Border colors */
+  --admin-border-color-light: #e2e8f0;
+
+  /* Decision platform status palette */
+  --admin-status-safe: #22C55E;
+  --admin-status-safe-light: #dcfce7;
+  --admin-status-warning: #F59E0B;
+  --admin-status-warning-light: #fef3c7;
+  --admin-status-risk: #EF4444;
+  --admin-status-risk-light: #fee2e2;
+  --admin-status-critical: #7F1D1D;
+  --admin-status-critical-light: #fecaca;
+
   /* ===== TYPOGRAPHY ===== */
   /* Font Families */
   --admin-font-family-ar:
-    "Noto Sans Arabic", "Arial Unicode MS", "Tahoma", sans-serif;
+    "Cairo", "Noto Sans Arabic", "Arial Unicode MS", "Tahoma", sans-serif;
   --admin-font-family-en:
     "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
@@ -90,6 +126,13 @@
   --admin-line-height-normal: 1.5;
   --admin-line-height-relaxed: 1.75;
 
+  /* Typography scale (8px grid aligned) */
+  --type-page-title: 700 24px/32px;
+  --type-section-title: 600 18px/24px;
+  --type-card-title: 600 14px/20px;
+  --type-body: 400 13px/20px;
+  --type-label: 500 12px/16px;
+
   /* ===== SPACING SCALE ===== */
   /* 8px Base Scale for Consistency */
   --admin-space-1: 0.25rem; /* 4px */
@@ -104,6 +147,16 @@
   --admin-space-16: 4rem; /* 64px */
   --admin-space-20: 5rem; /* 80px */
   --admin-space-24: 6rem; /* 96px */
+
+  /* 8px grid system tokens */
+  --space-8: 8px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-56: 56px;
+  --space-64: 64px;
 
   /* ===== BORDER RADIUS ===== */
   --admin-radius-sm: 0.25rem; /* 4px */
@@ -220,6 +273,8 @@ html[dir="ltr"] .admin-sidebar.collapsed + .admin-main {
 
 /* Sidebar */
 .admin-sidebar {
+  width: var(--admin-sidebar-width);
+  min-height: 100vh;
   background-color: var(--admin-bg-sidebar);
   border-right: var(--admin-border-width) solid var(--admin-border-color);
   padding: var(--admin-space-6);
@@ -272,6 +327,20 @@ html[dir="ltr"] .admin-sidebar.collapsed + .admin-main {
 .admin-nav-item.active {
   background-color: var(--admin-primary);
   color: white;
+}
+
+.admin-sidebar .nav-link {
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.admin-sidebar .nav-link.active {
+  border-inline-end: 3px solid var(--admin-primary);
+}
+
+.admin-sidebar .nav-link:hover {
+  background: var(--admin-bg-hover);
 }
 
 .admin-nav-item.active::before {
@@ -418,13 +487,14 @@ html[dir="rtl"] .admin-nav-item.active::before {
 
 .admin-btn-warning {
   background-color: var(--admin-warning);
-  color: white;
+  color: #1e293b;
   border-color: var(--admin-warning);
 }
 
 .admin-btn-warning:hover:not(:disabled) {
   background-color: var(--admin-warning-hover);
   border-color: var(--admin-warning-hover);
+  color: #1e293b;
 }
 
 .admin-btn-error {
@@ -692,12 +762,12 @@ html[dir="rtl"] .admin-table td {
 
 .admin-badge-success {
   background-color: var(--admin-success);
-  color: white;
+  color: #1e293b;
 }
 
 .admin-badge-warning {
   background-color: var(--admin-warning);
-  color: white;
+  color: #1e293b;
 }
 
 .admin-badge-error {
@@ -713,6 +783,15 @@ html[dir="rtl"] .admin-table td {
 /* ============================================================================
    UTILITY CLASSES
    ============================================================================ */
+
+/* 8px grid utilities */
+.p-section { padding: var(--space-24); }
+.px-section { padding-inline: var(--space-24); }
+.py-section { padding-block: var(--space-24); }
+.p-card { padding: var(--space-16); }
+.gap-card { gap: var(--space-16); }
+.mb-section { margin-bottom: var(--space-32); }
+.mb-card { margin-bottom: var(--space-16); }
 
 /* Spacing Utilities */
 .admin-m-0 {
@@ -881,9 +960,184 @@ html[dir="rtl"] .admin-text-right {
 }
 
 /* ============================================================================
-   RESPONSIVE DESIGN
+   SIDEBAR NAVIGATION TREE
    ============================================================================ */
 
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-item {
+  margin-bottom: var(--admin-space-1);
+}
+
+.nav-link {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: var(--admin-space-2);
+  padding: 0 var(--space-16);
+  border-radius: var(--admin-radius);
+  text-decoration: none;
+  color: var(--admin-text-secondary);
+  transition: all var(--admin-transition-fast);
+  position: relative;
+  font-size: var(--admin-font-size-sm);
+}
+
+.nav-link:hover {
+  background-color: var(--admin-bg-hover);
+  color: var(--admin-primary);
+}
+
+.nav-link.active {
+  border-inline-end: 3px solid var(--admin-primary);
+  background: var(--admin-bg-hover);
+  color: var(--admin-primary);
+}
+
+.nav-link.active::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--admin-primary-dark);
+  border-radius: 0 var(--admin-radius) var(--admin-radius) 0;
+}
+
+html[dir="rtl"] .nav-link.active::before {
+  border-radius: var(--admin-radius) 0 0 var(--admin-radius);
+}
+
+.nav-item.has-children > .nav-toggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--admin-space-3) var(--admin-space-4);
+  border-radius: var(--admin-radius);
+  text-decoration: none;
+  color: var(--admin-text-secondary);
+  transition: all var(--admin-transition-fast);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--admin-font-size-sm);
+  font-family: inherit;
+  gap: var(--admin-space-2);
+}
+
+.nav-item.has-children > .nav-toggle .nav-toggle-label,
+.nav-item.has-children > .nav-toggle .nav-chevron {
+  color: inherit;
+}
+
+.nav-item.has-children > .nav-toggle:hover {
+  background-color: var(--admin-bg-hover);
+  color: var(--admin-primary);
+}
+
+.nav-item.has-children > .nav-toggle[aria-expanded="true"] {
+  color: var(--admin-primary);
+}
+
+.nav-item.has-children > .nav-toggle:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 2px;
+}
+
+.nav-toggle-label {
+  flex: 1;
+  text-align: start;
+  color: #e5e7eb !important;
+}
+
+.admin-sidebar .nav-link span[data-i18n] {
+  color: #e5e7eb !important;
+}
+
+.nav-chevron {
+  font-size: 0.65rem;
+  opacity: 0.6;
+  transition: transform var(--admin-transition-fast);
+  margin-inline-start: auto;
+}
+
+.nav-toggle[aria-expanded="true"] .nav-chevron {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+.submenu {
+  list-style: none;
+  padding: var(--admin-space-1) 0 var(--admin-space-1) 0;
+  margin: 0 0 0 calc(var(--admin-space-4) + 0.25rem);
+  border-inline-start: 2px solid var(--admin-border-color);
+  display: none;
+}
+
+html[dir="rtl"] .submenu {
+  margin-left: 0;
+  margin-right: calc(var(--admin-space-4) + 0.25rem);
+}
+
+.submenu .nav-item {
+  margin-bottom: 0;
+}
+
+.submenu .nav-link {
+  padding: var(--admin-space-2) var(--admin-space-3);
+  font-size: calc(var(--admin-font-size-sm) - 0.05rem);
+  border-radius: 0 var(--admin-radius) var(--admin-radius) 0;
+  margin-inline-start: -1px;
+  border-inline-start: 2px solid transparent;
+}
+
+html[dir="rtl"] .submenu .nav-link {
+  border-radius: var(--admin-radius) 0 0 var(--admin-radius);
+}
+
+.submenu .nav-link:hover {
+  border-inline-start-color: var(--admin-primary);
+}
+
+.submenu .nav-link.active {
+  background-color: transparent;
+  color: var(--admin-primary);
+  font-weight: 600;
+  border-inline-start-color: var(--admin-primary);
+}
+
+.submenu .nav-link.active::before {
+  display: none;
+}
+
+.nav-link i,
+.nav-toggle i:first-child {
+  width: 1rem;
+  text-align: center;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
+.nav-link.active i {
+  opacity: 1;
+}
+
+/* Sidebar icon contrast on dark background (#0f172a).
+   .nav-link and .nav-toggle set color:#475569 globally (2.35:1 on dark sidebar — WCAG fail).
+   Text spans are already overridden to #e5e7eb by later rules but icons are not.
+   These rules raise icon/base color to #cbd5e1 (12:1) for the dark-sidebar context only.
+   Hover/active states retain their own light-background rules and are unaffected. */
+.admin-sidebar .nav-link,
+.admin-sidebar .nav-item.has-children > .nav-toggle {
+  color: #cbd5e1;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
   .admin-layout {
     grid-template-columns: 1fr;
@@ -1355,7 +1609,21 @@ html[dir="rtl"] .admin-text-right {
   text-align: center;
   color: var(--admin-text-muted);
   font-style: italic;
-  padding: var(--admin-space-6);
+  padding: var(--admin-space-4) var(--admin-space-6) var(--admin-space-2);
+  margin: 0;
+}
+
+.admin-empty-state {
+  padding: var(--admin-space-4) var(--admin-space-6);
+}
+
+.admin-no-data-hint {
+  text-align: center;
+  color: var(--admin-text-muted);
+  font-size: 0.8rem;
+  padding: 0 var(--admin-space-6) var(--admin-space-4);
+  margin: 0;
+  opacity: 0.75;
 }
 
 /* ============================================================================

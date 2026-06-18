@@ -38,7 +38,7 @@
                 <div class="sidebar-divider"></div>
             </li>
             <li class="sidebar-section-item">
-                <p class="sidebar-section-title px-3 mt-3 mb-2 text-muted small fw-bold" data-i18n="sidebar.section.daily_ops">
+                <p class="sidebar-section-title px-3 mt-3 mb-2 text-secondary small fw-bold" data-i18n="sidebar.section.daily_ops">
                     {% if ui_lang == 'en' %}Daily Operations{% else %}التشغيل اليومي{% endif %}</p>
             </li>
 
@@ -89,7 +89,7 @@
             <!-- Reports Section -->
             <li class="sidebar-divider-item" aria-hidden="true"><div class="sidebar-divider"></div></li>
             <li class="sidebar-section-item">
-                <p class="sidebar-section-title px-3 mt-3 mb-2 text-muted small fw-bold" data-i18n="sidebar.section.reports_requests">
+                <p class="sidebar-section-title px-3 mt-3 mb-2 text-secondary small fw-bold" data-i18n="sidebar.section.reports_requests">
                     {% if ui_lang == 'en' %}Reports and Requests{% else %}التقارير والطلبات{% endif %}</p>
             </li>
 
@@ -161,7 +161,7 @@
             {% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
             <li class="sidebar-divider-item" aria-hidden="true"><div class="sidebar-divider"></div></li>
             <li class="sidebar-section-item">
-                <p class="sidebar-section-title px-3 mt-3 mb-2 text-muted small fw-bold" data-i18n="sidebar.section.management">{% if ui_lang == 'en' %}Management{% else %}الإدارة{% endif %}
+                <p class="sidebar-section-title px-3 mt-3 mb-2 text-secondary small fw-bold" data-i18n="sidebar.section.management">{% if ui_lang == 'en' %}Management{% else %}الإدارة{% endif %}
                 </p>
             </li>
 
@@ -243,6 +243,20 @@
                     href="/admin/impersonate">
                     <i class="bi bi-person-fill-lock me-2"></i>
                     <span>{% if ui_lang == 'en' %}Impersonate Manager{% else %}انتحال هوية مدير{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/admin/alerts' in request.url.path %}active{% endif %}"
+                    href="/admin/alerts">
+                    <i class="bi bi-bell me-2"></i>
+                    <span>{% if ui_lang == 'en' %}Alert Management{% else %}إدارة التنبيهات{% endif %}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if '/admin/heatmap' in request.url.path %}active{% endif %}"
+                    href="/admin/heatmap">
+                    <i class="bi bi-map me-2"></i>
+                    <span>{% if ui_lang == 'en' %}Jordan Heat Map{% else %}خريطة الأردن الحرارية{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">

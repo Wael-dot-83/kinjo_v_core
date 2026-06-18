@@ -293,7 +293,7 @@ async def _update_admin_cache_async():
         fresh_data = await _compute_admin_dashboard_data(db)
         # Cache is already updated in _compute_admin_dashboard_data
     except (RuntimeError, TypeError, ValueError, AttributeError, BuiltinException) as e:
-        print(f"Background admin cache update failed: {e}")
+        logger.error("Background admin cache update failed: %s", e)
     finally:
         if db:
             db.close()

@@ -1,0 +1,173 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Amman",
+        "GOVERNORATE_AR": "عمان",
+        "center": [35.9, 31.9]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [35.6, 32.0], [36.0, 32.0], [36.3, 31.9], [36.4, 31.8], [36.3, 31.7], [36.0, 31.6], [35.7, 31.6], [35.6, 31.8], [35.6, 32.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Irbid",
+        "GOVERNORATE_AR": "إربد",
+        "center": [35.8, 32.5]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [35.7, 32.7], [36.0, 32.7], [36.2, 32.6], [36.3, 32.4], [36.2, 32.2], [35.9, 32.2], [35.7, 32.4], [35.7, 32.7]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Zarqa",
+        "GOVERNORATE_AR": "الزرقاء",
+        "center": [36.1, 31.9]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [36.0, 32.0], [36.2, 32.0], [36.4, 31.8], [36.4, 31.6], [36.2, 31.5], [36.0, 31.6], [36.0, 31.8], [36.0, 32.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Mafraq",
+        "GOVERNORATE_AR": "المفرق",
+        "center": [36.2, 31.8]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [36.2, 32.0], [36.5, 32.0], [36.6, 31.8], [36.5, 31.6], [36.3, 31.6], [36.2, 31.7], [36.2, 32.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Jerash",
+        "GOVERNORATE_AR": "جرش",
+        "center": [35.9, 31.8]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [35.8, 31.9], [36.0, 31.9], [36.1, 31.7], [36.0, 31.6], [35.8, 31.6], [35.8, 31.9]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Ajloun",
+        "GOVERNORATE_AR": "عجلون",
+        "center": [35.7, 31.9]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [35.6, 32.0], [35.8, 32.0], [35.9, 31.8], [35.8, 31.7], [35.6, 31.7], [35.6, 32.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Balqa",
+        "GOVERNORATE_AR": "البلقاء",
+        "center": [35.9, 31.5]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [35.7, 31.7], [36.0, 31.7], [36.2, 31.5], [36.0, 31.4], [35.8, 31.4], [35.7, 31.6], [35.7, 31.7]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Madaba",
+        "GOVERNORATE_AR": "مادبا",
+        "center": [35.8, 31.7]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [35.6, 31.8], [35.8, 31.8], [35.9, 31.6], [35.8, 31.5], [35.6, 31.5], [35.6, 31.8]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Karak",
+        "GOVERNORATE_AR": "الكرك",
+        "center": [35.8, 31.2]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [35.6, 31.4], [36.0, 31.4], [36.2, 31.1], [36.0, 31.0], [35.7, 31.0], [35.6, 31.2], [35.6, 31.4]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Tafileh",
+        "GOVERNORATE_AR": "الطفيلة",
+        "center": [35.7, 30.9]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [35.5, 31.1], [35.7, 31.1], [35.9, 30.9], [35.7, 30.7], [35.5, 30.7], [35.5, 31.1]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Maan",
+        "GOVERNORATE_AR": "معان",
+        "center": [35.9, 30.2]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [35.7, 30.4], [36.0, 30.4], [36.2, 30.1], [36.0, 30.0], [35.7, 30.0], [35.7, 30.4]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "GOVERNORATE_A": "Aqaba",
+        "GOVERNORATE_AR": "العقبة",
+        "center": [39.2, 29.5]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [39.1, 29.6], [39.3, 29.6], [39.4, 29.4], [39.2, 29.4], [39.1, 29.6]
+        ]]
+      }
+    }
+  ]
+}

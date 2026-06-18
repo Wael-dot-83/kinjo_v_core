@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% set titles = {
+  'privacy': {'en': 'Privacy Policy', 'ar': 'سياسة الخصوصية'},
+  'terms': {'en': 'Terms of Use', 'ar': 'الشروط والأحكام'},
+  'disclaimer': {'en': 'Disclaimer', 'ar': 'إخلاء المسؤولية'},
+  'copyright': {'en': 'Copyright Statement', 'ar': 'بيان حقوق النشر'},
+} %}
+{% set page_title = titles[doc_type]['en'] if ui_lang == 'en' else titles[doc_type]['ar'] %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block meta_description %}
+<meta name="description" content="KinJo - {{ page_title }}" />
+{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+    title=page_title,
+    icon="bi-file-text",
+    breadcrumbs=[
+        {"label": "Home" if ui_lang == 'en' else "الرئيسية", "url": "/"},
+        {"label": page_title, "url": None}
+    ]
+) }}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4 p-lg-5">
+        <p class="text-muted small">
+          {% if ui_lang == 'en' %}Last updated: {{ current_year }}{% else %}آخر تحديث: {{ current_year }}{% endif %}
+        </p>
+
+        {% if doc_type == 'privacy' %}
+          {% if ui_lang == 'en' %}
+          <h2 class="h6">Information we collect</h2>
+          <p>KinJo collects the information you and your kindergarten provide to operate the enrollment,
+          attendance, and reporting service: account details, child enrollment information, daily attendance
+          and activity records, and messages exchanged on the platform.</p>
+          <h2 class="h6">How we use it</h2>
+          <p>Information is used solely to provide the kindergarten management service to the kindergarten,
+          its staff, and the parents of enrolled children. We do not sell personal data to third parties.</p>
+          <h2 class="h6">Data retention &amp; security</h2>
+          <p>Data is stored on access-controlled systems with role-based permissions, audit logging, and
+          encrypted password storage. Access is limited to the roles that need it to perform their duties
+          (parent, kindergarten manager/supervisor, or system administrator).</p>
+          <h2 class="h6">Your rights</h2>
+          <p>You may request access to, correction of, or deletion of your personal data by contacting us
+          through the <a href="/contact">Contact Us</a> page.</p>
+          {% else %}
+          <h2 class="h6">المعلومات التي نجمعها</h2>
+          <p>تجمع كينجو المعلومات التي يقدمها المستخدم والروضة لتقديم خدمة التسجيل والحضور والتقارير: بيانات
+          الحساب، معلومات تسجيل الطفل، سجلات الحضور والأنشطة اليومية، والرسائل المتبادلة عبر المنصة.</p>
+          <h2 class="h6">كيفية استخدام المعلومات</h2>
+          <p>تُستخدم المعلومات فقط لتقديم خدمة إدارة الروضة للروضة وكوادرها وأولياء أمور الأطفال المسجّلين.
+          لا نبيع البيانات الشخصية لأي طرف ثالث.</p>
+          <h2 class="h6">الاحتفاظ بالبيانات وأمنها</h2>
+          <p>تُخزَّن البيانات على أنظمة محمية بصلاحيات وصول حسب الدور، وتدقيق للعمليات، وتشفير لكلمات المرور.
+          يقتصر الوصول على الأدوار التي تحتاجه فعلياً (ولي أمر، مدير/مشرف روضة، أو مسؤول نظام).</p>
+          <h2 class="h6">حقوقك</h2>
+          <p>يمكنك طلب الوصول إلى بياناتك الشخصية أو تصحيحها أو حذفها من خلال صفحة
+          <a href="/contact">اتصل بنا</a>.</p>
+          {% endif %}
+
+        {% elif doc_type == 'terms' %}
+          {% if ui_lang == 'en' %}
+          <h2 class="h6">Acceptance of terms</h2>
+          <p>By creating an account or using KinJo, you agree to use the platform only for its intended
+          purpose: kindergarten enrollment, attendance, reporting, and communication between parents and
+          kindergartens.</p>
+          <h2 class="h6">Account responsibilities</h2>
+          <p>You are responsible for keeping your account credentials confidential and for the accuracy of
+          the information you submit, including enrollment and child information.</p>
+          <h2 class="h6">Acceptable use</h2>
+          <p>You agree not to misuse the platform, attempt to access accounts or data that are not yours,
+          or upload unlawful or harmful content.</p>
+          <h2 class="h6">Changes to the service</h2>
+          <p>KinJo may update these terms or the service from time to time. Continued use of the platform
+          after a change constitutes acceptance of the updated terms.</p>
+          {% else %}
+          <h2 class="h6">قبول الشروط</h2>
+          <p>بإنشاء حساب أو استخدام كينجو، فإنك توافق على استخدام المنصة للغرض المخصص لها فقط: تسجيل
+          الروضات، والحضور، والتقارير، والتواصل بين أولياء الأمور والروضات.</p>
+          <h2 class="h6">مسؤوليات الحساب</h2>
+          <p>أنت مسؤول عن سرّية بيانات حسابك وعن دقة المعلومات التي تقدمها، بما فيها معلومات التسجيل والطفل.</p>
+          <h2 class="h6">الاستخدام المقبول</h2>
+          <p>توافق على عدم إساءة استخدام المنصة، أو محاولة الوصول إلى حسابات أو بيانات لا تخصك، أو تحميل
+          محتوى غير قانوني أو ضار.</p>
+          <h2 class="h6">التغييرات على الخدمة</h2>
+          <p>قد تُحدّث كينجو هذه الشروط أو الخدمة من وقت لآخر. يُعدّ استمرار استخدام المنصة بعد أي تغيير
+          موافقة على الشروط المحدّثة.</p>
+          {% endif %}
+
+        {% elif doc_type == 'disclaimer' %}
+          {% if ui_lang == 'en' %}
+          <p>KinJo provides this platform on an "as available" basis to support kindergarten enrollment and
+          management. While we work to keep information accurate and the service available, KinJo does not
+          guarantee uninterrupted availability and is not responsible for decisions made solely on the basis
+          of information displayed on the platform without independent verification with the relevant
+          kindergarten. Each kindergarten remains responsible for the accuracy of the information it
+          publishes through the platform (capacity, hours, contact details, and fees).</p>
+          {% else %}
+          <p>تُقدَّم منصة كينجو على أساس "كما هي متاحة" لدعم تسجيل وإدارة الروضات. وبينما نعمل على الحفاظ على
+          دقة المعلومات وتوافر الخدمة، لا تضمن كينجو استمرارية الخدمة دون انقطاع، ولا تتحمل المسؤولية عن أي
+          قرار يُتخذ بالاعتماد فقط على المعلومات المعروضة في المنصة دون التحقق المباشر مع الروضة المعنية.
+          تبقى كل روضة مسؤولة عن دقة المعلومات التي تنشرها عبر المنصة (السعة، ساعات العمل، بيانات الاتصال،
+          والرسوم).</p>
+          {% endif %}
+
+        {% elif doc_type == 'copyright' %}
+          {% if ui_lang == 'en' %}
+          <p>&copy; {{ current_year }} KinJo. All rights reserved. The KinJo name, logo, and platform design
+          may not be reproduced, distributed, or used without prior written permission. Content submitted by
+          kindergartens and users (such as daily reports and photos) remains the property of the submitting
+          party and is used solely to provide the service to that party.</p>
+          {% else %}
+          <p>&copy; {{ current_year }} كينجو. جميع الحقوق محفوظة. لا يجوز إعادة إنتاج أو توزيع أو استخدام اسم
+          كينجو أو شعارها أو تصميم المنصة دون إذن خطي مسبق. يبقى المحتوى الذي تقدمه الروضات والمستخدمون
+          (كالتقارير اليومية والصور) ملكاً للجهة المقدمة، ويُستخدم فقط لتقديم الخدمة لها.</p>
+          {% endif %}
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

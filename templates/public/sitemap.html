@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{% if ui_lang == 'en' %}Sitemap{% else %}خريطة الموقع{% endif %}{% endblock %}
+{% block meta_description %}
+<meta name="description" content="{% if ui_lang == 'en' %}Sitemap of the public and main KinJo sections.{% else %}خريطة موقع كينجو للأقسام العامة والرئيسية.{% endif %}" />
+{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+    title="Sitemap" if ui_lang == 'en' else "خريطة الموقع",
+    icon="bi-diagram-3",
+    breadcrumbs=[
+        {"label": "Home" if ui_lang == 'en' else "الرئيسية", "url": "/"},
+        {"label": "Sitemap" if ui_lang == 'en' else "خريطة الموقع", "url": None}
+    ]
+) }}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="row">
+
+      <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <h2 class="h6 mb-3"><i class="bi bi-globe me-2 text-primary"></i>{% if ui_lang == 'en' %}Public pages{% else %}الصفحات العامة{% endif %}</h2>
+            <ul class="list-unstyled mb-0">
+              <li class="mb-2"><a href="/about"><i class="bi bi-info-circle me-1"></i>{% if ui_lang == 'en' %}About{% else %}عن كينجو{% endif %}</a></li>
+              <li class="mb-2"><a href="/services"><i class="bi bi-journal-check me-1"></i>{% if ui_lang == 'en' %}Service Guide{% else %}دليل الخدمة{% endif %}</a></li>
+              <li class="mb-2"><a href="/faq"><i class="bi bi-patch-question me-1"></i>{% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}</a></li>
+              <li class="mb-2"><a href="/contact"><i class="bi bi-envelope me-1"></i>{% if ui_lang == 'en' %}Contact Us{% else %}اتصل بنا{% endif %}</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <h2 class="h6 mb-3"><i class="bi bi-box-arrow-in-right me-2 text-primary"></i>{% if ui_lang == 'en' %}Account{% else %}الحساب{% endif %}</h2>
+            <ul class="list-unstyled mb-0">
+              <li class="mb-2"><a href="/login"><i class="bi bi-box-arrow-in-right me-1"></i>{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}</a></li>
+              <li class="mb-2"><a href="/register"><i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}Create account{% else %}إنشاء حساب{% endif %}</a></li>
+              <li class="mb-2"><a href="/forgot-password"><i class="bi bi-key me-1"></i>{% if ui_lang == 'en' %}Forgot password{% else %}نسيت كلمة المرور{% endif %}</a></li>
+              <li class="mb-2"><a href="/dashboard"><i class="bi bi-speedometer2 me-1"></i>{% if ui_lang == 'en' %}Dashboard (sign-in required){% else %}لوحة التحكم (يتطلب تسجيل الدخول){% endif %}</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <h2 class="h6 mb-3"><i class="bi bi-shield-check me-2 text-primary"></i>{% if ui_lang == 'en' %}Policies{% else %}السياسات{% endif %}</h2>
+            <ul class="list-unstyled mb-0">
+              <li class="mb-2"><a href="/privacy"><i class="bi bi-file-text me-1"></i>{% if ui_lang == 'en' %}Privacy Policy{% else %}سياسة الخصوصية{% endif %}</a></li>
+              <li class="mb-2"><a href="/terms"><i class="bi bi-file-text me-1"></i>{% if ui_lang == 'en' %}Terms of Use{% else %}الشروط والأحكام{% endif %}</a></li>
+              <li class="mb-2"><a href="/disclaimer"><i class="bi bi-file-text me-1"></i>{% if ui_lang == 'en' %}Disclaimer{% else %}إخلاء المسؤولية{% endif %}</a></li>
+              <li class="mb-2"><a href="/copyright"><i class="bi bi-file-text me-1"></i>{% if ui_lang == 'en' %}Copyright Statement{% else %}بيان حقوق النشر{% endif %}</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <h2 class="h6 mb-3"><i class="bi bi-people me-2 text-primary"></i>{% if ui_lang == 'en' %}Main app areas (sign-in required){% else %}الأقسام الرئيسية (تتطلب تسجيل الدخول){% endif %}</h2>
+            <ul class="list-unstyled mb-0">
+              <li class="mb-2"><i class="bi bi-building me-1"></i>{% if ui_lang == 'en' %}Kindergartens &amp; classes{% else %}الروضات والشعب{% endif %}</li>
+              <li class="mb-2"><i class="bi bi-clipboard-check me-1"></i>{% if ui_lang == 'en' %}Enrollment &amp; attendance{% else %}التسجيل والحضور{% endif %}</li>
+              <li class="mb-2"><i class="bi bi-journal-text me-1"></i>{% if ui_lang == 'en' %}Daily reports{% else %}التقارير اليومية{% endif %}</li>
+              <li class="mb-2"><i class="bi bi-chat-dots me-1"></i>{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

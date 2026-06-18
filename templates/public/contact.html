@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{% if ui_lang == 'en' %}Contact Us{% else %}اتصل بنا{% endif %}{% endblock %}
+{% block meta_description %}
+<meta name="description" content="{% if ui_lang == 'en' %}Contact the KinJo team — send us a message and we will get back to you.{% else %}تواصل مع فريق كينجو — أرسل لنا رسالتك وسنرد عليك.{% endif %}" />
+{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+    title="Contact Us" if ui_lang == 'en' else "اتصل بنا",
+    icon="bi-envelope",
+    breadcrumbs=[
+        {"label": "Home" if ui_lang == 'en' else "الرئيسية", "url": "/"},
+        {"label": "Contact Us" if ui_lang == 'en' else "اتصل بنا", "url": None}
+    ]
+) }}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+
+    {% if support_contact_email or support_contact_phone %}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h2 class="h6 mb-3">{% if ui_lang == 'en' %}Other ways to reach us{% else %}طرق أخرى للتواصل{% endif %}</h2>
+        <ul class="list-unstyled mb-0 small">
+          {% if support_contact_email %}
+          <li class="mb-1"><i class="bi bi-envelope me-2 text-primary"></i><a href="mailto:{{ support_contact_email }}">{{ support_contact_email }}</a></li>
+          {% endif %}
+          {% if support_contact_phone %}
+          <li><i class="bi bi-telephone me-2 text-primary"></i><a href="tel:{{ support_contact_phone }}" dir="ltr">{{ support_contact_phone }}</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4 p-lg-5">
+
+        <div id="contactSuccessAlert" class="alert alert-success d-none" role="alert" aria-live="polite">
+          <i class="bi bi-check-circle me-2"></i><span id="contactSuccessMessage"></span>
+        </div>
+        <div id="contactErrorAlert" class="alert alert-danger d-none" role="alert" aria-live="assertive">
+          <i class="bi bi-exclamation-circle me-2"></i><span id="contactErrorMessage"></span>
+        </div>
+
+        <form id="contactForm" novalidate>
+          <div class="mb-3">
+            <label for="contactName" class="form-label required">{% if ui_lang == 'en' %}Name{% else %}الاسم{% endif %}</label>
+            <input type="text" class="form-control" id="contactName" name="name" maxlength="200" required>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="contactEmail" class="form-label required">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label>
+              <input type="email" class="form-control" id="contactEmail" name="email" maxlength="255" dir="ltr" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="contactPhone" class="form-label">{% if ui_lang == 'en' %}Phone (optional){% else %}الهاتف (اختياري){% endif %}</label>
+              <input type="tel" class="form-control" id="contactPhone" name="phone" maxlength="30" dir="ltr" placeholder="07XXXXXXXX">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="contactSubject" class="form-label required">{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %}</label>
+            <select class="form-select" id="contactSubject" name="subject" required>
+              <option value="" selected disabled>{% if ui_lang == 'en' %}Choose a topic{% else %}اختر موضوعاً{% endif %}</option>
+              <option value="enrollment">{% if ui_lang == 'en' %}Enrollment{% else %}التسجيل{% endif %}</option>
+              <option value="technical">{% if ui_lang == 'en' %}Technical issue{% else %}مشكلة تقنية{% endif %}</option>
+              <option value="account">{% if ui_lang == 'en' %}Account / login{% else %}الحساب / تسجيل الدخول{% endif %}</option>
+              <option value="other">{% if ui_lang == 'en' %}Other{% else %}أخرى{% endif %}</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="contactMessage" class="form-label required">{% if ui_lang == 'en' %}Message{% else %}الرسالة{% endif %}</label>
+            <textarea class="form-control" id="contactMessage" name="message" rows="5" maxlength="5000" required></textarea>
+          </div>
+
+          {% if captcha_enabled %}
+          <div class="mb-3">
+            <div class="{{ 'g-recaptcha' if captcha_provider == 'recaptcha' else 'h-captcha' }}" data-sitekey="{{ captcha_site_key }}"></div>
+          </div>
+          {% endif %}
+
+          <button type="submit" class="btn btn-primary" id="contactSubmitBtn">
+            <span class="btn-text"><i class="bi bi-send me-1"></i>{% if ui_lang == 'en' %}Send Message{% else %}إرسال الرسالة{% endif %}</span>
+            <span class="btn-loading d-none">
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              {% if ui_lang == 'en' %}Sending…{% else %}جاري الإرسال…{% endif %}
+            </span>
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var form = document.getElementById("contactForm");
+  var btn = document.getElementById("contactSubmitBtn");
+  var successAlert = document.getElementById("contactSuccessAlert");
+  var successMessage = document.getElementById("contactSuccessMessage");
+  var errorAlert = document.getElementById("contactErrorAlert");
+  var errorMessage = document.getElementById("contactErrorMessage");
+  var isAr = document.documentElement.lang !== "en";
+
+  function setLoading(on) {
+    btn.disabled = on;
+    btn.querySelector(".btn-text").classList.toggle("d-none", on);
+    btn.querySelector(".btn-loading").classList.toggle("d-none", !on);
+  }
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    errorAlert.classList.add("d-none");
+    successAlert.classList.add("d-none");
+
+    if (!form.checkValidity()) {
+      form.classList.add("was-validated");
+      return;
+    }
+
+    var payload = {
+      name: document.getElementById("contactName").value.trim(),
+      email: document.getElementById("contactEmail").value.trim(),
+      phone: document.getElementById("contactPhone").value.trim() || null,
+      subject: document.getElementById("contactSubject").value,
+      message: document.getElementById("contactMessage").value.trim(),
+      captcha_token: typeof window.getCaptchaToken === "function" ? window.getCaptchaToken() : "",
+    };
+
+    setLoading(true);
+    try {
+      var resp = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      var data = await resp.json().catch(function () { return {}; });
+      if (resp.ok) {
+        successMessage.textContent = data.message || (isAr
+          ? "تم استلام رسالتك بنجاح. سنتواصل معك قريباً."
+          : "Your message has been received. We will get back to you soon.");
+        successAlert.classList.remove("d-none");
+        form.reset();
+        form.classList.remove("was-validated");
+      } else {
+        errorMessage.textContent = data.detail || (isAr
+          ? "حدث خطأ أثناء إرسال الرسالة، يرجى المحاولة مرة أخرى."
+          : "Something went wrong sending your message. Please try again.");
+        errorAlert.classList.remove("d-none");
+      }
+    } catch (err) {
+      errorMessage.textContent = isAr
+        ? "تعذّر الاتصال بالخادم، يرجى المحاولة لاحقاً."
+        : "Could not reach the server. Please try again later.";
+      errorAlert.classList.remove("d-none");
+    } finally {
+      setLoading(false);
+    }
+  });
+})();
+</script>
+{% endblock %}

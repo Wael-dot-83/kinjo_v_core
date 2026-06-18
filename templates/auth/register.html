@@ -24,8 +24,11 @@
             <!-- Registration Card -->
             <div class="card shadow-lg border-0">
                 <div class="card-body p-4 p-lg-5">
-                    <h4 class="card-title text-center mb-4">{% if ui_lang == 'en' %}Parent Registration{% else %}تسجيل ولي أمر جديد{% endif %}</h4>
-                    
+                    <h4 class="card-title text-center mb-2">{% if ui_lang == 'en' %}Parent Registration{% else %}تسجيل ولي أمر جديد{% endif %}</h4>
+                    <p class="text-muted text-center small mb-4">
+                        {% if ui_lang == 'en' %}Create your parent account in about 3 minutes. You will need a valid email and phone number.{% else %}أنشئ حساب ولي الأمر في نحو 3 دقائق. ستحتاج إلى بريد إلكتروني ورقم هاتف صالحين.{% endif %}
+                    </p>
+
                     <!-- Progress Steps -->
                     {{ step_indicator(
                         steps=[
@@ -140,11 +143,17 @@
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="agreeTerms" required>
                                 <label class="form-check-label" for="agreeTerms">
-                                    {% if ui_lang == 'en' %}I agree to the <a href="/terms" target="_blank">Terms and Conditions</a> and <a href="/privacy" target="_blank">Privacy Policy</a>{% else %}أوافق على <a href="/terms" target="_blank">الشروط والأحكام</a> و <a href="/privacy" target="_blank">سياسة الخصوصية</a>{% endif %}
+                                    {% if ui_lang == 'en' %}I agree to the <a href="/terms" target="_blank" rel="noopener">Terms and Conditions</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>{% else %}أوافق على <a href="/terms" target="_blank" rel="noopener">الشروط والأحكام</a> و<a href="/privacy" target="_blank" rel="noopener">سياسة الخصوصية</a>{% endif %}
                                 </label>
                                 <div class="invalid-feedback">{% if ui_lang == 'en' %}You must agree to the terms{% else %}يجب الموافقة على الشروط والأحكام{% endif %}</div>
                             </div>
-                            
+
+                            {% if captcha_enabled %}
+                            <div class="mb-3">
+                                <div class="{{ 'g-recaptcha' if captcha_provider == 'recaptcha' else 'h-captcha' }}" data-sitekey="{{ captcha_site_key }}"></div>
+                            </div>
+                            {% endif %}
+
                             <div class="d-flex justify-content-between mt-4">
                                 <button type="button" class="btn btn-outline-secondary" onclick="prevStep(2)">
                                     <i class="bi bi-{% if ui_lang == 'en' %}arrow-left{% else %}arrow-right{% endif %} me-2"></i> {% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}
@@ -337,10 +346,13 @@
         try {
             const formData = new FormData(this);
             const data = Object.fromEntries(formData.entries());
-            
+
             // Convert checkbox
             data.correspondence_preference = document.getElementById('correspondencePreference').checked;
-            
+            if (typeof window.getCaptchaToken === "function") {
+                data.captcha_token = window.getCaptchaToken();
+            }
+
             await api.registerParent(data);
             
             showToast(uiText('تم إنشاء الحساب بنجاح! جاري تحويلك لتسجيل الدخول...', 'Account created successfully. Redirecting to sign-in...'), 'success');

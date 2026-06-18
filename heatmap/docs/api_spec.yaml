@@ -1,0 +1,344 @@
+openapi: "3.1.0"
+info:
+  title: Jordan Kindergarten Heatmap API
+  version: "1.0.0"
+  description: |
+    REST API for the Jordan National Kindergarten Intelligence Heat Map.
+    Provides GeoJSON layers, composite indicators, statistical analytics,
+    ETL pipeline control, and multi-channel alerts.
+
+servers:
+  - url: /api/heatmap
+    description: Mounted at FastAPI root
+
+tags:
+  - name: geojson
+    description: Spatial data endpoints
+  - name: indicators
+    description: Composite indicator data
+  - name: analytics
+    description: Correlations, OLS regression, time series
+  - name: alerts
+    description: Multi-channel alert management
+  - name: pipeline
+    description: ETL pipeline control
+
+paths:
+  /geojson:
+    get:
+      tags: [geojson]
+      summary: Jordan admin GeoJSON with indicator overlays
+      parameters:
+        - name: date
+          in: query
+          schema: { type: string, format: date }
+          description: Filter by specific date (YYYY-MM-DD); defaults to latest
+      responses:
+        "200":
+          description: GeoJSON FeatureCollection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeoJSONCollection"
+
+  /geojson/intensity-points:
+    get:
+      tags: [geojson]
+      summary: Array of [lat, lng, intensity] for leaflet.heat
+      parameters:
+        - name: indicator
+          in: query
+          required: true
+          schema: { type: string, enum: [kindergarten_status, children_enrollment, staff_classrooms, safety_incidents, reports_attendance, tasks_governance] }
+        - name: date
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Array of [lat, lng, 0-1 intensity]
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: array
+                  items: { type: number }
+                  minItems: 3
+                  maxItems: 3
+
+  /indicators:
+    get:
+      tags: [indicators]
+      summary: Composite indicator values
+      parameters:
+        - name: admin_id
+          in: query
+          schema: { type: string }
+        - name: date_from
+          in: query
+          schema: { type: string, format: date }
+        - name: date_to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: List of indicator records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IndicatorRecord"
+
+  /indicators/ingest:
+    post:
+      tags: [indicators]
+      summary: Ingest daily payload records
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/DailyPayload"
+      responses:
+        "200":
+          description: Pipeline result summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineResult"
+
+  /analytics/correlations:
+    get:
+      tags: [analytics]
+      summary: Pearson r + OLS β for each sub→main pair
+      parameters:
+        - name: main_indicator
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Correlation rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CorrelationRow"
+
+  /analytics/correlations/csv:
+    get:
+      tags: [analytics]
+      summary: Download correlations as CSV
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema: { type: string }
+
+  /analytics/regression/{main_indicator}:
+    get:
+      tags: [analytics]
+      summary: Standardized OLS coefficients for a main indicator
+      parameters:
+        - name: main_indicator
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OLS results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OLSRow"
+
+  /analytics/timeseries/{admin_id}:
+    get:
+      tags: [analytics]
+      summary: Time series for an admin unit and indicator
+      parameters:
+        - name: admin_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: indicator
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Date-value pairs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date: { type: string, format: date }
+                    value: { type: number }
+
+  /analytics/hotspots:
+    get:
+      tags: [analytics]
+      summary: Health absence hotspots (rolling 3-day detection)
+      responses:
+        "200":
+          description: Hotspot records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    admin_id:     { type: string }
+                    date:         { type: string }
+                    current_avg:  { type: number }
+                    baseline_avg: { type: number }
+                    pct_change:   { type: number }
+
+  /alerts:
+    get:
+      tags: [alerts]
+      summary: List alerts
+      parameters:
+        - name: unacknowledged_only
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Alert list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+
+  /alerts/{alert_id}/acknowledge:
+    post:
+      tags: [alerts]
+      summary: Acknowledge an alert
+      parameters:
+        - name: alert_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+
+  /pipeline/run:
+    post:
+      tags: [pipeline]
+      summary: Manually trigger the ETL pipeline
+      parameters:
+        - name: csv_path
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Pipeline result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineResult"
+
+components:
+  schemas:
+    DailyPayload:
+      type: object
+      required: [date, admin_id]
+      properties:
+        date:                     { type: string, format: date, example: "2026-06-13" }
+        admin_id:                 { type: string, example: "JO-AM" }
+        kindergartens_active:     { type: integer, minimum: 0 }
+        kindergartens_inactive:   { type: integer, minimum: 0 }
+        enrolled_children:        { type: integer, minimum: 0 }
+        unregistered_children:    { type: integer, minimum: 0 }
+        supervisors_count:        { type: integer, minimum: 0 }
+        classes_count:            { type: integer, minimum: 0 }
+        classes_without_supervisor: { type: integer, minimum: 0 }
+        critical_incidents:       { type: integer, minimum: 0 }
+        protection_issues:        { type: integer, minimum: 0 }
+        daily_reports_count:      { type: integer, minimum: 0 }
+        absences_total:           { type: integer, minimum: 0 }
+        absences_health_alerts:   { type: integer, minimum: 0 }
+        tasks_overdue:            { type: integer, minimum: 0 }
+        governance_score:         { type: number, minimum: 0, maximum: 100 }
+        training_completion_pct:  { type: number, minimum: 0, maximum: 100 }
+
+    IndicatorRecord:
+      type: object
+      properties:
+        date:                  { type: string, format: date }
+        admin_id:              { type: string }
+        kindergarten_status:   { type: number }
+        children_enrollment:   { type: number }
+        staff_classrooms:      { type: number }
+        safety_incidents:      { type: number }
+        reports_attendance:    { type: number }
+        tasks_governance:      { type: number }
+
+    CorrelationRow:
+      type: object
+      properties:
+        main_indicator:   { type: string }
+        sub_indicator:    { type: string }
+        pearson_r:        { type: number }
+        p_value:          { type: number }
+        strong_correlation: { type: boolean }
+        beta_std:         { type: number }
+        se:               { type: number }
+        t_stat:           { type: number }
+        ols_p_value:      { type: number }
+        high_impact:      { type: boolean }
+
+    OLSRow:
+      type: object
+      properties:
+        sub_indicator: { type: string }
+        beta_std:      { type: number }
+        se:            { type: number }
+        t_stat:        { type: number }
+        p_value:       { type: number }
+        high_impact:   { type: boolean }
+
+    Alert:
+      type: object
+      properties:
+        id:           { type: string, format: uuid }
+        severity:     { type: string, enum: [HIGH, MEDIUM, INFO] }
+        admin_id:     { type: string }
+        rule:         { type: string }
+        message:      { type: string }
+        meta:         { type: object }
+        created_at:   { type: string, format: date-time }
+        acknowledged: { type: boolean }
+
+    PipelineResult:
+      type: object
+      properties:
+        date:           { type: string }
+        rows_processed: { type: integer }
+        errors:         { type: array, items: { type: object } }
+        alerts:         { type: array, items: { type: object } }
+        hotspots:       { type: array, items: { type: object } }
+
+    GeoJSONCollection:
+      type: object
+      properties:
+        type:     { type: string, enum: [FeatureCollection] }
+        features: { type: array, items: { type: object } }

@@ -1,4 +1,4 @@
-"""
+﻿"""
 KInJo - Kindergarten Management Platform
 Main FastAPI Application
 """
@@ -49,7 +49,7 @@ class UTF8StaticFiles(StaticFiles):
                     ".webp", ".ico", ".woff", ".woff2", ".ttf", ".eot", ".map"
                 )
                 if normalized_path.endswith(static_asset_suffixes):
-                    response.headers["Cache-Control"] = "public, max-age=86400"
+                    response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
                 elif normalized_path.endswith(".html"):
                     response.headers["Cache-Control"] = "no-cache"
         return response
@@ -85,6 +85,7 @@ from mfa_service import (
     verify_code,
 )
 import validators
+from captcha_service import captcha_error_message, captcha_required, verify_captcha
 from admin_security import CorrelationIdMiddleware, APIError, api_error_handler
 from rate_limiter import limiter, rate_limit_exceeded_handler
 from performance_monitor import PerformanceMiddleware, setup_database_monitoring, start_system_monitoring
@@ -118,17 +119,48 @@ def ensure_secure_production_config() -> None:
 ensure_not_testing_in_production()
 ensure_secure_production_config()
 
-# Logging configuration (best practice)
+# Logging configuration â€” JSON-structured in production, human-readable otherwise
 def configure_logging():
     log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
-    handlers = [logging.StreamHandler()]
-    if settings.ENVIRONMENT.lower() == "production":
-        handlers.append(logging.FileHandler(settings.LOG_FILE))
-    logging.basicConfig(
-        level=log_level,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-        handlers=handlers
-    )
+    use_json = settings.LOG_FORMAT.lower() == "json" and settings.ENVIRONMENT.lower() == "production"
+    handlers: list = []
+    if use_json:
+        try:
+            from pythonjsonlogger.json import JsonFormatter
+
+            stream_handler = logging.StreamHandler()
+            fmt = JsonFormatter(
+                "%(asctime)s %(levelname)s %(name)s %(message)s",
+                rename_fields={"asctime": "ts", "levelname": "level"},
+            )
+            stream_handler.setFormatter(fmt)
+            handlers.append(stream_handler)
+            if settings.LOG_FILE:
+                file_handler = logging.FileHandler(settings.LOG_FILE)
+                file_handler.setFormatter(fmt)
+                handlers.append(file_handler)
+        except ImportError:
+            logging.warning("python-json-logger not installed; falling back to text logging")
+            use_json = False
+
+    if not use_json:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+        )
+        handlers.append(stream_handler)
+        if settings.ENVIRONMENT.lower() == "production" and settings.LOG_FILE:
+            file_handler = logging.FileHandler(settings.LOG_FILE)
+            file_handler.setFormatter(
+                logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+            )
+            handlers.append(file_handler)
+
+    root = logging.getLogger()
+    root.setLevel(log_level)
+    for h in handlers:
+        h.setLevel(log_level)
+        root.addHandler(h)
 
 configure_logging()
 
@@ -179,6 +211,7 @@ from routers.manager import router as manager_scoped_router
 from routers.admin_impersonation import router as admin_impersonation_router
 from routers.messaging import router as messaging_router
 from government_api import router as government_api_router
+from api.public import router as public_router
 
 # =============================================================================
 # Lifespan Event Handler
@@ -259,6 +292,18 @@ async def redirect_to_login_handler(request: Request, exc: RedirectToLogin):
 async def validation_error_handler(request: Request, exc: validators.ValidationError):
     return JSONResponse(status_code=400, content={"detail": exc.message})
 
+
+# Catch-all: guarantee every uncaught exception is logged with a full traceback
+# server-side (so it lands in the app's own structured log, not just uvicorn's
+# console output) and that the client only ever sees a generic message —
+# regardless of environment — never internal details or a stack trace.
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception(
+        "UNHANDLED_EXCEPTION method=%s path=%s", request.method, request.url.path
+    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error."})
+
 # Trusted host middleware
 trusted_hosts = settings.TRUSTED_HOSTS or ["127.0.0.1", "localhost", "testserver"]
 if settings.ENVIRONMENT.lower() != "production":
@@ -288,6 +333,50 @@ async def enforce_request_timeout(request: Request, call_next):
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     return await security_headers_middleware(request, call_next)
+
+
+@app.middleware("http")
+async def structured_access_log(request: Request, call_next):
+    """Emit one structured log line per admin API request (user_id, method, path, status_code, duration_ms, request_id)."""
+    import time
+    from jose import jwt as _jwt, JWTError as _JWTError
+
+    if not request.url.path.startswith("/api/admin"):
+        return await call_next(request)
+
+    start = time.monotonic()
+    response = await call_next(request)
+    duration_ms = int((time.monotonic() - start) * 1000)
+
+    # Prefer the id resolved by the auth dependency (set on request.state) to avoid
+    # re-decoding the JWT on every admin request. Fall back to a lightweight decode
+    # only when the dependency did not run (e.g. unauthenticated/error responses).
+    user_id: Optional[int] = getattr(request.state, "user_id", None)
+    if user_id is None:
+        try:
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer "):
+                token = auth_header[7:]
+                payload = _jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+                sub = payload.get("sub")
+                if sub and str(sub).isdigit():
+                    user_id = int(sub)
+        except (_JWTError, Exception):
+            pass
+
+    correlation_id = request.headers.get("X-Correlation-ID") or response.headers.get("X-Correlation-ID", "")
+    logger.info(
+        "admin_api_access",
+        extra={
+            "user_id": user_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": duration_ms,
+            "request_id": correlation_id,
+        },
+    )
+    return response
 
 
 def _likely_contains_arabic_utf8(payload: bytes) -> bool:
@@ -375,10 +464,10 @@ async def enforce_english_language_integrity(request: Request, call_next):
     return response
 
 
-# CSRF protection — validate Origin/Referer on state-changing requests
+# CSRF protection â€” validate Origin/Referer on state-changing requests
 # Cookie uses SameSite=Lax (set in auth.js), this is defense-in-depth.
 _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-_CSRF_DOUBLE_SUBMIT_EXEMPT_PATHS = {"/token", "/api/auth/login", "/api/auth/register"}
+_CSRF_DOUBLE_SUBMIT_EXEMPT_PATHS = {"/token", "/api/auth/login", "/api/auth/register", "/api/auth/mfa/setup", "/api/auth/mfa/verify"}
 _CSRF_ALLOWED_HOSTS = {
     origin.split("://", 1)[-1].rstrip("/")
     for origin in (settings.CORS_ALLOWED_ORIGINS or ["http://127.0.0.1:8000", "http://localhost:8000"])
@@ -406,7 +495,7 @@ async def csrf_origin_check(request: Request, call_next):
         # Skip CSRF check for API calls with Bearer token (inherently CSRF-safe)
         auth_header = request.headers.get("authorization", "")
         if not auth_header.lower().startswith("bearer "):
-            # Cookie-based auth — verify Origin or Referer
+            # Cookie-based auth â€” verify Origin or Referer
             origin = request.headers.get("origin", "")
             referer = request.headers.get("referer", "")
             request_netloc = (request.url.netloc or "").lower()
@@ -642,6 +731,12 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
     remember_raw = form.get("remember_me")
     remember_me = str(remember_raw).lower() in {"1", "true", "on", "yes"}
     raw_username = form_data.username.strip()
+
+    if captcha_required():
+        captcha_token = str(form.get("captcha_token") or "")
+        if not verify_captcha(captcha_token):
+            lang = "en" if request.headers.get("Accept-Language", "ar").startswith("en") else "ar"
+            raise HTTPException(status_code=400, detail=captcha_error_message(lang))
 
     try:
         identifier_type, normalized_identifier = classify_login_identifier(raw_username)
@@ -1016,6 +1111,17 @@ async def refresh_token(
 
 # Include routers AFTER auth endpoints
 app.include_router(admin_router, prefix="/api", tags=["Admin"])
+
+# Jordan Heat Map admin-facing endpoints (canonical route is /api/admin/heat-map/*)
+try:
+    from heatmap.backend.admin_router import router as admin_heat_map_router
+    app.include_router(admin_heat_map_router, prefix="/api")
+except Exception as _heat_map_import_exc:
+    import logging as _logging
+    _logging.getLogger(__name__).warning(
+        "Heat map admin router not mounted: %s", _heat_map_import_exc
+    )
+
 app.include_router(communication_router, prefix="/comm", tags=["Communication"])
 app.include_router(safety_router, prefix="/api", tags=["Safety"])
 app.include_router(kpi_router, prefix="/api", tags=["KPI"])
@@ -1028,6 +1134,7 @@ app.include_router(decision_support_router)
 app.include_router(filter_router)
 app.include_router(export_router)
 app.include_router(audit_service.router, prefix="/api", tags=["Audit"])
+app.include_router(audit_service.admin_router, prefix="/api/admin", tags=["Admin"], include_in_schema=False)
 app.include_router(analytics_ws_router)
 app.include_router(dr_analytics_router, prefix="/api", tags=["Daily Report Analytics"])
 app.include_router(dr_analytics_frontend)
@@ -1052,7 +1159,20 @@ app.include_router(admin_impersonation_router, prefix="/api", tags=["Admin"])
 app.include_router(messaging_router, prefix="/api", tags=["Messaging"])
 app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
 app.include_router(government_api_router, prefix="/api", tags=["Government API"])
+app.include_router(public_router, prefix="/api", tags=["Public"])
 app.include_router(api_router, prefix="/api", tags=["API"])
+
+# Heat map ETL/analytics router (legacy /api/heatmap/* path used by the
+# standalone React app).  Safe to fail if dependencies (pandas / scipy /
+# apscheduler) are missing in the deployed environment.
+try:
+    from heatmap.backend.api.router import router as heat_map_router
+    app.include_router(heat_map_router, prefix="/api/heatmap")
+except Exception as _heat_map_router_exc:
+    import logging as _logging
+    _logging.getLogger(__name__).warning(
+        "Heat map ETL router not mounted: %s", _heat_map_router_exc
+    )
 
 # WebSocket endpoint for real-time dashboard updates
 from dependencies import get_current_user_optional
@@ -1185,6 +1305,18 @@ async def health_check(db: Session = Depends(get_db)):
         )
 
 
+@app.head("/api/health")
+async def api_health_check_head(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """HEAD health check endpoint for monitoring systems"""
+    if current_user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    # HEAD request just checks if authenticated - return empty body
+    return Response(status_code=200, headers={"X-Health": "OK"})
+
+
 @app.get("/api/health")
 async def api_health_check(
     db: Session = Depends(get_db),
@@ -1236,7 +1368,7 @@ async def api_health_check(
             "details": health_check.details
         }
 
-    # Add SMTP health (non-blocking — failure degrades but doesn't mark service unhealthy)
+    # Add SMTP health (non-blocking â€” failure degrades but doesn't mark service unhealthy)
     from email_service import check_smtp_health
     smtp_health = check_smtp_health()
     response["services"]["smtp"] = smtp_health
@@ -1552,9 +1684,69 @@ async def get_predictive_insights(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@app.get("/api/dev/auto-login")
+async def dev_auto_login(
+    request: Request,
+    role: str = "admin",
+    db: Session = Depends(get_db),
+):
+    """
+    Development-only auto-login endpoint.
+    Only available when TESTING=true and ENVIRONMENT=development.
+    Returns a session cookie for immediate testing without manual auth.
+    """
+    if settings.ENVIRONMENT.lower() == "production":
+        raise HTTPException(status_code=404, detail="Not found")
+    if not settings.TESTING:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    role = role.lower()
+    username_map = {
+        "admin": "admin",
+        "manager": "manager1",
+        "manager1": "manager1",
+        "manager2": "manager2",
+        "supervisor": "supervisor1",
+        "supervisor1": "supervisor1",
+        "supervisor2": "supervisor2",
+        "parent": "parent1",
+        "parent1": "parent1",
+        "parent2": "parent2",
+    }
+
+    if role not in username_map:
+        raise HTTPException(status_code=400, detail="Invalid role. Use: admin, manager, supervisor, parent")
+
+    username = username_map[role]
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User '{username}' not found in database")
+
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES_REMEMBER)
+    access_token = create_access_token(
+        data={"sub": user.username, "role": user.role.value},
+        expires_delta=access_token_expires,
+    )
+
+    response = JSONResponse(content={
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role.value,
+        }
+    })
+    _set_authenticated_session(response, access_token=access_token, remember_me=True)
+    _set_ui_language_cookie(response, "en")
+    return response
+
+
 # Note: When running with `python -m uvicorn main:app`, don't use the code below
 # The if __name__ == "__main__" block is only for running with `python main.py`
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
+
 

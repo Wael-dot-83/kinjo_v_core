@@ -170,7 +170,7 @@
                 <td>${childName(r.child_id)}</td>
                 <td>${escHtml(r.start_date)}</td>
                 <td>${escHtml(r.end_date)}</td>
-                <td class="text-truncate" style="max-width:200px">${escHtml(r.reason)}</td>
+                <td class="text-truncate-2" style="max-width:220px" title="${escHtml(r.reason)}">${escHtml(r.reason)}</td>
                 <td>${statusBadge(r.status)}</td>
                 <td>${escHtml(r.decision_note || '-')}</td>
                 <td>

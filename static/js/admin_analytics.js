@@ -1,15 +1,15 @@
+// safeChartData() is provided globally by chart_utils.js (loaded before this script).
+
+var lastDashboardData = null;
+
 document.addEventListener("DOMContentLoaded", function () {
   // Set default date range (Current Month)
   const today = new Date();
-  console.log("Today:", today);
-  console.log("Year:", today.getFullYear(), "Month:", today.getMonth(), "Date:", today.getDate());
   // Explicitly set to current month start and end
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
   const firstDay = new Date(currentYear, currentMonth, 1);
   const lastDay = new Date(currentYear, currentMonth + 1, 0); // Last day of current month
-  console.log("First day of month:", firstDay);
-  console.log("Last day of month:", lastDay);
 
   // Format dates as YYYY-MM-DD
   const formatDate = (d) => d.toISOString().split("T")[0];
@@ -24,10 +24,22 @@ document.addEventListener("DOMContentLoaded", function () {
     const startDate = formatDate(firstDay);
     const endDate = formatDate(today); // Use today instead of lastDay to match data
 
-    console.log(`Setting date range: ${startDate} to ${endDate}`);
-
     startInput.value = startDate;
     endInput.value = endDate;
+
+    // Sync from global filter state
+    if (window.AnalyticsFilterState) {
+      var saved = window.AnalyticsFilterState.getState();
+      var pStart = document.getElementById('periodStart');
+      var pEnd = document.getElementById('periodEnd');
+      var govFilter = document.getElementById('governorateFilter');
+      
+      if (saved.periodStart && pStart) pStart.value = saved.periodStart;
+      if (saved.periodEnd && pEnd) pEnd.value = saved.periodEnd;
+      if (saved.governorate && govFilter) {
+        govFilter.value = saved.governorate;
+      }
+    }
 
     // Initial load
     loadAdminAnalytics();
@@ -42,10 +54,13 @@ document.addEventListener("DOMContentLoaded", function () {
       })
       .then((data) => {
         if (!data) return;
+        const locale = adminAnalyticsLocale();
         (data.governorates || []).forEach((g) => {
+          const normalized = normalizeGovernorateOption(g, locale);
+          if (!normalized.value || !normalized.label) return;
           const opt = document.createElement("option");
-          opt.value = g.value || g.id || g.name || g.label || g;
-          opt.textContent = g.label || g.name || g.value || g;
+          opt.value = normalized.value;
+          opt.textContent = normalized.label;
           govSelect.appendChild(opt);
         });
 
@@ -57,7 +72,43 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       })
       .catch(() => {});
-    govSelect.addEventListener("change", () => loadAdminAnalytics());
+    govSelect.addEventListener("change", () => {
+      if (window.AnalyticsFilterState) {
+        window.AnalyticsFilterState.syncFromDOM();
+        window.AnalyticsFilterState.setState({ source: 'dashboard' });
+      }
+      loadAdminAnalytics();
+    });
+  }
+
+  // Subscribe to global filter state changes from other views
+  if (window.AnalyticsFilterState) {
+    window.AnalyticsFilterState.subscribe(function (newState) {
+      if (newState.source === 'dashboard') return;
+
+      var pStart = document.getElementById('periodStart');
+      var pEnd = document.getElementById('periodEnd');
+      var govFilter = document.getElementById('governorateFilter');
+
+      var needsReload = false;
+
+      if (newState.periodStart && pStart && pStart.value !== newState.periodStart) {
+        pStart.value = newState.periodStart;
+        needsReload = true;
+      }
+      if (newState.periodEnd && pEnd && pEnd.value !== newState.periodEnd) {
+        pEnd.value = newState.periodEnd;
+        needsReload = true;
+      }
+      if (govFilter && newState.governorate !== undefined && govFilter.value !== newState.governorate) {
+        govFilter.value = newState.governorate;
+        needsReload = true;
+      }
+
+      if (needsReload) {
+        loadAdminAnalytics();
+      }
+    });
   }
 
   // Setup Report Form Date Inputs
@@ -87,6 +138,35 @@ function adminAnalyticsLocale() {
   return adminAnalyticsText("ar-JO", "en-US");
 }
 
+function normalizeGovernorateOption(option, locale) {
+  if (typeof option === "string") {
+    const text = option.trim();
+    return text ? { value: text, label: text } : { value: "", label: "" };
+  }
+
+  if (!option || typeof option !== "object") {
+    return { value: "", label: "" };
+  }
+
+  const isEnglish = String(locale || "").toLowerCase().startsWith("en");
+  const value = option.id ?? option.value ?? option.name ?? option.label ?? "";
+  const label = option.name_ar || option.name_en || option.name || option.label || value || "";
+
+  if (value == null || label == null || typeof value === "object" || typeof label === "object") {
+    return { value: "", label: "" };
+  }
+
+  const valueText = String(value).trim();
+  const labelValue = isEnglish && option.name_en ? option.name_en : label;
+  const labelText = String(labelValue ?? label ?? "").trim();
+
+  if (!valueText || !labelText || valueText === "[object Object]" || labelText === "[object Object]") {
+    return { value: "", label: "" };
+  }
+
+  return { value: valueText, label: labelText };
+}
+
 function adminAnalyticsLiteral(value) {
   const raw = String(value ?? "");
   if (!raw) {
@@ -102,6 +182,19 @@ function adminAnalyticsLiteral(value) {
 }
 
 async function loadAdminAnalytics(retryCount = 0) {
+  // Push current filter values to global state
+  if (window.AnalyticsFilterState) {
+    var pStart = document.getElementById('periodStart');
+    var pEnd = document.getElementById('periodEnd');
+    var govFilter = document.getElementById('governorateFilter');
+    window.AnalyticsFilterState.setState({
+      periodStart: pStart ? pStart.value : undefined,
+      periodEnd: pEnd ? pEnd.value : undefined,
+      governorate: govFilter ? govFilter.value : 'all',
+      source: 'dashboard'
+    });
+  }
+
   const maxRetries = 2;
   const start = document.getElementById("periodStart")?.value || "";
   const end = document.getElementById("periodEnd")?.value || "";
@@ -161,6 +254,7 @@ async function loadAdminAnalytics(retryCount = 0) {
     const data = await response.json();
 
     // Update all dashboard components
+    lastDashboardData = data;
     updateNetworkSummary(data.network_summary);
     updateTrendCharts(data.attendance_trend, data.incident_trend);
     updateGovernorateBreakdown(data.governorate_breakdown);
@@ -185,14 +279,21 @@ async function loadAdminAnalytics(retryCount = 0) {
       adminAnalyticsText("تم تحديث البيانات بنجاح", "Data refreshed successfully"),
       "success"
     );
+    // Update last-updated timestamp
+    updateLastUpdatedTimestamp();
   } catch (error) {
     console.error("Analytics load error:", error);
+
+    // Hide overlay, show error state
+    const overlay = document.getElementById("trendChartOverlay");
+    const errorDiv = document.getElementById("trendChartError");
+    if (overlay) overlay.classList.add("d-none");
+    if (errorDiv) errorDiv.classList.add("show");
 
     // Handle timeout
     if (error.name === "AbortError") {
       console.error("Request timed out");
       if (retryCount < maxRetries) {
-        console.log(`Retrying after timeout (attempt ${retryCount + 1}/${maxRetries})`);
         setTimeout(() => loadAdminAnalytics(retryCount + 1), 2000);
         return;
       }
@@ -208,7 +309,6 @@ async function loadAdminAnalytics(retryCount = 0) {
 
     // Retry logic
     if (retryCount < maxRetries && !error.message.includes("Invalid date range")) {
-      console.log(`Retrying analytics load (attempt ${retryCount + 1}/${maxRetries})`);
       setTimeout(() => loadAdminAnalytics(retryCount + 1), 1000 * (retryCount + 1)); // Exponential backoff
       return;
     }
@@ -314,9 +414,19 @@ function hideSkeletonLoaders() {
   // Charts are re-initialized when data loads.
 }
 
+function updateLastUpdatedTimestamp() {
+  const el = document.getElementById("analyticsLastUpdated");
+  if (!el) return;
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat(adminAnalyticsLocale(), {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+  el.innerHTML = `<i class="bi bi-clock"></i> <span>${adminAnalyticsText("آخر تحديث:", "Last updated:")} ${formatter.format(now)}</span>`;
+}
+
 function updateNetworkSummary(summary) {
   if (!summary) {
-    console.warn("No network summary data provided");
     return;
   }
 
@@ -345,70 +455,71 @@ function updateNetworkSummary(summary) {
     enrollmentBar.className = `progress-bar ${enrollmentRate > 90 ? "bg-success" : enrollmentRate > 70 ? "bg-info" : "bg-warning"}`;
   }
 
-  // Add trend indicators (mock data for now - in real implementation, calculate from previous period)
   updateTrendIndicators(summary);
+  if (lastDashboardData) {
+    lastDashboardData.network_summary = summary;
+    renderSparklines(lastDashboardData);
+  }
 }
 
 function updateTrendIndicators(summary) {
-  // Mock trend calculation - in production, compare with previous period data
-  const attendanceTrend = document.getElementById("attendanceTrendIndicator");
-  const incidentTrend = document.getElementById("incidentTrend");
-  const kgGrowth = document.getElementById("kpiKgGrowth");
+  renderDeltaIndicator(
+    summary?.deltas?.attendance_rate,
+    "attendanceTrendIndicator",
+    "attendance_rate"
+  );
+  renderDeltaIndicator(summary?.deltas?.incident_rate, "incidentTrend", "incident_rate");
+  renderDeltaIndicator(summary?.deltas?.total_kindergartens, "kpiKgGrowth", "total_kindergartens");
+}
 
-  if (attendanceTrend) {
-    const trend =
-      summary.attendance_rate > 85 ? "up" : summary.attendance_rate > 75 ? "stable" : "down";
-    const trendIcon =
-      trend === "up"
-        ? "bi-arrow-up-short text-success"
-        : trend === "down"
-          ? "bi-arrow-down-short text-danger"
-          : "bi-dash text-warning";
-    const trendText =
-      trend === "up"
-        ? adminAnalyticsText("في تحسن", "Improving")
-        : trend === "down"
-          ? adminAnalyticsText("في تراجع", "Declining")
-          : adminAnalyticsText("مستقر", "Stable");
-    attendanceTrend.innerHTML = `<i class="bi ${trendIcon} me-1"></i>${trendText}`;
+function renderDeltaIndicator(delta, elementId, metricKey) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  const unavailableText = adminAnalyticsText(
+    "غير متوفر للفترة السابقة",
+    "No previous-period data"
+  );
+
+  if (!delta || delta.source !== "real" || delta.delta_percent == null) {
+    element.className = "text-muted";
+    element.innerHTML = `<i class="bi bi-dash me-1"></i>${unavailableText}`;
+    return;
   }
 
-  if (incidentTrend) {
-    const trend =
-      summary.incident_rate < 0.5 ? "down" : summary.incident_rate > 1.0 ? "up" : "stable";
-    const trendIcon =
-      trend === "down"
-        ? "bi-arrow-down-short text-success"
-        : trend === "up"
-          ? "bi-arrow-up-short text-danger"
-          : "bi-dash text-warning";
-    const trendText =
-      trend === "down"
-        ? adminAnalyticsText("في تحسن", "Improving")
-        : trend === "up"
-          ? adminAnalyticsText("في ارتفاع", "Increasing")
-          : adminAnalyticsText("مستقر", "Stable");
-    incidentTrend.innerHTML = `<i class="bi ${trendIcon} me-1"></i>${trendText}`;
-  }
+  const percent = Math.abs(Number(delta.delta_percent || 0)).toFixed(1);
+  const direction = delta.direction || "neutral";
+  const isNeutral = direction === "neutral";
+  const isImprovement =
+    direction === "up" ||
+    (metricKey === "incident_rate" && direction === "down");
+  const icon = isNeutral
+    ? "bi-dash"
+    : isImprovement
+      ? "bi-arrow-up-short"
+      : "bi-arrow-down-short";
+  const className = isNeutral ? "text-muted" : isImprovement ? "text-success" : "text-danger";
+  const label = adminAnalyticsText("عن الفترة السابقة", "vs previous period");
+  const ariaLabel = isNeutral
+    ? adminAnalyticsText("لا تغيير عن الفترة السابقة", "No change vs previous period")
+    : isImprovement
+      ? adminAnalyticsText(`تحسن بنسبة ${percent}% عن الفترة السابقة`, `Increased by ${percent}% vs previous period`)
+      : adminAnalyticsText(`انخفاض بنسبة ${percent}% عن الفترة السابقة`, `Decreased by ${percent}% vs previous period`);
 
-  if (kgGrowth) {
-    // Calculate growth from actual data — use total kindergartens count
-    const totalKg = summary.total_kindergartens || 0;
-    const growth = totalKg > 0 ? (totalKg / Math.max(totalKg - 1, 1) - 1) * 100 : 0;
-    const growthClass = growth >= 0 ? "text-success" : "text-danger";
-    const growthIcon = growth >= 0 ? "bi-arrow-up-short" : "bi-arrow-down-short";
-    kgGrowth.innerHTML = `<i class="bi ${growthIcon}"></i> ${Math.abs(growth).toFixed(1)}%`;
-    kgGrowth.className = growthClass;
-  }
+  element.className = className;
+  element.setAttribute("aria-label", ariaLabel);
+  element.innerHTML = `<i class="bi ${icon} me-1" aria-hidden="true"></i>${isNeutral ? "—" : (delta.delta_percent < 0 ? "-" : "+")}${percent}% ${label}`;
 }
 
 function updateTrendCharts(attendanceData, incidentData) {
   const ctx = document.getElementById("trendChart");
   if (!ctx) return;
 
-  // Show loading overlay
+  // Show loading overlay, hide error
   const overlay = document.getElementById("trendChartOverlay");
+  const errorDiv = document.getElementById("trendChartError");
   if (overlay) overlay.classList.remove("d-none");
+  if (errorDiv) errorDiv.classList.remove("show");
 
   if (trendChartInstance) {
     trendChartInstance.destroy();
@@ -486,7 +597,7 @@ function buildTrendChartData(type) {
       datasets: [
         {
           label: lineLabel,
-          data: dataSeries.map((d) => d.value),
+          data: safeChartData(dataSeries.map((d) => d.value)),
           borderColor: lineColor,
           backgroundColor:
             type === "attendance" ? "rgba(25, 135, 84, 0.1)" : "rgba(253, 126, 20, 0.1)",
@@ -548,6 +659,7 @@ function buildTrendChartData(type) {
             font: {
               size: 12,
               weight: "bold",
+              family: adminAnalyticsText("Cairo, sans-serif", "Inter, sans-serif"),
             },
           },
         },
@@ -587,6 +699,7 @@ function buildTrendChartData(type) {
             font: {
               size: 14,
               weight: "bold",
+              family: adminAnalyticsText("Cairo, sans-serif", "Inter, sans-serif"),
             },
           },
           grid: {
@@ -906,7 +1019,7 @@ function updateGovernanceChart(green, amber, red) {
       ],
       datasets: [
         {
-          data: [green, amber, red],
+          data: safeChartData([green, amber, red]),
           backgroundColor: ["#198754", "#ffc107", "#dc3545"],
           borderWidth: 0,
         },
@@ -977,9 +1090,10 @@ function showToast(message, type = "info") {
   toastEl.setAttribute("role", "alert");
   toastEl.setAttribute("aria-live", "assertive");
   toastEl.setAttribute("aria-atomic", "true");
+  var safeMessage = message ? String(message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
   toastEl.innerHTML = `
         <div class="d-flex">
-            <div class="toast-body">${message}</div>
+            <div class="toast-body">${safeMessage}</div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     `;
@@ -1396,6 +1510,65 @@ function getScoreColor(score) {
   if (score >= 80) return "bg-success";
   else if (score >= 60) return "bg-warning";
   return "bg-danger";
+}
+
+function renderSparklines(dashboardData) {
+  var containers = document.querySelectorAll('.kpi-sparkline');
+  if (!containers || containers.length === 0) return;
+
+  containers.forEach(function (el) {
+    var metric = el.getAttribute('data-metric');
+    var data = getSparklineData(dashboardData, metric);
+    if (!data || data.length < 2) {
+      el.innerHTML = '';
+      return;
+    }
+    renderMiniSparkline(el, data);
+  });
+}
+
+function getSparklineData(data, metric) {
+  if (!data) return null;
+
+  switch (metric) {
+    case 'total_kg':
+      return data.total_kindergartens_trend || [data.previous_period?.total_kindergartens, data.network_summary?.total_kindergartens];
+    case 'total_children':
+      return data.total_children_trend || [data.previous_period?.total_children, data.network_summary?.total_children];
+    case 'attendance_rate':
+      return data.attendance_rate_trend || [data.previous_period?.attendance_rate, data.network_summary?.attendance_rate];
+    case 'incident_rate':
+      return data.incident_rate_trend || [data.previous_period?.incident_rate, data.network_summary?.incident_rate];
+    default:
+      return null;
+  }
+}
+
+function renderMiniSparkline(container, data) {
+  var w = container.offsetWidth || 120;
+  var h = 32;
+  var padding = 2;
+  var min = Math.min.apply(null, data);
+  var max = Math.max.apply(null, data);
+  var range = max - min || 1;
+
+  var points = data.map(function (v, i) {
+    var x = padding + (i / (data.length - 1)) * (w - 2 * padding);
+    var y = h - padding - ((v - min) / range) * (h - 2 * padding);
+    return x + ',' + y;
+  }).join(' ');
+
+  var isUp = data[data.length - 1] >= data[0];
+  var color = isUp ? '#22C55E' : '#EF4444';
+  var metric = container.getAttribute('data-metric');
+  if (metric === 'incident_rate') {
+    color = isUp ? '#EF4444' : '#22C55E';
+  }
+
+  var svg = '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' +
+    '<polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+  container.innerHTML = svg;
 }
 
 window.addEventListener("languageChanged", () => {

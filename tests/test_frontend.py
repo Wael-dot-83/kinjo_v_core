@@ -1,6 +1,7 @@
 """
 Unit tests for Frontend Routes
 """
+import re
 import pytest
 from datetime import date, timedelta
 from unittest.mock import Mock, patch
@@ -151,13 +152,16 @@ class TestFrontendRoutes:
 
         app.dependency_overrides.clear()
 
-    def test_index_redirect_unauthenticated(self, client):
-        """Test index page redirects unauthenticated users to login"""
+    def test_index_renders_public_homepage_unauthenticated(self, client):
+        """Anonymous visitors get a real public homepage (GWS requirement),
+        not a redirect to login — Round 3."""
         app.dependency_overrides[get_current_user_optional] = lambda: None
 
         response = client.get("/", follow_redirects=False)
-        assert response.status_code == 307  # Redirect
-        assert "/login" in response.headers.get("location", "")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+        assert "/register" in response.text
+        assert "/login" in response.text
 
         app.dependency_overrides.clear()
 
@@ -174,6 +178,24 @@ class TestFrontendRoutes:
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
         assert b"register" in response.content.lower()
+
+    def test_mfa_setup_page(self, client):
+        """MFA setup page renders without authentication"""
+        response = client.get("/mfa/setup")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+    def test_forgot_password_page(self, client):
+        """Forgot password page renders without authentication"""
+        response = client.get("/forgot-password")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+    def test_reset_password_page(self, client):
+        """Reset password page renders with optional token"""
+        response = client.get("/reset-password?token=abc123")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
 
     def test_favicon(self, client):
         """Test favicon endpoint"""
@@ -355,6 +377,46 @@ class TestFrontendRoutes:
         app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
 
         response = client.get("/parent/dashboard")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_parent_profile_page(self, client, parent_user):
+        """Parent profile page renders for parent user"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+
+        response = client.get("/parent/profile")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_parent_children_page(self, client, parent_user):
+        """Parent children page renders for parent user"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+
+        response = client.get("/parent/children")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_parent_enrollments_page(self, client, parent_user):
+        """Parent enrollments page renders for parent user"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+
+        response = client.get("/parent/enrollments")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_parent_attendance_page(self, client, parent_user):
+        """Parent attendance page renders for parent user"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+
+        response = client.get("/parent/attendance")
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
@@ -665,6 +727,25 @@ class TestFrontendRoutes:
 
         app.dependency_overrides.clear()
 
+    def test_curriculum_page_manager_redirect(self, client, manager_user):
+        """Curriculum page redirects manager to dashboard (placeholder route)"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/curriculum", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/dashboard" in response.headers.get("location", "")
+
+        app.dependency_overrides.clear()
+
+    def test_curriculum_page_supervisor_403(self, client, supervisor_user):
+        """Curriculum page returns 403 for supervisors"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+
+        response = client.get("/curriculum")
+        assert response.status_code == 403
+
+        app.dependency_overrides.clear()
+
     def test_safety_dashboard(self, client, admin_user):
         """Test safety dashboard"""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
@@ -957,29 +1038,28 @@ class TestFrontendRoutes:
 
         app.dependency_overrides.clear()
 
-    def test_contact_page(self, client):
-        """Test contact page"""
+    def test_contact_page_exists(self, client):
+        """Contact page is required for GWS compliance (public Contact Us form)."""
         response = client.get("/contact")
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
-    def test_privacy_page(self, client):
-        """Test privacy policy page"""
+    def test_privacy_page_exists(self, client):
+        """Privacy policy page is required for GWS compliance."""
         response = client.get("/privacy")
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
-    def test_terms_page(self, client):
-        """Test terms of service page"""
+    def test_terms_page_exists(self, client):
+        """Terms of use page is required for GWS compliance."""
         response = client.get("/terms")
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
-    def test_help_page(self, client):
-        """Test help center page"""
+    def test_help_page_removed(self, client):
+        """Help page was removed during the streamlining cleanup; route must 404."""
         response = client.get("/help")
-        assert response.status_code == 200
-        assert "text/html" in response.headers.get("content-type", "")
+        assert response.status_code == 404
 
     def test_audit_logs_page_admin(self, client, admin_user):
         """Test audit logs page for admin"""
@@ -1111,6 +1191,65 @@ class TestFrontendRoutes:
 
         app.dependency_overrides.clear()
 
+    def test_admin_analytics_live_sections_are_visible(self, client, admin_user):
+        """Predictions/anomalies/risk-heatmap/targets/benchmarks/recommendations widgets
+        must render in the visible dashboard, not be trapped inside the hidden
+        #pageHelpContent guide panel (regression: they were previously nested there
+        and never displayed, even though admin_analytics.js populates them with
+        real API data)."""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/analytics")
+        assert response.status_code == 200
+        page = response.text
+
+        # pageHelpContent has been removed (task: remove "How to use this page" section).
+        assert 'id="pageHelpContent"' not in page, (
+            "#pageHelpContent must not be present — help section was removed"
+        )
+
+        dashboard_start = page.index('class="analytics-dashboard"')
+        visible_section = page[dashboard_start:]
+
+        live_widget_ids = [
+            "attendanceForecast",
+            "incidentForecast",
+            "enrollmentForecast",
+            "modelMeta",
+            "anomalyList",
+            "anomalyCount",
+            "riskHeatmap",
+            "alertList",
+            "alertBanner",
+            "dataQualityScore",
+            "dataQualityStatus",
+            "targetList",
+            "benchmarkList",
+            "recommendationList",
+        ]
+        for widget_id in live_widget_ids:
+            assert f'id="{widget_id}"' in visible_section, (
+                f"#{widget_id} must be present in the visible dashboard markup"
+            )
+
+        app.dependency_overrides.clear()
+
+    def test_admin_analytics_no_hardcoded_fake_risk_entry(self, client, admin_user):
+        """The Smart Risk Indicator card must start as a skeleton loader, not a
+        baked-in fake kindergarten/risk-score (no mock data in production markup)."""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/analytics")
+        assert response.status_code == 200
+        page = response.text
+
+        assert "Al-Amal Kindergarten" not in page
+        assert "روضة الأمل" not in page
+        assert "92% Risk" not in page
+        assert "92% خطر" not in page
+
+        app.dependency_overrides.clear()
+
     def test_admin_reports_admin(self, client, admin_user):
         """Test admin reports page for admin"""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
@@ -1192,4 +1331,1532 @@ class TestFrontendRoutes:
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
 
+        app.dependency_overrides.clear()
+
+    def test_admin_import_users_page_admin(self, client, admin_user):
+        """Import Users page must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/users/import")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_admin_import_users_page_non_admin_redirects(self, client, manager_user):
+        """Import Users page must redirect non-admin to dashboard"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/users/import", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers.get("location") == "/dashboard"
+
+        app.dependency_overrides.clear()
+
+    def test_admin_import_logs_page_admin(self, client, admin_user):
+        """Import Logs page must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/import-logs")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_admin_import_logs_page_non_admin_redirects(self, client, manager_user):
+        """Import Logs page must redirect non-admin to dashboard"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/import-logs", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers.get("location") == "/dashboard"
+
+        app.dependency_overrides.clear()
+
+    def test_admin_governance_reminders_page_admin(self, client, admin_user):
+        """Governance Reminders page must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/governance/reminders")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_admin_governance_reminders_page_non_admin_redirects(self, client, manager_user):
+        """Governance Reminders page must redirect non-admin to dashboard"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/governance/reminders", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers.get("location") == "/dashboard"
+
+        app.dependency_overrides.clear()
+
+    def test_admin_alerts_page_admin(self, client, admin_user):
+        """Alerts page must be accessible by admin and render from admin_base.html"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/alerts")
+        assert response.status_code == 200
+        ct = response.headers.get("content-type", "")
+        assert "text/html" in ct
+        assert "admin_alerts.js" in response.text
+
+        app.dependency_overrides.clear()
+
+    def test_admin_alerts_page_non_admin_redirects(self, client, manager_user):
+        """Alerts page must redirect non-admin to dashboard"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/alerts", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers.get("location") == "/dashboard"
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Heat map page
+    # ------------------------------------------------------------------
+
+    def test_admin_heatmap_page_admin(self, client, admin_user):
+        """Heat map page must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/heatmap")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_admin_heatmap_page_non_admin_redirects(self, client, manager_user):
+        """Heat map page must redirect non-admin to dashboard"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/heatmap", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers.get("location") == "/dashboard"
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # /admin root redirect
+    # ------------------------------------------------------------------
+
+    def test_admin_root_redirects_to_dashboard(self, client, admin_user):
+        """/admin must redirect to /admin/dashboard"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin", follow_redirects=False)
+        assert response.status_code == 302
+        assert "/admin/dashboard" in response.headers.get("location", "")
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Non-admin redirects for analytics / reports pages
+    # ------------------------------------------------------------------
+
+    def test_admin_reports_non_admin_redirects(self, client, manager_user):
+        """Analytics reports page must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/analytics/reports", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    def test_admin_analytics_drilldown_non_admin_redirects(self, client, manager_user):
+        """Analytics drilldown must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/analytics/drilldown/kindergarten/1", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    def test_admin_daily_reports_non_admin_redirects(self, client, manager_user):
+        """Admin analytics daily-reports page must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/analytics/daily-reports", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    def test_admin_incident_report_generate_non_admin_redirects(self, client, manager_user):
+        """Incident report generation page must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/reports/incidents/generate", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    def test_admin_incident_report_detail_non_admin_redirects(self, client, manager_user):
+        """Incident report detail page must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/reports/incidents/1", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    def test_admin_messages_list_non_admin_redirects(self, client, manager_user):
+        """Admin messages list must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/messages", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Audit logs page
+    # ------------------------------------------------------------------
+
+    def test_audit_logs_page_admin(self, client, admin_user):
+        """Audit logs page must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/audit-logs")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_audit_logs_page_non_admin_redirects(self, client, manager_user):
+        """Audit logs page must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/audit-logs", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Incident reports list page
+    # ------------------------------------------------------------------
+
+    def test_incidents_list_page_admin(self, client, admin_user):
+        """Incident reports list must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/incidents")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_incidents_list_page_non_admin_redirects(self, client, manager_user):
+        """Incident reports list must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/incidents", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Contact messages page
+    # ------------------------------------------------------------------
+
+    def test_admin_contact_messages_page_admin(self, client, admin_user, test_db):
+        """Contact messages page must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/contact-messages")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_admin_contact_messages_page_non_admin_redirects(self, client, manager_user):
+        """Contact messages page must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/contact-messages", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Daily reports organization page (admin via /daily-reports)
+    # ------------------------------------------------------------------
+
+    def test_daily_reports_org_page_admin(self, client, admin_user):
+        """Admin visiting /daily-reports should get the org template"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/daily-reports")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Admin Profile page
+    # ------------------------------------------------------------------
+
+    def test_admin_profile_page_admin(self, client, admin_user):
+        """Admin profile page must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/profile")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+        assert admin_user.username in response.text
+
+        app.dependency_overrides.clear()
+
+    def test_admin_profile_page_non_admin_redirects(self, client, manager_user):
+        """Admin profile page must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/profile", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers.get("location") == "/dashboard"
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Admin Settings page
+    # ------------------------------------------------------------------
+
+    def test_admin_settings_page_admin(self, client, admin_user):
+        """Admin settings page must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/settings")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_admin_settings_page_non_admin_redirects(self, client, manager_user):
+        """Admin settings page must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/settings", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers.get("location") == "/dashboard"
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Admin Classification page
+    # ------------------------------------------------------------------
+
+    def test_admin_classification_page_admin(self, client, admin_user):
+        """Classification page must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/classification")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_admin_classification_page_non_admin_redirects(self, client, manager_user):
+        """Classification page must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/classification", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Admin Impersonate page
+    # ------------------------------------------------------------------
+
+    def test_admin_impersonate_page_admin(self, client, admin_user):
+        """Impersonate page must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/impersonate")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_admin_impersonate_page_non_admin_redirects(self, client, manager_user):
+        """Impersonate page must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/impersonate", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Admin Safety Analytics page
+    # ------------------------------------------------------------------
+
+    def test_admin_safety_analytics_page_admin(self, client, admin_user):
+        """Safety analytics page must be accessible by admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+
+        response = client.get("/admin/safety-analytics")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+
+        app.dependency_overrides.clear()
+
+    def test_admin_safety_analytics_page_non_admin_redirects(self, client, manager_user):
+        """Safety analytics page must redirect non-admin"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+
+        response = client.get("/admin/safety-analytics", follow_redirects=False)
+        assert response.status_code == 307
+
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # normalize_ui_language edge cases (lines 27-28)
+    # ------------------------------------------------------------------
+
+    def test_language_cookie_en_sets_ltr(self, client, admin_user):
+        """?lang=en query param switches to LTR"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/dashboard?lang=en")
+        assert response.status_code == 200
+        assert 'dir="ltr"' in response.text or "ltr" in response.text
+        app.dependency_overrides.clear()
+
+    def test_language_invalid_falls_back_to_ar(self, client, admin_user):
+        """Unknown lang value falls back to Arabic"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/dashboard?lang=xyz")
+        assert response.status_code == 200
+        assert 'dir="rtl"' in response.text or "rtl" in response.text
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # register page when PUBLIC_REGISTRATION_ENABLED=False (line 121)
+    # ------------------------------------------------------------------
+
+    def test_register_page_disabled_redirects(self, client):
+        """Registration disabled → redirect to login"""
+        from unittest.mock import patch
+        with patch("frontend.settings") as mock_settings:
+            mock_settings.PUBLIC_REGISTRATION_ENABLED = False
+            mock_settings.TESTING = False
+            mock_settings.CSRF_COOKIE_NAME = "csrftoken"
+            response = client.get("/register", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "login" in response.headers.get("location", "")
+
+    # ------------------------------------------------------------------
+    # dashboard supervisor branch (line 165)
+    # ------------------------------------------------------------------
+
+    def test_dashboard_supervisor(self, client, supervisor_user):
+        """Supervisor gets supervisor dashboard template"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get("/dashboard")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Parent route non-parent redirect branches (lines 191, 204, 213, 222, 230)
+    # ------------------------------------------------------------------
+
+    def test_parent_dashboard_non_parent_redirects(self, client, admin_user):
+        """Non-parent user redirected from /parent/dashboard"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/parent/dashboard", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/dashboard" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    def test_parent_profile_non_parent_redirects(self, client, admin_user):
+        """Non-parent redirected from /parent/profile"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/parent/profile", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/profile" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    def test_parent_children_non_parent_redirects(self, client, admin_user):
+        """Non-parent redirected from /parent/children"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/parent/children", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    def test_parent_enrollments_non_parent_redirects(self, client, admin_user):
+        """Non-parent redirected from /parent/enrollments"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/parent/enrollments", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    def test_parent_attendance_non_parent_redirects(self, client, admin_user):
+        """Non-parent redirected from /parent/attendance"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/parent/attendance", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Kindergartens — ADMIN filtering + other-role fallback (lines 258-299)
+    # ------------------------------------------------------------------
+
+    def test_kindergartens_admin_no_kg_id(self, client, test_db, sample_kindergarten):
+        """Admin with no kindergarten_id can still list kindergartens"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: models.User(
+            id=9001,
+            username="adminkg",
+            email="adminkg@test.com",
+            hashed_password="x",
+            role=models.UserRole.ADMIN,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=None
+        )
+        response = client.get("/kindergartens")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_kindergartens_admin_with_status_filter(self, client, admin_user, test_db, sample_kindergarten):
+        """Admin can filter kindergartens by status"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/kindergartens?status=active")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_kindergartens_admin_with_invalid_status(self, client, admin_user, test_db, sample_kindergarten):
+        """Invalid status string is ignored gracefully"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/kindergartens?status=INVALID")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_kindergartens_admin_with_governorate_filter(self, client, admin_user, test_db, sample_kindergarten):
+        """Admin can filter kindergartens by governorate"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/kindergartens?governorate=Amman")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_kindergartens_admin_with_city_name_filter(self, client, admin_user, test_db, sample_kindergarten):
+        """Admin can filter kindergartens by city and name"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/kindergartens?city=Amman&name=test")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_kindergartens_supervisor_role(self, client, supervisor_user, test_db):
+        """Supervisor gets empty kindergarten list (other-role branch)"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get("/kindergartens")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Kindergartens — MANAGER wrong-kg 403 / non-admin/manager 403 (lines 339-357)
+    # ------------------------------------------------------------------
+
+    def test_view_kindergarten_manager_wrong_kg(self, client, test_db, manager_user, sample_kindergarten):
+        """Manager cannot view a kindergarten they don't own"""
+        other_kg = models.Kindergarten(
+            name_ar="روضة أخرى",
+            name_en="Other KG",
+            license_number="OTHER001",
+            governorate="Irbid",
+            city="Irbid",
+            area="Irbid Center",
+            address_line="Other Addr",
+            contact_phone="+96222000001",
+            status=models.KindergartenStatus.ACTIVE
+        )
+        test_db.add(other_kg)
+        test_db.commit()
+        test_db.refresh(other_kg)
+
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get(f"/kindergartens/{other_kg.id}")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_view_kindergarten_supervisor_403(self, client, supervisor_user, test_db, sample_kindergarten):
+        """Supervisor cannot view kindergartens (other-role 403)"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get(f"/kindergartens/{sample_kindergarten.id}")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_edit_kindergarten_404(self, client, admin_user):
+        """Edit kindergarten page returns 404 for missing kg"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/kindergartens/99999/edit")
+        assert response.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_edit_kindergarten_manager_wrong_kg_403(self, client, test_db, manager_user, sample_kindergarten):
+        """Manager cannot edit a kindergarten they don't own"""
+        other_kg = models.Kindergarten(
+            name_ar="روضة أخرى 2",
+            name_en="Other KG 2",
+            license_number="OTHER002",
+            governorate="Zarqa",
+            city="Zarqa",
+            area="Zarqa Center",
+            address_line="Other Addr 2",
+            contact_phone="+96222000002",
+            status=models.KindergartenStatus.ACTIVE
+        )
+        test_db.add(other_kg)
+        test_db.commit()
+        test_db.refresh(other_kg)
+
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get(f"/kindergartens/{other_kg.id}/edit")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_edit_kindergarten_supervisor_403(self, client, supervisor_user, test_db, sample_kindergarten):
+        """Supervisor cannot edit kindergartens"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get(f"/kindergartens/{sample_kindergarten.id}/edit")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Classes — non-MANAGER/ADMIN 403, MANAGER create/edit (lines 369-396)
+    # ------------------------------------------------------------------
+
+    def test_classes_list_supervisor_403(self, client, supervisor_user):
+        """Supervisor cannot access class list"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get("/classes")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_create_class_page_manager(self, client, manager_user, test_db, sample_kindergarten):
+        """Manager can access create class page"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/classes/create")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_create_class_page_admin_403(self, client, admin_user):
+        """Admin cannot access create class page (manager-only)"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/classes/create")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_edit_class_admin_403(self, client, admin_user):
+        """Admin cannot edit classes (manager-only)"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/classes/1/edit")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_edit_class_manager_404(self, client, manager_user, test_db, sample_kindergarten):
+        """Manager gets 404 for non-existent class"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/classes/99999/edit")
+        assert response.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_edit_class_manager_wrong_kg_403(self, client, manager_user, test_db, sample_kindergarten):
+        """Manager gets 403 for class in another kindergarten"""
+        other_kg = models.Kindergarten(
+            name_ar="روضة ثالثة",
+            name_en="Third KG",
+            license_number="THIRD001",
+            governorate="Amman",
+            city="Amman",
+            area="Amman Center",
+            address_line="Third St",
+            contact_phone="+96222000003",
+            status=models.KindergartenStatus.ACTIVE
+        )
+        test_db.add(other_kg)
+        test_db.commit()
+        test_db.refresh(other_kg)
+        cls = models.Class(
+            name_ar="فصل أ",
+            name_en="Class A",
+            class_code="CLSA001",
+            kindergarten_id=other_kg.id,
+            age_group="AGE_2_4",
+            capacity_total=10,
+            min_age_months=24,
+            max_age_months=48,
+            is_active=True
+        )
+        test_db.add(cls)
+        test_db.commit()
+        test_db.refresh(cls)
+
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get(f"/classes/{cls.id}/edit")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Enrollments — PARENT redirect, SUPERVISOR 403 (lines 413, 423)
+    # ------------------------------------------------------------------
+
+    def test_enrollments_list_parent_redirect(self, client, parent_user):
+        """Parent redirected from /enrollments to parent enrollments"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/enrollments", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/parent/enrollments" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    def test_enrollment_create_supervisor_403(self, client, supervisor_user):
+        """Supervisor cannot access enrollment create page"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get("/enrollments/create")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_enrollment_create_parent(self, client, parent_user, test_db):
+        """Parent can access enrollment create page"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/enrollments/create")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_enrollment_view_404(self, client, admin_user):
+        """Enrollment view returns 404 for missing enrollment"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/enrollments/99999")
+        assert response.status_code == 404
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Attendance history — PARENT redirect, non-PARENT context (lines 562, 566-605)
+    # ------------------------------------------------------------------
+
+    def test_attendance_history_parent_redirects(self, client, parent_user):
+        """Parent is redirected from attendance history"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/attendance/history", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/parent/dashboard" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    def test_attendance_history_manager(self, client, manager_user, test_db, sample_kindergarten):
+        """Manager can access attendance history"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/attendance/history")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_attendance_history_manager_no_kg_403(self, client, test_db):
+        """Manager without kindergarten gets 403 on attendance history"""
+        user = models.User(
+            id=9002,
+            username="mgr_nokg",
+            email="mgr_nokg@test.com",
+            hashed_password="x",
+            role=models.UserRole.MANAGER,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=None
+        )
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: user
+        response = client.get("/attendance/history")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Reports — PARENT redirect (lines 615, 622)
+    # ------------------------------------------------------------------
+
+    def test_reports_list_parent_redirect(self, client, parent_user):
+        """Parent is redirected away from /reports"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/reports", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    def test_reports_create_parent_redirect(self, client, parent_user):
+        """Parent is redirected away from /reports/create"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/reports/create", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # KPI / Tasks / Safety — PARENT redirects (lines 654, 685, 697)
+    # ------------------------------------------------------------------
+
+    def test_kpi_dashboard_parent_redirect(self, client, parent_user):
+        """Parent is redirected from KPI dashboard"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/kpi/dashboard", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    def test_tasks_parent_redirect(self, client, parent_user):
+        """Parent is redirected from /tasks"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/tasks", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    def test_safety_parent_redirect(self, client, parent_user):
+        """Parent is redirected from /safety"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/safety", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Safety incidents/create — ADMIN redirect, non-staff redirect (lines 706-708)
+    # ------------------------------------------------------------------
+
+    def test_create_safety_incident_admin_redirect(self, client, admin_user):
+        """Admin is redirected to daily-reports from safety incidents/new"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/safety/incidents/new", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/daily-reports" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    def test_create_safety_incident_parent_redirect(self, client, parent_user):
+        """Parent is redirected from safety incidents/new"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/safety/incidents/new", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Attendance main — PARENT redirect (lines 721-723)
+    # ------------------------------------------------------------------
+
+    def test_attendance_main_parent_redirect(self, client, parent_user):
+        """Parent is redirected from /attendance to absence-requests"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/attendance", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/absence-requests" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Attendance daily — PARENT redirect, MANAGER no-kg 403 (lines 738, 745)
+    # ------------------------------------------------------------------
+
+    def test_attendance_daily_parent_redirect(self, client, parent_user):
+        """Parent is redirected from /attendance/daily"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/attendance/daily", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/absence-requests" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    def test_attendance_daily_manager_no_kg_403(self, client, test_db):
+        """Manager without kindergarten gets 403 on daily attendance"""
+        user = models.User(
+            id=9003,
+            username="mgr_nokg2",
+            email="mgr_nokg2@test.com",
+            hashed_password="x",
+            role=models.UserRole.MANAGER,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=None
+        )
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: user
+        response = client.get("/attendance/daily")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Attendance check-in — MANAGER no-kg 403 (line 792)
+    # ------------------------------------------------------------------
+
+    def test_attendance_check_in_manager_no_kg_403(self, client, test_db):
+        """Manager without kindergarten gets 403 on check-in page"""
+        user = models.User(
+            id=9004,
+            username="mgr_nokg3",
+            email="mgr_nokg3@test.com",
+            hashed_password="x",
+            role=models.UserRole.MANAGER,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=None
+        )
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: user
+        response = client.get("/attendance/check-in")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Daily reports — non-ADMIN gets reports/list, daily-reports/create MANAGER (lines 843, 856)
+    # ------------------------------------------------------------------
+
+    def test_daily_reports_manager_gets_list(self, client, manager_user):
+        """Non-admin (manager) gets reports/list template"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/daily-reports")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_create_daily_report_manager(self, client, manager_user):
+        """Manager can access daily-reports/create"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/daily-reports/create")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Incidents create — non-staff redirect (line 881)
+    # ------------------------------------------------------------------
+
+    def test_incidents_create_parent_redirect(self, client, parent_user):
+        """Parent is redirected from /incidents/create"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/incidents/create", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Profile — PARENT redirect (line 919)
+    # ------------------------------------------------------------------
+
+    def test_profile_parent_redirect(self, client, parent_user):
+        """Parent is redirected from /profile to /parent/profile"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/profile", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/parent/profile" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # View class — MANAGER/SUPERVISOR wrong-KG 403 (lines 949-950)
+    # ------------------------------------------------------------------
+
+    def test_view_class_manager_wrong_kg_403(self, client, test_db, manager_user, sample_kindergarten):
+        """Manager gets 403 for class in another kindergarten"""
+        other_kg = models.Kindergarten(
+            name_ar="روضة رابعة",
+            name_en="Fourth KG",
+            license_number="FOUR001",
+            governorate="Amman",
+            city="Amman",
+            area="Amman West",
+            address_line="Four St",
+            contact_phone="+96222000004",
+            status=models.KindergartenStatus.ACTIVE
+        )
+        test_db.add(other_kg)
+        test_db.commit()
+        test_db.refresh(other_kg)
+        cls = models.Class(
+            name_ar="فصل ب",
+            name_en="Class B",
+            class_code="CLSB001",
+            kindergarten_id=other_kg.id,
+            age_group="AGE_2_4",
+            capacity_total=10,
+            min_age_months=24,
+            max_age_months=48,
+            is_active=True
+        )
+        test_db.add(cls)
+        test_db.commit()
+        test_db.refresh(cls)
+
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get(f"/classes/{cls.id}")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Children list — PARENT redirect / non-parent redirect (lines 957-961)
+    # ------------------------------------------------------------------
+
+    def test_children_list_parent_redirect(self, client, parent_user):
+        """Parent redirected to /parent/children"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/children", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/parent/children" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    def test_children_list_manager_redirect(self, client, manager_user):
+        """Manager redirected to /dashboard from /children"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/children", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/dashboard" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # View child — 404, PARENT access control, MANAGER scoped (lines 970-984)
+    # ------------------------------------------------------------------
+
+    def test_view_child_404(self, client, admin_user):
+        """Returns 404 for non-existent child"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/children/99999")
+        assert response.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_view_child_parent_wrong_child_403(self, client, parent_user, test_db):
+        """Parent cannot view another parent's child"""
+        from auth import get_password_hash as _gph
+        other_user = models.User(
+            username="other_parent_u",
+            email="other_parent_u@test.com",
+            hashed_password=_gph("Test123!"),
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE
+        )
+        test_db.add(other_user)
+        test_db.commit()
+        test_db.refresh(other_user)
+        other_profile = models.ParentProfile(
+            user_id=other_user.id,
+            first_name="Other",
+            last_name="Parent",
+            phone_number="+962799000001",
+            gender=models.Gender.FEMALE,
+            nationality="Jordanian",
+            national_id="999888777",
+            home_governorate="Amman",
+            home_city="Amman",
+            home_area="Test",
+            home_address_line="Test",
+            correspondence_preference=True
+        )
+        test_db.add(other_profile)
+        test_db.commit()
+        test_db.refresh(other_profile)
+        child = models.Child(
+            first_name="Other",
+            last_name="Child",
+            date_of_birth=date(2024, 1, 1),
+            gender=models.Gender.MALE,
+            parent_id=other_profile.id,
+            father_name="Other Father",
+            mother_first_name="Mother",
+            mother_last_name="Name",
+            mother_nationality="Jordanian",
+            mother_national_id="111222333"
+        )
+        test_db.add(child)
+        test_db.commit()
+        test_db.refresh(child)
+
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get(f"/children/{child.id}")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_view_child_manager_not_enrolled_403(self, client, manager_user, test_db, sample_kindergarten):
+        """Manager gets 403 for child not enrolled in their kindergarten"""
+        from auth import get_password_hash as _gph
+        other_user2 = models.User(
+            username="other_parent_u2",
+            email="other_parent_u2@test.com",
+            hashed_password=_gph("Test123!"),
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE
+        )
+        test_db.add(other_user2)
+        test_db.commit()
+        test_db.refresh(other_user2)
+        other_profile = models.ParentProfile(
+            user_id=other_user2.id,
+            first_name="Other2",
+            last_name="Parent2",
+            phone_number="+962799000002",
+            gender=models.Gender.FEMALE,
+            nationality="Jordanian",
+            national_id="999888778",
+            home_governorate="Amman",
+            home_city="Amman",
+            home_area="Test2",
+            home_address_line="Test2",
+            correspondence_preference=True
+        )
+        test_db.add(other_profile)
+        test_db.commit()
+        test_db.refresh(other_profile)
+        child = models.Child(
+            first_name="Unenrolled",
+            last_name="Child",
+            date_of_birth=date(2024, 6, 1),
+            gender=models.Gender.MALE,
+            parent_id=other_profile.id,
+            father_name="Unenrolled Father",
+            mother_first_name="Mother2",
+            mother_last_name="Name2",
+            mother_nationality="Jordanian",
+            mother_national_id="111222334"
+        )
+        test_db.add(child)
+        test_db.commit()
+        test_db.refresh(child)
+
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get(f"/children/{child.id}")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # my-reports — non-PARENT redirect, date parse, no parent profile (lines 1003-1018)
+    # ------------------------------------------------------------------
+
+    def test_my_reports_admin_redirect(self, client, admin_user):
+        """Non-parent is redirected from /my-reports"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/my-reports", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/dashboard" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    def test_my_reports_invalid_date_falls_back(self, client, parent_user, test_db):
+        """Invalid date param falls back to today"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/my-reports?date=not-a-date")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_my_reports_no_parent_profile(self, client, test_db):
+        """Parent with no profile gets empty list"""
+        bare_parent = models.User(
+            id=9010,
+            username="bareparent",
+            email="bareparent@test.com",
+            hashed_password="x",
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE
+        )
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: bare_parent
+        response = client.get("/my-reports")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_my_reports_child_id_filter_forbidden(self, client, parent_user, test_db):
+        """Parent cannot access reports for another child via child_id filter"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/my-reports?child_id=99999")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_my_reports_valid_parent(self, client, parent_user, test_db):
+        """Parent with profile gets reports list (even if empty)"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/my-reports")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Admin user management — non-admin/manager redirect (lines 1097, 1103, 1122)
+    # ------------------------------------------------------------------
+
+    def test_admin_users_list_supervisor_redirect(self, client, supervisor_user):
+        """Supervisor is redirected from /admin/users"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get("/admin/users", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    def test_admin_users_create_supervisor_redirect(self, client, supervisor_user):
+        """Supervisor is redirected from /admin/users/create"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get("/admin/users/create", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    def test_admin_users_create_manager(self, client, manager_user, test_db, sample_kindergarten):
+        """Manager can access /admin/users/create (scoped to their KG)"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/admin/users/create")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_admin_users_edit_supervisor_redirect(self, client, supervisor_user, test_db, admin_user):
+        """Supervisor is redirected from user edit page"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get(f"/admin/users/{admin_user.id}/edit", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    def test_admin_users_edit_404(self, client, admin_user):
+        """Edit user page returns 404 for non-existent user"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/admin/users/99999/edit")
+        assert response.status_code == 404
+        app.dependency_overrides.clear()
+
+    def test_admin_users_edit_manager_wrong_kg_redirect(self, client, manager_user, test_db, admin_user):
+        """Manager cannot edit user from another kindergarten"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get(f"/admin/users/{admin_user.id}/edit", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    def test_admin_users_edit_manager_own_kg(self, client, manager_user, test_db, sample_kindergarten):
+        """Manager can edit user in their own kindergarten"""
+        other_user = models.User(
+            username="mgr_staff",
+            email="mgr_staff@test.com",
+            hashed_password="x",
+            role=models.UserRole.SUPERVISOR,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=sample_kindergarten.id
+        )
+        test_db.add(other_user)
+        test_db.commit()
+        test_db.refresh(other_user)
+
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get(f"/admin/users/{other_user.id}/edit")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Admin import pages — non-admin redirect (lines 1165, 1177)
+    # ------------------------------------------------------------------
+
+    def test_import_kindergartens_non_admin_redirect(self, client, manager_user):
+        """Non-admin redirected from import kindergartens"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/admin/import-kindergartens", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    def test_imported_kindergartens_supervisor_redirect(self, client, supervisor_user):
+        """Supervisor redirected from imported kindergartens"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get("/admin/imported-kindergartens", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Admin dashboard non-admin redirect (lines 1198-1200)
+    # ------------------------------------------------------------------
+
+    def test_admin_dashboard_manager_redirect(self, client, manager_user):
+        """Manager is redirected from admin dashboard"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/admin/dashboard", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/dashboard" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Absence requests — PARENT with children (lines 1357-1370)
+    # ------------------------------------------------------------------
+
+    def test_absence_requests_parent_with_children(self, client, parent_user, test_db):
+        """Parent can view absence requests page with their children"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/absence-requests")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_absence_requests_non_parent_redirect(self, client, manager_user):
+        """Non-parent redirected from /absence-requests"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/absence-requests", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Contact messages — search/status filters (lines 1478-1491)
+    # ------------------------------------------------------------------
+
+    def test_contact_messages_with_search_and_open_filter(self, client, admin_user, test_db):
+        """Admin can filter contact messages by search term and open status"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/admin/contact-messages?q=test&status_filter=open")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_contact_messages_with_resolved_filter(self, client, admin_user, test_db):
+        """Admin can filter contact messages by resolved status"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/admin/contact-messages?status_filter=resolved")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Admin dashboard — admin renders template (line 1200)
+    # ------------------------------------------------------------------
+
+    def test_admin_dashboard_admin_renders(self, client, admin_user):
+        """Admin can access the admin dashboard"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/admin/dashboard")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Admin sidebar i18n — every visible label must switch with ui_lang,
+    # not stay hardcoded in English (regression guard)
+    # ------------------------------------------------------------------
+
+    def test_admin_sidebar_is_arabic_by_default(self, client, admin_user):
+        """Default (no ?lang= override) admin sidebar renders in Arabic"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/admin/dashboard")
+        assert response.status_code == 200
+        page = response.text
+        sidebar = page[page.index('id="admin-sidebar"'):page.index("</aside>")]
+        sidebar_no_comments = re.sub(r"<!--.*?-->", "", sidebar, flags=re.DOTALL)
+        assert "لوحة التحكم" in sidebar
+        assert "المستخدمون" in sidebar
+        assert "إدارة البيانات" in sidebar
+        assert "انتحال الهوية" in sidebar
+        # None of the old hardcoded English group headers should remain
+        # (comments are stripped since the section dividers keep the English
+        # name for readability — only visible text must follow ui_lang)
+        assert "User Management" not in sidebar_no_comments
+        assert "Analytics &amp; Reports" not in sidebar_no_comments
+        assert "Governance &amp; Compliance" not in sidebar_no_comments
+        assert "Security &amp; Audit" not in sidebar_no_comments
+        app.dependency_overrides.clear()
+
+    def test_admin_sidebar_switches_to_english(self, client, admin_user):
+        """?lang=en renders the admin sidebar fully in English"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/admin/dashboard?lang=en")
+        assert response.status_code == 200
+        page = response.text
+        sidebar = page[page.index('id="admin-sidebar"'):page.index("</aside>")]
+        assert "Users" in sidebar
+        assert "Data Management" in sidebar
+        assert "Impersonation" in sidebar
+        assert "Jordan Heat Map" in sidebar
+        # No leftover Arabic text should appear when English is selected
+        assert "لوحة التحكم" not in sidebar
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Create safety incident — supervisor and manager get form (line 708)
+    # ------------------------------------------------------------------
+
+    def test_create_safety_incident_supervisor(self, client, supervisor_user):
+        """Supervisor can access safety incidents/new"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get("/safety/incidents/new")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Attendance main — manager redirects to /attendance/daily (line 723)
+    # ------------------------------------------------------------------
+
+    def test_attendance_main_manager_redirect_to_daily(self, client, manager_user):
+        """Manager is redirected from /attendance to /attendance/daily"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get("/attendance", follow_redirects=False)
+        assert response.status_code in (302, 307)
+        assert "/attendance/daily" in response.headers.get("location", "")
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Attendance daily/check-in — SUPERVISOR with assignments (lines 758-770, 806-818)
+    # ------------------------------------------------------------------
+
+    def test_attendance_daily_supervisor_403(self, client, supervisor_user, test_db, sample_kindergarten):
+        """Supervisor is blocked from daily attendance (use check-in instead)"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get("/attendance/daily")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    def test_attendance_check_in_supervisor(self, client, supervisor_user, test_db, sample_kindergarten):
+        """Supervisor can access check-in page (gets their class assignments)"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: supervisor_user
+        response = client.get("/attendance/check-in")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Attendance history — manager whose KG doesn't exist in DB (line 597)
+    # ------------------------------------------------------------------
+
+    def test_attendance_history_manager_kg_missing(self, client, test_db):
+        """Manager whose kindergarten_id points to a missing record gets 403"""
+        user = models.User(
+            id=9020,
+            username="mgr_badkg",
+            email="mgr_badkg@test.com",
+            hashed_password="x",
+            role=models.UserRole.MANAGER,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=99999
+        )
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: user
+        response = client.get("/attendance/history")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Edit class — manager success path (lines 395-396)
+    # ------------------------------------------------------------------
+
+    def test_edit_class_manager_own_kg(self, client, manager_user, test_db, sample_kindergarten):
+        """Manager can access edit page for a class in their own KG"""
+        cls = models.Class(
+            name_ar="فصل خاص",
+            name_en="Own Class",
+            class_code="OWNC001",
+            kindergarten_id=sample_kindergarten.id,
+            age_group="AGE_2_4",
+            capacity_total=10,
+            min_age_months=24,
+            max_age_months=48,
+            is_active=True
+        )
+        test_db.add(cls)
+        test_db.commit()
+        test_db.refresh(cls)
+
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: manager_user
+        response = client.get(f"/classes/{cls.id}/edit")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Enrollment create — MANAGER with no kindergarten (line 462)
+    # ------------------------------------------------------------------
+
+    def test_enrollment_create_manager_no_kg(self, client, test_db):
+        """Manager with no kindergarten_id gets empty enrollment form"""
+        user = models.User(
+            id=9021,
+            username="mgr_nokg_enroll",
+            email="mgr_nokg_enroll@test.com",
+            hashed_password="x",
+            role=models.UserRole.MANAGER,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=None
+        )
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: user
+        response = client.get("/enrollments/create")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # my-reports — valid child filter (lines 1044, 1048-1066)
+    # ------------------------------------------------------------------
+
+    def test_my_reports_valid_child_filter_own_child(self, client, parent_user, test_db):
+        """Parent can filter /my-reports by their own child_id"""
+        from conftest import sample_child as _sample_child
+        parent_profile = test_db.query(models.ParentProfile).filter(
+            models.ParentProfile.user_id == parent_user.id
+        ).first()
+        if not parent_profile:
+            pytest.skip("No parent profile found for parent_user")
+        child_qs = test_db.query(models.Child).filter(
+            models.Child.parent_id == parent_profile.id
+        ).all()
+        if not child_qs:
+            pytest.skip("No children found for parent_user")
+        child_id = child_qs[0].id
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get(f"/my-reports?child_id={child_id}")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    def test_my_reports_invalid_child_id_format(self, client, parent_user, test_db):
+        """Non-integer child_id uses -1 as fallback and returns 403"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: parent_user
+        response = client.get("/my-reports?child_id=notanumber")
+        assert response.status_code == 403
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # my-reports — parent with a real child in DB (lines 1044, 1048-1066)
+    # ------------------------------------------------------------------
+
+    def test_my_reports_parent_with_child(self, client, test_db):
+        """Parent with a child in DB can filter reports by that child_id"""
+        from auth import get_password_hash as _gph
+        pr_user = models.User(
+            username="rpt_parent",
+            email="rpt_parent@test.com",
+            hashed_password=_gph("Test123!"),
+            role=models.UserRole.PARENT,
+            status=models.UserStatus.ACTIVE
+        )
+        test_db.add(pr_user)
+        test_db.commit()
+        test_db.refresh(pr_user)
+        profile = models.ParentProfile(
+            user_id=pr_user.id,
+            first_name="Rpt",
+            last_name="Parent",
+            phone_number="+962799100001",
+            gender=models.Gender.MALE,
+            nationality="Jordanian",
+            national_id="RPT100001",
+            home_governorate="Amman",
+            home_city="Amman",
+            home_area="Test",
+            home_address_line="Test",
+            correspondence_preference=True
+        )
+        test_db.add(profile)
+        test_db.commit()
+        test_db.refresh(profile)
+        child = models.Child(
+            first_name="Rpt",
+            last_name="Child",
+            date_of_birth=date(2024, 3, 1),
+            gender=models.Gender.MALE,
+            parent_id=profile.id,
+            father_name="Rpt Father",
+            mother_first_name="Rpt",
+            mother_last_name="Mother",
+            mother_nationality="Jordanian",
+            mother_national_id="RPT200001"
+        )
+        test_db.add(child)
+        test_db.commit()
+        test_db.refresh(child)
+
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: pr_user
+        # Valid own child → covers lines 1044 and 1048-1066
+        response = client.get(f"/my-reports?child_id={child.id}")
+        assert response.status_code == 200
+        # No-filter path also exercises 1048-1066
+        response2 = client.get("/my-reports")
+        assert response2.status_code == 200
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Kindergartens — manager with no kindergarten_id (lines 258-259)
+    # ------------------------------------------------------------------
+
+    def test_kindergartens_manager_no_kg_id(self, client, test_db):
+        """Manager with no kindergarten_id gets empty list"""
+        user = models.User(
+            id=9030,
+            username="mgr_nokg_kgs",
+            email="mgr_nokg_kgs@test.com",
+            hashed_password="x",
+            role=models.UserRole.MANAGER,
+            status=models.UserStatus.ACTIVE,
+            kindergarten_id=None
+        )
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: user
+        response = client.get("/kindergartens")
+        assert response.status_code == 200
+        app.dependency_overrides.clear()
+
+    # ------------------------------------------------------------------
+    # Attendance check-in — admin gets else branch (line 818)
+    # ------------------------------------------------------------------
+
+    def test_attendance_check_in_admin(self, client, admin_user, test_db):
+        """Admin accesses check-in page (else branch for non-manager/supervisor)"""
+        app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
+        response = client.get("/attendance/check-in")
+        assert response.status_code == 200
         app.dependency_overrides.clear()

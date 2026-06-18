@@ -41,14 +41,16 @@ def _security_csp() -> str:
     return "; ".join(
         [
             "default-src 'self'",
+            "object-src 'none'",
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
             "font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com",
             "img-src 'self' data: blob:",
             f"connect-src {' '.join(connect_sources)}",
+            "worker-src 'self' blob:",
         ]
     )
 
@@ -66,17 +68,52 @@ async def request_timeout_middleware(request: Request, call_next: Callable):
     return response
 
 
+_ADMIN_RATE_LIMIT_WINDOW = 60  # seconds (matches slowapi default window)
+
+
 async def security_headers_middleware(request: Request, call_next: Callable):
-    """Attach baseline browser security headers to every response."""
+    """Attach baseline browser security headers and rate-limit info to every response."""
+    import time
+
+    start = time.monotonic()
     response = await call_next(request)
+    duration_ms = int((time.monotonic() - start) * 1000)
+
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # The password-reset page carries a single-use token in its URL query string;
+    # use the strictest Referrer-Policy there so the token can never leak to a
+    # third-party resource via the Referer header.
+    if request.url.path == "/reset-password":
+        response.headers["Referrer-Policy"] = "no-referrer"
+    else:
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Content-Security-Policy"] = _security_csp()
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
     if settings.ENVIRONMENT.lower() == "production":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+    # Expose rate-limit context on admin API responses so clients can back off proactively.
+    # The actual counters live in slowapi; we surface the configured ceiling and window.
+    # Write methods are governed by RATE_LIMIT_ADMIN_WRITE, reads by RATE_LIMIT_ADMIN_READ,
+    # so the advertised ceiling must match the method to avoid misleading clients.
+    path = request.url.path
+    if path.startswith("/api/admin"):
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            limit_str = getattr(settings, "RATE_LIMIT_ADMIN_WRITE", "30/minute")
+            default_ceiling = 30
+        else:
+            limit_str = getattr(settings, "RATE_LIMIT_ADMIN_READ", "60/minute")
+            default_ceiling = 60
+        try:
+            ceiling = int(limit_str.split("/")[0])
+        except (ValueError, IndexError):
+            ceiling = default_ceiling
+        response.headers.setdefault("X-RateLimit-Limit", str(ceiling))
+        response.headers.setdefault("X-RateLimit-Window", str(_ADMIN_RATE_LIMIT_WINDOW))
+
+    response.headers["X-Response-Time-Ms"] = str(duration_ms)
     return response
 
 

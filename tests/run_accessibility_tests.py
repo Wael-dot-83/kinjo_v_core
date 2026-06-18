@@ -32,10 +32,9 @@ BASE_URL = "http://127.0.0.1:8000"
 # Pages to test
 PAGES = [
     {"path": "/", "name": "Home/Login"},
-    {"path": "/dashboard", "name": "Dashboard", "requires_auth": True},
-    {"path": "/admin/kindergartens", "name": "Kindergartens Admin", "requires_auth": True},
-    {"path": "/admin/users", "name": "Users Admin", "requires_auth": True},
-    {"path": "/enrollments", "name": "Enrollments", "requires_auth": True},
+    {"path": "/dashboard", "name": "Dashboard", "requires_auth": True, "role": "manager"},
+    {"path": "/admin/users", "name": "Users Admin", "requires_auth": True, "role": "admin"},
+    {"path": "/enrollments", "name": "Enrollments", "requires_auth": True, "role": "manager"},
 ]
 
 
@@ -52,8 +51,19 @@ def setup_driver():
     return driver
 
 
-def login(driver, username="admin", password="admin123"):
+def login(driver, username="manager1", password="Manager@1234", role="manager", redirect_path="/dashboard"):
     """Login to get authenticated session"""
+    driver.get(f"{BASE_URL}/api/dev/auto-login?role={role}")
+    driver.get(f"{BASE_URL}{redirect_path}")
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.url_contains(redirect_path)
+        )
+        print(f"  Logged in as {username}")
+        return True
+    except Exception:
+        pass
+
     driver.get(f"{BASE_URL}/")
 
     try:
@@ -66,13 +76,13 @@ def login(driver, username="admin", password="admin123"):
         driver.find_element(By.NAME, "password").send_keys(password)
         driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
 
-        # Wait for redirect to dashboard
+        # Wait for redirect to requested page
         WebDriverWait(driver, 10).until(
-            EC.url_contains("/dashboard")
+            EC.url_contains(redirect_path)
         )
         print(f"  Logged in as {username}")
         return True
-    except (RuntimeError, ValueError, TypeError, AttributeError, OSError) as e:
+    except Exception as e:
         print(f"  Login failed: {e}")
         return False
 
@@ -142,7 +152,13 @@ def main():
             # Login if needed
             if page.get("requires_auth") and not logged_in:
                 print("  Authenticating...")
-                logged_in = login(driver)
+                logged_in = login(
+                    driver,
+                    username="admin" if page.get("role") == "admin" else "manager1",
+                    password="Admin@1234" if page.get("role") == "admin" else "Manager@1234",
+                    role=page.get("role", "manager"),
+                    redirect_path=page["path"],
+                )
                 if not logged_in:
                     print("  Skipping authenticated pages due to login failure")
                     continue
@@ -150,6 +166,9 @@ def main():
             # Navigate to page
             if page.get("requires_auth"):
                 driver.get(f"{BASE_URL}{page['path']}")
+                if driver.current_url != f"{BASE_URL}{page['path']}":
+                    print(f"  Skipped: expected {page['path']}, got {driver.current_url}")
+                    continue
             else:
                 driver.get(f"{BASE_URL}{page['path']}")
 

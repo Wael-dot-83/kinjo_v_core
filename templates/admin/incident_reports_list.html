@@ -1,30 +1,24 @@
-﻿{% extends 'base.html' %}
+﻿{% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %} — KinJo{% endblock %}
 
-{% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <h1 class="page-header-title">
-            <i class="bi bi-exclamation-triangle text-warning me-2" aria-hidden="true"></i>
-            {% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}
-        </h1>
-        <nav aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</a></li>
-                <li class="breadcrumb-item active">{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}</li>
-            </ol>
-        </nav>
-    </div>
-    <div class="page-header-actions">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
-            <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
-        </button>
-    </div>
-</div>
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}</span>
 {% endblock %}
 
 {% block content %}
+<div class="admin-page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="admin-page-title mb-0">
+    <i class="bi bi-exclamation-triangle text-warning me-2" aria-hidden="true"></i>
+    {% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}
+  </h1>
+  <button class="admin-btn admin-btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
+    <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
+  </button>
+</div>
+
 <div class="row g-4">
     <!-- Filters -->
     <div class="col-12">
@@ -73,8 +67,7 @@
         <div class="card shadow-sm">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">{% if ui_lang == 'en' %}Reports List{% else %}قائمة التقارير{% endif %}</h5>
-                <div id="loadingSpinner" class="spinner-border spinner-border-sm text-primary" role="status"
-                    style="display: none;">
+                <div id="loadingSpinner" class="spinner-border spinner-border-sm text-primary d-none" role="status">
                     <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                 </div>
             </div>
@@ -82,7 +75,7 @@
                 <div id="reportsTableContainer">
                     <!-- Reports will be loaded here -->
                 </div>
-                <div id="emptyState" class="text-center py-5" style="display: none;">
+                <div id="emptyState" class="text-center py-5 d-none">
                     <i class="bi bi-file-earmark-x display-4 text-muted mb-3"></i>
                     <h5 class="text-muted">{% if ui_lang == 'en' %}No reports{% else %}لا توجد تقارير{% endif %}</h5>
                     <p class="text-muted">{% if ui_lang == 'en' %}No reports found matching the search criteria.{% else %}لم يتم العثور على أي تقارير تطابق معايير البحث.{% endif %}</p>
@@ -111,13 +104,13 @@
                             <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
                         </select>
                     </div>
-                    <div class="mb-3" id="kindergartenSelectDiv" style="display: none;">
+                    <div class="mb-3 d-none" id="kindergartenSelectDiv">
                         <label for="reportKindergarten" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
                         <select class="form-select" id="reportKindergarten">
                             <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
                         </select>
                     </div>
-                    <div class="mb-3" id="governorateSelectDiv" style="display: none;">
+                    <div class="mb-3 d-none" id="governorateSelectDiv">
                         <label for="reportGovernorate" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
                         <select class="form-select" id="reportGovernorate">
                             <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
@@ -133,7 +126,7 @@
                             <option value="annual">{% if ui_lang == 'en' %}Current Year{% else %}السنة الحالية{% endif %}</option>
                         </select>
                     </div>
-                    <div class="mb-3" id="yearSelectDiv" style="display: none;">
+                    <div class="mb-3 d-none" id="yearSelectDiv">
                         <label for="reportYear" class="form-label">{% if ui_lang == 'en' %}Year{% else %}السنة{% endif %}</label>
                         <select class="form-select" id="reportYear">
                             <option value="">{% if ui_lang == 'en' %}Select Year{% else %}اختر السنة{% endif %}</option>
@@ -173,15 +166,15 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
 
-    // Global variables
     let currentReportId = null;
 
-    // Load reports on page load
     document.addEventListener('DOMContentLoaded', function () {
         loadReports();
         setupFormHandlers();
@@ -189,17 +182,16 @@
         loadKindergartens();
     });
 
-    // Setup form handlers
     function setupFormHandlers() {
         document.getElementById('reportScope').addEventListener('change', function () {
             const scope = this.value;
-            document.getElementById('kindergartenSelectDiv').style.display = scope === 'KINDERGARTEN' ? 'block' : 'none';
-            document.getElementById('governorateSelectDiv').style.display = scope === 'GOVERNORATE' ? 'block' : 'none';
+            document.getElementById('kindergartenSelectDiv').classList.toggle('d-none', scope !== 'KINDERGARTEN');
+            document.getElementById('governorateSelectDiv').classList.toggle('d-none', scope !== 'GOVERNORATE');
         });
 
         document.getElementById('reportPeriod').addEventListener('change', function () {
             const period = this.value;
-            document.getElementById('yearSelectDiv').style.display = period === 'annual' ? 'block' : 'none';
+            document.getElementById('yearSelectDiv').classList.toggle('d-none', period !== 'annual');
             if (period === 'annual') {
                 populateYearSelect();
             }
@@ -212,13 +204,8 @@
         });
     }
 
-    // Load governorates
     async function loadGovernorates() {
         try {
-            const response = await fetch('/api/kindergartens?limit=1'); // Just to get governorates
-            if (!response.ok) return;
-            const data = await response.json();
-            // This is a simplified version - in real implementation, get unique governorates
             const governorates = ['عمان', 'إربد', 'الزرقاء', 'المفرق', 'جرش', 'عجلون', 'الكرك', 'الطفيلة', 'معان', 'العقبة', 'مادبا', 'البلقاء'];
             const selects = ['reportGovernorate', 'governorateFilter'];
             selects.forEach(selectId => {
@@ -237,7 +224,6 @@
         }
     }
 
-    // Load kindergartens
     async function loadKindergartens() {
         try {
             const response = await fetch('/api/kindergartens?limit=200');
@@ -261,7 +247,6 @@
         }
     }
 
-    // Populate year select
     function populateYearSelect() {
         const select = document.getElementById('reportYear');
         select.innerHTML = '<option value="">' + T('اختر السنة', 'Select Year') + '</option>';
@@ -274,13 +259,12 @@
         }
     }
 
-    // Load reports
     async function loadReports() {
         const loadingSpinner = document.getElementById('loadingSpinner');
         const reportsContainer = document.getElementById('reportsTableContainer');
         const emptyState = document.getElementById('emptyState');
 
-        loadingSpinner.style.display = 'inline-block';
+        loadingSpinner.classList.remove('d-none');
         reportsContainer.innerHTML = '';
 
         try {
@@ -300,22 +284,21 @@
             const reports = data.reports || [];
 
             if (reports.length === 0) {
-                emptyState.style.display = 'block';
+                emptyState.classList.remove('d-none');
                 return;
             }
 
-            emptyState.style.display = 'none';
+            emptyState.classList.add('d-none');
             renderReportsTable(reports);
 
         } catch (error) {
             console.error('Error loading reports:', error);
             reportsContainer.innerHTML = '<div class="alert alert-danger">' + T('حدث خطأ في تحميل التقارير', 'Error loading reports') + '</div>';
         } finally {
-            loadingSpinner.style.display = 'none';
+            loadingSpinner.classList.add('d-none');
         }
     }
 
-    // Render reports table
     function renderReportsTable(reports) {
         const container = document.getElementById('reportsTableContainer');
         let html = `
@@ -356,16 +339,10 @@
         `;
         });
 
-        html += `
-                </tbody>
-            </table>
-        </div>
-    `;
-
+        html += `</tbody></table></div>`;
         container.innerHTML = html;
     }
 
-    // Get scope display name
     function getScopeDisplayName(scopeType, scopeName) {
         switch (scopeType) {
             case 'KINDERGARTEN':
@@ -379,7 +356,6 @@
         }
     }
 
-    // Reset filters
     function resetFilters() {
         document.getElementById('scopeFilter').value = '';
         document.getElementById('kindergartenFilter').value = '';
@@ -389,9 +365,7 @@
         loadReports();
     }
 
-    // Generate report
     async function generateReport() {
-        const form = document.getElementById('generateReportForm');
         const scopeType = document.getElementById('reportScope').value;
         const kindergartenId = document.getElementById('reportKindergarten').value;
         const governorate = document.getElementById('reportGovernorate').value;
@@ -402,8 +376,6 @@
             alert(T('يرجى ملء جميع الحقول المطلوبة', 'Please fill in all required fields'));
             return;
         }
-
-        // Validate scope-specific fields
         if (scopeType === 'KINDERGARTEN' && !kindergartenId) {
             alert(T('يرجى اختيار الروضة', 'Please select a kindergarten'));
             return;
@@ -434,7 +406,6 @@
 
             if (!response.ok) throw new Error('Failed to generate report');
 
-            const data = await response.json();
             alert(T('تم إنشاء التقرير بنجاح', 'Report generated successfully'));
             bootstrap.Modal.getInstance(document.getElementById('generateReportModal')).hide();
             loadReports();
@@ -445,7 +416,6 @@
         }
     }
 
-    // View report
     async function viewReport(reportId) {
         currentReportId = reportId;
         try {
@@ -462,7 +432,6 @@
         }
     }
 
-    // Render report detail
     function renderReportDetail(report) {
         const container = document.getElementById('reportDetailContent');
         const metrics = report.metrics_json || {};
@@ -497,17 +466,6 @@
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-6">
-                <h6>${T('الحوادث حسب النوع', 'Incidents by Type')}</h6>
-                <div id="typeChart"></div>
-            </div>
-            <div class="col-md-6">
-                <h6>${T('الحوادث حسب الخطورة', 'Incidents by Severity')}</h6>
-                <div id="severityChart"></div>
-            </div>
-        </div>
-
         ${metrics.per_kindergarten ? `
         <div class="mt-4">
             <h6>${T('الحوادث حسب الروضة', 'Incidents by Kindergarten')}</h6>
@@ -533,7 +491,6 @@
         container.innerHTML = html;
     }
 
-    // Export report
     async function exportReport(reportId = null) {
         const id = reportId || currentReportId;
         if (!id) return;
@@ -568,10 +525,5 @@
         max-height: 600px;
         overflow-y: auto;
     }
-
-    .badge {
-        font-size: 0.75em;
-    }
 </style>
 {% endblock %}
-<parameter name="filePath">e:\KInjov2\templates\admin\incident_reports_list.html

@@ -1,27 +1,72 @@
 <!-- Footer -->
-<footer class="footer mt-auto py-3 border-top bg-surface-muted">
+<footer class="footer mt-auto py-4 border-top bg-surface-muted">
     <div class="container-fluid">
-        <div class="row align-items-center">
-            <div class="col-md-6 text-center text-md-start">
+        <div class="row gy-3">
+            <div class="col-md-4">
+                <div class="fw-bold mb-2">KinJo</div>
+                <p class="text-muted small mb-2">
+                    {% if ui_lang == 'en' %}Kindergarten enrollment and management platform for Jordan.{% else %}منصة تسجيل وإدارة الروضات في الأردن.{% endif %}
+                </p>
+                {% if support_contact_email or support_contact_phone %}
+                <ul class="list-unstyled small text-muted mb-0">
+                    {% if support_contact_email %}
+                    <li><i class="bi bi-envelope me-1"></i><a href="mailto:{{ support_contact_email }}" class="text-muted">{{ support_contact_email }}</a></li>
+                    {% endif %}
+                    {% if support_contact_phone %}
+                    <li><i class="bi bi-telephone me-1"></i><a href="tel:{{ support_contact_phone }}" class="text-muted" dir="ltr">{{ support_contact_phone }}</a></li>
+                    {% endif %}
+                </ul>
+                {% endif %}
+            </div>
+
+            <div class="col-md-2 col-6">
+                <div class="fw-semibold small text-uppercase text-muted mb-2">{% if ui_lang == 'en' %}About{% else %}عن المنصة{% endif %}</div>
+                <ul class="list-unstyled small mb-0">
+                    <li class="mb-1"><a href="/about" class="text-muted">{% if ui_lang == 'en' %}About Us{% else %}عن كينجو{% endif %}</a></li>
+                    <li class="mb-1"><a href="/services" class="text-muted">{% if ui_lang == 'en' %}Service Guide{% else %}دليل الخدمة{% endif %}</a></li>
+                    <li class="mb-1"><a href="/faq" class="text-muted">{% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}</a></li>
+                    <li class="mb-1"><a href="/contact" class="text-muted">{% if ui_lang == 'en' %}Contact Us{% else %}اتصل بنا{% endif %}</a></li>
+                    <li><a href="/sitemap" class="text-muted">{% if ui_lang == 'en' %}Sitemap{% else %}خريطة الموقع{% endif %}</a></li>
+                </ul>
+            </div>
+
+            <div class="col-md-3 col-6">
+                <div class="fw-semibold small text-uppercase text-muted mb-2">{% if ui_lang == 'en' %}Policies{% else %}السياسات{% endif %}</div>
+                <ul class="list-unstyled small mb-0">
+                    <li class="mb-1"><a href="/privacy" class="text-muted">{% if ui_lang == 'en' %}Privacy Policy{% else %}سياسة الخصوصية{% endif %}</a></li>
+                    <li class="mb-1"><a href="/terms" class="text-muted">{% if ui_lang == 'en' %}Terms of Use{% else %}الشروط والأحكام{% endif %}</a></li>
+                    <li class="mb-1"><a href="/disclaimer" class="text-muted">{% if ui_lang == 'en' %}Disclaimer{% else %}إخلاء المسؤولية{% endif %}</a></li>
+                    <li><a href="/copyright" class="text-muted">{% if ui_lang == 'en' %}Copyright{% else %}حقوق النشر{% endif %}</a></li>
+                </ul>
+            </div>
+
+            <div class="col-md-3">
+                <div class="fw-semibold small text-uppercase text-muted mb-2">{% if ui_lang == 'en' %}Government Links{% else %}روابط حكومية{% endif %}</div>
+                <ul class="list-unstyled small mb-0">
+                    <li class="mb-1"><a href="https://www.ammanmessage.com" target="_blank" rel="noopener" class="text-muted">{% if ui_lang == 'en' %}Amman Message{% else %}رسالة عمان{% endif %}</a></li>
+                    <li class="mb-1"><a href="https://www.gam.gov.jo" target="_blank" rel="noopener" class="text-muted">{% if ui_lang == 'en' %}e-Government Portal{% else %}بوابة الحكومة الإلكترونية{% endif %}</a></li>
+                    <li><a href="https://www.ombudsman.jo" target="_blank" rel="noopener" class="text-muted">{% if ui_lang == 'en' %}Right to Obtain Information{% else %}الحق في الحصول على المعلومات{% endif %}</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <hr class="my-3">
+
+        <div class="row align-items-center gy-2">
+            <div class="col-12 col-md-6 text-center text-md-start">
                 <span class="text-muted small">
                     {% if ui_lang == 'en' %}
-                    &copy; 2026 <strong>KinJo</strong> &mdash; Kindergarten Management Platform
+                    &copy; {{ current_year | default(2026) }} <strong>KinJo</strong> &mdash; Kindergarten Management Platform
                     {% else %}
-                    &copy; 2026 <strong>KinJo</strong> &mdash; منصة إدارة الروضات
+                    &copy; {{ current_year | default(2026) }} <strong>KinJo</strong> &mdash; منصة إدارة الروضات
                     {% endif %}
                 </span>
                 <span class="text-muted small ms-2 d-none d-md-inline footer-version">v2.0</span>
             </div>
-            <div class="col-md-6 text-center text-md-end mt-2 mt-md-0">
-                <a href="/help" class="footer-link me-3">
-                    <i class="bi bi-question-circle me-1" aria-hidden="true"></i>{% if ui_lang == 'en' %}Help{% else %}المساعدة{% endif %}
-                </a>
-                <a href="/privacy" class="footer-link me-3">
-                    <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>{% if ui_lang == 'en' %}Privacy{% else %}الخصوصية{% endif %}
-                </a>
-                <a href="/terms" class="footer-link">
-                    <i class="bi bi-file-text me-1" aria-hidden="true"></i>{% if ui_lang == 'en' %}Terms{% else %}الشروط{% endif %}
-                </a>
+            <div class="col-12 col-md-6 text-center text-md-end">
+                <span class="text-muted small">
+                    {% if ui_lang == 'en' %}Best viewed in Chrome, Edge, Firefox, or Safari at 1366&times;768 resolution or higher.{% else %}يُفضّل استخدام Chrome أو Edge أو Firefox أو Safari بدقة 1366×768 أو أعلى.{% endif %}
+                </span>
             </div>
         </div>
     </div>

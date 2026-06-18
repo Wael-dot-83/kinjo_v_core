@@ -252,6 +252,9 @@
                     <div class="mb-3">
                         <label class="form-label" for="photos">{% if ui_lang == 'en' %}Photos (optional){% else %}الصور (اختياري){% endif %}</label>
                         <input type="file" class="form-control" id="photos" name="photos" multiple accept="image/*">
+                        <div class="form-text">
+                            {% if ui_lang == 'en' %}Accepted formats: JPG, PNG, WEBP. Max file size: {{ max_attachment_size_mb }} MB per file.{% else %}الصيغ المقبولة: JPG, PNG, WEBP. الحد الأقصى لحجم الملف: {{ max_attachment_size_mb }} ميغابايت لكل ملف.{% endif %}
+                        </div>
                     </div>
                 </div>
             </div>

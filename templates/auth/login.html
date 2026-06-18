@@ -604,7 +604,7 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
   }
   .auth-copyright {
     font-size: 0.78rem;
-    color: #b0bec5;
+    color: #64748b;
     margin: 0;
   }
 
@@ -1000,6 +1000,15 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
           </a>
         </div>
 
+        {% if captcha_enabled %}
+        <div class="mb-3 af-anim af-delay3">
+          <div
+            class="{{ 'g-recaptcha' if captcha_provider == 'recaptcha' else 'h-captcha' }}"
+            data-sitekey="{{ captcha_site_key }}"
+          ></div>
+        </div>
+        {% endif %}
+
         {# ── Submit button ── #}
         <button
           type="submit"
@@ -1050,22 +1059,6 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
       class="auth-footer"
       aria-label="{% if ui_lang == 'en' %}Footer links{% else %}روابط التذييل{% endif %}"
     >
-      <nav
-        class="auth-footer-nav"
-        aria-label="{% if ui_lang == 'en' %}Help and legal links{% else %}روابط المساعدة والقانونية{% endif %}"
-      >
-        <a href="/help"
-          >{% if ui_lang == 'en' %}Help{% else %}المساعدة{% endif %}</a
-        >
-        <span class="auth-footer-sep" aria-hidden="true">·</span>
-        <a href="/privacy"
-          >{% if ui_lang == 'en' %}Privacy{% else %}الخصوصية{% endif %}</a
-        >
-        <span class="auth-footer-sep" aria-hidden="true">·</span>
-        <a href="/terms"
-          >{% if ui_lang == 'en' %}Terms{% else %}الشروط والأحكام{% endif %}</a
-        >
-      </nav>
       <p class="auth-copyright">
         &copy; 2026 KinJo &mdash; {% if ui_lang == 'en' %}All rights reserved{%
         else %}جميع الحقوق محفوظة{% endif %}

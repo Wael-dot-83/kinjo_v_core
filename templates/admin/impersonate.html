@@ -1,164 +1,16 @@
-﻿{% extends 'base.html' %}
-{% block title %}{{ _('انتحال الهوية') }} — KinJo{% endblock %}
+{% extends 'admin_base.html' %}
+{% block title %}{% if ui_lang == 'en' %}Impersonation — KinJo{% else %}انتحال الهوية — KinJo{% endif %}{% endblock %}
 
-{% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow text-danger">
-            <i class="bi bi-person-fill-lock" aria-hidden="true"></i>
-            {{ _('المشرف العام') }}
-        </div>
-        <h1 class="page-header-title">{{ _('انتحال هوية مدير') }}</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0 breadcrumb-sm">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
-                <li class="breadcrumb-item active">{{ _('انتحال الهوية') }}</li>
-            </ol>
-        </nav>
-    </div>
-    <a href="/dashboard" class="btn btn-ghost">
-        <i class="bi bi-arrow-right me-2"></i>{{ _('رجوع') }}
-    </a>
-</div>
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item">
+    <i class="bi bi-house"></i>
+    <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
+</a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Impersonation{% else %}انتحال الهوية{% endif %}</span>
 {% endblock %}
 
-{% block content %}
-<div class="row g-4 justify-content-center">
-    <div class="col-xl-7 col-lg-9">
-
-        <!-- Warning Banner -->
-        <div class="impersonate-warning mb-4">
-            <div class="d-flex align-items-start gap-3">
-                <i class="bi bi-exclamation-triangle-fill fs-4 flex-shrink-0 mt-1"></i>
-                <div>
-                    <div class="fw-800 mb-1">{{ _('تحذير: هذا الإجراء مُسجَّل في سجل المراجعة') }}</div>
-                    <div style="font-size:0.85rem;opacity:0.9;">
-                        {{ _('سيتم تسجيل بيانات هذه الجلسة (من — إلى — السبب — الوقت) في سجل المراجعة الأمنية بشكل دائم.') }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Validation -->
-        <div id="validationAlert" class="alert alert-danger d-none mb-4" role="alert">
-            <i class="bi bi-exclamation-circle-fill me-2"></i>
-            <span id="validationMsg"></span>
-        </div>
-
-        <!-- Form -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-person-fill-gear me-2 text-primary"></i>
-                    {{ _('اختر المدير') }}
-                </h6>
-            </div>
-            <div class="card-body">
-                <form id="impersonateForm" novalidate autocomplete="off">
-
-                    <div class="mb-3">
-                        <label class="field-label" for="managerSearch">{{ _('بحث وتصفية المديرين') }}</label>
-                        <input type="search" class="form-control" id="managerSearch"
-                               placeholder="{{ _('ابحث باسم المدير أو الروضة...') }}"
-                               aria-label="{{ _('بحث في قائمة المديرين') }}"
-                               oninput="filterManagers(this.value)">
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="field-label mb-2" for="managerSelect">{{ _('المدير') }} <span class="text-danger">*</span></label>
-                        <div id="managerListLoading" class="text-center py-3 text-muted">
-                            <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">Loading...</span></div>
-                            {{ _('جاري تحميل المديرين...') }}
-                        </div>
-                        <div id="managerListWrap" class="manager-list d-none" role="listbox" aria-label="{{ _('قائمة المديرين') }}">
-                            <!-- Items rendered by JS -->
-                        </div>
-                        <div id="managerListEmpty" class="text-muted small text-center py-3 d-none">
-                            {{ _('لا يوجد مديرون يطابقون البحث') }}
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="field-label" for="impersonateReason">{{ _('سبب انتحال الهوية') }}</label>
-                        <textarea class="form-control" id="impersonateReason" rows="3" maxlength="500"
-                                  placeholder="{{ _('مثال: مراجعة مشكلة تقنية بلّغ عنها المدير...') }}"
-                                  aria-label="{{ _('سبب انتحال الهوية') }}"></textarea>
-                        <div class="form-text">{{ _('يُوصى بذكر السبب لتسهيل المراجعة لاحقاً') }}</div>
-                    </div>
-
-                    <button type="submit" class="btn btn-danger w-100 py-2" id="startImpersonateBtn">
-                        <span class="btn-text">
-                            <i class="bi bi-person-fill-lock me-2"></i>{{ _('بدء انتحال الهوية') }}
-                        </span>
-                        <span class="btn-loading d-none">
-                            <span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}
-                        </span>
-                    </button>
-
-                </form>
-            </div>
-        </div>
-
-        <!-- Recent Impersonation Events -->
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-clock-history me-2 text-muted"></i>
-                    {{ _('آخر عمليات انتحال الهوية') }}
-                </h6>
-                <span class="badge bg-light text-muted border small" id="auditCount"></span>
-            </div>
-
-            <div id="auditLoading" class="card-body text-center py-4 text-muted">
-                <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">Loading...</span></div>{{ _('جاري التحميل...') }}
-            </div>
-
-            <div id="auditEmpty" class="card-body text-center py-4 text-muted d-none">
-                <i class="bi bi-shield-check d-block fs-2 mb-2 opacity-25"></i>
-                <small>{{ _('لا توجد عمليات سابقة') }}</small>
-            </div>
-
-            <div id="auditList" class="d-none">
-                <!-- Rendered by JS -->
-            </div>
-        </div>
-
-    </div>
-</div>
-
-<!-- Confirm Modal -->
-<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-modal="true" role="dialog">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title fw-700 text-danger" id="confirmModalLabel">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    {{ _('تأكيد انتحال الهوية') }}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
-            </div>
-            <div class="modal-body">
-                <p>{{ _('أنت على وشك انتحال هوية:') }}</p>
-                <div class="p-3 bg-light rounded mb-3">
-                    <div class="fw-700" id="confirmManagerName"></div>
-                    <div class="small text-muted" id="confirmManagerKG"></div>
-                </div>
-                <div class="alert alert-warning py-2 small mb-0">
-                    <i class="bi bi-shield-exclamation me-2"></i>
-                    {{ _('سيتم تسجيل هذه العملية في سجل المراجعة الأمني.') }}
-                </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _('إلغاء') }}</button>
-                <button type="button" class="btn btn-danger" id="confirmImpBtn" onclick="executeImpersonation()">
-                    <span class="btn-text"><i class="bi bi-person-fill-lock me-2"></i>{{ _('تأكيد وبدء') }}</span>
-                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _('جاري...') }}</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
+{% block extra_head %}
 <style>
 .fw-800 { font-weight:800; }
 
@@ -213,10 +65,170 @@
 </style>
 {% endblock %}
 
-{% block extra_js %}
+{% block content %}
+<!-- Page Header -->
+<div class="page-header-wrap mb-4">
+    <div>
+        <div class="page-header-eyebrow text-danger">
+            <i class="bi bi-person-fill-lock" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %}System Administrator{% else %}المشرف العام{% endif %}
+        </div>
+        <h1 class="page-header-title">{% if ui_lang == 'en' %}Impersonate Manager{% else %}انتحال هوية مدير{% endif %}</h1>
+    </div>
+    <a href="/dashboard" class="btn btn-ghost">
+        <i class="bi bi-arrow-right me-2"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
+    </a>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-xl-7 col-lg-9">
+
+        <!-- Warning Banner -->
+        <div class="impersonate-warning mb-4">
+            <div class="d-flex align-items-start gap-3">
+                <i class="bi bi-exclamation-triangle-fill fs-4 flex-shrink-0 mt-1"></i>
+                <div>
+                    <div class="fw-800 mb-1">{% if ui_lang == 'en' %}Warning: This action is recorded in the audit log{% else %}تحذير: هذا الإجراء مُسجَّل في سجل المراجعة{% endif %}</div>
+                    <div style="font-size:0.85rem;opacity:0.9;">
+                        {% if ui_lang == 'en' %}Session data (from — to — reason — time) will be permanently recorded in the security audit log.{% else %}سيتم تسجيل بيانات هذه الجلسة (من — إلى — السبب — الوقت) في سجل المراجعة الأمنية بشكل دائم.{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validation -->
+        <div id="validationAlert" class="alert alert-danger d-none mb-4" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            <span id="validationMsg"></span>
+        </div>
+
+        <!-- Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-person-fill-gear me-2 text-primary"></i>
+                    {% if ui_lang == 'en' %}Select Manager{% else %}اختر المدير{% endif %}
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="impersonateForm" novalidate autocomplete="off">
+
+                    <div class="mb-3">
+                        <label class="field-label" for="managerSearch">{% if ui_lang == 'en' %}Search & Filter Managers{% else %}بحث وتصفية المديرين{% endif %}</label>
+                        <input type="search" class="form-control" id="managerSearch"
+                               placeholder="{% if ui_lang == 'en' %}Search by manager name or kindergarten...{% else %}ابحث باسم المدير أو الروضة...{% endif %}"
+                               aria-label="{% if ui_lang == 'en' %}Search manager list{% else %}بحث في قائمة المديرين{% endif %}"
+                               oninput="filterManagers(this.value)">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="field-label mb-2" for="managerSelect">{% if ui_lang == 'en' %}Manager{% else %}المدير{% endif %} <span class="text-danger">*</span></label>
+                        <div id="managerListLoading" class="text-center py-3 text-muted">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span></div>
+                            {% if ui_lang == 'en' %}Loading managers...{% else %}جاري تحميل المديرين...{% endif %}
+                        </div>
+                        <div id="managerListWrap" class="manager-list d-none" role="listbox"
+                             aria-label="{% if ui_lang == 'en' %}Manager list{% else %}قائمة المديرين{% endif %}">
+                            <!-- Items rendered by JS -->
+                        </div>
+                        <div id="managerListEmpty" class="text-muted small text-center py-3 d-none">
+                            {% if ui_lang == 'en' %}No managers match the search{% else %}لا يوجد مديرون يطابقون البحث{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="field-label" for="impersonateReason">{% if ui_lang == 'en' %}Reason for Impersonation{% else %}سبب انتحال الهوية{% endif %}</label>
+                        <textarea class="form-control" id="impersonateReason" rows="3" maxlength="500"
+                                  placeholder="{% if ui_lang == 'en' %}e.g. Reviewing a technical issue reported by the manager...{% else %}مثال: مراجعة مشكلة تقنية بلّغ عنها المدير...{% endif %}"
+                                  aria-label="{% if ui_lang == 'en' %}Reason for impersonation{% else %}سبب انتحال الهوية{% endif %}"></textarea>
+                        <div class="form-text">{% if ui_lang == 'en' %}Providing a reason is recommended to facilitate future review{% else %}يُوصى بذكر السبب لتسهيل المراجعة لاحقاً{% endif %}</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-danger w-100 py-2" id="startImpersonateBtn">
+                        <span class="btn-text">
+                            <i class="bi bi-person-fill-lock me-2"></i>{% if ui_lang == 'en' %}Start Impersonation{% else %}بدء انتحال الهوية{% endif %}
+                        </span>
+                        <span class="btn-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-2"></span>{% if ui_lang == 'en' %}Processing...{% else %}جاري...{% endif %}
+                        </span>
+                    </button>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- Recent Impersonation Events -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title-sm mb-0">
+                    <i class="bi bi-clock-history me-2 text-muted"></i>
+                    {% if ui_lang == 'en' %}Recent Impersonation Events{% else %}آخر عمليات انتحال الهوية{% endif %}
+                </h6>
+                <span class="badge bg-light text-muted border small" id="auditCount"></span>
+            </div>
+
+            <div id="auditLoading" class="card-body text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري...{% endif %}</span></div>{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
+            </div>
+
+            <div id="auditEmpty" class="card-body text-center py-4 text-muted d-none">
+                <i class="bi bi-shield-check d-block fs-2 mb-2 opacity-25"></i>
+                <small>{% if ui_lang == 'en' %}No previous events{% else %}لا توجد عمليات سابقة{% endif %}</small>
+            </div>
+
+            <div id="auditList" class="d-none">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-700 text-danger" id="confirmModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    {% if ui_lang == 'en' %}Confirm Impersonation{% else %}تأكيد انتحال الهوية{% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+            </div>
+            <div class="modal-body">
+                <p>{% if ui_lang == 'en' %}You are about to impersonate:{% else %}أنت على وشك انتحال هوية:{% endif %}</p>
+                <div class="p-3 bg-light rounded mb-3">
+                    <div class="fw-700" id="confirmManagerName"></div>
+                    <div class="small text-muted" id="confirmManagerKG"></div>
+                </div>
+                <div class="alert alert-warning py-2 small mb-0">
+                    <i class="bi bi-shield-exclamation me-2"></i>
+                    {% if ui_lang == 'en' %}This action will be recorded in the security audit log.{% else %}سيتم تسجيل هذه العملية في سجل المراجعة الأمني.{% endif %}
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-danger" id="confirmImpBtn" onclick="executeImpersonation()">
+                    <span class="btn-text"><i class="bi bi-person-fill-lock me-2"></i>{% if ui_lang == 'en' %}Confirm &amp; Start{% else %}تأكيد وبدء{% endif %}</span>
+                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{% if ui_lang == 'en' %}Processing...{% else %}جاري...{% endif %}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
 (function () {
     'use strict';
+
+    const _isEn = document.documentElement.lang === 'en';
+    const _noKg = _isEn ? 'No kindergarten' : 'بدون روضة';
+    const _noReason = _isEn ? 'No reason provided' : 'بدون سبب';
+    const _eventLabel = _isEn ? 'Impersonated ' : 'انتحال هوية ';
+    const _eventCount = _isEn ? ' event(s)' : ' عملية';
 
     let confirmModal  = null;
     let allManagers   = [];
@@ -224,8 +236,7 @@
     let pendingPayload = null;
 
     function getHeaders() {
-        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-        return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` };
+        return { 'Content-Type': 'application/json' };
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -244,7 +255,7 @@
             document.getElementById('managerListLoading').classList.add('d-none');
             renderManagerList(allManagers);
         } catch {
-            document.getElementById('managerListLoading').textContent = '{{ _("تعذّر تحميل المديرين") }}';
+            document.getElementById('managerListLoading').textContent = _isEn ? 'Failed to load managers' : 'تعذّر تحميل المديرين';
         }
     }
 
@@ -266,7 +277,7 @@
                 <div>
                     <div class="manager-name">${escHtml(m.name || m.username)}</div>
                     <div class="manager-kg">
-                        <i class="bi bi-building me-1"></i>${escHtml(m.kindergarten_name || '{{ _("بدون روضة") }}')}
+                        <i class="bi bi-building me-1"></i>${escHtml(m.kindergarten_name || _noKg)}
                     </div>
                 </div>
                 ${selectedMgrId === m.id ? '<i class="bi bi-check-circle-fill text-primary ms-auto"></i>' : ''}
@@ -297,13 +308,13 @@
         hideValidation();
 
         if (!selectedMgrId) {
-            showValidation('{{ _("يجب اختيار مدير من القائمة") }}');
+            showValidation(_isEn ? 'Please select a manager from the list' : 'يجب اختيار مدير من القائمة');
             return;
         }
 
         const mgr = allManagers.find(m => m.id === selectedMgrId);
         document.getElementById('confirmManagerName').textContent = mgr ? (mgr.name || mgr.username) : '';
-        document.getElementById('confirmManagerKG').textContent   = mgr ? (mgr.kindergarten_name || '{{ _("بدون روضة") }}') : '';
+        document.getElementById('confirmManagerKG').textContent   = mgr ? (mgr.kindergarten_name || _noKg) : '';
 
         pendingPayload = {
             target_user_id: selectedMgrId,
@@ -326,15 +337,18 @@
             if (!r.ok) {
                 const err = await r.json().catch(() => ({}));
                 confirmModal.hide();
-                showValidation(err.detail || '{{ _("فشل انتحال الهوية") }}');
+                showValidation(err.detail || (_isEn ? 'Impersonation failed' : 'فشل انتحال الهوية'));
                 setLoading(btn, false);
                 return;
             }
-            showToast('{{ _("تم بدء انتحال الهوية — جاري التحويل...") }}', 'success');
+            const msg = _isEn ? 'Impersonation started — redirecting...' : 'تم بدء انتحال الهوية — جاري التحويل...';
+            if (window.AdminComponents && typeof AdminComponents.showNotification === 'function') {
+                AdminComponents.showNotification({ type: 'success', message: msg });
+            }
             setTimeout(() => { window.location.href = '/dashboard'; }, 1200);
         } catch {
             confirmModal.hide();
-            showValidation('{{ _("حدث خطأ في الاتصال بالخادم") }}');
+            showValidation(_isEn ? 'Connection error — please try again' : 'حدث خطأ في الاتصال بالخادم');
             setLoading(btn, false);
         }
     };
@@ -349,7 +363,7 @@
             document.getElementById('auditLoading').classList.add('d-none');
 
             const cnt = document.getElementById('auditCount');
-            if (cnt) cnt.textContent = events.length ? `${events.length} {{ _("عملية") }}` : '';
+            if (cnt) cnt.textContent = events.length ? `${events.length}${_eventCount}` : '';
 
             if (!events.length) {
                 document.getElementById('auditEmpty').classList.remove('d-none');
@@ -358,18 +372,19 @@
 
             const list = document.getElementById('auditList');
             list.innerHTML = events.map(ev => {
+                const locale = _isEn ? 'en-GB' : 'ar-SA';
                 const date = ev.created_at
-                    ? new Date(ev.created_at).toLocaleString('ar-SA', {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+                    ? new Date(ev.created_at).toLocaleString(locale, {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
                     : '—';
                 return `
                 <div class="audit-item">
                     <div class="audit-dot"></div>
                     <div class="flex-grow-1">
                         <div style="font-size:0.875rem;font-weight:700;">
-                            {{ _('انتحال هوية') }} ${escHtml(ev.target_name || ev.target_user_id)}
+                            ${_eventLabel}${escHtml(ev.target_name || ev.target_user_id)}
                         </div>
                         <div class="small text-muted">
-                            ${escHtml(ev.reason || '{{ _("بدون سبب") }}')}
+                            ${escHtml(ev.reason || _noReason)}
                         </div>
                         <div class="small text-muted mt-1">
                             <i class="bi bi-clock me-1"></i>${date}

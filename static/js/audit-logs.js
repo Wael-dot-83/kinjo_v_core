@@ -102,7 +102,7 @@ class AuditLogsManager {
         if (value) params.set(key, value);
       });
 
-      const response = await api.get(`/api/audit-logs?${params}`);
+      const response = await api.get(`/api/admin/audit-logs?${params}`);
 
       this.totalRecords = response.total || 0;
       this.renderAuditLogs(response.logs || []);
@@ -336,44 +336,37 @@ function doExport() {
     ...auditLogs.filters,
   });
 
-  // Download with auth header
-  const token = AuthStorage.getToken();
-  if (!token) {
+  // Download through the admin-namespaced route; rely on the HttpOnly session
+  // cookie for auth and do not send Authorization with a CSRF sentinel value.
+  const response = await fetchWithAuth(`/api/admin/audit-logs/export?${params}`);
+  if (!response) {
     window.location.href = "/login";
     return;
   }
 
-  fetch(`/api/audit-logs/export?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-    .then((res) => {
-      if (!res.ok) throw new Error(auditText("فشل التصدير", "Export failed"));
-      return res.blob();
-    })
-    .then((blob) => {
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `audit-logs.${format}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      showToast(auditText("تم تصدير السجلات بنجاح", "Audit logs exported successfully"), "success");
-    })
-    .catch((err) => {
-      console.error("Export error:", err);
-      showToast(auditText("فشل تصدير السجلات", "Failed to export audit logs"), "error");
-    })
-    .finally(() => {
-      // Reset button
-      exportBtn.textContent = originalText;
-      exportBtn.disabled = false;
+  try {
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `audit-logs.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    showToast(auditText("تم تصدير السجلات بنجاح", "Audit logs exported successfully"), "success");
+  } catch (err) {
+    console.error("Export error:", err);
+    showToast(auditText("فشل تصدير السجلات", "Failed to export audit logs"), "error");
+  } finally {
+    // Reset button
+    exportBtn.textContent = originalText;
+    exportBtn.disabled = false;
 
-      // Close modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById("exportModal"));
-      if (modal) modal.hide();
-    });
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById("exportModal"));
+    if (modal) modal.hide();
+  }
 }
 
 window.applyFilters = applyFilters;

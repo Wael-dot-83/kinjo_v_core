@@ -1,0 +1,8 @@
+# Additional dependencies for the heatmap module
+# (numpy, pandas, scikit-learn already in project requirements.txt)
+apscheduler>=3.10,<4
+tenacity>=8.2,<9
+httpx>=0.28
+geoalchemy2>=0.15,<1       # optional: PostGIS support
+shapely>=2.0,<3            # optional: geometry ops
+scipy>=1.13,<2             # Pearson p-values and t-distribution

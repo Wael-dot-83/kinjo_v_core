@@ -11,10 +11,12 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
 import validators
+from captcha_service import captcha_error_message, captcha_required, verify_captcha
 from config import settings
 from database import get_db
 from dependencies import get_current_user
 from i18n import gettext as _api
+from rate_limiter import limiter
 
 
 def _req_lang(request: Request) -> str:
@@ -48,6 +50,7 @@ class ParentRegistrationRequest(BaseModel):
     emergency_contact_phone: Optional[str] = None
     emergency_contact_relationship: Optional[str] = None
     relationship_to_child: Optional[str] = None
+    captcha_token: Optional[str] = None
 
     @field_validator("home_governorate")
     def validate_home_governorate(cls, value):
@@ -58,6 +61,7 @@ class ParentRegistrationRequest(BaseModel):
 
 
 @router.post("/register/parent", status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/hour")
 def register_parent(
     request: Request,
     registration_data: ParentRegistrationRequest,
@@ -72,11 +76,14 @@ def register_parent(
             detail="Public registration is disabled. Contact an administrator for an invite.",
         )
 
-    # Check if email already exists
-    existing_user = db.query(models.User).filter(
-        models.User.email == registration_data.email
-    ).first()
     lang = _req_lang(request)
+    if captcha_required() and not verify_captcha(registration_data.captcha_token):
+        raise HTTPException(status_code=400, detail=captcha_error_message(lang))
+
+    # Check if email already exists (case-insensitive)
+    existing_user = db.query(models.User).filter(
+        func.lower(models.User.email) == registration_data.email.lower()
+    ).first()
     if existing_user:
         raise HTTPException(status_code=400, detail=_api("Email is already registered.", lang))
 

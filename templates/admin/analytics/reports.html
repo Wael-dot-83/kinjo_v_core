@@ -1,43 +1,24 @@
-{% extends 'base.html' %}
-{% from 'components/page-header.html' import page_header %}
+﻿{% extends "admin_base.html" %}
 
-{% block title %}{% if ui_lang == 'en' %}System Reports{% else %}تقارير النظام{% endif %}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}System Reports{% else %}تقارير النظام{% endif %} — KinJo{% endblock %}
 
-{% block page_header %}
-{{ page_header(
-title="System Reports" if ui_lang == 'en' else "تقارير النظام",
-icon="bi-file-earmark-text",
-breadcrumbs=[
-{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
-{"label": "Reports" if ui_lang == 'en' else "التقارير", "url": None}
-]
-) }}
-
-<!-- Page Help Content -->
-<div id="pageHelpContent" class="d-none" data-help-title="{% if ui_lang == 'en' %}Central Reports Guide{% else %}دليل التقارير المركزية{% endif %}">
-    <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-file-earmark-text me-2"></i>{% if ui_lang == 'en' %}Report Types{% else %}أنواع التقارير{% endif %}</h6>
-        <p>{% if ui_lang == 'en' %}Choose the appropriate report type to get the data you need:{% else %}قم باختيار نوع التقرير المناسب للحصول على البيانات التي تحتاجها:{% endif %}</p>
-        <ul class="list-unstyled">
-            <li class="mb-2"><strong><i class="bi bi-calendar-check text-success me-2"></i>{% if ui_lang == 'en' %}Attendance Report:{% else %}تقرير الحضور:{% endif %}</strong> {% if ui_lang == 'en' %}Attendance and absence rates for each kindergarten during the specified period.{% else %}نسب
-                الحضور والغياب لكل روضة خلال الفترة المحددة.{% endif %}</li>
-            <li class="mb-2"><strong><i class="bi bi-exclamation-triangle text-warning me-2"></i>{% if ui_lang == 'en' %}Incidents Report:{% else %}تقرير الحوادث:{% endif %}</strong>
-                {% if ui_lang == 'en' %}Details of recorded incidents, their types, and severity levels.{% else %}تفاصيل الحوادث المسجلة، أنواعها، ودرجة خطورتها.{% endif %}</li>
-            <li class="mb-2"><strong><i class="bi bi-shield-check text-info me-2"></i>{% if ui_lang == 'en' %}Compliance & Governance:{% else %}الامتثال والحوكمة:{% endif %}</strong> {% if ui_lang == 'en' %}Kindergarten compliance with standards and regulations.{% else %}مدى
-                التزام الروضات بالمعايير واللوائح.{% endif %}</li>
-            <li class="mb-2"><strong><i class="bi bi-list-check text-primary me-2"></i>{% if ui_lang == 'en' %}Audit Log:{% else %}سجل التدقيق:{% endif %}</strong> {% if ui_lang == 'en' %}Complete copy of activity logs for auditing and archiving.{% else %}نسخة كاملة
-                من سجلات النشاط للتدقيق والأرشفة.{% endif %}</li>
-        </ul>
-    </div>
-
-    <div class="alert alert-info small">
-        <i class="bi bi-info-circle me-1"></i>
-        {% if ui_lang == 'en' %}You can download reports in CSV format to open and analyze them using Excel or Google Sheets.{% else %}يمكنك تحميل التقارير بصيغة CSV لفتحها وتحليلها باستخدام برنامج Excel أو Google Sheets.{% endif %}
-    </div>
-</div>
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="admin-breadcrumb-separator">/</span>
+<a href="/admin/analytics" class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</span>
 {% endblock %}
 
 {% block content %}
+<div class="admin-page-header mb-4">
+  <h1 class="admin-page-title">
+    <i class="bi bi-file-earmark-text me-2"></i>
+    {% if ui_lang == 'en' %}System Reports{% else %}تقارير النظام{% endif %}
+  </h1>
+</div>
+
+
 <div class="row justify-content-center">
     <div class="col-lg-8">
         <div class="card shadow-sm">
@@ -142,7 +123,8 @@ breadcrumbs=[
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_scripts %}
+<script src="/static/js/chart_utils.js" charset="utf-8"></script>
 <script src="/static/js/admin_analytics.js" charset="utf-8"></script>
 <style>
     .custom-card-check .form-check-input {

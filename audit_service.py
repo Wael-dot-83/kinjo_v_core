@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, desc
-from typing import List, Optional
+from sqlalchemy import desc
+from typing import Optional
 from datetime import date, datetime, timedelta, timezone
 import csv
 import io
@@ -13,28 +13,30 @@ from dependencies import get_current_user
 from models import UserRole
 from audit_actions import AuditAction
 from admin_security import log_audit_event
+from csv_utils import escape_csv_formula
 
 router = APIRouter()
+admin_router = APIRouter()
 
-@router.get("/audit-logs")
-def list_audit_logs(
-    page: int = Query(1, ge=1),
-    limit: int = Query(25, ge=1, le=100),
-    action: Optional[str] = None,
-    entity_type: Optional[str] = None,
-    user: Optional[str] = None,
-    date: Optional[str] = None,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    List audit logs with filtering and pagination.
-    Only accessible by Admins.
-    """
+
+def _require_admin(current_user: models.User) -> None:
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Normalize empty strings to None
+
+def _list_audit_logs(
+    *,
+    page: int,
+    limit: int,
+    action: Optional[str],
+    entity_type: Optional[str],
+    user: Optional[str],
+    date: Optional[str],
+    current_user: models.User,
+    db: Session,
+):
+    _require_admin(current_user)
+
     action = action if action else None
     entity_type = entity_type if entity_type else None
     user = user if user else None
@@ -46,62 +48,11 @@ def list_audit_logs(
         except (ValueError, TypeError):
             parsed_date = None
 
-    query = db.query(models.AuditLog)
-
-    # Apply filters
-    if action:
-        query = query.filter(models.AuditLog.action == action)
-    
-    if entity_type:
-        query = query.filter(models.AuditLog.entity_type == entity_type)
-    
-    if parsed_date:
-        # Filter by specific date (start of day to end of day)
-        from sqlalchemy import func as sqlfunc
-        query = query.filter(
-            sqlfunc.date(models.AuditLog.created_at) == parsed_date
-        )
-
-    if user:
-        # Join with User table to filter by username
-        query = query.join(models.User).filter(
-            models.User.username.ilike(f"%{user}%")
-        )
-
-    # Sorting
-    query = query.order_by(desc(models.AuditLog.created_at))
-
-    # Pagination
-    total_records = query.count()
-    total_pages = (total_records + limit - 1) // limit
-    
-    offset = (page - 1) * limit
-    logs = query.offset(offset).limit(limit).all()
-
-    # Prepare response with user info enriched
-    result = []
-    for log in logs:
-        user_name = "Unknown"
-        if log.user_id:
-            # We could join in the main query for efficiency, 
-            # but for simple display this is okay or relying on relationship if defined.
-            # Model definition didn't show relationship on AuditLog back to User explicitly in provided view,
-            # but let's check if we can fetch it.
-            # actually AuditLog model in `models.py` has `user_id` FK but NO relationship property defined in the snippet I saw.
-            # So I will fetch manually or use a join. List join above suggests I can join.
-            # Let's do a quick lookup or just join in the main query to select fields.
-            pass
-
-    # Re-writing query to include user username eagerly if possible, or just individual lookups.
-    # Given the previous `models.py` view, `AuditLog` didn't seem to have `user` relationship.
-    # Let's simple query join to get username.
-    
     logs_with_users = (
         db.query(models.AuditLog, models.User.username)
         .outerjoin(models.User, models.AuditLog.user_id == models.User.id)
     )
 
-    # Re-apply filters to this new query object
     if action:
         logs_with_users = logs_with_users.filter(models.AuditLog.action == action)
     if entity_type:
@@ -113,11 +64,8 @@ def list_audit_logs(
         logs_with_users = logs_with_users.filter(models.User.username.ilike(f"%{user}%"))
 
     logs_with_users = logs_with_users.order_by(desc(models.AuditLog.created_at))
-    
-    # Pagination execution
     total_records = logs_with_users.count()
     total_pages = (total_records + limit - 1) // limit
-    
     offset = (page - 1) * limit
     paged_data = logs_with_users.offset(offset).limit(limit).all()
 
@@ -142,35 +90,31 @@ def list_audit_logs(
         "total_pages": total_pages
     }
 
-@router.get("/audit-logs/export")
-def export_audit_logs(
-    format: str = Query("csv", pattern="^(csv|json)$"), # PDF suppressed for now
-    period: str = Query("7"), # days
-    action: Optional[str] = None,
-    entity_type: Optional[str] = None,
-    user: Optional[str] = None,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+
+def _export_audit_logs(
+    *,
+    format: str,
+    period: str,
+    action: Optional[str],
+    entity_type: Optional[str],
+    user: Optional[str],
+    current_user: models.User,
+    db: Session,
 ):
-    """
-    Export audit logs for Admin.
-    """
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    _require_admin(current_user)
 
-    # Base query
-    query = db.query(models.AuditLog, models.User.username).outerjoin(models.User, models.AuditLog.user_id == models.User.id)
+    query = db.query(models.AuditLog, models.User.username).outerjoin(
+        models.User, models.AuditLog.user_id == models.User.id
+    )
 
-    # Date Filter
     if period != "all":
         try:
             days = int(period)
             cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
             query = query.filter(models.AuditLog.created_at >= cutoff)
         except ValueError:
-            pass # Ignore invalid period, return all or default
+            pass
 
-    # Other filters
     if action:
         query = query.filter(models.AuditLog.action == action)
     if entity_type:
@@ -179,8 +123,6 @@ def export_audit_logs(
         query = query.filter(models.User.username.ilike(f"%{user}%"))
 
     query = query.order_by(desc(models.AuditLog.created_at))
-    
-    # Limit export to avoid memory issues (e.g., last 5000)
     data = query.limit(5000).all()
 
     log_audit_event(
@@ -216,23 +158,110 @@ def export_audit_logs(
             headers={"Content-Disposition": f"attachment; filename=audit_logs_{date.today()}.json"}
         )
 
-    else: # CSV
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["Timestamp", "User", "Action", "Entity Type", "Details", "IP Address"])
-        
-        for log, username in data:
-            writer.writerow([
-                log.created_at,
-                username or "Unknown",
-                log.action,
-                log.entity_type,
-                log.details,
-                log.ip_address
-            ])
-            
-        return Response(
-            content=output.getvalue(),
-            media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename=audit_logs_{date.today()}.csv"}
-        )
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Timestamp", "User", "Action", "Entity Type", "Details", "IP Address"])
+
+    for log, username in data:
+        writer.writerow([
+            escape_csv_formula(log.created_at),
+            escape_csv_formula(username or "Unknown"),
+            escape_csv_formula(log.action),
+            escape_csv_formula(log.entity_type),
+            escape_csv_formula(log.details),
+            escape_csv_formula(log.ip_address)
+        ])
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=audit_logs_{date.today()}.csv"}
+    )
+
+
+@router.get("/audit-logs")
+def list_audit_logs(
+    page: int = Query(1, ge=1),
+    limit: int = Query(25, ge=1, le=100),
+    action: Optional[str] = None,
+    entity_type: Optional[str] = None,
+    user: Optional[str] = None,
+    date: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return _list_audit_logs(
+        page=page,
+        limit=limit,
+        action=action,
+        entity_type=entity_type,
+        user=user,
+        date=date,
+        current_user=current_user,
+        db=db,
+    )
+
+
+@admin_router.get("/audit-logs")
+def list_admin_audit_logs(
+    page: int = Query(1, ge=1),
+    limit: int = Query(25, ge=1, le=100),
+    action: Optional[str] = None,
+    entity_type: Optional[str] = None,
+    user: Optional[str] = None,
+    date: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return _list_audit_logs(
+        page=page,
+        limit=limit,
+        action=action,
+        entity_type=entity_type,
+        user=user,
+        date=date,
+        current_user=current_user,
+        db=db,
+    )
+
+
+@router.get("/audit-logs/export")
+def export_audit_logs(
+    format: str = Query("csv", pattern="^(csv|json)$"),
+    period: str = Query("7"),
+    action: Optional[str] = None,
+    entity_type: Optional[str] = None,
+    user: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return _export_audit_logs(
+        format=format,
+        period=period,
+        action=action,
+        entity_type=entity_type,
+        user=user,
+        current_user=current_user,
+        db=db,
+    )
+
+
+@admin_router.get("/audit-logs/export")
+def export_admin_audit_logs(
+    format: str = Query("csv", pattern="^(csv|json)$"),
+    period: str = Query("7"),
+    action: Optional[str] = None,
+    entity_type: Optional[str] = None,
+    user: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return _export_audit_logs(
+        format=format,
+        period=period,
+        action=action,
+        entity_type=entity_type,
+        user=user,
+        current_user=current_user,
+        db=db,
+    )

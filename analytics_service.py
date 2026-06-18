@@ -316,6 +316,8 @@ def drilldown_governorate(
     db: Session = Depends(get_db),
 ):
     _ensure_admin_only(current_user)
+    if start_date > end_date:
+        raise HTTPException(status_code=422, detail="start_date must be before or equal to end_date")
     results = AnalyticsService.get_governorate_breakdown(db, start_date, end_date, governorate=gov_id)
     kgs = [r.model_dump() for r in results]
     kpis = {
@@ -348,6 +350,8 @@ def drilldown_kindergarten(
     db: Session = Depends(get_db),
 ):
     _ensure_admin_only(current_user)
+    if start_date > end_date:
+        raise HTTPException(status_code=422, detail="start_date must be before or equal to end_date")
     metrics = AnalyticsService.get_kindergarten_metrics(db, kg_id, start_date, end_date)
     response = DrilldownResponse(
         scope={"type": "KINDERGARTEN", "id": kg_id, "label": _scope_label(db, "KINDERGARTEN", str(kg_id))},
@@ -372,6 +376,8 @@ def drilldown_class(
     db: Session = Depends(get_db),
 ):
     _ensure_admin_only(current_user)
+    if start_date > end_date:
+        raise HTTPException(status_code=422, detail="start_date must be before or equal to end_date")
     metrics = AnalyticsService.get_class_metrics(db, class_id, start_date, end_date)
     response = DrilldownResponse(
         scope={"type": "CLASS", "id": class_id, "label": _scope_label(db, "CLASS", str(class_id))},
@@ -396,6 +402,8 @@ def drilldown_child(
     db: Session = Depends(get_db),
 ):
     _ensure_admin_only(current_user)
+    if start_date > end_date:
+        raise HTTPException(status_code=422, detail="start_date must be before or equal to end_date")
     metrics = AnalyticsService.get_child_metrics(db, child_id, start_date, end_date)
     response = DrilldownResponse(
         scope={"type": "CHILD", "id": child_id, "label": _scope_label(db, "CHILD", str(child_id))},
@@ -737,6 +745,15 @@ class MetricValue(BaseModel):
     trend: Optional[str] = None  # "up", "down", "stable"
 
 
+class MetricDelta(BaseModel):
+    current_value: Any
+    previous_value: Optional[Any] = None
+    delta_absolute: Optional[Any] = None
+    delta_percent: Optional[float] = None
+    direction: str
+    source: str
+
+
 class NetworkSummary(BaseModel):
     total_kindergartens: int
     total_children: int
@@ -749,6 +766,8 @@ class NetworkSummary(BaseModel):
     report_approval_rate: float
     report_completion_rate: float = Field(alias="report_approval_rate")  # Backward compatibility
     governance_avg_score: float
+    previous_period: Dict[str, Any] = Field(default_factory=dict)
+    deltas: Dict[str, MetricDelta] = Field(default_factory=dict)
 
 
 class GovernorateMetrics(BaseModel):
@@ -905,6 +924,8 @@ def get_network_summary_endpoint(
     db: Session = Depends(get_db)
 ):
     """Get network-wide summary metrics (scoped for managers/supervisors)"""
+    if period_start > period_end:
+        raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
     if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
@@ -926,6 +947,8 @@ def get_governorate_breakdown_endpoint(
     db: Session = Depends(get_db)
 ):
     """Get metrics broken down by governorate (scoped for managers/supervisors)"""
+    if period_start > period_end:
+        raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
     if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
@@ -941,6 +964,121 @@ def get_governorate_breakdown_endpoint(
     return AnalyticsService.get_governorate_breakdown(
         db, period_start, period_end, gov_filter, allowed_kgs, allowed_govs
     )
+
+
+def _previous_period_bounds(period_start: date, period_end: date) -> Optional[tuple[date, date]]:
+    if period_start > period_end or period_start <= date.min:
+        return None
+    duration_days = (period_end - period_start).days + 1
+    previous_end = period_start - timedelta(days=1)
+    previous_start = previous_end - timedelta(days=duration_days - 1)
+    if previous_start < date.min or previous_start > previous_end:
+        return None
+    return previous_start, previous_end
+
+
+def _count_active_kindergartens_at(db: Session, kg_ids: Optional[List[int]], as_of_date: date) -> int:
+    if kg_ids is not None and not kg_ids:
+        return 0
+
+    query = db.query(func.count(models.Kindergarten.id)).filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+        func.date(models.Kindergarten.created_at) <= as_of_date,
+        or_(
+            models.Kindergarten.license_valid_until.is_(None),
+            models.Kindergarten.license_valid_until >= as_of_date,
+        ),
+    )
+    if kg_ids is not None:
+        query = query.filter(models.Kindergarten.id.in_(kg_ids))
+    return int(query.scalar() or 0)
+
+
+def _network_expected_child_days(
+    db: Session,
+    period_start: date,
+    period_end: date,
+    kg_ids: Optional[List[int]],
+) -> int:
+    if kg_ids is not None and not kg_ids:
+        return 0
+    days_in_period = (period_end - period_start).days + 1
+    query = db.query(func.count(models.EnrollmentApplication.id)).filter(
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    )
+    if kg_ids is not None:
+        query = query.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
+    return int(query.scalar() or 0) * days_in_period
+
+
+def _network_attended_child_days(
+    db: Session,
+    period_start: date,
+    period_end: date,
+    kg_ids: Optional[List[int]],
+) -> int:
+    if kg_ids is not None and not kg_ids:
+        return 0
+    query = db.query(func.count(models.AttendanceLog.id)).filter(
+        models.AttendanceLog.date >= period_start,
+        models.AttendanceLog.date <= period_end,
+    ).join(models.Child).join(
+        models.EnrollmentApplication,
+        models.EnrollmentApplication.child_id == models.Child.id,
+    ).filter(
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    )
+    if kg_ids is not None:
+        query = query.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
+    return int(query.scalar() or 0)
+
+
+def _build_metric_delta(
+    current_value,
+    previous_value,
+    higher_is_good: bool,
+    available: bool = True,
+) -> Dict[str, Any]:
+    if not available or previous_value is None:
+        return {
+            "current_value": current_value,
+            "previous_value": None,
+            "delta_absolute": None,
+            "delta_percent": None,
+            "direction": "neutral",
+            "source": "unavailable",
+        }
+
+    try:
+        current = float(current_value)
+        previous = float(previous_value)
+    except (TypeError, ValueError):
+        return {
+            "current_value": current_value,
+            "previous_value": previous_value,
+            "delta_absolute": None,
+            "delta_percent": None,
+            "direction": "neutral",
+            "source": "unavailable",
+        }
+
+    delta_absolute = current - previous
+    delta_percent = None if previous == 0 else round((delta_absolute / previous) * 100, 2)
+    if delta_absolute > 0:
+        direction = "up" if higher_is_good else "down"
+    elif delta_absolute < 0:
+        direction = "down" if higher_is_good else "up"
+    else:
+        direction = "neutral"
+
+    return {
+        "current_value": current_value,
+        "previous_value": previous_value,
+        "delta_absolute": round(delta_absolute, 4),
+        "delta_percent": delta_percent,
+        "direction": direction,
+        "source": "real",
+    }
 
 
 @router.get("/dashboard-data", response_model=ConsolidatedAnalyticsResponse)
@@ -986,6 +1124,58 @@ def get_consolidated_dashboard_data(
         logger.info(f"Fetching analytics data for date range {period_start} to {period_end}")
         
         network_summary = AnalyticsService.get_network_summary(db, period_start, period_end, kg_filter)
+        previous_period_bounds = _previous_period_bounds(period_start, period_end)
+        if previous_period_bounds:
+            previous_start, previous_end = previous_period_bounds
+            previous_summary = AnalyticsService.get_network_summary(db, previous_start, previous_end, kg_filter)
+            previous_summary.total_kindergartens = _count_active_kindergartens_at(db, kg_filter, previous_end)
+            previous_expected_child_days = _network_expected_child_days(db, previous_start, previous_end, kg_filter)
+            previous_attended_child_days = _network_attended_child_days(db, previous_start, previous_end, kg_filter)
+            previous_period = {
+                "period_start": previous_start.isoformat(),
+                "period_end": previous_end.isoformat(),
+            }
+            deltas = {
+                "total_kindergartens": MetricDelta(
+                    **_build_metric_delta(
+                        network_summary.total_kindergartens,
+                        previous_summary.total_kindergartens,
+                        True,
+                        available=True,
+                    )
+                ),
+                "attendance_rate": MetricDelta(
+                    **_build_metric_delta(
+                        network_summary.attendance_rate,
+                        previous_summary.attendance_rate,
+                        True,
+                        available=previous_expected_child_days > 0,
+                    )
+                ),
+                "incident_rate": MetricDelta(
+                    **_build_metric_delta(
+                        network_summary.incident_rate,
+                        previous_summary.incident_rate,
+                        False,
+                        available=previous_attended_child_days > 0,
+                    )
+                ),
+            }
+        else:
+            previous_period = {}
+            deltas = {
+                "total_kindergartens": MetricDelta(
+                    **_build_metric_delta(network_summary.total_kindergartens, None, True, available=False)
+                ),
+                "attendance_rate": MetricDelta(
+                    **_build_metric_delta(network_summary.attendance_rate, None, True, available=False)
+                ),
+                "incident_rate": MetricDelta(
+                    **_build_metric_delta(network_summary.incident_rate, None, False, available=False)
+                ),
+            }
+        network_summary.previous_period = previous_period
+        network_summary.deltas = deltas
         governorate_breakdown = AnalyticsService.get_governorate_breakdown(
             db, period_start, period_end, gov_filter, allowed_kgs, allowed_govs
         )
@@ -1026,6 +1216,8 @@ def get_network_trends_endpoint(
     db: Session = Depends(get_db)
 ):
     """Get time-series trend data for network (Admin only)"""
+    if period_start > period_end:
+        raise HTTPException(status_code=422, detail="period_start must be before or equal to period_end")
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
     if current_user.role != models.UserRole.ADMIN and not allowed_kgs:
         raise HTTPException(status_code=403, detail="Access denied")
@@ -1158,8 +1350,12 @@ def export_analytics_data(
              func.date(models.AuditLog.created_at) <= end_date
         ).order_by(desc(models.AuditLog.created_at)).all()
         
-        # Pre-fetch users to avoid N+1
-        user_map = {u.id: u.username for u in db.query(models.User).all()}
+        # Pre-fetch only referenced users to avoid unbounded memory load
+        referenced_user_ids = {log.user_id for log in logs if log.user_id}
+        user_map = {
+            u.id: u.username
+            for u in db.query(models.User).filter(models.User.id.in_(referenced_user_ids)).all()
+        } if referenced_user_ids else {}
         
         for log in logs:
             username = user_map.get(log.user_id, "Unknown")
@@ -1205,309 +1401,6 @@ def export_analytics_data(
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
-
-    @staticmethod
-    def get_network_summary(
-        db: Session,
-        period_start: date,
-        period_end: date
-    ) -> NetworkSummary:
-        """Get network-wide summary metrics"""
-        # Total kindergartens (active only)
-        total_kg = db.query(func.count(models.Kindergarten.id)).filter(
-            models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-        ).scalar() or 0
-
-        # Total capacity (from active classes in active kindergartens)
-        total_capacity = db.query(func.sum(models.Class.capacity_total)).join(
-            models.Kindergarten
-        ).filter(
-            models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
-            models.Class.is_active == True
-        ).scalar() or 0
-
-        # Total enrolled children
-        total_children = db.query(func.count(models.EnrollmentApplication.id)).filter(
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).scalar() or 0
-
-        # Total staff
-        total_staff = db.query(func.count(models.User.id)).filter(
-            models.User.role.in_([
-                models.UserRole.MANAGER,
-                models.UserRole.SUPERVISOR
-            ]),
-            models.User.status == models.UserStatus.ACTIVE
-        ).scalar() or 0
-
-        # Enrollment rate
-        enrollment_rate = (total_children / total_capacity * 100) if total_capacity > 0 else 0
-
-        # Network-wide attendance rate
-        days_in_period = (period_end - period_start).days + 1
-        expected_attendance = total_children * days_in_period
-        actual_attendance = db.query(func.count(models.AttendanceLog.id)).filter(
-            models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end
-        ).scalar() or 0
-        attendance_rate = (actual_attendance / expected_attendance * 100) if expected_attendance > 0 else 0
-
-        # Network-wide incident rate
-        total_incidents = db.query(func.count(models.Incident.id)).filter(
-            func.date(models.Incident.occurred_at) >= period_start,
-            func.date(models.Incident.occurred_at) <= period_end
-        ).scalar() or 0
-        incident_rate = (total_incidents / actual_attendance * 100) if actual_attendance > 0 else 0
-
-        # Report completion rate
-        expected_reports = db.query(func.count(models.Child.id)).join(
-            models.EnrollmentApplication
-        ).filter(
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).scalar() or 0
-        expected_reports = expected_reports * days_in_period
-
-        submitted_reports = db.query(func.count(models.DailyReport.id)).filter(
-            models.DailyReport.date >= period_start,
-            models.DailyReport.date <= period_end,
-            models.DailyReport.status.in_([
-                models.DailyReportStatus.SUBMITTED,
-                models.DailyReportStatus.APPROVED
-            ])
-        ).scalar() or 0
-
-        approved_reports = db.query(func.count(models.DailyReport.id)).filter(
-            models.DailyReport.date >= period_start,
-            models.DailyReport.date <= period_end,
-            models.DailyReport.status == models.DailyReportStatus.APPROVED
-        ).scalar() or 0
-
-        report_submission_rate = (submitted_reports / expected_reports * 100) if expected_reports > 0 else 0
-        report_approval_rate = (approved_reports / submitted_reports * 100) if submitted_reports > 0 else 0
-        report_completion_rate = report_submission_rate  # Same as submission rate for backward compatibility
-
-        # Average governance score
-        avg_governance = db.query(func.avg(models.GovernanceScore.final_governance_score)).filter(
-            models.GovernanceScore.period_start >= period_start,
-            models.GovernanceScore.period_end <= period_end
-        ).scalar() or 0
-
-        return NetworkSummary(
-            total_kindergartens=total_kg,
-            total_children=total_children,
-            total_staff=total_staff,
-            total_capacity=total_capacity,
-            enrollment_rate=round(enrollment_rate, 2),
-            attendance_rate=round(attendance_rate, 2),
-            incident_rate=round(incident_rate, 4),
-            report_submission_rate=round(report_submission_rate, 2),
-            report_approval_rate=round(report_approval_rate, 2),
-            report_completion_rate=round(report_completion_rate, 2),
-            governance_avg_score=round(avg_governance, 2)
-        )
-
-    @staticmethod
-    def get_governorate_breakdown(
-        db: Session,
-        period_start: date,
-        period_end: date,
-        only_governorate: Optional[str] = None
-    ) -> List[GovernorateMetrics]:
-        """Get metrics broken down by governorate"""
-        gov_query = db.query(models.Kindergarten.governorate).filter(
-            models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
-            models.Kindergarten.governorate.isnot(None)
-        )
-        if only_governorate:
-            gov_query = gov_query.filter(models.Kindergarten.governorate == only_governorate)
-        governorates = gov_query.distinct().all()
-
-        results = []
-        for (gov,) in governorates:
-            if not gov:
-                continue
-
-            # Get kindergartens in this governorate
-            kg_ids = db.query(models.Kindergarten.id).filter(
-                models.Kindergarten.governorate == gov,
-                models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-            ).all()
-            kg_ids = [k[0] for k in kg_ids]
-
-            kg_count = len(kg_ids)
-
-            # Capacity (from active classes)
-            capacity = db.query(func.sum(models.Class.capacity_total)).filter(
-                models.Class.kindergarten_id.in_(kg_ids),
-                models.Class.is_active == True
-            ).scalar() or 0
-
-            # Children count
-            children_count = db.query(func.count(models.EnrollmentApplication.id)).filter(
-                models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-            ).scalar() or 0
-
-            # Enrollment rate
-            enrollment_rate = (children_count / capacity * 100) if capacity > 0 else 0
-
-            # Attendance rate (simplified)
-            days_in_period = (period_end - period_start).days + 1
-            expected = children_count * days_in_period
-            actual = db.query(func.count(models.AttendanceLog.id)).join(
-                models.Child
-            ).join(
-                models.EnrollmentApplication,
-                models.EnrollmentApplication.child_id == models.Child.id
-            ).filter(
-                models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-                models.AttendanceLog.date >= period_start,
-                models.AttendanceLog.date <= period_end
-            ).scalar() or 0
-            attendance_rate = (actual / expected * 100) if expected > 0 else 0
-
-            # Incident rate
-            incidents = db.query(func.count(models.Incident.id)).filter(
-                models.Incident.kindergarten_id.in_(kg_ids),
-                func.date(models.Incident.occurred_at) >= period_start,
-                func.date(models.Incident.occurred_at) <= period_end
-            ).scalar() or 0
-            incident_rate = (incidents / actual * 100) if actual > 0 else 0
-
-            # Average governance score
-            avg_gov_score = db.query(func.avg(models.GovernanceScore.final_governance_score)).filter(
-                models.GovernanceScore.kindergarten_id.in_(kg_ids),
-                models.GovernanceScore.period_start >= period_start,
-                models.GovernanceScore.period_end <= period_end
-            ).scalar() or 0
-
-            results.append(GovernorateMetrics(
-                governorate=gov,
-                kindergarten_count=kg_count,
-                children_count=children_count,
-                capacity=capacity,
-                enrollment_rate=round(enrollment_rate, 2),
-                attendance_rate=round(attendance_rate, 2),
-                incident_rate=round(incident_rate, 4),
-                governance_score=round(avg_gov_score, 2)
-            ))
-
-        # Sort by governance score descending
-        results.sort(key=lambda x: x.governance_score, reverse=True)
-        return results
-
-    @staticmethod
-    def get_time_series(
-        db: Session,
-        metric: str,
-        dimension_type: str,
-        dimension_id: Optional[str],
-        period_start: date,
-        period_end: date,
-        granularity: str = "daily",
-        kg_scope: Optional[List[int]] = None
-    ) -> List[TimeSeriesPoint]:
-        """Get time series data for charts"""
-        points = []
-        current = period_start
-
-        while current <= period_end:
-            if granularity == "daily":
-                next_date = current + timedelta(days=1)
-            elif granularity == "weekly":
-                next_date = current + timedelta(weeks=1)
-            elif granularity == "monthly":
-                if current.month == 12:
-                    next_date = date(current.year + 1, 1, 1)
-                else:
-                    next_date = date(current.year, current.month + 1, 1)
-            else:
-                next_date = current + timedelta(days=1)
-
-            # Compute metric for this period
-            value = 0.0
-
-            if metric == "attendance_rate":
-                if dimension_type == "NETWORK":
-                    # Network-wide attendance
-                    total_children_q = db.query(func.count(models.EnrollmentApplication.id)).filter(
-                        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-                    )
-                    actual_q = db.query(func.count(models.AttendanceLog.id)).filter(
-                        models.AttendanceLog.date >= current,
-                        models.AttendanceLog.date < next_date
-                    )
-                    if kg_scope:
-                        total_children_q = total_children_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_scope))
-                        actual_q = actual_q.join(models.Child).join(
-                            models.EnrollmentApplication,
-                            models.EnrollmentApplication.child_id == models.Child.id
-                        ).filter(models.EnrollmentApplication.kindergarten_id.in_(kg_scope))
-                    total_children = total_children_q.scalar() or 1
-                    actual = actual_q.scalar() or 0
-                    value = (actual / total_children * 100) if total_children > 0 else 0
-                elif dimension_type == "KINDERGARTEN" and kg_scope:
-                    value = KPIService.compute_attendance_rate(
-                        db, kg_scope[0], current, next_date - timedelta(days=1)
-                    )
-                elif dimension_type == "GOVERNORATE" and kg_scope:
-                    value = AnalyticsService._compute_network_attendance_rate(
-                        db, current, next_date - timedelta(days=1), kg_scope
-                    )
-
-            elif metric == "incident_count":
-                query = db.query(func.count(models.Incident.id)).filter(
-                    func.date(models.Incident.occurred_at) >= current,
-                    func.date(models.Incident.occurred_at) < next_date
-                )
-                if dimension_type in ("KINDERGARTEN", "GOVERNORATE") and kg_scope:
-                    query = query.filter(models.Incident.kindergarten_id.in_(kg_scope))
-                value = query.scalar() or 0
-
-            elif metric == "enrollment_count":
-                query = db.query(func.count(models.EnrollmentApplication.id)).filter(
-                    func.date(models.EnrollmentApplication.created_at) >= current,
-                    func.date(models.EnrollmentApplication.created_at) < next_date
-                )
-                if dimension_type in ("KINDERGARTEN", "GOVERNORATE") and kg_scope:
-                    query = query.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_scope))
-                value = query.scalar() or 0
-
-            points.append(TimeSeriesPoint(
-                date=current.isoformat(),
-                value=round(value, 2)
-            ))
-
-            current = next_date
-
-        return points
-
-    @staticmethod
-    def get_governance_distribution(
-        db: Session, period_start: date, period_end: date, kg_filter: Optional[List[int]] = None
-    ) -> GovernanceDistribution:
-        """Get the distribution of kindergartens by governance band."""
-        kg_query = db.query(models.Kindergarten).filter(
-            models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-        )
-        if kg_filter:
-            kg_query = kg_query.filter(models.Kindergarten.id.in_(kg_filter))
-        kindergartens = kg_query.all()
-
-        green = 0
-        amber = 0
-        red = 0
-
-        for kg in kindergartens:
-            _, band = KPIService.compute_governance_score(db, kg.id, period_start, period_end)
-            if band == "Green":
-                green += 1
-            elif band == "Amber":
-                amber += 1
-            elif band == "Red":
-                red += 1
-
-        return GovernanceDistribution(green=green, amber=amber, red=red)
 
 def get_enrollment_analytics(
     db: Session,

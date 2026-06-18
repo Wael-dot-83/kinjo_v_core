@@ -35,7 +35,7 @@ class IncidentCreate(BaseModel):
 class IncidentUpdate(BaseModel):
     description: Optional[str] = None
     followup_sla_deadline: Optional[datetime] = None
-    closed_at: Optional[datetime] = None
+    close_incident: Optional[bool] = None  # set True to close; server sets closed_at
 
 class HealthAlertCreate(BaseModel):
     alert_type: str # Allergy, Condition, Medication, etc.
@@ -71,8 +71,8 @@ def update_incident(
         incident.description = update_data.description
     if update_data.followup_sla_deadline:
         incident.followup_sla_deadline = update_data.followup_sla_deadline
-    if update_data.closed_at:
-        incident.closed_at = update_data.closed_at
+    if update_data.close_incident:
+        incident.closed_at = datetime.now(timezone.utc)
         incident.closed_by = current_user.id
         
     db.commit()

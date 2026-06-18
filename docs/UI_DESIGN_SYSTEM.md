@@ -16,9 +16,11 @@ KinJo uses a restrained operational palette anchored by professional blue and su
 | Warning | `--kinjo-warning`, `--admin-warning` | `#f59e0b` | `#fbbf24` |
 | Error | `--kinjo-danger`, `--admin-error` | `#ef4444` | `#f87171` |
 | Surface | `--kinjo-surface`, `--admin-bg-white` | `#ffffff` | `#111827` |
-| Body text | `--kinjo-text-primary`, `--admin-text-primary` | `#1e293b` / `#0f172a` | `#f8fafc` |
+| Body text | `--kinjo-text-primary`, `--admin-text-primary` | `#1e293b` | `#1e293b` |
+| Secondary text | `--kinjo-text-secondary`, `--admin-text-secondary` | `#64748b` | `#475569` |
+| Muted/help text | `--kinjo-text-muted`, `--admin-text-muted` | `#64748b` | `#475569` |
 
-Warnings use dark foreground text through `--kinjo-text-on-warning` and `--admin-text-on-warning` to meet WCAG AA contrast where amber backgrounds are used.
+Warnings use dark foreground text on light semantic backgrounds (`#92400e` on `#fef3c7`) to meet WCAG AA contrast where amber backgrounds are used.
 
 ### Typography System
 
@@ -77,9 +79,9 @@ Use `.container-kinjo` for tokenized max-width content in new pages. Existing Bo
 
 ## Theme Strategy
 
-Both base templates expose `data-theme="{{ ui_theme | default('light') }}"`. The CSS includes an opt-in `[data-theme="dark"]` token set for the main app and admin.
+Both base templates expose the accessibility toolbar in `templates/base.html`; admin pages use the same toolbar through `templates/admin_base.html`. The CSS includes persisted `html.a11y-text-lg`, `html.a11y-text-xl`, `html.a11y-contrast`, and `html.a11y-dim` classes for text resizing, high-contrast/color-vision support, and night mode.
 
-Theme implementation rule: toggle `data-theme` at the `html` element and do not hard-code page colors in templates unless there is a product requirement.
+Theme implementation rule: reuse design tokens and accessibility classes from `kinjo.css`/`admin_design_system.css`; do not hard-code page colors in templates unless there is a product requirement.
 
 ## Accessibility Standards
 
@@ -99,4 +101,4 @@ For new interface work:
 1. Start with tokens in `kinjo.css` or `admin_design_system.css`.
 2. Reuse `.btn`, `.form-control`, `.card`, `.table`, `.admin-btn`, `.admin-form-control`, `.admin-card`, and `.admin-table`.
 3. Avoid inline colors and pixel-only one-off styles in templates.
-4. Verify light theme, dark theme hook, keyboard focus, mobile width, and RTL layout before release.
+4. Verify WCAG AA contrast with `pytest tests/test_gws_round3.py`, keyboard focus, mobile width, and RTL layout before release.

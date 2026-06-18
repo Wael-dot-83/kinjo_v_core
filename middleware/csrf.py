@@ -1,4 +1,4 @@
-"""Double-submit CSRF protection helpers."""
+﻿"""Double-submit CSRF protection helpers."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from config import settings
 
 CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+CSRF_MFA_EXEMPT_PATHS = {"/api/auth/mfa/setup", "/api/auth/mfa/verify"}
 
 
 def _allowed_hosts(request: Request) -> set[str]:
@@ -50,7 +51,7 @@ async def csrf_protection_middleware(request: Request, call_next: Callable):
     """Strict CSRF enforcement for state-changing requests."""
     csrf_token = ensure_request_csrf_token(request)
 
-    if settings.TESTING or request.method in CSRF_SAFE_METHODS:
+    if (settings.TESTING and not settings.is_production) or request.method in CSRF_SAFE_METHODS:
         response = await call_next(request)
         if request.cookies.get(settings.CSRF_COOKIE_NAME) != csrf_token:
             response.set_cookie(
@@ -63,6 +64,10 @@ async def csrf_protection_middleware(request: Request, call_next: Callable):
                 domain=settings.COOKIE_DOMAIN or None,
             )
         return response
+
+    # Skip CSRF for MFA setup/verify endpoints (user has kinjo_mfa_ticket but no session)
+    if request.url.path in CSRF_MFA_EXEMPT_PATHS:
+        return await call_next(request)
 
     if not _same_origin_allowed(request):
         return JSONResponse(status_code=403, content={"detail": "CSRF validation failed."})
@@ -86,4 +91,3 @@ async def csrf_protection_middleware(request: Request, call_next: Callable):
             domain=settings.COOKIE_DOMAIN or None,
         )
     return response
-

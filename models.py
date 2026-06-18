@@ -2,6 +2,7 @@
 SQLAlchemy ORM Models for KInJo Kindergarten Management Platform
 """
 import enum
+import uuid
 from enum import Enum as PyEnum
 from datetime import date, datetime
 from typing import Optional, List
@@ -304,6 +305,10 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    # Opaque, globally-unique public identifier — for any future public-facing
+    # URL/API surface that should not expose the sequential internal id
+    # (GWS S.5.10-026). Internal numeric id is still the FK/PK everywhere else.
+    public_id = Column(String(36), unique=True, index=True, nullable=False, default=lambda: str(uuid.uuid4()))
     username = Column(String(100), unique=True, index=True, nullable=False)
     email = Column(String(255), index=True, nullable=True)
     hashed_password = Column(String(255), nullable=False)
@@ -483,6 +488,8 @@ class Child(Base):
     __tablename__ = "children"
 
     id = Column(Integer, primary_key=True, index=True)
+    # Opaque, globally-unique public identifier — see User.public_id docstring.
+    public_id = Column(String(36), unique=True, index=True, nullable=False, default=lambda: str(uuid.uuid4()))
     parent_id = Column(Integer, ForeignKey("parent_profiles.id"), nullable=False)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
@@ -529,6 +536,11 @@ class Child(Base):
     vaccination_up_to_date = Column(Boolean, nullable=True)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Corresponding guardian (secondary contact who may pick up / be contacted for the child)
+    corresponding_type = Column(String(20), nullable=True)  # PENDING_MANAGER, GUARDIAN
+    corresponding_phone = Column(String(20), nullable=True)
+    corresponding_pending_reason = Column(String(255), nullable=True)
 
     # Relationships
     parent = relationship("ParentProfile", back_populates="children")
@@ -635,6 +647,8 @@ class EnrollmentApplication(Base):
     __tablename__ = "enrollment_applications"
 
     id = Column(Integer, primary_key=True, index=True)
+    # Opaque, globally-unique public identifier — see User.public_id docstring.
+    public_id = Column(String(36), unique=True, index=True, nullable=False, default=lambda: str(uuid.uuid4()))
     child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
     kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
     class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)
@@ -879,6 +893,22 @@ class Observation(Base):
     # Relationships
     child = relationship("Child", back_populates="observations")
     observer = relationship("User", back_populates="observations")
+
+
+class CurriculumOutcome(Base):
+    __tablename__ = "curriculum_outcomes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    domain = Column(Enum(LearningDomain), nullable=False)
+    age_band_min_months = Column(Integer, nullable=False)
+    age_band_max_months = Column(Integer, nullable=False)
+    indicator_code = Column(String(50), nullable=False, unique=True)
+    description = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_curriculum_outcomes_domain_age", "domain", "age_band_min_months"),
+    )
 
 
 class Portfolio(Base):
@@ -1283,6 +1313,30 @@ class SafeguardingCase(Base):
     sla_closure_deadline = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class ContactMessage(Base):
+    """
+    Public contact-form submission.  Anyone can submit; only admins can view
+    and resolve.  Added as part of P1-D audit remediation.
+    """
+    __tablename__ = "contact_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    email = Column(String(255), nullable=False, index=True)
+    phone = Column(String(30), nullable=True)
+    subject = Column(String(255), nullable=True)
+    message = Column(Text, nullable=False)
+    is_resolved = Column(Boolean, default=False, nullable=False)
+    resolved_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    submitted_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("ix_contact_messages_is_resolved", "is_resolved"),
+        Index("ix_contact_messages_submitted_at_desc", submitted_at.desc()),
+    )
 
 
 class Task(Base):
@@ -1880,3 +1934,330 @@ class ImportLog(Base):
     skipped_count = Column(Integer, nullable=False, default=0)
     errors_json = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# =============================================================================
+# Jordan Heat Map — daily snapshot models
+# Reference: docs/JORDAN_HEAT_MAP_TECHNICAL_SPECIFICATION.md §4
+# These tables back the Admin Heat Map dashboard.  Snapshots are immutable
+# once written; the pipeline is idempotent on (snapshot_date, dimension).
+# =============================================================================
+
+
+class MapIndicatorSnapshot(Base):
+    """One row per (date, governorate, main_indicator). Upserted daily."""
+    __tablename__ = "map_indicator_snapshot"
+
+    id = Column(Integer, primary_key=True, index=True)
+    snapshot_date = Column(Date, nullable=False, index=True)
+    governorate_code = Column(String(8), nullable=False, index=True)
+    main_indicator = Column(String(40), nullable=False)
+    value = Column(Float, nullable=False)
+    previous_value = Column(Float, nullable=True)
+    trend_pct = Column(Float, nullable=True)
+    sample_size = Column(Integer, nullable=False, default=0)
+    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("snapshot_date", "governorate_code", "main_indicator", name="uq_mis"),
+        Index("idx_mis_latest", "snapshot_date", "governorate_code"),
+        Index("idx_mis_history", "governorate_code", "main_indicator", "snapshot_date"),
+        CheckConstraint("value BETWEEN 0 AND 100", name="ck_mis_value_range"),
+    )
+
+
+class MapSubIndicatorValue(Base):
+    """One row per (date, governorate, sub_indicator)."""
+    __tablename__ = "map_sub_indicator_value"
+
+    id = Column(Integer, primary_key=True, index=True)
+    snapshot_date = Column(Date, nullable=False, index=True)
+    governorate_code = Column(String(8), nullable=False, index=True)
+    sub_indicator = Column(String(40), nullable=False)
+    raw_value = Column(Float, nullable=False)
+    threshold_high = Column(Float, nullable=True)
+    threshold_low = Column(Float, nullable=True)
+    above_threshold = Column(Boolean, nullable=False, default=False)
+    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("snapshot_date", "governorate_code", "sub_indicator", name="uq_ssiv"),
+        Index("idx_ssiv_gov", "snapshot_date", "governorate_code"),
+    )
+
+
+class MapCorrelationSnapshot(Base):
+    """One row per (date, main, sub, method) — Pearson / Spearman / Kendall τ-b."""
+    __tablename__ = "map_correlation_snapshot"
+
+    id = Column(Integer, primary_key=True, index=True)
+    snapshot_date = Column(Date, nullable=False, index=True)
+    main_indicator = Column(String(40), nullable=False)
+    sub_indicator = Column(String(40), nullable=False)
+    method = Column(String(10), nullable=False)
+    coefficient = Column(Float, nullable=True)
+    p_value = Column(Float, nullable=True)
+    n_samples = Column(Integer, nullable=False, default=0)
+    strength = Column(String(15), nullable=False)
+    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("snapshot_date", "main_indicator", "sub_indicator", "method", name="uq_corr"),
+        Index("idx_corr_latest", "snapshot_date"),
+        Index("idx_corr_pair", "main_indicator", "sub_indicator", "snapshot_date"),
+        CheckConstraint(
+            "method IN ('pearson', 'spearman', 'kendall_tau')",
+            name="ck_corr_method",
+        ),
+    )
+
+
+class MapRegressionSnapshot(Base):
+    """One row per (date, main, sub) — standardized OLS coefficient + VIF."""
+    __tablename__ = "map_regression_snapshot"
+
+    id = Column(Integer, primary_key=True, index=True)
+    snapshot_date = Column(Date, nullable=False, index=True)
+    main_indicator = Column(String(40), nullable=False)
+    sub_indicator = Column(String(40), nullable=False)
+    beta_std = Column(Float, nullable=False)
+    std_error = Column(Float, nullable=True)
+    t_stat = Column(Float, nullable=True)
+    p_value = Column(Float, nullable=True)
+    r_squared = Column(Float, nullable=True)
+    adj_r_squared = Column(Float, nullable=True)
+    high_impact = Column(Boolean, nullable=False, default=False)
+    vif = Column(Float, nullable=True)
+    vif_flag = Column(String(10), nullable=False, default="ok")
+    n_samples = Column(Integer, nullable=False, default=0)
+    ridge_used = Column(Boolean, nullable=False, default=False)
+    fit_warning = Column(String(40), nullable=True)
+    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("snapshot_date", "main_indicator", "sub_indicator", name="uq_reg"),
+        Index("idx_reg_latest", "snapshot_date"),
+        Index("idx_reg_main", "main_indicator", "snapshot_date"),
+    )
+
+
+class MapRiskSnapshot(Base):
+    """One row per (date, governorate) — composite risk score + level + drivers."""
+    __tablename__ = "map_risk_snapshot"
+
+    id = Column(Integer, primary_key=True, index=True)
+    snapshot_date = Column(Date, nullable=False, index=True)
+    governorate_code = Column(String(8), nullable=False, index=True)
+    risk_score = Column(Float, nullable=False)
+    risk_level = Column(String(10), nullable=False)
+    top_driver_sub = Column(String(40), nullable=True)
+    top_driver_beta = Column(Float, nullable=True)
+    trend_pct = Column(Float, nullable=True)
+    contributing_subs = Column(JSON, nullable=False, default=list)
+    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("snapshot_date", "governorate_code", name="uq_risk"),
+        Index("idx_risk_latest", "snapshot_date"),
+        CheckConstraint("risk_score BETWEEN 0 AND 100", name="ck_risk_range"),
+        CheckConstraint(
+            "risk_level IN ('low','medium','high','critical')",
+            name="ck_risk_level",
+        ),
+    )
+
+
+class MapAlertHistory(Base):
+    """Append-only alert ledger.  One row per (date, gov, sub, rule)."""
+    __tablename__ = "map_alert_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    snapshot_date = Column(Date, nullable=False, index=True)
+    governorate_code = Column(String(8), nullable=True, index=True)
+    sub_indicator = Column(String(40), nullable=False, index=True)
+    rule = Column(String(80), nullable=False)
+    severity = Column(String(10), nullable=False)
+    current_value = Column(Float, nullable=True)
+    threshold = Column(Float, nullable=True)
+    message = Column(Text, nullable=False)
+    meta = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    acknowledged_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "snapshot_date", "governorate_code", "sub_indicator", "rule",
+            name="uq_alert",
+        ),
+        CheckConstraint(
+            "severity IN ('low','medium','high','critical')",
+            name="ck_alert_severity",
+        ),
+    )
+
+
+class MapDailyRunLog(Base):
+    """Append-only audit log of the daily ETL pipeline runs."""
+    __tablename__ = "map_daily_run_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(String(36), nullable=False, unique=True)
+    started_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(20), nullable=False)
+    rows_processed = Column(Integer, nullable=False, default=0)
+    governorates = Column(Integer, nullable=False, default=0)
+    errors = Column(JSON, nullable=False, default=list)
+    warnings = Column(JSON, nullable=False, default=list)
+    duration_ms = Column(Integer, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('running','success','failed','partial')",
+            name="ck_run_status",
+        ),
+    )
+
+
+class Governorate(Base):
+    """The 12 Jordan governorates, normalized seed data."""
+    __tablename__ = "governorate"
+
+    code = Column(String(8), primary_key=True)
+    slug = Column(String(20), nullable=False, unique=True, index=True)
+    name_en = Column(String(40), nullable=False)
+    name_ar = Column(String(40), nullable=False)
+    center_lon = Column(Float, nullable=False)
+    center_lat = Column(Float, nullable=False)
+    display_order = Column(Integer, nullable=False)
+    active = Column(Boolean, nullable=False, default=True)
+
+
+# =============================================================================
+# AI infrastructure (ai/ package: ml.py, llm.py, insights.py, embeddings.py)
+# =============================================================================
+
+class AIParentRecommendation(Base):
+    __tablename__ = "ai_parent_recommendations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    child_id = Column(Integer, ForeignKey("children.id"), nullable=True)
+    report_date = Column(Date, nullable=False)
+    source_report_id = Column(Integer, ForeignKey("daily_reports.id"), nullable=True)
+    recommendation_type = Column(String(50), nullable=False)
+    content_ar = Column(Text, nullable=True)
+    content_en = Column(Text, nullable=True)
+    model_version = Column(String(50), nullable=True)
+    prompt_version = Column(String(20), nullable=True)
+    confidence = Column(Float, nullable=True)
+    evidence_json = Column(JSON, nullable=True)
+    parent_feedback = Column(String(20), nullable=True)
+    feedback_at = Column(DateTime(timezone=True), nullable=True)
+    human_reviewed = Column(Boolean, nullable=False, default=False)
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    review_note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class AIManagerAlert(Base):
+    __tablename__ = "ai_manager_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
+    alert_type = Column(String(100), nullable=False)
+    severity = Column(String(20), nullable=False)
+    target_entity_type = Column(String(50), nullable=True)
+    target_entity_id = Column(Integer, nullable=True)
+    details = Column(JSON, nullable=False)
+    rule_version = Column(String(20), nullable=True)
+    acknowledged = Column(Boolean, nullable=False, default=False)
+    acknowledged_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    dismissed = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class AIJobLog(Base):
+    __tablename__ = "ai_job_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_name = Column(String(100), nullable=False)
+    job_type = Column(String(50), nullable=False)
+    started_at = Column(DateTime(timezone=True), nullable=False)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(20), nullable=False)
+    records_in = Column(Integer, nullable=True)
+    records_out = Column(Integer, nullable=True)
+    error_message = Column(Text, nullable=True)
+    model_version = Column(String(50), nullable=True)
+    prompt_version = Column(String(20), nullable=True)
+    job_metadata = Column(JSON, nullable=True)
+
+
+class AIFeature(Base):
+    __tablename__ = "ai_features"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entity_type = Column(String(50), nullable=False)
+    entity_id = Column(Integer, nullable=False)
+    feature_name = Column(String(100), nullable=False)
+    feature_value = Column(Float, nullable=True)
+    feature_json = Column(JSON, nullable=True)
+    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+    valid_until = Column(DateTime(timezone=True), nullable=True)
+    model_version = Column(String(50), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("entity_type", "entity_id", "feature_name", name="idx_ai_features_entity_feature"),
+    )
+
+
+class AIModelVersion(Base):
+    __tablename__ = "ai_model_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    model_name = Column(String(100), nullable=False)
+    version = Column(String(20), nullable=False)
+    model_type = Column(String(50), nullable=False)
+    description = Column(Text, nullable=True)
+    parameters = Column(JSON, nullable=True)
+    deployed_at = Column(DateTime(timezone=True), server_default=func.now())
+    retired_at = Column(DateTime(timezone=True), nullable=True)
+    deployed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("model_name", "version", name="uq_ai_model_version"),
+    )
+
+
+class AIFeedback(Base):
+    __tablename__ = "ai_feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_table = Column(String(100), nullable=False)
+    source_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_role = Column(String(50), nullable=True)
+    feedback_type = Column(String(50), nullable=False)
+    feedback_note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class AIEmbedding(Base):
+    __tablename__ = "ai_embeddings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_table = Column(String(100), nullable=False)
+    source_id = Column(Integer, nullable=False)
+    chunk_index = Column(Integer, nullable=False, default=0)
+    embedding = Column(Text, nullable=False)
+    model_name = Column(String(100), nullable=False, default="nomic-embed-text")
+    computed_at = Column(DateTime(timezone=True), server_default=func.now())
+    content_hash = Column(String(64), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("source_table", "source_id", "chunk_index", "model_name", name="uq_ai_embeddings_source"),
+    )

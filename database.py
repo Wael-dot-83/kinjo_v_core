@@ -3,6 +3,7 @@ Database configuration and session management
 """
 import logging
 import sqlite3
+import uuid
 from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import sessionmaker, declarative_base, with_loader_criteria, Session
 from sqlalchemy.pool import StaticPool
@@ -67,10 +68,10 @@ else:
     engine = create_engine(
         settings.DATABASE_URL,
         pool_pre_ping=True,
-        pool_recycle=1800,
-        pool_size=10,
-        max_overflow=20,
-        pool_timeout=30,
+        pool_recycle=settings.DB_POOL_RECYCLE,
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
+        pool_timeout=settings.DB_POOL_TIMEOUT,
         echo=settings.DEBUG,
         connect_args={"client_encoding": "utf8"}
     )
@@ -187,6 +188,23 @@ def init_db():
     ensure_runtime_security_schema()
 
 
+def _backfill_empty_public_ids():
+    """Give local-dev rows with placeholder public_id values unique UUIDs."""
+    for table in ("users", "children", "enrollment_applications"):
+        if table not in inspect(engine).get_table_names():
+            continue
+        columns = {column["name"] for column in inspect(engine).get_columns(table)}
+        if "public_id" not in columns:
+            continue
+        with engine.begin() as connection:
+            rows = connection.execute(text(f"SELECT id FROM {table} WHERE public_id IS NULL OR public_id = ''")).fetchall()
+            for (row_id,) in rows:
+                connection.execute(
+                    text(f"UPDATE {table} SET public_id = :pid WHERE id = :rid"),
+                    {"pid": str(uuid.uuid4()), "rid": row_id},
+                )
+
+
 def ensure_runtime_security_schema():
     """Backfill local-dev security columns when Alembic has not run yet."""
     inspector = inspect(engine)
@@ -196,6 +214,8 @@ def ensure_runtime_security_schema():
 
     if "users" in table_names:
         existing_columns = {column["name"] for column in inspector.get_columns("users")}
+        if "public_id" not in existing_columns:
+            statements.append("ALTER TABLE users ADD COLUMN public_id VARCHAR(36) NOT NULL DEFAULT ''")
         if "mfa_enabled" not in existing_columns:
             statements.append("ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN NOT NULL DEFAULT 0")
         if "mfa_secret" not in existing_columns:
@@ -205,6 +225,16 @@ def ensure_runtime_security_schema():
         if "mfa_last_verified_at" not in existing_columns:
             statements.append("ALTER TABLE users ADD COLUMN mfa_last_verified_at DATETIME")
 
+    if "children" in table_names:
+        existing_columns = {column["name"] for column in inspector.get_columns("children")}
+        if "public_id" not in existing_columns:
+            statements.append("ALTER TABLE children ADD COLUMN public_id VARCHAR(36) NOT NULL DEFAULT ''")
+
+    if "enrollment_applications" in table_names:
+        existing_columns = {column["name"] for column in inspector.get_columns("enrollment_applications")}
+        if "public_id" not in existing_columns:
+            statements.append("ALTER TABLE enrollment_applications ADD COLUMN public_id VARCHAR(36) NOT NULL DEFAULT ''")
+
     if "parent_profiles" in table_names:
         existing_columns = {column["name"] for column in inspector.get_columns("parent_profiles")}
         if "notification_language" not in existing_columns:
@@ -213,9 +243,9 @@ def ensure_runtime_security_schema():
                 "ADD COLUMN notification_language VARCHAR(10) NOT NULL DEFAULT 'ar'"
             )
 
-    if not statements:
-        return
+    if statements:
+        with engine.begin() as connection:
+            for statement in statements:
+                connection.execute(text(statement))
 
-    with engine.begin() as connection:
-        for statement in statements:
-            connection.execute(text(statement))
+    _backfill_empty_public_ids()

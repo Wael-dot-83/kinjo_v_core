@@ -12,12 +12,11 @@ import json
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import get_current_user
 from models import AuditLog, Kindergarten, User, UserRole
 from rbac import IMPERSONATION_SESSION_KEY, require_role
 
@@ -32,7 +31,7 @@ _require_admin = require_role(UserRole.ADMIN)
 
 class ImpersonateRequest(BaseModel):
     target_user_id: int
-    reason: Optional[str] = None
+    reason: Optional[str] = Field(None, max_length=500)
 
 
 # ---------------------------------------------------------------------------
@@ -65,10 +64,10 @@ def _write_audit(
     ip: Optional[str],
 ) -> None:
     entry = AuditLog(
-        user_id=target_id,
+        user_id=admin_id,          # actor who performed the action
         action=action,
         entity_type="User",
-        entity_id=target_id,
+        entity_id=target_id,       # subject being impersonated
         details=json.dumps({"reason": reason}),
         ip_address=ip,
         sensitivity_level=4,
@@ -95,8 +94,24 @@ def start_impersonation(
         User.deleted_at.is_(None),
     ).first()
     if not target:
+        _write_audit(
+            db,
+            admin_id=current_admin.id,
+            target_id=payload.target_user_id,
+            action="IMPERSONATION_ATTEMPT_FAILED",
+            reason=f"User not found: {payload.target_user_id}",
+            ip=_get_ip(request),
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     if target.role != UserRole.MANAGER:
+        _write_audit(
+            db,
+            admin_id=current_admin.id,
+            target_id=target.id,
+            action="IMPERSONATION_ATTEMPT_FAILED",
+            reason=f"Target role is {target.role.value}, not MANAGER",
+            ip=_get_ip(request),
+        )
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Only managers can be impersonated.",
@@ -145,7 +160,7 @@ def start_impersonation(
 @router.post("/admin/exit-impersonation", status_code=status.HTTP_200_OK)
 def exit_impersonation(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_admin: User = Depends(_require_admin),
     db: Session = Depends(get_db),
 ):
     session = _get_session(request)
@@ -154,13 +169,12 @@ def exit_impersonation(
     if not imp_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not currently impersonating.")
 
-    admin_id = imp_data.get("admin_id", current_user.id)
     target_id = imp_data.get("user_id")
 
     _write_audit(
         db,
-        admin_id=admin_id,
-        target_id=target_id or current_user.id,
+        admin_id=current_admin.id,   # always use JWT-verified identity
+        target_id=target_id or current_admin.id,
         action="IMPERSONATION_END",
         reason=None,
         ip=_get_ip(request),
@@ -177,7 +191,7 @@ def exit_impersonation(
 
 @router.get("/admin/impersonate/audit")
 def impersonation_audit(
-    limit: int = 20,
+    limit: int = Query(20, ge=1, le=100),
     _admin: User = Depends(_require_admin),
     db: Session = Depends(get_db),
 ):
@@ -185,7 +199,7 @@ def impersonation_audit(
         db.query(AuditLog)
         .filter(AuditLog.action.in_(["IMPERSONATION_START", "IMPERSONATION_END"]))
         .order_by(AuditLog.created_at.desc())
-        .limit(min(limit, 100))
+        .limit(limit)
         .all()
     )
 

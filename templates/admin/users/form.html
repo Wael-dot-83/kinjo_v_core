@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "admin_base.html" %}
 {% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if user_obj %}{% if ui_lang == 'en' %}Edit User{% else %}تعديل المستخدم{% endif %}{% else %}{% if ui_lang == 'en' %}Add New User{% else %}إضافة مستخدم جديد{% endif %}{% endif %}{% endblock %}
@@ -319,12 +319,19 @@ breadcrumbs=[
         const governorateFilter = document.getElementById('kgGovernorateFilter');
         const searchInput = document.getElementById('kgSearch');
 
+        // Debounce search input to avoid O(N) DOM traversal on every keystroke
+        let _kgSearchTimer = null;
+        const debouncedFilter = () => {
+            clearTimeout(_kgSearchTimer);
+            _kgSearchTimer = setTimeout(filterKindergartenOptions, 200);
+        };
+
         if (governorateFilter) {
             governorateFilter.addEventListener('change', filterKindergartenOptions);
         }
 
         if (searchInput) {
-            searchInput.addEventListener('input', filterKindergartenOptions);
+            searchInput.addEventListener('input', debouncedFilter);
         }
 
         filterKindergartenOptions();
@@ -334,7 +341,7 @@ breadcrumbs=[
         const role = document.getElementById('role').value;
         const section = document.getElementById('kindergartenSection');
         const kgSelect = document.getElementById('kindergarten_id');
-        const isManagerUser = {{ 'true' if is_manager_user else 'false' }};
+        const isManagerUser = {{ is_manager_user | tojson }};
 
 
     updateRoleHelp(role);

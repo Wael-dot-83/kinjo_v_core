@@ -1,13 +1,23 @@
 """
 Missing Critical Endpoints - Implementation
 Adds CRUD operations and complete workflows
+
+P3-A AUDIT RESULT (2026-06-14):
+  26 routes audited. None conflict with admin_endpoints.py (all are in user-facing
+  namespaces: /users/me, /notifications, /search, /communication, /kindergartens,
+  /classes, /safety, /reports, /parent-profiles, /children, /manager, /enrollments,
+  /attendance, /daily-reports, /curriculum).
+
+  This module is mounted at /api in main.py (after admin_router), so there is no
+  overlap with /api/admin/* routes. Safe to keep as-is. Future work: migrate each
+  domain into its own router file (e.g., api/attendance.py, api/curriculum.py).
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, text
 from sqlalchemy.exc import IntegrityError
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator, model_validator
 from slowapi import Limiter
@@ -621,7 +631,7 @@ def get_kindergarten_kpi_snapshot(
     governance_score = _kpi_svc.KPIService.compute_governance_quality_index(
         db, kindergarten_id, period_start, period_end
     )
-    satisfaction_score = _kpi_svc.KPIService.compute_parent_satisfaction(
+    satisfaction_score = _kpi_svc.KPIService.compute_parent_satisfaction_score(
         db, kindergarten_id, period_start, period_end
     )
 
@@ -841,7 +851,7 @@ def get_reports(
     query = db.query(models.DailyReport)
 
     if current_user.role == models.UserRole.PARENT:
-        # Parents only see approved reports for their children
+        # Parents only see approved reports for their own children
         parent_profile = db.query(models.ParentProfile).filter(
             models.ParentProfile.user_id == current_user.id
         ).first()
@@ -854,6 +864,15 @@ def get_reports(
             models.DailyReport.child_id.in_(child_ids),
             models.DailyReport.status == models.DailyReportStatus.APPROVED
         )
+    elif current_user.role in (models.UserRole.SUPERVISOR, models.UserRole.MANAGER):
+        # Scope to the user's own kindergarten
+        if current_user.kindergarten_id:
+            query = query.filter(
+                models.DailyReport.kindergarten_id == current_user.kindergarten_id
+            )
+        else:
+            return {"reports": []}
+    # ADMIN sees all — no additional filter
 
     if child_id:
         query = query.filter(models.DailyReport.child_id == child_id)
@@ -1034,7 +1053,7 @@ def update_parent_profile(
     if all(getattr(profile, f) for f in required):
         profile.profile_complete = True
         if not profile.profile_completed_at:
-            profile.profile_completed_at = datetime.utcnow()
+            profile.profile_completed_at = datetime.now(timezone.utc)
 
     db.commit()
     return {"id": profile.id, "profile_complete": profile.profile_complete}
@@ -1176,6 +1195,7 @@ def review_enrollment_plural_alias(
     db: Session = Depends(get_db)
 ):
     """Compatibility endpoint for frontend plural enrollment review path."""
+    from api.enrollment import review_enrollment
     if decision is None:
         decision = "accept"
     return review_enrollment(
@@ -1231,6 +1251,7 @@ def mark_attendance(
     """Compatibility endpoint for simple attendance actions from the UI."""
     status_value = attendance_data.status.upper()
     if status_value in {"PRESENT", "LATE"}:
+        from api.attendance_routes import check_in_child
         try:
             return check_in_child(
                 child_id=attendance_data.child_id,

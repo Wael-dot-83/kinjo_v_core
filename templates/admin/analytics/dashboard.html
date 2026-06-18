@@ -1,33 +1,41 @@
-﻿{% extends 'base.html' %}
-{% from 'components/page-header.html' import page_header %}
+﻿{% extends "admin_base.html" %}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 {% from 'components/export-modal.html' import export_modal %}
 
-{% block title %}{% if ui_lang == 'en' %}Central Analytics Dashboard{% else %}لوحة التحليلات المركزية{% endif %}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Central Analytics Dashboard{% else %}لوحة التحليلات المركزية{% endif %} — KinJo{% endblock %}
 
-{% block page_header %}
-{% set filter_actions %}
-{{ date_range_filter(
-start_id="periodStart",
-end_id="periodEnd",
-governorate_id="governorateFilter",
-show_governorate=(current_user.role in ["ADMIN","SUPERVISOR"]),
-refresh_btn_id="refreshBtn",
-on_refresh="loadAdminAnalytics",
-show_export=True,
-export_modal_id="exportModal",
-user_role=current_user.role
-) }}
-{% endset %}
-{{ page_header(
-title="Central Analytics" if ui_lang == 'en' else "التحليلات المركزية",
-icon="bi-bar-chart-line-fill",
-breadcrumbs=[
-{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
-{"label": "Analytics" if ui_lang == 'en' else "التحليلات", "url": None}
-],
-actions=filter_actions
-) }}
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <div>
+    <h1 class="admin-page-title mb-0" style="font: var(--type-page-title)">
+      <i class="bi bi-bar-chart-line-fill me-2"></i>
+      {% if ui_lang == 'en' %}Central Analytics{% else %}التحليلات المركزية{% endif %}
+    </h1>
+    <small class="text-muted datetime-indicator mt-1" id="analyticsLastUpdated">
+      <i class="bi bi-clock"></i>
+      <span>{% if ui_lang == 'en' %}Loading data...{% else %}جاري تحميل البيانات...{% endif %}</span>
+    </small>
+  </div>
+  <div>
+    {{ date_range_filter(
+      start_id="periodStart",
+      end_id="periodEnd",
+      governorate_id="governorateFilter",
+      show_governorate=(current_user.role in ["ADMIN","SUPERVISOR"]),
+      refresh_btn_id="refreshBtn",
+      on_refresh="loadAdminAnalytics",
+      show_export=True,
+      export_modal_id="exportModal",
+      user_role=current_user.role
+    ) }}
+  </div>
+</div>
 
 {% if current_user.role == "SUPERVISOR" %}
 <div id="supervisorScopeHint" class="alert alert-info py-2 px-3 d-none" role="alert">
@@ -38,41 +46,335 @@ actions=filter_actions
 </div>
 {% endif %}
 
-<!-- Page Help Content -->
-<div id="pageHelpContent" class="d-none" data-help-title="{% if ui_lang == 'en' %}Analytics Dashboard Guide{% else %}دليل لوحة التحليلات{% endif %}">
-    <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-speedometer2 me-2"></i>{% if ui_lang == 'en' %}Overview{% else %}نظرة عامة{% endif %}</h6>
-        <p>{% if ui_lang == 'en' %}This dashboard provides a comprehensive overview of the kindergarten network performance, focusing on safety and compliance.{% else %}توفر هذه اللوحة نظرة شاملة على أداء شبكة الروضات، مع التركيز على السلامة والامتثال.{% endif %}</p>
+
+<div class="analytics-dashboard">
+    <!-- Network Overview Cards -->
+    <div class="row g-4 mb-section gap-card">
+        <!-- Kindergartens Count -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 border-start border-4 border-primary shadow-sm" role="region" aria-label="{% if ui_lang == 'ar' %}بطانية رياض الأطفال{% else %}Kindergartens KPI{% endif %}">
+                <div class="card-body p-card">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Kindergartens{% else %}عدد الروضات{% endif %}<i class="bi bi-info-circle-fill text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{% if ui_lang == 'ar' %}إجمالي رياض الأطفال النشطة في الفترة المحددة{% else %}Total active kindergartens in the selected period{% endif %}"></i></h6>
+                        <div class="icon-circle bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
+                            title="{% if ui_lang == 'en' %}Total active kindergartens in the network{% else %}إجمالي عدد الروضات النشطة في الشبكة{% endif %}">
+                            <i class="bi bi-building fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="mb-2 fw-bold text-primary" id="totalKg" aria-label="{% if ui_lang == 'en' %}Kindergartens Count{% else %}عدد الروضات{% endif %}" aria-live="polite">
+                        <div class="skeleton-text w-50"></div>
+                    </h3>
+                    <small class="text-success fw-medium" id="kpiKgGrowth">
+                        <i class="bi bi-arrow-up-short"></i>
+                        <div class="skeleton-text w-75"></div>
+                    </small>
+                    <div class="kpi-sparkline mt-2" data-metric="total_kg" style="height:32px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Children Count -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 border-start border-4 border-info shadow-sm" role="region" aria-label="{% if ui_lang == 'ar' %}بطانية إجمالي الأطفال{% else %}Total Children KPI{% endif %}">
+                <div class="card-body p-card">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}<i class="bi bi-info-circle-fill text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{% if ui_lang == 'ar' %}إجمالي الأطفال المسجلين في جميع رياض الأطفال{% else %}Total enrolled children across all kindergartens{% endif %}"></i></h6>
+                        <div class="icon-circle bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
+                            title="{% if ui_lang == 'en' %}Total children enrolled in the system{% else %}مجموع الأطفال المسجلين في النظام{% endif %}">
+                            <i class="bi bi-people fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="mb-2 fw-bold text-info" id="totalChildren" aria-label="{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}" aria-live="polite">
+                        <div class="skeleton-text w-50"></div>
+                    </h3>
+                    <div class="progress mt-2 mb-2" style="height: 6px;">
+                        <div class="progress-bar bg-info" id="enrollmentRateBar" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted d-block">{% if ui_lang == 'en' %}Occupancy Rate:{% else %}نسبة الإشغال:{% endif %} <span class="fw-medium" id="enrollmentRate">
+                            <div class="skeleton-text w-25 d-inline-block"></div>
+                        </span></small>
+                    <div class="kpi-sparkline mt-2" data-metric="total_children" style="height:32px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Avg Attendance -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 border-start border-4 border-success shadow-sm" role="region" aria-label="{% if ui_lang == 'ar' %}بطانية نسبة الحضور{% else %}Attendance Rate KPI{% endif %}">
+                <div class="card-body p-card">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}<i class="bi bi-info-circle-fill text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{% if ui_lang == 'ar' %}متوسط معدل الحضور اليومي عبر الشبكة{% else %}Average daily attendance rate across the network{% endif %}"></i></h6>
+                        <div class="icon-circle bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
+                            title="{% if ui_lang == 'en' %}Average children attendance rate during the selected period{% else %}متوسط نسبة حضور الأطفال خلال الفترة المحددة{% endif %}">
+                            <i class="bi bi-check-circle fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="mb-2 fw-bold text-success" id="avgAttendance" aria-label="{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}" aria-live="polite">
+                        <div class="skeleton-text w-50"></div>
+                    </h3>
+                    <small class="text-muted" id="attendanceTrendIndicator">
+                        <div class="skeleton-text w-75"></div>
+                    </small>
+                    <div class="kpi-sparkline mt-2" data-metric="attendance_rate" style="height:32px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Incident Rate -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 border-start border-4 border-warning shadow-sm" role="region" aria-label="{% if ui_lang == 'ar' %}بطانية معدل الحوادث{% else %}Incident Rate KPI{% endif %}">
+                <div class="card-body p-card">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}<i class="bi bi-info-circle-fill text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{% if ui_lang == 'ar' %}حوادث السلامة المبلغ عنها لكل 1,000 يوم طفل{% else %}Reported safety incidents per 1,000 child-days{% endif %}"></i></h6>
+                        <div class="icon-circle bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
+                            title="{% if ui_lang == 'en' %}Incidents recorded per 100 child-days (safety indicator){% else %}عدد الحوادث المسجلة لكل 100 يوم-طفل (مؤشر السلامة){% endif %}">
+                            <i class="bi bi-exclamation-triangle fs-5"></i>
+                        </div>
+                    </div>
+                    <h3 class="mb-2 fw-bold text-warning" id="incidentRate" aria-label="{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}" aria-live="polite">
+                        <div class="skeleton-text w-50"></div>
+                    </h3>
+                    <small class="text-muted" id="incidentTrend">
+                        <div class="skeleton-text w-75"></div>
+                    </small>
+                    <div class="kpi-sparkline mt-2" data-metric="incident_rate" style="height:32px;"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-info-circle me-2"></i>{% if ui_lang == 'en' %}Key Indicators{% else %}المؤشرات الرئيسية{% endif %}</h6>
-        <ul class="list-unstyled">
-            <li class="mb-2">{% if ui_lang == 'en' %}<strong><i class="bi bi-check-circle text-success me-2"></i>Attendance Rate:</strong> Average daily attendance of children across the network.{% else %}<strong><i class="bi bi-check-circle text-success me-2"></i>نسبة الحضور:</strong> متوسط
-                الحضور اليومي للأطفال عبر الشبكة.{% endif %}</li>
-            <li class="mb-2">{% if ui_lang == 'en' %}<strong><i class="bi bi-exclamation-triangle text-warning me-2"></i>Incident Rate:</strong> Number of incidents recorded per 100 children.{% else %}<strong><i class="bi bi-exclamation-triangle text-warning me-2"></i>معدل الحوادث:</strong>
-                عدد الحوادث المسجلة لكل 100 طفل.{% endif %}</li>
-            <li class="mb-2">{% if ui_lang == 'en' %}<strong><i class="bi bi-shield-check text-info me-2"></i>Governance Index:</strong> Comprehensive assessment of kindergarten compliance (green=excellent, red=needs improvement).{% else %}<strong><i class="bi bi-shield-check text-info me-2"></i>مؤشر الحوكمة:</strong> تقييم شامل
-                لامتثال الروضات للمعايير (أخضر=ممتاز، أحمر=يحتاج تحسين).{% endif %}</li>
-        </ul>
+    <div class="row g-4 mb-section gap-card">
+        <!-- Governorate Breakdown -->
+        <div class="col-lg-8">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center border-bottom">
+                    <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+                        <i class="bi bi-geo-alt me-2 text-primary"></i>{% if ui_lang == 'en' %}Governorate Analysis{% else %}تحليل المحافظات{% endif %}
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary" onclick="refreshGovernorateData()">
+                            <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+                        </button>
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
+                            <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0 p-card">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="governorateTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-semibold text-muted border-0 ps-4">
+                                        <i class="bi bi-geo-alt me-1"></i>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
+                                    </th>
+                                    <th class="text-center fw-semibold text-muted border-0">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</th>
+                                    <th class="text-center fw-semibold text-muted border-0">{% if ui_lang == 'en' %}Students{% else %}الطلاب{% endif %}</th>
+                                    <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
+                                        <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
+                                    </th>
+                                    <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
+                                    </th>
+                                    <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
+                                        <i class="bi bi-shield-check me-1"></i>{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="governorateTableBody">
+                                <tr class="skeleton-row">
+                                    <td class="ps-4"><div class="skeleton-text w-75"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-75 mx-auto"></div></td>
+                                </tr>
+                                <tr class="skeleton-row">
+                                    <td class="ps-4"><div class="skeleton-text w-75"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-75 mx-auto"></div></td>
+                                </tr>
+                                <tr class="skeleton-row">
+                                    <td class="ps-4"><div class="skeleton-text w-75"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-50 mx-auto"></div></td>
+                                    <td class="text-center"><div class="skeleton-text w-75 mx-auto"></div></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Governance Distribution -->
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-transparent border-bottom">
+                    <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+                        <i class="bi bi-pie-chart me-2 text-info"></i>{% if ui_lang == 'en' %}Governance Rating Distribution{% else %}توزيع تقييم الحوكمة{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body p-card d-flex flex-column justify-content-center align-items-center">
+                    <div style="width: 200px; height: 200px;">
+                        <canvas id="governancePieChart"></canvas>
+                    </div>
+                    <div class="mt-4 w-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span><i class="bi bi-circle-fill text-success me-2"></i>{% if ui_lang == 'en' %}Excellent (Green){% else %}متميز (أخضر){% endif %}</span>
+                            <span class="fw-bold" id="countGreen">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span><i class="bi bi-circle-fill text-warning me-2"></i>{% if ui_lang == 'en' %}Average (Amber){% else %}متوسط (برتقالي){% endif %}</span>
+                            <span class="fw-bold" id="countAmber">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-circle-fill text-danger me-2"></i>{% if ui_lang == 'en' %}Needs Improvement (Red){% else %}يحتاج تحسين (أحمر){% endif %}</span>
+                            <span class="fw-bold" id="countRed">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="mb-4">
-        <h6 class="fw-bold text-primary"><i class="bi bi-tools me-2"></i>{% if ui_lang == 'en' %}Available Tools{% else %}الأدوات المتاحة{% endif %}</h6>
-        <ul class="list-unstyled">
-            <li class="mb-2">{% if ui_lang == 'en' %}<strong>Governorate Analysis:</strong> A table comparing performance across geographical areas.{% else %}<strong>تحليل المحافظات:</strong> جدول يقارن الأداء بين المناطق الجغرافية.{% endif %}</li>
-            <li class="mb-2">{% if ui_lang == 'en' %}<strong>Export CSV:</strong> Use the button in the "Governorate Analysis" section to download a detailed report.{% else %}<strong>تصدير CSV:</strong> استخدم الزر في قسم "تحليل المحافظات" لتحميل تقرير مفصل.{% endif %}</li>
-            <li class="mb-2">{% if ui_lang == 'en' %}<strong>Time Filter:</strong> Use the date picker at the top to change the report time period.{% else %}<strong>تصفية الوقت:</strong> استخدم محدد التاريخ في الأعلى لتغيير الفترة الزمنية للتقرير.{% endif %}
-            </li>
-        </ul>
+    <!-- Trends & Advanced Analytics -->
+    <div class="row g-4 mb-section gap-card">
+        <!-- Trend Chart -->
+        <div class="col-lg-8">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-gradient-primary text-white border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+                            <i class="bi bi-graph-up me-2"></i>{% if ui_lang == 'en' %}Time Trend Analysis{% else %}تحليل الاتجاهات الزمنية{% endif %}
+                        </h5>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="{% if ui_lang == 'en' %}Select Trend{% else %}اختيار الاتجاه{% endif %}">
+                            <input type="radio" class="btn-check" name="trendType" id="attendanceTrend"
+                                autocomplete="off" checked>
+                            <label class="btn btn-outline-light active" for="attendanceTrend">
+                                <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
+                            </label>
+                            <input type="radio" class="btn-check" name="trendType" id="incidentsTrend"
+                                autocomplete="off">
+                            <label class="btn btn-outline-light" for="incidentsTrend">
+                                <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-card">
+                    <div style="height: 320px; position: relative;">
+                        <canvas id="trendChart" style="max-width: 100%; max-height: 100%;"></canvas>
+                        <div id="trendChartOverlay" class="d-none position-absolute top-50 start-50 translate-middle">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                                </div>
+                                <div class="mt-2 text-muted small">{% if ui_lang == 'en' %}Loading data...{% else %}جاري تحميل البيانات...{% endif %}</div>
+                            </div>
+                        </div>
+                        <div id="trendChartError" class="analytics-error-state">
+                            <div class="icon">&#x26A0;&#xFE0F;</div>
+                            <p>{% if ui_lang == 'en' %}Failed to load trend data.{% else %}تعذر تحميل بيانات الاتجاهات.{% endif %}</p>
+                            <button class="btn btn-sm btn-outline-primary" onclick="loadAdminAnalytics()">
+                                <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Predictive Risk Radar -->
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-warning border-2">
+                <div class="card-header bg-warning bg-opacity-10 text-dark border-bottom border-warning">
+                    <h5 class="card-title mb-0 fw-bold" style="font: var(--type-card-title)">
+                        <i class="bi bi-shield-exclamation me-2 text-warning"></i>{% if ui_lang == 'en' %}Smart Risk Indicator{% else %}مؤشر الخطر الذكي{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body p-card">
+                    <div class="alert alert-warning border-0 small mb-3">
+                        <i class="bi bi-robot me-1"></i>
+                        {% if ui_lang == 'en' %}The system analyzes data to identify kindergartens that need urgent attention.{% else %}يقوم النظام بتحليل البيانات لتحديد الروضات التي تحتاج انتباه عاجل.{% endif %}
+                    </div>
+                    <div id="riskListContainer">
+                        <ul class="list-group list-group-flush" id="riskList">
+                            <li class="list-group-item d-flex justify-content-between align-items-center border-0">
+                                <div><div class="skeleton-text w-75 mb-1"></div><div class="skeleton-text w-50"></div></div>
+                                <div class="skeleton-text w-25"></div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="noRiskData" class="text-center text-muted d-none">
+                        <i class="bi bi-check-circle fs-1 text-success mb-2"></i>
+                        <div class="small">{% if ui_lang == 'en' %}No risk cases recorded{% else %}لا توجد حالات خطر مسجلة{% endif %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparative Analysis -->
+    <div class="row g-4 mb-section gap-card">
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm border-start border-success border-4">
+                <div class="card-header bg-success bg-opacity-10 text-success fw-bold border-bottom border-success border-opacity-25" style="font: var(--type-card-title)">
+                    <i class="bi bi-trophy-fill me-2"></i>{% if ui_lang == 'en' %}Top 5 Performing Kindergartens{% else %}أفضل 5 روضات أداءً{% endif %}
+                    <small class="float-end text-success-emphasis fw-normal">{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="topPerformersList">
+                        <div class="list-group-item text-muted text-center py-4 border-0">
+                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
+                            <div class="skeleton-text w-50 mx-auto"></div>
+                        </div>
+                        <div class="list-group-item text-muted text-center py-4 border-0">
+                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
+                            <div class="skeleton-text w-50 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm border-start border-danger border-4">
+                <div class="card-header bg-danger bg-opacity-10 text-danger fw-bold border-bottom border-danger border-opacity-25" style="font: var(--type-card-title)">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>{% if ui_lang == 'en' %}Kindergartens Need Urgent Support{% else %}الروضات تحتاج دعم عاجل{% endif %}
+                    <small class="float-end text-danger-emphasis fw-normal">{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="lowPerformersList">
+                        <div class="list-group-item text-muted text-center py-4 border-0">
+                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
+                            <div class="skeleton-text w-50 mx-auto"></div>
+                        </div>
+                        <div class="list-group-item text-muted text-center py-4 border-0">
+                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
+                            <div class="skeleton-text w-50 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Predictive & Anomaly Insights -->
-    <div class="row g-4 mb-4">
+    <div class="row g-4 mb-section gap-card">
         <div class="col-lg-8">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0 fw-bold">
+                    <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
                         <i class="bi bi-cpu-fill me-2 text-primary"></i>{% if ui_lang == 'en' %}Predictions & Alerts{% else %}التوقعات والإنذارات{% endif %}
                     </h5>
                     <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse"
@@ -80,7 +382,7 @@ actions=filter_actions
                         <i class="bi bi-info-circle me-1"></i>{% if ui_lang == 'en' %}Model Data{% else %}بيانات النموذج{% endif %}
                     </button>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-card">
                     <div id="modelMetaPanel" class="collapse">
                         <div class="alert alert-light border" id="modelMeta">
                             <div class="small text-muted">{% if ui_lang == 'en' %}Last Training: -- | Version: -- | Confidence: --{% else %}آخر تدريب: -- | الإصدار: -- | الثقة: --{% endif %}</div>
@@ -118,7 +420,7 @@ actions=filter_actions
                     <hr />
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <h6 class="mb-0">{% if ui_lang == 'en' %}Anomaly Indicators{% else %}مؤشرات الشذوذ{% endif %}</h6>
-                        <span class="badge badge-soft badge-soft-warning" id="anomalyCount">0</span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis" id="anomalyCount">0</span>
                     </div>
                     <div id="anomalyList" class="list-group list-group-flush"></div>
                     <hr />
@@ -133,17 +435,17 @@ actions=filter_actions
         <div class="col-lg-4">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-transparent border-bottom">
-                    <h5 class="card-title mb-0 fw-bold">
+                    <h5 class="card-title mb-0 fw-bold" style="font: var(--type-card-title)">
                         <i class="bi bi-graph-up-arrow me-2 text-success"></i>{% if ui_lang == 'en' %}Data Quality & Alerts{% else %}جودة البيانات والتنبيهات{% endif %}
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-card">
                     <div id="alertBanner" class="alert alert-danger d-none" role="alert"></div>
                     <div class="mb-3">
                         <div class="small text-muted">{% if ui_lang == 'en' %}Data Quality{% else %}جودة البيانات{% endif %}</div>
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="fw-bold" id="dataQualityScore">--</span>
-                            <span class="badge badge-soft badge-soft-success" id="dataQualityStatus">--</span>
+                            <span class="badge bg-success-subtle text-success-emphasis" id="dataQualityStatus">--</span>
                         </div>
                     </div>
                     <div class="list-group list-group-flush" id="alertList"></div>
@@ -153,15 +455,15 @@ actions=filter_actions
     </div>
 
     <!-- Targets, Benchmarks, Recommendations -->
-    <div class="row g-4 mb-4">
+    <div class="row g-4 mb-section gap-card">
         <div class="col-lg-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-transparent border-bottom">
-                    <h5 class="card-title mb-0 fw-bold">
+                    <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
                         <i class="bi bi-bullseye me-2 text-primary"></i>{% if ui_lang == 'en' %}Targets & Benchmarks{% else %}الأهداف والمعايير{% endif %}
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-card">
                     <div id="targetList" class="list-group list-group-flush"></div>
                     <hr />
                     <div id="benchmarkList" class="list-group list-group-flush"></div>
@@ -171,367 +473,12 @@ actions=filter_actions
         <div class="col-lg-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-transparent border-bottom">
-                    <h5 class="card-title mb-0 fw-bold">
+                    <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
                         <i class="bi bi-lightbulb-fill me-2 text-warning"></i>{% if ui_lang == 'en' %}Recommendations & Action Plans{% else %}التوصيات وخطط العمل{% endif %}
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-card">
                     <div id="recommendationList" class="list-group list-group-flush"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block content %}
-<div class="analytics-dashboard">
-    <!-- Network Overview Cards -->
-    <div class="row g-4 mb-4">
-        <!-- Kindergartens Count -->
-        <div class="col-md-6 col-xl-3">
-            <div class="card h-100 border-start border-4 border-primary shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold">{% if ui_lang == 'en' %}Kindergartens{% else %}عدد الروضات{% endif %}</h6>
-                        <div class="icon-circle bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center"
-                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="{% if ui_lang == 'en' %}Total active kindergartens in the network{% else %}إجمالي عدد الروضات النشطة في الشبكة{% endif %}">
-                            <i class="bi bi-building fs-5"></i>
-                        </div>
-                    </div>
-                    <h3 class="mb-2 fw-bold text-primary" id="totalKg" aria-label="{% if ui_lang == 'en' %}Kindergartens Count{% else %}عدد الروضات{% endif %}">
-                        <div class="skeleton-text w-50"></div>
-                    </h3>
-                    <small class="text-success fw-medium" id="kpiKgGrowth">
-                        <i class="bi bi-arrow-up-short"></i>
-                        <div class="skeleton-text w-75"></div>
-                    </small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Children Count -->
-        <div class="col-md-6 col-xl-3">
-            <div class="card h-100 border-start border-4 border-info shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold">{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}</h6>
-                        <div class="icon-circle bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center"
-                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="{% if ui_lang == 'en' %}Total children enrolled in the system{% else %}مجموع الأطفال المسجلين في النظام{% endif %}">
-                            <i class="bi bi-people fs-5"></i>
-                        </div>
-                    </div>
-                    <h3 class="mb-2 fw-bold text-info" id="totalChildren" aria-label="{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}">
-                        <div class="skeleton-text w-50"></div>
-                    </h3>
-                    <div class="progress mt-2 mb-2" style="height: 6px;">
-                        <div class="progress-bar bg-info" id="enrollmentRateBar" style="width: 0%"></div>
-                    </div>
-                    <small class="text-muted d-block">{% if ui_lang == 'en' %}Occupancy Rate:{% else %}نسبة الإشغال:{% endif %} <span class="fw-medium" id="enrollmentRate">
-                            <div class="skeleton-text w-25 d-inline-block"></div>
-                        </span></small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Avg Attendance -->
-        <div class="col-md-6 col-xl-3">
-            <div class="card h-100 border-start border-4 border-success shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold">{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}</h6>
-                        <div class="icon-circle bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center"
-                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="{% if ui_lang == 'en' %}Average children attendance rate during the selected period{% else %}متوسط نسبة حضور الأطفال خلال الفترة المحددة{% endif %}">
-                            <i class="bi bi-check-circle fs-5"></i>
-                        </div>
-                    </div>
-                    <h3 class="mb-2 fw-bold text-success" id="avgAttendance" aria-label="{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}">
-                        <div class="skeleton-text w-50"></div>
-                    </h3>
-                    <small class="text-muted" id="attendanceTrendIndicator">
-                        <div class="skeleton-text w-75"></div>
-                    </small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Incident Rate -->
-        <div class="col-md-6 col-xl-3">
-            <div class="card h-100 border-start border-4 border-warning shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold">{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}</h6>
-                        <div class="icon-circle bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center"
-                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="{% if ui_lang == 'en' %}Incidents recorded per 100 child-days (safety indicator){% else %}عدد الحوادث المسجلة لكل 100 يوم-طفل (مؤشر السلامة){% endif %}">
-                            <i class="bi bi-exclamation-triangle fs-5"></i>
-                        </div>
-                    </div>
-                    <h3 class="mb-2 fw-bold text-warning" id="incidentRate" aria-label="{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}">
-                        <div class="skeleton-text w-50"></div>
-                    </h3>
-                    <small class="text-muted" id="incidentTrend">
-                        <div class="skeleton-text w-75"></div>
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-4">
-        <!-- Governorate Breakdown -->
-        <div class="col-lg-8">
-            <div class="card h-100 shadow-sm">
-                <div class="card-header bg-transparent d-flex justify-content-between align-items-center border-bottom">
-                    <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-geo-alt me-2 text-primary"></i>{% if ui_lang == 'en' %}Governorate Analysis{% else %}تحليل المحافظات{% endif %}
-                    </h5>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-outline-primary" onclick="refreshGovernorateData()">
-                            <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
-                        </button>
-                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
-                            <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" id="governorateTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="fw-semibold text-muted border-0 ps-4">
-                                        <i class="bi bi-geo-alt me-1"></i>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
-                                    </th>
-                                    <th class="text-center fw-semibold text-muted border-0">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</th>
-                                    <th class="text-center fw-semibold text-muted border-0">{% if ui_lang == 'en' %}Students{% else %}الطلاب{% endif %}</th>
-                                    <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
-                                        <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
-                                    </th>
-                                    <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
-                                        <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
-                                    </th>
-                                    <th class="text-center fw-semibold text-muted border-0" data-sort-method="number">
-                                        <i class="bi bi-shield-check me-1"></i>{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="governorateTableBody">
-                                <tr class="skeleton-row">
-                                    <td class="ps-4">
-                                        <div class="skeleton-text w-75"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-75 mx-auto"></div>
-                                    </td>
-                                </tr>
-                                <tr class="skeleton-row">
-                                    <td class="ps-4">
-                                        <div class="skeleton-text w-75"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-75 mx-auto"></div>
-                                    </td>
-                                </tr>
-                                <tr class="skeleton-row">
-                                    <td class="ps-4">
-                                        <div class="skeleton-text w-75"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-50 mx-auto"></div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="skeleton-text w-75 mx-auto"></div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Governance Distribution -->
-        <div class="col-lg-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-header bg-transparent border-bottom">
-                    <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-pie-chart me-2 text-info"></i>{% if ui_lang == 'en' %}Governance Rating Distribution{% else %}توزيع تقييم الحوكمة{% endif %}
-                    </h5>
-                </div>
-                <div class="card-body d-flex flex-column justify-content-center align-items-center">
-                    <div style="width: 200px; height: 200px;">
-                        <canvas id="governancePieChart"></canvas>
-                    </div>
-                    <div class="mt-4 w-100">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span><i class="bi bi-circle-fill text-success me-2"></i>{% if ui_lang == 'en' %}Excellent (Green){% else %}متميز (أخضر){% endif %}</span>
-                            <span class="fw-bold" id="countGreen">--</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span><i class="bi bi-circle-fill text-warning me-2"></i>{% if ui_lang == 'en' %}Average (Amber){% else %}متوسط (برتقالي){% endif %}</span>
-                            <span class="fw-bold" id="countAmber">--</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-circle-fill text-danger me-2"></i>{% if ui_lang == 'en' %}Needs Improvement (Red){% else %}يحتاج تحسين (أحمر){% endif %}</span>
-                            <span class="fw-bold" id="countRed">--</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Trends & Advanced Analytics -->
-    <div class="row g-4 mb-4">
-        <!-- Trend Chart -->
-        <div class="col-lg-8">
-            <div class="card h-100 shadow-sm border-0">
-                <div class="card-header bg-gradient-primary text-white border-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0 fw-bold">
-                            <i class="bi bi-graph-up me-2"></i>{% if ui_lang == 'en' %}Time Trend Analysis{% else %}تحليل الاتجاهات الزمنية{% endif %}
-                        </h5>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="{% if ui_lang == 'en' %}Select Trend{% else %}اختيار الاتجاه{% endif %}">
-                            <input type="radio" class="btn-check" name="trendType" id="attendanceTrend"
-                                autocomplete="off" checked>
-                            <label class="btn btn-outline-light active" for="attendanceTrend">
-                                <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
-                            </label>
-                            <input type="radio" class="btn-check" name="trendType" id="incidentsTrend"
-                                autocomplete="off">
-                            <label class="btn btn-outline-light" for="incidentsTrend">
-                                <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div style="height: 320px; position: relative;">
-                        <canvas id="trendChart" style="max-width: 100%; max-height: 100%;"></canvas>
-                        <div id="trendChartOverlay" class="d-none position-absolute top-50 start-50 translate-middle">
-                            <div class="text-center">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
-                                </div>
-                                <div class="mt-2 text-muted small">{% if ui_lang == 'en' %}Loading data...{% else %}جاري تحميل البيانات...{% endif %}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Predictive Risk Radar -->
-        <div class="col-lg-4">
-            <div class="card h-100 shadow-sm border-warning border-2">
-                <div class="card-header bg-warning bg-opacity-10 text-dark border-bottom border-warning">
-                    <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-shield-exclamation me-2 text-warning"></i>{% if ui_lang == 'en' %}Smart Risk Indicator{% else %}مؤشر الخطر الذكي{% endif %}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-warning border-0 small mb-3">
-                        <i class="bi bi-robot me-1"></i>
-                        {% if ui_lang == 'en' %}The system analyzes data to identify kindergartens that need urgent attention.{% else %}يقوم النظام بتحليل البيانات لتحديد الروضات التي تحتاج انتباه عاجل.{% endif %}
-                    </div>
-                    <div id="riskListContainer">
-                        <ul class="list-group list-group-flush" id="riskList">
-                            <li class="list-group-item d-flex justify-content-between align-items-center border-0">
-                                <div>
-                                    <span class="fw-bold d-block">{% if ui_lang == 'en' %}Al-Amal Kindergarten{% else %}روضة الأمل{% endif %}</span>
-                                    <small class="text-danger">{% if ui_lang == 'en' %}High absence rate{% else %}معدل غياب مرتفع{% endif %}</small>
-                                </div>
-                                <span class="badge badge-soft badge-soft-danger rounded-pill">{% if ui_lang == 'en' %}92% Risk{% else %}92% خطر{% endif %}</span>
-                            </li>
-                        </ul>
-                    </div>
-                    <div id="noRiskData" class="text-center text-muted d-none">
-                        <i class="bi bi-check-circle fs-1 text-success mb-2"></i>
-                        <div class="small">{% if ui_lang == 'en' %}No risk cases recorded{% else %}لا توجد حالات خطر مسجلة{% endif %}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Comparative Analysis -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-6">
-            <div class="card h-100 border-0 shadow-sm border-start border-success border-4">
-                <div
-                    class="card-header bg-success bg-opacity-10 text-success fw-bold border-bottom border-success border-opacity-25">
-                    <i class="bi bi-trophy-fill me-2"></i>{% if ui_lang == 'en' %}Top 5 Performing Kindergartens{% else %}أفضل 5 روضات أداءً{% endif %}
-                    <small class="float-end text-success-emphasis fw-normal">{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush" id="topPerformersList">
-                        <div class="list-group-item text-muted text-center py-4 border-0">
-                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
-                            <div class="skeleton-text w-50 mx-auto"></div>
-                        </div>
-                        <div class="list-group-item text-muted text-center py-4 border-0">
-                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
-                            <div class="skeleton-text w-50 mx-auto"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card h-100 border-0 shadow-sm border-start border-danger border-4">
-                <div
-                    class="card-header bg-danger bg-opacity-10 text-danger fw-bold border-bottom border-danger border-opacity-25">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>{% if ui_lang == 'en' %}Kindergartens Need Urgent Support{% else %}الروضات تحتاج دعم عاجل{% endif %}
-                    <small class="float-end text-danger-emphasis fw-normal">{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush" id="lowPerformersList">
-                        <div class="list-group-item text-muted text-center py-4 border-0">
-                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
-                            <div class="skeleton-text w-50 mx-auto"></div>
-                        </div>
-                        <div class="list-group-item text-muted text-center py-4 border-0">
-                            <div class="skeleton-text w-75 mx-auto mb-2"></div>
-                            <div class="skeleton-text w-50 mx-auto"></div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -540,26 +487,53 @@ actions=filter_actions
 
 <!-- Export Modal -->
 {{ export_modal(
-modal_id="exportModal",
-form_id="exportForm",
-spinner_id="exportSpinner",
-report_types=[
-{"value": "overview", "label": "Network Overview" if ui_lang == 'en' else "نظرة عامة للشبكة"},
-{"value": "attendance", "label": "Attendance Report" if ui_lang == 'en' else "تقرير الحضور"},
-{"value": "incidents", "label": "Incidents Report" if ui_lang == 'en' else "تقرير الحوادث"},
-{"value": "compliance", "label": "Compliance Report" if ui_lang == 'en' else "تقرير الامتثال"},
-{"value": "governorate", "label": "Governorate Detail" if ui_lang == 'en' else "تفصيل المحافظات"},
-{"value": "full_audit", "label": "Full Audit Log" if ui_lang == 'en' else "سجل التدقيق الكامل"}
-]
+  modal_id="exportModal",
+  form_id="exportForm",
+  spinner_id="exportSpinner",
+  report_types=[
+    {"value": "overview", "label": "Network Overview" if ui_lang == 'en' else "نظرة عامة للشبكة"},
+    {"value": "attendance", "label": "Attendance Report" if ui_lang == 'en' else "تقرير الحضور"},
+    {"value": "incidents", "label": "Incidents Report" if ui_lang == 'en' else "تقرير الحوادث"},
+    {"value": "compliance", "label": "Compliance Report" if ui_lang == 'en' else "تقرير الامتثال"},
+    {"value": "governorate", "label": "Governorate Detail" if ui_lang == 'en' else "تفصيل المحافظات"},
+    {"value": "full_audit", "label": "Full Audit Log" if ui_lang == 'en' else "سجل التدقيق الكامل"}
+  ]
 ) }}
 {% endblock %}
 
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
-    integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
-    crossorigin="anonymous"></script>
+{% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/tablesort@5.3.0/dist/tablesort.min.js"
     integrity="sha384-vhcBfNt762rNlbnxZsIJQSPWX7b+8NzToPmcW6J5cJzXSnOjZKS2LQ/O2uqLlHcX"
     crossorigin="anonymous"></script>
+<script src="/static/js/chart_utils.js" charset="utf-8"></script>
 <script src="/static/js/admin_analytics.js" charset="utf-8"></script>
+<style>
+    .analytics-dashboard {
+      font-family: var(--admin-font-family-ar), var(--admin-font-family-en);
+    }
+    :root {
+      --type-page-title: 700 24px/32px;
+      --type-section-title: 600 18px/24px;
+      --type-card-title: 600 14px/20px;
+      --type-body: 400 13px/20px;
+      --type-label: 500 12px/16px;
+      --space-32: 32px;
+    }
+    .mb-section { margin-bottom: var(--space-32); }
+    .p-card { padding: 16px; }
+    .gap-card { gap: 16px; }
+    [dir="rtl"] .trend-chart-wrapper canvas { direction: rtl; }
+    .analytics-error-state { display: none; text-align: center; padding: 3rem 1rem; color: #6b7280; }
+    .analytics-error-state.show { display: block; }
+    .analytics-error-state .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .datetime-indicator { font-size: 0.75rem; color: #6b7280; display: flex; align-items: center; gap: 0.3rem; }
+    html[dir="rtl"] .btn-group .btn:first-child { border-radius: 0 0.25rem 0.25rem 0; }
+    html[dir="rtl"] .btn-group .btn:last-child { border-radius: 0.25rem 0 0 0.25rem; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function(el) { new bootstrap.Tooltip(el); });
+});
+</script>
 {% endblock %}

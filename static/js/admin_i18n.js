@@ -69,7 +69,7 @@ class AdminI18n {
       // Load all supported languages in parallel
       const loadPromises = this.options.supportedLanguages.map(async (lang) => {
         try {
-          const response = await fetch(`/static/i18n/admin_${lang}.json`, { cache: "force-cache" });
+          const response = await fetch(`/static/i18n/admin_${lang}.json`, { cache: "no-cache" });
           if (response.ok) {
             this.translations[lang] = await response.json();
           } else {
@@ -88,10 +88,6 @@ class AdminI18n {
     } finally {
       this.isLoading = false;
     }
-  }
-
-  resolveAuthToken() {
-    return localStorage.getItem("kinjo_token") || sessionStorage.getItem("kinjo_token") || "";
   }
 
   resolveServerLanguageApiState() {
@@ -120,14 +116,11 @@ class AdminI18n {
 
   async loadServerLanguagePreference() {
     try {
-      const token = this.resolveAuthToken();
-      if (!token || this.serverLanguageApiState === "missing") {
+      if (this.serverLanguageApiState === "missing") {
         return null;
       }
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await fetch("/api/users/me/language", {
         method: "GET",
-        headers,
         credentials: "same-origin",
       });
       if (response.status === 404) {
@@ -148,14 +141,10 @@ class AdminI18n {
 
   async persistServerLanguagePreference(language) {
     try {
-      const token = this.resolveAuthToken();
-      if (!token || this.serverLanguageApiState === "missing") {
+      if (this.serverLanguageApiState === "missing") {
         return;
       }
       const headers = { "Content-Type": "application/json" };
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
       const response = await fetch("/api/users/me/language", {
         method: "PUT",
         headers,
@@ -184,16 +173,15 @@ class AdminI18n {
       return false;
     }
 
-    if (language === this.currentLanguage) {
-      return true;
-    }
+    if (language === this.currentLanguage) return true;
 
     try {
       this.currentLanguage = language;
       this.saveLanguage(language);
-      this.persistServerLanguagePreference(language);
+      // Await server persistence so the preference is saved before the page
+      // reloads — without await the reload can outrace the PUT request.
+      await this.persistServerLanguagePreference(language);
       window.location.reload();
-
       return true;
     } catch (error) {
       console.error("Failed to switch language:", error);
@@ -345,6 +333,11 @@ class AdminI18n {
 
       if (!translation) {
         console.warn(`Translation missing for key: ${key}`);
+        // GWS A.1.4-022: show the language-fallback banner once if a key is missing
+        const banner = document.getElementById("langFallbackBanner");
+        if (banner && banner.classList.contains("d-none")) {
+          banner.classList.remove("d-none");
+        }
         return fallback || key;
       }
     }
@@ -790,38 +783,44 @@ class AdminI18n {
     const switcher = document.querySelector(".admin-language-switcher");
     if (!switcher) return;
 
-    // Create language options
+    // Options must go inside .admin-dropdown-menu so they stay hidden until opened
+    const menu = switcher.querySelector(".admin-dropdown-menu");
+    if (!menu) return;
+
     const languages = [
-      {
-        code: "en",
-        name: this.currentLanguage === "ar" ? "الإنجليزية" : "English",
-        flag: "🇺🇸",
-      },
-      {
-        code: "ar",
-        name: this.currentLanguage === "ar" ? "العربية" : "Arabic",
-        flag: "🇯🇴",
-      },
+      { code: "en", name: "English",  nameAr: "الإنجليزية", flag: "🇬🇧" },
+      { code: "ar", name: "العربية",  nameAr: "العربية",    flag: "🇯🇴" },
     ];
 
     languages.forEach((lang) => {
       const option = document.createElement("button");
       option.className = "admin-language-option";
       option.setAttribute("data-language", lang.code);
-      option.innerHTML = `
-        <span class="admin-language-flag">${lang.flag}</span>
-        <span class="admin-language-name">${lang.name}</span>
-      `;
+      option.setAttribute("type", "button");
+
+      const displayName = this.currentLanguage === "ar" ? lang.nameAr : lang.name;
+      const flagSpan = document.createElement("span");
+      flagSpan.className = "admin-language-flag";
+      flagSpan.setAttribute("aria-hidden", "true");
+      flagSpan.textContent = lang.flag;
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "admin-language-name";
+      nameSpan.textContent = displayName;
+
+      option.appendChild(flagSpan);
+      option.appendChild(nameSpan);
 
       if (lang.code === this.currentLanguage) {
         option.classList.add("active");
+        option.setAttribute("aria-current", "true");
       }
 
       option.addEventListener("click", () => {
         this.switchLanguage(lang.code);
       });
 
-      switcher.appendChild(option);
+      menu.appendChild(option);
     });
   }
 

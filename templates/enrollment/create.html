@@ -19,6 +19,20 @@ breadcrumbs=[
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-8">
+        <!-- Required documents notice -->
+        <div class="alert alert-info d-flex align-items-start mb-4">
+            <i class="bi bi-info-circle-fill fs-5 me-2 mt-1"></i>
+            <div>
+                {% if ui_lang == 'en' %}
+                Before you begin, have these ready: a birth certificate and a health certificate for the
+                child (image or PDF). The form takes about 5 minutes to complete.
+                {% else %}
+                قبل البدء، تأكد من توفر شهادة الميلاد والشهادة الصحية للطفل (صورة أو PDF).
+                يستغرق إكمال النموذج نحو 5 دقائق.
+                {% endif %}
+            </div>
+        </div>
+
         <!-- Progress Indicator -->
         <div class="card mb-4">
             <div class="card-body">

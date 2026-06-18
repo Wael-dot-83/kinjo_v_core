@@ -23,6 +23,7 @@ Validation utilities and audit logging for KInJo platform
 """
 import logging
 import re
+import unicodedata
 from datetime import date, datetime, timezone
 from typing import Optional, List
 from fastapi import HTTPException, status
@@ -177,9 +178,61 @@ def validate_identity_by_nationality(nationality: str, national_id: Optional[str
 
 
 def _normalize_governorate_input(value: str) -> str:
-    cleaned = value.strip().lower().replace("’", "'")
+    cleaned = value.strip().lower().replace("'", "'")
     cleaned = re.sub(r"[\s\-_`']", "", cleaned)
     return cleaned
+
+
+# ---------------------------------------------------------------------------
+# Arabic search normalization (GWS U.2.3-065)
+# ---------------------------------------------------------------------------
+# Canonicalises Arabic text so that searches are robust against:
+#   - Alef variants (أ إ آ ٱ) → plain ا
+#   - Tah marbuta (ة) → open tah (ه)   — optional tolerance
+#   - Final ya without dots (ى) → dotted ya (ي)
+#   - Tatweel / kashida (ـ)
+#   - Hamza on waw (ؤ→و) and hamza alone (ئ→ي)
+#   - Definite article prefix (ال) stripped from the start of the term
+# This function is applied to BOTH the user query and the stored value before
+# comparison via LIKE — the column ilike() call is generated with the
+# normalized pattern when build_arabic_search_terms() is used.
+_ALEF_RE = re.compile(r"[أإآٱ]")
+_YA_RE = re.compile(r"ى")
+_TAH_MARBUTA_RE = re.compile(r"ة")
+_TATWEEL_RE = re.compile(r"ـ")
+_HAMZA_WAW_RE = re.compile(r"ؤ")
+_HAMZA_YA_RE = re.compile(r"ئ")
+_AL_PREFIX_RE = re.compile(r"^[اأإ]ل")
+
+
+def normalize_arabic_text(text: str) -> str:
+    """Return a canonicalized form of *text* for fuzzy Arabic search matching."""
+    if not text:
+        return text
+    s = unicodedata.normalize("NFC", text)
+    s = _ALEF_RE.sub("ا", s)
+    s = _YA_RE.sub("ي", s)
+    s = _TATWEEL_RE.sub("", s)
+    s = _HAMZA_WAW_RE.sub("و", s)
+    s = _HAMZA_YA_RE.sub("ي", s)
+    # Strip Arabic definite article at word boundaries
+    s = re.sub(r"(?<!\w)[اأإ]ل(?=\w)", "", s)
+    return s.strip()
+
+
+def build_arabic_search_terms(raw: str) -> list[str]:
+    """Split *raw* into individual search tokens, each with Arabic normalisation.
+
+    Returns up to 8 tokens to prevent degenerate queries.
+    """
+    original_tokens = [t.strip() for t in (raw or "").split() if t.strip()][:8]
+    result: list[str] = []
+    for tok in original_tokens:
+        result.append(tok)
+        normalised = normalize_arabic_text(tok)
+        if normalised and normalised != tok:
+            result.append(normalised)
+    return result
 
 
 def validate_jordan_governorate(governorate: str) -> str:
@@ -642,7 +695,9 @@ def log_audit_action(
     entity_id: Optional[int] = None,
     details: Optional[str] = None,
     ip_address: Optional[str] = None,
-    sensitivity_level: int = 1
+    sensitivity_level: int = 1,
+    old_data: Optional[dict] = None,
+    new_data: Optional[dict] = None
 ) -> models.AuditLog:
     """Log an audit action"""
     audit_log = models.AuditLog(
@@ -651,6 +706,8 @@ def log_audit_action(
         entity_type=entity_type,
         entity_id=entity_id,
         details=details,
+        old_data=old_data,
+        new_data=new_data,
         ip_address=ip_address,
         sensitivity_level=sensitivity_level
     )

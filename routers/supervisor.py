@@ -763,6 +763,9 @@ def create_daily_report(
     assert_supervisor_owns_child(current_user.id, body.child_id, db)
     target_date = date.fromisoformat(body.date)
 
+    if target_date > date.today():
+        raise HTTPException(status_code=400, detail="Cannot create reports for future dates")
+
     # Reject duplicate report for same child + date unless caller explicitly
     # requests an overwrite. Overwrite updates the existing row rather than
     # creating a second report for the same child/day.
@@ -790,6 +793,12 @@ def create_daily_report(
     provided_fields = getattr(body, "model_fields_set", set())
 
     if existing and force:
+        # Prevent overwriting reports that have already been approved or shared with parent
+        if existing.status in (DailyReportStatus.APPROVED, DailyReportStatus.SENT_TO_PARENT):
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot overwrite a report that has already been approved or sent to the parent"
+            )
         report = existing
         report.status = target_status
         report.submitted_by = current_user.id

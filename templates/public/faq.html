@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{% if ui_lang == 'en' %}FAQ{% else %}الأسئلة الشائعة{% endif %}{% endblock %}
+{% block meta_description %}
+<meta name="description" content="{% if ui_lang == 'en' %}Frequently asked questions about KinJo enrollment, accounts, and daily reports.{% else %}الأسئلة الشائعة حول التسجيل في كينجو والحسابات والتقارير اليومية.{% endif %}" />
+{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+    title="Frequently Asked Questions" if ui_lang == 'en' else "الأسئلة الشائعة",
+    icon="bi-patch-question",
+    breadcrumbs=[
+        {"label": "Home" if ui_lang == 'en' else "الرئيسية", "url": "/"},
+        {"label": "FAQ" if ui_lang == 'en' else "الأسئلة الشائعة", "url": None}
+    ]
+) }}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+
+    <h2 class="h6 text-muted text-uppercase mb-3">{% if ui_lang == 'en' %}Enrollment{% else %}التسجيل{% endif %}</h2>
+    <div class="accordion mb-4" id="faqEnrollment">
+
+      <div class="accordion-item">
+        <h3 class="accordion-header">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+            {% if ui_lang == 'en' %}How do I enroll my child?{% else %}كيف أسجّل طفلي؟{% endif %}
+          </button>
+        </h3>
+        <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqEnrollment">
+          <div class="accordion-body">
+            {% if ui_lang == 'en' %}
+            Create a parent account from <a href="/register">Create account</a>, then go to
+            <a href="/services">Service Guide</a> to see required documents, or sign in and start
+            an enrollment application from your dashboard.
+            {% else %}
+            أنشئ حساب ولي أمر من صفحة <a href="/register">إنشاء حساب</a>، ثم راجع
+            <a href="/services">دليل الخدمة</a> للتعرف على المستندات المطلوبة، أو سجّل الدخول وابدأ
+            طلب التسجيل من لوحة التحكم.
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h3 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+            {% if ui_lang == 'en' %}What documents are required?{% else %}ما هي المستندات المطلوبة؟{% endif %}
+          </button>
+        </h3>
+        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqEnrollment">
+          <div class="accordion-body">
+            {% if ui_lang == 'en' %}
+            At minimum, a birth certificate and a health certificate. See the
+            <a href="/services">Service Guide</a> for the full, current list.
+            {% else %}
+            كحد أدنى، شهادة ميلاد وشهادة صحية. راجع <a href="/services">دليل الخدمة</a> للحصول على
+            القائمة الكاملة والمحدّثة.
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h3 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+            {% if ui_lang == 'en' %}How long does an application take to review?{% else %}كم تستغرق مراجعة الطلب؟{% endif %}
+          </button>
+        </h3>
+        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqEnrollment">
+          <div class="accordion-body">
+            {% if ui_lang == 'en' %}
+            Review time depends on the kindergarten's available capacity. You can track the status
+            of your application at any time from your parent dashboard.
+            {% else %}
+            يعتمد وقت المراجعة على السعة المتوفرة في الروضة. يمكنك تتبع حالة طلبك في أي وقت من
+            لوحة تحكم ولي الأمر.
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <h2 class="h6 text-muted text-uppercase mb-3">{% if ui_lang == 'en' %}Account &amp; access{% else %}الحساب والوصول{% endif %}</h2>
+    <div class="accordion mb-4" id="faqAccount">
+
+      <div class="accordion-item">
+        <h3 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+            {% if ui_lang == 'en' %}I forgot my password. What do I do?{% else %}نسيت كلمة المرور، ماذا أفعل؟{% endif %}
+          </button>
+        </h3>
+        <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccount">
+          <div class="accordion-body">
+            {% if ui_lang == 'en' %}
+            Use <a href="/forgot-password">Forgot password</a> to receive a reset link by email.
+            {% else %}
+            استخدم صفحة <a href="/forgot-password">نسيت كلمة المرور</a> لاستلام رابط إعادة التعيين عبر البريد الإلكتروني.
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h3 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+            {% if ui_lang == 'en' %}Can I use KinJo in Arabic and English?{% else %}هل يمكن استخدام كينجو بالعربية والإنجليزية؟{% endif %}
+          </button>
+        </h3>
+        <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccount">
+          <div class="accordion-body">
+            {% if ui_lang == 'en' %}
+            Yes. Use the language toggle in the top navigation bar to switch between Arabic and English at any time.
+            {% else %}
+            نعم. استخدم مفتاح تبديل اللغة في شريط التنقل العلوي للتبديل بين العربية والإنجليزية في أي وقت.
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <h3 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6">
+            {% if ui_lang == 'en' %}Have a question that isn't answered here?{% else %}هل لديك سؤال لم تجد إجابته هنا؟{% endif %}
+          </button>
+        </h3>
+        <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#faqAccount">
+          <div class="accordion-body">
+            {% if ui_lang == 'en' %}
+            <a href="/contact">Contact us</a> and we will respond as soon as possible.
+            {% else %}
+            <a href="/contact">تواصل معنا</a> وسنرد عليك في أقرب وقت ممكن.
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+{% endblock %}

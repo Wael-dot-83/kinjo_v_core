@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 {% extends "admin_base.html" %}
 
 {% block title %}KinJo Admin - Dashboard{% endblock %}
@@ -21,7 +21,7 @@
         </div>
         <div class="admin-page-header-actions">
             <button class="admin-btn admin-btn-secondary" id="refresh-dashboard" data-i18n="common.refresh">
-                <i class="fas fa-sync-alt"></i> Refresh
+                <i class="bi bi-arrow-repeat"></i> Refresh
             </button>
         </div>
     </div>
@@ -31,7 +31,7 @@
         <!-- Loading State -->
         <div class="admin-dashboard-loading" id="dashboard-loading">
             <div class="admin-loading-spinner">
-                <i class="fas fa-spinner fa-spin"></i>
+                <i class="bi bi-arrow-repeat bi-spin"></i>
             </div>
             <p data-i18n="common.loading">Loading dashboard data...</p>
         </div>
@@ -39,11 +39,11 @@
         <!-- Error State -->
         <div class="admin-dashboard-error" id="dashboard-error" style="display: none;">
             <div class="admin-error-state">
-                <i class="fas fa-exclamation-triangle"></i>
+                <i class="bi bi-exclamation-triangle"></i>
                 <h3 data-i18n="common.error">Error Loading Dashboard</h3>
                 <p id="error-message">Unable to load dashboard data. Please try again.</p>
                 <button class="admin-btn admin-btn-primary" id="retry-dashboard">
-                    <i class="fas fa-redo"></i> Try Again
+                    <i class="bi bi-arrow-clockwise"></i> Try Again
                 </button>
             </div>
         </div>
@@ -121,21 +121,21 @@
                         </div>
                         <div class="admin-card-body">
                             <div class="admin-quick-actions">
-                                <a href="/admin/users" class="admin-quick-action-link">
-                                    <i class="fas fa-users"></i>
-                                    <span data-i18n="nav.users">Manage Users</span>
+                                <a href="/admin/users/create" class="admin-quick-action-link">
+                                    <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
+                                    <span data-i18n="dashboard.manage_users">Manage Users</span>
                                 </a>
-                                <a href="/admin/communication" class="admin-quick-action-link">
-                                    <i class="fas fa-envelope"></i>
-                                    <span data-i18n="nav.communication">Send Message</span>
+                                <a href="/admin/messages/compose" class="admin-quick-action-link">
+                                    <i class="bi bi-envelope-fill" aria-hidden="true"></i>
+                                    <span data-i18n="dashboard.send_message">Send Message</span>
                                 </a>
                                 <a href="/admin/analytics" class="admin-quick-action-link">
-                                    <i class="fas fa-chart-bar"></i>
-                                    <span data-i18n="nav.analytics">View Analytics</span>
+                                    <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
+                                    <span data-i18n="dashboard.view_analytics">View Analytics</span>
                                 </a>
-                                <a href="/admin/data" class="admin-quick-action-link">
-                                    <i class="fas fa-database"></i>
-                                    <span data-i18n="nav.data">Data Management</span>
+                                <a href="/admin/import-kindergartens" class="admin-quick-action-link">
+                                    <i class="bi bi-database-fill" aria-hidden="true"></i>
+                                    <span data-i18n="dashboard.data_management">Data Management</span>
                                 </a>
                             </div>
                         </div>
@@ -149,6 +149,6 @@
 
 {% block extra_scripts %}
 <!-- Admin Dashboard JavaScript -->
+<script src="/static/js/chart_utils.js"></script>
 <script src="/static/js/admin_dashboard.js"></script>
-{% endblock %}</content>
-<parameter name="filePath">e:\KInjov2\templates\admin_dashboard.html
+{% endblock %}

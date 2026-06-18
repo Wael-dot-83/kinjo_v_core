@@ -1,0 +1,197 @@
+﻿{% extends "admin_base.html" %}
+
+{% block title %}Import Users — KinJo{% endblock %}
+
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item">
+  <i class="bi bi-house"></i> Dashboard
+</a>
+<span class="admin-breadcrumb-separator">/</span>
+<a href="/admin/users" class="admin-breadcrumb-item">User Management</a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">Import Users</span>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page-header mb-4">
+  <h1 class="admin-page-title">
+    <i class="bi bi-file-earmark-arrow-down me-2"></i>Import Users
+  </h1>
+  <p class="admin-page-subtitle text-muted">Bulk-create user accounts by uploading a CSV file</p>
+</div>
+
+<div class="row g-4">
+  <!-- Upload Card -->
+  <div class="col-lg-7">
+    <div class="admin-card">
+      <div class="admin-card-header">
+        <h2 class="admin-card-title mb-0">Upload CSV</h2>
+      </div>
+      <div class="admin-card-body">
+        <div class="alert alert-info d-flex gap-3 mb-4">
+          <i class="bi bi-info-circle fs-4 mt-1 flex-shrink-0"></i>
+          <div>
+            <strong>Required columns (header row must match exactly):</strong>
+            <ul class="mb-0 mt-1 small">
+              <li><code>username</code> — unique login name</li>
+              <li><code>email</code> — unique email address</li>
+              <li><code>password</code> — minimum 8 characters</li>
+              <li><code>role</code> — one of <code>SUPERVISOR</code>, <code>MANAGER</code>, <code>PARENT</code></li>
+              <li><code>kindergarten_id</code> — numeric ID (required for SUPERVISOR / MANAGER)</li>
+            </ul>
+          </div>
+        </div>
+
+        <form id="importForm" enctype="multipart/form-data" novalidate>
+          <div class="mb-3">
+            <label for="csvFile" class="form-label fw-semibold">Select CSV File <span class="text-danger">*</span></label>
+            <input type="file" class="form-control" id="csvFile" name="file" accept=".csv" required>
+            <div class="form-text">Maximum file size: 20 MB · Encoding: UTF-8</div>
+          </div>
+          <button type="submit" class="admin-btn admin-btn-primary" id="importBtn">
+            <i class="bi bi-upload me-1"></i> Import Users
+          </button>
+          <a href="/admin/import-logs" class="admin-btn admin-btn-ghost ms-2">
+            <i class="bi bi-clock-history me-1"></i> View Import Logs
+          </a>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info / Template Card -->
+  <div class="col-lg-5">
+    <div class="admin-card h-100">
+      <div class="admin-card-header">
+        <h2 class="admin-card-title mb-0">CSV Template</h2>
+      </div>
+      <div class="admin-card-body">
+        <p class="small text-muted mb-3">Download and fill in the template, then upload it above.</p>
+        <button id="downloadTemplateBtn" class="admin-btn admin-btn-ghost admin-btn-sm mb-4">
+          <i class="bi bi-download me-1"></i> Download Template
+        </button>
+        <h6 class="fw-semibold small text-uppercase text-muted mb-2">Example Row</h6>
+        <div class="bg-light rounded p-3 font-monospace small text-break">
+          supervisor01,supervisor@example.com,Pass1234!,SUPERVISOR,3
+        </div>
+        <div class="mt-3 small text-muted">
+          <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+          Rows with errors are skipped; successfully parsed rows are imported immediately.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Results -->
+<div id="resultsSection" class="mt-4" style="display:none;">
+  <div class="admin-card">
+    <div class="admin-card-header">
+      <h2 class="admin-card-title mb-0">Import Results</h2>
+    </div>
+    <div class="admin-card-body">
+      <div id="resultsSummary" class="mb-3"></div>
+      <div id="errorsWrap" style="display:none;">
+        <h6 class="fw-semibold text-danger mb-2">Rows with errors</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light">
+              <tr><th>Row</th><th>Field</th><th>Error</th></tr>
+            </thead>
+            <tbody id="errorsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  'use strict';
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+  }
+
+  document.getElementById('downloadTemplateBtn').addEventListener('click', function () {
+    const csv = 'username,email,password,role,kindergarten_id\nexample_user,user@example.com,Pass1234!,SUPERVISOR,1\n';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'import_users_template.csv';
+    a.click();
+  });
+
+  document.getElementById('importForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const fileInput = document.getElementById('csvFile');
+    if (!fileInput.files.length) {
+      alert('Please select a CSV file.');
+      return;
+    }
+    const btn = document.getElementById('importBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Importing…';
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    try {
+      const res = await fetch('/api/admin/users/import-csv', { method: 'POST', body: formData });
+      const data = await res.json();
+      showResults(data);
+    } catch (err) {
+      alert('Upload failed: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-upload me-1"></i> Import Users';
+    }
+  });
+
+  function showResults(data) {
+    const section = document.getElementById('resultsSection');
+    section.style.display = '';
+
+    const imported = data.imported ?? 0;
+    const errors = data.errors ?? [];
+    const total = data.total ?? (imported + errors.length);
+
+    document.getElementById('resultsSummary').innerHTML = `
+      <div class="row g-3">
+        <div class="col-auto">
+          <div class="p-3 rounded border text-center" style="min-width:100px;">
+            <div class="fs-4 fw-bold text-success">${imported}</div>
+            <div class="small text-muted">Imported</div>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="p-3 rounded border text-center" style="min-width:100px;">
+            <div class="fs-4 fw-bold text-danger">${errors.length}</div>
+            <div class="small text-muted">Errors</div>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="p-3 rounded border text-center" style="min-width:100px;">
+            <div class="fs-4 fw-bold">${total}</div>
+            <div class="small text-muted">Total Rows</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (errors.length) {
+      document.getElementById('errorsWrap').style.display = '';
+      document.getElementById('errorsTableBody').innerHTML = errors.map(e =>
+        `<tr><td>${escHtml(e.row ?? '—')}</td><td>${escHtml(e.field || '—')}</td><td class="text-danger small">${escHtml(e.error || e.message || '—')}</td></tr>`
+      ).join('');
+    } else {
+      document.getElementById('errorsWrap').style.display = 'none';
+    }
+
+    section.scrollIntoView({ behavior: 'smooth' });
+  }
+})();
+</script>
+{% endblock %}

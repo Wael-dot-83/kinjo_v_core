@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if ui_lang == 'en' %}Home{% else %}الرئيسية{% endif %}{% endblock %}
+{% block meta_description %}
+<meta name="description" content="{% if ui_lang == 'en' %}KinJo - Kindergarten enrollment and management platform for Jordan.{% else %}كينجو - منصة تسجيل وإدارة الروضات في الأردن.{% endif %}" />
+{% endblock %}
+
+{% block content %}
+<div class="kinjo-home-hero">
+  <div class="container py-5">
+    <div class="row align-items-center">
+      <div class="col-lg-7">
+        <h1 class="display-6 fw-bold mb-3">
+          {% if ui_lang == 'en' %}Kindergarten enrollment, made simple{% else %}تسجيل الروضة، بخطوات بسيطة{% endif %}
+        </h1>
+        <p class="lead text-muted mb-4">
+          {% if ui_lang == 'en' %}
+          KinJo connects parents, kindergarten staff, and education supervisors on one platform —
+          enroll a child, track attendance, and follow daily reports online.
+          {% else %}
+          تجمع كينجو أولياء الأمور والعاملين في الروضات والمشرفين التربويين في منصة واحدة —
+          سجّل طفلك، وتابع الحضور والتقارير اليومية عبر الإنترنت.
+          {% endif %}
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="/register" class="btn btn-primary btn-lg">
+            <i class="bi bi-person-plus me-1"></i>{% if ui_lang == 'en' %}Create an account{% else %}إنشاء حساب{% endif %}
+          </a>
+          <a href="/login" class="btn btn-outline-primary btn-lg">
+            <i class="bi bi-box-arrow-in-right me-1"></i>{% if ui_lang == 'en' %}Sign in{% else %}تسجيل الدخول{% endif %}
+          </a>
+          <a href="/services" class="btn btn-outline-secondary btn-lg">
+            <i class="bi bi-journal-check me-1"></i>{% if ui_lang == 'en' %}View Service Guide{% else %}دليل الخدمة{% endif %}
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-5 d-none d-lg-block text-center">
+        <i class="bi bi-building" style="font-size: 12rem; color: var(--kinjo-primary, #2563eb); opacity: 0.15;" aria-hidden="true"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container py-5">
+  <div class="row text-center mb-4">
+    <div class="col-12">
+      <h2 class="h4">{% if ui_lang == 'en' %}What you can do on KinJo{% else %}ماذا يمكنك فعله على كينجو؟{% endif %}</h2>
+    </div>
+  </div>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100 text-center p-3">
+        <i class="bi bi-clipboard-check fs-1 text-primary mb-2" aria-hidden="true"></i>
+        <h3 class="h6">{% if ui_lang == 'en' %}Enroll a child{% else %}تسجيل طفل{% endif %}</h3>
+        <p class="text-muted small mb-0">
+          {% if ui_lang == 'en' %}Find a kindergarten and submit an enrollment application online.{% else %}اختر روضة وقدّم طلب التسجيل عبر الإنترنت.{% endif %}
+        </p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100 text-center p-3">
+        <i class="bi bi-journal-text fs-1 text-primary mb-2" aria-hidden="true"></i>
+        <h3 class="h6">{% if ui_lang == 'en' %}Follow daily reports{% else %}متابعة التقارير اليومية{% endif %}</h3>
+        <p class="text-muted small mb-0">
+          {% if ui_lang == 'en' %}See attendance and daily activity reports for your child.{% else %}تابع الحضور والتقارير اليومية لطفلك.{% endif %}
+        </p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100 text-center p-3">
+        <i class="bi bi-chat-dots fs-1 text-primary mb-2" aria-hidden="true"></i>
+        <h3 class="h6">{% if ui_lang == 'en' %}Stay in touch{% else %}التواصل المستمر{% endif %}</h3>
+        <p class="text-muted small mb-0">
+          {% if ui_lang == 'en' %}Message kindergarten staff directly through the platform.{% else %}تواصل مع كادر الروضة مباشرة عبر المنصة.{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8 text-center">
+      <p class="text-muted small">
+        {% if ui_lang == 'en' %}
+        Have a question? Visit our <a href="/faq">FAQ</a> or <a href="/contact">contact us</a>.
+        Read our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.
+        Use the accessibility button in the bottom corner of any page to adjust text size, contrast, or night mode.
+        {% else %}
+        لديك سؤال؟ زر صفحة <a href="/faq">الأسئلة الشائعة</a> أو <a href="/contact">تواصل معنا</a>.
+        اقرأ <a href="/privacy">سياسة الخصوصية</a> و<a href="/terms">الشروط والأحكام</a>.
+        استخدم زر إمكانية الوصول في زاوية أي صفحة لتعديل حجم النص أو التباين أو الوضع الليلي.
+        {% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .kinjo-home-hero {
+    background: linear-gradient(155deg, #eff6ff 0%, #ffffff 60%);
+    border-bottom: 1px solid var(--kinjo-border-light, #e2e8f0);
+  }
+</style>
+{% endblock %}

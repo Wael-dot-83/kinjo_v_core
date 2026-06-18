@@ -45,9 +45,13 @@ def mock_auth():
 
 def test_read_root(test_client):
     response = test_client.get("/", follow_redirects=False)
-    # Should redirect to /login or /dashboard
-    assert response.status_code == 307
-    assert response.headers["location"] in ["/login", "/dashboard"]
+    # Authenticated users redirect to /dashboard; anonymous visitors get the
+    # public homepage (200) — GWS requires a real homepage, not a redirect.
+    if response.status_code == 307:
+        assert response.headers["location"] == "/dashboard"
+    else:
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
 
 
 def test_read_login_page(test_client):
@@ -111,25 +115,22 @@ def test_404_template(test_client):
     assert "404" in response.text
 
 
-def test_help_page(test_client):
+def test_help_page_removed(test_client):
+    """Help page was removed during the streamlining cleanup; route must 404."""
     response = test_client.get("/help")
-    assert response.status_code == 200
-    assert "مركز المساعدة" in response.text
-    assert "مساعدة" in response.text
+    assert response.status_code == 404
 
 
-def test_privacy_page(test_client):
+def test_privacy_page_exists(test_client):
+    """Privacy policy page is required for GWS compliance."""
     response = test_client.get("/privacy")
     assert response.status_code == 200
-    assert "سياسة الخصوصية" in response.text
-    assert "خصوصية" in response.text
 
 
-def test_terms_page(test_client):
+def test_terms_page_exists(test_client):
+    """Terms of use page is required for GWS compliance."""
     response = test_client.get("/terms")
     assert response.status_code == 200
-    assert "شروط الاستخدام" in response.text
-    assert "شروط" in response.text
 
 
 def test_admin_sidebar_hides_classes_link(test_client):

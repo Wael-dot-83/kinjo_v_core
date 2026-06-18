@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{% if ui_lang == 'en' %}About KinJo{% else %}عن كينجو{% endif %}{% endblock %}
+{% block meta_description %}
+<meta name="description" content="{% if ui_lang == 'en' %}KinJo is a kindergarten enrollment and management platform serving parents, kindergarten staff, and education supervisors in Jordan.{% else %}كينجو منصة لإدارة وتسجيل الروضات تخدم أولياء الأمور والعاملين في الروضات والمشرفين التربويين في الأردن.{% endif %}" />
+{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+    title="About KinJo" if ui_lang == 'en' else "عن كينجو",
+    icon="bi-info-circle",
+    breadcrumbs=[
+        {"label": "Home" if ui_lang == 'en' else "الرئيسية", "url": "/"},
+        {"label": "About" if ui_lang == 'en' else "عن كينجو", "url": None}
+    ]
+) }}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4 p-lg-5">
+
+        <h2 class="h5 mb-3">{% if ui_lang == 'en' %}What is KinJo?{% else %}ما هو كينجو؟{% endif %}</h2>
+        <p>
+          {% if ui_lang == 'en' %}
+          KinJo is a kindergarten enrollment and management platform built for Jordan. It connects parents,
+          kindergarten managers and supervisors, and education administrators on a single system to manage
+          child enrollment, daily attendance, daily activity reports, incident reporting, and communication
+          between families and kindergartens.
+          {% else %}
+          كينجو منصة لتسجيل وإدارة الروضات في الأردن. تجمع المنصة أولياء الأمور ومديري ومشرفي الروضات
+          والمسؤولين التربويين في نظام واحد لإدارة تسجيل الأطفال، والحضور اليومي، والتقارير اليومية للأنشطة،
+          والإبلاغ عن الحوادث، والتواصل بين الأسر والروضات.
+          {% endif %}
+        </p>
+
+        <h2 class="h5 mb-3 mt-4">{% if ui_lang == 'en' %}Who uses KinJo?{% else %}من يستخدم كينجو؟{% endif %}</h2>
+        <ul>
+          <li>{% if ui_lang == 'en' %}Parents — enroll children, track attendance, and review daily reports.{% else %}أولياء الأمور — لتسجيل الأطفال، ومتابعة الحضور، ومراجعة التقارير اليومية.{% endif %}</li>
+          <li>{% if ui_lang == 'en' %}Kindergarten managers and supervisors — manage classes, staff, and daily operations.{% else %}مديرو ومشرفو الروضات — لإدارة الشعب والكوادر والعمليات اليومية.{% endif %}</li>
+          <li>{% if ui_lang == 'en' %}Administrators — oversee enrollment, safety, and performance across kindergartens.{% else %}المسؤولون — للإشراف على التسجيل والسلامة والأداء عبر الروضات.{% endif %}</li>
+        </ul>
+
+        <h2 class="h5 mb-3 mt-4">{% if ui_lang == 'en' %}Need help?{% else %}تحتاج مساعدة؟{% endif %}</h2>
+        <p class="mb-0">
+          {% if ui_lang == 'en' %}
+          Visit our <a href="/services">Service Guide</a> for enrollment requirements, or
+          <a href="/contact">contact us</a> with any question.
+          {% else %}
+          يمكنك زيارة <a href="/services">دليل الخدمة</a> للتعرّف على متطلبات التسجيل، أو
+          <a href="/contact">التواصل معنا</a> لأي استفسار.
+          {% endif %}
+        </p>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -6,16 +6,9 @@ serialised due to StaticPool, so we assert that one request receives HTTP 400
 (class full) and the other succeeds with HTTP 200, yielding exactly one ACTIVE
 enrollment in the class.
 
-On a PostgreSQL deployment the class-capacity check in
-`missing_endpoints.py::assign_child_to_class` uses a plain count+compare, which
-races without `SELECT … FOR UPDATE`.  In a production environment, add::
-
-    db.execute(
-        text("SELECT id FROM classes WHERE id = :id FOR UPDATE"),
-        {"id": class_id}
-    )
-
-before the capacity count to eliminate the TOCTOU window.
+`api/classes.py::assign_child_to_class` locks the class row with
+`.with_for_update()` before the capacity count, eliminating the TOCTOU window
+on PostgreSQL (matches the same pattern in `api/enrollment.py::review_enrollment`).
 
 Usage:
     pytest tests/test_concurrent_enrollment.py -v

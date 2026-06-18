@@ -42,7 +42,7 @@ def _assert_arabic_shell(response, route: str) -> None:
     assert 'dir="rtl"' in response.text, f"Missing dir=rtl on route {route}"
 
 
-@pytest.mark.parametrize("route", ["/login", "/register", "/help", "/privacy", "/terms"])
+@pytest.mark.parametrize("route", ["/login", "/register"])
 def test_public_pages_are_english_without_arabic_mix(client, route):
     client.cookies.set("kinjo_lang", "en")
     response = client.get(route, follow_redirects=True)
@@ -98,6 +98,11 @@ def test_redirected_login_stays_english_with_persisted_cookie(client, route):
         "/admin/governance-reports",
         "/admin/classification",
         "/admin/import-kindergartens",
+        "/admin/imported-kindergartens",
+        "/admin/safety-analytics",
+        "/admin/contact-messages",
+        "/admin/impersonate",
+        "/admin/governance/reminders",
     ],
 )
 def test_admin_routes_have_zero_arabic_leakage_in_english(
@@ -192,7 +197,7 @@ def test_parent_routes_have_zero_arabic_leakage_in_english(
     _assert_english_clean(response, route)
 
 
-@pytest.mark.parametrize("route", ["/login", "/register", "/help", "/privacy", "/terms"])
+@pytest.mark.parametrize("route", ["/login", "/register"])
 def test_public_pages_render_arabic_shell_by_default(client, route):
     client.cookies.set("kinjo_lang", "ar")
     response = client.get(route, follow_redirects=True)

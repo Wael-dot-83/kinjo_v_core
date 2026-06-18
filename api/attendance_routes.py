@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
+from sqlalchemy.exc import IntegrityError
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
@@ -40,19 +41,22 @@ def check_in_child(
     
     if not active_enrollment:
         raise HTTPException(status_code=400, detail="Child does not have active enrollment")
-    
+
+    if not active_enrollment.class_id:
+        raise HTTPException(status_code=400, detail="Child must be assigned to a class before attendance can be recorded")
+
     validators.validate_kindergarten_scope(current_user, active_enrollment.kindergarten_id)
-    
+
     # Check if already checked in today (any record, even if checked out)
     today = date.today()
     existing_checkin = db.query(models.AttendanceLog).filter(
         models.AttendanceLog.child_id == child_id,
         models.AttendanceLog.date == today
     ).first()
-    
+
     if existing_checkin:
-        raise HTTPException(status_code=400, detail="Child already checked in today (one record per day allowed)")
-    
+        raise HTTPException(status_code=409, detail="Child already checked in today (one record per day allowed)")
+
     # Create attendance log
     attendance = models.AttendanceLog(
         child_id=child_id,
@@ -63,7 +67,11 @@ def check_in_child(
         recorded_by=current_user.id
     )
     db.add(attendance)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Child already checked in today (concurrent request)")
     db.refresh(attendance)
     
     validators.log_audit_action(
@@ -215,7 +223,9 @@ def get_attendance_report(
             else:
                 end_date = anchor_date.replace(month=anchor_date.month + 1, day=1) - timedelta(days=1)
 
-    # Validate date range (max 62 days)
+    # Validate date range
+    if start_date > end_date:
+        raise HTTPException(status_code=422, detail="start_date must be before or equal to end_date")
     if (end_date - start_date).days > 62:
         raise HTTPException(status_code=422, detail="Date range cannot exceed 62 days")
 
@@ -379,7 +389,14 @@ def correct_attendance_status(
     if not att:
         raise HTTPException(status_code=404, detail="Attendance record not found")
 
-    # 2. Kindergarten scope: verify via the class that owns this attendance record
+    # 2. Limit corrections to within 7 days of the attendance date
+    if (date.today() - att.date).days > 7:
+        raise HTTPException(
+            status_code=400,
+            detail="Attendance corrections are only permitted within 7 days of the recorded date"
+        )
+
+    # 3. Kindergarten scope: verify via the class that owns this attendance record
     att_class = db.query(models.Class).filter(models.Class.id == att.class_id).first()
     if not att_class:
         raise HTTPException(status_code=404, detail="Class for attendance record not found")
@@ -409,6 +426,8 @@ def correct_attendance_status(
         entity_id=att.id,
         details=f"Status changed from {old_status} to {att.status.value} by user {current_user.id}",
         sensitivity_level=2,
+        old_data={"status": old_status},
+        new_data={"status": att.status.value}
     )
 
     return {"old_status": old_status, "new_status": att.status.value}
@@ -473,6 +492,11 @@ def get_attendance_history_summary(
     db: Session = Depends(get_db),
 ):
     """History summary with filtering — Admin only."""
+    validators.validate_admin_role(current_user)
+
+    if start_date > end_date:
+        raise HTTPException(status_code=422, detail="start_date must be before or equal to end_date")
+
     # Determine kindergarten scope
     kg_query = db.query(models.Kindergarten)
     filters_applied: dict = {}

@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "KinJo"
     ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     API_DOCS_ENABLED: bool = True
     CORS_ALLOWED_ORIGINS: List[str] = ["http://127.0.0.1:8000", "http://localhost:8000"]
     TRUSTED_HOSTS: List[str] = ["127.0.0.1", "localhost", "testserver"]
@@ -112,6 +112,17 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"  # Set to DEBUG, INFO, WARNING, ERROR, CRITICAL
     LOG_FILE: str = "kinjo.log"  # Log file path for production
+    LOG_FORMAT: str = "text"  # "text" (default, human-readable) or "json" (structured); opt-in to avoid breaking existing log pipelines
+
+    # Database pool (PostgreSQL only)
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 1800
+
+    # Session & timeouts
+    SESSION_TIMEOUT_MINUTES: int = 30
+    HEATMAP_SERVICE_TIMEOUT_SECONDS: int = 10
 
     # Bulk Operation Limits
     MAX_BULK_CREATE: int = 100
@@ -159,6 +170,28 @@ class Settings(BaseSettings):
     # Localization
     DEFAULT_LANGUAGE: str = "ar"
     SUPPORTED_LANGUAGES: List[str] = ["ar", "en"]
+
+    # Public-facing organization contact info (shown on the public Contact/footer
+    # pages once the operator configures real values; left blank otherwise so we
+    # never display fabricated contact details).
+    SUPPORT_CONTACT_EMAIL: str = ""
+    SUPPORT_CONTACT_PHONE: str = ""
+
+    # CAPTCHA (hCaptcha or reCAPTCHA v2) on public abuse-prone forms
+    # (login, registration, forgot-password, contact). Disabled by default —
+    # an operator must supply real provider credentials to turn this on.
+    CAPTCHA_ENABLED: bool = False
+    CAPTCHA_PROVIDER: str = "hcaptcha"  # "hcaptcha" or "recaptcha"
+    CAPTCHA_SITE_KEY: str = ""    # public key, safe to expose to templates/JS
+    CAPTCHA_SECRET_KEY: str = ""  # private key, server-side only, never exposed
+
+    # Upload virus/malware scanning (ClamAV). Disabled by default. When enabled
+    # in production, a scanner must be reachable or uploads are rejected —
+    # see ensure_secure_production_config() / validate_production_settings().
+    VIRUS_SCAN_ENABLED: bool = False
+    VIRUS_SCAN_PROVIDER: str = "clamav"
+    CLAMAV_HOST: str = "127.0.0.1"
+    CLAMAV_PORT: int = 3310
 
     # Business Rules
     MIN_CHILD_AGE_DAYS: int = 70
@@ -247,6 +280,13 @@ class Settings(BaseSettings):
     GOVERNANCE_REMINDER_COOLDOWN_HOURS: int = 48
     GOVERNANCE_REPORT_DEADLINE_HOUR: int = 16  # 4 PM Amman time
     AMMAN_TIMEZONE: str = "Asia/Amman"
+
+    # AI/ML (ai/ package: ml.py, llm.py, insights.py, embeddings.py) — local Ollama
+    OLLAMA_URL: str = "http://localhost:11434"
+    OLLAMA_LLM_MODEL: str = "llama3"
+    OLLAMA_EMBED_MODEL: str = "nomic-embed-text"
+    OLLAMA_EMBED_DIM: int = 768
+    OLLAMA_TIMEOUT_SECONDS: int = 30
 
     @field_validator("DEBUG", mode="before")
     @classmethod
@@ -368,6 +408,31 @@ def validate_production_settings():
             "Password reset emails WILL NOT be delivered. "
             "Set SMTP_HOST, SMTP_PORT, SMTP_FROM (and optionally SMTP_USERNAME/SMTP_PASSWORD) in .env."
         )
+
+    # CAPTCHA: if turned on, it must be configured for real — never run with a
+    # half-enabled CAPTCHA that silently fails closed on every submission.
+    if settings.CAPTCHA_ENABLED:
+        if settings.CAPTCHA_PROVIDER.lower() not in ("hcaptcha", "recaptcha"):
+            raise RuntimeError(
+                f"CAPTCHA_ENABLED but CAPTCHA_PROVIDER={settings.CAPTCHA_PROVIDER!r} is not "
+                "supported. Use 'hcaptcha' or 'recaptcha'."
+            )
+        if not settings.CAPTCHA_SITE_KEY or not settings.CAPTCHA_SECRET_KEY:
+            raise RuntimeError(
+                "CAPTCHA_ENABLED=true but CAPTCHA_SITE_KEY/CAPTCHA_SECRET_KEY are not set. "
+                "Set both, or set CAPTCHA_ENABLED=false."
+            )
+
+    # Virus scanning: if turned on, a scanner must be reachable — never let
+    # uploads silently bypass scanning because the daemon is misconfigured.
+    if settings.VIRUS_SCAN_ENABLED:
+        if settings.VIRUS_SCAN_PROVIDER.lower() != "clamav":
+            raise RuntimeError(
+                f"VIRUS_SCAN_ENABLED but VIRUS_SCAN_PROVIDER={settings.VIRUS_SCAN_PROVIDER!r} "
+                "is not supported. Use 'clamav'."
+            )
+        if not settings.CLAMAV_HOST:
+            raise RuntimeError("VIRUS_SCAN_ENABLED=true but CLAMAV_HOST is not set.")
 
     logger.info("✓ Production configuration validation passed")
 

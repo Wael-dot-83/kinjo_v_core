@@ -1,106 +1,119 @@
-﻿{% extends 'base.html' %}
-{% block title %}تحليلات الحوادث — KinJo{% endblock %}
+﻿{% extends 'admin_base.html' %}
+{% block title %}{% if ui_lang == 'en' %}Incident Analytics — KinJo{% else %}تحليلات الحوادث — KinJo{% endif %}{% endblock %}
 
-{% block page_header %}
-<div class="page-header-wrap">
-    <div>
-        <div class="page-header-eyebrow text-danger">
-            <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
-            تقارير وتحليلات
-        </div>
-        <h1 class="page-header-title">لوحة تحليلات الحوادث</h1>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0 breadcrumb-sm">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">الرئيسية</a></li>
-                <li class="breadcrumb-item"><a href="/safety" class="text-decoration-none">الصحة والسلامة</a></li>
-                <li class="breadcrumb-item active">تحليلات الحوادث</li>
-            </ol>
-        </nav>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="/safety" class="btn btn-ghost">
-            <i class="bi bi-arrow-right me-2"></i>رجوع
-        </a>
-    </div>
-</div>
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item">
+    <i class="bi bi-house"></i>
+    <span data-i18n="nav.dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
+</a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active" data-i18n="safety_analytics.breadcrumb">{% if ui_lang == 'en' %}Incident Analytics{% else %}تحليلات الحوادث{% endif %}</span>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.field-label { font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block; }
+.mini-bar-wrap { display:flex;flex-direction:column;gap:0.5rem; }
+.mini-bar-row { display:flex;align-items:center;gap:0.75rem; }
+.mini-bar-label { min-width:80px;font-size:0.78rem;font-weight:600;color:var(--kinjo-text-secondary);text-align:end; }
+.mini-bar-track { flex:1;background:var(--kinjo-border);border-radius:50px;height:10px;overflow:hidden; }
+.mini-bar-fill  { height:100%;border-radius:50px;transition:width 0.4s ease; }
+.mini-bar-count { min-width:24px;font-size:0.78rem;font-weight:700;color:var(--kinjo-text-primary); }
+</style>
 {% endblock %}
 
 {% block content %}
+<!-- Page Header -->
+<div class="page-header-wrap mb-4">
+    <div>
+        <div class="page-header-eyebrow text-danger">
+            <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
+            <span data-i18n="safety_analytics.eyebrow">{% if ui_lang == 'en' %}Reports & Analytics{% else %}تقارير وتحليلات{% endif %}</span>
+        </div>
+        <h1 class="page-header-title" data-i18n="safety_analytics.page_title">{% if ui_lang == 'en' %}Incident Analytics Dashboard{% else %}لوحة تحليلات الحوادث{% endif %}</h1>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/safety" class="btn btn-ghost">
+            <i class="bi bi-arrow-right me-2"></i>
+            <span data-i18n="safety_analytics.back">{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}</span>
+        </a>
+    </div>
+</div>
 
 <!-- Admin notice -->
 <div class="alert alert-primary d-flex gap-3 align-items-start mb-4 rounded-3">
     <i class="bi bi-info-circle-fill flex-shrink-0 fs-5 mt-1" aria-hidden="true"></i>
     <div class="small">
-        <span class="fw-700">لوحة المراقبة والتحليل — </span>
-        هذه اللوحة مخصصة للمشرف العام لمراجعة إحصائيات الحوادث عبر الروضات.
-        لا يمكن للمشرف العام تسجيل حوادث جديدة.
+        <span class="fw-700" data-i18n="safety_analytics.admin_notice_title">{% if ui_lang == 'en' %}Monitoring &amp; Analysis Dashboard — {% else %}لوحة المراقبة والتحليل — {% endif %}</span>
+        <span data-i18n="safety_analytics.admin_notice_body">{% if ui_lang == 'en' %}This dashboard is for the system administrator to review incident statistics across kindergartens. The system administrator cannot register new incidents.{% else %}هذه اللوحة مخصصة للمشرف العام لمراجعة إحصائيات الحوادث عبر الروضات. لا يمكن للمشرف العام تسجيل حوادث جديدة.{% endif %}</span>
     </div>
 </div>
 
 <!-- ── Filters ───────────────────────────────────────────────────────────────── -->
 <div class="card mb-4">
     <div class="card-header">
-        <h6 class="card-title-sm mb-0"><i class="bi bi-funnel-fill me-2 text-primary"></i>فلاتر التقرير</h6>
+        <h6 class="card-title-sm mb-0"><i class="bi bi-funnel-fill me-2 text-primary"></i><span data-i18n="safety_analytics.filters_title">{% if ui_lang == 'en' %}Report Filters{% else %}فلاتر التقرير{% endif %}</span></h6>
     </div>
     <div class="card-body">
         <div class="row g-3">
             <div class="col-md-3">
-                <label class="field-label mb-1">الروضة</label>
+                <label class="field-label mb-1" data-i18n="safety_analytics.filter_kindergarten">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
                 <select class="form-select form-select-sm" id="filterKg">
-                    <option value="">جميع الروضات</option>
+                    <option value="" data-i18n="safety_analytics.filter_all_kg">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1">نوع الحادث</label>
+                <label class="field-label mb-1" data-i18n="safety_analytics.filter_type">{% if ui_lang == 'en' %}Incident Type{% else %}نوع الحادث{% endif %}</label>
                 <select class="form-select form-select-sm" id="filterType">
-                    <option value="">جميع الأنواع</option>
-                    <option value="INJURY">إصابة جسدية</option>
-                    <option value="ILLNESS">مرض</option>
-                    <option value="ALLERGY">حساسية</option>
-                    <option value="BEHAVIOR">سلوكي</option>
-                    <option value="OTHER">أخرى</option>
+                    <option value="" data-i18n="safety_analytics.filter_all_types">{% if ui_lang == 'en' %}All Types{% else %}جميع الأنواع{% endif %}</option>
+                    <option value="INJURY" data-i18n="safety_analytics.type_injury">{% if ui_lang == 'en' %}Physical Injury{% else %}إصابة جسدية{% endif %}</option>
+                    <option value="ILLNESS" data-i18n="safety_analytics.type_illness">{% if ui_lang == 'en' %}Illness{% else %}مرض{% endif %}</option>
+                    <option value="ALLERGY" data-i18n="safety_analytics.type_allergy">{% if ui_lang == 'en' %}Allergy{% else %}حساسية{% endif %}</option>
+                    <option value="BEHAVIOR" data-i18n="safety_analytics.type_behavior">{% if ui_lang == 'en' %}Behavioral{% else %}سلوكي{% endif %}</option>
+                    <option value="OTHER" data-i18n="safety_analytics.type_other">{% if ui_lang == 'en' %}Other{% else %}أخرى{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1">تصنيف الحادث</label>
+                <label class="field-label mb-1" data-i18n="safety_analytics.filter_classification">{% if ui_lang == 'en' %}Incident Classification{% else %}تصنيف الحادث{% endif %}</label>
                 <select class="form-select form-select-sm" id="filterClass">
-                    <option value="">جميع التصنيفات</option>
-                    <option value="ACCIDENT">حادث عرضي</option>
-                    <option value="BEHAVIORAL">سلوكي</option>
-                    <option value="MEDICAL">طبي</option>
-                    <option value="ENVIRONMENTAL">بيئي</option>
-                    <option value="OTHER">أخرى</option>
+                    <option value="" data-i18n="safety_analytics.filter_all_classifications">{% if ui_lang == 'en' %}All Classifications{% else %}جميع التصنيفات{% endif %}</option>
+                    <option value="ACCIDENT" data-i18n="safety_analytics.class_accident">{% if ui_lang == 'en' %}Accidental{% else %}حادث عرضي{% endif %}</option>
+                    <option value="BEHAVIORAL" data-i18n="safety_analytics.class_behavioral">{% if ui_lang == 'en' %}Behavioral{% else %}سلوكي{% endif %}</option>
+                    <option value="MEDICAL" data-i18n="safety_analytics.class_medical">{% if ui_lang == 'en' %}Medical{% else %}طبي{% endif %}</option>
+                    <option value="ENVIRONMENTAL" data-i18n="safety_analytics.class_environmental">{% if ui_lang == 'en' %}Environmental{% else %}بيئي{% endif %}</option>
+                    <option value="OTHER" data-i18n="safety_analytics.class_other">{% if ui_lang == 'en' %}Other{% else %}أخرى{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1">درجة الخطورة</label>
+                <label class="field-label mb-1" data-i18n="safety_analytics.filter_severity">{% if ui_lang == 'en' %}Severity Level{% else %}درجة الخطورة{% endif %}</label>
                 <select class="form-select form-select-sm" id="filterSeverity">
-                    <option value="">جميع الدرجات</option>
-                    <option value="LOW">منخفض</option>
-                    <option value="MEDIUM">متوسط</option>
-                    <option value="HIGH">عالٍ</option>
-                    <option value="CRITICAL">حرج</option>
+                    <option value="" data-i18n="safety_analytics.filter_all_severities">{% if ui_lang == 'en' %}All Levels{% else %}جميع الدرجات{% endif %}</option>
+                    <option value="LOW" data-i18n="safety_analytics.sev_low">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</option>
+                    <option value="MEDIUM" data-i18n="safety_analytics.sev_medium">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</option>
+                    <option value="HIGH" data-i18n="safety_analytics.sev_high">{% if ui_lang == 'en' %}High{% else %}عالٍ{% endif %}</option>
+                    <option value="CRITICAL" data-i18n="safety_analytics.sev_critical">{% if ui_lang == 'en' %}Critical{% else %}حرج{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1">إبلاغ ولي الأمر</label>
+                <label class="field-label mb-1" data-i18n="safety_analytics.filter_parent_informed">{% if ui_lang == 'en' %}Parent Notified{% else %}إبلاغ ولي الأمر{% endif %}</label>
                 <select class="form-select form-select-sm" id="filterParentInformed">
-                    <option value="">الكل</option>
-                    <option value="true">تم الإبلاغ</option>
-                    <option value="false">لم يتم الإبلاغ</option>
+                    <option value="" data-i18n="safety_analytics.filter_all">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+                    <option value="true" data-i18n="safety_analytics.filter_informed">{% if ui_lang == 'en' %}Notified{% else %}تم الإبلاغ{% endif %}</option>
+                    <option value="false" data-i18n="safety_analytics.filter_not_informed">{% if ui_lang == 'en' %}Not Notified{% else %}لم يتم الإبلاغ{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1">من تاريخ</label>
+                <label class="field-label mb-1" data-i18n="safety_analytics.filter_from">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %}</label>
                 <input type="date" class="form-control form-control-sm" id="filterFrom">
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1">إلى تاريخ</label>
+                <label class="field-label mb-1" data-i18n="safety_analytics.filter_to">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %}</label>
                 <input type="date" class="form-control form-control-sm" id="filterTo">
             </div>
             <div class="col-md-3 d-flex align-items-end">
                 <button class="btn btn-primary btn-sm w-100" onclick="loadAnalytics()">
-                    <i class="bi bi-search me-1"></i>تطبيق الفلاتر
+                    <i class="bi bi-search me-1"></i>
+                    <span data-i18n="safety_analytics.apply_filters">{% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}</span>
                 </button>
             </div>
         </div>
@@ -113,7 +126,7 @@
         <div class="stat-card card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">إجمالي الحوادث</div>
+                    <div class="stat-label" data-i18n="safety_analytics.kpi_total">{% if ui_lang == 'en' %}Total Incidents{% else %}إجمالي الحوادث{% endif %}</div>
                     <div class="stat-value" id="kpiTotal">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-danger">
@@ -126,7 +139,7 @@
         <div class="stat-card warning card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">مفتوحة</div>
+                    <div class="stat-label" data-i18n="safety_analytics.kpi_open">{% if ui_lang == 'en' %}Open{% else %}مفتوحة{% endif %}</div>
                     <div class="stat-value" id="kpiOpen">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-warning">
@@ -139,7 +152,7 @@
         <div class="stat-card success card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">مغلقة</div>
+                    <div class="stat-label" data-i18n="safety_analytics.kpi_closed">{% if ui_lang == 'en' %}Closed{% else %}مغلقة{% endif %}</div>
                     <div class="stat-value" id="kpiClosed">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-success">
@@ -152,7 +165,7 @@
         <div class="stat-card danger card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">تم إبلاغ الأهل</div>
+                    <div class="stat-label" data-i18n="safety_analytics.kpi_informed">{% if ui_lang == 'en' %}Parents Notified{% else %}تم إبلاغ الأهل{% endif %}</div>
                     <div class="stat-value" id="kpiInformed">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-primary">
@@ -165,7 +178,7 @@
         <div class="stat-card card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">لم يُبلَّغ الأهل</div>
+                    <div class="stat-label" data-i18n="safety_analytics.kpi_not_informed">{% if ui_lang == 'en' %}Parents Not Notified{% else %}لم يُبلَّغ الأهل{% endif %}</div>
                     <div class="stat-value" id="kpiNotInformed">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-danger">
@@ -178,7 +191,7 @@
         <div class="stat-card card">
             <div class="card-body">
                 <div class="stat-info">
-                    <div class="stat-label">أطفال متكررون</div>
+                    <div class="stat-label" data-i18n="safety_analytics.kpi_repeated">{% if ui_lang == 'en' %}Repeated Children{% else %}أطفال متكررون{% endif %}</div>
                     <div class="stat-value" id="kpiRepeated">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-warning">
@@ -194,7 +207,7 @@
     <div class="col-md-4">
         <div class="card h-100">
             <div class="card-header">
-                <h6 class="card-title-sm mb-0"><i class="bi bi-bar-chart-fill me-2 text-primary"></i>توزيع الخطورة</h6>
+                <h6 class="card-title-sm mb-0"><i class="bi bi-bar-chart-fill me-2 text-primary"></i><span data-i18n="safety_analytics.severity_distribution">{% if ui_lang == 'en' %}Severity Distribution{% else %}توزيع الخطورة{% endif %}</span></h6>
             </div>
             <div class="card-body" id="severityChart">
                 <div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div></div>
@@ -204,7 +217,7 @@
     <div class="col-md-4">
         <div class="card h-100">
             <div class="card-header">
-                <h6 class="card-title-sm mb-0"><i class="bi bi-pie-chart-fill me-2 text-primary"></i>توزيع النوع</h6>
+                <h6 class="card-title-sm mb-0"><i class="bi bi-pie-chart-fill me-2 text-primary"></i><span data-i18n="safety_analytics.type_distribution">{% if ui_lang == 'en' %}Type Distribution{% else %}توزيع النوع{% endif %}</span></h6>
             </div>
             <div class="card-body" id="typeChart">
                 <div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div></div>
@@ -214,7 +227,7 @@
     <div class="col-md-4">
         <div class="card h-100">
             <div class="card-header">
-                <h6 class="card-title-sm mb-0"><i class="bi bi-tags-fill me-2 text-primary"></i>توزيع التصنيف</h6>
+                <h6 class="card-title-sm mb-0"><i class="bi bi-tags-fill me-2 text-primary"></i><span data-i18n="safety_analytics.classification_distribution">{% if ui_lang == 'en' %}Classification Distribution{% else %}توزيع التصنيف{% endif %}</span></h6>
             </div>
             <div class="card-body" id="classificationChart">
                 <div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div></div>
@@ -229,21 +242,22 @@
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-building-fill me-2 text-primary"></i>عدد الحوادث حسب الروضة
+                    <i class="bi bi-building-fill me-2 text-primary"></i>
+                    <span data-i18n="safety_analytics.by_kindergarten">{% if ui_lang == 'en' %}Incidents by Kindergarten{% else %}عدد الحوادث حسب الروضة{% endif %}</span>
                 </h6>
-                <span class="badge badge-soft badge-soft-danger" id="highRiskBadge" style="display:none;">روضات عالية الخطر</span>
+                <span class="badge badge-soft badge-soft-danger" id="highRiskBadge" style="display:none;" data-i18n="safety_analytics.high_risk_badge">{% if ui_lang == 'en' %}High-Risk Kindergartens{% else %}روضات عالية الخطر{% endif %}</span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
-                                <th class="th-sm">الروضة</th>
-                                <th class="th-sm">عدد الحوادث</th>
-                                <th class="th-sm">المستوى</th>
+                                <th class="th-sm" data-i18n="safety_analytics.col_kindergarten">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                                <th class="th-sm" data-i18n="safety_analytics.col_count">{% if ui_lang == 'en' %}Incident Count{% else %}عدد الحوادث{% endif %}</th>
+                                <th class="th-sm" data-i18n="safety_analytics.col_level">{% if ui_lang == 'en' %}Level{% else %}المستوى{% endif %}</th>
                             </tr>
                         </thead>
-                        <tbody id="kgTable"><tr><td colspan="3" class="text-center text-muted py-3">جاري التحميل...</td></tr></tbody>
+                        <tbody id="kgTable"><tr><td colspan="3" class="text-center text-muted py-3" data-i18n="safety_analytics.loading">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -255,7 +269,8 @@
         <div class="card h-100">
             <div class="card-header bg-danger-subtle">
                 <h6 class="card-title-sm mb-0 text-danger">
-                    <i class="bi bi-person-exclamation me-2" aria-hidden="true"></i>أطفال بحوادث متكررة
+                    <i class="bi bi-person-exclamation me-2" aria-hidden="true"></i>
+                    <span data-i18n="safety_analytics.repeated_children">{% if ui_lang == 'en' %}Children with Repeated Incidents{% else %}أطفال بحوادث متكررة{% endif %}</span>
                 </h6>
             </div>
             <div class="card-body p-0">
@@ -263,41 +278,32 @@
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
-                                <th class="th-sm">معرّف الطفل</th>
-                                <th class="th-sm">عدد الحوادث</th>
-                                <th class="th-sm">الإجراء</th>
+                                <th class="th-sm" data-i18n="safety_analytics.col_child_id">{% if ui_lang == 'en' %}Child ID{% else %}معرّف الطفل{% endif %}</th>
+                                <th class="th-sm" data-i18n="safety_analytics.col_count">{% if ui_lang == 'en' %}Incident Count{% else %}عدد الحوادث{% endif %}</th>
+                                <th class="th-sm" data-i18n="safety_analytics.col_actions">{% if ui_lang == 'en' %}Actions{% else %}الإجراء{% endif %}</th>
                             </tr>
                         </thead>
-                        <tbody id="repeatedTable"><tr><td colspan="3" class="text-center text-muted py-3">جاري التحميل...</td></tr></tbody>
+                        <tbody id="repeatedTable"><tr><td colspan="3" class="text-center text-muted py-3" data-i18n="safety_analytics.loading">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr></tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-.field-label { font-size:0.75rem;font-weight:700;color:var(--kinjo-text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block; }
-.mini-bar-wrap { display:flex;flex-direction:column;gap:0.5rem; }
-.mini-bar-row { display:flex;align-items:center;gap:0.75rem; }
-.mini-bar-label { min-width:80px;font-size:0.78rem;font-weight:600;color:var(--kinjo-text-secondary);text-align:end; }
-.mini-bar-track { flex:1;background:var(--kinjo-border);border-radius:50px;height:10px;overflow:hidden; }
-.mini-bar-fill  { height:100%;border-radius:50px;transition:width 0.4s ease; }
-.mini-bar-count { min-width:24px;font-size:0.78rem;font-weight:700;color:var(--kinjo-text-primary); }
-</style>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_scripts %}
 <script>
 (function () {
     "use strict";
-    const token = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token') || localStorage.getItem('token');
-    const authHeaders = { 'Authorization': `Bearer ${token}` };
+
+    const _isEn = document.documentElement.lang === 'en';
+    function _t(arText, enText) { return _isEn ? enText : arText; }
 
     // Load kindergartens for filter
     async function loadKindergartenOptions() {
         try {
-            const r = await fetch('/api/kindergartens', { headers: authHeaders });
+            const r = await fetch('/api/kindergartens');
             if (!r.ok) return;
             const data = await r.json();
             const kg = data.kindergartens || data || [];
@@ -305,7 +311,7 @@
             kg.forEach(k => {
                 const opt = document.createElement('option');
                 opt.value = k.id;
-                opt.textContent = k.name_ar || k.name_en || `روضة #${k.id}`;
+                opt.textContent = _isEn ? (k.name_en || k.name_ar || `Kindergarten #${k.id}`) : (k.name_ar || k.name_en || `روضة #${k.id}`);
                 sel.appendChild(opt);
             });
         } catch {}
@@ -330,7 +336,7 @@
         if (to)   params.set('date_to', to);
 
         try {
-            const r = await fetch(`/api/safety/analytics?${params.toString()}`, { headers: authHeaders });
+            const r = await fetch(`/api/safety/analytics?${params.toString()}`);
             if (!r.ok) {
                 console.error('Analytics fetch failed', r.status);
                 return;
@@ -360,7 +366,7 @@
         const el = document.getElementById(containerId);
         const entries = Object.entries(dataObj);
         if (!entries.length) {
-            el.innerHTML = '<p class="text-muted text-center py-3 mb-0 small">لا توجد بيانات</p>';
+            el.innerHTML = `<p class="text-muted text-center py-3 mb-0 small">${_t('لا توجد بيانات', 'No data available')}</p>`;
             return;
         }
         const max = Math.max(...entries.map(([, v]) => v), 1);
@@ -380,7 +386,12 @@
         }</div>`;
     }
 
-    const labelMap = {
+    const labelMap = _isEn ? {
+        INJURY:'Physical Injury', ILLNESS:'Illness', ALLERGY:'Allergy', BEHAVIOR:'Behavioral', OTHER:'Other',
+        ACCIDENT:'Accidental', BEHAVIORAL:'Behavioral', MEDICAL:'Medical', ENVIRONMENTAL:'Environmental',
+        LOW:'Low', MEDIUM:'Medium', HIGH:'High', CRITICAL:'Critical',
+        UNKNOWN: 'Unknown'
+    } : {
         INJURY:'إصابة', ILLNESS:'مرض', ALLERGY:'حساسية', BEHAVIOR:'سلوكي', OTHER:'أخرى',
         ACCIDENT:'حادث عرضي', BEHAVIORAL:'سلوكي', MEDICAL:'طبي', ENVIRONMENTAL:'بيئي',
         LOW:'منخفض', MEDIUM:'متوسط', HIGH:'عالٍ', CRITICAL:'حرج',
@@ -400,20 +411,20 @@
         const badge = document.getElementById('highRiskBadge');
         const entries = Object.entries(byKg).sort((a, b) => b[1] - a[1]);
         if (!entries.length) {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">لا توجد بيانات</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">${_t('لا توجد بيانات', 'No data available')}</td></tr>`;
             return;
         }
         const hrCount = Object.keys(highRisk).length;
-        if (hrCount > 0) { badge.textContent = `${hrCount} روضة عالية الخطر`; badge.style.display = ''; }
+        if (hrCount > 0) { badge.textContent = `${hrCount} ${_t('روضة عالية الخطر', 'High-Risk Kindergartens')}`; badge.style.display = ''; }
         tbody.innerHTML = entries.map(([kgId, count]) => {
             const isHigh = highRisk[kgId];
             const safeKgId = parseInt(kgId, 10) || 0;
             return `<tr>
-                <td class="small">روضة #${safeKgId}</td>
+                <td class="small">${_t('روضة #', 'Kindergarten #')}${safeKgId}</td>
                 <td class="small fw-bold">${count}</td>
                 <td>${isHigh
-                    ? '<span class="badge badge-soft badge-soft-danger badge-xs">خطر مرتفع</span>'
-                    : '<span class="badge badge-soft badge-soft-success badge-xs">طبيعي</span>'
+                    ? `<span class="badge badge-soft badge-soft-danger badge-xs">${_t('خطر مرتفع', 'High Risk')}</span>`
+                    : `<span class="badge badge-soft badge-soft-success badge-xs">${_t('طبيعي', 'Normal')}</span>`
                 }</td>
             </tr>`;
         }).join('');
@@ -423,15 +434,15 @@
         const tbody = document.getElementById('repeatedTable');
         const entries = Object.entries(repeated).sort((a, b) => b[1] - a[1]);
         if (!entries.length) {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3 small">لا توجد أطفال بحوادث متكررة</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3 small">${_t('لا توجد أطفال بحوادث متكررة', 'No children with repeated incidents')}</td></tr>`;
             return;
         }
         tbody.innerHTML = entries.map(([childId, count]) => {
             const safeId = parseInt(childId, 10) || 0;
             return `<tr>
-                <td class="small">طفل #${safeId}</td>
+                <td class="small">${_t('طفل #', 'Child #')}${safeId}</td>
                 <td class="small fw-bold text-danger">${parseInt(count, 10) || 0}</td>
-                <td><a href="/children/${safeId}" class="btn btn-ghost btn-sm px-2">عرض الملف</a></td>
+                <td><a href="/children/${safeId}" class="btn btn-ghost btn-sm px-2">${_t('عرض الملف', 'View Profile')}</a></td>
             </tr>`;
         }).join('');
     }

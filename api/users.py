@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
 import validators
+from captcha_service import captcha_error_message, captcha_required, verify_captcha
 from config import settings
 from database import get_db
 from dependencies import get_current_user
@@ -69,6 +70,7 @@ DUPLICATE_ERROR_MAP = {
 
 class UserResponse(BaseModel):
     id: int
+    public_id: Optional[str] = None
     username: str
     email: Optional[str] = None
     role: str
@@ -89,6 +91,7 @@ def get_current_user_info(
     """Get current authenticated user's information"""
     return UserResponse(
         id=current_user.id,
+        public_id=current_user.public_id,
         username=current_user.username,
         email=current_user.email,
         role=current_user.role.value,
@@ -483,9 +486,12 @@ def create_user(
         _log_access_denied(db, current_user, "create_user", "Not authorized", request)
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Check if exists
+    # Check if exists (case-insensitive email check)
     existing = db.query(models.User).filter(
-        or_(models.User.username == user_data.username, models.User.email == user_data.email)
+        or_(
+            models.User.username == user_data.username,
+            func.lower(models.User.email) == user_data.email.lower()
+        )
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username or email already exists")
@@ -692,6 +698,13 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    before_state = {
+        "email": user.email,
+        "role": user.role.value,
+        "status": user.status.value,
+        "kindergarten_id": user.kindergarten_id,
+    }
+
     if current_user.role == models.UserRole.ADMIN:
         # Admin cannot update other admin users
         if user.role == models.UserRole.ADMIN and user.id != current_user.id:
@@ -707,38 +720,59 @@ def update_user(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if user_data.email:
-        # Check uniqueness
+        # Case-insensitive uniqueness check
         existing = db.query(models.User).filter(
-            models.User.email == user_data.email, 
+            func.lower(models.User.email) == user_data.email.lower(),
             models.User.id != user_id
         ).first()
         if existing:
             raise HTTPException(status_code=400, detail="Email already used")
         user.email = user_data.email
-        
+
     if user_data.password:
+        # Password change via PUT requires admin; non-admins must use /users/change-password
+        if current_user.role != models.UserRole.ADMIN:
+            raise HTTPException(
+                status_code=400,
+                detail="Use POST /users/change-password to update your password (current password required)"
+            )
         from auth import get_password_hash
         user.hashed_password = get_password_hash(user_data.password)
-        
+
     if current_user.role == models.UserRole.ADMIN:
         if user_data.role:
             user.role = user_data.role
         if user_data.status:
             user.status = user_data.status
         if user_data.kindergarten_id is not None:
-             # Allow 0 or -1 to clear? Pydantic handles null
-             user.kindergarten_id = user_data.kindergarten_id
+            # Validate the kindergarten exists before assigning
+            if user_data.kindergarten_id > 0:
+                kg_exists = db.query(models.Kindergarten.id).filter(
+                    models.Kindergarten.id == user_data.kindergarten_id
+                ).first()
+                if not kg_exists:
+                    raise HTTPException(status_code=400, detail="Kindergarten not found")
+            user.kindergarten_id = user_data.kindergarten_id
 
     db.commit()
     db.refresh(user)
-    
+
+    after_state = {
+        "email": user.email,
+        "role": user.role.value,
+        "status": user.status.value,
+        "kindergarten_id": user.kindergarten_id,
+    }
+
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
         action="USER_UPDATED",
         entity_type="User",
         entity_id=user.id,
-        sensitivity_level=3
+        sensitivity_level=3,
+        old_data=before_state,
+        new_data=after_state
     )
 
     return {
@@ -773,9 +807,11 @@ def delete_user(
         _log_access_denied(db, current_user, "delete_user", "Cannot delete admin users", request)
         raise HTTPException(status_code=403, detail="Cannot delete admin users")
 
-    db.delete(user)
+    user.deleted_at = datetime.now(UTC)
+    user.deleted_by = current_user.id
+    user.status = models.UserStatus.INACTIVE
     db.commit()
-    
+
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
@@ -790,6 +826,7 @@ def delete_user(
 # Password Reset Endpoints
 class PasswordResetRequest(BaseModel):
     email: str
+    captcha_token: Optional[str] = None
 
 class PasswordResetConfirm(BaseModel):
     token: str
@@ -861,6 +898,10 @@ def request_password_reset(
     db: Session = Depends(get_db)
 ):
     """Request password reset token (for self-service)"""
+    if captcha_required() and not verify_captcha(reset_request.captcha_token):
+        lang = "en" if request.headers.get("Accept-Language", "ar").startswith("en") else "ar"
+        raise HTTPException(status_code=400, detail=captcha_error_message(lang))
+
     user = db.query(models.User).filter(models.User.email == reset_request.email).first()
     # Always return the same message — never reveal whether email exists
     if not user:

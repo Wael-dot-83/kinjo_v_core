@@ -279,8 +279,8 @@
 </div>
 
 <!-- Loading Overlay -->
-<div id="loadingOverlay" class="d-none">
-    <div class="d-flex justify-content-center align-items-center" style="height: 200px;">
+<div id="loadingOverlay" class="d-none position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75" style="z-index: 1050;">
+    <div class="d-flex justify-content-center align-items-center min-vh-100">
         <div class="text-center">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>

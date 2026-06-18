@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% from 'components/page-header.html' import page_header %}
+
+{% block title %}{% if ui_lang == 'en' %}Service Guide{% else %}دليل الخدمة{% endif %}{% endblock %}
+{% block meta_description %}
+<meta name="description" content="{% if ui_lang == 'en' %}Kindergarten enrollment service: requirements, documents, fees, and how to apply on KinJo.{% else %}خدمة تسجيل الروضة: المتطلبات والمستندات والرسوم وطريقة التقديم عبر كينجو.{% endif %}" />
+{% endblock %}
+
+{% block page_header %}
+{{ page_header(
+    title="Service Guide" if ui_lang == 'en' else "دليل الخدمة",
+    icon="bi-journal-check",
+    breadcrumbs=[
+        {"label": "Home" if ui_lang == 'en' else "الرئيسية", "url": "/"},
+        {"label": "Service Guide" if ui_lang == 'en' else "دليل الخدمة", "url": None}
+    ]
+) }}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4 p-lg-5">
+
+        <h2 class="h4 mb-1">{% if ui_lang == 'en' %}Kindergarten Enrollment{% else %}تسجيل الروضة{% endif %}</h2>
+        <p class="text-muted">
+          {% if ui_lang == 'en' %}
+          Register a child at a participating kindergarten and track the application online.
+          {% else %}
+          تسجيل طفل في روضة مشاركة، ومتابعة الطلب عبر الإنترنت.
+          {% endif %}
+        </p>
+
+        <dl class="row mt-4">
+          <dt class="col-sm-3">{% if ui_lang == 'en' %}Description{% else %}الوصف{% endif %}</dt>
+          <dd class="col-sm-9">
+            {% if ui_lang == 'en' %}Online enrollment of a child into a participating kindergarten, including
+            application, document submission, and status tracking.{% else %}تسجيل طفل عبر الإنترنت في روضة
+            مشاركة، ويشمل تقديم الطلب وإرسال المستندات ومتابعة الحالة.{% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% if ui_lang == 'en' %}Department{% else %}الجهة المسؤولة{% endif %}</dt>
+          <dd class="col-sm-9">
+            {% if ui_lang == 'en' %}The kindergarten selected during enrollment, supervised by its assigned
+            education supervisor on the platform.{% else %}الروضة المختارة عند التسجيل، تحت إشراف المشرف
+            التربوي المخصص لها في المنصة.{% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% if ui_lang == 'en' %}Eligibility{% else %}شروط الأهلية{% endif %}</dt>
+          <dd class="col-sm-9">
+            {% if ui_lang == 'en' %}
+            Child age between {{ min_child_age_days }} days and {{ max_child_age_months }} months at the time
+            of enrollment.
+            {% else %}
+            أن يكون عمر الطفل بين {{ min_child_age_days }} يوماً و {{ max_child_age_months }} شهراً عند التسجيل.
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% if ui_lang == 'en' %}Required documents{% else %}المستندات المطلوبة{% endif %}</dt>
+          <dd class="col-sm-9">
+            <ul class="mb-0">
+              {% for doc in required_documents %}
+              <li>
+                {% if doc == 'birth_certificate' %}{% if ui_lang == 'en' %}Birth certificate{% else %}شهادة ميلاد{% endif %}
+                {% elif doc == 'health_certificate' %}{% if ui_lang == 'en' %}Health certificate{% else %}شهادة صحية{% endif %}
+                {% else %}{{ doc }}
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+          </dd>
+
+          <dt class="col-sm-3">{% if ui_lang == 'en' %}Procedure / steps{% else %}الإجراءات / الخطوات{% endif %}</dt>
+          <dd class="col-sm-9">
+            <ol class="mb-0">
+              <li>{% if ui_lang == 'en' %}Create a parent account or sign in.{% else %}إنشاء حساب ولي أمر أو تسجيل الدخول.{% endif %}</li>
+              <li>{% if ui_lang == 'en' %}Choose a kindergarten by governorate and city.{% else %}اختيار الروضة حسب المحافظة والمدينة.{% endif %}</li>
+              <li>{% if ui_lang == 'en' %}Fill in the child's information and upload required documents.{% else %}تعبئة بيانات الطفل وتحميل المستندات المطلوبة.{% endif %}</li>
+              <li>{% if ui_lang == 'en' %}Submit the application and track its status from your dashboard.{% else %}تقديم الطلب ومتابعة حالته من لوحة التحكم.{% endif %}</li>
+            </ol>
+          </dd>
+
+          <dt class="col-sm-3">{% if ui_lang == 'en' %}Needed forms{% else %}النماذج المطلوبة{% endif %}</dt>
+          <dd class="col-sm-9">
+            {% if ui_lang == 'en' %}None — the enrollment form is completed entirely online.{% else %}لا يوجد — يتم تعبئة نموذج التسجيل بالكامل عبر الإنترنت.{% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% if ui_lang == 'en' %}Expected completion time{% else %}الوقت المتوقع للإنجاز{% endif %}</dt>
+          <dd class="col-sm-9">
+            {% if ui_lang == 'en' %}Varies by kindergarten capacity; the application status is updated on
+            your dashboard as it is reviewed.{% else %}يختلف حسب السعة المتوفرة في الروضة؛ تُحدَّث حالة الطلب
+            على لوحة التحكم أثناء المراجعة.{% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% if ui_lang == 'en' %}Fees{% else %}الرسوم{% endif %}</dt>
+          <dd class="col-sm-9">
+            {% if ui_lang == 'en' %}Set independently by each kindergarten (public kindergartens may differ
+            from private ones). Confirm fees directly with the selected kindergarten before submitting.{% else %}
+            تحدّدها كل روضة بشكل مستقل (قد تختلف الروضات العامة عن الخاصة). يرجى تأكيد الرسوم مباشرة مع الروضة
+            المختارة قبل التقديم.{% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% if ui_lang == 'en' %}Centers{% else %}المراكز{% endif %}</dt>
+          <dd class="col-sm-9">
+            {% if ui_lang == 'en' %}All participating kindergartens registered on the platform, across
+            Jordan's governorates.{% else %}جميع الروضات المشاركة المسجّلة في المنصة، في جميع محافظات
+            الأردن.{% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% if ui_lang == 'en' %}eService option{% else %}خيار الخدمة الإلكترونية{% endif %}</dt>
+          <dd class="col-sm-9">
+            <a href="/register" class="btn btn-primary btn-sm">
+              <i class="bi bi-box-arrow-in-right me-1"></i>{% if ui_lang == 'en' %}Apply online{% else %}التقديم عبر الإنترنت{% endif %}
+            </a>
+          </dd>
+        </dl>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+  # ── Backend API (mounts into KinJo FastAPI or standalone) ──────────────────
+  heatmap-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ..:/app
+      - heatmap-static:/app/static/heatmap
+    environment:
+      DATABASE_URL:          ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/kinjo}
+      REDIS_URL:             ${REDIS_URL:-redis://redis:6379/0}
+      HEATMAP_CRON_HOUR:     2
+      HEATMAP_CRON_MINUTE:   0
+      GEOJSON_OUTPUT_DIR:    /app/static/heatmap
+      HEATMAP_LOG_DIR:       /app/logs
+      SENDGRID_API_KEY:      ${SENDGRID_API_KEY:-}
+      ALERT_EMAIL_TO:        ${ALERT_EMAIL_TO:-admin@kinjo.jo}
+      TWILIO_ACCOUNT_SID:    ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN:     ${TWILIO_AUTH_TOKEN:-}
+      ALERT_SMS_TO:          ${ALERT_SMS_TO:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # ── React frontend (dev mode) ──────────────────────────────────────────────
+  heatmap-ui:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    volumes:
+      - ./frontend:/app
+    environment:
+      VITE_API_BASE: http://heatmap-api:8000/api/heatmap
+    ports:
+      - "5173:5173"
+    depends_on:
+      - heatmap-api
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB:       kinjo
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./scripts/init_heatmap_schema.sql:/docker-entrypoint-initdb.d/01_heatmap.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kinjo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Redis (for Celery/caching) ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+volumes:
+  pg-data:
+  heatmap-static:

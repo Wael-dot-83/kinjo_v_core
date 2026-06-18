@@ -25,7 +25,7 @@ class ClassCreate(BaseModel):
     name_en: Optional[str] = None
     class_code: str
     age_group: str
-    capacity_total: int
+    capacity_total: int = Field(..., ge=1)
     min_age_months: int
     max_age_months: int
     supervisor_id: int
@@ -40,7 +40,7 @@ class ClassResponse(ClassCreate):
 class ClassUpdate(BaseModel):
     name_ar: Optional[str] = None
     name_en: Optional[str] = None
-    capacity_total: Optional[int] = None
+    capacity_total: Optional[int] = Field(None, ge=1)
     min_age_months: Optional[int] = None
     max_age_months: Optional[int] = None
     is_active: Optional[bool] = None
@@ -464,10 +464,10 @@ def assign_child_to_class(
     if not profile_complete:
         raise HTTPException(status_code=400, detail={"message": "Child profile incomplete", "missing_fields": missing_fields})
 
-    # Get class
+    # Get class — row-level lock prevents double-booking (see api/enrollment.py review_enrollment)
     class_obj = db.query(models.Class).filter(
         models.Class.id == class_id
-    ).first()
+    ).with_for_update().first()
 
     if not class_obj:
         raise HTTPException(status_code=404, detail="Class not found")
@@ -497,6 +497,10 @@ def assign_child_to_class(
         raise HTTPException(status_code=400, detail="Class is at full capacity")
 
     # Assign to class
+    before_state = {
+        "class_id": enrollment.class_id,
+        "class_assignment_date": enrollment.class_assignment_date.isoformat() if enrollment.class_assignment_date else None,
+    }
     enrollment.class_id = class_id
     enrollment.class_assignment_date = date.today()
 
@@ -510,7 +514,9 @@ def assign_child_to_class(
         entity_type="EnrollmentApplication",
         entity_id=enrollment.id,
         details=f"Child {child.first_name} {child.last_name} assigned to class {class_obj.name_en}",
-        sensitivity_level=2
+        sensitivity_level=2,
+        old_data=before_state,
+        new_data={"class_id": enrollment.class_id, "class_assignment_date": enrollment.class_assignment_date.isoformat()}
     )
 
     return {
