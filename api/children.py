@@ -240,7 +240,8 @@ def create_incident_json(
         raise HTTPException(status_code=403, detail="Child is not enrolled in this kindergarten")
 
     occurred_dt = datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00'))
-    if occurred_dt > datetime.now(timezone.utc):
+    _now = datetime.now(timezone.utc) if occurred_dt.tzinfo else datetime.now()
+    if occurred_dt > _now:
         raise HTTPException(status_code=400, detail="occurred_at cannot be in the future")
 
     # Duplicate incident detection (same child, type, day)
@@ -354,10 +355,11 @@ def create_incident(
 
     # Parse and validate occurred_at is not in the future
     try:
-        occurred_dt = datetime.fromisoformat(occurred_at)
+        occurred_dt = datetime.fromisoformat(occurred_at.replace('Z', '+00:00'))
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid occurred_at format. Use ISO 8601.")
-    if occurred_dt > datetime.now(timezone.utc):
+    _now = datetime.now(timezone.utc) if occurred_dt.tzinfo else datetime.now()
+    if occurred_dt > _now:
         raise HTTPException(status_code=400, detail="occurred_at cannot be in the future")
 
     # Enforce parent_informed business rule

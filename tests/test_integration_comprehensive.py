@@ -157,7 +157,7 @@ class TestEnrollmentWorkflowIntegration:
 
     def test_full_enrollment_workflow(
         self, client, test_db, parent_user, auth_headers_parent,
-        auth_headers_manager, sample_kindergarten, manager_user
+        auth_headers_manager, sample_kindergarten, sample_class, manager_user
     ):
         """Happy path: Complete enrollment from application to acceptance"""
         # Step 1: Parent creates enrollment application
@@ -194,7 +194,7 @@ class TestEnrollmentWorkflowIntegration:
         assert response.status_code == 200
         assert response.json()["status"] == "submitted"
 
-        # Add required documents before acceptance
+        # Add required documents and class assignment before acceptance
         import models as m
         for doc_type in ("birth_certificate", "health_certificate"):
             test_db.add(m.ChildDocument(
@@ -202,6 +202,10 @@ class TestEnrollmentWorkflowIntegration:
                 file_name=f"{doc_type}.pdf",
                 file_path=f"/fake/{doc_type}.pdf", uploaded_by=manager_user.id,
             ))
+        # H-7: class_id must be set before enrollment can be accepted
+        ea = test_db.query(m.EnrollmentApplication).filter(m.EnrollmentApplication.id == enrollment_id).first()
+        if ea:
+            ea.class_id = sample_class.id
         test_db.commit()
 
         # Step 3: Manager reviews and accepts
@@ -396,7 +400,7 @@ class TestAttendanceIntegration:
             headers=auth_headers_manager,
             params={"child_id": sample_child.id, "method": "qr"}
         )
-        assert response.status_code == 400
+        assert response.status_code in (400, 409)  # 409 on IntegrityError race, 400 on pre-flight check
 
     def test_checkout_without_checkin_fails(
         self, client, test_db, auth_headers_manager, sample_child,
@@ -570,9 +574,19 @@ class TestSafetyIncidentsIntegration:
 
     def test_incident_creation_with_followup(
         self, client, test_db, auth_headers_manager,
-        sample_kindergarten, sample_child
+        sample_kindergarten, sample_class, sample_child
     ):
         """Happy path: Create incident with follow-up SLA"""
+        import models as m
+        enrollment = m.EnrollmentApplication(
+            child_id=sample_child.id,
+            kindergarten_id=sample_kindergarten.id,
+            class_id=sample_class.id,
+            status=m.EnrollmentStatus.ACTIVE,
+        )
+        test_db.add(enrollment)
+        test_db.commit()
+
         incident_data = {
             "kindergarten_id": sample_kindergarten.id,
             "child_id": sample_child.id,
@@ -580,9 +594,10 @@ class TestSafetyIncidentsIntegration:
             "severity_level": "medium",
             "description": "سقط الطفل أثناء اللعب وأصيب بكدمة في الركبة",
             "occurred_at": datetime.now().isoformat(),
-            "followup_required": True
+            "followup_required": True,
+            "parent_informed": True,
         }
-        
+
         response = client.post(
             "/api/incidents/create",
             headers=auth_headers_manager,

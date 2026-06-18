@@ -359,9 +359,12 @@ class TestUserEndpoints:
         response = client.delete(f"/api/users/{test_user.id}")
         assert response.status_code == 204
 
-        # Verify user is deleted
+        # Verify user is soft-deleted (still in DB but marked inactive)
+        test_db.expire_all()
         deleted_user = test_db.query(models.User).filter(models.User.id == test_user.id).first()
-        assert deleted_user is None
+        assert deleted_user is not None
+        assert deleted_user.deleted_at is not None
+        assert deleted_user.status == models.UserStatus.INACTIVE
 
         app.dependency_overrides.clear()
 

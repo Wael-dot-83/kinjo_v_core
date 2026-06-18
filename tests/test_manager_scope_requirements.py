@@ -536,9 +536,24 @@ class TestDocumentEnforcement:
         db.commit()
         db.refresh(child)
 
+        kg_class = models.Class(
+            kindergarten_id=kg.id,
+            name_ar="الصف الأول",
+            name_en="Class A",
+            class_code=f"CLS{secrets.token_hex(2)}",
+            age_group="AGE_1_2",
+            capacity_total=20,
+            min_age_months=12,
+            max_age_months=36,
+        )
+        db.add(kg_class)
+        db.commit()
+        db.refresh(kg_class)
+
         enrollment = models.EnrollmentApplication(
             child_id=child.id,
             kindergarten_id=kg.id,
+            class_id=kg_class.id,
             status=models.EnrollmentStatus.SUBMITTED,
         )
         db.add(enrollment)

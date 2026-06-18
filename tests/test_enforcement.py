@@ -186,10 +186,11 @@ class TestParentRegistrationEnforcement:
 
 class TestEnrollmentReviewEnforcement:
     @pytest.fixture
-    def pending_enrollment(self, test_db, sample_child, sample_kindergarten, manager_user):
+    def pending_enrollment(self, test_db, sample_child, sample_kindergarten, sample_class, manager_user):
         enrollment = models.EnrollmentApplication(
             child_id=sample_child.id,
             kindergarten_id=sample_kindergarten.id,
+            class_id=sample_class.id,
             status=models.EnrollmentStatus.SUBMITTED,
         )
         test_db.add(enrollment)

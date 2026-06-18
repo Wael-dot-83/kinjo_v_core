@@ -208,7 +208,7 @@ class TestReviewBlockedWhenActiveElsewhere:
     """
 
     def test_accept_then_second_submit_blocked(
-        self, client, test_db, parent_user, sample_kindergarten, manager_user, manager_token, parent_token
+        self, client, test_db, parent_user, sample_kindergarten, sample_class, manager_user, manager_token, parent_token
     ):
         """After child is ACCEPTED in KG1, submitting DRAFT in KG2 should fail."""
         import secrets
@@ -225,8 +225,10 @@ class TestReviewBlockedWhenActiveElsewhere:
             ))
         test_db.commit()
 
-        # Create enrollment in KG1 as SUBMITTED → accept it
+        # Create enrollment in KG1 as SUBMITTED → accept it (class_id required by H-7 guard)
         ea1 = _enroll(test_db, child, sample_kindergarten, status=models.EnrollmentStatus.SUBMITTED)
+        ea1.class_id = sample_class.id
+        test_db.commit()
 
         csrf_token = secrets.token_hex(32)
         mgr_headers = {
@@ -402,7 +404,7 @@ class TestManagerAcceptHappyPath:
     """Successful accept should set ACCEPTED status and decision metadata."""
 
     def test_accept_sets_accepted_status(
-        self, client, test_db, parent_user, sample_kindergarten, manager_user, manager_token
+        self, client, test_db, parent_user, sample_kindergarten, sample_class, manager_user, manager_token
     ):
         import secrets
         csrf_token = secrets.token_hex(32)
@@ -424,6 +426,8 @@ class TestManagerAcceptHappyPath:
         test_db.commit()
 
         enrollment = _enroll(test_db, child, sample_kindergarten, status=models.EnrollmentStatus.SUBMITTED)
+        enrollment.class_id = sample_class.id
+        test_db.commit()
 
         response = client.post(
             f"/api/enrollment/{enrollment.id}/review?decision=accept",
