@@ -11,66 +11,6 @@
 <span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Reports Governance{% else %}حوكمة التقارير{% endif %}</span>
 {% endblock %}
 
-{% block extra_head %}
-<style>
-    .kpi-card {
-        border-radius: 12px;
-        transition: transform 0.2s;
-    }
-
-    .kpi-card:hover {
-        transform: translateY(-2px);
-    }
-
-    .kpi-value {
-        font-size: 2rem;
-        font-weight: 700;
-    }
-
-    .kpi-label {
-        font-size: 0.85rem;
-        color: #6c757d;
-    }
-
-    .low-performer-badge {
-        background-color: #fff3cd;
-        border: 1px solid #ffc107;
-        border-radius: 8px;
-    }
-
-    .rank-badge {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 0.85rem;
-    }
-
-    .rank-1 {
-        background-color: #ffd700;
-        color: #333;
-    }
-
-    .rank-2 {
-        background-color: #c0c0c0;
-        color: #333;
-    }
-
-    .rank-3 {
-        background-color: #cd7f32;
-        color: #fff;
-    }
-
-    .rank-default {
-        background-color: #e9ecef;
-        color: #333;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">

@@ -109,14 +109,15 @@
     return riskRGB(Math.max(0, Math.min(100, pct)));
   }
 
-  /* =========================================================================
-     LANGUAGE HELPERS
-     ========================================================================= */
-  function lang() {
-    const s = localStorage.getItem('kinjo_lang') || localStorage.getItem('admin_language') || '';
-    return s.toLowerCase().startsWith('en') || document.documentElement.lang?.toLowerCase().startsWith('en') ? 'en' : 'ar';
-  }
-  function t(en, ar) { return lang() === 'en' ? en : ar; }
+/* =========================================================================
+      LANGUAGE HELPERS — DELEGATE TO CENTRAL auth.js
+      auth.js provides: currentLanguage() and t(arText, enText)
+      ========================================================================= */
+   const lang = typeof currentLanguage === 'function' ? () => currentLanguage() : function() {
+     const s = localStorage.getItem('kinjo_lang') || localStorage.getItem('admin_language') || '';
+     return s.toLowerCase().startsWith('en') || document.documentElement.lang?.toLowerCase().startsWith('en') ? 'en' : 'ar';
+   };
+   function t(en, ar) { return lang() === 'ar' ? ar : en; }
 
   /* =========================================================================
      API HELPERS

@@ -8,64 +8,6 @@
 <span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Daily Reports Organization{% else %}تنظيم التقارير اليومية{% endif %}</span>
 {% endblock %}
 
-{% block extra_head %}
-<style>
-  .daily-reports-org-page .filter-card {
-    border: 1px solid #e8ebf0;
-    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.05);
-  }
-
-  .daily-reports-org-page .status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-weight: 600;
-    padding: 0.3rem 0.55rem;
-    border-radius: 999px;
-    white-space: nowrap;
-    color: #fff;
-  }
-
-  .daily-reports-org-page .accordion-button:not(.collapsed) {
-    color: #0c4a6e;
-    background: linear-gradient(135deg, #e0f2fe 0%, #f8fafc 100%);
-  }
-
-  .daily-reports-org-page .kg-meta {
-    color: #475569;
-    font-size: 0.93rem;
-  }
-
-  .daily-reports-org-page .report-table td,
-  .daily-reports-org-page .report-table th {
-    vertical-align: middle;
-  }
-
-  .daily-reports-org-page .no-report-note {
-    border: 1px dashed #f59e0b;
-    background-color: #fffaf0;
-    color: #92400e;
-    border-radius: 0.75rem;
-    padding: 0.9rem 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .daily-reports-org-page .summary-chip {
-    border: 1px solid #e2e8f0;
-    border-radius: 999px;
-    padding: 0.25rem 0.65rem;
-    font-size: 0.85rem;
-    background-color: #f8fafc;
-  }
-
-  @media (max-width: 768px) {
-    .daily-reports-org-page .report-table {
-      font-size: 0.88rem;
-    }
-  }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="admin-page-header mb-4">
   <h1 class="admin-page-title">

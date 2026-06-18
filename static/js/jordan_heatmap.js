@@ -45,15 +45,16 @@
   };
 
   // -------------------------------------------------------------------------
-  // Language helpers
+  // Language helpers — DELEGATE to centralized auth.js t() and currentLanguage()
+  // auth.js signature: t(arText, enText)
   // -------------------------------------------------------------------------
-  function currentLang() {
+  const currentLang = typeof currentLanguage === 'function' ? currentLanguage : function() {
     const stored = localStorage.getItem('kinjo_lang') || localStorage.getItem('admin_language');
     if (stored && String(stored).toLowerCase().startsWith('en')) return 'en';
     const html = document.documentElement.lang;
     return String(html || '').toLowerCase().startsWith('en') ? 'en' : 'ar';
-  }
-  function t(en, ar) { return currentLang() === 'en' ? en : ar; }
+  };
+  function t(arText, enText) { return currentLang() === 'ar' ? arText : enText; }
   function dir() { return currentLang() === 'en' ? 'ltr' : 'rtl'; }
 
   // -------------------------------------------------------------------------

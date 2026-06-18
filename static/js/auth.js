@@ -712,6 +712,8 @@ window.AuthGuard = AuthGuard;
 window.handleLogin = handleLogin;
 window.handleLogout = handleLogout;
 window.fetchWithAuth = fetchWithAuth;
+window.currentLanguage = currentLanguage;
+window.t = t;
 
 document.addEventListener("DOMContentLoaded", () => {
   initAuth().catch((error) => {
