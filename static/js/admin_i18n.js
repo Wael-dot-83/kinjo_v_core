@@ -73,12 +73,12 @@ class AdminI18n {
           if (response.ok) {
             this.translations[lang] = await response.json();
           } else {
-            console.warn(`Translation file for ${lang} not found`);
-            this.translations[lang] = {};
+            console.warn(`Translation file for ${lang} not found — keeping defaults`);
+            // Do NOT overwrite defaults with {} — leave whatever was set already
           }
         } catch (error) {
           console.error(`Failed to load translations for ${lang}:`, error);
-          this.translations[lang] = {};
+          // Do NOT overwrite defaults with {} — leave whatever was set already
         }
       });
 
@@ -365,7 +365,9 @@ class AdminI18n {
   }
 
   /**
-   * Translate all elements with data-i18n attributes
+   * Translate all elements with data-i18n attributes.
+   * Uses each element's existing text as fallback so missing keys never
+   * overwrite visible content with a raw translation key string.
    */
   translatePage() {
     const elements = document.querySelectorAll("[data-i18n]");
@@ -374,9 +376,21 @@ class AdminI18n {
       const params = this.parseDataParams(element, "data-i18n-");
 
       if (key) {
-        const translation = this.translate(key, "", params);
-        if (translation) {
-          // Handle different element types
+        // Use the element's existing visible text as the fallback so that
+        // a missing key preserves the server-rendered content instead of
+        // writing the raw key string (e.g. "dashboard.total_kindergartens").
+        let existingText;
+        if (element.tagName === "INPUT" && element.type === "placeholder") {
+          existingText = element.placeholder || "";
+        } else if (element.tagName === "IMG") {
+          existingText = element.alt || "";
+        } else {
+          existingText = element.textContent.trim();
+        }
+
+        const translation = this.translate(key, existingText, params);
+        // Never apply the raw key — only apply when we have a real translation
+        if (translation && translation !== key) {
           if (element.tagName === "INPUT" && element.type === "placeholder") {
             element.placeholder = translation;
           } else if (element.tagName === "IMG") {
@@ -395,8 +409,9 @@ class AdminI18n {
       const params = this.parseDataParams(element, "data-i18n-aria-");
 
       if (key) {
-        const translation = this.translate(key, "", params);
-        if (translation) {
+        const existingAria = element.getAttribute("aria-label") || "";
+        const translation = this.translate(key, existingAria, params);
+        if (translation && translation !== key) {
           element.setAttribute("aria-label", translation);
         }
       }
@@ -793,6 +808,10 @@ class AdminI18n {
     ];
 
     languages.forEach((lang) => {
+      // The current language is already shown in the button trigger (server-rendered).
+      // Adding it to the dropdown too would duplicate it visually.
+      if (lang.code === this.currentLanguage) return;
+
       const option = document.createElement("button");
       option.className = "admin-language-option";
       option.setAttribute("data-language", lang.code);
@@ -810,11 +829,6 @@ class AdminI18n {
 
       option.appendChild(flagSpan);
       option.appendChild(nameSpan);
-
-      if (lang.code === this.currentLanguage) {
-        option.classList.add("active");
-        option.setAttribute("aria-current", "true");
-      }
 
       option.addEventListener("click", () => {
         this.switchLanguage(lang.code);
@@ -953,7 +967,8 @@ class AdminI18n {
 // DEFAULT TRANSLATIONS
 // ============================================================================
 
-// English translations (fallback)
+// English translations (fallback) — must cover every key used in admin_dashboard.html
+// and admin_dashboard.js so pages render correctly even when JSON files fail to load.
 const defaultEnglishTranslations = {
   language: {
     en: "English",
@@ -987,18 +1002,48 @@ const defaultEnglishTranslations = {
     confirm: "Confirm",
     yes: "Yes",
     no: "No",
+    refresh: "Refresh",
+    error: "Error",
+    just_now: "just now",
+    minutes_ago: "minutes ago",
+    hours_ago: "hours ago",
+    days_ago: "days ago",
+    locale: "en-US",
   },
   dashboard: {
     title: "Dashboard",
+    subtitle: "Monitor system performance and manage operations",
     welcome: "Welcome to KinJo Admin",
     total_users: "Total Users",
     active_users: "Active Users",
+    total_kindergartens: "Total Kindergartens",
+    active_kindergartens: "Active Kindergartens",
+    total_submissions: "Total Submissions",
+    pending_submissions: "Pending Submissions",
+    page_load_time: "Page Load Time",
+    page_load_subtitle: "System performance",
+    measured_from_page_load: "Measured from this page load",
+    data_quality_score: "Data Quality",
+    no_recent_activity: "No recent activity",
+    no_activity_hint: "Add users or monitor operations to see activity here",
+    no_alerts: "No active alerts",
+    manage_users: "Manage Users",
+    send_message: "Send Message",
+    view_analytics: "View Analytics",
+    data_management: "Data Management",
+    quick_actions: "Quick Actions",
+    user_activity: "User Activity",
+    data_submissions: "Data Submissions",
+    recent_activity: "Recent Activity",
+    alerts: "Alerts",
     reports_today: "Reports Today",
     compliance_rate: "Compliance Rate",
+    overview: "Overview",
   },
 };
 
-// Arabic translations
+// Arabic translations — must cover every key used in admin_dashboard.html
+// and admin_dashboard.js so pages render correctly even when JSON files fail to load.
 const defaultArabicTranslations = {
   language: {
     en: "English",
@@ -1032,14 +1077,43 @@ const defaultArabicTranslations = {
     confirm: "تأكيد",
     yes: "نعم",
     no: "لا",
+    refresh: "تحديث",
+    error: "خطأ",
+    just_now: "الآن",
+    minutes_ago: "دقائق مضت",
+    hours_ago: "ساعات مضت",
+    days_ago: "أيام مضت",
+    locale: "ar-SA",
   },
   dashboard: {
     title: "لوحة التحكم",
+    subtitle: "مراقبة أداء النظام وإدارة العمليات",
     welcome: "مرحباً بك في إدارة كينجو",
     total_users: "إجمالي المستخدمين",
     active_users: "المستخدمون النشطون",
+    total_kindergartens: "إجمالي الروضات",
+    active_kindergartens: "الروضات النشطة",
+    total_submissions: "إجمالي الطلبات",
+    pending_submissions: "الطلبات المعلقة",
+    page_load_time: "وقت تحميل الصفحة",
+    page_load_subtitle: "أداء النظام",
+    measured_from_page_load: "مقاس من تحميل هذه الصفحة",
+    data_quality_score: "مؤشر جودة البيانات",
+    no_recent_activity: "لا يوجد نشاط حديث",
+    no_activity_hint: "ابدأ بإضافة مستخدمين أو متابعة العمليات لعرض النشاط هنا",
+    no_alerts: "لا توجد تنبيهات نشطة",
+    manage_users: "إدارة المستخدمين",
+    send_message: "إرسال رسالة",
+    view_analytics: "عرض التحليلات",
+    data_management: "إدارة البيانات",
+    quick_actions: "الإجراءات السريعة",
+    user_activity: "نشاط المستخدمين",
+    data_submissions: "عمليات الإدخال",
+    recent_activity: "النشاط الأخير",
+    alerts: "التنبيهات",
     reports_today: "التقارير اليوم",
     compliance_rate: "معدل الامتثال",
+    overview: "نظرة عامة",
   },
 };
 

@@ -205,6 +205,69 @@ def test_admin_base_confirm_dialog_uses_i18n():
 
 
 # ---------------------------------------------------------------------------
+# Key parity — dashboard section
+# ---------------------------------------------------------------------------
+
+DASHBOARD_REQUIRED_KEYS = {
+    "title", "subtitle", "welcome",
+    "total_users", "active_users",
+    "total_kindergartens", "active_kindergartens",
+    "total_submissions", "pending_submissions",
+    "page_load_time", "page_load_subtitle", "measured_from_page_load",
+    "data_quality_score",
+    "no_recent_activity", "no_activity_hint", "no_alerts",
+    "manage_users", "send_message", "view_analytics", "data_management",
+    "quick_actions", "user_activity", "data_submissions",
+    "recent_activity", "alerts", "overview",
+}
+
+
+def test_en_has_all_dashboard_keys():
+    data = _load_en()
+    assert "dashboard" in data, "admin_en.json missing dashboard section"
+    missing = DASHBOARD_REQUIRED_KEYS - set(data["dashboard"].keys())
+    assert not missing, f"admin_en.json dashboard missing keys: {sorted(missing)}"
+
+
+def test_ar_has_all_dashboard_keys():
+    data = _load_ar()
+    assert "dashboard" in data, "admin_ar.json missing dashboard section"
+    missing = DASHBOARD_REQUIRED_KEYS - set(data["dashboard"].keys())
+    assert not missing, f"admin_ar.json dashboard missing keys: {sorted(missing)}"
+
+
+def test_dashboard_key_parity():
+    en = set(_load_en().get("dashboard", {}).keys())
+    ar = set(_load_ar().get("dashboard", {}).keys())
+    only_en = en - ar
+    only_ar = ar - en
+    assert not only_en, f"Keys only in admin_en.json dashboard: {sorted(only_en)}"
+    assert not only_ar, f"Keys only in admin_ar.json dashboard: {sorted(only_ar)}"
+
+
+def test_ar_dashboard_values_contain_arabic():
+    """Every required Arabic dashboard value must contain at least one Arabic character."""
+    ar_data = _load_ar().get("dashboard", {})
+    _AR_CHAR = re.compile(r"[؀-ۿ]")
+    no_arabic = [
+        f"{key}: {ar_data.get(key, '')!r}"
+        for key in DASHBOARD_REQUIRED_KEYS
+        if ar_data.get(key) and not _AR_CHAR.search(ar_data[key])
+    ]
+    assert not no_arabic, (
+        "Arabic dashboard values without Arabic characters:\n" + "\n".join(no_arabic)
+    )
+
+
+def test_en_dashboard_values_no_arabic():
+    en_data = _load_en().get("dashboard", {})
+    for key, value in en_data.items():
+        assert not _ARABIC_RE.search(value), (
+            f"Arabic text in admin_en.json dashboard[{key!r}]: {value!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # EN catalog must be free of Arabic values (includes new sections)
 # ---------------------------------------------------------------------------
 

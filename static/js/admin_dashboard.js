@@ -218,7 +218,7 @@ class AdminDashboard {
       case "duration":
         // Capture page-load duration once at construction time, not on every auto-refresh
         formattedValue = `${this.getPageLoadDuration().toFixed(2)}s`;
-        subtitle = this.t("dashboard.page_load_subtitle", "System performance");
+        subtitle = this.t("dashboard.measured_from_page_load", "Measured from this page load");
         break;
       case "number":
         formattedValue = this.formatNumber(value);

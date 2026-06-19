@@ -107,6 +107,7 @@
     "pending_submissions": "Pending Submissions",
     "page_load_time": "Page Load Time",
     "page_load_subtitle": "System performance",
+    "measured_from_page_load": "Measured from this page load",
     "data_quality_score": "Data Quality",
     "no_recent_activity": "No recent activity",
     "no_activity_hint": "Add users or monitor operations to see activity here",

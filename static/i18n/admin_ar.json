@@ -107,6 +107,7 @@
     "pending_submissions": "الطلبات المعلقة",
     "page_load_time": "وقت تحميل الصفحة",
     "page_load_subtitle": "أداء النظام",
+    "measured_from_page_load": "مقاس من تحميل هذه الصفحة",
     "data_quality_score": "مؤشر جودة البيانات",
     "no_recent_activity": "لا يوجد نشاط حديث",
     "no_activity_hint": "ابدأ بإضافة مستخدمين أو متابعة العمليات لعرض النشاط هنا",
