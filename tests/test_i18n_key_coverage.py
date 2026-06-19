@@ -268,6 +268,98 @@ def test_en_dashboard_values_no_arabic():
 
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Key parity — heatmap section (flat-expanded nested keys)
+# ---------------------------------------------------------------------------
+
+def _nested_keys(data, prefix=""):
+    """Flatten nested dict keys using dot notation."""
+    keys = set()
+    for k, v in data.items():
+        full = (prefix + "." + k) if prefix else k
+        keys.add(full)
+        if isinstance(v, dict):
+            keys.update(_nested_keys(v, full))
+    return keys
+
+
+HEATMAP_REQUIRED_FLAT_KEYS = {
+    "multi_indicator_title", "multi_indicator_description",
+    "show_indicators", "all_indicators",
+    "covered_governorates", "average_indicator",
+    "highest_risk_governorate", "general_level",
+    "no_data", "map_load_error", "retry",
+    # risk_levels sub-keys
+    "risk_levels.low", "risk_levels.medium", "risk_levels.high", "risk_levels.critical",
+    # indicators sub-keys
+    "indicators.overall_risk", "indicators.attendance", "indicators.incidents",
+    "indicators.governance", "indicators.data_quality", "indicators.occupancy",
+    # indicator_descriptions sub-keys
+    "indicator_descriptions.overall_risk", "indicator_descriptions.attendance",
+    "indicator_descriptions.incidents", "indicator_descriptions.governance",
+    "indicator_descriptions.data_quality", "indicator_descriptions.occupancy",
+}
+
+
+def test_en_has_all_heatmap_keys():
+    data = _load_en()
+    assert "heatmap" in data, "admin_en.json missing heatmap section"
+    actual = _nested_keys(data["heatmap"])
+    missing = HEATMAP_REQUIRED_FLAT_KEYS - actual
+    assert not missing, f"admin_en.json heatmap missing keys: {sorted(missing)}"
+
+
+def test_ar_has_all_heatmap_keys():
+    data = _load_ar()
+    assert "heatmap" in data, "admin_ar.json missing heatmap section"
+    actual = _nested_keys(data["heatmap"])
+    missing = HEATMAP_REQUIRED_FLAT_KEYS - actual
+    assert not missing, f"admin_ar.json heatmap missing keys: {sorted(missing)}"
+
+
+def test_heatmap_key_parity():
+    en_flat = _nested_keys(_load_en().get("heatmap", {}))
+    ar_flat = _nested_keys(_load_ar().get("heatmap", {}))
+    only_en = en_flat - ar_flat
+    only_ar = ar_flat - en_flat
+    assert not only_en, f"Keys only in admin_en.json heatmap: {sorted(only_en)}"
+    assert not only_ar, f"Keys only in admin_ar.json heatmap: {sorted(only_ar)}"
+
+
+def test_ar_heatmap_values_contain_arabic():
+    """Every required Arabic heatmap leaf value must contain at least one Arabic character."""
+    ar_section = _load_ar().get("heatmap", {})
+    _AR_CHAR = re.compile(r"[؀-ۿ]")
+
+    def _check(data, path=""):
+        failures = []
+        for k, v in data.items():
+            full = (path + "." + k) if path else k
+            if isinstance(v, dict):
+                failures.extend(_check(v, full))
+            elif isinstance(v, str) and not _AR_CHAR.search(v):
+                failures.append(f"{full}: {v!r}")
+        return failures
+
+    bad = _check(ar_section)
+    assert not bad, "Arabic heatmap values without Arabic characters:\n" + "\n".join(bad)
+
+
+def test_en_heatmap_values_no_arabic():
+    en_section = _load_en().get("heatmap", {})
+    _AR = re.compile(r"[؀-ۿ]")
+
+    def _check(data):
+        for k, v in data.items():
+            if isinstance(v, dict):
+                _check(v)
+            elif isinstance(v, str):
+                assert not _AR.search(v), f"Arabic text in admin_en.json heatmap[{k!r}]: {v!r}"
+
+    _check(en_section)
+
+
+# ---------------------------------------------------------------------------
 # EN catalog must be free of Arabic values (includes new sections)
 # ---------------------------------------------------------------------------
 
@@ -284,7 +376,7 @@ def _iter_values(value):
 
 def test_en_catalog_new_sections_have_no_arabic_values():
     data = _load_en()
-    for section in ("safety_analytics", "components"):
+    for section in ("safety_analytics", "components", "heatmap"):
         section_data = data.get(section, {})
         for value in _iter_values(section_data):
             assert not _ARABIC_RE.search(value), (

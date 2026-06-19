@@ -2614,10 +2614,13 @@ class TestFrontendRoutes:
         page = response.text
         sidebar = page[page.index('id="admin-sidebar"'):page.index("</aside>")]
         sidebar_no_comments = re.sub(r"<!--.*?-->", "", sidebar, flags=re.DOTALL)
-        assert "لوحة التحكم" in sidebar
+        assert "لوحة التحكم العامة" in sidebar
         assert "المستخدمون" in sidebar
         assert "إدارة البيانات" in sidebar
-        assert "انتحال الهوية" in sidebar
+        assert "التحليلات والتقارير" in sidebar
+        assert "الخريطة الحرارية" in sidebar
+        assert "النظام" in sidebar
+        assert "انتحال الهوية" not in sidebar
         # None of the old hardcoded English group headers should remain
         # (comments are stripped since the section dividers keep the English
         # name for readability — only visible text must follow ui_lang)
@@ -2634,10 +2637,14 @@ class TestFrontendRoutes:
         assert response.status_code == 200
         page = response.text
         sidebar = page[page.index('id="admin-sidebar"'):page.index("</aside>")]
+        assert "General Dashboard" in sidebar
         assert "Users" in sidebar
         assert "Data Management" in sidebar
-        assert "Impersonation" in sidebar
-        assert "Jordan Heat Map" in sidebar
+        assert "Analytics &amp; Reports" in sidebar
+        assert "Heat Map" in sidebar
+        assert "System" in sidebar
+        assert "Impersonation" not in sidebar
+        assert "Jordan Heat Map" not in sidebar
         # No leftover Arabic text should appear when English is selected
         assert "لوحة التحكم" not in sidebar
         app.dependency_overrides.clear()

@@ -448,5 +448,40 @@
     "confirm_text": "Confirm",
     "cancel_text": "Cancel",
     "loading": "Loading..."
+  },
+  "heatmap": {
+    "multi_indicator_title": "Geographic Indicator Heatmaps",
+    "multi_indicator_description": "Six separate heatmaps by indicator across Jordan's 12 governorates.",
+    "show_indicators": "Show Indicators",
+    "all_indicators": "All",
+    "covered_governorates": "Covered Governorates",
+    "average_indicator": "Average Indicator",
+    "highest_risk_governorate": "Highest Risk Governorate",
+    "general_level": "Overall Level",
+    "no_data": "Insufficient data for this indicator",
+    "map_load_error": "Failed to load geographic map",
+    "retry": "Retry",
+    "risk_levels": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "indicators": {
+      "overall_risk": "Overall Risk",
+      "attendance": "Attendance",
+      "incidents": "Incidents",
+      "governance": "Governance",
+      "data_quality": "Data Quality",
+      "occupancy": "Occupancy"
+    },
+    "indicator_descriptions": {
+      "overall_risk": "Shows overall risk level per governorate.",
+      "attendance": "Shows risk associated with low attendance rates.",
+      "incidents": "Shows risk associated with incident rates.",
+      "governance": "Shows risk associated with low governance scores.",
+      "data_quality": "Shows risk associated with data quality and completeness.",
+      "occupancy": "Shows risk associated with capacity and occupancy rates."
+    }
   }
 }

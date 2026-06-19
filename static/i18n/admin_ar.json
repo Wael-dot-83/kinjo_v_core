@@ -448,5 +448,40 @@
     "confirm_text": "تأكيد",
     "cancel_text": "إلغاء",
     "loading": "جارٍ التحميل..."
+  },
+  "heatmap": {
+    "multi_indicator_title": "خرائط المؤشرات الجغرافية",
+    "multi_indicator_description": "عرض ست خرائط حرارية منفصلة حسب المؤشر على مستوى محافظات الأردن.",
+    "show_indicators": "عرض المؤشرات",
+    "all_indicators": "الكل",
+    "covered_governorates": "المحافظات المغطاة",
+    "average_indicator": "متوسط المؤشر",
+    "highest_risk_governorate": "أعلى محافظة خطورة",
+    "general_level": "المستوى العام",
+    "no_data": "لا توجد بيانات كافية لهذا المؤشر",
+    "map_load_error": "تعذر تحميل الخريطة الجغرافية",
+    "retry": "إعادة المحاولة",
+    "risk_levels": {
+      "low": "منخفض",
+      "medium": "متوسط",
+      "high": "مرتفع",
+      "critical": "حرج"
+    },
+    "indicators": {
+      "overall_risk": "مؤشر الخطر العام",
+      "attendance": "مؤشر الحضور",
+      "incidents": "مؤشر الحوادث",
+      "governance": "مؤشر الحوكمة",
+      "data_quality": "مؤشر جودة البيانات",
+      "occupancy": "مؤشر الإشغال"
+    },
+    "indicator_descriptions": {
+      "overall_risk": "يوضح مستوى الخطر الكلي لكل محافظة.",
+      "attendance": "يوضح مستوى الخطر المرتبط بانخفاض الحضور.",
+      "incidents": "يوضح مستوى الخطر المرتبط بمعدل الحوادث.",
+      "governance": "يوضح مستوى الخطر المرتبط بانخفاض مؤشر الحوكمة.",
+      "data_quality": "يوضح مستوى الخطر المرتبط بجودة واكتمال البيانات.",
+      "occupancy": "يوضح مستوى الخطر المرتبط بالطاقة الاستيعابية ونسبة الإشغال."
+    }
   }
 }

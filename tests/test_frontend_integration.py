@@ -135,21 +135,28 @@ def test_terms_page_exists(test_client):
 
 def test_admin_sidebar_hides_classes_link(test_client):
     """Admin sidebar must not contain the /classes nav link (admin gets 403 on that route)."""
-    response = test_client.get("/dashboard")
+    response = test_client.get("/admin/dashboard")
     assert response.status_code == 200
     assert 'data-i18n="sidebar.classes"' not in response.text
 
 
-def test_admin_sidebar_hides_daily_reports_link(test_client):
-    """Admin sidebar must not contain the /daily-reports nav link (admin gets 403 on that route)."""
-    response = test_client.get("/dashboard")
+def test_admin_sidebar_uses_admin_daily_reports_link(test_client):
+    """Admin sidebar must use the admin reports route, not the non-admin /daily-reports route."""
+    response = test_client.get("/admin/dashboard")
     assert response.status_code == 200
-    assert 'data-i18n="sidebar.daily_reports"' not in response.text
+    html = response.text
+    sidebar = (
+        html[html.index('id="admin-sidebar"') : html.index("</aside>")]
+        if 'id="admin-sidebar"' in html
+        else html
+    )
+    assert 'href="/daily-reports"' not in sidebar
+    assert 'href="/admin/analytics/daily-reports"' in sidebar
 
 
 def test_admin_sidebar_shows_admin_links(test_client):
     """Admin sidebar must include admin-specific management links."""
-    response = test_client.get("/dashboard")
+    response = test_client.get("/admin/dashboard")
     assert response.status_code == 200
     html = response.text
     assert "/admin/users" in html
