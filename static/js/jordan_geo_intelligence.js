@@ -95,13 +95,13 @@
     return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
   }
 
-  function riskLevel(score) {
-    const s = Number(score) || 0;
-    if (s < 25) return { key: 'low',      en: 'Low',      ar: 'منخفض',  icon: 'bi-check-circle-fill',         color: '#4caf50' };
-    if (s < 50) return { key: 'medium',   en: 'Medium',   ar: 'متوسط',  icon: 'bi-exclamation-triangle-fill', color: '#ff9800' };
-    if (s < 75) return { key: 'high',     en: 'High',     ar: 'مرتفع',  icon: 'bi-exclamation-diamond-fill',  color: '#ff5722' };
-    return              { key: 'critical', en: 'Critical', ar: 'حرج',    icon: 'bi-x-octagon-fill',            color: '#ef5350' };
-  }
+function riskLevel(score) {
+     const s = Number(score) || 0;
+     if (s <= 25) return { key: 'low',      en: 'Low',      ar: 'منخفض',  icon: 'bi-check-circle-fill',         color: '#4caf50' };
+     if (s <= 50) return { key: 'medium',   en: 'Medium',   ar: 'متوسط',  icon: 'bi-exclamation-triangle-fill', color: '#ff9800' };
+     if (s <= 75) return { key: 'high',     en: 'High',     ar: 'مرتفع',  icon: 'bi-exclamation-diamond-fill',  color: '#ff5722' };
+     return              { key: 'critical', en: 'Critical', ar: 'حرج',    icon: 'bi-x-octagon-fill',            color: '#ef5350' };
+   }
 
   function indicatorRGB(value, minV, maxV) {
     if (value == null) return [156, 163, 175];
@@ -630,38 +630,40 @@
   /* =========================================================================
      KPI STRIP
      ========================================================================= */
-  function renderKPIStrip(mapData) {
-    const strip = document.getElementById('kpiStrip');
-    if (!strip || !mapData) return;
-    const govs = mapData.governorates || [];
-    const totalKindergartens = govs.reduce((s, g) => s + (g.sub_indicators?.total_nurseries || g.kindergarten_count || 0), 0);
-    const totalChildren = govs.reduce((s, g) => s + (g.sub_indicators?.total_children || g.children_count || 0), 0);
-    const criticalCount = govs.filter(g => (g.risk_score || 0) >= 75).length;
-    const avgRisk = govs.length ? (govs.reduce((s, g) => s + (g.risk_score || 0), 0) / govs.length) : 0;
-    const avgColor = riskHex(avgRisk);
+function renderKPIStrip(mapData) {
+     const strip = document.getElementById('kpiStrip');
+     if (!strip || !mapData) return;
+     const govs = mapData.governorates || [];
+     const totalInstitutions = govs.reduce((s, g) => s + (g.sub_indicators?.total_nurseries || g.kindergarten_count || 0), 0);
+     const criticalCount = govs.filter(g => (g.risk_score || 0) >= 75).length;
+     const avgRisk = govs.length ? (govs.reduce((s, g) => s + (g.risk_score || 0), 0) / govs.length) : 0;
+     const avgColor = riskHex(avgRisk);
+     const instText = totalInstitutions === 0
+       ? (lang() === 'ar' ? 'لا توجد مؤسسات مسجلة' : 'No institutions registered')
+       : fmtNum(totalInstitutions);
 
-    strip.innerHTML = `
-      <div class="kpi-card" style="--kpi-color:#1e88e5">
-        <div class="kpi-label">${t('Governorates', 'المحافظات')}</div>
-        <div class="kpi-value">12</div>
-        <div class="kpi-sub">12 / 12 ${t('covered', 'مغطاة')}</div>
-      </div>
-      <div class="kpi-card" style="--kpi-color:${avgColor}">
-        <div class="kpi-label">${t('Avg. Risk Score', 'متوسط مؤشر الخطر')}</div>
-        <div class="kpi-value" style="color:${avgColor}">${avgRisk.toFixed(0)}</div>
-        <div class="kpi-sub" style="color:${avgColor}">${avgRisk < 25 ? t('Safe — No action needed', 'آمن — لا إجراء مطلوب') : avgRisk < 50 ? t('Moderate — Needs review', 'متوسط — يحتاج مراجعة') : avgRisk < 75 ? t('Warning — Action advised', 'تحذير — يُنصح بالتدخل') : t('Critical — Immediate action', 'حرج — تدخل فوري')}</div>
-      </div>
-      <div class="kpi-card" style="--kpi-color:#ef5350">
-        <div class="kpi-label">${t('Critical Zones', 'المناطق الحرجة')}</div>
-        <div class="kpi-value" style="color:${criticalCount > 0 ? '#ef5350' : '#4caf50'}">${criticalCount}</div>
-        <div class="kpi-sub" style="color:${criticalCount > 0 ? '#ef5350' : '#4caf50'}">${criticalCount === 0 ? t('No critical zones', 'لا مناطق حرجة') : t('Review recommended', 'يُنصح بالمراجعة')}</div>
-      </div>
-      <div class="kpi-card" style="--kpi-color:#1e88e5">
-        <div class="kpi-label">${t('Nurseries', 'الحضانات')}</div>
-        <div class="kpi-value">${fmtNum(totalKindergartens) || govs.length}</div>
-        <div class="kpi-sub">${t('Across all governorates', 'في جميع المحافظات')}</div>
-      </div>`;
-  }
+     strip.innerHTML = `
+       <div class="kpi-card" style="--kpi-color:#1e88e5">
+         <div class="kpi-label">${t('Governorates', 'المحافظات')}</div>
+         <div class="kpi-value">12</div>
+         <div class="kpi-sub">${t('Fully covered', 'مغطاة بالكامل')}</div>
+       </div>
+       <div class="kpi-card" style="--kpi-color:${avgColor}">
+         <div class="kpi-label">${t('Avg. Risk Score', 'متوسط مؤشر الخطر')}</div>
+         <div class="kpi-value" style="color:${avgColor}">${avgRisk.toFixed(0)}</div>
+         <div class="kpi-sub" style="color:${avgColor}">${avgRisk < 25 ? t('Safe — No action needed', 'آمن — لا إجراء مطلوب') : avgRisk < 50 ? t('Moderate — Periodic review needed', 'متوسط — يتطلب متابعة دورية') : avgRisk < 75 ? t('Warning — Action advised', 'تحذير — يُنصح بالتدخل') : t('Critical — Immediate action', 'حرج — تدخل فوري')}</div>
+       </div>
+       <div class="kpi-card" style="--kpi-color:#ef5350">
+         <div class="kpi-label">${t('Critical Zones', 'المناطق الحرجة')}</div>
+         <div class="kpi-value" style="color:${criticalCount > 0 ? '#ef5350' : '#4caf50'}">${criticalCount}</div>
+         <div class="kpi-sub" style="color:${criticalCount > 0 ? '#ef5350' : '#4caf50'}">${criticalCount === 0 ? t('No critical zones currently', 'لا مناطق حرجة حالياً') : t('Review recommended', 'يُنصح بالمراجعة')}</div>
+       </div>
+       <div class="kpi-card" style="--kpi-color:#1e88e5">
+         <div class="kpi-label">${t('Institutions', 'المؤسسات')}</div>
+         <div class="kpi-value">${instText}</div>
+         <div class="kpi-sub">${t('Registered', 'مسجلة')}</div>
+       </div>`;
+   }
 
   /* =========================================================================
      RANKINGS TABLE
@@ -811,14 +813,35 @@
   /* =========================================================================
      UI HELPERS
      ========================================================================= */
-  function showLoading(show) {
-    const overlay = document.getElementById('mapLoadingOverlay');
-    if (overlay) overlay.style.display = show ? 'flex' : 'none';
-  }
-  function showMapError(show) {
-    const err = document.getElementById('mapErrorState');
-    if (err) err.style.display = show ? 'flex' : 'none';
-  }
+function showLoading(show) {
+     const overlay = document.getElementById('mapLoadingOverlay');
+     if (overlay) overlay.style.display = show ? 'flex' : 'none';
+     const err = document.getElementById('mapErrorState');
+     if (err) err.style.display = 'none';
+     const retryBtn = document.getElementById('retryMapBtn');
+     const retrySpinner = retryBtn?.querySelector('.retry-spinner');
+     if (retryBtn && retrySpinner) {
+       retrySpinner.style.display = show ? 'inline-block' : 'none';
+       retryBtn.disabled = show;
+     }
+   }
+function showMapError(show, errorMsg) {
+     const err = document.getElementById('mapErrorState');
+     if (err) {
+       err.style.display = show ? 'flex' : 'none';
+       if (show && errorMsg) {
+         const details = err.querySelector('.map-error-details');
+         if (details) details.textContent = errorMsg;
+       }
+     }
+     const mapStatus = document.getElementById('mapStatus');
+     if (mapStatus) {
+       mapStatus.className = show ? 'status-chip error' : 'status-chip live';
+       mapStatus.innerHTML = show
+         ? `<i class="bi bi-exclamation-triangle" aria-hidden="true"></i> ${t('Map Unavailable', 'الخريطة غير متاحة')}`
+         : `<i class="bi bi-map" aria-hidden="true"></i> ${t('Map Ready', 'الخريطة جاهزة')}`;
+     }
+   }
   function resetDetailPanel() {
     const panel = document.getElementById('intelPanel');
     if (!panel) return;
@@ -858,10 +881,11 @@
       return new Date(iso).toLocaleString(lang() === 'en' ? 'en-US' : 'ar-JO', { dateStyle: 'medium', timeStyle: 'short' });
     } catch (_) { return iso; }
   }
-  function fmtNum(n) {
-    if (!n) return '0';
-    return Number(n).toLocaleString(lang() === 'en' ? 'en-US' : 'ar-JO');
-  }
+function fmtNum(n) {
+     if (n === null || n === undefined) return t('No data', 'لا بيانات');
+     if (n === 0) return '0';
+     return Number(n).toLocaleString(lang() === 'en' ? 'en-US' : 'ar-JO');
+   }
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -893,25 +917,25 @@
      NATIONAL INSIGHTS PANEL
      Shown in the intel panel when no governorate is selected.
      ========================================================================= */
-  function renderNationalInsights(governorates) {
-    const panel = document.getElementById('intelPanel');
-    if (!panel) return;
-    if (!governorates || !governorates.length) return;
-    const critGovs = governorates.filter(g => (g.risk_score || 0) >= 75);
-    const highGovs = governorates.filter(g => (g.risk_score || 0) >= 50 && (g.risk_score || 0) < 75);
-    const avgRisk  = governorates.reduce((s, g) => s + (g.risk_score || 0), 0) / governorates.length;
-    const l = lang();
-    const riskLevelText = avgRisk < 25
-      ? t('Low — System is operating within safe thresholds.', 'منخفض — النظام يعمل ضمن الحدود الآمنة.')
-      : avgRisk < 50
-        ? t('Moderate — Some areas need operational attention.', 'متوسط — بعض المناطق تحتاج متابعة.')
-        : avgRisk < 75
-          ? t('High — Several governorates require urgent review.', 'مرتفع — عدة محافظات تحتاج مراجعة عاجلة.')
-          : t('Critical — Immediate intervention required across multiple areas.', 'حرج — يلزم التدخل الفوري في مناطق متعددة.');
+function renderNationalInsights(governorates) {
+     const panel = document.getElementById('intelPanel');
+     if (!panel) return;
+     if (!governorates || !governorates.length) return;
+     const critGovs = governorates.filter(g => (g.risk_score || 0) >= 75);
+     const highGovs = governorates.filter(g => (g.risk_score || 0) >= 50 && (g.risk_score || 0) < 75);
+     const avgRisk  = governorates.reduce((s, g) => s + (g.risk_score || 0), 0) / governorates.length;
+     const l = lang();
+     const riskLevelText = avgRisk < 25
+       ? t('Low — System is operating within safe thresholds.', 'منخفض — النظام يعمل ضمن الحدود الآمنة.')
+       : avgRisk < 50
+         ? t('Moderate — Some areas need periodic review.', 'متوسط — بعض المناطق تحتاج متابعة دورية.')
+         : avgRisk < 75
+           ? t('High — Several governorates require urgent review.', 'مرتفع — عدة محافظات تحتاج مراجعة عاجلة.')
+           : t('Critical — Immediate intervention required.', 'حرج — يلزم التدخل الفوري.');
 
-    const critList = critGovs.length
-      ? critGovs.map(g => esc(l === 'ar' ? (g.name_ar || g.name_en || g.slug) : (g.name_en || g.slug))).join('، ')
-      : null;
+     const critList = critGovs.length
+       ? critGovs.map(g => esc(l === 'ar' ? (g.name_ar || g.name_en || g.slug) : (g.name_en || g.slug))).join('، ')
+       : null;
 
     panel.innerHTML = `
       <div class="intel-gov-header" style="background:linear-gradient(140deg,rgba(30,136,229,0.08) 0%,transparent 70%)">
@@ -943,22 +967,22 @@
           </div>`;
         }).join('')}
       </div>` : ''}
-      ${highGovs.length ? `
-      <div class="intel-section">
-        <div class="intel-section-title">${t('High-Risk Zones', 'مناطق عالية الخطر')}</div>
-        ${highGovs.slice(0, 4).map(g => {
-          const gname = esc(l === 'ar' ? (g.name_ar || g.name_en || g.slug) : (g.name_en || g.slug));
-          return `<div class="intel-alert-row">
-            <span class="intel-alert-dot" style="background:#ff5722"></span>
-            <span>${gname} — ${t('Risk', 'خطر')} <strong style="color:#ff5722">${Number(g.risk_score||0).toFixed(0)}</strong></span>
-          </div>`;
-        }).join('')}
-      </div>` : ''}
-      <div class="intel-actions">
-        <a href="/admin/analytics" class="intel-btn-secondary">
-          <i class="bi bi-bar-chart-line"></i> ${t('Open Analytics', 'فتح التحليلات')}
-        </a>
-      </div>
+${highGovs.length ? `
+       <div class="intel-section">
+         <div class="intel-section-title">${t('High-Risk Zones', 'مناطق عالية الخطر')} <span class="intel-count">(${highGovs.length})</span></div>
+         ${highGovs.map(g => {
+           const gname = esc(l === 'ar' ? (g.name_ar || g.name_en || g.slug) : (g.name_en || g.slug));
+           return `<div class="intel-alert-row">
+             <span class="intel-alert-dot" style="background:#ff5722"></span>
+             <span>${gname} — ${t('Risk', 'خطر')} <strong style="color:#ff5722">${Number(g.risk_score||0).toFixed(0)}</strong></span>
+           </div>`;
+         }).join('')}
+       </div>` : ''}
+<div class="intel-actions">
+         <a href="/admin/analytics" class="intel-btn-secondary">
+           <i class="bi bi-bar-chart-line"></i> ${t('View Full Analytics', 'عرض التحليلات الكاملة')}
+         </a>
+       </div>
       <div class="intel-footer">
         <span>${t('Click a governorate to drill down.', 'انقر على محافظة للاطلاع على تفاصيلها.')}</span>
       </div>`;
@@ -1003,17 +1027,25 @@
     }
   }
 
-  function bindControls() {
-    document.getElementById('zoomInBtn')?.addEventListener('click', zoomIn);
-    document.getElementById('zoomOutBtn')?.addEventListener('click', zoomOut);
-    document.getElementById('resetViewBtn')?.addEventListener('click', resetView);
-    document.getElementById('tiltMoreBtn')?.addEventListener('click', tiltMore);
-    document.getElementById('tiltLessBtn')?.addEventListener('click', tiltLess);
-    document.getElementById('btn3D')?.addEventListener('click', () => set3D(true));
-    document.getElementById('btn2D')?.addEventListener('click', () => set3D(false));
-    document.getElementById('compassReset')?.addEventListener('click', () => {
-      if (deckgl) deckgl.setProps({ initialViewState: { ...viewState, bearing: -8, transitionDuration: 500 } });
-    });
+function bindControls() {
+     document.getElementById('zoomInBtn')?.addEventListener('click', zoomIn);
+     document.getElementById('zoomOutBtn')?.addEventListener('click', zoomOut);
+     document.getElementById('resetViewBtn')?.addEventListener('click', resetView);
+     document.getElementById('tiltMoreBtn')?.addEventListener('click', tiltMore);
+     document.getElementById('tiltLessBtn')?.addEventListener('click', tiltLess);
+     document.getElementById('btn3D')?.addEventListener('click', () => set3D(true));
+     document.getElementById('btn2D')?.addEventListener('click', () => set3D(false));
+     document.getElementById('compassReset')?.addEventListener('click', () => {
+       if (deckgl) deckgl.setProps({ initialViewState: { ...viewState, bearing: -8, transitionDuration: 500 } });
+     });
+     document.getElementById('retryMapBtn')?.addEventListener('click', () => {
+       showLoading(true);
+       if (deckgl) { deckgl.finalize(); deckgl = null; }
+       state.initialized = false;
+       state.geojson = null;
+       state.mapData = null;
+       init();
+     });
 
     document.getElementById('indicatorSelect')?.addEventListener('change', e => {
       state.indicator = e.target.value;

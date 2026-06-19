@@ -84,14 +84,14 @@ def test_risk_levels():
     assert len(constants.RISK_LEVELS) == 4
     levels = [r['key'] for r in constants.RISK_LEVELS]
     assert levels == ['low', 'medium', 'high', 'critical']
-    # Verify boundary logic
+    # Verify boundary logic (boundaries: low=0-24, medium=25-49, high=50-74, critical=75-100)
     assert constants.risk_level_for_score(0)['key'] == 'low'
-    assert constants.risk_level_for_score(25)['key'] == 'low'
-    assert constants.risk_level_for_score(26)['key'] == 'medium'
-    assert constants.risk_level_for_score(50)['key'] == 'medium'
-    assert constants.risk_level_for_score(51)['key'] == 'high'
-    assert constants.risk_level_for_score(75)['key'] == 'high'
-    assert constants.risk_level_for_score(76)['key'] == 'critical'
+    assert constants.risk_level_for_score(24)['key'] == 'low'
+    assert constants.risk_level_for_score(25)['key'] == 'medium'
+    assert constants.risk_level_for_score(49)['key'] == 'medium'
+    assert constants.risk_level_for_score(50)['key'] == 'high'
+    assert constants.risk_level_for_score(74)['key'] == 'high'
+    assert constants.risk_level_for_score(75)['key'] == 'critical'
     assert constants.risk_level_for_score(100)['key'] == 'critical'
 
 

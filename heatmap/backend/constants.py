@@ -185,10 +185,10 @@ SUB_INDICATORS: Dict[str, List[Dict]] = {
 # indicator value yields a low risk score and vice-versa.  The map shows the
 # risk score (or the selected indicator value, depending on the UI mode).
 RISK_LEVELS: List[Dict] = [
-    {"key": "low",      "name_en": "Low",      "name_ar": "منخفض",   "min": 0,  "max": 25,  "color": "#28A745"},
-    {"key": "medium",   "name_en": "Medium",   "name_ar": "متوسط",   "min": 26, "max": 50,  "color": "#FFC107"},
-    {"key": "high",     "name_en": "High",     "name_ar": "مرتفع",   "min": 51, "max": 75,  "color": "#FD7E14"},
-    {"key": "critical", "name_en": "Critical", "name_ar": "حرج",     "min": 76, "max": 100, "color": "#DC3545"},
+    {"key": "low",      "name_en": "Low",      "name_ar": "منخفض",   "min": 0,  "max": 24,  "color": "#28A745"},
+    {"key": "medium",   "name_en": "Medium",   "name_ar": "متوسط",   "min": 25, "max": 49,  "color": "#FFC107"},
+    {"key": "high",     "name_en": "High",     "name_ar": "مرتفع",   "min": 50, "max": 74,  "color": "#FD7E14"},
+    {"key": "critical", "name_en": "Critical", "name_ar": "حرج",     "min": 75, "max": 100, "color": "#DC3545"},
 ]
 RISK_BY_KEY: Dict[str, Dict] = {r["key"]: r for r in RISK_LEVELS}
 

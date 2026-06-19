@@ -2897,11 +2897,12 @@ class AnalyticsService:
         green = amber = red = 0
         for kg in kindergartens:
             _, band = KPIService.compute_governance_score(db, kg.id, period_start, period_end)
-            if band == "Green":
+            # Band is returned as "GREEN", "AMBER", or "RED" (uppercase)
+            if band == "GREEN":
                 green += 1
-            elif band == "Amber":
+            elif band == "AMBER":
                 amber += 1
-            elif band == "Red":
+            elif band == "RED":
                 red += 1
 
         return GovernanceDistribution(green=green, amber=amber, red=red)

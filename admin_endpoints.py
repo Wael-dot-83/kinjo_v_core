@@ -4771,10 +4771,14 @@ class AdminAlertResponse(BaseModel):
     kindergarten_name: Optional[str] = None
     metric: str
     current_value: float
-    threshold: float
+    threshold: Optional[float] = None
     triggered_at: str
+    acknowledged_at: Optional[str] = None
+    acknowledged_by_id: Optional[int] = None
     status: str
     message: Optional[str] = None
+    scope_type: Optional[str] = None
+    scope_id: Optional[str] = None
 
 
 class AdminAlertsListResponse(BaseModel):
@@ -4784,91 +4788,149 @@ class AdminAlertsListResponse(BaseModel):
     page_size: int
 
 
+_VALID_SEVERITIES = {s.value for s in models.SeverityLevel}
+_VALID_STATUSES   = {s.value for s in models.AlertStatus}
+
+
 @router.get("/admin/alerts", response_model=AdminAlertsListResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_admin_alerts(
     request: Request,
-    severity: Optional[str] = Query(None, description="Filter by severity (CRITICAL/HIGH/MEDIUM/LOW)"),
-    governorate: Optional[str] = Query(None, description="Filter by governorate"),
-    status: Optional[str] = Query("ACTIVE", description="Filter by status (ACTIVE/ACKNOWLEDGED)"),
+    severity: Optional[str] = Query(None),
+    governorate: Optional[str] = Query(None),
+    status: Optional[str] = Query("ACTIVE"),
+    date_from: Optional[str] = Query(None, description="ISO date — lower bound on triggered_at"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """Get admin alerts with optional filtering."""
+    """Get admin alerts with filtering, full threshold & kindergarten details."""
     try:
         query = db.query(models.ActiveAlert)
 
         if severity:
-            try:
-                query = query.filter(models.ActiveAlert.severity == models.SeverityLevel(severity))
-            except ValueError:
-                raise HTTPException(status_code=422, detail=f"Invalid severity '{severity}'. Use CRITICAL, HIGH, MEDIUM, or LOW.")
+            if severity.upper() not in _VALID_SEVERITIES:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid severity '{severity}'. Use: {', '.join(_VALID_SEVERITIES)}"
+                )
+            query = query.filter(models.ActiveAlert.severity == models.SeverityLevel(severity.upper()))
 
         if status:
-            try:
-                query = query.filter(models.ActiveAlert.status == models.AlertStatus(status))
-            except ValueError:
-                raise HTTPException(status_code=422, detail=f"Invalid status '{status}'. Use ACTIVE or ACKNOWLEDGED.")
+            if status.upper() not in _VALID_STATUSES:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid status '{status}'. Use: {', '.join(_VALID_STATUSES)}"
+                )
+            query = query.filter(models.ActiveAlert.status == models.AlertStatus(status.upper()))
 
+        if date_from:
+            try:
+                dt_from = datetime.fromisoformat(date_from)
+                query = query.filter(models.ActiveAlert.triggered_at >= dt_from)
+            except ValueError:
+                raise HTTPException(status_code=422, detail=f"Invalid date_from: '{date_from}'")
+
+        # Governorate filter: match GOVERNORATE-scoped alerts directly, and KINDERGARTEN
+        # alerts where the kindergarten sits in that governorate.
         if governorate:
+            kg_id_strings = [
+                str(row.id)
+                for row in db.query(models.Kindergarten.id).filter(
+                    models.Kindergarten.governorate == governorate
+                ).all()
+            ]
             query = query.filter(
-                models.ActiveAlert.scope_type == "GOVERNORATE",
-                models.ActiveAlert.scope_id == governorate
+                or_(
+                    and_(
+                        models.ActiveAlert.scope_type == "GOVERNORATE",
+                        models.ActiveAlert.scope_id == governorate,
+                    ),
+                    and_(
+                        models.ActiveAlert.scope_type == "KINDERGARTEN",
+                        models.ActiveAlert.scope_id.in_(kg_id_strings),
+                    ),
+                )
             )
 
         total = query.count()
-        alerts = query.order_by(
-            models.ActiveAlert.triggered_at.desc(),
-            models.ActiveAlert.severity.desc()
-        ).offset(skip).limit(limit).all()
+        alerts = (
+            query
+            .order_by(
+                models.ActiveAlert.severity.desc(),
+                models.ActiveAlert.triggered_at.desc(),
+            )
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
-        # Pre-load governorates for KINDERGARTEN-scoped alerts in a single query (avoids N+1).
+        # Batch-load kindergartens for KINDERGARTEN-scoped alerts (avoids N+1).
         kg_ids: Set[int] = set()
+        threshold_ids: Set[int] = set()
         for alert in alerts:
+            threshold_ids.add(alert.threshold_id)
             if alert.scope_type == "KINDERGARTEN" and alert.scope_id:
                 try:
                     kg_ids.add(int(alert.scope_id))
                 except (TypeError, ValueError):
-                    continue
-        kg_governorate_map: Dict[int, str] = {}
-        if kg_ids:
-            for kg_id, gov in db.query(
-                models.Kindergarten.id, models.Kindergarten.governorate
-            ).filter(models.Kindergarten.id.in_(kg_ids)).all():
-                kg_governorate_map[kg_id] = gov
+                    pass
 
-        alerts_data = []
+        # threshold_id → threshold_value
+        threshold_map: Dict[int, float] = {}
+        if threshold_ids:
+            for t_id, t_val in db.query(
+                models.AlertThreshold.id, models.AlertThreshold.threshold_value
+            ).filter(models.AlertThreshold.id.in_(threshold_ids)).all():
+                threshold_map[t_id] = float(t_val)
+
+        # kg_id → (name_ar, name_en, governorate)
+        kg_map: Dict[int, models.Kindergarten] = {}
+        if kg_ids:
+            for kg in db.query(models.Kindergarten).filter(
+                models.Kindergarten.id.in_(kg_ids)
+            ).all():
+                kg_map[kg.id] = kg
+
+        alerts_data: List[AdminAlertResponse] = []
         for alert in alerts:
-            # Extract governorate from scope_id if scope_type is GOVERNORATE
-            governorate_name = None
+            governorate_name: Optional[str] = None
+            kg_name: Optional[str] = None
+
             if alert.scope_type == "GOVERNORATE":
                 governorate_name = alert.scope_id
             elif alert.scope_type == "KINDERGARTEN" and alert.scope_id:
                 try:
-                    governorate_name = kg_governorate_map.get(int(alert.scope_id))
+                    kg = kg_map.get(int(alert.scope_id))
+                    if kg:
+                        governorate_name = kg.governorate
+                        kg_name = kg.name_ar or kg.name_en
                 except (TypeError, ValueError):
-                    governorate_name = None
+                    pass
 
             alerts_data.append(AdminAlertResponse(
                 id=alert.id,
-                severity=alert.severity.value if hasattr(alert.severity, 'value') else str(alert.severity),
+                severity=alert.severity.value if hasattr(alert.severity, "value") else str(alert.severity),
                 governorate=governorate_name,
-                kindergarten_name=None,
+                kindergarten_name=kg_name,
                 metric=alert.metric_type,
                 current_value=float(alert.current_value) if alert.current_value is not None else 0.0,
-                threshold=0.0,
+                threshold=threshold_map.get(alert.threshold_id),
                 triggered_at=alert.triggered_at.isoformat() if alert.triggered_at else "",
-                status=alert.status.value if hasattr(alert.status, 'value') else str(alert.status),
-                message=alert.message
+                acknowledged_at=alert.acknowledged_at.isoformat() if alert.acknowledged_at else None,
+                acknowledged_by_id=alert.acknowledged_by,
+                status=alert.status.value if hasattr(alert.status, "value") else str(alert.status),
+                message=alert.message,
+                scope_type=alert.scope_type,
+                scope_id=alert.scope_id,
             ))
 
         return AdminAlertsListResponse(
             alerts=alerts_data,
             total=total,
             page=(skip // limit) + 1,
-            page_size=limit
+            page_size=limit,
         )
 
     except HTTPException:
@@ -4876,6 +4938,70 @@ def get_admin_alerts(
     except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
         logger.error(f"Failed to get admin alerts: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.patch("/admin/alerts/{alert_id}/acknowledge", response_model=AdminAlertResponse)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+def acknowledge_alert(
+    request: Request,
+    alert_id: int,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Mark an active alert as acknowledged."""
+    alert = db.query(models.ActiveAlert).filter(models.ActiveAlert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    if alert.status == models.AlertStatus.ACKNOWLEDGED:
+        raise HTTPException(status_code=409, detail="Alert is already acknowledged")
+
+    now = datetime.now(timezone.utc)
+    alert.status = models.AlertStatus.ACKNOWLEDGED
+    alert.acknowledged_by = current_user.id
+    alert.acknowledged_at = now
+    db.commit()
+    db.refresh(alert)
+
+    # Build response (mirrors get_admin_alerts logic for the single record)
+    threshold_val: Optional[float] = None
+    if alert.threshold_id:
+        t = db.query(models.AlertThreshold.threshold_value).filter(
+            models.AlertThreshold.id == alert.threshold_id
+        ).scalar()
+        if t is not None:
+            threshold_val = float(t)
+
+    governorate_name: Optional[str] = None
+    kg_name: Optional[str] = None
+    if alert.scope_type == "GOVERNORATE":
+        governorate_name = alert.scope_id
+    elif alert.scope_type == "KINDERGARTEN" and alert.scope_id:
+        try:
+            kg = db.query(models.Kindergarten).filter(
+                models.Kindergarten.id == int(alert.scope_id)
+            ).first()
+            if kg:
+                governorate_name = kg.governorate
+                kg_name = kg.name_ar or kg.name_en
+        except (TypeError, ValueError):
+            pass
+
+    return AdminAlertResponse(
+        id=alert.id,
+        severity=alert.severity.value if hasattr(alert.severity, "value") else str(alert.severity),
+        governorate=governorate_name,
+        kindergarten_name=kg_name,
+        metric=alert.metric_type,
+        current_value=float(alert.current_value) if alert.current_value is not None else 0.0,
+        threshold=threshold_val,
+        triggered_at=alert.triggered_at.isoformat() if alert.triggered_at else "",
+        acknowledged_at=alert.acknowledged_at.isoformat() if alert.acknowledged_at else None,
+        acknowledged_by_id=alert.acknowledged_by,
+        status=alert.status.value if hasattr(alert.status, "value") else str(alert.status),
+        message=alert.message,
+        scope_type=alert.scope_type,
+        scope_id=alert.scope_id,
+    )
 
 
 # =============================================================================

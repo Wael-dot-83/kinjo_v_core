@@ -11,8 +11,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
-  <div>
+<div class="admin-page-header analytics-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
+  <div class="analytics-page-titleblock">
     <h1 class="admin-page-title mb-0" style="font: var(--type-page-title)">
       <i class="bi bi-bar-chart-line-fill me-2"></i>
       {% if ui_lang == 'en' %}Central Analytics{% else %}التحليلات المركزية{% endif %}
@@ -22,7 +22,7 @@
       <span>{% if ui_lang == 'en' %}Loading data...{% else %}جاري تحميل البيانات...{% endif %}</span>
     </small>
   </div>
-  <div>
+  <div class="analytics-page-actions">
     {{ date_range_filter(
       start_id="periodStart",
       end_id="periodEnd",
@@ -509,9 +509,13 @@
 <script src="https://cdn.jsdelivr.net/npm/tablesort@5.3.0/dist/tablesort.min.js"
     integrity="sha384-vhcBfNt762rNlbnxZsIJQSPWX7b+8NzToPmcW6J5cJzXSnOjZKS2LQ/O2uqLlHcX"
     crossorigin="anonymous"></script>
-<script src="/static/js/chart_utils.js" charset="utf-8"></script>
-<script src="/static/js/admin_analytics.js" charset="utf-8"></script>
+<script src="/static/js/chart_utils.js?v=2.1" charset="utf-8"></script>
+<script src="/static/js/kpi-validation.js?v=2.1" charset="utf-8"></script>
+<script src="/static/js/admin_analytics.js?v=2.1" charset="utf-8"></script>
 <style>
+    .admin-content:has(.analytics-dashboard) {
+      background: #f6f8fb;
+    }
     .analytics-dashboard {
       font-family: var(--admin-font-family-ar), var(--admin-font-family-en);
     }
@@ -523,16 +527,84 @@
       --type-label: 500 12px/16px;
       --space-32: 32px;
     }
+    .analytics-page-header {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      padding: 16px;
+    }
+    .analytics-page-titleblock {
+      min-width: 240px;
+      padding-block: 6px;
+    }
+    .analytics-page-actions {
+      flex: 1 1 720px;
+      max-width: 940px;
+    }
+    .analytics-page-actions .card {
+      margin: 0 !important;
+      border: 0;
+      border-radius: 8px;
+      box-shadow: none;
+      background: transparent;
+    }
+    .analytics-page-actions .card-body {
+      padding: 0;
+    }
+    .analytics-page-actions .row {
+      --bs-gutter-x: 0.75rem;
+      --bs-gutter-y: 0.75rem;
+      align-items: end;
+    }
+    .analytics-page-actions .form-label {
+      color: #475569;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .analytics-page-actions .form-control,
+    .analytics-page-actions .form-select,
+    .analytics-page-actions .btn {
+      min-height: 38px;
+      border-radius: 8px;
+      font-size: 0.86rem;
+    }
+    .analytics-dashboard .card {
+      border-color: #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05) !important;
+    }
+    .analytics-dashboard .card-header {
+      min-height: 52px;
+      border-color: #e5e7eb !important;
+    }
+    .analytics-dashboard .icon-circle,
+    .analytics-dashboard .rank-circle {
+      border-radius: 8px !important;
+    }
     .mb-section { margin-bottom: var(--space-32); }
     .p-card { padding: 16px; }
-    .gap-card { gap: 16px; }
+    .gap-card { row-gap: 16px; }
     [dir="rtl"] .trend-chart-wrapper canvas { direction: rtl; }
     .analytics-error-state { display: none; text-align: center; padding: 3rem 1rem; color: #6b7280; }
     .analytics-error-state.show { display: block; }
     .analytics-error-state .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
     .datetime-indicator { font-size: 0.75rem; color: #6b7280; display: flex; align-items: center; gap: 0.3rem; }
+    .analytics-empty-state {
+      color: #64748b;
+      font-size: 0.9rem;
+      padding: 1rem;
+      text-align: center;
+    }
     html[dir="rtl"] .btn-group .btn:first-child { border-radius: 0 0.25rem 0.25rem 0; }
     html[dir="rtl"] .btn-group .btn:last-child { border-radius: 0.25rem 0 0 0.25rem; }
+    @media (max-width: 991.98px) {
+      .analytics-page-actions {
+        flex-basis: 100%;
+        max-width: none;
+      }
+    }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {

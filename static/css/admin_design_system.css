@@ -263,23 +263,26 @@ html[dir="ltr"] .admin-sidebar.collapsed + .admin-main {
 /* Admin Layout Grid */
 .admin-layout {
   display: grid;
-  grid-template-columns: var(--admin-sidebar-width) 1fr;
-  grid-template-rows: auto 1fr;
+  grid-template-columns: var(--admin-sidebar-width, 240px) minmax(0, 1fr);
+  grid-template-rows: minmax(100vh, auto);
   min-height: 100vh;
   transition: grid-template-columns var(--admin-transition-normal);
 }
 
 .admin-layout.sidebar-collapsed {
-  grid-template-columns: var(--admin-sidebar-width-collapsed) 1fr;
+  grid-template-columns: var(--admin-sidebar-width-collapsed, 64px) minmax(0, 1fr);
 }
 
 /* Sidebar */
 .admin-sidebar {
-  width: var(--admin-sidebar-width);
+  grid-column: 1;
+  grid-row: 1;
+  width: var(--admin-sidebar-width, 240px);
+  min-width: var(--admin-sidebar-width, 240px);
   min-height: 100vh;
-  background-color: var(--admin-bg-sidebar);
-  border-right: var(--admin-border-width) solid var(--admin-border-color);
-  padding: var(--admin-space-6);
+  background-color: var(--admin-bg-sidebar, #0f172a);
+  border-right: var(--admin-border-width, 1px) solid var(--admin-border-color, #e2e8f0);
+  padding: var(--admin-space-6, 1.5rem);
   overflow-y: auto;
   position: sticky;
   top: 0;
@@ -374,8 +377,11 @@ html[dir="rtl"] .admin-nav-item.active::before {
 
 /* Main Content Area */
 .admin-main {
-  background-color: var(--admin-bg-primary);
-  padding: var(--admin-space-8);
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  background-color: var(--admin-bg-primary, #ffffff);
+  padding: var(--admin-space-8, 2rem);
   overflow-x: auto;
   transition: margin var(--admin-transition-normal);
 }
@@ -1147,10 +1153,13 @@ html[dir="rtl"] .submenu .nav-link {
   }
 
   .admin-sidebar {
+    grid-column: 1;
+    grid-row: 1;
     position: fixed;
     top: 0;
     left: 0;
-    width: var(--admin-sidebar-width);
+    width: var(--admin-sidebar-width, 240px);
+    min-width: var(--admin-sidebar-width, 240px);
     height: 100vh;
     z-index: var(--admin-z-modal);
     transform: translateX(-100%);
@@ -1172,7 +1181,9 @@ html[dir="rtl"] .submenu .nav-link {
   }
 
   .admin-main {
-    padding: var(--admin-space-4);
+    grid-column: 1;
+    grid-row: 1;
+    padding: var(--admin-space-4, 1rem);
   }
 
   .admin-header {
@@ -1986,9 +1997,14 @@ html[dir="rtl"] .submenu .nav-link {
    Viewport permanently locked to the Hashemite Kingdom of Jordan.
    ============================================================================ */
 
-/* Page-level override — fill the admin content area with the command center */
-.p-section { padding: 0 !important; }
-.admin-content { background: #050d1a !important; }
+/* Page-level override — fill only the heatmap admin content area with the command center */
+.admin-content:has(> .geo-cc) {
+  background: #050d1a !important;
+}
+
+.admin-content:has(> .geo-cc) .p-section {
+  padding: 0 !important;
+}
 
 /* ——— MAIN SHELL ——— */
 .geo-cc {

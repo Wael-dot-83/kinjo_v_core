@@ -528,8 +528,8 @@ def get_map_overview(db: Session) -> Dict:
         "summary": {
             "total_governorates": len(governors),
             "average_risk": overall_avg_risk,
-            "high_risk_count": sum(1 for g in governors if g["risk_score"] >= 51),
-            "critical_count": sum(1 for g in governors if g["risk_score"] >= 76),
+            "high_risk_count": sum(1 for g in governors if g["risk_score"] >= 50),
+            "critical_count": sum(1 for g in governors if g["risk_score"] >= 75),
         },
         "risk_legend": [
             {
