@@ -62,6 +62,13 @@
     return t("heatmap.risk_levels." + rl.key, IS_AR ? rl.ar : rl.en);
   }
 
+  function govName(g, fallback) {
+    return (IS_AR ? (g.name_ar || g.name_en) : (g.name_en || g.name_ar)) || (fallback || "");
+  }
+  function govNameAlt(g) {
+    return IS_AR ? (g.name_en || "") : (g.name_ar || "");
+  }
+
   /* ── 6 INDICATOR CONFIGURATIONS ──────────────────────────────── */
   const INDICATORS = [
     {
@@ -232,11 +239,11 @@
     var rl      = riskValue != null ? riskLevel(riskValue) : null;
     var rlLabel = rl ? riskLevelLabel(rl) : "";
     var valStr  = rawValue != null ? rawValue.toFixed(1) + "%" : (IS_AR ? "لا توجد بيانات" : "No data");
-    var govName = IS_AR ? (gov.name_ar || gov.name_en) : (gov.name_en || gov.name_ar);
-    var indName = indLabel(indicator);
+    var govLabel = govName(gov);
+    var indName  = indLabel(indicator);
 
     ttEl.innerHTML =
-      '<div class="tt-name">' + esc(govName) + "</div>" +
+      '<div class="tt-name">' + esc(govLabel) + "</div>" +
       (rl ? '<div class="tt-badge" style="color:' + rl.color + '">' + esc(rlLabel) + "</div>" : "") +
       '<div class="tt-divider"></div>' +
       '<div class="tt-row"><span>' + esc(indName) + "</span><strong>" + esc(valStr) + "</strong></div>" +
@@ -375,7 +382,7 @@
               '<div class="hm-stat-value" style="color:' + riskColor(avgRisk) + '">' + avgRisk.toFixed(0) + "</div>";
     }
     if (topGov) {
-      var topName = IS_AR ? (topGov.name_ar || topGov.name_en) : (topGov.name_en || topGov.name_ar);
+      var topName = govName(topGov);
       html += '<div class="hm-stat-label">' + esc(topLbl) + '</div><div class="hm-stat-value">' + esc(topName) + "</div>";
     }
     if (rl) {
@@ -481,11 +488,8 @@
   function loadGovDetail(slug) {
     var panel = document.getElementById("intelPanel");
     if (!panel) return;
-    var gov   = null;
-    for (var i = 0; i < state.governorates.length; i++) {
-      if (state.governorates[i].slug === slug) { gov = state.governorates[i]; break; }
-    }
-    var name = gov ? (IS_AR ? (gov.name_ar || gov.name_en) : (gov.name_en || gov.name_ar)) : slug;
+    var gov  = state.govLookup[slug] || null;
+    var name = gov ? govName(gov) : slug;
 
     panel.innerHTML =
       '<div class="intel-loading">' +
@@ -523,8 +527,8 @@
   function renderGovDetail(panel, data, slug) {
     var gov   = (data && data.governorate) || data || {};
     var rl    = riskLevel(gov.risk_score || 0);
-    var name  = IS_AR ? (gov.name_ar || gov.name_en || slug) : (gov.name_en || gov.name_ar || slug);
-    var sub   = IS_AR ? (gov.name_en || "") : (gov.name_ar || "");
+    var name  = govName(gov, slug);
+    var sub   = govNameAlt(gov);
 
     var indBars = "";
     var mi = gov.main_indicators || {};
@@ -641,8 +645,8 @@
       var rlLbl  = riskLevelLabel(rl);
       var rank   = i + 1;
       var rnkCls = rank === 1 ? " top-1" : rank === 2 ? " top-2" : rank === 3 ? " top-3" : "";
-      var name   = IS_AR ? (g.name_ar || g.name_en) : (g.name_en || g.name_ar);
-      var sub    = IS_AR ? (g.name_en || "") : (g.name_ar || "");
+      var name   = govName(g);
+      var sub    = govNameAlt(g);
       var score  = +(g.risk_score || 0);
       rows +=
         '<tr data-slug="' + esc(g.slug) + '" title="' + esc(name) + '">' +
@@ -679,12 +683,8 @@
           if (e.target.closest(".rank-drill")) return;
           var slug = tr.dataset.slug;
           if (!slug) return;
-          var sel = document.getElementById("indicatorViewSelect");
-          if (sel) sel.value = "overall_risk";
-          state.selectedSlug = slug;
-          showSingleMap("overall_risk");
-          loadGovDetail(slug);
-          highlightGov(slug);
+          state.selectedIndicator = "";
+          goToGov(slug);
         });
       })(trs[j]);
     }
@@ -724,7 +724,7 @@
       var g   = sorted[i];
       var opt = document.createElement("option");
       opt.value       = g.slug;
-      opt.textContent = IS_AR ? (g.name_ar || g.name_en) : (g.name_en || g.name_ar);
+      opt.textContent = govName(g);
       sel.appendChild(opt);
     }
   }
@@ -748,6 +748,18 @@
     if (grid) grid.style.visibility   = show ? "hidden" : "visible";
   }
 
+  /* ── GOV NAVIGATION (shared by govSelect, rankings, _hmLoadGov) ─ */
+  function goToGov(slug) {
+    state.selectedSlug = slug;
+    if (!state.selectedIndicator) {
+      var s = document.getElementById("indicatorViewSelect");
+      if (s) s.value = "overall_risk";
+      showSingleMap("overall_risk");
+    }
+    loadGovDetail(slug);
+    highlightGov(slug);
+  }
+
   /* ── CONTROLS ────────────────────────────────────────────────── */
   function bindControls() {
     var indSel = document.getElementById("indicatorViewSelect");
@@ -761,16 +773,7 @@
     var govSel = document.getElementById("govSelect");
     if (govSel) {
       govSel.addEventListener("change", function() {
-        var slug = govSel.value;
-        if (!slug) return;
-        state.selectedSlug = slug;
-        if (!state.selectedIndicator) {
-          var s = document.getElementById("indicatorViewSelect");
-          if (s) s.value = "overall_risk";
-          showSingleMap("overall_risk");
-        }
-        loadGovDetail(slug);
-        highlightGov(slug);
+        if (govSel.value) goToGov(govSel.value);
       });
     }
 
@@ -816,16 +819,7 @@
       var ind = findIndicator(indKey);
       if (ind) renderCard(ind);
     };
-    window._hmLoadGov = function(slug) {
-      state.selectedSlug = slug;
-      if (!state.selectedIndicator) {
-        var s = document.getElementById("indicatorViewSelect");
-        if (s) s.value = "overall_risk";
-        showSingleMap("overall_risk");
-      }
-      loadGovDetail(slug);
-      highlightGov(slug);
-    };
+    window._hmLoadGov = goToGov;
   }
 
   /* ── INIT ────────────────────────────────────────────────────── */
