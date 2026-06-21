@@ -3,75 +3,11 @@
 'components/filter_panel.html' import filter_panel %} {% from
 'components/alert_banner.html' import alert_banner %} {% block title %}{% if
 ui_lang == 'en' %}KPI Dashboard{% else %}لوحة مؤشرات الأداء{% endif %}{%
-endblock %} {% block page_header %}
-<div class="row pt-4 pb-2 mb-3 border-bottom align-items-center">
-  <div class="col-md-8">
-    <nav
-      aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}"
-    >
-      <ol class="breadcrumb bg-transparent p-0 mb-2">
-        <li class="breadcrumb-item">
-          <a href="/dashboard" class="text-decoration-none"
-            >{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif
-            %}</a
-          >
-        </li>
-        <li class="breadcrumb-item active">
-          {% if ui_lang == 'en' %}KPI{% else %}مؤشرات الأداء{% endif %}
-        </li>
-      </ol>
-    </nav>
-    <h1 class="h2 fw-bold text-dark mb-1">
-      <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
-      {% if ui_lang == 'en' %}KPI & Governance Dashboard{% else %}لوحة مؤشرات
-      الأداء والحوكمة{% endif %}
-    </h1>
-    <p class="text-muted small">
-      {% if ui_lang == 'en' %}Comprehensive analysis of kindergarten
-      performance, quality standards, safety and compliance rates.{% else
-      %}تحليل شامل لأداء الروضة، معايير الجودة، ومعدلات السلامة والالتزام.{%
-      endif %}
-    </p>
-  </div>
-  <div class="col-md-4 text-md-end">
-    <button
-      id="refreshBtn"
-      type="button"
-      class="btn btn-white shadow-sm border rounded-pill px-4 py-2"
-      onclick="document.getElementById('applyFiltersBtn').click()"
-    >
-      <i class="bi bi-arrow-clockwise me-1 text-primary"></i>
-      {% if ui_lang == 'en' %}Refresh Data{% else %}تحديث البيانات{% endif %}
-    </button>
-    {% if current_user and current_user.role.value == 'ADMIN' %}
-    <a
-      href="/admin/classification"
-      class="btn btn-outline-primary rounded-pill px-4 py-2 ms-2"
-    >
-      <i class="bi bi-trophy me-1"></i>
-      {% if ui_lang == 'en' %}Classification & Comparisons{% else %}التصنيف
-      والمقارنات{% endif %}
-    </a>
-    {% endif %}
-<span
-       id="wsStatusIndicator"
-       class="badge rounded-pill ms-2 d-none align-middle"
-     >
-       <i class="bi bi-wifi-off me-1"></i>
-       <span id="wsStatusText"></span>
-     </span>
-     <span
-       id="dataQualityScore"
-       class="badge rounded-pill ms-2 d-none align-middle"
-       aria-label="{% if ui_lang == 'en' %}Data quality score{% else %}درجة جودة البيانات{% endif %}"
-     ></span>
-   </div>
- </div>
- {% endblock %} {% block content %}
+endblock %} {% block extra_css %}
 <style>
-  /* Professional KPI Dashboard - Redesign */
+  /* Professional KPI Dashboard */
   :root {
-    --kpi-primary: #4285f4;
+    --kpi-primary: #1F5E47;
     --kpi-success: #34a853;
     --kpi-warning: #fbbc05;
     --kpi-danger: #ea4335;
@@ -90,7 +26,7 @@ endblock %} {% block page_header %}
   }
 
   .governance-hero {
-    background: linear-gradient(135deg, #f8faff 0%, #ffffff 100%);
+    background: linear-gradient(135deg, #f0f7f4 0%, #ffffff 100%);
     border-right: 4px solid var(--kpi-primary);
   }
 
@@ -177,7 +113,6 @@ endblock %} {% block page_header %}
     border-right: 3px solid #ffc107;
   }
 
-  /* Skeleton Loading Overlay */
   .skeleton-text {
     height: 20px;
     background: #eee;
@@ -217,7 +152,71 @@ endblock %} {% block page_header %}
     color: var(--kpi-primary);
   }
 </style>
-
+{% endblock %} {% block page_header %}
+<div class="row pt-4 pb-2 mb-3 border-bottom align-items-center">
+  <div class="col-md-8">
+    <nav
+      aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}"
+    >
+      <ol class="breadcrumb bg-transparent p-0 mb-2">
+        <li class="breadcrumb-item">
+          <a href="/dashboard" class="text-decoration-none"
+            >{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif
+            %}</a
+          >
+        </li>
+        <li class="breadcrumb-item active">
+          {% if ui_lang == 'en' %}KPI{% else %}مؤشرات الأداء{% endif %}
+        </li>
+      </ol>
+    </nav>
+    <h1 class="h2 fw-bold text-dark mb-1">
+      <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
+      {% if ui_lang == 'en' %}KPI & Governance Dashboard{% else %}لوحة مؤشرات
+      الأداء والحوكمة{% endif %}
+    </h1>
+    <p class="text-muted small">
+      {% if ui_lang == 'en' %}Comprehensive analysis of kindergarten
+      performance, quality standards, safety and compliance rates.{% else
+      %}تحليل شامل لأداء الروضة، معايير الجودة، ومعدلات السلامة والالتزام.{%
+      endif %}
+    </p>
+  </div>
+  <div class="col-md-4 text-md-end">
+    <button
+      id="refreshBtn"
+      type="button"
+      class="btn btn-white shadow-sm border rounded-pill px-4 py-2"
+      onclick="document.getElementById('applyFiltersBtn').click()"
+    >
+      <i class="bi bi-arrow-clockwise me-1 text-primary"></i>
+      {% if ui_lang == 'en' %}Refresh Data{% else %}تحديث البيانات{% endif %}
+    </button>
+    {% if current_user and current_user.role.value == 'ADMIN' %}
+    <a
+      href="/admin/classification"
+      class="btn btn-outline-primary rounded-pill px-4 py-2 ms-2"
+    >
+      <i class="bi bi-trophy me-1"></i>
+      {% if ui_lang == 'en' %}Classification & Comparisons{% else %}التصنيف
+      والمقارنات{% endif %}
+    </a>
+    {% endif %}
+<span
+       id="wsStatusIndicator"
+       class="badge rounded-pill ms-2 d-none align-middle"
+     >
+       <i class="bi bi-wifi-off me-1"></i>
+       <span id="wsStatusText"></span>
+     </span>
+     <span
+       id="dataQualityScore"
+       class="badge rounded-pill ms-2 d-none align-middle"
+       aria-label="{% if ui_lang == 'en' %}Data quality score{% else %}درجة جودة البيانات{% endif %}"
+     ></span>
+   </div>
+ </div>
+ {% endblock %} {% block content %}
 <div
   id="kpiDashboardRoot"
   data-user-role="{{ current_user.role.value if current_user else '' }}"
@@ -404,7 +403,7 @@ endblock %} {% block page_header %}
                 </div>
                 <div
                   class="progress rounded-pill mb-2"
-                  style="height: 10px; background: rgba(66, 133, 244, 0.1)"
+                  style="height: 10px; background: rgba(31, 94, 71, 0.1)"
                 >
                   <div
                     class="progress-bar rounded-pill shadow-sm"
@@ -1156,12 +1155,12 @@ endblock %} {% block page_header %}
       day: "numeric",
     });
     const chartPalette = [
-      "#1a73e8",
-      "#34a853",
-      "#f9ab00",
-      "#ea4335",
-      "#8e24aa",
-      "#00acc1",
+      "#1F5E47",
+      "#B49B3B",
+      "#2F7D62",
+      "#D97706",
+      "#7C3AED",
+      "#163d2e",
     ];
 
     function formatArabicDate(start, end) {
@@ -1234,7 +1233,7 @@ endblock %} {% block page_header %}
         typeof hexColor !== "string" ||
         !hexColor.startsWith("#")
       ) {
-        return `rgba(66, 133, 244, ${alpha})`;
+        return `rgba(31, 94, 71, ${alpha})`;
       }
       const value = hexColor.replace("#", "");
       const full =
@@ -1531,7 +1530,7 @@ endblock %} {% block page_header %}
         suffix: "",
       });
       enrollmentTrendChart = createTrendChart("enrollmentTrendChart", {
-        color: "#1a73e8",
+        color: "#2F7D62",
         percent: false,
         decimals: 0,
         suffix: "",

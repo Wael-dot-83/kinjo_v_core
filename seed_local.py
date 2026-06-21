@@ -44,6 +44,23 @@ def run():
     init_db()
     db = SessionLocal()
     try:
+        # ── Fix any kindergartens with corrupt '????' data from old seed runs ─
+        from sqlalchemy import text as _text
+        _corrupt = db.execute(_text(
+            "SELECT id FROM kindergartens WHERE name_ar LIKE '%?%'"
+        )).fetchall()
+        for (_id,) in _corrupt:
+            db.execute(_text(
+                "UPDATE kindergartens SET "
+                "name_ar='روضة البراعم', name_en='Al Baraaem Kindergarten', "
+                "governorate='عمان', city='عمان', area='الرابية', "
+                "address_line='شارع الرابية، عمان', contact_phone='0799000001' "
+                "WHERE id=:id"
+            ), {"id": _id})
+            print(f"  Fixed corrupt kindergarten id={_id}")
+        if _corrupt:
+            db.commit()
+
         # ── Kindergartens ─────────────────────────────────────────────────────
         kg1 = db.query(Kindergarten).filter(Kindergarten.name_ar == "روضة الأمل").first()
         if not kg1:

@@ -2,7 +2,17 @@
 
 var lastDashboardData = null;
 var fetchWithAuth = window.fetchWithAuth || async function adminAnalyticsFetchFallback(url, options) {
-  const response = await fetch(url, Object.assign({ credentials: "same-origin" }, options || {}));
+  const opts = Object.assign({ credentials: "same-origin" }, options || {});
+  const method = (opts.method || "GET").toUpperCase();
+  opts.headers = Object.assign({ "Accept": "application/json" }, opts.headers || {});
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+    const csrfToken = (window.CSRF_CONFIG && window.CSRF_CONFIG.cookieName && window.AuthStorage && window.AuthStorage.getCookie && window.AuthStorage.getCookie(window.CSRF_CONFIG.cookieName)) ||
+                      document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    if (csrfToken) {
+      opts.headers["X-CSRF-Token"] = csrfToken;
+    }
+  }
+  const response = await fetch(url, opts);
   if (response.status === 401) {
     window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
     return null;
@@ -682,7 +692,7 @@ function buildTrendChartData(type) {
           data: new Array(dataSeries.length - 1)
             .fill(null)
             .concat(forecastPoints.map((d) => d.value)),
-          borderColor: "#0d6efd",
+          borderColor: "#2F7D62",
           borderDash: [6, 4],
           fill: false,
           pointRadius: 2,
@@ -692,8 +702,8 @@ function buildTrendChartData(type) {
           data: new Array(dataSeries.length - 1)
             .fill(null)
             .concat((confidence.lower || []).map((d) => d.value)),
-          borderColor: "rgba(13,110,253,0.2)",
-          backgroundColor: "rgba(13,110,253,0.1)",
+          borderColor: "rgba(31,94,71,0.2)",
+          backgroundColor: "rgba(31,94,71,0.1)",
           fill: "+1",
           pointRadius: 0,
         },
@@ -702,8 +712,8 @@ function buildTrendChartData(type) {
           data: new Array(dataSeries.length - 1)
             .fill(null)
             .concat((confidence.upper || []).map((d) => d.value)),
-          borderColor: "rgba(13,110,253,0.2)",
-          backgroundColor: "rgba(13,110,253,0.1)",
+          borderColor: "rgba(31,94,71,0.2)",
+          backgroundColor: "rgba(31,94,71,0.1)",
           fill: false,
           pointRadius: 0,
         },

@@ -15,7 +15,7 @@ celery_app = Celery(
     "kinjo",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["messaging_tasks"],
+    include=["messaging_tasks", "charts.tasks"],
 )
 
 celery_app.conf.update(

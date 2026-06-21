@@ -105,9 +105,6 @@
     "active_kindergartens": "الروضات النشطة",
     "total_submissions": "إجمالي الطلبات",
     "pending_submissions": "الطلبات المعلقة",
-    "page_load_time": "وقت تحميل الصفحة",
-    "page_load_subtitle": "أداء النظام",
-    "measured_from_page_load": "مقاس من تحميل هذه الصفحة",
     "data_quality_score": "مؤشر جودة البيانات",
     "no_recent_activity": "لا يوجد نشاط حديث",
     "no_activity_hint": "ابدأ بإضافة مستخدمين أو متابعة العمليات لعرض النشاط هنا",
@@ -129,7 +126,20 @@
     "overview": "نظرة عامة",
     "performance": "الأداء",
     "trends": "الاتجاهات",
-    "summary": "الملخص"
+    "summary": "الملخص",
+    "dq_good": "جيد",
+    "dq_average": "متوسط",
+    "dq_low": "منخفض",
+    "enrollment_active": "نشط",
+    "enrollment_pending": "قيد الانتظار",
+    "enrollment_rejected": "مرفوض",
+    "enrollment_withdrawn": "منسحب",
+    "enrollment_waitlisted": "قائمة الانتظار",
+    "no_alerts_hint": "سيتم إخطارك عند وقوع أحداث مهمة في النظام",
+    "enrollment_status": "حالة التسجيل",
+    "time_minutes_ago": "منذ {{count}} دقيقة",
+    "time_hours_ago": "منذ {{count}} ساعة",
+    "time_days_ago": "منذ {{count}} يوم"
   },
   "users": {
     "title": "إدارة المستخدمين",
@@ -357,7 +367,8 @@
     "duplicate_entry": "هذا الإدخال موجود بالفعل.",
     "operation_failed": "فشلت العملية. يرجى المحاولة مرة أخرى.",
     "session_expired": "انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى.",
-    "maintenance_mode": "النظام قيد الصيانة حالياً."
+    "maintenance_mode": "النظام قيد الصيانة حالياً.",
+    "request_timeout": "انتهت مهلة الطلب. يرجى المحاولة مرة أخرى."
   },
   "success": {
     "operation_completed": "تم إكمال العملية بنجاح.",

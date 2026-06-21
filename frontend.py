@@ -423,8 +423,6 @@ async def list_kindergartens(
         total = 0
 
     # Get filter options for the UI
-    from config import Settings
-    settings = Settings()
     governorates = settings.JORDAN_GOVERNORATES
 
     return templates.TemplateResponse(

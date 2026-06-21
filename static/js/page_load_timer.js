@@ -128,10 +128,10 @@
         transform-origin: right center;
       }
       .page-load-timer.is-loading {
-        background: rgba(37, 99, 235, 0.92);
+        background: rgba(31, 94, 71, 0.92);
       }
       .page-load-timer.is-loading .page-load-timer__bar-fill {
-        background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
+        background: linear-gradient(90deg, #1F5E47 0%, #2F7D62 100%);
       }
       .page-load-timer.is-done {
         background: rgba(22, 163, 74, 0.9);

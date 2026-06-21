@@ -18,7 +18,7 @@ import json
 import logging
 import math
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -142,9 +142,9 @@ def _query_classroom_count(db: Session, slug: str) -> int:
     try:
         import models
         names = _names_for_slug(slug)
-        return int(db.query(func.count(models.Classroom.id))
+        return int(db.query(func.count(models.Class.id))
                      .join(models.Kindergarten,
-                           models.Classroom.kindergarten_id == models.Kindergarten.id)
+                           models.Class.kindergarten_id == models.Kindergarten.id)
                      .filter(models.Kindergarten.governorate.in_(names))
                      .scalar() or 0)
     except Exception:
@@ -159,9 +159,9 @@ def _query_incident_count(db: Session, slug: str, critical_only: bool = False) -
                .join(models.Kindergarten,
                      models.Incident.kindergarten_id == models.Kindergarten.id)
                .filter(models.Kindergarten.governorate.in_(names)))
-        if critical_only and hasattr(models.Incident, "severity"):
+        if critical_only and hasattr(models.Incident, "severity_level"):
             from models import SeverityLevel
-            q = q.filter(models.Incident.severity == SeverityLevel.CRITICAL)
+            q = q.filter(models.Incident.severity_level == SeverityLevel.CRITICAL)
         return int(q.scalar() or 0)
     except Exception:
         return 0
@@ -171,7 +171,9 @@ def _query_governance_score(db: Session, slug: str) -> float:
     try:
         import models
         names = _names_for_slug(slug)
-        val = (db.query(func.avg(models.Kindergarten.governance_score))
+        val = (db.query(func.avg(models.GovernanceScore.final_governance_score))
+                 .join(models.Kindergarten,
+                       models.GovernanceScore.kindergarten_id == models.Kindergarten.id)
                  .filter(models.Kindergarten.governorate.in_(names))
                  .scalar() or 0)
         return float(val)
@@ -187,7 +189,7 @@ def _query_reports_count(db: Session, slug: str, since: datetime) -> int:
                      .join(models.Kindergarten,
                            models.DailyReport.kindergarten_id == models.Kindergarten.id)
                      .filter(models.Kindergarten.governorate.in_(names))
-                     .filter(models.DailyReport.report_date >= since.date())
+                     .filter(models.DailyReport.date >= since.date())
                      .scalar() or 0)
     except Exception:
         return 0
@@ -389,22 +391,409 @@ def _compute_main_indicators(sub: Dict[str, Any]) -> Dict[str, float]:
     }
 
 
+def _kindergarten_status_payload(score: Optional[float]) -> Dict[str, Any]:
+    """Return a canonical KPI status payload for a 0-100 score."""
+    from .kpi_status import KPIStatus, get_status_display, normalize_kpi_status, status_to_color
+
+    score_f = 0.0 if score is None else max(0.0, min(100.0, float(score)))
+    status = normalize_kpi_status(score_f)
+    if status == KPIStatus.UNKNOWN:
+        score_f = 0.0
+    return {
+        "score": round(score_f, 2),
+        "status": status.value,
+        "display_en": get_status_display(status, "en"),
+        "display_ar": get_status_display(status, "ar"),
+        "color": status_to_color(status),
+    }
+
+
+def _latest_governance_score(db: Session, kindergarten_id: int) -> Optional[float]:
+    try:
+        score_tuple = (
+            db.query(models.GovernanceScore.final_governance_score)
+            .filter(models.GovernanceScore.kindergarten_id == kindergarten_id)
+            .order_by(models.GovernanceScore.period_end.desc())
+            .first()
+        )
+        score = score_tuple[0] if score_tuple else None
+        return float(score) if score is not None else None
+    except Exception:
+        return None
+
+
+def _count_enrollments(db: Session, kindergarten_id: int) -> int:
+    try:
+        return int(
+            db.query(func.count(models.EnrollmentApplication.id))
+            .filter(models.EnrollmentApplication.kindergarten_id == kindergarten_id)
+            .filter(models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
+            .scalar()
+            or 0
+        )
+    except Exception:
+        return 0
+
+
+def _count_classes(db: Session, kindergarten_id: int) -> int:
+    try:
+        return int(
+            db.query(func.count(models.Class.id))
+            .filter(models.Class.kindergarten_id == kindergarten_id)
+            .scalar()
+            or 0
+        )
+    except Exception:
+        return 0
+
+
+def _count_supervisors(db: Session, kindergarten_id: int) -> int:
+    try:
+        user_count = int(
+            db.query(func.count(models.User.id))
+            .filter(models.User.kindergarten_id == kindergarten_id)
+            .filter(models.User.role == models.UserRole.SUPERVISOR)
+            .scalar()
+            or 0
+        )
+        profile_count = int(
+            db.query(func.count(models.SupervisorProfile.user_id))
+            .filter(models.SupervisorProfile.kindergarten_id == kindergarten_id)
+            .scalar()
+            or 0
+        )
+        return max(user_count, profile_count)
+    except Exception:
+        return 0
+
+
+def _count_recent_reports(db: Session, kindergarten_id: int, days: int = 30) -> int:
+    try:
+        since = date.today() - timedelta(days=days)
+        return int(
+            db.query(func.count(models.DailyReport.id))
+            .filter(models.DailyReport.kindergarten_id == kindergarten_id)
+            .filter(models.DailyReport.date >= since)
+            .scalar()
+            or 0
+        )
+    except Exception:
+        return 0
+
+
+def _count_recent_incidents(db: Session, kindergarten_id: int, days: int = 90) -> Dict[str, int]:
+    try:
+        since = datetime.now() - timedelta(days=days)
+        q = (
+            db.query(models.Incident)
+            .filter(models.Incident.kindergarten_id == kindergarten_id)
+            .filter(models.Incident.occurred_at >= since)
+        )
+        total = q.count()
+        critical = 0
+        if hasattr(models.Incident, "severity_level"):
+            critical = (
+                q.filter(models.Incident.severity_level == models.SeverityLevel.CRITICAL)
+                .count()
+            )
+        return {"total": int(total), "critical": int(critical)}
+    except Exception:
+        return {"total": 0, "critical": 0}
+
+
+def compute_kindergarten_kpi_scores(db: Session, kindergarten: models.Kindergarten) -> Dict[str, Any]:
+    """Compute normalized kindergarten-level KPI scores for admin heat-map views."""
+    status_score = {
+        models.KindergartenStatus.ACTIVE.value: 100.0,
+        models.KindergartenStatus.DRAFT.value: 60.0,
+        models.KindergartenStatus.INACTIVE.value: 20.0,
+    }.get(kindergarten.status.value if hasattr(kindergarten.status, "value") else str(kindergarten.status), 0.0)
+
+    license_score = 50.0
+    if kindergarten.license_valid_until is not None:
+        license_score = 100.0 if kindergarten.license_valid_until >= date.today() else 25.0
+
+    location_score = 100.0 if kindergarten.latitude is not None and kindergarten.longitude is not None else 60.0
+    nursery_score = round((status_score + license_score + location_score) / 3.0, 2)
+
+    enrollment_count = _count_enrollments(db, kindergarten.id)
+    children_score = 100.0 if enrollment_count > 0 else 0.0
+
+    class_count = _count_classes(db, kindergarten.id)
+    supervisor_count = _count_supervisors(db, kindergarten.id)
+    staff_score = 100.0 if class_count > 0 and supervisor_count >= max(1, class_count // 2) else 0.0
+
+    incidents = _count_recent_incidents(db, kindergarten.id)
+    safety_score = max(0.0, 100.0 - incidents["total"] * 8.0 - incidents["critical"] * 25.0)
+
+    reports_count = _count_recent_reports(db, kindergarten.id)
+    reports_score = 100.0 if class_count == 0 else min(100.0, reports_count / max(class_count * 30, 1) * 100.0)
+
+    governance_score = _latest_governance_score(db, kindergarten.id)
+    governance_score = 0.0 if governance_score is None else max(0.0, min(100.0, governance_score))
+
+    indicator_scores = {
+        "nursery_status": nursery_score,
+        "children_registration": children_score,
+        "staff_classrooms": staff_score,
+        "safety_incidents": safety_score,
+        "reports_attendance": reports_score,
+        "tasks_governance": governance_score,
+    }
+    overall_score = round(sum(indicator_scores.values()) / len(indicator_scores), 2)
+
+    return {
+        "score": overall_score,
+        "indicators": {
+            key: _kindergarten_status_payload(score)
+            for key, score in indicator_scores.items()
+        },
+        "kpi_status": _kindergarten_status_payload(overall_score),
+        "supporting_counts": {
+            "active_enrollments": enrollment_count,
+            "classes": class_count,
+            "supervisors": supervisor_count,
+            "recent_reports": reports_count,
+            "recent_incidents": incidents["total"],
+            "recent_critical_incidents": incidents["critical"],
+            "governance_score": round(governance_score, 2),
+        },
+    }
+
+
+def kindergarten_to_dict(
+    db: Session,
+    kindergarten: models.Kindergarten,
+    *,
+    include_details: bool = True,
+) -> Dict[str, Any]:
+    """Serialize a Kindergarten row with canonical KPI status data."""
+    kpi = compute_kindergarten_kpi_scores(db, kindergarten)
+    data = {
+        "id": kindergarten.id,
+        "name_ar": kindergarten.name_ar,
+        "name_en": kindergarten.name_en,
+        "governorate": C.normalize_governorate(kindergarten.governorate),
+        "governorate_name_en": kindergarten.governorate,
+        "city": kindergarten.city,
+        "area": kindergarten.area,
+        "address_line": kindergarten.address_line,
+        "contact_phone": kindergarten.contact_phone,
+        "contact_email": kindergarten.contact_email,
+        "status": kindergarten.status.value if hasattr(kindergarten.status, "value") else str(kindergarten.status),
+        "latitude": kindergarten.latitude,
+        "longitude": kindergarten.longitude,
+        "license_number": kindergarten.license_number,
+        "license_valid_until": kindergarten.license_valid_until.isoformat() if kindergarten.license_valid_until else None,
+        "created_at": kindergarten.created_at.isoformat() if kindergarten.created_at else None,
+        "updated_at": kindergarten.updated_at.isoformat() if kindergarten.updated_at else None,
+        "kpi_score": kpi["score"],
+        "kpi_status": kpi["kpi_status"]["status"],
+        "kpi_status_payload": kpi["kpi_status"],
+        "main_indicators": kpi["indicators"],
+        "supporting_counts": kpi["supporting_counts"],
+    }
+    if include_details:
+        gov = C.GOVERNORATE_BY_SLUG.get(data["governorate"], {})
+        data.update({
+            "governorate_code": gov.get("code"),
+            "governorate_name_ar": gov.get("name_ar"),
+        })
+    return data
+
+
+def get_kindergarten_detail(db: Session, kindergarten_id: int) -> Optional[Dict[str, Any]]:
+    kindergarten = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    if kindergarten is None:
+        return None
+    return kindergarten_to_dict(db, kindergarten, include_details=True)
+
+
+def get_kindergarten_map_data(
+    db: Session,
+    *,
+    governorate: Optional[str] = None,
+    city: Optional[str] = None,
+    status: Optional[str] = None,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+) -> Dict[str, Any]:
+    rows = build_kindergarten_query(
+        db,
+        governorate=governorate,
+        city=city,
+        status=status,
+        from_date=from_date,
+        to_date=to_date,
+    ).order_by(models.Kindergarten.id.asc()).all()
+
+    if status:
+        from .kpi_status import normalize_kpi_status
+
+        normalized = normalize_kpi_status(status).value
+        rows = [
+            kg for kg in rows
+            if compute_kindergarten_kpi_scores(db, kg)["kpi_status"]["status"] == normalized
+        ]
+
+    features = []
+    missing_location_count = 0
+    for kg in rows:
+        kg_dict = kindergarten_to_dict(db, kg, include_details=False)
+        if kg.latitude is None or kg.longitude is None:
+            missing_location_count += 1
+            continue
+        features.append({
+            "type": "Feature",
+            "id": kg.id,
+            "geometry": {
+                "type": "Point",
+                "coordinates": [float(kg.longitude), float(kg.latitude)],
+            },
+            "properties": kg_dict,
+        })
+
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+        "count": len(features),
+        "total_kindergartens": len(rows),
+        "missing_location_count": missing_location_count,
+        "filters": {
+            "governorate": governorate,
+            "city": city,
+            "status": status,
+            "from": from_date.isoformat() if from_date else None,
+            "to": to_date.isoformat() if to_date else None,
+        },
+        "last_update": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    }
+
+
+def get_kindergarten_stats(
+    db: Session,
+    *,
+    governorate: Optional[str] = None,
+    city: Optional[str] = None,
+    status: Optional[str] = None,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+) -> Dict[str, Any]:
+    rows = build_kindergarten_query(
+        db,
+        governorate=governorate,
+        city=city,
+        status=status,
+        from_date=from_date,
+        to_date=to_date,
+    ).order_by(models.Kindergarten.id.asc()).all()
+
+    if status:
+        from .kpi_status import normalize_kpi_status
+
+        normalized = normalize_kpi_status(status).value
+        rows = [
+            kg for kg in rows
+            if compute_kindergarten_kpi_scores(db, kg)["kpi_status"]["status"] == normalized
+        ]
+
+    from .kpi_status import KPIStatus
+
+    status_counts = {s.value: 0 for s in KPIStatus}
+    governorate_counts: Dict[str, Dict[str, int]] = {}
+    city_counts: Dict[str, Dict[str, int]] = {}
+    indicator_scores: Dict[str, List[float]] = {ind["key"]: [] for ind in C.MAIN_INDICATORS}
+    scores: List[float] = []
+
+    for kg in rows:
+        kg_dict = kindergarten_to_dict(db, kg, include_details=False)
+        kpi_status = kg_dict["kpi_status"]
+        status_counts[kpi_status] = status_counts.get(kpi_status, 0) + 1
+        scores.append(float(kg_dict["kpi_score"]))
+
+        gov_key = kg_dict["governorate"]
+        city_key = kg_dict["city"] or "Unknown"
+        governorate_counts.setdefault(gov_key, {s.value: 0 for s in KPIStatus})
+        governorate_counts[gov_key]["total"] = governorate_counts[gov_key].get("total", 0) + 1
+        governorate_counts[gov_key][kpi_status] = governorate_counts[gov_key].get(kpi_status, 0) + 1
+        city_counts.setdefault(city_key, {s.value: 0 for s in KPIStatus})
+        city_counts[city_key]["total"] = city_counts[city_key].get("total", 0) + 1
+        city_counts[city_key][kpi_status] = city_counts[city_key].get(kpi_status, 0) + 1
+
+        for indicator_key, indicator in kg_dict["main_indicators"].items():
+            indicator_scores.setdefault(indicator_key, []).append(float(indicator["score"]))
+
+    return {
+        "total": len(rows),
+        "status_counts": status_counts,
+        "governorate_counts": governorate_counts,
+        "city_counts": city_counts,
+        "score": {
+            "average": round(sum(scores) / len(scores), 2) if scores else 0.0,
+            "min": round(min(scores), 2) if scores else 0.0,
+            "max": round(max(scores), 2) if scores else 0.0,
+        },
+        "indicator_averages": {
+            key: round(sum(values) / len(values), 2) if values else 0.0
+            for key, values in indicator_scores.items()
+        },
+        "filters": {
+            "governorate": governorate,
+            "city": city,
+            "status": status,
+            "from": from_date.isoformat() if from_date else None,
+            "to": to_date.isoformat() if to_date else None,
+        },
+        "last_update": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    }
+
+
+def build_kindergarten_query(
+    db: Session,
+    *,
+    governorate: Optional[str] = None,
+    city: Optional[str] = None,
+    status: Optional[str] = None,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+):
+    """Build the reusable filtered Kindergarten query for admin endpoints."""
+    query = db.query(models.Kindergarten)
+
+    if governorate:
+        slug = C.normalize_governorate(governorate)
+        if slug not in C.GOVERNORATE_BY_SLUG:
+            raise ValueError(f"Unknown governorate slug: {governorate!r}")
+        query = query.filter(models.Kindergarten.governorate.in_(_names_for_slug(slug)))
+
+    if city:
+        query = query.filter(models.Kindergarten.city == city)
+
+    if from_date:
+        query = query.filter(func.date(func.coalesce(models.Kindergarten.updated_at, models.Kindergarten.created_at)) >= from_date)
+    if to_date:
+        query = query.filter(func.date(func.coalesce(models.Kindergarten.updated_at, models.Kindergarten.created_at)) <= to_date)
+
+    return query
+
+
 def _previous_period_sub(db: Session, slug: str, days: int = 30) -> Dict[str, Any]:
-    """Best-effort previous-period lookup. Returns dict of historical sub-indicator averages."""
     try:
         import models
         names = _names_for_slug(slug)
         since = datetime.now(timezone.utc) - timedelta(days=days * 2)
         until = datetime.now(timezone.utc) - timedelta(days=days)
-        prev_gov = (db.query(func.avg(models.Kindergarten.governance_score))
+        prev_gov = (db.query(func.avg(models.GovernanceScore.final_governance_score))
+                      .join(models.Kindergarten,
+                            models.GovernanceScore.kindergarten_id == models.Kindergarten.id)
                       .filter(models.Kindergarten.governorate.in_(names))
                       .scalar() or 0.0)
         prev_reports = (db.query(func.count(models.DailyReport.id))
                           .join(models.Kindergarten,
                                 models.DailyReport.kindergarten_id == models.Kindergarten.id)
                           .filter(models.Kindergarten.governorate.in_(names))
-                          .filter(models.DailyReport.report_date >= since.date())
-                          .filter(models.DailyReport.report_date < until.date())
+                          .filter(models.DailyReport.date >= since.date())
+                          .filter(models.DailyReport.date < until.date())
                           .scalar() or 0)
         prev_incidents = (db.query(func.count(models.Incident.id))
                             .join(models.Kindergarten,
@@ -767,7 +1156,7 @@ def daily_update_summary(db: Optional[Session] = None) -> Dict:
     if db is not None:
         try:
             import models
-            latest = (db.query(func.max(models.DailyReport.report_date)).scalar())
+            latest = (db.query(func.max(models.DailyReport.date)).scalar())
         except Exception:
             latest = None
     else:

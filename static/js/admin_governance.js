@@ -68,10 +68,10 @@ function formatReminderType(reminderType) {
 }
 
 async function governanceFetch(url, options = {}) {
-  const token = localStorage.getItem("kinjo_token") || sessionStorage.getItem("kinjo_token");
-  const headers = { "Content-Type": "application/json", ...options.headers };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  const response = await fetch(url, { ...options, headers });
+  const response = await fetchWithAuth(url, options);
+  if (!response) {
+    throw new Error("Unauthenticated");
+  }
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw { status: response.status, body };
@@ -198,7 +198,7 @@ function renderFunnelChart(funnel) {
       datasets: [
         {
           data: [agg.required || 0, agg.submitted || 0, agg.delivered || 0, agg.viewed || 0],
-          backgroundColor: ["#6c757d", "#0d6efd", "#198754", "#0dcaf0"],
+          backgroundColor: ["#6c757d", "#1F5E47", "#198754", "#B49B3B"],
           borderRadius: 6,
         },
       ],

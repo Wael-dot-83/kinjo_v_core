@@ -5,6 +5,34 @@
     filters: null,
   };
 
+  // ui_lang is injected by the template as window.KINJO_LANG (falls back to "ar")
+  const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+
+  const T = {
+    all:            lang === "en" ? "All"                     : "الكل",
+    loading:        lang === "en" ? "Loading classification data..." : "جار تحميل بيانات التصنيف...",
+    noData:         lang === "en" ? "Not enough data within the current filters." : "لا توجد بيانات كافية ضمن الفلاتر الحالية.",
+    loadError:      lang === "en" ? "Failed to load the leaderboard. Please check filters and retry." : "تعذر تحميل قائمة التصنيف. يرجى التحقق من الفلاتر أو إعادة المحاولة.",
+    detailError:    lang === "en" ? "Failed to load detail for the selected entity." : "تعذر تحميل تفاصيل الكيان المحدد.",
+    initError:      lang === "en" ? "Failed to initialise the classification page. Please refresh." : "تعذر تهيئة صفحة التصنيف. يرجى تحديث الصفحة.",
+    viewDetail:     lang === "en" ? "View Details"            : "عرض التفاصيل",
+    unavailable:    lang === "en" ? "N/A"                     : "غير متاح",
+    unclassified:   lang === "en" ? "Unclassified"            : "غير مصنف",
+    stable:         lang === "en" ? "Stable"                  : "مستقر",
+    up:             lang === "en" ? "Rising"                  : "صاعد",
+    down:           lang === "en" ? "Falling"                 : "هابط",
+    noTrend:        lang === "en" ? "—"                       : "—",
+    finalScore:     lang === "en" ? "Final Score"             : "الدرجة النهائية",
+    band:           lang === "en" ? "Band"                    : "المجال",
+    dataCoverage:   lang === "en" ? "Data Coverage"           : "تغطية البيانات",
+    period:         lang === "en" ? "Period"                  : "الفترة",
+    periodTo:       lang === "en" ? "to"                      : "إلى",
+    chartScore:     lang === "en" ? "Final Score"             : "الدرجة النهائية",
+    chartYAxis:     lang === "en" ? "Score"                   : "قيمة المؤشر",
+    chartXAxis:     lang === "en" ? "Period"                  : "الفترة",
+    governorate:    lang === "en" ? "Governorate"             : "المحافظة",
+  };
+
   function tokenValue() {
     return localStorage.getItem("kinjo_token") || sessionStorage.getItem("kinjo_token") || "";
   }
@@ -18,7 +46,7 @@
     const response = await fetch(url, { headers });
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(text || "تعذر تحميل البيانات");
+      throw new Error(text || T.loadError);
     }
     return response.json();
   }
@@ -57,7 +85,7 @@
     }
     const parts = [];
     if (includeAll) {
-      parts.push('<option value="">الكل</option>');
+      parts.push(`<option value="">${escapeHtml(T.all)}</option>`);
     }
     options.forEach((item) => {
       if (typeof item === "string") {
@@ -132,42 +160,51 @@
     return "bg-secondary";
   }
 
+  // Compare against stable direction codes emitted by the backend
   function trendText(row) {
-    if (row.trend_direction === "صاعد") {
-      return `صاعد (+${formatNumber(row.trend_vs_previous || 0)})`;
+    const delta = formatNumber(Math.abs(row.trend_vs_previous || 0));
+    if (row.trend_direction === "UP") {
+      return `${T.up} (+${delta})`;
     }
-    if (row.trend_direction === "هابط") {
-      return `هابط (${formatNumber(row.trend_vs_previous || 0)})`;
+    if (row.trend_direction === "DOWN") {
+      return `${T.down} (${formatNumber(row.trend_vs_previous || 0)})`;
     }
-    return "مستقر";
+    if (row.trend_direction === "STABLE") {
+      return T.stable;
+    }
+    return T.noTrend;
   }
 
   function tableRowHtml(row) {
-    const score = row.final_score === null ? "غير متاح" : formatNumber(row.final_score);
+    const score = row.final_score === null ? T.unavailable : formatNumber(row.final_score);
     const percentile = row.percentile === null ? "--" : `${formatNumber(row.percentile)}%`;
     const coverage = `${formatNumber(row.coverage_pct)}%`;
     const rank = row.rank === null ? "--" : row.rank;
+    // Fix 1: escape display_name and insufficient_reason to prevent XSS
     const info =
       row.insufficient_data && row.insufficient_reason
-        ? `<div class="small text-danger">${row.insufficient_reason}</div>`
+        ? `<div class="small text-danger">${escapeHtml(row.insufficient_reason)}</div>`
         : "";
     const disabled = row.insufficient_data ? "disabled" : "";
+    const govText = (row.geography && row.geography.governorate)
+      ? `<div class="small text-muted">${escapeHtml(T.governorate)}: ${escapeHtml(row.geography.governorate)}</div>`
+      : "";
 
     return `
       <tr>
         <td>${rank}</td>
         <td>
-          <div class="fw-semibold">${row.display_name}</div>
-          ${info}
+          <div class="fw-semibold">${escapeHtml(row.display_name)}</div>
+          ${govText}${info}
         </td>
         <td>${score}</td>
         <td>${percentile}</td>
-        <td><span class="badge ${bandBadgeClass(row.band_code)}">${row.band_label || "غير مصنف"}</span></td>
+        <td><span class="badge ${bandBadgeClass(row.band_code)}">${escapeHtml(row.band_label || T.unclassified)}</span></td>
         <td>${trendText(row)}</td>
         <td>${coverage}</td>
         <td>
-          <button class="btn btn-sm btn-outline-primary" data-detail-entity="${row.entity_type}" data-detail-id="${row.entity_id}" ${disabled}>
-            عرض التفاصيل
+          <button class="btn btn-sm btn-outline-primary" data-detail-entity="${escapeHtml(row.entity_type)}" data-detail-id="${row.entity_id}" ${disabled}>
+            ${escapeHtml(T.viewDetail)}
           </button>
         </td>
       </tr>
@@ -203,7 +240,7 @@
       const data = await apiRequest(`${endpoint}?${params.toString()}`);
       renderRows(data.rows || []);
     } catch (error) {
-      setError("تعذر تحميل قائمة التصنيف. يرجى التحقق من الفلاتر أو إعادة المحاولة.");
+      setError(T.loadError);
       renderRows([]);
     } finally {
       setLoading(false);
@@ -226,10 +263,10 @@
         labels,
         datasets: [
           {
-            label: "الدرجة النهائية",
+            label: T.chartScore,
             data: values,
-            borderColor: "#0d6efd",
-            backgroundColor: "rgba(13, 110, 253, 0.15)",
+            borderColor: "#1F5E47",
+            backgroundColor: "rgba(31, 94, 71, 0.15)",
             borderWidth: 2,
             tension: 0.25,
             fill: true,
@@ -243,9 +280,9 @@
           y: {
             beginAtZero: true,
             max: 100,
-            title: { display: true, text: "قيمة المؤشر" },
+            title: { display: true, text: T.chartYAxis },
           },
-          x: { title: { display: true, text: "الفترة" } },
+          x: { title: { display: true, text: T.chartXAxis } },
         },
       },
     });
@@ -256,26 +293,26 @@
       <div class="row g-3">
         <div class="col-md-3">
           <div class="border rounded p-3">
-            <div class="text-muted small">الدرجة النهائية</div>
-            <div class="h4 mb-0">${detail.final_score === null ? "غير متاح" : formatNumber(detail.final_score)}</div>
+            <div class="text-muted small">${escapeHtml(T.finalScore)}</div>
+            <div class="h4 mb-0">${detail.final_score === null ? escapeHtml(T.unavailable) : formatNumber(detail.final_score)}</div>
           </div>
         </div>
         <div class="col-md-3">
           <div class="border rounded p-3">
-            <div class="text-muted small">المجال</div>
-            <div class="h4 mb-0">${escapeHtml(detail.band_label || "غير مصنف")}</div>
+            <div class="text-muted small">${escapeHtml(T.band)}</div>
+            <div class="h4 mb-0">${escapeHtml(detail.band_label || T.unclassified)}</div>
           </div>
         </div>
         <div class="col-md-3">
           <div class="border rounded p-3">
-            <div class="text-muted small">تغطية البيانات</div>
+            <div class="text-muted small">${escapeHtml(T.dataCoverage)}</div>
             <div class="h4 mb-0">${formatNumber(detail.coverage_pct)}%</div>
           </div>
         </div>
         <div class="col-md-3">
           <div class="border rounded p-3">
-            <div class="text-muted small">الفترة</div>
-            <div class="small fw-semibold">${escapeHtml(detail.period_start)} إلى ${escapeHtml(detail.period_end)}</div>
+            <div class="text-muted small">${escapeHtml(T.period)}</div>
+            <div class="small fw-semibold">${escapeHtml(detail.period_start)} ${escapeHtml(T.periodTo)} ${escapeHtml(detail.period_end)}</div>
           </div>
         </div>
       </div>
@@ -298,7 +335,7 @@
         return;
       }
 
-      titleEl.textContent = `تفاصيل ${detail.display_name}`;
+      titleEl.textContent = `${detail.display_name}`;
       summaryEl.innerHTML = detailSummaryHtml(detail);
 
       const aspects = detail.aspects || {};
@@ -318,7 +355,7 @@
         modal.show();
       }
     } catch (error) {
-      setError("تعذر تحميل تفاصيل الكيان المحدد.");
+      setError(T.detailError);
     }
   }
 
@@ -327,7 +364,7 @@
     state.filters = filters;
     renderSelect("levelSelect", filters.levels || []);
     renderSelect("sizeModeSelect", filters.size_modes || []);
-    renderSelect("sizeBandSelect", [{ value: "", label: "الكل" }, ...(filters.size_bands || [])]);
+    renderSelect("sizeBandSelect", [{ value: "", label: T.all }, ...(filters.size_bands || [])]);
     renderSelect("countrySelect", filters.countries || [], true);
     renderSelect("governorateSelect", filters.governorates || [], true);
     renderSelect("citySelect", filters.cities || [], true);
@@ -384,7 +421,7 @@
       await loadFilters();
       await loadLeaderboard();
     } catch (error) {
-      setError("تعذر تهيئة صفحة التصنيف. يرجى تحديث الصفحة.");
+      setError(T.initError);
     }
   }
 

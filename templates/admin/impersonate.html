@@ -329,7 +329,7 @@
         const btn = document.getElementById('confirmImpBtn');
         setLoading(btn, true);
         try {
-            const r = await fetch('/api/admin/impersonate', {
+            const r = await fetchWithAuth('/api/admin/impersonate', {
                 method: 'POST',
                 headers: getHeaders(),
                 body: JSON.stringify(pendingPayload)

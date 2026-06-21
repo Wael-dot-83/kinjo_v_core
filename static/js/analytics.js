@@ -436,8 +436,8 @@ const Analytics = {
           {
             label: metricLabels[metric] || metric,
             data: values,
-            borderColor: "#0d6efd",
-            backgroundColor: "rgba(13, 110, 253, 0.1)",
+            borderColor: "#1F5E47",
+            backgroundColor: "rgba(31, 94, 71, 0.1)",
             fill: true,
             tension: 0.4,
           },
@@ -843,11 +843,11 @@ const Analytics = {
             data: values,
             backgroundColor: [
               "#6c757d",
-              "#17a2b8",
+              "#B49B3B",
               "#ffc107",
               "#fd7e14",
               "#28a745",
-              "#007bff",
+              "#1F5E47",
               "#198754",
               "#dc3545",
               "#6c757d",
@@ -940,7 +940,7 @@ const Analytics = {
           {
             label: analyticsText("الحضور", "Attendance"),
             data: values,
-            backgroundColor: "#0d6efd",
+            backgroundColor: "#1F5E47",
           },
         ],
       },
@@ -1184,7 +1184,7 @@ const Analytics = {
           {
             label: analyticsText("عدد الحوادث", "Incident count"),
             data: values,
-            backgroundColor: "#0d6efd",
+            backgroundColor: "#1F5E47",
           },
         ],
       },

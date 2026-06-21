@@ -105,9 +105,6 @@
     "active_kindergartens": "Active Kindergartens",
     "total_submissions": "Total Submissions",
     "pending_submissions": "Pending Submissions",
-    "page_load_time": "Page Load Time",
-    "page_load_subtitle": "System performance",
-    "measured_from_page_load": "Measured from this page load",
     "data_quality_score": "Data Quality",
     "no_recent_activity": "No recent activity",
     "no_activity_hint": "Add users or monitor operations to see activity here",
@@ -129,7 +126,20 @@
     "overview": "Overview",
     "performance": "Performance",
     "trends": "Trends",
-    "summary": "Summary"
+    "summary": "Summary",
+    "dq_good": "Good",
+    "dq_average": "Average",
+    "dq_low": "Low",
+    "enrollment_active": "Active",
+    "enrollment_pending": "Pending",
+    "enrollment_rejected": "Rejected",
+    "enrollment_withdrawn": "Withdrawn",
+    "enrollment_waitlisted": "Waitlisted",
+    "no_alerts_hint": "You'll be notified when important system events occur",
+    "enrollment_status": "Enrollment Status",
+    "time_minutes_ago": "{{count}} minutes ago",
+    "time_hours_ago": "{{count}} hours ago",
+    "time_days_ago": "{{count}} days ago"
   },
   "users": {
     "title": "User Management",
@@ -357,7 +367,8 @@
     "duplicate_entry": "This entry already exists.",
     "operation_failed": "Operation failed. Please try again.",
     "session_expired": "Your session has expired. Please log in again.",
-    "maintenance_mode": "System is currently under maintenance."
+    "maintenance_mode": "System is currently under maintenance.",
+    "request_timeout": "Request timed out. Please try again."
   },
   "success": {
     "operation_completed": "Operation completed successfully.",

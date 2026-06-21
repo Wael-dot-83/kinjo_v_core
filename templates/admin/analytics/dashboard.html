@@ -46,11 +46,6 @@
 </div>
 {% endif %}
 
-<div id="pageHelpContent" class="d-none visually-hidden"
-     data-help-title="{% if ui_lang == 'en' %}Analytics Dashboard Help{% else %}مساعدة لوحة التحليلات{% endif %}">
-  <p>{% if ui_lang == 'en' %}This dashboard shows network-wide KPI metrics, trends and incident analytics.{% else %}تعرض هذه اللوحة مؤشرات الأداء على مستوى الشبكة والاتجاهات وتحليلات الحوادث.{% endif %}</p>
-</div>
-
 <div class="analytics-dashboard">
     <!-- Network Overview Cards -->
     <div class="row g-4 mb-section gap-card">
@@ -514,7 +509,7 @@
 <script src="/static/js/admin_analytics.js?v=2.1" charset="utf-8"></script>
 <style>
     .admin-content:has(.analytics-dashboard) {
-      background: #f6f8fb;
+      background: var(--admin-bg-gray-100, #F5F5F5);
     }
     .analytics-dashboard {
       font-family: var(--admin-font-family-ar), var(--admin-font-family-en);
@@ -529,7 +524,7 @@
     }
     .analytics-page-header {
       background: #fff;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--admin-border-color-light);
       border-radius: 8px;
       box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
       padding: 16px;
@@ -558,7 +553,7 @@
       align-items: end;
     }
     .analytics-page-actions .form-label {
-      color: #475569;
+      color: var(--admin-text-secondary);
       font-size: 0.78rem;
       font-weight: 700;
       margin-bottom: 0.25rem;
@@ -571,13 +566,13 @@
       font-size: 0.86rem;
     }
     .analytics-dashboard .card {
-      border-color: #e5e7eb;
+      border-color: var(--admin-border-color-light);
       border-radius: 8px;
       box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05) !important;
     }
     .analytics-dashboard .card-header {
       min-height: 52px;
-      border-color: #e5e7eb !important;
+      border-color: var(--admin-border-color-light) !important;
     }
     .analytics-dashboard .icon-circle,
     .analytics-dashboard .rank-circle {
@@ -587,12 +582,12 @@
     .p-card { padding: 16px; }
     .gap-card { row-gap: 16px; }
     [dir="rtl"] .trend-chart-wrapper canvas { direction: rtl; }
-    .analytics-error-state { display: none; text-align: center; padding: 3rem 1rem; color: #6b7280; }
+    .analytics-error-state { display: none; text-align: center; padding: 3rem 1rem; color: var(--admin-text-muted); }
     .analytics-error-state.show { display: block; }
     .analytics-error-state .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .datetime-indicator { font-size: 0.75rem; color: #6b7280; display: flex; align-items: center; gap: 0.3rem; }
+    .datetime-indicator { font-size: 0.75rem; color: var(--admin-text-muted); display: flex; align-items: center; gap: 0.3rem; }
     .analytics-empty-state {
-      color: #64748b;
+      color: var(--admin-text-muted);
       font-size: 0.9rem;
       padding: 1rem;
       text-align: center;

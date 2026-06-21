@@ -165,6 +165,27 @@ class CacheService:
         self.memory_cache.clear()
         logger.info("Memory cache cleared")
 
+    def clear_prefix(self, prefix: str) -> int:
+        """Clear all cache entries whose key starts with prefix. Returns count deleted."""
+        deleted = 0
+        if self.redis_client:
+            try:
+                pattern = f"kinjo:{prefix}*"
+                keys = self.redis_client.keys(pattern)
+                if keys:
+                    self.redis_client.delete(*keys)
+                    deleted += len(keys)
+                logger.info("Redis cache cleared for prefix '%s' (%d keys)", prefix, len(keys) if keys else 0)
+            except RedisError as e:
+                logger.warning("Redis clear_prefix error for '%s': %s", prefix, str(e))
+
+        matching = [k for k in list(self.memory_cache.keys()) if k.startswith(prefix)]
+        for key in matching:
+            del self.memory_cache[key]
+        deleted += len(matching)
+        logger.info("Memory cache cleared for prefix '%s' (%d keys)", prefix, len(matching))
+        return deleted
+
     def get_stats(self) -> dict:
         """Get cache statistics"""
         stats = {

@@ -1,154 +1,215 @@
-﻿<!DOCTYPE html>
 {% extends "admin_base.html" %}
 
-{% block title %}KinJo Admin - Dashboard{% endblock %}
-
-{% block extra_head %}
-<!-- Chart.js for dashboard charts -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
-    integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
-    crossorigin="anonymous"></script>
-{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}KinJo Admin — Dashboard{% else %}إدارة كينجو — لوحة التحكم{% endif %}{% endblock %}
 
 {% block content %}
 <div class="admin-main-content">
-    <!-- Page Header -->
-    <div class="admin-page-header">
-        <div class="admin-page-header-content">
-            <h1 class="admin-page-title" data-i18n="dashboard.title">Dashboard</h1>
-            <p class="admin-page-subtitle" data-i18n="dashboard.subtitle">Monitor system performance and manage
-                operations</p>
+  <!-- Page Header -->
+  <div class="admin-page-header">
+    <div class="admin-page-header-content">
+      <h1 class="admin-page-title">
+        {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
+      </h1>
+      <p class="admin-page-subtitle">
+        {% if ui_lang == 'en' %}Monitor system performance and manage operations{% else %}مراقبة أداء النظام وإدارة العمليات{% endif %}
+      </p>
+    </div>
+    <div class="admin-page-header-actions">
+      <button class="admin-btn admin-btn-secondary" id="refresh-dashboard">
+        <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+      </button>
+    </div>
+  </div>
+
+  <!-- Dashboard Root — initial state is "loading"; JS drives transitions -->
+  <div class="admin-dashboard" id="admin-dashboard" data-ui-state="loading">
+
+    <!-- Loading State — skeleton loader -->
+    <div class="admin-dashboard-skeleton" id="dashboard-loading" aria-busy="true" role="status">
+      <span class="visually-hidden">{% if ui_lang == 'en' %}Loading dashboard data…{% else %}جارٍ تحميل البيانات…{% endif %}</span>
+
+      <!-- Skeleton KPI cards (4 placeholders) -->
+      <div class="admin-skeleton-kpi-row">
+        <div class="admin-skeleton-kpi-card" aria-hidden="true">
+          <div class="admin-skeleton-icon"></div>
+          <div class="admin-skeleton-content">
+            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
+            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
+          </div>
         </div>
-        <div class="admin-page-header-actions">
-            <button class="admin-btn admin-btn-secondary" id="refresh-dashboard" data-i18n="common.refresh">
-                <i class="bi bi-arrow-repeat"></i> Refresh
-            </button>
+        <div class="admin-skeleton-kpi-card" aria-hidden="true">
+          <div class="admin-skeleton-icon"></div>
+          <div class="admin-skeleton-content">
+            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
+            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
+          </div>
         </div>
+        <div class="admin-skeleton-kpi-card" aria-hidden="true">
+          <div class="admin-skeleton-icon"></div>
+          <div class="admin-skeleton-content">
+            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
+            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
+          </div>
+        </div>
+        <div class="admin-skeleton-kpi-card" aria-hidden="true">
+          <div class="admin-skeleton-icon"></div>
+          <div class="admin-skeleton-content">
+            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
+            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skeleton Charts -->
+      <div class="admin-skeleton-chart-row">
+        <div class="admin-skeleton-chart-card" aria-hidden="true"></div>
+        <div class="admin-skeleton-chart-card" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div class="admin-dashboard-error" id="dashboard-error">
+      <div class="admin-error-state">
+        <i class="bi bi-exclamation-triangle"></i>
+        <h3>{% if ui_lang == 'en' %}Error Loading Dashboard{% else %}خطأ في تحميل لوحة التحكم{% endif %}</h3>
+        <p id="error-message">
+          {% if ui_lang == 'en' %}Unable to load dashboard data. Please try again.{% else %}تعذّر تحميل البيانات. يرجى المحاولة مرة أخرى.{% endif %}
+        </p>
+        <button class="admin-btn admin-btn-primary" id="retry-dashboard">
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Try Again{% else %}إعادة المحاولة{% endif %}
+        </button>
+      </div>
     </div>
 
     <!-- Dashboard Content -->
-    <div class="admin-dashboard" id="admin-dashboard">
-        <!-- Loading State -->
-        <div class="admin-dashboard-loading" id="dashboard-loading">
-            <div class="admin-loading-spinner">
-                <i class="bi bi-arrow-repeat bi-spin"></i>
+    <div class="admin-dashboard-grid" id="dashboard-content">
+
+      <!-- KPI Cards -->
+      <div class="admin-dashboard-cards" id="kpi-cards">
+        <!-- Populated by JavaScript -->
+      </div>
+
+      <!-- Charts -->
+      <div class="admin-dashboard-charts">
+
+        <div class="admin-dashboard-chart-container">
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3 class="admin-card-title">
+                {% if ui_lang == 'en' %}User Activity{% else %}نشاط المستخدمين{% endif %}
+              </h3>
             </div>
-            <p data-i18n="common.loading">Loading dashboard data...</p>
+            <div class="admin-card-body">
+              <canvas id="user-activity-chart" width="400" height="200"></canvas>
+            </div>
+          </div>
         </div>
 
-        <!-- Error State -->
-        <div class="admin-dashboard-error" id="dashboard-error" style="display: none;">
-            <div class="admin-error-state">
-                <i class="bi bi-exclamation-triangle"></i>
-                <h3 data-i18n="common.error">Error Loading Dashboard</h3>
-                <p id="error-message">Unable to load dashboard data. Please try again.</p>
-                <button class="admin-btn admin-btn-primary" id="retry-dashboard">
-                    <i class="bi bi-arrow-clockwise"></i> Try Again
-                </button>
+        <div class="admin-dashboard-chart-container">
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3 class="admin-card-title">
+                {% if ui_lang == 'en' %}Enrollment Status{% else %}حالة التسجيل{% endif %}
+              </h3>
             </div>
+            <div class="admin-card-body">
+              <canvas id="data-submissions-chart" width="400" height="200"></canvas>
+            </div>
+          </div>
         </div>
 
-        <!-- Dashboard Grid -->
-        <div class="admin-dashboard-grid" id="dashboard-content" style="display: none;">
-            <!-- KPI Cards Row -->
-            <div class="admin-dashboard-row">
-                <div class="admin-dashboard-cards" id="kpi-cards">
-                    <!-- KPI cards will be populated by JavaScript -->
-                </div>
+      </div>
+
+      <!-- Activity, Alerts & Quick Actions -->
+      <div class="admin-dashboard-bottom">
+
+        <div class="admin-dashboard-activity">
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3 class="admin-card-title">
+                {% if ui_lang == 'en' %}Recent Activity{% else %}النشاط الأخير{% endif %}
+              </h3>
             </div>
-
-            <!-- Charts Row -->
-            <div class="admin-dashboard-row">
-                <div class="admin-dashboard-charts">
-                    <!-- Chart containers will be populated by JavaScript -->
-                    <div class="admin-dashboard-chart-container">
-                        <div class="admin-card">
-                            <div class="admin-card-header">
-                                <h3 data-i18n="dashboard.user_activity">User Activity</h3>
-                            </div>
-                            <div class="admin-card-body">
-                                <canvas id="user-activity-chart" width="400" height="200"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="admin-dashboard-chart-container">
-                        <div class="admin-card">
-                            <div class="admin-card-header">
-                                <h3 data-i18n="dashboard.data_submissions">Data Submissions</h3>
-                            </div>
-                            <div class="admin-card-body">
-                                <canvas id="data-submissions-chart" width="400" height="200"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="admin-card-body">
+              <div class="admin-activity-feed" id="activity-feed"></div>
             </div>
-
-            <!-- Activity and Alerts Row -->
-            <div class="admin-dashboard-row">
-                <div class="admin-dashboard-activity">
-                    <!-- Recent Activity -->
-                    <div class="admin-card">
-                        <div class="admin-card-header">
-                            <h3 data-i18n="dashboard.recent_activity">Recent Activity</h3>
-                        </div>
-                        <div class="admin-card-body">
-                            <div class="admin-activity-feed" id="activity-feed">
-                                <!-- Activity items will be populated by JavaScript -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="admin-dashboard-alerts">
-                    <!-- System Alerts -->
-                    <div class="admin-card">
-                        <div class="admin-card-header">
-                            <h3 data-i18n="dashboard.alerts">System Alerts</h3>
-                        </div>
-                        <div class="admin-card-body">
-                            <div class="admin-alerts-list" id="alerts-list">
-                                <!-- Alert items will be populated by JavaScript -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Actions -->
-                    <div class="admin-card">
-                        <div class="admin-card-header">
-                            <h3 data-i18n="dashboard.quick_actions">Quick Actions</h3>
-                        </div>
-                        <div class="admin-card-body">
-                            <div class="admin-quick-actions">
-                                <a href="/admin/users/create" class="admin-quick-action-link">
-                                    <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
-                                    <span data-i18n="dashboard.manage_users">Manage Users</span>
-                                </a>
-                                <a href="/admin/messages/compose" class="admin-quick-action-link">
-                                    <i class="bi bi-envelope-fill" aria-hidden="true"></i>
-                                    <span data-i18n="dashboard.send_message">Send Message</span>
-                                </a>
-                                <a href="/admin/analytics" class="admin-quick-action-link">
-                                    <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
-                                    <span data-i18n="dashboard.view_analytics">View Analytics</span>
-                                </a>
-                                <a href="/admin/import-kindergartens" class="admin-quick-action-link">
-                                    <i class="bi bi-database-fill" aria-hidden="true"></i>
-                                    <span data-i18n="dashboard.data_management">Data Management</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+          </div>
         </div>
-    </div>
+
+        <div class="admin-dashboard-alerts">
+          <!-- Alerts -->
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3 class="admin-card-title">
+                {% if ui_lang == 'en' %}System Alerts{% else %}تنبيهات النظام{% endif %}
+              </h3>
+            </div>
+            <div class="admin-card-body">
+              <div class="admin-alerts-list" id="alerts-list"></div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3 class="admin-card-title">
+                {% if ui_lang == 'en' %}Quick Actions{% else %}الإجراءات السريعة{% endif %}
+              </h3>
+            </div>
+            <div class="admin-card-body">
+              <div class="admin-quick-actions">
+
+                <a href="/admin/users/create" class="admin-quick-action-card">
+                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--primary">
+                    <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
+                  </span>
+                  <span class="admin-quick-action-card-label">
+                    {% if ui_lang == 'en' %}Manage Users{% else %}إدارة المستخدمين{% endif %}
+                  </span>
+                </a>
+
+                <a href="/admin/messages/compose" class="admin-quick-action-card">
+                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--success">
+                    <i class="bi bi-envelope-fill" aria-hidden="true"></i>
+                  </span>
+                  <span class="admin-quick-action-card-label">
+                    {% if ui_lang == 'en' %}Send Message{% else %}إرسال رسالة{% endif %}
+                  </span>
+                </a>
+
+                <a href="/admin/analytics" class="admin-quick-action-card">
+                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--info">
+                    <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
+                  </span>
+                  <span class="admin-quick-action-card-label">
+                    {% if ui_lang == 'en' %}View Analytics{% else %}عرض التحليلات{% endif %}
+                  </span>
+                </a>
+
+                <a href="/admin/imported-kindergartens" class="admin-quick-action-card">
+                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--warning">
+                    <i class="bi bi-database-fill" aria-hidden="true"></i>
+                  </span>
+                  <span class="admin-quick-action-card-label">
+                    {% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}
+                  </span>
+                </a>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.admin-dashboard-bottom -->
+    </div><!-- /#dashboard-content -->
+  </div><!-- /#admin-dashboard -->
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
-<!-- Admin Dashboard JavaScript -->
-<script src="/static/js/chart_utils.js"></script>
-<script src="/static/js/admin_dashboard.js"></script>
+<script>window.KINJO_LANG = "{{ ui_lang }}";</script>
+<script src="/static/js/chart_utils.js?v=2.1"></script>
+<script src="/static/js/admin_dashboard.js?v=2.7"></script>
 {% endblock %}

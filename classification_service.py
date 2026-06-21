@@ -97,15 +97,22 @@ def _band_for_score(score: Optional[float]) -> Tuple[Optional[str], str]:
 
 def _trend_direction(delta: Optional[float]) -> str:
     if delta is None:
-        return "لا يوجد"
+        return "NONE"
     if delta >= 1.0:
-        return "صاعد"
+        return "UP"
     if delta <= -1.0:
-        return "هابط"
-    return "مستقر"
+        return "DOWN"
+    return "STABLE"
 
 
-def _size_band(value: int) -> str:
+def _size_band(value: int, mode: str = "ENROLLMENT") -> str:
+    if mode == "CLASS_COUNT":
+        if value <= 3:
+            return "SMALL"
+        if value <= 7:
+            return "MEDIUM"
+        return "LARGE"
+    # CAPACITY and ENROLLMENT share the same child-count scale
     if value <= 60:
         return "SMALL"
     if value <= 120:
@@ -354,10 +361,10 @@ class BenchmarkingService:
     @staticmethod
     def _size_band_for_kindergarten(size_mode: str, stats: Dict[str, int]) -> str:
         if size_mode == "CAPACITY":
-            return _size_band(int(stats.get("capacity_total", 0)))
+            return _size_band(int(stats.get("capacity_total", 0)), size_mode)
         if size_mode == "ENROLLMENT":
-            return _size_band(int(stats.get("active_enrollments", 0)))
-        return _size_band(int(stats.get("class_count", 0)))
+            return _size_band(int(stats.get("active_enrollments", 0)), size_mode)
+        return _size_band(int(stats.get("class_count", 0)), size_mode)
 
     @staticmethod
     def _peer_group_key(
@@ -411,9 +418,13 @@ class BenchmarkingService:
         for group_rows in grouped.values():
             group_rows.sort(key=lambda item: float(item.final_score or 0.0), reverse=True)
             total = len(group_rows)
-            for index, row in enumerate(group_rows, start=1):
-                row.rank = index
-                row.percentile = round(((total - index + 1) / total) * 100.0, 2)
+            rank = 1
+            for index, row in enumerate(group_rows):
+                # Competition ranking: tied scores share the same rank
+                if index > 0 and row.final_score != group_rows[index - 1].final_score:
+                    rank = index + 1
+                row.rank = rank
+                row.percentile = round(((total - rank + 1) / total) * 100.0, 2)
                 row.band_code, row.band_label = _band_for_score(row.final_score)
 
     @staticmethod
@@ -540,22 +551,9 @@ class BenchmarkingService:
                     "area": kg.area,
                 },
                 aspects={
-                    "الحوكمة": float(current_bundle.get("gqi_score", 0.0)),
-                    "تجربة_الطفل": float(current_bundle.get("cei_score", 0.0)),
-                    "التشغيل": _average([
-                        float(current_bundle.get("attendance_rate", 0.0)),
-                        float(current_bundle.get("ratio_compliance", 0.0)),
-                        float(current_bundle.get("report_submission_rate", 0.0)),
-                    ]),
-                    "الجودة": _average([
-                        float(current_bundle.get("training_completion_rate", 0.0)),
-                        float(current_bundle.get("incident_followup_sla", 0.0)),
-                        float(current_bundle.get("checklist_compliance", 0.0)),
-                    ]),
-                    "التفاعل": _average([
-                        float(current_bundle.get("parent_satisfaction", 0.0)),
-                        float(current_bundle.get("parent_response_rate", 0.0)),
-                    ]),
+                    # final_score = 0.60 × GQI + 0.40 × CEI — aspects mirror the formula exactly
+                    "جودة_الحوكمة (60%)": float(current_bundle.get("gqi_score", 0.0)),
+                    "تجربة_الطفل (40%)": float(current_bundle.get("cei_score", 0.0)),
                 },
             )
             rows.append(row)
@@ -1125,24 +1123,34 @@ def _row_by_entity_id(rows: List[ClassificationRow], entity_id: int) -> Optional
 
 
 def _actions_from_aspects(aspects: Dict[str, float]) -> List[str]:
+    seen: set = set()
     actions: List[str] = []
+
+    def _add(text: str) -> None:
+        if text not in seen:
+            seen.add(text)
+            actions.append(text)
+
     for key, value in aspects.items():
         if value >= 80:
             continue
         if "الحضور" in key:
-            actions.append("رفع اكتمال إدخال الحضور اليومي وتقليل التأخير في التوثيق.")
+            _add("رفع اكتمال إدخال الحضور اليومي وتقليل التأخير في التوثيق.")
         elif "التقارير" in key:
-            actions.append("متابعة تسليم التقارير اليومية واعتمادها خلال 24 ساعة.")
+            _add("متابعة تسليم التقارير اليومية واعتمادها خلال 24 ساعة.")
         elif "الوقت" in key:
-            actions.append("تحسين الالتزام بزمن الاعتماد ومراجعة أسباب التأخير.")
+            _add("تحسين الالتزام بزمن الاعتماد ومراجعة أسباب التأخير.")
         elif "الجودة" in key:
-            actions.append("تنفيذ خطة تحسين جودة الممارسات الصفية والتوثيق.")
+            _add("تنفيذ خطة تحسين جودة الممارسات الصفية والتوثيق.")
         elif "التفاعل" in key:
-            actions.append("زيادة تفاعل أولياء الأمور عبر الاستبيانات والتغذية الراجعة.")
+            _add("زيادة تفاعل أولياء الأمور عبر الاستبيانات والتغذية الراجعة.")
         elif "الحوكمة" in key:
-            actions.append("رفع انضباط الحوكمة عبر الالتزام بالسياسات ومتابعة مؤشرات المخاطر.")
+            _add("رفع انضباط الحوكمة عبر الالتزام بالسياسات ومتابعة مؤشرات المخاطر.")
+        elif "تجربة" in key:
+            _add("تعزيز جودة تجربة الطفل اليومية وتقليل فجوات الرعاية والتوثيق.")
         else:
-            actions.append("تنفيذ خطة تحسين لهذا المؤشر ومراجعته أسبوعياً.")
+            _add(f"تنفيذ خطة تحسين لمؤشر '{key.split('(')[0].strip()}' ومراجعته أسبوعياً.")
+
     if not actions:
         actions.append("الاستمرار على نفس النهج مع مراقبة الاستقرار شهرياً.")
     return actions[:5]
@@ -1166,6 +1174,14 @@ def _build_trend_points(
     min_sample_days: int,
     periods: int = 6,
 ) -> List[Dict[str, Any]]:
+    cache_key = (
+        f"classification:trend:{entity_type}:{entity_id}:{level}:{level_value}:"
+        f"{size_mode}:{size_band}:{period_end}:{min_sample_days}:{periods}"
+    )
+    cached = dashboard_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     window_days = (period_end - period_start).days + 1
     if window_days <= 0:
         return []
@@ -1233,6 +1249,7 @@ def _build_trend_points(
         current_end = current_start - timedelta(days=1)
 
     points.reverse()
+    dashboard_cache.set(cache_key, points, ttl_seconds=3600)
     return points
 
 
@@ -1327,7 +1344,7 @@ def get_admin_kindergarten_leaderboard(
     city: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
     kindergarten_id: Optional[int] = Query(None),
-    min_sample_days: int = Query(30, ge=1, le=365),
+    min_sample_days: int = Query(30, ge=1, le=365, description="Minimum expected child-days in period to qualify for ranking"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -1363,7 +1380,7 @@ def get_admin_manager_leaderboard(
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
-    min_sample_days: int = Query(30, ge=1, le=365),
+    min_sample_days: int = Query(30, ge=1, le=365, description="Minimum number of submitted daily reports in period to qualify for ranking"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -1398,7 +1415,7 @@ def get_admin_supervisor_leaderboard(
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
-    min_sample_days: int = Query(30, ge=1, le=365),
+    min_sample_days: int = Query(30, ge=1, le=365, description="Minimum expected child-days across assigned classes to qualify for ranking"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -1565,8 +1582,8 @@ def invalidate_admin_classification_cache(
     current_user: models.User = Depends(get_current_user),
 ):
     _ensure_admin(current_user)
-    dashboard_cache.clear()
-    return {"message": "تمت إعادة تهيئة الذاكرة المؤقتة للتصنيف"}
+    deleted = dashboard_cache.clear_prefix("classification:")
+    return {"message": "تمت إعادة تهيئة الذاكرة المؤقتة للتصنيف", "deleted_entries": deleted}
 
 
 @router.get("/manager/benchmarking/summary", response_model=ManagerBenchmarkSummaryResponse)

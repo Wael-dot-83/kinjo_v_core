@@ -213,12 +213,15 @@ DASHBOARD_REQUIRED_KEYS = {
     "total_users", "active_users",
     "total_kindergartens", "active_kindergartens",
     "total_submissions", "pending_submissions",
-    "page_load_time", "page_load_subtitle", "measured_from_page_load",
-    "data_quality_score",
-    "no_recent_activity", "no_activity_hint", "no_alerts",
+    "data_quality_score", "dq_good", "dq_average", "dq_low",
+    "no_recent_activity", "no_activity_hint", "no_alerts", "no_alerts_hint",
     "manage_users", "send_message", "view_analytics", "data_management",
     "quick_actions", "user_activity", "data_submissions",
     "recent_activity", "alerts", "overview",
+    "enrollment_status",
+    "enrollment_active", "enrollment_pending", "enrollment_rejected",
+    "enrollment_withdrawn", "enrollment_waitlisted",
+    "time_minutes_ago", "time_hours_ago", "time_days_ago",
 }
 
 
@@ -372,6 +375,50 @@ def _iter_values(value):
     elif isinstance(value, list):
         for item in value:
             yield from _iter_values(item)
+
+
+# ---------------------------------------------------------------------------
+# Key parity — errors section
+# ---------------------------------------------------------------------------
+
+ERRORS_REQUIRED_KEYS = {
+    "generic_error",
+    "request_timeout",
+}
+
+
+def test_en_has_errors_section():
+    data = _load_en()
+    assert "errors" in data, "admin_en.json missing errors section"
+    missing = ERRORS_REQUIRED_KEYS - set(data["errors"].keys())
+    assert not missing, f"admin_en.json errors missing keys: {sorted(missing)}"
+
+
+def test_ar_has_errors_section():
+    data = _load_ar()
+    assert "errors" in data, "admin_ar.json missing errors section"
+    missing = ERRORS_REQUIRED_KEYS - set(data["errors"].keys())
+    assert not missing, f"admin_ar.json errors missing keys: {sorted(missing)}"
+
+
+def test_errors_key_parity():
+    en = set(_load_en().get("errors", {}).keys())
+    ar = set(_load_ar().get("errors", {}).keys())
+    only_en = en - ar
+    only_ar = ar - en
+    assert not only_en, f"Keys only in admin_en.json errors: {sorted(only_en)}"
+    assert not only_ar, f"Keys only in admin_ar.json errors: {sorted(only_ar)}"
+
+
+def test_ar_error_values_contain_arabic():
+    ar_data = _load_ar().get("errors", {})
+    _AR_CHAR = re.compile(r"[؀-ۿ]")
+    no_arabic = [
+        f"{k}: {v!r}"
+        for k, v in ar_data.items()
+        if k in ERRORS_REQUIRED_KEYS and v and not _AR_CHAR.search(v)
+    ]
+    assert not no_arabic, "Arabic error values without Arabic characters:\n" + "\n".join(no_arabic)
 
 
 def test_en_catalog_new_sections_have_no_arabic_values():

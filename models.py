@@ -274,6 +274,8 @@ class Kindergarten(Base):
     address_line = Column(Text, nullable=False)
     contact_phone = Column(String(20), nullable=False)
     contact_email = Column(String(255), nullable=True)  # Made optional
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     status = Column(Enum(KindergartenStatus), nullable=False, default=KindergartenStatus.DRAFT)
     operating_hours_start = Column(String(5), nullable=True)
     operating_hours_end = Column(String(5), nullable=True)
@@ -285,7 +287,10 @@ class Kindergarten(Base):
     __table_args__ = (
         UniqueConstraint("license_number", name="uq_kindergartens_license_number"),
         Index("idx_kindergartens_governorate", "governorate"),
+        Index("idx_kindergartens_governorate_city", "governorate", "city"),
         Index("idx_kindergartens_status", "status"),
+        Index("idx_kindergartens_latitude", "latitude"),
+        Index("idx_kindergartens_longitude", "longitude"),
     )
 
     # Relationships

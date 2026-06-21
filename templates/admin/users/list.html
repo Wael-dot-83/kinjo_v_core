@@ -198,7 +198,7 @@ actions=toolbar_actions
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block extra_scripts %}
 <script>
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
@@ -768,7 +768,7 @@ actions=toolbar_actions
 <style>
     /* Soft Background Colors */
     .bg-soft-primary {
-        background-color: rgba(13, 110, 253, 0.1);
+        background-color: rgba(31, 94, 71, 0.1);
     }
 
     .bg-soft-success {
@@ -818,7 +818,7 @@ actions=toolbar_actions
     }
 
     .sortable:hover {
-        background-color: rgba(13, 110, 253, 0.08);
+        background-color: rgba(31, 94, 71, 0.08);
     }
 
     .sortable::after {
@@ -834,13 +834,13 @@ actions=toolbar_actions
     .sortable.asc::after {
         content: '\F235';
         opacity: 1;
-        color: var(--kinjo-primary, #0d6efd);
+        color: var(--kinjo-primary, #1F5E47);
     }
 
     .sortable.desc::after {
         content: '\F229';
         opacity: 1;
-        color: var(--kinjo-primary, #0d6efd);
+        color: var(--kinjo-primary, #1F5E47);
     }
 
     /* Bulk Actions Toolbar */

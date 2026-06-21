@@ -337,7 +337,7 @@ class AdminComponents {
       success: "#10b981",
       warning: "#f59e0b",
       error: "#ef4444",
-      info: "#3b82f6",
+      info: "#2F7D62",
     };
     notification.style.borderLeftColor = colors[type] || colors.info;
 
@@ -830,10 +830,11 @@ if (typeof module !== "undefined" && module.exports) {
       el = document.createElement("div");
       el.id = WARNING_BANNER_ID;
       el.setAttribute("role", "alert");
+      const _isRtl = document.documentElement.dir === "rtl";
       el.style.cssText = [
         "position:fixed",
         "bottom:24px",
-        "right:24px",
+        (_isRtl ? "left:24px" : "right:24px"),
         "z-index:99998",
         "background:#92400e",
         "color:#fff",
@@ -918,7 +919,7 @@ if (typeof module !== "undefined" && module.exports) {
       ? window.AdminI18n.translate("components.session_expired", "Your session expired due to inactivity. Please sign in again.")
       : "Your session expired due to inactivity. Please sign in again.";
     notice.style.cssText =
-      "position:fixed;top:0;left:0;right:0;z-index:99999;background:#1e40af;" +
+      "position:fixed;top:0;left:0;right:0;z-index:99999;background:#1F5E47;" +
       "color:#fff;text-align:center;padding:10px;font-size:14px;font-weight:600;";
     document.body.prepend(notice);
     setTimeout(() => notice.remove(), 5000);
