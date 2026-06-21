@@ -620,7 +620,7 @@
     var avgEl  = document.getElementById("kpiAvgRisk");
     var critEl = document.getElementById("kpiCritical");
     var kgEl   = document.getElementById("kpiInstitutions");
-    if (avgEl)  { avgEl.textContent  = avg.toFixed(0); avgEl.style.color = rl.color; }
+    if (avgEl)  { avgEl.textContent  = avg.toFixed(1); avgEl.style.color = rl.color; }
     if (critEl) critEl.textContent   = crit;
     if (kgEl)   kgEl.textContent     = totKG;
   }
@@ -696,12 +696,16 @@
     var el = document.getElementById("lastUpdateStatus");
     if (!el) return;
     var ts = (daily && daily.last_run && daily.last_run.completed_at) || (daily && daily.updated_at);
-    if (!ts) return;
-    var d = new Date(ts);
-    if (isNaN(d)) return;
-    var lbl  = IS_AR ? "آخر تحديث:" : "Updated:";
-    var time = d.toLocaleTimeString(IS_AR ? "ar-JO" : "en-US", { hour: "2-digit", minute: "2-digit" });
-    el.innerHTML = '<i class="bi bi-clock" aria-hidden="true"></i> ' + lbl + " " + time;
+    var d = ts ? new Date(ts) : null;
+    if (d && !isNaN(d)) {
+      var time = d.toLocaleTimeString(IS_AR ? "ar-JO" : "en-US", { hour: "2-digit", minute: "2-digit" });
+      var dateStr = d.toLocaleDateString(IS_AR ? "ar-JO" : "en-US", { day: "numeric", month: "long", year: "numeric" });
+      el.innerHTML = '<i class="bi bi-clock" aria-hidden="true"></i> ' + (IS_AR ? "آخر تحديث: " : "Updated: ") + dateStr + " " + time;
+      el.className = "status-chip info";
+    } else {
+      el.innerHTML = '<i class="bi bi-check-circle" aria-hidden="true"></i> ' + (IS_AR ? "تم تحميل البيانات" : "Data loaded");
+      el.className = "status-chip live";
+    }
   }
 
   function renderAlertCount(govs) {

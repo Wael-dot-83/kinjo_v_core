@@ -196,10 +196,13 @@ RISK_BY_KEY: Dict[str, Dict] = {r["key"]: r for r in RISK_LEVELS}
 def risk_level_for_score(score: float) -> Dict:
     """Return the canonical risk-level dict for a 0-100 risk score."""
     s = max(0.0, min(100.0, float(score or 0)))
-    for level in RISK_LEVELS:
-        if level["min"] <= s <= level["max"]:
-            return level
-    return RISK_LEVELS[-1]
+    if s < 25:
+        return RISK_BY_KEY["low"]
+    if s < 50:
+        return RISK_BY_KEY["medium"]
+    if s < 75:
+        return RISK_BY_KEY["high"]
+    return RISK_BY_KEY["critical"]
 
 
 def risk_level_for_indicator(indicator_key: str, value: float) -> Dict:

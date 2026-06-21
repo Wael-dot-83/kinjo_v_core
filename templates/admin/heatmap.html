@@ -310,7 +310,7 @@
           {% if ui_lang == 'ar' %}خرائط المؤشرات الجغرافية{% else %}Geographic Indicator Heatmaps{% endif %}
         </h1>
         <div class="cc-subtitle">
-          {% if ui_lang == 'ar' %}ست خرائط حرارية منفصلة حسب المؤشر على مستوى محافظات الأردن الاثنتي عشرة{% else %}Six separate heatmaps by indicator across Jordan's 12 governorates{% endif %}
+          {% if ui_lang == 'ar' %}خريطة الأقمار الاصطناعية التفاعلية لمؤشرات الأداء في محافظات الأردن{% else %}Interactive satellite map of performance indicators across Jordan's 12 governorates{% endif %}
         </div>
       </div>
     </div>
@@ -396,45 +396,17 @@
       <div class="kpi-value" id="kpiCritical">--</div>
       <div class="kpi-sub">{% if ui_lang == 'ar' %}خطر ≥ 75{% else %}Risk ≥ 75{% endif %}</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-label">{% if ui_lang == 'ar' %}المؤسسات{% else %}Institutions{% endif %}</div>
+    <div class="kpi-card" title="{% if ui_lang == 'ar' %}عدد الحضانات المسجلة في قاعدة البيانات{% else %}Number of registered kindergartens in the database{% endif %}">
+      <div class="kpi-label">{% if ui_lang == 'ar' %}الروضات المسجلة{% else %}Registered KGs{% endif %}</div>
       <div class="kpi-value" id="kpiInstitutions">--</div>
-      <div class="kpi-sub">{% if ui_lang == 'ar' %}مسجلة{% else %}Registered{% endif %}</div>
+      <div class="kpi-sub">{% if ui_lang == 'ar' %}حضانة مسجلة{% else %}Registered{% endif %}</div>
     </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════
-       MULTI-MAP SECTION (default view — 6 cards)
+       SINGLE-MAP SECTION (default view — satellite map)
        ═══════════════════════════════════════════════════════════ -->
-  <div id="multiMapSection">
-    <div class="multi-map-intro">
-      <h2 class="multi-map-title">
-        {% if ui_lang == 'ar' %}خرائط المؤشرات الجغرافية{% else %}Geographic Indicator Heatmaps{% endif %}
-      </h2>
-      <p class="multi-map-desc">
-        {% if ui_lang == 'ar' %}عرض ست خرائط حرارية منفصلة حسب المؤشر على مستوى محافظات الأردن.{% else %}Six separate heatmaps by indicator across Jordan's 12 governorates.{% endif %}
-      </p>
-    </div>
-
-    <!-- Grid loading overlay (shown while fetching) -->
-    <div id="gridLoading" class="grid-loading" aria-live="polite">
-      <div class="load-spinner" aria-hidden="true"></div>
-      <div class="load-text">{% if ui_lang == 'ar' %}جاري تحميل الخرائط…{% else %}Loading maps…{% endif %}</div>
-    </div>
-
-    <!-- 6-card grid (populated by JS) -->
-    <div id="multiMapGrid"
-         class="hm-grid"
-         style="visibility:hidden"
-         role="region"
-         aria-label="{% if ui_lang == 'ar' %}خرائط المؤشرات الجغرافية{% else %}Geographic indicator heatmaps{% endif %}">
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════════
-       SINGLE-MAP SECTION (shown when one indicator selected)
-       ═══════════════════════════════════════════════════════════ -->
-  <div id="singleMapSection" style="display:none">
+  <div id="singleMapSection">
     <div class="cc-main">
       <!-- MAP COLUMN -->
       <div class="map-col">
@@ -508,6 +480,34 @@
 
     </div><!-- /cc-main -->
   </div><!-- /singleMapSection -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MULTI-MAP SECTION (shown when "All" indicators selected)
+       ═══════════════════════════════════════════════════════════ -->
+  <div id="multiMapSection" style="display:none">
+    <div class="multi-map-intro">
+      <h2 class="multi-map-title">
+        {% if ui_lang == 'ar' %}خرائط المؤشرات الجغرافية{% else %}Geographic Indicator Heatmaps{% endif %}
+      </h2>
+      <p class="multi-map-desc">
+        {% if ui_lang == 'ar' %}عرض ست خرائط حرارية منفصلة حسب المؤشر على مستوى محافظات الأردن.{% else %}Six separate heatmaps by indicator across Jordan's 12 governorates.{% endif %}
+      </p>
+    </div>
+
+    <!-- Grid loading overlay (shown while fetching) -->
+    <div id="gridLoading" class="grid-loading" aria-live="polite">
+      <div class="load-spinner" aria-hidden="true"></div>
+      <div class="load-text">{% if ui_lang == 'ar' %}جاري تحميل الخرائط…{% else %}Loading maps…{% endif %}</div>
+    </div>
+
+    <!-- 6-card grid (populated by JS) -->
+    <div id="multiMapGrid"
+         class="hm-grid"
+         style="visibility:hidden"
+         role="region"
+         aria-label="{% if ui_lang == 'ar' %}خرائط المؤشرات الجغرافية{% else %}Geographic indicator heatmaps{% endif %}">
+    </div>
+  </div>
 
   <!-- ═══════════════════════════════════════════════════════════
        GOVERNORATE RANKINGS TABLE
