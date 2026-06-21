@@ -12,15 +12,14 @@ Endpoints:
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import require_admin, require_manager
+from dependencies import require_admin_or_manager
 from frontend import templates  # use the singleton with globals/filters pre-configured
 from charts.schemas import (
     ChartRequest,
@@ -72,7 +71,7 @@ def _parse_chart_type(ct: Optional[str]) -> Optional[ChartType]:
 @router.get(
     "/admin/charts/data",
     summary="Raw chart data as JSON",
-    dependencies=[Depends(require_manager)],
+    dependencies=[Depends(require_admin_or_manager)],
 )
 def get_chart_data(
     source: str = Query(..., description="One of: incidents, attendance, daily_reports, enrollments, kindergartens"),
@@ -112,7 +111,7 @@ def get_chart_data(
     "/admin/charts/render",
     response_model=ChartResponse,
     summary="Render a Plotly chart as HTML",
-    dependencies=[Depends(require_manager)],
+    dependencies=[Depends(require_admin_or_manager)],
 )
 def render_chart(
     source: str = Query(...),
@@ -157,7 +156,7 @@ def render_chart(
     "/admin/charts/suggest",
     response_model=SuggestResponse,
     summary="Auto-suggest chart types for a data source",
-    dependencies=[Depends(require_manager)],
+    dependencies=[Depends(require_admin_or_manager)],
 )
 def suggest_charts(
     req: SuggestRequest,
@@ -181,7 +180,7 @@ def suggest_charts(
     "/admin/charts/task/{task_id}",
     response_model=TaskStatus,
     summary="Poll Celery task status for a heavy chart render",
-    dependencies=[Depends(require_manager)],
+    dependencies=[Depends(require_admin_or_manager)],
 )
 def get_task_status(task_id: str) -> TaskStatus:
     from celery_app import celery_app
@@ -212,11 +211,11 @@ def get_task_status(task_id: str) -> TaskStatus:
     "/admin/charts/dashboard",
     response_class=HTMLResponse,
     summary="Charts explorer dashboard",
-    dependencies=[Depends(require_manager)],
+    dependencies=[Depends(require_admin_or_manager)],
 )
 def charts_dashboard(
     request: Request,
-    _: Any = Depends(require_manager),
+    _: Any = Depends(require_admin_or_manager),
 ) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,

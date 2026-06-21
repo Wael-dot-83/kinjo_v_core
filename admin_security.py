@@ -15,20 +15,17 @@ import uuid
 import json
 import hashlib
 from datetime import datetime, timezone, date
-from typing import Optional, List, Dict, Any, Callable, TypeVar, Union
-from functools import wraps
+from typing import Optional, List, Dict, Any, Callable, Union
 from contextvars import ContextVar
 from enum import Enum
 
-from fastapi import Request, HTTPException, status, Depends
+from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field, field_validator, EmailStr, ValidationError
 from sqlalchemy.orm import Session
 
 import models
-from database import get_db
-from config import settings
 import validators
 
 # =============================================================================
@@ -370,7 +367,7 @@ def log_audit_event(
     )
 
     db.add(audit_log)
-    db.commit()
+    db.flush()
 
     return audit_log
 
@@ -721,10 +718,10 @@ class ChildCreateSchema(BaseModel):
     father_name: str = Field(..., min_length=1, max_length=255)
     mother_first_name: str = Field(..., min_length=1, max_length=100)
     mother_second_name: Optional[str] = None
-    mother_last_name: Optional[str] = None
+    mother_last_name: str = Field(..., min_length=1, max_length=100)
     mother_nationality: Optional[str] = None
 
-    @field_validator('first_name', 'last_name', 'father_name', 'mother_first_name')
+    @field_validator('first_name', 'last_name', 'father_name', 'mother_first_name', 'mother_last_name')
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
         return v.strip()

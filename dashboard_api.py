@@ -5,9 +5,7 @@ import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
 from typing import List, Dict
-from database import get_db
 from dependencies import get_current_user
 from dashboard_customization import dashboard_customization
 import models
@@ -19,9 +17,7 @@ logger = logging.getLogger(__name__)
 @router.get("/widgets")
 async def get_user_widgets(
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
 ):
-    """Get user's dashboard widget configuration"""
     try:
         widgets = dashboard_customization.get_user_widgets(current_user.id, current_user.role.value.lower())
         return {"widgets": widgets}
@@ -37,9 +33,7 @@ async def get_user_widgets(
 async def update_user_widgets(
     widgets: List[Dict],
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
 ):
-    """Update user's dashboard widget configuration"""
     try:
         success = dashboard_customization.update_user_widgets(current_user.id, widgets)
         if not success:
@@ -56,9 +50,7 @@ async def update_user_widgets(
 @router.post("/widgets/reset")
 async def reset_user_widgets(
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
 ):
-    """Reset user's dashboard widgets to role-based defaults"""
     try:
         success = dashboard_customization.reset_user_widgets(current_user.id, current_user.role.value.lower())
         if not success:
@@ -75,9 +67,7 @@ async def toggle_widget(
     widget_id: str,
     enabled: bool,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
 ):
-    """Toggle a specific widget on/off"""
     try:
         success = dashboard_customization.toggle_widget(current_user.id, widget_id, enabled)
         if not success:
@@ -95,9 +85,7 @@ async def toggle_widget(
 async def reorder_widgets(
     widget_order: List[str],
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
 ):
-    """Update widget order"""
     try:
         success = dashboard_customization.reorder_widgets(current_user.id, widget_order)
         if not success:
@@ -114,9 +102,7 @@ async def reorder_widgets(
 @router.get("/widgets/available")
 async def get_available_widgets(
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
 ):
-    """Get all available widgets for user's role"""
     try:
         widgets = dashboard_customization.get_available_widgets(current_user.role.value.lower())
         return {"widgets": widgets}

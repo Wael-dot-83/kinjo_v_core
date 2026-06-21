@@ -73,7 +73,7 @@ async def get_current_user(
         raise credentials_exception
 
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
@@ -166,7 +166,7 @@ async def get_current_user_optional(
         return None
 
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             return None
@@ -181,7 +181,7 @@ async def get_current_user_optional(
 def require_manager_with_kindergarten():
     """Dependency that ensures manager role and returns their kindergarten_id"""
     async def manager_kg_checker(
-        current_user: models.User = Depends(require_manager)
+        current_user: models.User = Depends(require_admin_or_manager)
     ) -> int:
         if not current_user.kindergarten_id:
             raise HTTPException(
@@ -224,7 +224,7 @@ def require_kindergarten_scoped_access(allow_admin: bool = True):
 
 # Common role dependencies
 require_admin = require_role(models.UserRole.ADMIN)
-require_manager = require_role(models.UserRole.ADMIN, models.UserRole.MANAGER)
+require_admin_or_manager = require_role(models.UserRole.ADMIN, models.UserRole.MANAGER)
 require_supervisor = require_role(models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR)
 
 

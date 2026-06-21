@@ -203,6 +203,9 @@ class KinJoAPI {
 
     const data = await response.json();
     this.setToken(data.access_token);
+    if (window.AuthService && typeof AuthService.setToken === "function") {
+      AuthService.setToken(data.access_token);
+    }
     return data;
   }
 
@@ -703,7 +706,13 @@ async downloadCSVErrorReport(errors) {
       );
     }
 
-    const response = await fetch(url);
+const response = await fetchWithAuth(url);
+
+    if (!response) {
+      throw new Error(
+        kinjoApiText("auth.login.required", "يتطلب تسجيل الدخول", "Sign-in is required")
+      );
+    }
 
     if (!response.ok) {
       throw new Error(kinjoApiText("common.export_failed", "فشل التصدير", "Export failed"));

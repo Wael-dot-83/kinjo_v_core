@@ -202,29 +202,6 @@ def list_audit_logs(
     )
 
 
-@admin_router.get("/audit-logs")
-def list_admin_audit_logs(
-    page: int = Query(1, ge=1),
-    limit: int = Query(25, ge=1, le=100),
-    action: Optional[str] = None,
-    entity_type: Optional[str] = None,
-    user: Optional[str] = None,
-    date: Optional[str] = None,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    return _list_audit_logs(
-        page=page,
-        limit=limit,
-        action=action,
-        entity_type=entity_type,
-        user=user,
-        date=date,
-        current_user=current_user,
-        db=db,
-    )
-
-
 @router.get("/audit-logs/export")
 def export_audit_logs(
     format: str = Query("csv", pattern="^(csv|json)$"),
@@ -246,22 +223,5 @@ def export_audit_logs(
     )
 
 
-@admin_router.get("/audit-logs/export")
-def export_admin_audit_logs(
-    format: str = Query("csv", pattern="^(csv|json)$"),
-    period: str = Query("7"),
-    action: Optional[str] = None,
-    entity_type: Optional[str] = None,
-    user: Optional[str] = None,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    return _export_audit_logs(
-        format=format,
-        period=period,
-        action=action,
-        entity_type=entity_type,
-        user=user,
-        current_user=current_user,
-        db=db,
-    )
+admin_router.add_api_route("/audit-logs", list_audit_logs, methods=["GET"])
+admin_router.add_api_route("/audit-logs/export", export_audit_logs, methods=["GET"])

@@ -873,7 +873,6 @@ async def attendance_daily(request: Request, db: Session = Depends(get_db), curr
             "is_manager_supervisor": True,
             "is_supervisor": False,
             "supervisor_class_ids": [],
-            "today": date.today(),
         }
     else:
         # Admin can see all kindergartens

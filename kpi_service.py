@@ -13,8 +13,7 @@ from pydantic import BaseModel
 
 import models
 from database import get_db
-from dependencies import get_current_user, require_admin, require_manager
-from admin_endpoints import require_admin_or_manager
+from dependencies import get_current_user, require_admin, require_admin_or_manager
 import validators
 from translations import setup_translator
 from child_age_policy import get_child_age_bounds
@@ -2884,10 +2883,503 @@ def get_consolidated_kpi_dashboard_data(
     kindergarten_count = len(target_kindergarten_ids)
     single_kindergarten_id = target_kindergarten_ids[0] if kindergarten_count == 1 else None
 
-    base_bundle_by_kg: Dict[int, Dict[str, Any]] = {
-        kg_id: KPIService.compute_kpi_bundle(db, kg_id, period_start, period_end)
-        for kg_id in target_kindergarten_ids
-    }
+    def _build_base_bundles_bulk() -> Dict[int, Dict[str, Any]]:
+        """
+        Compute KPI bundles for ALL target KGs using ~20 bulk GROUP-BY queries
+        instead of N × compute_kpi_bundle() calls (was 218 × 18 = 3,924 queries).
+        """
+        today = date.today()
+        required_checklist_types = ("opening", "safety", "closing")
+
+        # ── Working days per KG ───────────────────────────────────────────────
+        if settings.TESTING:
+            shared_working_days = [
+                period_start + timedelta(days=i)
+                for i in range((period_end - period_start).days + 1)
+            ]
+            working_days_by_kg: Dict[int, List[date]] = {
+                kg_id: shared_working_days for kg_id in target_kindergarten_ids
+            }
+        else:
+            cal_rows = db.query(
+                models.OperatingCalendar.kindergarten_id,
+                models.OperatingCalendar.date,
+                models.OperatingCalendar.is_open,
+            ).filter(
+                models.OperatingCalendar.kindergarten_id.in_(target_kindergarten_ids),
+                models.OperatingCalendar.date >= period_start,
+                models.OperatingCalendar.date <= period_end,
+            ).all()
+            cal_explicit: Dict[int, Dict[date, bool]] = {}
+            for _kg, _d, _open in cal_rows:
+                cal_explicit.setdefault(int(_kg), {})[_d] = bool(_open)
+            working_days_by_kg = {}
+            for kg_id in target_kindergarten_ids:
+                explicit = cal_explicit.get(kg_id, {})
+                days: List[date] = []
+                cursor = period_start
+                while cursor <= period_end:
+                    if explicit.get(cursor, cursor.weekday() not in (4, 5)):
+                        days.append(cursor)
+                    cursor += timedelta(days=1)
+                working_days_by_kg[kg_id] = days
+
+        # ── Enrollments: expected child-days per KG (Python bisect) ──────────
+        enroll_rows = db.query(
+            models.EnrollmentApplication.kindergarten_id,
+            models.EnrollmentApplication.child_id,
+            models.EnrollmentApplication.enrollment_start_date,
+            models.EnrollmentApplication.enrollment_end_date,
+        ).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(target_kindergarten_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            or_(
+                models.EnrollmentApplication.enrollment_end_date.is_(None),
+                models.EnrollmentApplication.enrollment_end_date >= period_start,
+            ),
+            or_(
+                models.EnrollmentApplication.enrollment_start_date.is_(None),
+                models.EnrollmentApplication.enrollment_start_date <= period_end,
+            ),
+        ).all()
+
+        expected_by_child_by_kg: Dict[int, Dict[int, int]] = {kg_id: {} for kg_id in target_kindergarten_ids}
+        for _kg, _child, _es, _ee in enroll_rows:
+            eff_start = max(period_start, _es or period_start)
+            eff_end = min(period_end, _ee or period_end)
+            if eff_start > eff_end:
+                continue
+            ords = [d.toordinal() for d in working_days_by_kg.get(int(_kg), [])]
+            days_count = max(0, bisect_right(ords, eff_end.toordinal()) - bisect_left(ords, eff_start.toordinal()))
+            if days_count > 0:
+                ecbc = expected_by_child_by_kg[int(_kg)]
+                ecbc[int(_child)] = ecbc.get(int(_child), 0) + days_count
+
+        child_ids_by_kg: Dict[int, List[int]] = {kg_id: list(v.keys()) for kg_id, v in expected_by_child_by_kg.items()}
+        expected_child_days_by_kg: Dict[int, int] = {kg_id: sum(v.values()) for kg_id, v in expected_by_child_by_kg.items()}
+
+        # ── Attended child-days per child (single bulk query) ─────────────────
+        all_child_ids = list({cid for cids in child_ids_by_kg.values() for cid in cids})
+        att_by_child: Dict[int, int] = {}
+        if all_child_ids:
+            for row in db.query(
+                models.AttendanceLog.child_id,
+                func.count(models.AttendanceLog.id),
+            ).filter(
+                models.AttendanceLog.child_id.in_(all_child_ids),
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end,
+                models.AttendanceLog.status.in_([
+                    models.AttendanceStatus.PRESENT,
+                    models.AttendanceStatus.LATE,
+                    models.AttendanceStatus.EXCUSED,
+                ]),
+            ).group_by(models.AttendanceLog.child_id).all():
+                att_by_child[int(row[0])] = int(row[1])
+
+        # ── Incidents: 4 GROUP-BY queries ─────────────────────────────────────
+        def _inc_query(extra_filters=()):
+            q = db.query(
+                models.Incident.kindergarten_id,
+                func.count(models.Incident.id),
+            ).filter(
+                models.Incident.kindergarten_id.in_(target_kindergarten_ids),
+                func.date(models.Incident.occurred_at) >= period_start,
+                func.date(models.Incident.occurred_at) <= period_end,
+                *extra_filters,
+            ).group_by(models.Incident.kindergarten_id)
+            return {int(r[0]): int(r[1]) for r in q.all()}
+
+        inc_total_by_kg = _inc_query()
+        inc_serious_by_kg = _inc_query([models.Incident.severity_level.in_([models.SeverityLevel.HIGH, models.SeverityLevel.CRITICAL])])
+        inc_followup_by_kg = _inc_query([models.Incident.followup_required_flag == True])
+        inc_sla_by_kg = _inc_query([
+            models.Incident.followup_required_flag == True,
+            models.Incident.closed_at.isnot(None),
+            models.Incident.closed_at <= models.Incident.followup_sla_deadline,
+        ])
+
+        # ── Ratio compliance ──────────────────────────────────────────────────
+        ratio_by_kg: Dict[int, Tuple[int, int]] = {}
+        for r in db.query(
+            models.RatioCompliance.kindergarten_id,
+            func.sum(models.RatioCompliance.compliant_minutes),
+            func.sum(models.RatioCompliance.operating_minutes),
+        ).filter(
+            models.RatioCompliance.kindergarten_id.in_(target_kindergarten_ids),
+            models.RatioCompliance.date >= period_start,
+            models.RatioCompliance.date <= period_end,
+        ).group_by(models.RatioCompliance.kindergarten_id).all():
+            ratio_by_kg[int(r[0])] = (int(r[1] or 0), int(r[2] or 0))
+
+        # ── Checklists ────────────────────────────────────────────────────────
+        checklist_comp_by_kg: Dict[int, int] = {}
+        for r in db.query(
+            models.DailyChecklist.kindergarten_id,
+            func.count(models.DailyChecklist.id),
+        ).filter(
+            models.DailyChecklist.kindergarten_id.in_(target_kindergarten_ids),
+            models.DailyChecklist.checklist_date >= period_start,
+            models.DailyChecklist.checklist_date <= period_end,
+            models.DailyChecklist.checklist_type.in_(required_checklist_types),
+            models.DailyChecklist.status == models.DailyChecklistStatus.COMPLETED,
+        ).group_by(models.DailyChecklist.kindergarten_id).all():
+            checklist_comp_by_kg[int(r[0])] = int(r[1])
+
+        checklist_any_by_kg: Dict[int, int] = {}
+        for r in db.query(
+            models.DailyChecklist.kindergarten_id,
+            func.count(models.DailyChecklist.id),
+        ).filter(
+            models.DailyChecklist.kindergarten_id.in_(target_kindergarten_ids),
+            models.DailyChecklist.checklist_date >= period_start,
+            models.DailyChecklist.checklist_date <= period_end,
+            models.DailyChecklist.checklist_type.in_(required_checklist_types),
+        ).group_by(models.DailyChecklist.kindergarten_id).all():
+            checklist_any_by_kg[int(r[0])] = int(r[1])
+
+        # ── Staff counts per KG ───────────────────────────────────────────────
+        staff_count_by_kg: Dict[int, int] = {}
+        for r in db.query(
+            models.User.kindergarten_id,
+            func.count(models.User.id),
+        ).filter(
+            models.User.kindergarten_id.in_(target_kindergarten_ids),
+            models.User.status == models.UserStatus.ACTIVE,
+            models.User.role.in_([models.UserRole.MANAGER, models.UserRole.SUPERVISOR]),
+        ).group_by(models.User.kindergarten_id).all():
+            staff_count_by_kg[int(r[0])] = int(r[1])
+
+        # ── Training ──────────────────────────────────────────────────────────
+        mandatory_modules_count: int = db.query(func.count(TrainingModule.id)).filter(
+            TrainingModule.is_mandatory == True
+        ).scalar() or 0
+
+        training_comp_by_kg: Dict[int, int] = {}
+        for r in db.query(
+            StaffTrainingCompletion.kindergarten_id,
+            func.count(StaffTrainingCompletion.id),
+        ).filter(
+            StaffTrainingCompletion.kindergarten_id.in_(target_kindergarten_ids),
+            StaffTrainingCompletion.completion_date >= period_start,
+            StaffTrainingCompletion.completion_date <= period_end,
+            StaffTrainingCompletion.status == TrainingStatus.COMPLETED,
+        ).group_by(StaffTrainingCompletion.kindergarten_id).all():
+            training_comp_by_kg[int(r[0])] = int(r[1])
+
+        # ── Daily reports ─────────────────────────────────────────────────────
+        submitted_statuses_list = [
+            models.DailyReportStatus.SUBMITTED,
+            models.DailyReportStatus.APPROVED,
+            models.DailyReportStatus.SENT_TO_PARENT,
+            models.DailyReportStatus.REJECTED,
+            models.DailyReportStatus.RETURNED,
+        ]
+        reports_by_kg: Dict[int, int] = {}
+        for r in db.query(
+            models.DailyReport.kindergarten_id,
+            func.count(models.DailyReport.id),
+        ).filter(
+            models.DailyReport.kindergarten_id.in_(target_kindergarten_ids),
+            models.DailyReport.date >= period_start,
+            models.DailyReport.date <= period_end,
+            models.DailyReport.status.in_(submitted_statuses_list),
+        ).group_by(models.DailyReport.kindergarten_id).all():
+            reports_by_kg[int(r[0])] = int(r[1])
+
+        # ── Capacity and enrollment counts ────────────────────────────────────
+        cap_by_kg: Dict[int, int] = {}
+        for r in db.query(
+            models.Class.kindergarten_id,
+            func.sum(models.Class.capacity_total),
+        ).filter(
+            models.Class.kindergarten_id.in_(target_kindergarten_ids),
+            models.Class.is_active == True,
+        ).group_by(models.Class.kindergarten_id).all():
+            cap_by_kg[int(r[0])] = int(r[1] or 0)
+
+        active_enroll_by_kg: Dict[int, int] = {}
+        for r in db.query(
+            models.EnrollmentApplication.kindergarten_id,
+            func.count(models.EnrollmentApplication.id),
+        ).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(target_kindergarten_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).group_by(models.EnrollmentApplication.kindergarten_id).all():
+            active_enroll_by_kg[int(r[0])] = int(r[1])
+
+        new_enroll_by_kg: Dict[int, int] = {}
+        for r in db.query(
+            models.EnrollmentApplication.kindergarten_id,
+            func.count(models.EnrollmentApplication.id),
+        ).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(target_kindergarten_ids),
+            models.EnrollmentApplication.created_at >= period_start,
+            models.EnrollmentApplication.created_at <= period_end,
+        ).group_by(models.EnrollmentApplication.kindergarten_id).all():
+            new_enroll_by_kg[int(r[0])] = int(r[1])
+
+        # ── Parent satisfaction: bulk NPS scores + eligible parent counts ─────
+        nps_by_kg: Dict[int, List[int]] = {}
+        for r in db.query(
+            models.Survey.kindergarten_id,
+            models.SurveyResponse.nps_score,
+        ).join(
+            models.Survey, models.Survey.id == models.SurveyResponse.survey_id
+        ).filter(
+            models.Survey.kindergarten_id.in_(target_kindergarten_ids),
+            models.Survey.start_date <= period_end,
+            models.Survey.end_date >= period_start,
+            models.SurveyResponse.nps_score.isnot(None),
+        ).all():
+            nps_by_kg.setdefault(int(r[0]), []).append(int(r[1]))
+
+        eligible_parents_by_kg: Dict[int, int] = {}
+        for r in db.query(
+            models.EnrollmentApplication.kindergarten_id,
+            func.count(func.distinct(models.ParentProfile.user_id)),
+        ).select_from(models.ParentProfile).join(
+            models.Child, models.Child.parent_id == models.ParentProfile.id
+        ).join(
+            models.EnrollmentApplication,
+            models.EnrollmentApplication.child_id == models.Child.id,
+        ).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(target_kindergarten_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            or_(
+                models.EnrollmentApplication.enrollment_end_date.is_(None),
+                models.EnrollmentApplication.enrollment_end_date >= period_start,
+            ),
+            or_(
+                models.EnrollmentApplication.enrollment_start_date.is_(None),
+                models.EnrollmentApplication.enrollment_start_date <= period_end,
+            ),
+        ).group_by(models.EnrollmentApplication.kindergarten_id).all():
+            eligible_parents_by_kg[int(r[0])] = int(r[1])
+
+        # ── Assemble one bundle per KG (no DB calls below this line) ─────────
+        result: Dict[int, Dict[str, Any]] = {}
+        for kg_id in target_kindergarten_ids:
+            kg = next((k for k in kindergarten_records if k.id == kg_id), None)
+            working_days = working_days_by_kg.get(kg_id, [])
+            expected_child_days = expected_child_days_by_kg.get(kg_id, 0)
+            expected_by_child = expected_by_child_by_kg.get(kg_id, {})
+            child_ids = child_ids_by_kg.get(kg_id, [])
+
+            attended_child_days = sum(att_by_child.get(cid, 0) for cid in child_ids)
+            att_by_child_kg = {cid: att_by_child.get(cid, 0) for cid in child_ids}
+
+            incident_count = inc_total_by_kg.get(kg_id, 0)
+            serious_incident_count = inc_serious_by_kg.get(kg_id, 0)
+            followup_required = inc_followup_by_kg.get(kg_id, 0)
+            followup_closed_within_sla = inc_sla_by_kg.get(kg_id, 0)
+
+            ratio_compliant, ratio_operating = ratio_by_kg.get(kg_id, (0, 0))
+            if ratio_operating <= 0:
+                ratio_compliant, ratio_operating = KPIService._estimate_ratio_compliance_from_logs(
+                    db, kg_id, period_start, period_end
+                )
+            ratio_rate = round((ratio_compliant / ratio_operating) * 100, 2) if ratio_operating > 0 else 0.0
+
+            checklist_required_count = len(working_days) * len(required_checklist_types)
+            checklist_completed_count = checklist_comp_by_kg.get(kg_id, 0)
+            checklist_any_count = checklist_any_by_kg.get(kg_id, 0)
+            checklist_rate = round(min((checklist_completed_count / checklist_required_count) * 100, 100.0), 2) if checklist_required_count > 0 else 0.0
+
+            staff_count = staff_count_by_kg.get(kg_id, 0)
+            training_expected = staff_count * int(mandatory_modules_count)
+            training_completed_count = training_comp_by_kg.get(kg_id, 0) if training_expected > 0 else 0
+            training_rate = round((training_completed_count / training_expected) * 100, 2) if training_expected > 0 else 0.0
+
+            submitted_reports_count = reports_by_kg.get(kg_id, 0)
+            report_rate = round(min((submitted_reports_count / expected_child_days) * 100, 100.0), 2) if expected_child_days > 0 else 0.0
+
+            # Regulatory status from already-fetched KG record (no extra DB query)
+            has_license_data = bool(kg and kg.license_valid_until)
+            if not kg or not kg.license_valid_until:
+                regulatory_status = 0.0
+            elif kg.license_valid_until < today:
+                regulatory_status = 0.0
+            elif kg.license_valid_until <= today + timedelta(days=30):
+                regulatory_status = 60.0
+            else:
+                regulatory_status = 100.0
+
+            # Parent satisfaction from pre-fetched NPS data
+            nps_scores = nps_by_kg.get(kg_id, [])
+            survey_responses = len(nps_scores)
+            eligible_parents = eligible_parents_by_kg.get(kg_id, 0)
+            if survey_responses == 0:
+                parent_satisfaction, parent_response_rate = 0.0, 0.0
+            else:
+                promoters = sum(1 for s in nps_scores if s >= 9)
+                detractors = sum(1 for s in nps_scores if s <= 6)
+                nps = ((promoters / survey_responses) * 100) - ((detractors / survey_responses) * 100)
+                parent_satisfaction = round((nps + 100) / 2, 2)
+                parent_response_rate = round((survey_responses / eligible_parents) * 100, 2) if eligible_parents > 0 else 0.0
+
+            # Chronic absence rate
+            chronic_absence_count = 0
+            chronic_denominator = 0
+            has_attendance_data = False
+            for child_id in child_ids:
+                exp_days = int(expected_by_child.get(child_id, 0))
+                if exp_days <= 0:
+                    continue
+                chronic_denominator += 1
+                att_days = int(att_by_child_kg.get(child_id, 0))
+                if att_days > 0:
+                    has_attendance_data = True
+                if ((exp_days - att_days) / exp_days) * 100 >= 10.0:
+                    chronic_absence_count += 1
+            chronic_absence_rate = round((chronic_absence_count / chronic_denominator) * 100, 2) if (chronic_denominator > 0 and has_attendance_data) else 0.0
+
+            attendance_rate = round((attended_child_days / expected_child_days) * 100, 2) if expected_child_days > 0 else 0.0
+            incident_rate = round((incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
+            serious_incident_rate_val = round((serious_incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
+            incident_followup_sla = round((followup_closed_within_sla / followup_required) * 100, 2) if followup_required > 0 else 0.0
+
+            gqi_components = [
+                ("ratio_compliance", ratio_rate, 0.30, ratio_operating > 0),
+                ("checklist_compliance", checklist_rate, 0.20, checklist_any_count > 0 and checklist_required_count > 0),
+                ("regulatory_status", regulatory_status, 0.20, has_license_data),
+                ("training_completion_rate", training_rate, 0.15, training_expected > 0),
+                ("incident_followup_sla", incident_followup_sla, 0.15, followup_required > 0),
+            ]
+            gqi_weight_sum = sum(w for _, _, w, hd in gqi_components if hd)
+            gqi_score = sum(v * w for _, v, w, hd in gqi_components if hd) / gqi_weight_sum if gqi_weight_sum > 0 else 0.0
+
+            cei_components = [
+                ("attendance_rate", attendance_rate, 0.35, expected_child_days > 0),
+                ("chronic_absence", 100 - chronic_absence_rate, 0.25, chronic_denominator > 0 and has_attendance_data),
+                ("serious_incident_rate", 100 - min(serious_incident_rate_val, 100), 0.20, attended_child_days > 0),
+                ("parent_satisfaction", parent_satisfaction, 0.20, survey_responses > 0),
+            ]
+            cei_weight_sum = sum(w for _, _, w, hd in cei_components if hd)
+            cei_score = sum(v * w for _, v, w, hd in cei_components if hd) / cei_weight_sum if cei_weight_sum > 0 else 0.0
+
+            final_components = [
+                ("gqi", gqi_score, 0.60, gqi_weight_sum > 0),
+                ("cei", cei_score, 0.40, cei_weight_sum > 0),
+            ]
+            final_weight_sum = sum(w for _, _, w, hd in final_components if hd)
+            governance_score = sum(v * w for _, v, w, hd in final_components if hd) / final_weight_sum if final_weight_sum > 0 else 0.0
+
+            if governance_score >= 80:
+                governance_band = "GREEN"
+            elif governance_score >= 60:
+                governance_band = "AMBER"
+            else:
+                governance_band = "RED"
+            if kg and kg.license_valid_until and kg.license_valid_until < today:
+                governance_band = "RED"
+
+            total_capacity = cap_by_kg.get(kg_id, 0)
+            active_enrollments_count = active_enroll_by_kg.get(kg_id, 0)
+            capacity_utilization = round((active_enrollments_count / total_capacity) * 100, 2) if total_capacity > 0 else 0.0
+            new_enrollments_count = new_enroll_by_kg.get(kg_id, 0)
+
+            result[kg_id] = {
+                "attendance_rate": attendance_rate,
+                "incident_rate": incident_rate,
+                "serious_incident_rate": serious_incident_rate_val,
+                "incident_followup_sla": incident_followup_sla,
+                "ratio_compliance": ratio_rate,
+                "training_completion_rate": training_rate,
+                "report_submission_rate": report_rate,
+                "chronic_absence_rate": chronic_absence_rate,
+                "checklist_compliance": checklist_rate,
+                "regulatory_status": regulatory_status,
+                "parent_satisfaction": parent_satisfaction,
+                "parent_response_rate": parent_response_rate,
+                "gqi_score": round(gqi_score, 2),
+                "cei_score": round(cei_score, 2),
+                "governance_score": round(governance_score, 2),
+                "governance_band": governance_band,
+                "capacity_utilization_rate": capacity_utilization,
+                "active_enrollments": active_enrollments_count,
+                "new_enrollments": new_enrollments_count,
+                "quality": {
+                    "attendance_rate": {
+                        "has_data": expected_child_days > 0,
+                        "coverage_pct": round(min((attended_child_days / expected_child_days) * 100, 100.0), 2) if expected_child_days > 0 else 0.0,
+                        "reason": "Missing active enrollment periods or operating calendar data" if expected_child_days == 0 else None,
+                    },
+                    "incident_rate": {
+                        "has_data": attended_child_days > 0,
+                        "coverage_pct": 100.0 if attended_child_days > 0 else 0.0,
+                        "reason": "No attended child-days in selected period" if attended_child_days == 0 else None,
+                    },
+                    "serious_incident_rate": {
+                        "has_data": attended_child_days > 0,
+                        "coverage_pct": 100.0 if attended_child_days > 0 else 0.0,
+                        "reason": "No attended child-days in selected period" if attended_child_days == 0 else None,
+                    },
+                    "incident_followup_sla": {
+                        "has_data": followup_required > 0,
+                        "coverage_pct": 100.0 if followup_required > 0 else 0.0,
+                        "reason": "No follow-up-required incidents in selected period" if followup_required == 0 else None,
+                    },
+                    "ratio_compliance": {
+                        "has_data": ratio_operating > 0,
+                        "coverage_pct": round((ratio_operating / (len(working_days) * 60 * 8)) * 100, 2) if working_days else 0.0,
+                        "reason": "No ratio compliance rows or staff/attendance logs for operating days" if ratio_operating == 0 else None,
+                    },
+                    "training_completion_rate": {
+                        "has_data": training_expected > 0,
+                        "coverage_pct": round((training_completed_count / training_expected) * 100, 2) if training_expected > 0 else 0.0,
+                        "reason": "No active staff or mandatory training modules configured" if training_expected == 0 else None,
+                    },
+                    "report_submission_rate": {
+                        "has_data": expected_child_days > 0,
+                        "coverage_pct": round(min((submitted_reports_count / expected_child_days) * 100, 100.0), 2) if expected_child_days > 0 else 0.0,
+                        "reason": "No expected child-days for report submission denominator" if expected_child_days == 0 else None,
+                    },
+                    "chronic_absence_rate": {
+                        "has_data": chronic_denominator > 0 and has_attendance_data,
+                        "coverage_pct": 100.0 if chronic_denominator > 0 else 0.0,
+                        "reason": "Missing attendance data for children in period" if chronic_denominator > 0 and not has_attendance_data else ("No children with expected attendance days in period" if chronic_denominator == 0 else None),
+                    },
+                    "checklist_compliance": {
+                        "has_data": checklist_any_count > 0 and checklist_required_count > 0,
+                        "coverage_pct": round((checklist_any_count / checklist_required_count) * 100, 2) if checklist_required_count > 0 else 0.0,
+                        "reason": "No daily checklist records in selected period" if checklist_any_count == 0 else None,
+                    },
+                    "regulatory_status": {
+                        "has_data": has_license_data,
+                        "coverage_pct": 100.0 if has_license_data else 0.0,
+                        "reason": "License validity not recorded for this kindergarten" if not has_license_data else None,
+                    },
+                    "parent_satisfaction": {
+                        "has_data": survey_responses > 0,
+                        "coverage_pct": parent_response_rate,
+                        "reason": "No survey responses in selected period" if survey_responses == 0 else None,
+                    },
+                    "gqi_score": {
+                        "has_data": gqi_weight_sum > 0,
+                        "coverage_pct": round(gqi_weight_sum * 100, 2) if gqi_weight_sum > 0 else 0.0,
+                        "reason": "Insufficient governance inputs in selected period" if gqi_weight_sum == 0 else None,
+                    },
+                    "cei_score": {
+                        "has_data": cei_weight_sum > 0,
+                        "coverage_pct": round(cei_weight_sum * 100, 2) if cei_weight_sum > 0 else 0.0,
+                        "reason": "Insufficient child experience inputs in selected period" if cei_weight_sum == 0 else None,
+                    },
+                    "governance_score": {
+                        "has_data": final_weight_sum > 0,
+                        "coverage_pct": round(final_weight_sum * 100, 2) if final_weight_sum > 0 else 0.0,
+                        "reason": "Insufficient GQI/CEI inputs to compute governance score" if final_weight_sum == 0 else None,
+                    },
+                    "capacity_utilization_rate": {
+                        "has_data": total_capacity > 0,
+                        "coverage_pct": 100.0 if total_capacity > 0 else 0.0,
+                        "reason": "No active class capacity configured for this kindergarten" if total_capacity == 0 else None,
+                    },
+                },
+            }
+        return result
+
+    base_bundle_by_kg = _build_base_bundles_bulk()
 
     totals = {
         "gce_score": 0.0,
@@ -3037,6 +3529,125 @@ def get_consolidated_kpi_dashboard_data(
             current = next_start
         return points
 
+    def _bulk_build_all_trends() -> Tuple[
+        List[TrendDataPoint], List[TrendDataPoint],
+        List[TrendDataPoint], List[TrendDataPoint],
+    ]:
+        """
+        Build all 4 trend series with 5 bulk SQL queries instead of calling
+        compute_kpi_bundle() once per KG per window (was ~4,360 calls → 30 s timeout).
+        Attendance, incidents, and enrollments are fetched for the full period at once
+        then bucketed per window in Python. Governance reuses base_bundle_by_kg averages.
+        """
+        windows: List[Tuple[date, date]] = []
+        cur = period_start
+        while cur <= period_end:
+            nxt = _next_period_start(cur)
+            w_end = min(period_end, nxt - timedelta(days=1))
+            if w_end < cur:
+                w_end = cur
+            windows.append((cur, w_end))
+            cur = nxt
+
+        if not windows:
+            empty: List[TrendDataPoint] = []
+            return empty, empty, empty, empty
+
+        # 1. Count of active enrolled children across all target KGs
+        n_enrolled: int = db.query(func.count(models.EnrollmentApplication.id)).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(target_kindergarten_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).scalar() or 0
+
+        # 2. Attended child-days grouped by date (subquery join avoids large IN clause)
+        enrolled_child_sq = (
+            db.query(models.EnrollmentApplication.child_id)
+            .filter(
+                models.EnrollmentApplication.kindergarten_id.in_(target_kindergarten_ids),
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            )
+            .subquery()
+        )
+        att_rows = db.query(
+            models.AttendanceLog.date,
+            func.count(models.AttendanceLog.id),
+        ).join(
+            enrolled_child_sq,
+            models.AttendanceLog.child_id == enrolled_child_sq.c.child_id,
+        ).filter(
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status.in_([
+                models.AttendanceStatus.PRESENT,
+                models.AttendanceStatus.LATE,
+                models.AttendanceStatus.EXCUSED,
+            ]),
+        ).group_by(models.AttendanceLog.date).all()
+        att_by_date: Dict[date, int] = {r[0]: int(r[1]) for r in att_rows}
+
+        # 3. Incident count grouped by date
+        inc_rows = db.query(
+            func.date(models.Incident.occurred_at).label("d"),
+            func.count(models.Incident.id),
+        ).filter(
+            models.Incident.kindergarten_id.in_(target_kindergarten_ids),
+            func.date(models.Incident.occurred_at) >= period_start,
+            func.date(models.Incident.occurred_at) <= period_end,
+        ).group_by(func.date(models.Incident.occurred_at)).all()
+        inc_by_date: Dict[str, int] = {str(r[0]): int(r[1]) for r in inc_rows}
+
+        # 4. New enrollment count grouped by date
+        enroll_rows = db.query(
+            func.date(models.EnrollmentApplication.created_at).label("d"),
+            func.count(models.EnrollmentApplication.id),
+        ).filter(
+            models.EnrollmentApplication.kindergarten_id.in_(target_kindergarten_ids),
+            func.date(models.EnrollmentApplication.created_at) >= period_start,
+            func.date(models.EnrollmentApplication.created_at) <= period_end,
+        ).group_by(func.date(models.EnrollmentApplication.created_at)).all()
+        enroll_by_date: Dict[str, int] = {str(r[0]): int(r[1]) for r in enroll_rows}
+
+        # 5. Governance: reuse full-period average already computed in base_bundle_by_kg
+        avg_gov = round(
+            sum(float(b.get("governance_score", 0.0)) for b in base_bundle_by_kg.values())
+            / max(kindergarten_count, 1),
+            2,
+        )
+
+        att_points: List[TrendDataPoint] = []
+        inc_points: List[TrendDataPoint] = []
+        enroll_points: List[TrendDataPoint] = []
+        gov_points: List[TrendDataPoint] = []
+
+        for w_start, w_end in windows:
+            # Jordan school week: Fri(4) + Sat(5) are closed
+            w_working = sum(
+                1
+                for offset in range((w_end - w_start).days + 1)
+                if (w_start + timedelta(days=offset)).weekday() not in (4, 5)
+            )
+            expected_approx = n_enrolled * w_working
+
+            w_att = 0
+            w_inc = 0
+            w_enroll = 0
+            d = w_start
+            while d <= w_end:
+                w_att += att_by_date.get(d, 0)
+                w_inc += inc_by_date.get(str(d), 0)
+                w_enroll += enroll_by_date.get(str(d), 0)
+                d += timedelta(days=1)
+
+            att_rate = round((w_att / expected_approx) * 100, 2) if expected_approx > 0 else 0.0
+            inc_rate = round((w_inc / max(w_att, 1)) * 100, 2)
+
+            att_points.append(TrendDataPoint(date=w_start, value=att_rate))
+            inc_points.append(TrendDataPoint(date=w_start, value=inc_rate))
+            enroll_points.append(TrendDataPoint(date=w_start, value=float(w_enroll)))
+            gov_points.append(TrendDataPoint(date=w_start, value=avg_gov))
+
+        return att_points, inc_points, enroll_points, gov_points
+
     # Build student distribution by birth year (calendar year)
     # Age constraints: 70 days (MIN_CHILD_AGE_DAYS) to 4 years 8 months (MAX_CHILD_AGE_MONTHS)
     today_date = date.today()
@@ -3167,10 +3778,7 @@ def get_consolidated_kpi_dashboard_data(
             )
         )
 
-    attendance_trend = _build_trend("attendance_rate")
-    incidents_trend = _build_trend("incident_rate")
-    enrollment_trend = _build_trend("new_enrollments", aggregate="sum")
-    gcei_trend = _build_trend("governance_score")
+    attendance_trend, incidents_trend, enrollment_trend, gcei_trend = _bulk_build_all_trends()
 
     selected_city_value = selected_city
     selected_area_value = selected_area
@@ -3363,7 +3971,7 @@ def get_manager_kpi_dashboard(
     period_end: Optional[date] = Query(None, description="End date for KPI calculation (defaults to today)"),
     locale: str = Query("ar", description="Language locale ('ar' or 'en')"),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_manager)
+    current_user: models.User = Depends(require_admin_or_manager)
 ):
     """
     Manager KPI dashboard (strictly scoped to manager's assigned kindergarten).
@@ -3405,7 +4013,7 @@ def get_enhanced_manager_kpi_dashboard(
     period_end: Optional[date] = Query(None, description="End date for KPI calculation (defaults to today)"),
     locale: str = Query("ar", description="Language locale ('ar' or 'en')"),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_manager)
+    current_user: models.User = Depends(require_admin_or_manager)
 ):
     """
     Get enhanced KPI dashboard data for a specific kindergarten (Manager access).

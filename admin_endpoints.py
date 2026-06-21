@@ -15,7 +15,6 @@ This module provides secure admin endpoints with:
 """
 import csv
 import io
-import json
 import os
 import secrets
 import enum
@@ -26,7 +25,7 @@ from typing import List, Optional, Dict, Any, Set, Tuple, Union
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, UploadFile, File, Form
 from fastapi.responses import Response, JSONResponse, StreamingResponse
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_, func, and_, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -34,8 +33,8 @@ from sqlalchemy.exc import SQLAlchemyError
 import models
 import validators
 from database import get_db
-from rate_limiter import limiter
 from dependencies import get_current_user
+from rate_limiter import limiter
 from config import settings
 from auth import get_password_hash, verify_password
 from notification_service import create_message_notifications
@@ -53,23 +52,23 @@ from audit_actions import AuditAction
 from admin_security import (
     # Error handling
     APIError, forbidden_error, unauthenticated_error, validation_error,
-    not_found_error, conflict_error, rate_limited_error, create_error_response,
+    not_found_error, conflict_error,
     ErrorCode,
     # Audit logging
-    log_audit_event, model_to_dict, get_correlation_id, get_request_ip,
+    log_audit_event, model_to_dict, get_correlation_id,
     # Authorization
-    can_admin_access_user, validate_bulk_targets,
+    can_admin_access_user,
     # Schemas
     UserCreateSchema, UserUpdateSchema, BulkStatusUpdateSchema,
     BulkDeleteSchema, BulkCreateSchema, AdminPasswordResetSchema,
     PasswordResetRequestSchema, PasswordResetConfirmSchema,
     # Bulk operations
-    BulkOperationConfig, BulkOperationResult, generate_confirmation_token,
+    generate_confirmation_token,
     verify_confirmation_token,
     # CSV
-    CSVRowError, CSVImportResult, sanitize_csv_cell, validate_csv_row,
+    CSVRowError, CSVImportResult, sanitize_csv_cell,
     # Pagination
-    PaginationConfig, enforce_pagination,
+    enforce_pagination,
 )
 
 logger = logging.getLogger(__name__)
@@ -211,21 +210,16 @@ router = APIRouter(tags=["Admin"])
 # Authorization Helpers
 # =============================================================================
 
+# require_admin and require_admin_or_manager are wrappers that chain to
+# admin_security's functions via Depends(get_current_user).
 def require_admin(current_user: models.User = Depends(get_current_user)) -> models.User:
-    """
-    Dependency that enforces admin role.
-    Returns 401 if not authenticated, 403 if authenticated but not admin.
-    """
-    if current_user.role != models.UserRole.ADMIN:
-        raise forbidden_error("Admin access required")
-    return current_user
+    from admin_security import require_admin_role
+    return require_admin_role(current_user)
 
 
 def require_admin_or_manager(current_user: models.User = Depends(get_current_user)) -> models.User:
-    """Dependency that enforces admin or manager role."""
-    if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
-        raise forbidden_error("Admin or Manager access required")
-    return current_user
+    from admin_security import require_admin_or_manager_role
+    return require_admin_or_manager_role(current_user)
 
 
 def get_client_ip(request: Request) -> str:
@@ -1706,7 +1700,7 @@ def download_csv_error_report(
     body: _CSVErrorReportBody,
     current_user: models.User = Depends(require_admin),
 ):
-    """Download CSV import error report as CSV file."""
+    _validate_csrf_token(request)
     error_list = body.errors
 
     output = io.StringIO()
@@ -1981,7 +1975,7 @@ def _canonical_governorates(governorates: Optional[List[str]]) -> List[str]:
 
 def _validate_csrf_token(request: Request) -> None:
     header_token = request.headers.get("x-csrf-token")
-    cookie_token = request.cookies.get("kinjo_csrf_token")
+    cookie_token = request.cookies.get(settings.CSRF_COOKIE_NAME)
     if not header_token or not cookie_token or not secrets.compare_digest(header_token, cookie_token):
         raise validation_error("Invalid CSRF token", fields={"csrf_token": "invalid"})
 
@@ -3499,21 +3493,11 @@ def get_admin_dashboard(
         day_count = daily_enrollment_counts.get(day_value, 0)
         enrollment_trend.append(DashboardChartPoint(date=day_value.isoformat(), value=day_count))
 
-    # Build GCEI (Governance Compliance & Excellence Index) trend chart
-    # Based on active kindergartens ratio and license compliance
-    daily_incident_counts_full = dict(
-        db.query(
-            func.date(models.Incident.occurred_at),
-            func.count(models.Incident.id),
-        ).filter(
-            func.date(models.Incident.occurred_at) >= chart_start_date,
-            func.date(models.Incident.occurred_at) <= today,
-        ).group_by(func.date(models.Incident.occurred_at)).all()
-    )
+# Build GCEI (Governance Compliance & Excellence Index) trend chart
     gcei_chart: List[DashboardChartPoint] = []
     for i in range(chart_days):
         day_value = today - timedelta(days=(chart_days - 1 - i))
-        day_incidents = daily_incident_counts_full.get(day_value, 0)
+        day_incidents = daily_incident_counts.get(day_value, 0)
         # Simplified GCEI calculation: based on active kindergartens and incident rate
         day_enrollments = daily_attendance_counts.get(day_value, 0)
         if day_enrollments > 0:
@@ -3620,7 +3604,6 @@ def get_admin_dashboard(
 # =============================================================================
 
 @router.post("/admin/backup/create")
-@router.post("/backup/create", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def create_backup(
     request: Request,
@@ -3667,7 +3650,6 @@ def create_backup(
 
 
 @router.get("/admin/backup/list")
-@router.get("/backup/list", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def list_backups(
     request: Request,
@@ -3690,7 +3672,6 @@ class _RestoreConfirmBody(BaseModel):
 
 
 @router.post("/admin/backup/restore/{backup_name}")
-@router.post("/backup/restore/{backup_name}", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def restore_backup(
     request: Request,
@@ -3770,7 +3751,6 @@ def restore_backup(
 
 
 @router.delete("/admin/backup/{backup_name}")
-@router.delete("/backup/{backup_name}", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def delete_backup(
     request: Request,
@@ -3817,7 +3797,6 @@ def delete_backup(
 
 
 @router.get("/admin/backup/info/{backup_name}")
-@router.get("/backup/info/{backup_name}", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_backup_info(
     request: Request,
@@ -3852,7 +3831,6 @@ def get_backup_info(
 
 
 @router.post("/admin/backup/cleanup")
-@router.post("/backup/cleanup", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def cleanup_old_backups(
     request: Request,
@@ -3882,7 +3860,6 @@ def cleanup_old_backups(
 
 
 @router.post("/admin/backup/validate/{backup_name}")
-@router.post("/backup/validate/{backup_name}", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def validate_backup(
     request: Request,
@@ -3929,7 +3906,6 @@ class KindergartenImportResult(BaseModel):
 
 
 @router.post("/admin/kindergartens/import-excel", response_model=KindergartenImportResult)
-@router.post("/kindergartens/import-excel", response_model=KindergartenImportResult, include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_CSV_IMPORT)
 def import_kindergartens_from_excel(
     request: Request,
