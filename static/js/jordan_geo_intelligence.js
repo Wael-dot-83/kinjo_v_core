@@ -409,13 +409,12 @@
   }
 
   function highlightGov(slug) {
-    var svgPaths = document.querySelectorAll("#singleMapSvg path");
-    for (var i = 0; i < svgPaths.length; i++) {
-      svgPaths[i].classList.toggle("hm-selected-gov", svgPaths[i].dataset.slug === slug);
-    }
     var rows = document.querySelectorAll("#rankingsTable tbody tr");
     for (var j = 0; j < rows.length; j++) {
       rows[j].classList.toggle("selected", rows[j].dataset.slug === slug);
+    }
+    if (window.JordanHeatmap && window.JordanHeatmap.highlightGov) {
+      window.JordanHeatmap.highlightGov(slug);
     }
   }
 
@@ -448,7 +447,6 @@
     if (titleEl) titleEl.textContent = indLabel(ind);
     if (descEl)  descEl.textContent  = indDesc(ind);
 
-    var svgEl  = document.getElementById("singleMapSvg");
     var loadEl = document.getElementById("singleMapLoading");
     var errEl  = document.getElementById("singleMapError");
     var wrapEl = document.getElementById("singleMapWrap");
@@ -459,14 +457,17 @@
       if (wrapEl) wrapEl.style.display = "none";
       return;
     }
-    try {
-      renderSVGMap(svgEl, ind, showTooltip, hideTooltip, handleSingleGovClick);
+    // Delegate to Leaflet-based JordanHeatmap
+    if (window.JordanHeatmap && window.JordanHeatmap.showSingleMap) {
+      window.JordanHeatmap.showSingleMap(indKey, state.governorates, state.geojson, function(slug) {
+        loadGovDetail(slug);
+        highlightGov(slug);
+      });
       if (loadEl) loadEl.style.display = "none";
       if (errEl)  errEl.style.display  = "none";
       if (wrapEl) wrapEl.style.display = "block";
-      if (state.selectedSlug) highlightGov(state.selectedSlug);
-    } catch (err) {
-      console.error("[Heatmap] showSingleMap error:", err);
+    } else {
+      // Fallback: show loading then error
       if (loadEl) loadEl.style.display = "none";
       if (errEl)  errEl.style.display  = "flex";
       if (wrapEl) wrapEl.style.display = "none";

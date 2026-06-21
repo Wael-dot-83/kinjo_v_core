@@ -311,7 +311,7 @@ html[dir="ltr"] .admin-sidebar.collapsed + .admin-main {
   min-height: 100vh;
   background-color: var(--admin-bg-sidebar, #1F5E47);
   background-image: linear-gradient(180deg, #163d2e 0%, #1F5E47 56%, #163d2e 100%);
-  border-right: 1px solid rgba(148, 163, 184, 0.18);
+  border-right: 1px solid rgba(0, 0, 0, 0.18);
   padding: var(--admin-space-4, 1rem) var(--admin-space-3, 0.75rem);
   overflow-y: auto;
   position: sticky;
@@ -417,6 +417,69 @@ html[dir="ltr"] .admin-sidebar.collapsed + .admin-main {
   border-radius: 999px;
 }
 
+/* ===== DROPDOWN COMPONENT ===== */
+.admin-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: var(--admin-z-dropdown, 1000);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  min-width: 180px;
+  padding: 0.375rem 0;
+  overflow: hidden;
+}
+
+html[dir="rtl"] .admin-dropdown-menu {
+  right: 0;
+  left: auto;
+}
+
+html[dir="ltr"] .admin-dropdown-menu {
+  left: 0;
+  right: auto;
+}
+
+.admin-dropdown.open .admin-dropdown-menu {
+  display: block;
+}
+
+.admin-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: var(--admin-text-primary, #333333);
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition: background-color 0.1s;
+  cursor: pointer;
+  width: 100%;
+  text-align: start;
+}
+
+.admin-dropdown-item:hover,
+.admin-dropdown-item:focus {
+  background: #f0f8f5;
+  color: var(--admin-primary, #1F5E47);
+  outline: none;
+}
+
+.admin-dropdown-divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  margin: 0.25rem 0;
+}
+
 /* ===== HEADER AVATAR IMAGE ===== */
 .admin-user-avatar-img {
   width: 28px;
@@ -461,11 +524,14 @@ html[dir="ltr"] .admin-sidebar.collapsed + .admin-main {
 }
 
 .admin-sidebar .nav-link.active {
-  border-inline-end: 3px solid var(--admin-primary);
+  border-inline-end: 3px solid #D6C56B;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
 }
 
 .admin-sidebar .nav-link:hover {
-  background: var(--admin-bg-hover);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
 .admin-nav-item.active::before {
@@ -508,8 +574,9 @@ html[dir="rtl"] .admin-nav-item.active::before {
 
 /* Header */
 .admin-header {
-  background-color: white;
-  border-bottom: var(--admin-border-width) solid var(--admin-border-color);
+  background-color: #1F5E47;
+  background-image: linear-gradient(90deg, #163d2e 0%, #1F5E47 60%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
   padding: var(--admin-space-4) var(--admin-space-8);
   display: flex;
   align-items: center;
@@ -517,7 +584,24 @@ html[dir="rtl"] .admin-nav-item.active::before {
   position: sticky;
   top: 0;
   z-index: var(--admin-z-sticky);
-  box-shadow: var(--admin-shadow-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* Header elements need white text on dark green background */
+.admin-header .admin-btn-ghost {
+  color: rgba(255, 255, 255, 0.85);
+}
+.admin-header .admin-btn-ghost:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+.admin-header .admin-user-name {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 500;
+}
+.admin-header .admin-user-avatar {
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
 }
 
 .admin-header-left {
@@ -3443,6 +3527,112 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
 @media (max-width: 768px) {
   .daily-reports-org-page .report-table {
     font-size: 0.88rem;
+  }
+}
+
+/* ============================================================================
+   ADMIN CLASSIFICATION PAGE
+   ============================================================================ */
+.classification-page .classification-kpi {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: 112px;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+.classification-page .classification-kpi-icon {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.classification-page .classification-kpi-label,
+.classification-page .classification-kpi-note {
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.classification-page .classification-kpi-value {
+  color: #0f172a;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.classification-page .classification-chart-panel {
+  min-height: 316px;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+.classification-page .classification-chart-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: start;
+  margin-bottom: 0.75rem;
+}
+
+.classification-page .classification-chart-header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.classification-page .classification-chart-header span {
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: end;
+}
+
+.classification-page .classification-chart-box {
+  position: relative;
+  height: 240px;
+}
+
+.classification-page .classification-band-dot {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  margin-inline-end: 0.35rem;
+}
+
+.classification-page #classificationTable th,
+.classification-page #classificationTable td {
+  white-space: nowrap;
+}
+
+.classification-page #classificationTable td:nth-child(2) {
+  min-width: 220px;
+  white-space: normal;
+}
+
+@media (max-width: 768px) {
+  .classification-page .classification-chart-box {
+    height: 220px;
+  }
+
+  .classification-page .classification-kpi {
+    min-height: 96px;
   }
 }
 

@@ -871,22 +871,10 @@ async def attendance_daily(request: Request, db: Session = Depends(get_db), curr
             "today": date.today(),
             "user_kindergarten": kindergarten,
             "is_manager_supervisor": True,
-            "is_supervisor": user_role == 'SUPERVISOR',
-            "supervisor_class_ids": []
+            "is_supervisor": False,
+            "supervisor_class_ids": [],
+            "today": date.today(),
         }
-
-        # For supervisors, get their assigned class IDs
-        if user_role == 'SUPERVISOR':
-            today = date.today()
-            assignments = db.query(models.SupervisorAssignment).filter(
-                models.SupervisorAssignment.supervisor_id == current_user.id,
-                models.SupervisorAssignment.start_date <= today,
-                or_(
-                    models.SupervisorAssignment.end_date.is_(None),
-                    models.SupervisorAssignment.end_date >= today
-                )
-            ).all()
-            context["supervisor_class_ids"] = [a.class_id for a in assignments]
     else:
         # Admin can see all kindergartens
         context = {
@@ -992,19 +980,25 @@ async def create_daily_report(request: Request, current_user: User = Depends(get
 
 @router.get("/curriculum", response_class=HTMLResponse)
 async def curriculum_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Curriculum management page.
+
+    TODO: Implement full curriculum management template.
+    Currently redirects to dashboard as curriculum module is not yet built.
+    """
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role in ('ADMIN', 'SUPERVISOR'):
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
+    # Curriculum module placeholder — redirect to dashboard
     return RedirectResponse(url="/dashboard")
 
 
 @router.get("/incidents", response_class=HTMLResponse)
 async def incidents_list(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """List incident reports for admins"""
+    """Redirect to admin incidents page for admins."""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return RedirectResponse(url="/admin/reports/incidents", status_code=302)
+    return RedirectResponse(url="/admin/reports/incidents")
 
 
 @router.get("/incidents/create", response_class=HTMLResponse)

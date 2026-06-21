@@ -1654,6 +1654,12 @@ class TestFrontendRoutes:
         response = client.get("/admin/classification")
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
+        html = response.text
+        assert 'id="classificationSummaryCards"' in html
+        assert 'id="classificationBandChart"' in html
+        assert 'id="classificationScoreChart"' in html
+        assert 'id="classificationAspectChart"' in html
+        assert "/static/js/admin_classification.js?v=5" in html
 
         app.dependency_overrides.clear()
 
