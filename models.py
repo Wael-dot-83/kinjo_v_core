@@ -144,7 +144,10 @@ class DailyChecklistStatus(str, enum.Enum):
 class IncidentType(str, enum.Enum):
     INJURY = "INJURY"
     BEHAVIOR = "BEHAVIOR"
+    BEHAVIORAL = "BEHAVIORAL"
     ILLNESS = "ILLNESS"
+    ACCIDENT = "ACCIDENT"
+    HEALTH = "HEALTH"
     OTHER = "OTHER"
 
 
@@ -680,6 +683,7 @@ class EnrollmentApplication(Base):
         Index("uq_enrollment_child_active", "child_id", "is_active", unique=True),
         Index("ix_enrollment_child_id", "child_id"),
         Index("ix_enrollment_child_status", "child_id", "status"),
+        Index("ix_enrollment_kg_status", "kindergarten_id", "status"),
     )
 
     # Relationships
@@ -735,6 +739,7 @@ class AttendanceLog(Base):
         Index("ix_attendance_class_id", "class_id"),
         Index("ix_attendance_class_date", "class_id", "date"),
         Index("ix_attendance_recorded_by", "recorded_by"),
+        Index("ix_attendance_child_date_status", "child_id", "date", "status"),
     )
 
     # Relationships
@@ -781,7 +786,8 @@ class DailyReport(Base):
 
     __table_args__ = (
         UniqueConstraint("kindergarten_id", "child_id", "date", name="uq_daily_report_kindergarten_child_date"),
-        Index("ix_daily_reports_child_date", "child_id", "date")
+        Index("ix_daily_reports_child_date", "child_id", "date"),
+        Index("ix_daily_reports_kg_date_status", "kindergarten_id", "date", "status"),
     )
 
     # Relationships
@@ -851,6 +857,11 @@ class Incident(Base):
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        Index("ix_incidents_kg_occurred_at", "kindergarten_id", "occurred_at"),
+        Index("ix_incidents_kg_severity", "kindergarten_id", "severity_level"),
+    )
 
     # Relationships
     child = relationship("Child", back_populates="incidents")
@@ -1273,6 +1284,10 @@ class RatioCompliance(Base):
     staff_count_avg = Column(Float, nullable=False)
     child_count_avg = Column(Float, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_ratio_compliance_kg_date", "kindergarten_id", "date"),
+    )
 
 
 class KPISnapshot(Base):
