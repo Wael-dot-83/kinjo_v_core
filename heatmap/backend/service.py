@@ -26,6 +26,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from . import constants as C
+import models
 
 logger = logging.getLogger(__name__)
 

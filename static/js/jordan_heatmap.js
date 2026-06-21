@@ -1,429 +1,407 @@
 /**
- * Jordan Heat Map v2 — Leaflet-based implementation
+ * Jordan Heat Map v3 — Satellite Leaflet implementation
  *
- * Replaces the pure-SVG version with a professional Leaflet map
- * including:
- * - Dark-themed tile layer (CartoDB Dark Matter)
- * - GeoJSON choropleth overlay with risk-based coloring
- * - Kindergarten point markers with custom clustering
- * - Governorate click → intelligence panel
- * - KPI status-colored circle markers
+ * - ESRI World Imagery satellite tiles + CartoDB label overlay
+ * - Tile-style toggle: Satellite ↔ Street
+ * - Custom pin DivIcons for kindergartens (jittered within governorate)
+ * - Governorate centroid badge markers (name + risk score)
+ * - GeoJSON choropleth with risk-based fill opacity
  */
 (function () {
   'use strict';
 
   const API_BASE = '/api/admin/heat-map';
+  const MAP_CENTER = [31.0, 36.2];
+  const MAP_ZOOM   = 7;
+  const MIN_ZOOM   = 6;
+  const MAX_ZOOM   = 17;
 
-  const MAP_CENTER = [31.5, 36.5];
-  const MAP_ZOOM = 8;
-  const MIN_ZOOM = 7;
-  const MAX_ZOOM = 11;
+  const RC = { low:'#22c55e', medium:'#f59e0b', high:'#f97316', critical:'#ef4444', nodata:'#1e293b' };
 
-  const RISK_COLORS = {
-    low:      '#22c55e',
-    medium:   '#f59e0b',
-    high:     '#f97316',
-    critical: '#ef4444',
-    nodata:   '#374151',
-  };
-
-  const KPI_COLORS = {
-    normal:   '#22c55e',
-    warning:  '#f59e0b',
-    risk:     '#f97316',
-    critical: '#ef4444',
-    unknown:  '#94a3b8',
+  // Governorate centroid coordinates for badge placement [lat, lng]
+  const CODE_CENTER = {
+    'JO-AM':[31.95,35.95], 'JO-IR':[32.55,35.85], 'JO-ZA':[32.07,36.10],
+    'JO-MA':[32.34,36.20], 'JO-JA':[32.28,35.90], 'JO-AJ':[32.33,35.75],
+    'JO-BA':[32.04,35.78], 'JO-MD':[31.72,35.79], 'JO-KA':[31.18,35.70],
+    'JO-TA':[30.83,35.60], 'JO-MN':[30.20,35.73], 'JO-AQ':[29.53,35.00],
   };
 
   let state = {
-    map: null,
-    geojsonLayer: null,
-    kgMarkers: null,
-    kgData: [],
-    selectedSlug: null,
-    indicator: '',
-    indicators: [],
-    governorates: [],
-    geojson: null,
-    onGovSelect: null,
+    map: null, baseTile: null, labelTile: null,
+    geojsonLayer: null, kgLayer: null, govLayer: null,
+    kgData: [], governorates: [], geojson: null,
+    selectedSlug: null, indicator: '',
+    onGovSelect: null, tileStyle: 'satellite', showKG: true,
   };
 
-  function currentLang() {
+  // ── HELPERS ──────────────────────────────────────────────────────
+  function lang() {
     const el = document.querySelector('.geo-cc');
-    if (el) return el.getAttribute('lang') || 'ar';
-    const stored = localStorage.getItem('kinjo_lang') || localStorage.getItem('admin_language');
-    if (stored && String(stored).toLowerCase().startsWith('en')) return 'en';
-    return document.documentElement.lang && String(document.documentElement.lang).toLowerCase().startsWith('en') ? 'en' : 'ar';
+    return el ? (el.getAttribute('lang') || 'ar') : 'ar';
   }
-  function t(ar, en) { return currentLang() === 'ar' ? ar : en; }
-
-  async function apiGet(path) {
-    const res = await fetch(API_BASE + path, { credentials: 'same-origin' });
-    if (!res.ok) throw new Error('API ' + res.status);
-    return res.json();
-  }
-
-  function riskLevel(v) {
-    const s = +v || 0;
-    if (s < 25) return { key: 'low',      label: t('منخفض', 'Low'),      color: RISK_COLORS.low };
-    if (s < 50) return { key: 'medium',   label: t('متوسط', 'Medium'),   color: RISK_COLORS.medium };
-    if (s < 75) return { key: 'high',     label: t('مرتفع', 'High'),     color: RISK_COLORS.high };
-    return          { key: 'critical', label: t('حرج', 'Critical'), color: RISK_COLORS.critical };
-  }
-
-  function riskColorScore(v) {
-    const s = Math.max(0, Math.min(100, +v || 0));
-    if (s < 25) return RISK_COLORS.low;
-    if (s < 50) return RISK_COLORS.medium;
-    if (s < 75) return RISK_COLORS.high;
-    return RISK_COLORS.critical;
-  }
-
-  function interpolateColor(value) {
-    const s = Math.max(0, Math.min(100, +value || 0));
-    if (s < 25) return '#22c55e';
-    if (s < 50) return '#f59e0b';
-    if (s < 75) return '#f97316';
-    return '#ef4444';
-  }
-
-  function kgColor(status) {
-    return KPI_COLORS[status] || KPI_COLORS.unknown;
-  }
-
-  function kgRadius(props) {
-    const score = +(props.kpi_score || 50);
-    return Math.max(5, Math.min(14, score / 10));
-  }
-
+  function t(ar, en) { return lang() === 'ar' ? ar : en; }
   function esc(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-// ── TOOLTIP FUNCTIONS ─────────────────────────────────────────
-  let ttEl = null;
+  async function api(path) {
+    const r = await fetch(API_BASE + path, { credentials: 'same-origin' });
+    if (!r.ok) throw new Error('API ' + r.status);
+    return r.json();
+  }
 
-  function showTooltipGov(e, gov, name) {
+  function riskColor(v) {
+    const s = +v || 0;
+    return s < 25 ? RC.low : s < 50 ? RC.medium : s < 75 ? RC.high : RC.critical;
+  }
+  function riskLabel(v) {
+    const s = +v || 0;
+    const K = { low:'low', medium:'medium', high:'high', critical:'critical' };
+    const k = s<25?'low':s<50?'medium':s<75?'high':'critical';
+    const AR = {low:'منخفض',medium:'متوسط',high:'مرتفع',critical:'حرج'};
+    const EN = {low:'Low',medium:'Medium',high:'High',critical:'Critical'};
+    return { key: k, color: RC[k], label: t(AR[k], EN[k]) };
+  }
+  function kpiColor(status) {
+    return ({normal:'#22c55e',warning:'#f59e0b',risk:'#f97316',critical:'#ef4444'})[status] || '#94a3b8';
+  }
+
+  // Seeded PRNG for deterministic per-KG jitter
+  function prng(seed) {
+    let s = (seed ^ 0xdeadbeef) >>> 0;
+    s = (Math.imul(s ^ (s >>> 16), 0x45d9f3b)) >>> 0;
+    s = (Math.imul(s ^ (s >>> 16), 0x45d9f3b)) >>> 0;
+    return ((s ^ (s >>> 16)) >>> 0) / 4294967296;
+  }
+
+  // ── TILE LAYERS ──────────────────────────────────────────────────
+  function setTiles(style) {
+    state.tileStyle = style;
+    if (!state.map) return;
+    if (state.baseTile)  { state.map.removeLayer(state.baseTile);  state.baseTile  = null; }
+    if (state.labelTile) { state.map.removeLayer(state.labelTile); state.labelTile = null; }
+
+    if (style === 'satellite') {
+      state.baseTile = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 19, attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP' }
+      ).addTo(state.map);
+      state.labelTile = L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',
+        { maxZoom: 19, attribution: '&copy; CartoDB', opacity: 0.9, zIndex: 10 }
+      ).addTo(state.map);
+    } else {
+      state.baseTile = L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; CartoDB' }
+      ).addTo(state.map);
+    }
+
+    const btn = document.getElementById('tileToggleBtn');
+    if (btn) {
+      btn.innerHTML = style === 'satellite'
+        ? '<i class="bi bi-map" aria-hidden="true"></i> ' + t('خريطة الطرق', 'Street Map')
+        : '<i class="bi bi-globe2" aria-hidden="true"></i> ' + t('صورة القمر الاصطناعي', 'Satellite');
+    }
+  }
+
+  // ── CUSTOM ICONS ─────────────────────────────────────────────────
+  function kgIcon(color) {
+    return L.divIcon({
+      className: 'kj-pin-icon',
+      html:
+        '<div class="kj-pin-body" style="background:' + color + ';box-shadow:0 2px 8px ' + color + '88">' +
+          '<i class="bi bi-building" aria-hidden="true"></i>' +
+        '</div>' +
+        '<div class="kj-pin-tip" style="border-top-color:' + color + '"></div>',
+      iconSize:    [28, 38],
+      iconAnchor:  [14, 38],
+      popupAnchor: [0, -40],
+    });
+  }
+
+  function govBadgeIcon(nameAr, nameEn, score, color) {
+    const nm = lang() === 'ar' ? (nameAr || nameEn) : (nameEn || nameAr);
+    return L.divIcon({
+      className: 'kj-gov-icon',
+      html:
+        '<div class="kj-gov-wrap">' +
+          '<div class="kj-gov-name">' + esc(nm || '') + '</div>' +
+          '<div class="kj-gov-score" style="background:' + color + '">' + Math.round(+score || 0) + '</div>' +
+        '</div>',
+      iconSize:   [0, 0],
+      iconAnchor: [0, 0],
+    });
+  }
+
+  // ── TOOLTIP ──────────────────────────────────────────────────────
+  let ttEl = null;
+  function showTT(e, gov, name) {
     if (!ttEl) ttEl = document.getElementById('geoTooltip');
     if (!ttEl) return;
-    var risk = gov ? riskLevel(gov.risk_score) : null;
+    const rl = gov ? riskLabel(gov.risk_score) : null;
     ttEl.innerHTML =
       '<div class="tt-name">' + esc(name) + '</div>' +
-      (risk ? '<div class="tt-badge" style="color:' + risk.color + '">' + esc(risk.label) + '</div>' : '') +
+      (rl ? '<div class="tt-badge" style="color:' + rl.color + '">' + esc(rl.label) + '</div>' : '') +
       '<div class="tt-divider"></div>' +
-      '<div class="tt-row"><span>' + t('مؤشر الخطر', 'Risk Score') + '</span><strong>' + (gov ? gov.risk_score.toFixed(0) : '--') + '/100</strong></div>' +
+      '<div class="tt-row"><span>' + t('مؤشر الخطر', 'Risk Score') + '</span>' +
+        '<strong>' + (gov ? (+gov.risk_score || 0).toFixed(0) : '--') + '/100</strong></div>' +
       '<div class="tt-hint">' + t('انقر للتفاصيل', 'Click for details') + '</div>';
     ttEl.style.display = 'block';
-    positionTooltip(e);
+    moveTT(e);
   }
-
-  function hideTooltip() {
-    if (ttEl) ttEl.style.display = 'none';
-  }
-
-  function positionTooltip(e) {
+  function hideTT() { if (ttEl) ttEl.style.display = 'none'; }
+  function moveTT(e) {
     if (!ttEl) return;
-    var pad = 16, x = e.clientX + pad, y = e.clientY + pad;
+    const pad = 16;
+    let x = e.clientX + pad, y = e.clientY + pad;
     ttEl.style.display = 'block';
-    var r = ttEl.getBoundingClientRect();
-    if (x + r.width > window.innerWidth - 8) x = e.clientX - r.width - pad;
+    const r = ttEl.getBoundingClientRect();
+    if (x + r.width  > window.innerWidth  - 8) x = e.clientX - r.width  - pad;
     if (y + r.height > window.innerHeight - 8) y = e.clientY - r.height - pad;
     ttEl.style.left = x + 'px';
-    ttEl.style.top = y + 'px';
+    ttEl.style.top  = y + 'px';
   }
 
-// ── CUSTOM CLUSTERING ──────────────────────────────────────────
-  // Groups nearby circle markers within a radius. No external dependency.
-  function clusterMarkers(markers, clusterRadius) {
-    const clusters = [];
-    const assigned = new Array(markers.length).fill(false);
-    for (let i = 0; i < markers.length; i++) {
-      if (assigned[i]) continue;
-      const cluster = { markers: [markers[i]], latlng: markers[i].getLatLng() };
-      assigned[i] = true;
-      for (let j = i + 1; j < markers.length; j++) {
-        if (assigned[j]) continue;
-        const dist = cluster.latlng.distanceTo(markers[j].getLatLng());
-        if (dist <= clusterRadius) {
-          cluster.markers.push(markers[j]);
-          assigned[j] = true;
-        }
-      }
-      // Recompute cluster center as average
-      let lat = 0, lng = 0;
-      for (const m of cluster.markers) {
-        const ll = m.getLatLng();
-        lat += ll.lat;
-        lng += ll.lng;
-      }
-      lat /= cluster.markers.length;
-      lng /= cluster.markers.length;
-      cluster.latlng = L.latLng(lat, lng);
-      clusters.push(cluster);
-    }
-    return clusters;
-  }
-
-  function renderClusterMarkers(clusters, map) {
-    const fg = L.featureGroup();
-    for (const cluster of clusters) {
-      if (cluster.markers.length === 1) {
-        fg.addLayer(cluster.markers[0]);
-      } else {
-        const count = cluster.markers.length;
-        const avgColor = '#2F7D62';
-        const r = Math.min(18, 8 + count * 2);
-        const clusterCircle = L.circleMarker(cluster.latlng, {
-          radius: r,
-          fillColor: avgColor,
-          color: 'rgba(255,255,255,0.4)',
-          weight: 1.5,
-          fillOpacity: 0.8,
-        });
-        clusterCircle.bindPopup(
-          '<div style="font-family:system-ui;text-align:center;min-width:120px;">' +
-          '<div style="font-weight:700;font-size:1.1rem;color:' + avgColor + '">' + count + '</div>' +
-          '<div style="font-size:0.85rem;color:#94a3b8;">' + t('روضة أطفال', 'Kindergartens') + '</div>' +
-          '</div>',
-          { className: 'kg-popup-dark' }
-        );
-        fg.addLayer(clusterCircle);
-      }
-    }
-    return fg;
-  }
-
-  // ── INIT MAP ──────────────────────────────────────────────────
+  // ── INIT MAP ─────────────────────────────────────────────────────
   function initMap() {
     if (state.map) return;
-
     state.map = L.map('leafletMap', {
-      center: MAP_CENTER,
-      zoom: MAP_ZOOM,
-      minZoom: MIN_ZOOM,
-      maxZoom: MAX_ZOOM,
-      zoomControl: true,
-      attributionControl: false,
+      center: MAP_CENTER, zoom: MAP_ZOOM,
+      minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM,
+      zoomControl: false,
+      attributionControl: true,
     });
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-    }).addTo(state.map);
+    L.control.zoom({ position: 'bottomright' }).addTo(state.map);
+    setTiles('satellite');
   }
 
-  // ── LOAD GEOJSON CHOROPLETH ──────────────────────────────────
+  // ── GEOJSON CHOROPLETH ───────────────────────────────────────────
   function loadGeoJSON() {
-    if (!state.geojson || !state.geojson.features) {
-      showError();
-      return;
-    }
+    if (!state.geojson || !state.geojson.features) { showError(); return; }
     if (state.geojsonLayer) state.map.removeLayer(state.geojsonLayer);
 
-    const features = state.geojson.features.filter(
-      f => (f.properties && (f.properties.level === 'governorate' || !f.properties.level))
-    );
+    const feats = state.geojson.features.filter(f => {
+      const lv = f.properties && f.properties.level;
+      return !lv || lv === 'governorate';
+    });
 
-    state.geojsonLayer = L.geoJSON(features, {
+    state.geojsonLayer = L.geoJSON(feats, {
       style: function (feature) {
-        const props = feature.properties || {};
-        const code = props.admin_code || props.id || '';
-        const gov = state.governorates.find(g => g.code === code);
-        let fillColor = RISK_COLORS.nodata;
+        const code = (feature.properties || {}).admin_code || (feature.properties || {}).id || '';
+        const gov  = state.governorates.find(g => g.code === code);
+        let fill   = RC.nodata;
         if (gov) {
           if (state.indicator) {
-            const v = gov.main_indicators ? gov.main_indicators[state.indicator] : null;
-            fillColor = v != null ? interpolateColor(v) : RISK_COLORS.nodata;
+            const v = gov.main_indicators && gov.main_indicators[state.indicator];
+            fill = v != null ? riskColor(v) : RC.nodata;
           } else {
-            fillColor = riskColorScore(gov.risk_score);
+            fill = riskColor(gov.risk_score);
           }
         }
-        return {
-          fillColor: fillColor,
-          fillOpacity: 0.6,
-          color: 'rgba(255,255,255,0.22)',
-          weight: 1.0,
-        };
+        return { fillColor: fill, fillOpacity: 0.38, color: 'rgba(255,255,255,0.6)', weight: 1.8 };
       },
       onEachFeature: function (feature, layer) {
         const props = feature.properties || {};
-        const code = props.admin_code || props.id || '';
-        const slug = props.slug || (code ? String(code).toLowerCase().replace('jo-', '') : '');
-        const gov = state.governorates.find(g => g.code === code);
-        const name = currentLang() === 'ar' ? (props.name_ar || props.name || slug) : (props.name || props.name_ar || slug);
-
+        const code  = props.admin_code || props.id || '';
+        const gov   = state.governorates.find(g => g.code === code);
+        const name  = lang() === 'ar'
+          ? (props.name_ar || props.name || code)
+          : (props.name    || props.name_ar || code);
         layer.on({
           mouseover: function (e) {
-            const target = e.target;
-            target.setStyle({ fillOpacity: 0.85, weight: 2.0, color: 'rgba(255,255,255,0.6)' });
-            target.bringToFront();
-            showTooltipGov(e, gov, name);
+            e.target.setStyle({ fillOpacity: 0.62, weight: 2.8, color: '#ffffff' });
+            e.target.bringToFront();
+            showTT(e, gov, name);
           },
           mouseout: function (e) {
             if (state.geojsonLayer) state.geojsonLayer.resetStyle(e.target);
-            hideTooltip();
+            hideTT();
           },
+          mousemove: moveTT,
           click: function () {
-            const g = state.governorates.find(gov => gov.code === code);
+            const g = state.governorates.find(gv => gv.code === code);
             if (g && state.onGovSelect) state.onGovSelect(g.slug);
           },
         });
       },
     }).addTo(state.map);
 
-    state.map.fitBounds(state.geojsonLayer.getBounds().pad(0.05));
+    state.map.fitBounds(state.geojsonLayer.getBounds().pad(0.04));
+    buildGovBadges();
   }
 
-  // ── LOAD KINDERGARTEN MARKERS ────────────────────────────────
-  async function loadKindergartenMarkers() {
+  // ── GOVERNORATE CENTROID BADGES ──────────────────────────────────
+  function buildGovBadges() {
+    if (state.govLayer) { state.map.removeLayer(state.govLayer); state.govLayer = null; }
+    const fg = L.featureGroup();
+
+    for (const gov of state.governorates) {
+      const center = CODE_CENTER[gov.code];
+      if (!center) continue;
+      const score = +(gov.risk_score || 0);
+      const color = riskColor(score);
+      const icon  = govBadgeIcon(gov.name_ar || '', gov.name_en || '', score, color);
+      const m     = L.marker(center, { icon, interactive: true, keyboard: false, zIndexOffset: 900 });
+      m.on('click', function () {
+        if (state.onGovSelect) state.onGovSelect(gov.slug);
+      });
+      m.bindTooltip(
+        '<strong>' + esc(lang() === 'ar' ? (gov.name_ar || gov.name_en) : (gov.name_en || gov.name_ar)) + '</strong>' +
+        ' &mdash; ' + t('مؤشر الخطر', 'Risk') + ': ' + score.toFixed(0),
+        { className: 'kj-gov-tt', sticky: true }
+      );
+      fg.addLayer(m);
+    }
+
+    state.govLayer = fg;
+    state.map.addLayer(fg);
+  }
+
+  // ── KINDERGARTEN PIN MARKERS ─────────────────────────────────────
+  async function loadKGMarkers() {
     try {
-      const data = await apiGet('/kindergartens/map-data');
+      const data   = await api('/kindergartens/map-data');
       state.kgData = data.features || [];
-    } catch (e) {
+    } catch (_) {
       state.kgData = [];
     }
-
-    rebuildKGMarkers();
+    rebuildKG();
   }
 
-  function rebuildKGMarkers() {
-    if (state.kgMarkers) {
-      state.map.removeLayer(state.kgMarkers);
-      state.kgMarkers = null;
-    }
+  function rebuildKG() {
+    if (state.kgLayer) { state.map.removeLayer(state.kgLayer); state.kgLayer = null; }
+    const fg = L.featureGroup();
 
-    const rawMarkers = [];
     for (const feat of state.kgData) {
-      const coords = feat.geometry.coordinates;
-      const props = feat.properties || {};
-      const status = props.kpi_status || 'unknown';
-      const radius = kgRadius(props);
-      const color = kgColor(status);
+      const coords = feat.geometry && feat.geometry.coordinates;
+      if (!coords || coords[0] == null || coords[1] == null) continue;
+      const props  = feat.properties || {};
+      const id     = feat.id || (props.id || 0);
 
-      const marker = L.circleMarker([coords[1], coords[0]], {
-        radius: radius,
-        fillColor: color,
-        color: '#fff',
-        weight: 1.5,
-        opacity: 0.8,
-        fillOpacity: 0.7,
-      });
+      // Deterministic jitter within ~10 km of governorate center
+      const dlat = (prng(id * 7 + 1) - 0.5) * 0.20;
+      const dlng = (prng(id * 13 + 2) - 0.5) * 0.20;
+      const lat  = coords[1] + dlat;
+      const lng  = coords[0] + dlng;
 
-      const name = currentLang() === 'ar' ? (props.name_ar || props.name_en || '') : (props.name_en || props.name_ar || '');
-      const govName = props.governorate || '';
-      const score = props.kpi_score != null ? props.kpi_score.toFixed(1) : '--';
-      const statusLabel = t(props.kpi_status_ar || status, status);
+      const color = kpiColor(props.kpi_status);
+      const icon  = kgIcon(color);
+      const m     = L.marker([lat, lng], { icon });
 
-      marker.bindPopup(
-        '<div style="font-family:system-ui;min-width:180px;">' +
-        '<div style="font-weight:700;font-size:1rem;margin-bottom:4px;">' + esc(name) + '</div>' +
-        '<div style="font-size:0.85rem;color:#64748b;margin-bottom:6px;">' + esc(govName) + '</div>' +
-        '<div style="display:flex;justify-content:space-between;gap:12px;font-size:0.85rem;">' +
-        '<span>' + t('الحالة', 'Status') + ': <strong style="color:' + color + '">' + esc(statusLabel) + '</strong></span>' +
-        '<span>' + t('الدرجة', 'Score') + ': <strong>' + score + '</strong></span>' +
-        '</div></div>',
-        { className: 'kg-popup-dark' }
+      const name  = lang() === 'ar'
+        ? (props.name_ar  || props.name_en || '')
+        : (props.name_en  || props.name_ar || '');
+      const gov   = props.governorate || '';
+      const score = props.kpi_score != null ? (+props.kpi_score).toFixed(1) : '--';
+      const st    = props.kpi_status || '--';
+
+      m.bindPopup(
+        '<div class="kj-popup">' +
+          '<div class="kj-popup-title"><i class="bi bi-buildings" aria-hidden="true"></i> ' + esc(name) + '</div>' +
+          '<div class="kj-popup-gov"><i class="bi bi-geo-alt-fill" style="color:#f59e0b" aria-hidden="true"></i> ' + esc(gov) + '</div>' +
+          '<div class="kj-popup-row">' +
+            '<span>' + t('الحالة','Status') + ': <b style="color:' + color + '">' + esc(st) + '</b></span>' +
+            '<span>' + t('الدرجة','Score') + ': <b>' + score + '</b></span>' +
+          '</div>' +
+        '</div>',
+        { className: 'kg-popup-dark', maxWidth: 230 }
       );
 
-      rawMarkers.push(marker);
+      fg.addLayer(m);
     }
 
-    const clusters = clusterMarkers(rawMarkers, 2500);
-    state.kgMarkers = renderClusterMarkers(clusters, state.map);
-
-    if (document.getElementById('kgToggle') && document.getElementById('kgToggle').checked) {
-      state.map.addLayer(state.kgMarkers);
-    }
+    state.kgLayer = fg;
+    if (state.showKG) state.map.addLayer(state.kgLayer);
 
     const badge = document.getElementById('kgCountBadge');
-    if (badge) badge.textContent = rawMarkers.length;
+    if (badge) badge.textContent = state.kgData.length;
   }
 
-  // ── GOVERNORATE SELECTION ────────────────────────────────────
-  function selectGovernorate(slug) {
-    state.selectedSlug = slug;
-    if (state.geojsonLayer) {
-      state.geojsonLayer.resetStyle();
-      state.geojsonLayer.eachLayer(function (layer) {
-        const props = layer.feature && layer.feature.properties;
-        if (props) {
-          const code = props.admin_code || props.id || '';
-          const gov = state.governorates.find(g => g.code === code);
-          if (gov && gov.slug === slug) {
-            layer.setStyle({ fillOpacity: 0.9, weight: 2.5, color: '#fff' });
-            layer.bringToFront();
-          }
-        }
-      });
-    }
-  }
-
-// ── PUBLIC API (called from geo_intelligence.js) ──────────────
+  // ── HIGHLIGHT GOVERNORATE ────────────────────────────────────────
   function highlightGov(slug) {
-    selectGovernorate(slug);
-  }
-
-  function showSingleMap(indKey, governorates, geojson, onGovSelectCb) {
-    state.governorates = governorates || state.governorates;
-    state.geojson = geojson || state.geojson;
-    state.indicator = (indKey === 'overall_risk') ? '' : indKey;
-    state.onGovSelect = onGovSelectCb;
-
-    initMap();
-
-    const loadEl = document.getElementById('singleMapLoading');
-    const errEl = document.getElementById('singleMapError');
-    const wrapEl = document.getElementById('singleMapWrap');
-
-    if (loadEl) loadEl.style.display = 'none';
-    if (errEl) errEl.style.display = 'none';
-    if (wrapEl) wrapEl.style.display = 'block';
-
-    // Invalidate size (Leaflet needs this when container becomes visible)
-    if (state.map) setTimeout(() => state.map.invalidateSize(), 50);
-
-    loadGeoJSON();
-  }
-
-  function showError() {
-    const loadEl = document.getElementById('singleMapLoading');
-    const errEl = document.getElementById('singleMapError');
-    const wrapEl = document.getElementById('singleMapWrap');
-    if (loadEl) loadEl.style.display = 'none';
-    if (errEl) errEl.style.display = 'flex';
-    if (wrapEl) wrapEl.style.display = 'none';
-  }
-
-  // ── KEYBOARD SHORTCUT ────────────────────────────────────────
-  function bindKeyboard() {
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'r' && !e.ctrlKey && !e.metaKey && !e.target.closest('input,textarea,select')) {
-        e.preventDefault();
-        const refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) refreshBtn.click();
+    state.selectedSlug = slug;
+    if (!state.geojsonLayer) return;
+    state.geojsonLayer.resetStyle();
+    state.geojsonLayer.eachLayer(function (l) {
+      const code = ((l.feature && l.feature.properties) || {}).admin_code || '';
+      const g    = state.governorates.find(g => g.code === code);
+      if (g && g.slug === slug) {
+        l.setStyle({ fillOpacity: 0.72, weight: 3.5, color: '#fff' });
+        l.bringToFront();
       }
     });
   }
 
-  // ── BIND CONTROLS ────────────────────────────────────────────
+  // ── ERROR STATE ──────────────────────────────────────────────────
+  function showError() {
+    const wrapEl = document.getElementById('singleMapWrap');
+    const errEl  = document.getElementById('singleMapError');
+    if (wrapEl) wrapEl.style.display = 'none';
+    if (errEl)  errEl.style.display  = 'flex';
+  }
+
+  // ── PUBLIC API ───────────────────────────────────────────────────
+  function showSingleMap(indKey, governorates, geojson, onGovSelectCb) {
+    state.governorates = governorates || state.governorates;
+    state.geojson      = geojson      || state.geojson;
+    state.indicator    = (indKey === 'overall_risk') ? '' : (indKey || '');
+    state.onGovSelect  = onGovSelectCb;
+
+    initMap();
+
+    const wrapEl = document.getElementById('singleMapWrap');
+    const loadEl = document.getElementById('singleMapLoading');
+    const errEl  = document.getElementById('singleMapError');
+    if (wrapEl) wrapEl.style.display = 'block';
+    if (loadEl) loadEl.style.display = 'none';
+    if (errEl)  errEl.style.display  = 'none';
+
+    if (state.map) setTimeout(function () { state.map.invalidateSize(); }, 80);
+    loadGeoJSON();
+  }
+
+  // ── CONTROLS ─────────────────────────────────────────────────────
   function bindControls() {
-    const refreshBtn = document.getElementById('refreshBtn');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', function () {
-        state.kgData = [];
-        if (state.kgMarkers) { state.map.removeLayer(state.kgMarkers); state.kgMarkers = null; }
-        loadKindergartenMarkers();
+    const tileBtn = document.getElementById('tileToggleBtn');
+    if (tileBtn) {
+      tileBtn.addEventListener('click', function () {
+        setTiles(state.tileStyle === 'satellite' ? 'street' : 'satellite');
+        // Refresh choropleth opacity for current tile style
+        if (state.geojsonLayer) {
+          state.geojsonLayer.eachLayer(function (l) {
+            if (l.feature) state.geojsonLayer.resetStyle(l);
+          });
+        }
       });
     }
 
     const kgToggle = document.getElementById('kgToggle');
     if (kgToggle) {
       kgToggle.addEventListener('change', function (e) {
-        if (!state.kgMarkers) return;
-        if (e.target.checked) {
-          state.map.addLayer(state.kgMarkers);
-        } else {
-          state.map.removeLayer(state.kgMarkers);
-        }
+        state.showKG = e.target.checked;
+        if (!state.kgLayer) return;
+        if (state.showKG) state.map.addLayer(state.kgLayer);
+        else state.map.removeLayer(state.kgLayer);
+      });
+    }
+
+    const govToggle = document.getElementById('govBadgeToggle');
+    if (govToggle) {
+      govToggle.addEventListener('change', function (e) {
+        if (!state.govLayer) return;
+        if (e.target.checked) state.map.addLayer(state.govLayer);
+        else state.map.removeLayer(state.govLayer);
+      });
+    }
+
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function () {
+        state.kgData = [];
+        if (state.kgLayer) { state.map.removeLayer(state.kgLayer); state.kgLayer = null; }
+        loadKGMarkers();
       });
     }
 
@@ -433,45 +411,27 @@
         showSingleMap(state.indicator || 'overall_risk', state.governorates, state.geojson, state.onGovSelect);
       });
     }
-
-    bindKeyboard();
   }
 
-  // ── INIT ─────────────────────────────────────────────────────
+  // ── INIT ─────────────────────────────────────────────────────────
   async function init() {
     if (!document.getElementById('leafletMap')) return;
-
     try {
-      const [indRes, mapRes, gjRes] = await Promise.all([
-        apiGet('/indicators').catch(() => ({ indicators: [] })),
-        apiGet('/data'),
-        apiGet('/geojson'),
+      const [, mapRes, gjRes] = await Promise.all([
+        api('/indicators').catch(function () { return { indicators: [] }; }),
+        api('/data'),
+        api('/geojson'),
       ]);
-
-      state.indicators = indRes.indicators || [];
-      state.governorates = mapRes.governorates || [];
-      state.geojson = gjRes;
-
+      state.governorates = (mapRes && mapRes.governorates) || [];
+      state.geojson      = gjRes;
       initMap();
-
-      // Load KG markers in background
-      loadKindergartenMarkers();
-
+      loadKGMarkers();
       bindControls();
     } catch (e) {
       console.error('[Heatmap] init error:', e);
     }
   }
 
-  // ── EXPORT ───────────────────────────────────────────────────
-  const JordanHeatmap = {
-    init: init,
-    showSingleMap: showSingleMap,
-    highlightGov: highlightGov,
-  };
-
-  window.JordanHeatmap = JordanHeatmap;
-
-  // Auto-init on DOMContentLoaded (for direct page load)
+  window.JordanHeatmap = { init: init, showSingleMap: showSingleMap, highlightGov: highlightGov };
   document.addEventListener('DOMContentLoaded', init);
 })();

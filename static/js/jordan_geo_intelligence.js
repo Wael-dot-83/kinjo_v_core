@@ -865,6 +865,11 @@
       if (dailyRes.status === "fulfilled") renderLastUpdate(dailyRes.value);
 
       showGridLoading(false);
+
+      // Default view: satellite Leaflet map (overall risk)
+      var indSel = document.getElementById("indicatorViewSelect");
+      if (indSel) indSel.value = "overall_risk";
+      showSingleMap("overall_risk");
     }).catch(function(err) {
       console.error("[Heatmap] init error:", err);
       showGridLoading(false);
