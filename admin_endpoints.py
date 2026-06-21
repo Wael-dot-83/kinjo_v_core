@@ -441,7 +441,7 @@ def create_user(
                 user_data.passport_number,
             )
         except validators.ValidationError as exc:
-            raise HTTPException(status_code=400, detail=exc.message)
+            raise validation_error(exc.message, {"identity": exc.message})
 
     db.add(new_user)
     db.flush()
@@ -734,7 +734,7 @@ def update_user(
                 user_data.passport_number or user.passport_number,
             )
         except validators.ValidationError as exc:
-            raise HTTPException(status_code=400, detail=exc.message)
+            raise validation_error(exc.message, {"identity": exc.message})
 
     # Only admins can change role and status
     if current_user.role == models.UserRole.ADMIN:
@@ -757,7 +757,7 @@ def update_user(
                 try:
                     validators.validate_kg_has_supervisor(db, user.kindergarten_id, exclude_user_id=user.id)
                 except validators.ValidationError as exc:
-                    raise HTTPException(status_code=400, detail=exc.message)
+                    raise validation_error(exc.message, {"supervisor": exc.message})
             user.status = user_data.status
 
         if user_data.kindergarten_id is not None:
@@ -3373,18 +3373,16 @@ def get_admin_dashboard(
         ).group_by(models.EnrollmentApplication.kindergarten_id).all()
     ) if kg_ids else {}
 
+    # Use kindergarten_id directly on DailyReport — avoids a child_id cross-join
+    # that would be enormous when many enrollments share a small set of child_ids.
     kg_pending_report_counts = dict(
         db.query(
-            models.EnrollmentApplication.kindergarten_id,
+            models.DailyReport.kindergarten_id,
             func.count(models.DailyReport.id),
-        ).join(
-            models.EnrollmentApplication,
-            models.EnrollmentApplication.child_id == models.DailyReport.child_id,
         ).filter(
-            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            models.DailyReport.kindergarten_id.in_(kg_ids),
             models.DailyReport.status == models.DailyReportStatus.SUBMITTED,
-        ).group_by(models.EnrollmentApplication.kindergarten_id).all()
+        ).group_by(models.DailyReport.kindergarten_id).all()
     ) if kg_ids else {}
 
     kg_capacities = dict(
@@ -3399,14 +3397,11 @@ def get_admin_dashboard(
 
     kg_last_report_dates = dict(
         db.query(
-            models.EnrollmentApplication.kindergarten_id,
+            models.DailyReport.kindergarten_id,
             func.max(models.DailyReport.date),
-        ).join(
-            models.EnrollmentApplication,
-            models.EnrollmentApplication.child_id == models.DailyReport.child_id,
         ).filter(
-            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-        ).group_by(models.EnrollmentApplication.kindergarten_id).all()
+            models.DailyReport.kindergarten_id.in_(kg_ids),
+        ).group_by(models.DailyReport.kindergarten_id).all()
     ) if kg_ids else {}
 
     for kg in all_kindergartens:
@@ -3935,7 +3930,9 @@ class KindergartenImportResult(BaseModel):
 
 @router.post("/admin/kindergartens/import-excel", response_model=KindergartenImportResult)
 @router.post("/kindergartens/import-excel", response_model=KindergartenImportResult, include_in_schema=False)
+@limiter.limit(settings.RATE_LIMIT_CSV_IMPORT)
 def import_kindergartens_from_excel(
+    request: Request,
     file: UploadFile = File(...),
     dry_run: bool = Query(False, description="Preview without writing to DB"),
     current_user: models.User = Depends(require_admin),
@@ -4050,6 +4047,18 @@ def import_kindergartens_from_excel(
         result.inserted, result.skipped_duplicate, result.skipped_empty,
         len(row_errors), dry_run,
     )
+
+    if not dry_run:
+        log_audit_event(
+            db,
+            AuditAction.KINDERGARTEN_IMPORT,
+            current_user,
+            target_type="kindergarten",
+            target_ids=[],
+            metadata={"imported_count": result.inserted, "errors": len(row_errors)},
+            sensitivity_level=2,
+        )
+
     return result
 
 

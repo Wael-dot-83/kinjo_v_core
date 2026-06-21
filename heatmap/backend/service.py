@@ -352,32 +352,45 @@ def _compute_sub_indicators(db: Session, slug: str) -> Dict[str, Any]:
 
 
 def _compute_main_indicators(sub: Dict[str, Any]) -> Dict[str, float]:
-    """Aggregate the 6 main indicators (0-100) from the sub-indicator values."""
-    kg_total = sub["active_nurseries"] + sub["inactive_nurseries"]
-    kg_active_ratio = (sub["active_nurseries"] / max(kg_total, 1)) * 100.0
+    """Aggregate the 6 main indicators (0-100) from the sub-indicator values.
 
-    children = sub["registered_children"] + sub["unregistered_children"]
-    enrollment_ratio = (sub["registered_children"] / max(children, 1)) * 100.0
+    Accepts both full sub-indicator dicts (from _compute_sub_indicators) and
+    partial dicts (from _previous_period_sub); missing keys default to 0.
+    """
+    def _g(key, default=0):
+        return sub.get(key, default)
 
-    supervised_ratio = 100.0 * (1.0 - sub["classrooms_no_supervisor"] / max(sub["classrooms_count"], 1))
+    active_kg = _g("active_nurseries")
+    inactive_kg = _g("inactive_nurseries")
+    kg_total = active_kg + inactive_kg
+    kg_active_ratio = (active_kg / max(kg_total, 1)) * 100.0
+
+    reg_children = _g("registered_children")
+    unreg_children = _g("unregistered_children")
+    children = reg_children + unreg_children
+    enrollment_ratio = (reg_children / max(children, 1)) * 100.0
+
+    classrooms_no_sup = _g("classrooms_no_supervisor")
+    classrooms_count = _g("classrooms_count")
+    supervised_ratio = 100.0 * (1.0 - classrooms_no_sup / max(classrooms_count, 1))
     supervised_ratio = max(0.0, min(100.0, supervised_ratio))
 
-    safety_penalty = min(100.0, sub["incidents_critical"] * 10.0 + sub["protection_cases"] * 5.0)
+    safety_penalty = min(100.0, _g("incidents_critical") * 10.0 + _g("protection_cases") * 5.0)
     safety_score = max(0.0, 100.0 - safety_penalty)
 
-    absence_rate = sub["absence_rate"] / 100.0
-    health_alert_rate = sub["health_absences"] / max(sub["registered_children"], 1)
-    report_completeness = min(1.0, sub["reports_submitted"] / max(sub["active_nurseries"] * 30, 1))
+    absence_rate = _g("absence_rate") / 100.0
+    health_alert_rate = _g("health_absences") / max(reg_children, 1)
+    report_completeness = min(1.0, _g("reports_submitted") / max(active_kg * 30, 1))
     reports_attendance_score = (
         report_completeness * 0.5
         + (1.0 - absence_rate) * 0.3
         + (1.0 - min(1.0, health_alert_rate)) * 0.2
     ) * 100.0
 
-    task_penalty = min(50.0, sub["delayed_tasks"] * 5.0)
+    task_penalty = min(50.0, _g("delayed_tasks") * 5.0)
     tasks_governance_score = (
-        sub["governance_score"] * 0.5
-        + sub["training_completion"] * 0.3
+        _g("governance_score") * 0.5
+        + _g("training_completion") * 0.3
         + max(0.0, 50.0 - task_penalty) * 0.4
     )
 
