@@ -1,12 +1,17 @@
 """
-Dashboard customization API endpoints
+Dashboard customization API endpoints + unified summary endpoint.
 """
 import json
 import logging
+from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-from typing import List, Dict
+from typing import List, Dict, Optional
+from pydantic import BaseModel
 from dependencies import get_current_user
+from database import get_db
 from dashboard_customization import dashboard_customization
 import models
 
@@ -97,6 +102,107 @@ async def reorder_widgets(
     except (TypeError, ValueError) as e:
         logger.warning("Invalid dashboard reorder request for user_id=%s: %s", current_user.id, str(e))
         raise HTTPException(status_code=500, detail="Failed to update widget order")
+
+
+# ── Unified summary endpoint consumed by dashboard_filters.js ─────────────────
+
+class DashboardSummaryRequest(BaseModel):
+    range: Optional[str] = "month"
+    period_start: Optional[str] = None
+    period_end: Optional[str] = None
+    kindergarten_id: Optional[int] = None
+
+
+@router.post("/summary")
+def get_dashboard_summary(
+    body: DashboardSummaryRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Compact aggregate summary for the inline filter bar + chart panel.
+    Returns children count, attendance rate, alert count, and 7-day trend."""
+    today = date.today()
+
+    # resolve date window
+    if body.period_start and body.period_end:
+        try:
+            start = date.fromisoformat(body.period_start)
+            end = date.fromisoformat(body.period_end)
+        except ValueError:
+            start = date(today.year, today.month, 1)
+            end = today
+    elif body.range == "today":
+        start = end = today
+    elif body.range == "week":
+        start = today - timedelta(days=6)
+        end = today
+    elif body.range == "quarter":
+        start = today - timedelta(days=89)
+        end = today
+    else:  # month (default)
+        start = date(today.year, today.month, 1)
+        end = today
+
+    # kindergarten filter (ADMIN/MANAGER can filter; others see their own scope)
+    kg_filter_ids: Optional[list] = None
+    if body.kindergarten_id:
+        kg_filter_ids = [body.kindergarten_id]
+    elif current_user.role == models.UserRole.MANAGER and current_user.kindergarten_id:
+        kg_filter_ids = [current_user.kindergarten_id]
+
+    try:
+        # active enrolled children
+        ch_q = db.query(func.count(models.EnrollmentApplication.id)).filter(
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+        )
+        if kg_filter_ids:
+            ch_q = ch_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter_ids))
+        children = ch_q.scalar() or 0
+
+        # attendance rate over period
+        att_q = db.query(func.count(models.AttendanceLog.id)).filter(
+            models.AttendanceLog.date >= start,
+            models.AttendanceLog.date <= end,
+            models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
+        )
+        if kg_filter_ids:
+            att_q = att_q.join(
+                models.EnrollmentApplication,
+                models.EnrollmentApplication.child_id == models.AttendanceLog.child_id,
+            ).filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter_ids))
+        present = att_q.scalar() or 0
+        attendance = round(present / children * 100, 1) if children > 0 else 0.0
+
+        # open alerts: pending enrollments + today's incidents
+        pending_enr = db.query(func.count(models.EnrollmentApplication.id)).filter(
+            models.EnrollmentApplication.status == models.EnrollmentStatus.PENDING_REVIEW
+        ).scalar() or 0
+        today_incidents = db.query(func.count(models.Incident.id)).filter(
+            func.date(models.Incident.occurred_at) == today,
+            models.Incident.deleted_at.is_(None),
+        ).scalar() or 0
+        alerts = pending_enr + today_incidents
+
+        # 7-day attendance trend (percent each day)
+        trend = []
+        for i in range(6, -1, -1):
+            d = today - timedelta(days=i)
+            day_present = db.query(func.count(models.AttendanceLog.id)).filter(
+                models.AttendanceLog.date == d,
+                models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
+            ).scalar() or 0
+            trend.append(round(day_present / children * 100, 1) if children > 0 else 0.0)
+
+        return {
+            "children": children,
+            "attendance": attendance,
+            "alerts": alerts,
+            "chart": trend,
+            "period": {"start": start.isoformat(), "end": end.isoformat()},
+        }
+    except Exception as e:
+        logger.error("Dashboard summary error: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch dashboard summary")
 
 
 @router.get("/widgets/available")

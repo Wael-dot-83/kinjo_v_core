@@ -58,6 +58,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/dashboard-pro.css">
+<link rel="stylesheet" href="/static/css/dashboard-enhanced.css">
 <style>
     /* Value update animation */
     .value-updated {
@@ -141,6 +142,10 @@
 {% endblock %}
 
 {% block content %}
+<!-- Inline filter bar (populated by dashboard_filters.js) -->
+<div id="dfe-filter-bar" role="toolbar"
+     aria-label="{% if ui_lang == 'en' %}Dashboard filter controls{% else %}أدوات تصفية لوحة التحكم{% endif %}"></div>
+
 <div class="fade-in-up container-fluid px-0">
     <!-- Top Quick Actions Bar -->
     <div class="row g-3 mb-4 mt-1 border-bottom pb-4 px-2 quick-actions-bar">
@@ -1716,6 +1721,7 @@
 <!-- Dashboard Logic -->
 <script src="/static/js/dashboard.js"></script>
 <script src="/static/js/decision_support.js"></script>
+<script src="/static/js/dashboard_filters.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof loadDecisionSupport === 'function') {

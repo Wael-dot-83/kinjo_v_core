@@ -1203,6 +1203,9 @@ def get_consolidated_dashboard_data(
     except (TypeError, ValueError) as e:
         logger.error("Invalid analytics data while fetching analytics data: %s", str(e), exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error while fetching analytics data")
+    except Exception as e:
+        logger.error("Unexpected error fetching analytics data: %s: %s", type(e).__name__, str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while fetching analytics data")
 
 
 

@@ -1,0 +1,734 @@
+/* ═══════════════════════════════════════════════════════════
+   KinJo — Kindergarten Overview Dashboard  v1.0
+   RTL-first · Dark-mode-ready · Animation-rich
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── 1. CSS Tokens ──────────────────────────────────────── */
+:root {
+  --ko-radius:      14px;
+  --ko-radius-sm:   8px;
+  --ko-shadow:      0 2px 12px rgba(0,0,0,.07), 0 1px 3px rgba(0,0,0,.05);
+  --ko-shadow-hover:0 8px 32px rgba(0,0,0,.13), 0 2px 8px rgba(0,0,0,.08);
+  --ko-transition:  200ms cubic-bezier(.4,0,.2,1);
+  --ko-transition-slow: 350ms cubic-bezier(.4,0,.2,1);
+
+  /* Palette */
+  --ko-bg:          #f4f6fb;
+  --ko-surface:     #ffffff;
+  --ko-surface2:    #f8f9fc;
+  --ko-border:      #e5e9f0;
+  --ko-text:        #1a2233;
+  --ko-text-muted:  #6b7a99;
+  --ko-text-light:  #a0aec0;
+
+  /* Accent colours */
+  --ko-blue:   #2563eb;
+  --ko-teal:   #0891b2;
+  --ko-green:  #16a34a;
+  --ko-amber:  #d97706;
+  --ko-red:    #dc2626;
+  --ko-purple: #7c3aed;
+
+  /* KPI card accent map */
+  --ko-kpi-children:   var(--ko-blue);
+  --ko-kpi-attendance: var(--ko-green);
+  --ko-kpi-teachers:   var(--ko-purple);
+  --ko-kpi-alerts:     var(--ko-red);
+
+  /* Sidebar/panel */
+  --ko-panel-w: 420px;
+  --ko-z-panel: 1050;
+  --ko-z-overlay: 1040;
+}
+
+/* ── 2. Dark Mode ───────────────────────────────────────── */
+[data-theme="dark"] {
+  --ko-bg:        #0f1117;
+  --ko-surface:   #1a1d27;
+  --ko-surface2:  #12151e;
+  --ko-border:    #2a2f3e;
+  --ko-text:      #e8eaf2;
+  --ko-text-muted:#8892ab;
+  --ko-text-light:#4a5568;
+  --ko-shadow:    0 2px 12px rgba(0,0,0,.4);
+  --ko-shadow-hover: 0 8px 32px rgba(0,0,0,.55);
+}
+
+/* ── 3. Layout ──────────────────────────────────────────── */
+.ko-root {
+  background: var(--ko-bg);
+  min-height: 100vh;
+  color: var(--ko-text);
+  transition: background var(--ko-transition-slow), color var(--ko-transition-slow);
+}
+
+/* ── 4. Control Bar ─────────────────────────────────────── */
+.ko-control-bar {
+  background: var(--ko-surface);
+  border-bottom: 1px solid var(--ko-border);
+  padding: .875rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: background var(--ko-transition-slow);
+}
+
+.ko-period-btns { display: flex; gap: .375rem; }
+
+.ko-period-btn {
+  padding: .4rem 1rem;
+  border-radius: 100px;
+  border: 1.5px solid var(--ko-border);
+  background: transparent;
+  color: var(--ko-text-muted);
+  font-size: .8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--ko-transition);
+  white-space: nowrap;
+}
+.ko-period-btn:hover { border-color: var(--ko-blue); color: var(--ko-blue); }
+.ko-period-btn.active {
+  background: var(--ko-blue);
+  border-color: var(--ko-blue);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37,99,235,.35);
+}
+
+.ko-filter-select {
+  padding: .4rem .75rem;
+  border-radius: 8px;
+  border: 1.5px solid var(--ko-border);
+  background: var(--ko-surface);
+  color: var(--ko-text);
+  font-size: .8125rem;
+  cursor: pointer;
+  transition: border-color var(--ko-transition);
+}
+.ko-filter-select:focus { outline: none; border-color: var(--ko-blue); }
+
+.ko-date-range {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+.ko-date-input {
+  padding: .375rem .625rem;
+  border-radius: 8px;
+  border: 1.5px solid var(--ko-border);
+  background: var(--ko-surface);
+  color: var(--ko-text);
+  font-size: .8rem;
+  transition: border-color var(--ko-transition);
+}
+.ko-date-input:focus { outline: none; border-color: var(--ko-blue); }
+
+.ko-bar-end { margin-inline-start: auto; display: flex; gap: .5rem; align-items: center; }
+
+.ko-icon-btn {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  border: 1.5px solid var(--ko-border);
+  background: var(--ko-surface);
+  color: var(--ko-text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all var(--ko-transition);
+  font-size: .9rem;
+}
+.ko-icon-btn:hover { border-color: var(--ko-blue); color: var(--ko-blue); background: rgba(37,99,235,.06); }
+.ko-icon-btn.active { background: var(--ko-blue); color: #fff; border-color: var(--ko-blue); }
+
+/* ── 5. KPI Cards ───────────────────────────────────────── */
+.ko-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.ko-kpi-card {
+  background: var(--ko-surface);
+  border-radius: var(--ko-radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--ko-shadow);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow var(--ko-transition), transform var(--ko-transition);
+  border: 1.5px solid var(--ko-border);
+  user-select: none;
+}
+.ko-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--accent);
+  border-radius: var(--ko-radius) var(--ko-radius) 0 0;
+}
+.ko-kpi-card:hover {
+  box-shadow: var(--ko-shadow-hover);
+  transform: translateY(-3px);
+}
+.ko-kpi-card:active { transform: translateY(-1px); }
+
+/* Drag state */
+.ko-kpi-card.dragging  { opacity: .45; transform: scale(.97); }
+.ko-kpi-card.drag-over { box-shadow: 0 0 0 2px var(--ko-blue); }
+
+.ko-kpi-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem;
+  margin-bottom: .875rem;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+.ko-kpi-label {
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ko-text-muted);
+  margin-bottom: .375rem;
+}
+.ko-kpi-value {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ko-text);
+  transition: all var(--ko-transition);
+}
+.ko-kpi-value.pulse {
+  animation: koPulse 600ms ease-out;
+}
+.ko-kpi-delta {
+  font-size: .78rem;
+  font-weight: 600;
+  margin-top: .5rem;
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+}
+.ko-kpi-delta.up   { color: var(--ko-green); }
+.ko-kpi-delta.down { color: var(--ko-red); }
+.ko-kpi-delta.flat { color: var(--ko-text-muted); }
+
+.ko-sparkline { margin-top: .875rem; height: 36px; }
+
+.ko-kpi-badge {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  font-size: .65rem;
+  padding: .2rem .5rem;
+  border-radius: 100px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+[dir="rtl"] .ko-kpi-badge { right: auto; left: 1rem; }
+
+/* ── 6. Section Header ──────────────────────────────────── */
+.ko-section {
+  padding: 0 1.5rem 1.5rem;
+}
+.ko-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+.ko-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ko-text);
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.ko-section-title i {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: rgba(37,99,235,.1);
+  color: var(--ko-blue);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .875rem;
+}
+
+/* ── 7. View Switcher ───────────────────────────────────── */
+.ko-view-switcher {
+  display: flex;
+  background: var(--ko-surface2);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--ko-border);
+}
+.ko-view-btn {
+  padding: .35rem .75rem;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ko-text-muted);
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--ko-transition);
+  display: flex; align-items: center; gap: .35rem;
+}
+.ko-view-btn.active {
+  background: var(--ko-surface);
+  color: var(--ko-blue);
+  box-shadow: 0 1px 4px rgba(0,0,0,.1);
+}
+
+/* ── 8. Data Panels ─────────────────────────────────────── */
+.ko-data-panel {
+  background: var(--ko-surface);
+  border-radius: var(--ko-radius);
+  border: 1.5px solid var(--ko-border);
+  box-shadow: var(--ko-shadow);
+  overflow: hidden;
+  transition: opacity var(--ko-transition-slow), transform var(--ko-transition-slow);
+}
+.ko-data-panel.ko-hidden {
+  display: none;
+}
+.ko-chart-wrap {
+  padding: 1.25rem;
+  position: relative;
+}
+.ko-chart-wrap canvas {
+  max-height: 320px;
+}
+
+/* ── 9. KG Cards Grid ───────────────────────────────────── */
+.ko-kg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  padding: 1.25rem;
+}
+.ko-kg-card {
+  border-radius: var(--ko-radius-sm);
+  border: 1.5px solid var(--ko-border);
+  padding: 1rem;
+  transition: all var(--ko-transition);
+  position: relative;
+  overflow: hidden;
+  background: var(--ko-surface2);
+}
+.ko-kg-card:hover { border-color: var(--ko-blue); box-shadow: 0 4px 14px rgba(37,99,235,.12); }
+.ko-kg-card-name {
+  font-weight: 700;
+  font-size: .9rem;
+  color: var(--ko-text);
+  margin-bottom: .375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ko-kg-card-meta { font-size: .75rem; color: var(--ko-text-muted); margin-bottom: .75rem; }
+.ko-kg-bar-wrap { position: relative; }
+.ko-kg-bar {
+  height: 6px;
+  border-radius: 100px;
+  background: var(--ko-border);
+  overflow: hidden;
+  margin-bottom: .25rem;
+}
+.ko-kg-bar-fill {
+  height: 100%;
+  border-radius: 100px;
+  background: var(--ko-green);
+  transition: width 800ms cubic-bezier(.4,0,.2,1);
+}
+.ko-kg-bar-fill.warn  { background: var(--ko-amber); }
+.ko-kg-bar-fill.alert { background: var(--ko-red); }
+
+/* ── 10. Table View ─────────────────────────────────────── */
+.ko-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.ko-table th {
+  padding: .75rem 1rem;
+  text-align: start;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--ko-text-muted);
+  background: var(--ko-surface2);
+  border-bottom: 1px solid var(--ko-border);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ko-table th:hover { color: var(--ko-blue); }
+.ko-table td {
+  padding: .75rem 1rem;
+  font-size: .875rem;
+  color: var(--ko-text);
+  border-bottom: 1px solid var(--ko-border);
+  vertical-align: middle;
+  transition: background var(--ko-transition);
+}
+.ko-table tr:hover td { background: rgba(37,99,235,.03); }
+.ko-table tr:last-child td { border-bottom: none; }
+
+.ko-badge {
+  padding: .2rem .6rem;
+  border-radius: 100px;
+  font-size: .7rem;
+  font-weight: 700;
+}
+.ko-badge-green  { background: rgba(22,163,74,.1);  color: var(--ko-green); }
+.ko-badge-amber  { background: rgba(217,119,6,.1);  color: var(--ko-amber); }
+.ko-badge-red    { background: rgba(220,38,38,.1);  color: var(--ko-red); }
+.ko-badge-blue   { background: rgba(37,99,235,.1);  color: var(--ko-blue); }
+
+/* ── 11. Quick Actions ──────────────────────────────────── */
+.ko-actions-bar {
+  display: flex;
+  gap: .75rem;
+  padding: 1rem 1.5rem;
+  flex-wrap: wrap;
+}
+.ko-action-btn {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem 1.125rem;
+  border-radius: var(--ko-radius-sm);
+  border: 1.5px solid var(--ko-border);
+  background: var(--ko-surface);
+  color: var(--ko-text);
+  font-size: .8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--ko-transition);
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.ko-action-btn i {
+  font-size: 1rem;
+  transition: transform var(--ko-transition);
+}
+.ko-action-btn:hover {
+  border-color: var(--accent, var(--ko-blue));
+  color: var(--accent, var(--ko-blue));
+  background: color-mix(in srgb, var(--accent, var(--ko-blue)) 6%, transparent);
+  box-shadow: 0 3px 10px rgba(37,99,235,.12);
+}
+.ko-action-btn:hover i { transform: scale(1.15); }
+.ko-action-btn.primary {
+  background: var(--ko-blue);
+  color: #fff;
+  border-color: var(--ko-blue);
+  box-shadow: 0 3px 10px rgba(37,99,235,.3);
+}
+.ko-action-btn.primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(37,99,235,.4);
+}
+
+/* ── 12. Alerts Panel ───────────────────────────────────── */
+.ko-alerts-wrap { padding: 0 1.5rem 1.5rem; }
+
+.ko-alert-filter-row {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.ko-alert-filter-btn {
+  padding: .3rem .75rem;
+  border-radius: 100px;
+  border: 1.5px solid var(--ko-border);
+  background: transparent;
+  color: var(--ko-text-muted);
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--ko-transition);
+}
+.ko-alert-filter-btn:hover,
+.ko-alert-filter-btn.active { border-color: currentColor; }
+.ko-alert-filter-btn[data-sev="high"].active    { color: var(--ko-red);   background: rgba(220,38,38,.06); }
+.ko-alert-filter-btn[data-sev="medium"].active  { color: var(--ko-amber); background: rgba(217,119,6,.06); }
+.ko-alert-filter-btn[data-sev="low"].active     { color: var(--ko-green); background: rgba(22,163,74,.06); }
+.ko-alert-filter-btn[data-sev="all"].active     { color: var(--ko-blue);  background: rgba(37,99,235,.06); }
+
+.ko-alert-list { display: flex; flex-direction: column; gap: .75rem; }
+
+.ko-alert-item {
+  background: var(--ko-surface);
+  border-radius: var(--ko-radius-sm);
+  border: 1.5px solid var(--ko-border);
+  border-inline-start: 4px solid var(--sev-color);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  transition: all var(--ko-transition);
+  animation: koSlideIn 300ms ease-out;
+}
+.ko-alert-item:hover { box-shadow: var(--ko-shadow-hover); }
+.ko-alert-item.dismissed {
+  opacity: 0;
+  transform: translateX(40px);
+  max-height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  overflow: hidden;
+  transition: all 350ms ease-out;
+}
+[dir="rtl"] .ko-alert-item.dismissed { transform: translateX(-40px); }
+
+.ko-alert-icon {
+  width: 36px; height: 36px; min-width: 36px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--sev-color) 12%, transparent);
+  color: var(--sev-color);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem;
+}
+.ko-alert-body { flex: 1; min-width: 0; }
+.ko-alert-title { font-weight: 700; font-size: .875rem; color: var(--ko-text); }
+.ko-alert-desc  { font-size: .8rem; color: var(--ko-text-muted); margin-top: .2rem; }
+.ko-alert-meta  { font-size: .7rem; color: var(--ko-text-light); margin-top: .375rem; }
+.ko-alert-actions { display: flex; gap: .5rem; align-items: flex-start; margin-top: .125rem; }
+.ko-alert-btn {
+  padding: .3rem .7rem;
+  border-radius: 6px;
+  border: 1.5px solid var(--ko-border);
+  background: transparent;
+  color: var(--ko-text-muted);
+  font-size: .72rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--ko-transition);
+}
+.ko-alert-btn.view { color: var(--ko-blue); border-color: var(--ko-blue); }
+.ko-alert-btn.view:hover { background: var(--ko-blue); color: #fff; }
+.ko-alert-btn.dismiss:hover { border-color: var(--ko-red); color: var(--ko-red); }
+
+.ko-rt-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--ko-green);
+  animation: koBlink 2s infinite;
+  margin-inline-end: .375rem;
+}
+
+/* ── 13. Detail Side Panel ──────────────────────────────── */
+.ko-overlay {
+  position: fixed; inset: 0;
+  background: rgba(10,15,30,.45);
+  backdrop-filter: blur(3px);
+  z-index: var(--ko-z-overlay);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--ko-transition-slow);
+}
+.ko-overlay.open { opacity: 1; pointer-events: all; }
+
+.ko-side-panel {
+  position: fixed;
+  top: 0; bottom: 0;
+  inset-inline-end: 0;
+  width: var(--ko-panel-w);
+  max-width: 95vw;
+  background: var(--ko-surface);
+  box-shadow: -8px 0 40px rgba(0,0,0,.15);
+  z-index: var(--ko-z-panel);
+  transform: translateX(100%);
+  transition: transform var(--ko-transition-slow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+[dir="rtl"] .ko-side-panel { transform: translateX(-100%); }
+.ko-side-panel.open { transform: translateX(0); }
+[dir="rtl"] .ko-side-panel.open { transform: translateX(0); }
+
+.ko-panel-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--ko-border);
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.ko-panel-title { font-size: 1rem; font-weight: 700; flex: 1; color: var(--ko-text); }
+.ko-panel-close {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid var(--ko-border);
+  background: transparent;
+  color: var(--ko-text-muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--ko-transition);
+}
+.ko-panel-close:hover { border-color: var(--ko-red); color: var(--ko-red); }
+.ko-panel-body  { flex: 1; overflow-y: auto; padding: 1.5rem; }
+.ko-panel-stat  { margin-bottom: 1.25rem; }
+.ko-panel-stat-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ko-text-muted); margin-bottom: .3rem; }
+.ko-panel-stat-val   { font-size: 1.5rem; font-weight: 800; color: var(--ko-text); }
+.ko-panel-stat-sub   { font-size: .8rem; color: var(--ko-text-muted); }
+
+/* ── 14. Customise Drawer ───────────────────────────────── */
+.ko-customise-panel {
+  background: var(--ko-surface);
+  border-radius: var(--ko-radius);
+  border: 1.5px solid var(--ko-border);
+  padding: 1.25rem;
+  margin: 0 1.5rem 1.5rem;
+  box-shadow: var(--ko-shadow);
+  animation: koFadeDown 250ms ease-out;
+  display: none;
+}
+.ko-customise-panel.open { display: block; }
+.ko-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .625rem 0;
+  border-bottom: 1px solid var(--ko-border);
+}
+.ko-toggle-row:last-child { border-bottom: none; }
+.ko-toggle-label { font-size: .875rem; font-weight: 600; color: var(--ko-text); display: flex; align-items: center; gap: .5rem; }
+.ko-toggle {
+  position: relative;
+  width: 40px; height: 22px;
+  cursor: pointer;
+}
+.ko-toggle input { opacity: 0; width: 0; height: 0; }
+.ko-toggle-track {
+  position: absolute; inset: 0;
+  border-radius: 100px;
+  background: var(--ko-border);
+  transition: background var(--ko-transition);
+}
+.ko-toggle input:checked + .ko-toggle-track { background: var(--ko-blue); }
+.ko-toggle-thumb {
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px; left: 3px;
+  transition: transform var(--ko-transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.ko-toggle input:checked ~ .ko-toggle-thumb { transform: translateX(18px); }
+
+/* ── 15. Skeleton / Loading ─────────────────────────────── */
+.ko-skeleton {
+  background: linear-gradient(90deg, var(--ko-border) 25%, var(--ko-surface2) 50%, var(--ko-border) 75%);
+  background-size: 200% 100%;
+  animation: koShimmer 1.5s infinite;
+  border-radius: 6px;
+}
+.ko-skeleton-kpi {
+  height: 140px;
+  border-radius: var(--ko-radius);
+}
+
+/* ── 16. Real-time Pulse ────────────────────────────────── */
+.ko-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .6rem;
+  border-radius: 100px;
+  background: rgba(22,163,74,.1);
+  color: var(--ko-green);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+/* ── 17. Empty State ────────────────────────────────────── */
+.ko-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--ko-text-muted);
+}
+.ko-empty i { font-size: 2.5rem; margin-bottom: 1rem; opacity: .4; }
+.ko-empty p  { font-size: .9rem; }
+
+/* ── 18. Animations ─────────────────────────────────────── */
+@keyframes koPulse {
+  0%  { transform: scale(1); }
+  40% { transform: scale(1.06); color: var(--ko-blue); }
+  100%{ transform: scale(1); }
+}
+@keyframes koShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes koSlideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes koFadeDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes koBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .3; }
+}
+@keyframes koFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── 19. Chart type selector ────────────────────────────── */
+.ko-chart-type-btns { display: flex; gap: .375rem; }
+.ko-chart-type-btn {
+  padding: .3rem .65rem;
+  border-radius: 6px;
+  border: 1.5px solid var(--ko-border);
+  background: transparent;
+  color: var(--ko-text-muted);
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--ko-transition);
+}
+.ko-chart-type-btn.active { border-color: var(--ko-blue); color: var(--ko-blue); background: rgba(37,99,235,.07); }
+
+/* ── 20. Divider ────────────────────────────────────────── */
+.ko-divider {
+  height: 1px;
+  background: var(--ko-border);
+  margin: 0 1.5rem;
+}
+
+/* ── 21. Responsive ─────────────────────────────────────── */
+@media (max-width: 640px) {
+  .ko-kpi-grid  { grid-template-columns: 1fr 1fr; gap: .75rem; padding: 1rem; }
+  .ko-kg-grid   { grid-template-columns: 1fr; padding: 1rem; }
+  .ko-side-panel{ width: 100%; }
+  .ko-control-bar { gap: .625rem; }
+  .ko-actions-bar { padding: 1rem; }
+  :root { --ko-panel-w: 100vw; }
+}
+@media (max-width: 400px) {
+  .ko-kpi-grid { grid-template-columns: 1fr; }
+}
+
+/* ── 22. RTL overrides ──────────────────────────────────── */
+[dir="rtl"] .ko-table th,
+[dir="rtl"] .ko-table td { text-align: right; }
+[dir="rtl"] .ko-alert-item { border-inline-start: 4px solid var(--sev-color); border-inline-end: none; }
