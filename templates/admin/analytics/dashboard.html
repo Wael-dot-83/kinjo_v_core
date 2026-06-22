@@ -34,6 +34,28 @@
       export_modal_id="exportModal",
       user_role=current_user.role
     ) }}
+    <div class="d-flex gap-2 flex-wrap mt-2 mt-md-0">
+        <select class="form-select form-select-sm" id="regStatusFilter" style="min-width: 150px;">
+            <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
+            <option value="DRAFT">{% if ui_lang == 'en' %}Incomplete{% else %}غير مكتمل{% endif %}</option>
+            <option value="SUBMITTED">{% if ui_lang == 'en' %}Under Verification{% else %}قيد التحقق{% endif %}</option>
+            <option value="PENDING_REVIEW">{% if ui_lang == 'en' %}Pending{% else %}قيد المراجعة{% endif %}</option>
+            <option value="ACCEPTED">{% if ui_lang == 'en' %}Approved{% else %}موافق عليه{% endif %}</option>
+            <option value="REJECTED">{% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}</option>
+            <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+            <option value="WAITLISTED">{% if ui_lang == 'en' %}Waitlisted{% else %}قائمة انتظار{% endif %}</option>
+            <option value="WITHDRAWN">{% if ui_lang == 'en' %}Withdrawn{% else %}منسحب{% endif %}</option>
+        </select>
+        <select class="form-select form-select-sm" id="regSourceFilter" style="min-width: 130px;">
+            <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
+            <option value="WEB">Web</option>
+            <option value="MOBILE">{% if ui_lang == 'en' %}Mobile{% else %}موبايل{% endif %}</option>
+            <option value="OFFICE">{% if ui_lang == 'en' %}Office{% else %}مكتب{% endif %}</option>
+        </select>
+        <select class="form-select form-select-sm" id="regReviewerFilter" style="min-width: 160px;">
+            <option value="">{% if ui_lang == 'en' %}All Reviewers{% else %}كل المُراجعين{% endif %}</option>
+        </select>
+    </div>
   </div>
 </div>
 
@@ -47,100 +69,605 @@
 {% endif %}
 
 <div class="analytics-dashboard">
-    <!-- Network Overview Cards -->
+
+    <!-- ── Network KPI Strip ──────────────────────────────────────────────────
+         Before: .row.g-4 > .col-md-6.col-xl-3 > .card.border-start.border-4
+                 (Bootstrap-only, fixed breakpoints, text-warning fails AA)
+         After:  .kpi-grid > .kpi-card
+                 (CSS Grid auto-fit, container queries, per-card accent token,
+                  all text/bg pairs WCAG 2.1 AA verified in design-tokens.css)
+         All JS-targeted IDs preserved: totalKg, totalChildren, avgAttendance,
+         incidentRate, kpiKgGrowth, enrollmentRateBar, enrollmentRate,
+         attendanceTrendIndicator, incidentTrend, .kpi-sparkline[data-metric]  -->
+    <section class="kpi-grid mb-section"
+             aria-label="{% if ui_lang == 'en' %}Network KPIs{% else %}مؤشرات الشبكة الرئيسية{% endif %}">
+
+      <!-- Kindergartens — accent: brand green (#1f5e47, 7.10:1) -->
+      <article class="kpi-card"
+               style="--kpi-accent:var(--kpi-accent-kg);--kpi-icon-bg:var(--kpi-icon-bg-kg);"
+               aria-label="{% if ui_lang == 'ar' %}عدد الروضات{% else %}Kindergartens KPI{% endif %}">
+        <header class="kpi-card__header">
+          <p class="kpi-card__label">
+            {% if ui_lang == 'en' %}Kindergartens{% else %}عدد الروضات{% endif %}
+            <i class="bi bi-info-circle-fill ms-1"
+               data-bs-toggle="tooltip" data-bs-placement="top"
+               title="{% if ui_lang == 'ar' %}إجمالي رياض الأطفال النشطة في الفترة المحددة{% else %}Total active kindergartens in the selected period{% endif %}"
+               aria-hidden="true"></i>
+          </p>
+          <span class="kpi-card__icon" aria-hidden="true"><i class="bi bi-building"></i></span>
+        </header>
+        <p class="kpi-card__value" id="totalKg"
+           aria-label="{% if ui_lang == 'en' %}Kindergartens Count{% else %}عدد الروضات{% endif %}"
+           aria-live="polite">
+          <span class="skeleton-text w-50" aria-hidden="true"></span>
+        </p>
+        <p class="kpi-card__delta" id="kpiKgGrowth">
+          <span class="skeleton-text w-75" aria-hidden="true"></span>
+        </p>
+        <div class="kpi-sparkline" data-metric="total_kg" aria-hidden="true"></div>
+      </article>
+
+      <!-- Children — accent: sky blue (#0369a1, 6.94:1) -->
+      <article class="kpi-card"
+               style="--kpi-accent:var(--kpi-accent-children);--kpi-icon-bg:var(--kpi-icon-bg-children);"
+               aria-label="{% if ui_lang == 'ar' %}إجمالي الأطفال{% else %}Total Children KPI{% endif %}">
+        <header class="kpi-card__header">
+          <p class="kpi-card__label">
+            {% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}
+            <i class="bi bi-info-circle-fill ms-1"
+               data-bs-toggle="tooltip" data-bs-placement="top"
+               title="{% if ui_lang == 'ar' %}إجمالي الأطفال المسجلين في جميع رياض الأطفال{% else %}Total enrolled children across all kindergartens{% endif %}"
+               aria-hidden="true"></i>
+          </p>
+          <span class="kpi-card__icon" aria-hidden="true"><i class="bi bi-people"></i></span>
+        </header>
+        <p class="kpi-card__value" id="totalChildren"
+           aria-label="{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}"
+           aria-live="polite">
+          <span class="skeleton-text w-50" aria-hidden="true"></span>
+        </p>
+        <div class="kpi-card__progress"
+             role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+             aria-label="{% if ui_lang == 'en' %}Occupancy Rate{% else %}نسبة الإشغال{% endif %}">
+          <div id="enrollmentRateBar" style="width:0%"></div>
+        </div>
+        <p class="kpi-card__meta">
+          {% if ui_lang == 'en' %}Occupancy:{% else %}نسبة الإشغال:{% endif %}
+          <span class="kpi-card__meta-value" id="enrollmentRate">
+            <span class="skeleton-text w-25 d-inline-block" aria-hidden="true"></span>
+          </span>
+        </p>
+        <div class="kpi-sparkline" data-metric="total_children" aria-hidden="true"></div>
+      </article>
+
+      <!-- Attendance — accent: emerald green (#047857, 5.08:1) -->
+      <article class="kpi-card"
+               style="--kpi-accent:var(--kpi-accent-attendance);--kpi-icon-bg:var(--kpi-icon-bg-attendance);"
+               aria-label="{% if ui_lang == 'ar' %}نسبة الحضور{% else %}Attendance Rate KPI{% endif %}">
+        <header class="kpi-card__header">
+          <p class="kpi-card__label">
+            {% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}
+            <i class="bi bi-info-circle-fill ms-1"
+               data-bs-toggle="tooltip" data-bs-placement="top"
+               title="{% if ui_lang == 'ar' %}متوسط معدل الحضور اليومي عبر الشبكة{% else %}Average daily attendance rate across the network{% endif %}"
+               aria-hidden="true"></i>
+          </p>
+          <span class="kpi-card__icon" aria-hidden="true"><i class="bi bi-check-circle"></i></span>
+        </header>
+        <p class="kpi-card__value" id="avgAttendance"
+           aria-label="{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}"
+           aria-live="polite">
+          <span class="skeleton-text w-50" aria-hidden="true"></span>
+        </p>
+        <p class="kpi-card__delta" id="attendanceTrendIndicator">
+          <span class="skeleton-text w-75" aria-hidden="true"></span>
+        </p>
+        <div class="kpi-sparkline" data-metric="attendance_rate" aria-hidden="true"></div>
+      </article>
+
+      <!-- Incident Rate — accent: amber (#b45309, 4.90:1)
+           Fixes: old text-warning (#f59e0b) was only 2.71:1 on white — WCAG FAIL -->
+      <article class="kpi-card"
+               style="--kpi-accent:var(--kpi-accent-incident);--kpi-icon-bg:var(--kpi-icon-bg-incident);"
+               aria-label="{% if ui_lang == 'ar' %}معدل الحوادث{% else %}Incident Rate KPI{% endif %}">
+        <header class="kpi-card__header">
+          <p class="kpi-card__label">
+            {% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}
+            <i class="bi bi-info-circle-fill ms-1"
+               data-bs-toggle="tooltip" data-bs-placement="top"
+               title="{% if ui_lang == 'ar' %}حوادث السلامة المبلغ عنها لكل 1,000 يوم طفل{% else %}Reported safety incidents per 1,000 child-days{% endif %}"
+               aria-hidden="true"></i>
+          </p>
+          <span class="kpi-card__icon" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
+        </header>
+        <p class="kpi-card__value" id="incidentRate"
+           aria-label="{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}"
+           aria-live="polite">
+          <span class="skeleton-text w-50" aria-hidden="true"></span>
+        </p>
+        <p class="kpi-card__delta" id="incidentTrend">
+          <span class="skeleton-text w-75" aria-hidden="true"></span>
+        </p>
+        <div class="kpi-sparkline" data-metric="incident_rate" aria-hidden="true"></div>
+      </article>
+
+    </section>
+
+    <!-- Registration Status Module — comprehensive multi-entity view -->
+    <div class="card shadow-sm border-0 mb-section" id="registrationAnalyticsSection"
+         role="region" aria-label="{% if ui_lang == 'en' %}Registration Status{% else %}حالة التسجيل الشاملة{% endif %}">
+      <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+            <i class="bi bi-clipboard2-data me-2 text-primary" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %}Registration Status — Comprehensive{% else %}حالة التسجيل الشاملة{% endif %}
+          </h5>
+          <small class="text-muted d-block mt-1" id="regStatusFreshness">
+            {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
+          </small>
+        </div>
+        <button class="btn btn-sm btn-outline-primary" id="regEntityRefreshBtn"
+                aria-label="{% if ui_lang == 'en' %}Refresh registration data{% else %}تحديث بيانات التسجيل{% endif %}">
+          <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+        </button>
+      </div>
+
+      <div class="card-body p-3">
+        <!-- ROW 1: Entity summary cards — Users / Kindergartens / Enrollments / Children -->
+        <div class="row g-3 mb-3">
+
+          <!-- Users -->
+          <div class="col-sm-6 col-xl-3">
+            <div class="reg-entity-card rounded-3 p-3 h-100"
+                 style="background:var(--bs-gray-100,#f8f9fa);"
+                 role="group" aria-label="{% if ui_lang == 'en' %}Users registration status{% else %}حالة تسجيل المستخدمين{% endif %}">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <div class="text-muted small fw-semibold mb-1">
+                    <i class="bi bi-person-gear me-1" aria-hidden="true"></i>
+                    {% if ui_lang == 'en' %}Users{% else %}المستخدمون{% endif %}
+                  </div>
+                  <div class="fs-3 fw-bold text-primary mb-0" id="regUsersTotal" aria-live="polite">--</div>
+                  <div class="small text-muted mt-1">
+                    <span class="text-success fw-semibold" id="regUsersNew">--</span>
+                    {% if ui_lang == 'en' %}new this period{% else %}جديد في الفترة{% endif %}
+                  </div>
+                </div>
+                <div class="icon-circle bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:40px;height:40px;" aria-hidden="true">
+                  <i class="bi bi-people fs-5"></i>
+                </div>
+              </div>
+              <div class="progress mb-2" style="height:5px;" role="progressbar"
+                   aria-label="{% if ui_lang == 'en' %}User status distribution{% else %}توزيع حالات المستخدمين{% endif %}">
+                <div class="progress-bar bg-success" id="regUsersActiveBar" style="width:0%"
+                     title="{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}"></div>
+                <div class="progress-bar bg-warning" id="regUsersSuspendedBar" style="width:0%"
+                     title="{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}"></div>
+                <div class="progress-bar bg-secondary" id="regUsersInactiveBar" style="width:0%"
+                     title="{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}"></div>
+              </div>
+              <div class="d-flex flex-wrap gap-2" style="font-size:.72rem;">
+                <span class="text-success d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regUsersActive">--</span>
+                  {% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}
+                </span>
+                <span class="text-warning d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regUsersSuspended">--</span>
+                  {% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}
+                </span>
+                <span class="text-secondary d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regUsersInactive">--</span>
+                  {% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kindergartens -->
+          <div class="col-sm-6 col-xl-3">
+            <div class="reg-entity-card rounded-3 p-3 h-100"
+                 style="background:var(--bs-gray-100,#f8f9fa);"
+                 role="group" aria-label="{% if ui_lang == 'en' %}Kindergartens registration status{% else %}حالة تسجيل الروضات{% endif %}">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <div class="text-muted small fw-semibold mb-1">
+                    <i class="bi bi-building me-1" aria-hidden="true"></i>
+                    {% if ui_lang == 'en' %}Kindergartens{% else %}الروضات والحضانات{% endif %}
+                  </div>
+                  <div class="fs-3 fw-bold text-info mb-0" id="regKgTotal" aria-live="polite">--</div>
+                  <div class="small text-muted mt-1">
+                    <span class="text-success fw-semibold" id="regKgNew">--</span>
+                    {% if ui_lang == 'en' %}new this period{% else %}جديد في الفترة{% endif %}
+                  </div>
+                </div>
+                <div class="icon-circle bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:40px;height:40px;" aria-hidden="true">
+                  <i class="bi bi-building fs-5"></i>
+                </div>
+              </div>
+              <div class="progress mb-2" style="height:5px;">
+                <div class="progress-bar bg-success" id="regKgActiveBar" style="width:0%"
+                     title="{% if ui_lang == 'en' %}Active{% else %}نشطة{% endif %}"></div>
+                <div class="progress-bar bg-secondary" id="regKgInactiveBar" style="width:0%"
+                     title="{% if ui_lang == 'en' %}Inactive{% else %}غير نشطة{% endif %}"></div>
+                <div class="progress-bar bg-warning" id="regKgDraftBar" style="width:0%"
+                     title="{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}"></div>
+              </div>
+              <div class="d-flex flex-wrap gap-2" style="font-size:.72rem;">
+                <span class="text-success d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regKgActive">--</span>
+                  {% if ui_lang == 'en' %}Active{% else %}نشطة{% endif %}
+                </span>
+                <span class="text-secondary d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regKgInactive">--</span>
+                  {% if ui_lang == 'en' %}Inactive{% else %}غير نشطة{% endif %}
+                </span>
+                <span class="text-warning d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regKgDraft">--</span>
+                  {% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Enrollment Applications (preserves all existing IDs) -->
+          <div class="col-sm-6 col-xl-3">
+            <div class="reg-entity-card rounded-3 p-3 h-100"
+                 style="background:var(--bs-gray-100,#f8f9fa);"
+                 role="group" aria-label="{% if ui_lang == 'en' %}Enrollment applications{% else %}طلبات التسجيل{% endif %}">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <div class="text-muted small fw-semibold mb-1">
+                    <i class="bi bi-folder2-open me-1" aria-hidden="true"></i>
+                    {% if ui_lang == 'en' %}Enrollment Apps{% else %}طلبات التسجيل{% endif %}
+                  </div>
+                  <div class="fs-3 fw-bold text-primary mb-0" id="regTotalApplications" aria-live="polite">--</div>
+                  <div class="small text-muted mt-1">
+                    <span class="text-success fw-semibold" id="regNewApplications">--</span>
+                    <span id="regNewApplicationsLabel">
+                      {% if ui_lang == 'en' %}new this period{% else %}جديد في الفترة{% endif %}
+                    </span>
+                  </div>
+                </div>
+                <div class="icon-circle bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:40px;height:40px;" aria-hidden="true">
+                  <i class="bi bi-folder2-open fs-5"></i>
+                </div>
+              </div>
+              <div class="d-flex flex-wrap gap-2 mb-1" style="font-size:.72rem;">
+                <span class="text-success d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regApproved">--</span>
+                  {% if ui_lang == 'en' %}Approved{% else %}مقبول{% endif %}
+                </span>
+                <span class="text-warning d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regPending">--</span>
+                  {% if ui_lang == 'en' %}Pending{% else %}معلق{% endif %}
+                </span>
+                <span class="text-danger d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regRejected">--</span>
+                  {% if ui_lang == 'en' %}Rejected{% else %}مرفوض{% endif %}
+                </span>
+              </div>
+              <div class="d-flex flex-wrap gap-2" style="font-size:.72rem;">
+                <span class="text-muted">
+                  <span id="regConversionRate">{% if ui_lang == 'en' %}Conversion:{% else %}معدل التحويل:{% endif %}</span>
+                  <strong class="text-primary" id="regConversionValue">--</strong>
+                </span>
+                <span class="text-muted">
+                  <span id="regRejectionRate">{% if ui_lang == 'en' %}Rejection:{% else %}معدل الرفض:{% endif %}</span>
+                  <strong class="text-danger" id="regRejectionValue">--</strong>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Children -->
+          <div class="col-sm-6 col-xl-3">
+            <div class="reg-entity-card rounded-3 p-3 h-100"
+                 style="background:var(--bs-gray-100,#f8f9fa);"
+                 role="group" aria-label="{% if ui_lang == 'en' %}Children registration status{% else %}حالة تسجيل الأطفال{% endif %}">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <div class="text-muted small fw-semibold mb-1">
+                    <i class="bi bi-emoji-smile me-1" aria-hidden="true"></i>
+                    {% if ui_lang == 'en' %}Children{% else %}الأطفال المسجلون{% endif %}
+                  </div>
+                  <div class="fs-3 fw-bold text-success mb-0" id="regChildrenTotal" aria-live="polite">--</div>
+                  <div class="small text-muted mt-1">
+                    <span class="text-success fw-semibold" id="regChildrenEnrolled">--</span>
+                    {% if ui_lang == 'en' %}actively enrolled{% else %}مسجل نشط{% endif %}
+                  </div>
+                </div>
+                <div class="icon-circle bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:40px;height:40px;" aria-hidden="true">
+                  <i class="bi bi-emoji-smile fs-5"></i>
+                </div>
+              </div>
+              <div class="progress mb-2" style="height:5px;">
+                <div class="progress-bar bg-success" id="regChildrenEnrolledBar" style="width:0%"
+                     title="{% if ui_lang == 'en' %}Active enrollment{% else %}مسجل نشط{% endif %}"></div>
+                <div class="progress-bar bg-warning" id="regChildrenPendingBar" style="width:0%"
+                     title="{% if ui_lang == 'en' %}Pending{% else %}في انتظار القبول{% endif %}"></div>
+                <div class="progress-bar bg-secondary" id="regChildrenNoEnrollBar" style="width:0%"
+                     title="{% if ui_lang == 'en' %}No enrollment{% else %}بدون تسجيل{% endif %}"></div>
+              </div>
+              <div class="d-flex flex-wrap gap-2 mb-1" style="font-size:.72rem;">
+                <span class="text-success d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regChildrenEnrolledCount">--</span>
+                  {% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}
+                </span>
+                <span class="text-warning d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regChildrenPending">--</span>
+                  {% if ui_lang == 'en' %}Pending{% else %}معلق{% endif %}
+                </span>
+                <span class="text-secondary d-flex align-items-center gap-1">
+                  <i class="bi bi-circle-fill" style="font-size:.45rem;" aria-hidden="true"></i>
+                  <span id="regChildrenNone">--</span>
+                  {% if ui_lang == 'en' %}No enrollment{% else %}بدون{% endif %}
+                </span>
+              </div>
+              <div style="font-size:.72rem;" class="text-muted">
+                <span id="regAvgApprovalTime">
+                  {% if ui_lang == 'en' %}Avg. approval time:{% else %}متوسط وقت الموافقة:{% endif %}
+                </span>
+                <strong id="regApprovalTimeValue">--</strong>
+              </div>
+            </div>
+          </div>
+        </div><!-- /ROW 1 -->
+
+        <!-- ROW 2: Status matrix + Funnel + Action queue -->
+        <div class="row g-3 mb-3">
+          <!-- Enrollment status matrix -->
+          <div class="col-lg-5">
+            <div class="rounded-3 p-3 h-100" style="background:var(--bs-gray-100,#f8f9fa);">
+              <h6 class="fw-semibold mb-3" style="font: var(--type-label);">
+                <i class="bi bi-list-check me-1 text-primary" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}Enrollment Status Breakdown{% else %}مسار حالات الطلبات{% endif %}
+              </h6>
+              <div id="regStatusMatrix" aria-live="polite">
+                <div class="text-center text-muted py-3">
+                  <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Registration funnel chart (preserves canvas id) -->
+          <div class="col-lg-4">
+            <div class="rounded-3 p-3 h-100" style="background:var(--bs-gray-100,#f8f9fa);">
+              <h6 class="fw-semibold mb-3" style="font: var(--type-label);">
+                <i class="bi bi-filter-circle me-1 text-primary" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}Registration Funnel{% else %}قمع التسجيل{% endif %}
+              </h6>
+              <div id="registrationFunnel" style="height:220px;position:relative;">
+                <canvas id="funnelChart"></canvas>
+              </div>
+              <div id="funnelEmpty" class="text-center text-muted d-none py-4">
+                <i class="bi bi-inbox fs-2 mb-2" aria-hidden="true"></i>
+                <div class="small">{% if ui_lang == 'en' %}No data available{% else %}لا توجد بيانات{% endif %}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action queue -->
+          <div class="col-lg-3">
+            <div class="rounded-3 p-3 h-100" style="background:var(--bs-gray-100,#f8f9fa);">
+              <h6 class="fw-semibold mb-3 d-flex align-items-center gap-2" style="font: var(--type-label);">
+                <i class="bi bi-lightning-charge-fill text-warning" aria-hidden="true"></i>
+                <span>{% if ui_lang == 'en' %}Actions Required{% else %}إجراءات مطلوبة{% endif %}</span>
+                <span class="badge bg-secondary ms-auto" id="regActionsBadge" aria-live="polite">0</span>
+              </h6>
+              <div id="regActionQueue" aria-live="polite">
+                <div class="text-center text-muted py-3 small">
+                  <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /ROW 2 -->
+
+        <!-- ROW 3: Rejection reasons + Source breakdown + Role distribution -->
+        <div class="row g-3">
+          <!-- Rejection reasons (preserves existing IDs) -->
+          <div class="col-lg-4">
+            <div class="rounded-3 p-3 h-100" style="background:var(--bs-gray-100,#f8f9fa);">
+              <h6 class="fw-semibold mb-3" style="font: var(--type-label);">
+                <i class="bi bi-x-circle me-1 text-danger" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}Rejection Reasons{% else %}أسباب الرفض{% endif %}
+              </h6>
+              <div id="rejectionReasonsList" class="list-group list-group-flush" style="max-height:220px;overflow-y:auto;">
+                <div class="text-center text-muted py-3 small">
+                  {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
+                </div>
+              </div>
+              <div id="rejectionEmpty" class="text-center text-muted d-none py-4">
+                <i class="bi bi-check-circle-fill fs-2 text-success mb-2" aria-hidden="true"></i>
+                <div class="small">{% if ui_lang == 'en' %}No rejections recorded{% else %}لا توجد حالات رفض{% endif %}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Source breakdown (preserves existing IDs) -->
+          <div class="col-lg-4">
+            <div class="rounded-3 p-3 h-100" style="background:var(--bs-gray-100,#f8f9fa);">
+              <h6 class="fw-semibold mb-3" style="font: var(--type-label);">
+                <i class="bi bi-graph-up-arrow me-1 text-success" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}Source Breakdown{% else %}توزيع مصادر التقديم{% endif %}
+              </h6>
+              <div id="sourceBreakdown" style="height:220px;position:relative;">
+                <canvas id="sourceChart"></canvas>
+              </div>
+              <div id="sourceEmpty" class="text-center text-muted d-none py-4">
+                <i class="bi bi-inbox fs-2 mb-2" aria-hidden="true"></i>
+                <div class="small">{% if ui_lang == 'en' %}No data{% else %}لا توجد بيانات{% endif %}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- User role distribution (new) -->
+          <div class="col-lg-4">
+            <div class="rounded-3 p-3 h-100" style="background:var(--bs-gray-100,#f8f9fa);">
+              <h6 class="fw-semibold mb-3" style="font: var(--type-label);">
+                <i class="bi bi-people me-1 text-info" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}User Role Distribution{% else %}توزيع أدوار المستخدمين{% endif %}
+              </h6>
+              <div id="regRoleBreakdown" aria-live="polite">
+                <div class="text-center text-muted py-3 small">
+                  {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /ROW 3 -->
+
+        <!-- ROW 4: Governorate registration breakdown -->
+        <div class="row g-3 mb-3">
+          <div class="col-12">
+            <div class="rounded-3 p-3" style="background:var(--bs-gray-100,#f8f9fa);">
+              <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <h6 class="fw-semibold mb-0" style="font: var(--type-label);">
+                  <i class="bi bi-geo-alt me-1 text-primary" aria-hidden="true"></i>
+                  {% if ui_lang == 'en' %}Registration by Governorate{% else %}التسجيل حسب المحافظة{% endif %}
+                  <span class="badge bg-light text-muted border fw-normal ms-1" id="regGovCount"></span>
+                </h6>
+                <small class="text-muted" id="regGovSubtitle" style="font-size:.72rem;"></small>
+              </div>
+              <div class="table-responsive" style="max-height:260px;overflow-y:auto;">
+                <table class="table table-sm table-hover align-middle mb-0" id="regGovTable">
+                  <thead class="table-light sticky-top">
+                    <tr>
+                      <th scope="col" style="min-width:90px;font-size:.75rem;">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                      <th scope="col" class="text-center" style="font-size:.75rem;">{% if ui_lang == 'en' %}KGs{% else %}الروضات{% endif %}</th>
+                      <th scope="col" class="text-center" style="font-size:.75rem;">{% if ui_lang == 'en' %}Active{% else %}نشطة{% endif %}</th>
+                      <th scope="col" class="text-center" style="font-size:.75rem;">{% if ui_lang == 'en' %}Draft{% else %}مسودة{% endif %}</th>
+                      <th scope="col" class="text-center" style="font-size:.75rem;">{% if ui_lang == 'en' %}Enrollments{% else %}الطلبات{% endif %}</th>
+                      <th scope="col" class="text-center" style="font-size:.75rem;">{% if ui_lang == 'en' %}Pending{% else %}معلق{% endif %}</th>
+                      <th scope="col" style="min-width:110px;font-size:.75rem;">{% if ui_lang == 'en' %}Completion%{% else %}نسبة الاستكمال{% endif %}</th>
+                    </tr>
+                  </thead>
+                  <tbody id="regGovTableBody">
+                    <tr><td colspan="7" class="text-center py-4">
+                      <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                      </div>
+                    </td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div><!-- /ROW 4 -->
+
+        <!-- ROW 5: Data completeness + Monthly registration trend -->
+        <div class="row g-3">
+          <!-- Profile & data completeness -->
+          <div class="col-lg-5">
+            <div class="rounded-3 p-3 h-100" style="background:var(--bs-gray-100,#f8f9fa);">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-semibold mb-0" style="font: var(--type-label);">
+                  <i class="bi bi-clipboard-check me-1 text-success" aria-hidden="true"></i>
+                  {% if ui_lang == 'en' %}Data Completeness{% else %}اكتمال بيانات التسجيل{% endif %}
+                </h6>
+                <span class="badge border fw-semibold" id="avgCompletenessBadge"
+                      aria-live="polite">--%</span>
+              </div>
+              <div id="regCompletenessPanel" aria-live="polite">
+                <div class="text-center text-muted py-3">
+                  <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Monthly registration trend chart -->
+          <div class="col-lg-7">
+            <div class="rounded-3 p-3 h-100" style="background:var(--bs-gray-100,#f8f9fa);">
+              <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-1">
+                <h6 class="fw-semibold mb-0" style="font: var(--type-label);">
+                  <i class="bi bi-graph-up me-1 text-info" aria-hidden="true"></i>
+                  {% if ui_lang == 'en' %}Monthly Registration Trend{% else %}الاتجاه الشهري للتسجيل{% endif %}
+                </h6>
+                <div class="d-flex align-items-center gap-2" style="font-size:.68rem;color:#64748b;">
+                  <span><span style="color:#2563EB;font-size:.85em;">&#9632;</span> {% if ui_lang == 'en' %}Users{% else %}مستخدمون{% endif %}</span>
+                  <span><span style="color:#0891B2;font-size:.85em;">&#9632;</span> {% if ui_lang == 'en' %}Enrollments{% else %}طلبات{% endif %}</span>
+                  <span><span style="color:#1F5E47;font-size:.85em;">&#9632;</span> {% if ui_lang == 'en' %}KGs{% else %}روضات{% endif %}</span>
+                </div>
+              </div>
+              <div style="height:200px;position:relative;">
+                <canvas id="regMonthlyTrendChart"></canvas>
+              </div>
+              <div id="regTrendEmpty" class="text-center text-muted d-none py-4">
+                <i class="bi bi-graph-up fs-2 mb-2" aria-hidden="true"></i>
+                <div class="small">{% if ui_lang == 'en' %}No trend data yet{% else %}لا توجد بيانات اتجاهات بعد{% endif %}</div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /ROW 5 -->
+
+      </div><!-- /card-body -->
+    </div><!-- /registrationAnalyticsSection -->
+
+    <!-- Recent Applications Data Table -->
     <div class="row g-4 mb-section gap-card">
-        <!-- Kindergartens Count -->
-        <div class="col-md-6 col-xl-3">
-            <div class="card h-100 border-start border-4 border-primary shadow-sm" role="region" aria-label="{% if ui_lang == 'ar' %}بطانية رياض الأطفال{% else %}Kindergartens KPI{% endif %}">
-                <div class="card-body p-card">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Kindergartens{% else %}عدد الروضات{% endif %}<i class="bi bi-info-circle-fill text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{% if ui_lang == 'ar' %}إجمالي رياض الأطفال النشطة في الفترة المحددة{% else %}Total active kindergartens in the selected period{% endif %}"></i></h6>
-                        <div class="icon-circle bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center"
-                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="{% if ui_lang == 'en' %}Total active kindergartens in the network{% else %}إجمالي عدد الروضات النشطة في الشبكة{% endif %}">
-                            <i class="bi bi-building fs-5"></i>
-                        </div>
+        <div class="col-12">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center border-bottom">
+                    <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+                        <i class="bi bi-table me-2 text-primary"></i>{% if ui_lang == 'en' %}Recent Applications{% else %}الطلبات الحديثة{% endif %}
+                    </h5>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <input type="text" class="form-control form-control-sm" id="regSearchInput" placeholder="{% if ui_lang == 'en' %}Search...{% else %}بحث...{% endif %}" style="min-width: 200px;">
+                        <button class="btn btn-sm btn-outline-primary" id="regRefreshTable">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
                     </div>
-                    <h3 class="mb-2 fw-bold text-primary" id="totalKg" aria-label="{% if ui_lang == 'en' %}Kindergartens Count{% else %}عدد الروضات{% endif %}" aria-live="polite">
-                        <div class="skeleton-text w-50"></div>
-                    </h3>
-                    <small class="text-success fw-medium" id="kpiKgGrowth">
-                        <i class="bi bi-arrow-up-short"></i>
-                        <div class="skeleton-text w-75"></div>
-                    </small>
-                    <div class="kpi-sparkline mt-2" data-metric="total_kg" style="height:32px;"></div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Children Count -->
-        <div class="col-md-6 col-xl-3">
-            <div class="card h-100 border-start border-4 border-info shadow-sm" role="region" aria-label="{% if ui_lang == 'ar' %}بطانية إجمالي الأطفال{% else %}Total Children KPI{% endif %}">
-                <div class="card-body p-card">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}<i class="bi bi-info-circle-fill text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{% if ui_lang == 'ar' %}إجمالي الأطفال المسجلين في جميع رياض الأطفال{% else %}Total enrolled children across all kindergartens{% endif %}"></i></h6>
-                        <div class="icon-circle bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center"
-                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="{% if ui_lang == 'en' %}Total children enrolled in the system{% else %}مجموع الأطفال المسجلين في النظام{% endif %}">
-                            <i class="bi bi-people fs-5"></i>
-                        </div>
-                    </div>
-                    <h3 class="mb-2 fw-bold text-info" id="totalChildren" aria-label="{% if ui_lang == 'en' %}Total Children{% else %}إجمالي الأطفال{% endif %}" aria-live="polite">
-                        <div class="skeleton-text w-50"></div>
-                    </h3>
-                    <div class="progress mt-2 mb-2" style="height: 6px;">
-                        <div class="progress-bar bg-info" id="enrollmentRateBar" style="width: 0%"></div>
-                    </div>
-                    <small class="text-muted d-block">{% if ui_lang == 'en' %}Occupancy Rate:{% else %}نسبة الإشغال:{% endif %} <span class="fw-medium" id="enrollmentRate">
-                            <div class="skeleton-text w-25 d-inline-block"></div>
-                        </span></small>
-                    <div class="kpi-sparkline mt-2" data-metric="total_children" style="height:32px;"></div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="registrationTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{% if ui_lang == 'en' %}Child{% else %}الطفل{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Parent{% else %}الوصي{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Submitted{% else %}تاريخ التقديم{% endif %}</th>
+                                <th>{% if ui_lang == 'en' %}Reviewer{% else %}المُراجع{% endif %}</th>
+                                <th class="text-center">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registrationTableBody">
+                            <tr><td colspan="9" class="text-center py-4 text-muted">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-        </div>
-
-        <!-- Avg Attendance -->
-        <div class="col-md-6 col-xl-3">
-            <div class="card h-100 border-start border-4 border-success shadow-sm" role="region" aria-label="{% if ui_lang == 'ar' %}بطانية نسبة الحضور{% else %}Attendance Rate KPI{% endif %}">
-                <div class="card-body p-card">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}<i class="bi bi-info-circle-fill text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{% if ui_lang == 'ar' %}متوسط معدل الحضور اليومي عبر الشبكة{% else %}Average daily attendance rate across the network{% endif %}"></i></h6>
-                        <div class="icon-circle bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center"
-                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="{% if ui_lang == 'en' %}Average children attendance rate during the selected period{% else %}متوسط نسبة حضور الأطفال خلال الفترة المحددة{% endif %}">
-                            <i class="bi bi-check-circle fs-5"></i>
-                        </div>
+                <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                    <small class="text-muted" id="regTableInfo">--</small>
+                    <div class="btn-group btn-group-sm" id="regPagination">
+                        <button class="btn btn-outline-secondary" id="regPrevPage">{% if ui_lang == 'en' %}Previous{% else %}السابق{% endif %}</button>
+                        <button class="btn btn-outline-secondary" id="regNextPage">{% if ui_lang == 'en' %}Next{% else %}التالي{% endif %}</button>
                     </div>
-                    <h3 class="mb-2 fw-bold text-success" id="avgAttendance" aria-label="{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}" aria-live="polite">
-                        <div class="skeleton-text w-50"></div>
-                    </h3>
-                    <small class="text-muted" id="attendanceTrendIndicator">
-                        <div class="skeleton-text w-75"></div>
-                    </small>
-                    <div class="kpi-sparkline mt-2" data-metric="attendance_rate" style="height:32px;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Incident Rate -->
-        <div class="col-md-6 col-xl-3">
-            <div class="card h-100 border-start border-4 border-warning shadow-sm" role="region" aria-label="{% if ui_lang == 'ar' %}بطانية معدل الحوادث{% else %}Incident Rate KPI{% endif %}">
-                <div class="card-body p-card">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}<i class="bi bi-info-circle-fill text-muted ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="{% if ui_lang == 'ar' %}حوادث السلامة المبلغ عنها لكل 1,000 يوم طفل{% else %}Reported safety incidents per 1,000 child-days{% endif %}"></i></h6>
-                        <div class="icon-circle bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center"
-                            style="width: 48px; height: 48px;" data-bs-toggle="tooltip"
-                            title="{% if ui_lang == 'en' %}Incidents recorded per 100 child-days (safety indicator){% else %}عدد الحوادث المسجلة لكل 100 يوم-طفل (مؤشر السلامة){% endif %}">
-                            <i class="bi bi-exclamation-triangle fs-5"></i>
-                        </div>
-                    </div>
-                    <h3 class="mb-2 fw-bold text-warning" id="incidentRate" aria-label="{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}" aria-live="polite">
-                        <div class="skeleton-text w-50"></div>
-                    </h3>
-                    <small class="text-muted" id="incidentTrend">
-                        <div class="skeleton-text w-75"></div>
-                    </small>
-                    <div class="kpi-sparkline mt-2" data-metric="incident_rate" style="height:32px;"></div>
                 </div>
             </div>
         </div>

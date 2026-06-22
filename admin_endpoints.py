@@ -5159,10 +5159,10 @@ def _fallback_map_overview(db: Session) -> Dict[str, Any]:
             },
             "risk_score": risk_score,
             "risk_level": {
-                "key": "low" if risk_score < 25 else "medium",
-                "name_en": "Low" if risk_score < 25 else "Medium",
-                "name_ar": "منخفض" if risk_score < 25 else "متوسط",
-                "color": "#28A745" if risk_score < 25 else "#FFC107",
+                "key": "low" if risk_score < 25 else "medium" if risk_score < 50 else "high" if risk_score < 75 else "critical",
+                "name_en": "Low" if risk_score < 25 else "Medium" if risk_score < 50 else "High" if risk_score < 75 else "Critical",
+                "name_ar": "منخفض" if risk_score < 25 else "متوسط" if risk_score < 50 else "مرتفع" if risk_score < 75 else "حرج",
+                "color": "#22C55E" if risk_score < 25 else "#F59E0B" if risk_score < 50 else "#F97316" if risk_score < 75 else "#EF4444",
             },
         })
     return {
@@ -5172,8 +5172,8 @@ def _fallback_map_overview(db: Session) -> Dict[str, Any]:
         "summary": {
             "total_governorates": len(data),
             "average_risk": round(sum(d["risk_score"] for d in data) / len(data), 1) if data else 0,
-            "high_risk_count": sum(1 for d in data if d["risk_score"] > 50),
-            "critical_count": sum(1 for d in data if d["risk_score"] > 75),
+            "high_risk_count": sum(1 for d in data if d["risk_score"] >= 50),
+            "critical_count": sum(1 for d in data if d["risk_score"] >= 75),
         },
         "risk_legend": [],
     }

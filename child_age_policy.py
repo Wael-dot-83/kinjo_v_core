@@ -2,7 +2,7 @@
 Centralized child age policy utilities.
 
 Business rule:
-- Minimum child age = 70 days (inclusive)
+- Minimum child age = 1 day (inclusive)
 - Maximum child age = 4 years and 8 months (inclusive)
 """
 from __future__ import annotations

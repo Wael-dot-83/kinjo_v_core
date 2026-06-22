@@ -666,6 +666,8 @@ class EnrollmentApplication(Base):
     status_reason = Column(String(255), nullable=True)
     source = Column(String(50), nullable=False, default="WEB")
     submitted_at = Column(DateTime(timezone=True), nullable=True)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    rejected_at = Column(DateTime(timezone=True), nullable=True)
     decision_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     decision_at = Column(DateTime(timezone=True), nullable=True)
     enrollment_start_date = Column(Date, nullable=True)
@@ -684,6 +686,11 @@ class EnrollmentApplication(Base):
         Index("ix_enrollment_child_id", "child_id"),
         Index("ix_enrollment_child_status", "child_id", "status"),
         Index("ix_enrollment_kg_status", "kindergarten_id", "status"),
+        Index("ix_enrollment_status", "status"),
+        Index("ix_enrollment_source", "source"),
+        Index("ix_enrollment_decision_by", "decision_by"),
+        Index("ix_enrollment_submitted_at", "submitted_at"),
+        Index("ix_enrollment_decision_at", "decision_at"),
     )
 
     # Relationships
@@ -1585,6 +1592,53 @@ class ExportJob(Base):
 
     __table_args__ = (
         Index('ix_export_jobs_user_status', 'user_id', 'status'),
+    )
+
+
+class ReportTemplate(Base):
+    """Saved report configurations for quick reuse."""
+    __tablename__ = "report_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    report_type = Column(String(100), nullable=False)
+    filters = Column(JSON, nullable=True)
+    export_format = Column(String(20), nullable=False, default="CSV")
+    include_charts = Column(Boolean, nullable=False, default=True)
+    include_summary = Column(Boolean, nullable=False, default=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+
+    creator = relationship("User")
+
+    __table_args__ = (
+        Index("ix_report_templates_created_by", "created_by"),
+    )
+
+
+class ScheduledReport(Base):
+    """Scheduled report generation and delivery."""
+    __tablename__ = "scheduled_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    report_type = Column(String(100), nullable=False)
+    filters = Column(JSON, nullable=True)
+    export_format = Column(String(20), nullable=False, default="CSV")
+    frequency = Column(String(50), nullable=False)  # daily, weekly, monthly, quarterly, once
+    recipients = Column(JSON, nullable=True)  # list of user_ids or emails
+    next_run = Column(DateTime(timezone=True), nullable=True)
+    last_run = Column(DateTime(timezone=True), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    creator = relationship("User")
+
+    __table_args__ = (
+        Index("ix_scheduled_reports_created_by", "created_by"),
+        Index("ix_scheduled_reports_next_run", "next_run"),
     )
 
 

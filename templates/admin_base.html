@@ -2,7 +2,7 @@
 {% if ui_lang == 'en' %}
 <html lang="en" dir="{{ ui_dir | default('ltr') }}">
   {% else %}
-  <html lang="ar" dir="{{ ui_dir | default('rtl') }}">
+  <html lang="ar-JO" dir="{{ ui_dir | default('rtl') }}">
     {% endif %}
   <head>
     <meta charset="UTF-8" />
@@ -37,6 +37,8 @@
 
     <!-- Admin Design System CSS -->
     <link rel="stylesheet" href="/static/css/admin_design_system.css?v=2.9" />
+    <!-- Design token layer: dark mode, semantic aliases, a11y primitives, layout utils -->
+    <link rel="stylesheet" href="/static/css/design-tokens.css?v=1.0" />
     <script src="/static/js/sanitize.js"></script>
 
     <!-- Bootstrap CSS (direction-aware on initial SSR) -->
@@ -177,6 +179,8 @@
   </head>
 
   <body class="admin-container">
+    <!-- Skip navigation: keyboard users jump past sidebar directly to main content -->
+    <a href="#main-content" class="skip-nav" data-i18n="a11y.skip_nav">تخطي إلى المحتوى الرئيسي</a>
     {% include 'components/impersonation_banner.html' %}
     <div class="admin-layout" id="admin-layout">
       <!-- Sidebar -->
@@ -353,7 +357,7 @@
       </aside>
 
       <!-- Main Content Area -->
-      <main class="admin-main">
+      <main class="admin-main" id="main-content">
         <!-- Header -->
         <header class="admin-header">
           <div class="admin-header-left">

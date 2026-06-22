@@ -1,17 +1,16 @@
 /**
- * jordan_cesium_map.js  —  v4 (visual + performance + interactivity)
+ * jordan_cesium_map.js  —  v5
  * Cesium 3D globe for KinJo heatmap admin page.
  *
- * v4 changes vs v3:
- *  - Polygon fill opacity boosted; stroke width scales with risk level
- *  - KG pin size scales by risk (7/9/11/15 px); critical pins animate via CallbackProperty
- *  - Critical KG expanding halo pulse ring (transparent point entity)
- *  - Camera-height clustering: KG pins hidden above CLUSTER_HEIGHT (280 km)
- *  - SVG radar chart rendered inside governorate / KG intel panel
- *  - Risk-level filter pills in left panel (منخفض/متوسط/مرتفع/حرج/الكل)
- *  - Governorate polygon overlay toggle (govOverlayToggle)
- *  - selectCity flies camera to city KG centroid
- *  - Centralised _applyKgVisibility() replaces duplicated show/hide logic
+ * v5 additions vs v4:
+ *  - 6-card KPI strip (covered, avg risk, high+critical, critical, facilities, children)
+ *  - Rankings table: 8 columns incl. facility count, children, comparison vs national avg
+ *  - Client-side CSV export + print-to-PDF
+ *  - Per-governorate report export
+ *  - Sort & debounced search for rankings table
+ *  - Enhanced intel panel: national-avg comparison, action buttons (view / export)
+ *  - Page-load timestamp badge
+ *  - aria-pressed on risk filter pills
  */
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -36,12 +35,12 @@ const IND_RISK_GETTER = {
 };
 
 const IND_LABELS = {
-  nursery_status:        { ar: 'حالة الروضات',       color: '#0E334F' },
-  children_registration: { ar: 'الأطفال والتسجيل',   color: '#28A745' },
-  staff_classrooms:      { ar: 'الموظفون والفصول',   color: '#155ECF' },
-  safety_incidents:      { ar: 'السلامة والحوادث',   color: '#FFC107' },
-  reports_attendance:    { ar: 'التقارير والحضور',   color: '#06B6D4' },
-  tasks_governance:      { ar: 'المهام والحوكمة',    color: '#8B5CF6' },
+  nursery_status:        { ar: 'حالة الحضانات ورياض الأطفال', color: '#0E334F' },
+  children_registration: { ar: 'الأطفال المسجلون',            color: '#28A745' },
+  staff_classrooms:      { ar: 'الموظفون والفصول',            color: '#155ECF' },
+  safety_incidents:      { ar: 'السلامة والحوادث',            color: '#FFC107' },
+  reports_attendance:    { ar: 'التقارير والحضور',            color: '#06B6D4' },
+  tasks_governance:      { ar: 'المهام والحوكمة',             color: '#8B5CF6' },
 };
 
 const IND_ORDER = [
@@ -50,6 +49,13 @@ const IND_ORDER = [
 ];
 
 // ── Risk helpers ──────────────────────────────────────────────────────────────
+function getRiskLevel(score) {
+  if (score < 25) return 'low';
+  if (score < 50) return 'medium';
+  if (score < 75) return 'high';
+  return 'critical';
+}
+
 function riskColor(score, alpha) {
   const a = alpha ?? 0.60;
   if (score >= 75) return Cesium.Color.fromCssColorString('#ef4444').withAlpha(a);
@@ -63,17 +69,10 @@ function riskHex(score) {
   if (score >= 25) return '#f59e0b';
   return '#22c55e';
 }
-function riskClass(score) {
-  if (score >= 75) return 'critical';
-  if (score >= 50) return 'high';
-  if (score >= 25) return 'medium';
-  return 'low';
-}
+function riskClass(score) { return getRiskLevel(score); }
 function riskAr(score) {
-  if (score >= 75) return 'حرج';
-  if (score >= 50) return 'مرتفع';
-  if (score >= 25) return 'متوسط';
-  return 'منخفض';
+  const level = getRiskLevel(score);
+  return { low: 'منخفض', medium: 'متوسط', high: 'مرتفع', critical: 'حرج' }[level];
 }
 
 // ── App State ─────────────────────────────────────────────────────────────────
@@ -85,18 +84,28 @@ const CsApp = {
   selectedGov:   null,
   selectedCity:  null,
   currentInd:    'overall_risk',
-  riskFilter:    'all',       // 'all'|'low'|'medium'|'high'|'critical'
+  riskFilter:    'all',
   ws:            null,
   wsTimer:       null,
   highlighted:   null,
   warnings:      [],
   kgLoaded:      false,
   dataLoaded:    false,
-  _clusterState: null,        // tracks last { range, label } to avoid redundant passes
+  _clusterState: null,
+  _avgRisk:      0,
 };
+
+// ── Rankings state ────────────────────────────────────────────────────────────
+let _rankSort   = { col: 'risk', dir: 'desc' };
+let _rankSearch = '';
+let _rankSearchTimer = null;
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Stamp page-load time
+  const ptEl = document.getElementById('pageLoadTime');
+  if (ptEl) ptEl.textContent = new Date().toLocaleTimeString('ar-JO');
+
   if (typeof Cesium === 'undefined') {
     showFallback('Cesium JS failed to load. Check your internet connection.');
     return;
@@ -177,7 +186,7 @@ function esriImagery() {
 // ── Camera-height Clustering ──────────────────────────────────────────────────
 function setupClustering(viewer) {
   viewer.camera.changed.addEventListener(() => {
-    const h    = viewer.camera.positionCartographic?.height ?? 0;
+    const h     = viewer.camera.positionCartographic?.height ?? 0;
     const inRng = h < CLUSTER_HEIGHT;
     const lblRng = h < 80000;
     const prev  = CsApp._clusterState;
@@ -244,13 +253,30 @@ async function fetchMapData() {
     addWarning('تعذر تحميل بيانات الخريطة. يرجى التحقق من الاتصال بالخادم.');
     setStatusError();
     renderWarnings();
+
+    // Show retry state in rankings
+    const tbody = document.querySelector('#rankingsTable tbody');
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr><td colspan="8" style="text-align:center;padding:2rem;color:#64748b">
+          <div>تعذر تحميل بيانات المحافظات</div>
+          <button class="cc-btn" style="margin-top:.75rem" onclick="retryFetchMapData()">
+            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> إعادة المحاولة
+          </button>
+        </td></tr>`;
+    }
   }
+}
+
+function retryFetchMapData() {
+  CsApp.warnings = [];
+  fetchMapData();
 }
 
 async function fetchKgPins() {
   try {
     const res = await fetch(API_KG_MAPDATA, { credentials: 'include' });
-    if (!res.ok) { addWarning('تعذر تحميل بيانات الروضات على الخريطة.'); return; }
+    if (!res.ok) { addWarning('تعذر تحميل بيانات الحضانات ورياض الأطفال على الخريطة.'); return; }
     const geojson  = await res.json();
     const features = geojson.features || [];
     const kgs = features.map(f => ({
@@ -260,14 +286,14 @@ async function fetchKgPins() {
     })).filter(k => k.longitude != null && k.latitude != null);
 
     if (geojson.missing_location_count > 0) {
-      addWarning(`${geojson.missing_location_count} روضة لا تمتلك إحداثيات جغرافية ولم تُعرض على الخريطة.`);
+      addWarning(`${geojson.missing_location_count} منشأة لا تمتلك إحداثيات جغرافية ولم تُعرض على الخريطة.`);
       renderWarnings();
     }
 
     addKgPins(kgs);
     CsApp.kgLoaded = true;
   } catch {
-    addWarning('تعذر تحميل مواقع الروضات.');
+    addWarning('تعذر تحميل مواقع الحضانات ورياض الأطفال.');
     renderWarnings();
   }
 }
@@ -447,11 +473,11 @@ function setupInteraction(viewer) {
         <div class="tt-name">${g.name_ar || g.name_en}</div>
         <div class="tt-badge"><span class="rank-badge risk-${riskClass(score)}">${riskAr(score)}</span></div>
         <div class="tt-divider"></div>
-        <div class="tt-row"><span>درجة الخطر</span><b style="color:${riskHex(score)}">${score.toFixed(1)}</b></div>
+        <div class="tt-row"><span>درجة الخطر</span><b style="color:${riskHex(score)}">${score.toFixed(1)}/100</b></div>
         ${indRow}
-        <div class="tt-row"><span>الروضات</span><b>${g.kg_count ?? '--'}</b></div>
-        <div class="tt-row"><span>الطلاب</span><b>${g.student_count ?? '--'}</b></div>
-        <div class="tt-hint">انقر للتفاصيل</div>`;
+        <div class="tt-row"><span>إجمالي المنشآت</span><b>${g.kg_count ?? '--'}</b></div>
+        <div class="tt-row"><span>الأطفال النشطون</span><b>${g.student_count ?? '--'}</b></div>
+        <div class="tt-hint">انقر للتفاصيل الكاملة</div>`;
 
     } else if (ent._kgData && !ent._isPulseRing) {
       const k      = ent._kgData;
@@ -460,7 +486,7 @@ function setupInteraction(viewer) {
       const govAr  = govNameAr(k.governorate) || k.governorate_name_en || '';
       const cityTxt = k.city ? `<div class="tt-row"><span>المدينة</span><b>${k.city}</b></div>` : '';
       html = `
-        <div class="tt-name">${k.name_ar || k.name_en || 'روضة'}</div>
+        <div class="tt-name">${k.name_ar || k.name_en || 'منشأة'}</div>
         <div class="tt-badge"><span class="rank-badge risk-${riskClass(riskSc)}">${riskAr(riskSc)}</span></div>
         <div class="tt-divider"></div>
         <div class="tt-row"><span>المحافظة</span><b>${govAr}</b></div>
@@ -499,6 +525,11 @@ function selectGovernorate(gov) {
 
   document.querySelectorAll('.cs-gov-item').forEach(el =>
     el.classList.toggle('selected', el.dataset.slug === gov.slug)
+  );
+
+  // Update selected row in rankings
+  document.querySelectorAll('#rankingsTable tbody tr').forEach(tr =>
+    tr.classList.toggle('rank-selected', tr.dataset.slug === gov.slug)
   );
 
   const entity = CsApp.govDS?.entities.values.find(e => e._govData?.slug === gov.slug);
@@ -541,7 +572,7 @@ function highlightGovEntity(slug) {
 async function loadGovDetail(slug) {
   const panel = document.getElementById('intelPanel');
   panel.innerHTML = `
-    <div class="intel-loading">
+    <div class="intel-loading" role="status" aria-live="polite">
       <div class="intel-loading-spinner" aria-hidden="true"></div>
       <div class="intel-loading-name">جاري تحميل بيانات المحافظة…</div>
     </div>`;
@@ -553,11 +584,11 @@ async function loadGovDetail(slug) {
     loadCityData(slug);
   } catch {
     panel.innerHTML = `
-      <div class="intel-error">
+      <div class="intel-error" role="alert">
         <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
-        <p>تعذر تحميل بيانات المحافظة</p>
+        <p>تعذر تحميل بيانات المحافظة، يرجى المحاولة مرة أخرى.</p>
         <button class="cc-btn" onclick="loadGovDetail('${slug}')">
-          <i class="bi bi-arrow-clockwise"></i> إعادة المحاولة
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> إعادة المحاولة
         </button>
       </div>`;
   }
@@ -591,7 +622,7 @@ function renderRadarChart(perfIndicators) {
     return `<circle cx="${p.x}" cy="${p.y}" r="2.5" fill="${riskHex(100-v)}" stroke="rgba(255,255,255,.8)" stroke-width=".75"/>`;
   }).join('');
 
-  const ABBREV = ['روضات', 'أطفال', 'موظفون', 'سلامة', 'تقارير', 'حوكمة'];
+  const ABBREV = ['منشآت', 'أطفال', 'موظفون', 'سلامة', 'تقارير', 'حوكمة'];
   const lbls = IND_ORDER.map((_, i) => {
     const p = pt(MAX_R + 17, i);
     return `<text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle" font-size="8" fill="#94a3b8" font-family="system-ui,sans-serif">${ABBREV[i]}</text>`;
@@ -600,7 +631,7 @@ function renderRadarChart(perfIndicators) {
   return `
     <div style="display:flex;flex-direction:column;align-items:center;padding:.5rem 0 .25rem">
       <div style="font-size:.7rem;color:#64748b;margin-bottom:.25rem;letter-spacing:.03em">مخطط الأداء الشعاعي</div>
-      <svg width="${SZ}" height="${SZ}" viewBox="0 0 ${SZ} ${SZ}" style="overflow:visible">
+      <svg width="${SZ}" height="${SZ}" viewBox="0 0 ${SZ} ${SZ}" style="overflow:visible" aria-hidden="true">
         ${grid}${axes}
         <polygon points="${poly}" fill="${fc}" fill-opacity=".18" stroke="${fc}" stroke-width="1.5" stroke-linejoin="round"/>
         ${dots}${lbls}
@@ -612,9 +643,28 @@ function renderRadarChart(perfIndicators) {
 
 // ── Intel Panel Render ────────────────────────────────────────────────────────
 function renderIntelPanel(d) {
-  const panel = document.getElementById('intelPanel');
-  const score = d.risk_score ?? 0;
-  const cls   = riskClass(score);
+  const panel   = document.getElementById('intelPanel');
+  const score   = d.risk_score ?? 0;
+  const cls     = riskClass(score);
+  const avgRisk = CsApp._avgRisk || 0;
+  const diff    = score - avgRisk;
+
+  const compareHtml = avgRisk > 0
+    ? diff > 2
+      ? `<div class="intel-compare" style="color:#ef4444" aria-label="أعلى من المتوسط الوطني">
+           <i class="bi bi-arrow-up-short" aria-hidden="true"></i>
+           أعلى من المتوسط الوطني بـ ${diff.toFixed(1)} نقطة
+         </div>`
+      : diff < -2
+      ? `<div class="intel-compare" style="color:#22c55e" aria-label="أقل من المتوسط الوطني">
+           <i class="bi bi-arrow-down-short" aria-hidden="true"></i>
+           أقل من المتوسط الوطني بـ ${Math.abs(diff).toFixed(1)} نقطة
+         </div>`
+      : `<div class="intel-compare" style="color:#475569">
+           <i class="bi bi-dash" aria-hidden="true"></i>
+           يساوي تقريباً المتوسط الوطني
+         </div>`
+    : '';
 
   const indHtml = IND_ORDER.map(key => {
     const perf  = d.main_indicators?.[key] ?? 0;
@@ -655,9 +705,11 @@ function renderIntelPanel(d) {
        </div>` : '';
 
   const sub          = d.sub_indicators || {};
-  const kgCount      = sub.active_nurseries    ?? d.kg_count      ?? '--';
-  const studentCount = sub.registered_children ?? d.student_count ?? '--';
-  const govScore     = sub.governance_score     != null ? sub.governance_score.toFixed(1) : '--';
+  const kgCount      = sub.active_nurseries    ?? d.kg_count      ?? 'غير متوفر';
+  const studentCount = sub.registered_children ?? d.student_count ?? 'غير متوفر';
+  const govScore     = sub.governance_score     != null ? sub.governance_score.toFixed(1) : 'غير متوفر';
+  const safeSlug     = (d.slug || d.code || '').replace(/'/g, '');
+  const safeName     = (d.name_ar || d.name_en || '').replace(/'/g, '');
 
   panel.innerHTML = `
     <div class="intel-gov-header">
@@ -667,14 +719,32 @@ function renderIntelPanel(d) {
       </div>
       <div class="intel-gov-name-sub">${d.name_en || ''}</div>
       <div class="intel-risk-row">
-        <div class="intel-risk-score" style="color:${riskHex(score)}">${score.toFixed(1)}</div>
-        <span class="intel-risk-badge risk-${cls}">${riskAr(score)}</span>
+        <div class="intel-risk-score" style="color:${riskHex(score)}" aria-label="مؤشر الخطر: ${score.toFixed(1)}">${score.toFixed(1)}</div>
+        <span class="intel-risk-badge risk-${cls}">
+          <i class="bi bi-${cls === 'low' ? 'check-circle' : cls === 'medium' ? 'exclamation-circle' : 'x-circle'}" aria-hidden="true"></i>
+          ${riskAr(score)}
+        </span>
       </div>
+      ${compareHtml}
       ${actionHtml}
+
+      <div class="intel-action-row">
+        <button class="cc-btn intel-action-btn"
+                onclick="window.location.href='/admin/kindergartens?governorate=${safeSlug}'"
+                aria-label="عرض منشآت ${safeName}">
+          <i class="bi bi-building" aria-hidden="true"></i> عرض المنشآت
+        </button>
+        <button class="cc-btn intel-action-btn"
+                onclick="exportGovReport('${safeSlug}','${safeName}')"
+                aria-label="تصدير تقرير ${safeName}">
+          <i class="bi bi-download" aria-hidden="true"></i>
+        </button>
+      </div>
     </div>
 
     <div class="intel-section">
       <div class="intel-section-title">
+        <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
         المؤشرات الرئيسية <span class="intel-count">(6)</span>
       </div>
       ${indHtml}
@@ -686,6 +756,7 @@ function renderIntelPanel(d) {
 
     <div class="intel-section">
       <div class="intel-section-title">
+        <i class="bi bi-bell" aria-hidden="true"></i>
         التنبيهات <span class="intel-count">${alerts.length}</span>
       </div>
       ${alertHtml}
@@ -693,23 +764,26 @@ function renderIntelPanel(d) {
 
     <div class="intel-section" id="cityDataSection">
       <div class="intel-section-title">
+        <i class="bi bi-geo" aria-hidden="true"></i>
         المؤشرات حسب المدينة <span class="intel-count" id="citySectionCount"></span>
       </div>
       <div id="cityTableBody">
         <div class="intel-loading-inline">
-          <span class="intel-loading-spinner" style="width:14px;height:14px;border-width:1.5px"></span>
+          <span class="intel-loading-spinner" style="width:14px;height:14px;border-width:1.5px" aria-hidden="true"></span>
           جاري التحميل…
         </div>
       </div>
     </div>
 
     <div class="intel-footer">
-      <div>الروضات النشطة: <strong>${kgCount}</strong></div>
-      <div>الطلاب المسجلون: <strong>${studentCount}</strong></div>
+      <div>إجمالي المنشآت: <strong>${kgCount}</strong></div>
+      <div>الأطفال المسجلون: <strong>${studentCount}</strong></div>
       <div>نقاط الحوكمة: <strong>${govScore}</strong></div>
+      ${avgRisk > 0 ? `<div>المتوسط الوطني للخطر: <strong>${avgRisk.toFixed(1)}</strong></div>` : ''}
       <div style="margin-top:.5rem;font-size:.7rem;color:#475569">
-        آخر تحديث: ${d.last_update ? new Date(d.last_update).toLocaleString('ar-JO') : '--'}
+        آخر تحديث: ${d.last_update ? new Date(d.last_update).toLocaleString('ar-JO') : 'غير متوفر'}
       </div>
+      <div style="font-size:.7rem;color:#475569">المصدر: قاعدة بيانات كينجو المركزية</div>
     </div>`;
 }
 
@@ -751,16 +825,17 @@ function renderCitySection(cityData, errorMsg) {
   body.innerHTML = cities.map(c => {
     const riskSc   = c.risk_score ?? 0;
     const cls      = riskClass(riskSc);
-    const kgLabel  = c.kindergarten_count + ' روضة';
-    const stLabel  = c.children_count ? `· ${c.children_count} طالب` : '';
+    const kgLabel  = c.kindergarten_count + ' منشأة';
+    const stLabel  = c.children_count ? `· ${c.children_count} طفل` : '';
     const critLabel = c.critical_kindergartens
       ? `<span style="color:#ef4444;font-size:.7rem"> — ${c.critical_kindergartens} حرجة</span>` : '';
     const safeCity = c.city.replace(/'/g, "\\'");
     return `
       <div class="city-row" data-city="${c.city}"
            role="button" tabindex="0"
+           aria-label="${c.city} — خطر: ${riskAr(riskSc)}"
            onclick="selectCity('${safeCity}')"
-           onkeydown="if(event.key==='Enter')selectCity('${safeCity}')">
+           onkeydown="if(event.key==='Enter'||event.key===' ')selectCity('${safeCity}')">
         <div class="city-row-name">
           <span>${c.city}</span>${critLabel}
           <div style="font-size:.7rem;color:#64748b;margin-top:1px">${kgLabel}${stLabel}</div>
@@ -779,7 +854,6 @@ function selectCity(cityName) {
   CsApp.selectedCity = cityName;
   const govSlug = CsApp.selectedGov?.slug || null;
 
-  // Fly camera to the centroid of this city's KG pins
   const cityKgs = CsApp.kgEntities.filter(e =>
     !e._isPulseRing && e._kgData?.city === cityName &&
     (!govSlug || e._kgData?.governorate === govSlug)
@@ -826,7 +900,7 @@ function showKgDetail(kg) {
   const panel   = document.getElementById('intelPanel');
   const score   = parseFloat(kg.kpi_score) || 0;
   const riskSc  = 100 - score;
-  const name    = kg.name_ar || kg.name_en || 'روضة';
+  const name    = kg.name_ar || kg.name_en || 'منشأة';
   const govAr   = govNameAr(kg.governorate) || kg.governorate_name_en || '';
   const cityTxt = kg.city ? ` • ${kg.city}` : '';
   const sc      = kg.supporting_counts || {};
@@ -861,7 +935,10 @@ function showKgDetail(kg) {
       <div class="intel-gov-name-sub">${govAr}${cityTxt}</div>
       <div class="intel-risk-row">
         <div class="intel-risk-score" style="color:${riskHex(riskSc)};font-size:1.6rem">${score.toFixed(1)}</div>
-        <span class="intel-risk-badge risk-${riskClass(riskSc)}">${riskAr(riskSc)}</span>
+        <span class="intel-risk-badge risk-${riskClass(riskSc)}">
+          <i class="bi bi-${riskClass(riskSc) === 'low' ? 'check-circle' : 'exclamation-circle'}" aria-hidden="true"></i>
+          ${riskAr(riskSc)}
+        </span>
       </div>
     </div>
 
@@ -875,13 +952,14 @@ function showKgDetail(kg) {
     </div>
 
     <div class="intel-footer">
-      <div>الطلاب النشطون: <strong>${sc.active_enrollments ?? '--'}</strong></div>
-      <div>الفصول الدراسية: <strong>${sc.classes ?? '--'}</strong></div>
-      <div>المشرفون: <strong>${sc.supervisors ?? '--'}</strong></div>
-      <div>الحوادث (90 يوم): <strong>${sc.recent_incidents ?? '--'}</strong></div>
-      <div>نقاط الحوكمة: <strong>${sc.governance_score != null ? sc.governance_score.toFixed(1) : '--'}</strong></div>
+      <div>الأطفال النشطون: <strong>${sc.active_enrollments ?? 'غير متوفر'}</strong></div>
+      <div>الفصول الدراسية: <strong>${sc.classes ?? 'غير متوفر'}</strong></div>
+      <div>المشرفون: <strong>${sc.supervisors ?? 'غير متوفر'}</strong></div>
+      <div>الحوادث (90 يوم): <strong>${sc.recent_incidents ?? 'غير متوفر'}</strong></div>
+      <div>نقاط الحوكمة: <strong>${sc.governance_score != null ? sc.governance_score.toFixed(1) : 'غير متوفر'}</strong></div>
       ${kg.id ? `<div style="margin-top:.75rem">
-        <a href="/admin/kindergartens/${kg.id}" class="cc-btn" style="display:inline-flex">
+        <a href="/admin/kindergartens/${kg.id}" class="cc-btn" style="display:inline-flex"
+           aria-label="فتح ملف المنشأة الكامل">
           <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> فتح الملف الكامل
         </a>
       </div>` : ''}
@@ -934,13 +1012,13 @@ function populateGovList(govs) {
     const cls     = riskClass(score);
     const govJson = JSON.stringify(g).replace(/"/g, '&quot;');
     const kgLabel = g.kg_count != null
-      ? `<span style="font-size:.7rem;color:#64748b">${g.kg_count} روضة</span>` : '';
+      ? `<span style="font-size:.7rem;color:#64748b">${g.kg_count} منشأة</span>` : '';
     return `
       <div class="cs-gov-item" data-slug="${g.slug}" data-risk-class="${cls}"
            tabindex="0" role="button"
-           aria-label="${g.name_ar || g.name_en}"
+           aria-label="${g.name_ar || g.name_en} — ${riskAr(score)}"
            onclick="selectGovernorate(${govJson})"
-           onkeydown="if(event.key==='Enter')selectGovernorate(${govJson})">
+           onkeydown="if(event.key==='Enter'||event.key===' ')selectGovernorate(${govJson})">
         <div>
           <div class="cs-gov-name">${g.name_ar || g.name_en}</div>
           ${kgLabel}
@@ -962,24 +1040,31 @@ function applyGovListFilter() {
   });
 }
 
-// ── KPI Strip ─────────────────────────────────────────────────────────────────
+// ── KPI Strip — 6 cards ───────────────────────────────────────────────────────
 function updateKpiStrip(data) {
   const govs     = data.governorates || [];
   const sum      = data.summary || {};
+
   const avgRisk  = sum.average_risk   != null ? sum.average_risk
     : govs.length ? govs.reduce((s, g) => s + (g.risk_score || 0), 0) / govs.length : 0;
-  const critical = sum.critical_count != null ? sum.critical_count
+  const critical = sum.critical_count  != null ? sum.critical_count
     : govs.filter(g => (g.risk_score || 0) >= 75).length;
-  const totalKg  = govs.reduce((s, g) => s + (g.kg_count    || 0), 0);
+  const highRisk = sum.high_risk_count != null ? sum.high_risk_count
+    : govs.filter(g => (g.risk_score || 0) >= 50).length;
+  const totalKg  = govs.reduce((s, g) => s + (g.kg_count     || 0), 0);
   const totalSt  = govs.reduce((s, g) => s + (g.student_count || 0), 0);
-  const alertCnt = sum.high_risk_count ?? govs.filter(g => (g.risk_score || 0) >= 50).length;
+  const covered  = govs.filter(g => g.risk_score != null).length || govs.length;
 
+  CsApp._avgRisk = avgRisk;
+
+  _setEl('kpiCovered',      covered || '--');
   _setEl('kpiAvgRisk',      avgRisk.toFixed(1));
+  _setEl('kpiHighRisk',     highRisk);
   _setEl('kpiCritical',     critical);
   _setEl('kpiInstitutions', totalKg || '--');
   _setEl('kpiStudents',     totalSt || '--');
   _setEl('alertCountStatus',
-    `<i class="bi bi-shield-exclamation" aria-hidden="true"></i> ${alertCnt} محافظة عالية الخطر`);
+    `<i class="bi bi-shield-exclamation" aria-hidden="true"></i> ${highRisk} محافظة مرتفعة أو حرجة الخطر`);
 }
 
 function updateGovSelect(govs) {
@@ -991,20 +1076,55 @@ function updateGovSelect(govs) {
   });
 }
 
-// ── Rankings Table ────────────────────────────────────────────────────────────
+// ── Rankings Table — 8 columns ────────────────────────────────────────────────
 function populateRankings(govs) {
   const tbody = document.querySelector('#rankingsTable tbody');
   if (!tbody) return;
+
+  const avgRisk = CsApp._avgRisk || 0;
+  const q       = _rankSearch.toLowerCase();
+
+  let list = [...govs];
+
+  // Search filter
+  if (q) {
+    list = list.filter(g =>
+      (g.name_ar || '').includes(q) ||
+      (g.name_en || '').toLowerCase().includes(q)
+    );
+  }
+
+  // Sort
+  list.sort((a, b) => {
+    if (_rankSort.col === 'name') {
+      const na = a.name_ar || a.name_en || '';
+      const nb = b.name_ar || b.name_en || '';
+      return _rankSort.dir === 'asc'
+        ? na.localeCompare(nb, 'ar')
+        : nb.localeCompare(na, 'ar');
+    }
+    const va = _rankSort.col === 'kgs'
+      ? (a.kg_count || 0)
+      : (a.risk_score || 0);
+    const vb = _rankSort.col === 'kgs'
+      ? (b.kg_count || 0)
+      : (b.risk_score || 0);
+    return _rankSort.dir === 'asc' ? va - vb : vb - va;
+  });
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:#64748b">
+      لا توجد نتائج مطابقة للبحث
+    </td></tr>`;
+    return;
+  }
+
   tbody.innerHTML = '';
-  const sorted = [...govs].sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0));
-  sorted.forEach((g, i) => {
+  list.forEach((g, i) => {
     const score   = g.risk_score || 0;
     const cls     = riskClass(score);
     const rank    = i + 1;
     const numCls  = rank <= 3 ? `top-${rank}` : '';
-    const govJson = JSON.stringify(g).replace(/"/g, '&quot;');
-    const tr      = document.createElement('tr');
-    tr.onclick    = () => selectGovernorate(g);
 
     const indVal  = CsApp.currentInd && CsApp.currentInd !== 'overall_risk'
       ? (g.main_indicators?.[CsApp.currentInd] ?? null) : null;
@@ -1012,29 +1132,190 @@ function populateRankings(govs) {
       ? `<small style="color:#64748b">${IND_LABELS[CsApp.currentInd]?.ar || CsApp.currentInd}: ${indVal.toFixed(0)}</small>`
       : '';
 
+    // Compare to national average
+    const diff = score - avgRisk;
+    const compHtml = avgRisk > 0
+      ? diff > 2
+        ? `<span class="compare-up" title="أعلى من المتوسط بـ ${diff.toFixed(1)}">↑ ${diff.toFixed(1)}</span>`
+        : diff < -2
+        ? `<span class="compare-dn" title="أقل من المتوسط بـ ${Math.abs(diff).toFixed(1)}">↓ ${Math.abs(diff).toFixed(1)}</span>`
+        : `<span class="compare-eq">≈</span>`
+      : '<span class="compare-eq">--</span>';
+
+    const kgCount = g.kg_count      != null ? g.kg_count      : '--';
+    const stCount = g.student_count != null ? g.student_count : '--';
+    const govJson = JSON.stringify(g).replace(/"/g, '&quot;');
+    const safeName = (g.name_ar || g.name_en || '').replace(/'/g, '');
+    const safeSlug = (g.slug || '').replace(/'/g, '');
+
+    const tr = document.createElement('tr');
+    tr.dataset.slug = g.slug;
+    if (CsApp.selectedGov?.slug === g.slug) tr.classList.add('rank-selected');
+    tr.onclick = () => selectGovernorate(g);
+
     tr.innerHTML = `
       <td><span class="rank-num ${numCls}">${rank}</span></td>
       <td>
         <div class="rank-name">${g.name_ar || g.name_en}</div>
         <div class="rank-code">${g.name_en || ''} ${indCell}</div>
       </td>
+      <td style="font-size:.85rem;color:#cbd5e1;white-space:nowrap">${kgCount}</td>
+      <td style="font-size:.85rem;color:#cbd5e1;white-space:nowrap">${stCount}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
           <div class="mini-bar-track" style="flex:1">
             <div class="mini-bar-fill" style="width:${score}%;background:${riskHex(score)}"></div>
           </div>
-          <span style="color:${riskHex(score)};font-weight:600;font-size:.85rem">${score.toFixed(1)}</span>
+          <span style="color:${riskHex(score)};font-weight:600;font-size:.85rem;min-width:32px">${score.toFixed(1)}</span>
         </div>
       </td>
-      <td><span class="rank-badge risk-${cls}">${riskAr(score)}</span></td>
       <td>
-        <button class="rank-drill" onclick="event.stopPropagation();selectGovernorate(${govJson})"
-                aria-label="عرض تفاصيل ${g.name_ar || ''}">
-          <i class="bi bi-chevron-left" aria-hidden="true"></i>
-        </button>
+        <span class="rank-badge risk-${cls}">
+          ${riskAr(score)}
+        </span>
+      </td>
+      <td style="font-size:.8rem">${compHtml}</td>
+      <td>
+        <div class="rank-actions">
+          <button class="rank-drill"
+                  onclick="event.stopPropagation();selectGovernorate(${govJson})"
+                  title="عرض التفاصيل"
+                  aria-label="عرض تفاصيل ${g.name_ar || ''}">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+          </button>
+          <button class="rank-drill"
+                  onclick="event.stopPropagation();selectGovernorate(${govJson})"
+                  title="تحليل المحافظة"
+                  aria-label="تحليل ${g.name_ar || ''}">
+            <i class="bi bi-graph-up" aria-hidden="true"></i>
+          </button>
+          <button class="rank-drill"
+                  onclick="event.stopPropagation();exportGovReport('${safeSlug}','${safeName}')"
+                  title="تصدير التقرير"
+                  aria-label="تصدير تقرير ${g.name_ar || ''}">
+            <i class="bi bi-download" aria-hidden="true"></i>
+          </button>
+        </div>
       </td>`;
     tbody.appendChild(tr);
   });
+}
+
+// ── Export Functions ──────────────────────────────────────────────────────────
+function showHeatmapToast(message, type) {
+  if (window.Swal) {
+    window.Swal.fire({
+      toast:            true,
+      position:         'top-end',
+      icon:             type || 'info',
+      title:            message,
+      showConfirmButton: false,
+      timer:            3000,
+      timerProgressBar: true,
+    });
+    return;
+  }
+  // Fallback: update status chip
+  const chip = document.getElementById('lastUpdateStatus');
+  if (!chip) return;
+  const old = chip.innerHTML;
+  chip.innerHTML = `<i class="bi bi-info-circle" aria-hidden="true"></i> ${message}`;
+  setTimeout(() => { if (chip) chip.innerHTML = old; }, 3500);
+}
+
+function _downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportAllCSV() {
+  if (!CsApp.mapData?.governorates?.length) {
+    showHeatmapToast('لا توجد بيانات للتصدير', 'warning');
+    return;
+  }
+  showHeatmapToast('جاري تجهيز التقرير...', 'info');
+
+  const govs    = CsApp.mapData.governorates;
+  const avgRisk = CsApp._avgRisk || 0;
+  const headers = [
+    'المحافظة', 'الاسم الإنجليزي', 'إجمالي المنشآت',
+    'الأطفال النشطون', 'مؤشر الخطر', 'مستوى الخطر', 'مقارنة بالمتوسط الوطني',
+  ];
+  const rows = govs
+    .sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0))
+    .map(g => [
+      g.name_ar || '',
+      g.name_en || '',
+      g.kg_count      ?? '',
+      g.student_count ?? '',
+      (g.risk_score || 0).toFixed(1),
+      riskAr(g.risk_score || 0),
+      avgRisk > 0 ? ((g.risk_score || 0) - avgRisk).toFixed(1) : '',
+    ]);
+
+  const csv = '﻿' + [headers, ...rows]
+    .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    .join('\r\n');
+
+  _downloadBlob(
+    new Blob([csv], { type: 'text/csv;charset=utf-8;' }),
+    `kinjo_heatmap_${new Date().toISOString().split('T')[0]}.csv`
+  );
+  setTimeout(() => showHeatmapToast('تم تصدير التقرير بنجاح', 'success'), 600);
+}
+
+function exportToPDF() {
+  showHeatmapToast('جاري تجهيز التقرير للطباعة...', 'info');
+  setTimeout(() => window.print(), 800);
+}
+
+function exportGovReport(slug, name) {
+  if (!slug) return;
+  showHeatmapToast(`جاري تجهيز تقرير ${name || slug}...`, 'info');
+
+  const gov = CsApp.mapData?.governorates?.find(g => g.slug === slug);
+  if (!gov) {
+    setTimeout(() => showHeatmapToast('تعذر تجهيز التقرير، جرب مجدداً', 'error'), 800);
+    return;
+  }
+
+  const avgRisk = CsApp._avgRisk || 0;
+  const diff    = (gov.risk_score || 0) - avgRisk;
+  const lines   = [
+    '=== تقرير محافظة: ' + (gov.name_ar || gov.name_en) + ' ===',
+    '',
+    'الاسم بالعربية   : ' + (gov.name_ar || 'غير متوفر'),
+    'الاسم بالإنجليزية: ' + (gov.name_en || 'غير متوفر'),
+    'مؤشر الخطر      : ' + (gov.risk_score || 0).toFixed(1) + ' / 100',
+    'مستوى الخطر     : ' + riskAr(gov.risk_score || 0),
+    'إجمالي المنشآت  : ' + (gov.kg_count      ?? 'غير متوفر'),
+    'الأطفال النشطون  : ' + (gov.student_count ?? 'غير متوفر'),
+    avgRisk > 0
+      ? 'مقارنة بالمتوسط  : ' + (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' نقطة'
+      : '',
+    '',
+    '--- المؤشرات الرئيسية ---',
+    ...Object.entries(gov.main_indicators || {}).map(([k, v]) =>
+      (IND_LABELS[k]?.ar || k) + ': ' + (typeof v === 'number' ? v.toFixed(1) : (v ?? 'غير متوفر'))
+    ),
+    '',
+    '--- معلومات التقرير ---',
+    'تاريخ التصدير : ' + new Date().toLocaleString('ar-JO'),
+    'المصدر        : قاعدة بيانات كينجو المركزية',
+    'وزارة التنمية الاجتماعية — المملكة الأردنية الهاشمية',
+  ].filter(l => l !== null && l !== undefined);
+
+  _downloadBlob(
+    new Blob(['﻿' + lines.join('\r\n')], { type: 'text/plain;charset=utf-8;' }),
+    `kinjo_gov_${slug}_${new Date().toISOString().split('T')[0]}.txt`
+  );
+  setTimeout(() => showHeatmapToast('تم تصدير تقرير المحافظة بنجاح', 'success'), 600);
 }
 
 // ── WebSocket ─────────────────────────────────────────────────────────────────
@@ -1059,6 +1340,7 @@ function startWebSocket() {
           }
           colorGovPolygons(msg.governorates);
           updateKpiStrip({ governorates: msg.governorates });
+          populateRankings(CsApp.mapData?.governorates || []);
           updateStatusLive();
         }
       } catch { /* ignore malformed frames */ }
@@ -1089,8 +1371,8 @@ function setStatusError() {
 function bindUiEvents() {
 
   _on('indicatorViewSelect', 'change', () => {
-    const sel        = document.getElementById('indicatorViewSelect');
-    CsApp.currentInd = sel?.value || 'overall_risk';
+    const sel         = document.getElementById('indicatorViewSelect');
+    CsApp.currentInd  = sel?.value || 'overall_risk';
     if (CsApp.govDS && CsApp.mapData) {
       colorGovPolygons(CsApp.mapData.governorates || []);
       if (CsApp.highlighted?._govData) highlightGovEntity(CsApp.highlighted._govData.slug);
@@ -1128,16 +1410,21 @@ function bindUiEvents() {
     if (CsApp.govDS) CsApp.govDS.show = document.getElementById('govOverlayToggle')?.checked ?? true;
   });
 
-  // Governorate list search
-  _on('govSearch', 'input', applyGovListFilter);
+  // Governorate list search (debounced)
+  let govSearchTimer;
+  _on('govSearch', 'input', () => {
+    clearTimeout(govSearchTimer);
+    govSearchTimer = setTimeout(applyGovListFilter, 250);
+  });
 
   // Risk level filter pills
   document.querySelectorAll('.risk-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       CsApp.riskFilter = btn.dataset.risk || 'all';
-      document.querySelectorAll('.risk-filter-btn').forEach(b =>
-        b.classList.toggle('active', b === btn)
-      );
+      document.querySelectorAll('.risk-filter-btn').forEach(b => {
+        b.classList.toggle('active', b === btn);
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
       applyGovListFilter();
     });
   });
@@ -1177,6 +1464,36 @@ function bindUiEvents() {
       ? '<i class="bi bi-globe2" aria-hidden="true"></i> صورة القمر الاصطناعي'
       : '<i class="bi bi-map" aria-hidden="true"></i> خريطة بسيطة';
   });
+
+  // Rankings: debounced search
+  _on('rankSearch', 'input', () => {
+    clearTimeout(_rankSearchTimer);
+    _rankSearchTimer = setTimeout(() => {
+      _rankSearch = document.getElementById('rankSearch')?.value || '';
+      if (CsApp.mapData) populateRankings(CsApp.mapData.governorates || []);
+    }, 300);
+  });
+
+  // Rankings: sort buttons
+  const sortMap = { sortByRisk: 'risk', sortByName: 'name', sortByKgs: 'kgs' };
+  Object.keys(sortMap).forEach(id => {
+    _on(id, 'click', () => {
+      const col = sortMap[id];
+      if (_rankSort.col === col) {
+        _rankSort.dir = _rankSort.dir === 'desc' ? 'asc' : 'desc';
+      } else {
+        _rankSort = { col, dir: col === 'name' ? 'asc' : 'desc' };
+      }
+      document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(id)?.classList.add('active');
+      if (CsApp.mapData) populateRankings(CsApp.mapData.governorates || []);
+    });
+  });
+
+  // Export buttons
+  _on('exportCsvBtn', 'click', exportAllCSV);
+  _on('exportPdfBtn', 'click', exportToPDF);
+  _on('printPageBtn', 'click', () => window.print());
 }
 
 function flyToJordan() {
@@ -1192,14 +1509,19 @@ function showFallback(msg) {
   const c = document.getElementById('cesiumContainer');
   if (c) {
     c.innerHTML = `
-      <div class="page-error-state" style="min-height:400px">
+      <div class="page-error-state" style="min-height:400px" role="alert">
         <i class="bi bi-exclamation-octagon" style="font-size:3rem;color:#ef4444" aria-hidden="true"></i>
-        <h2>تعذر تحميل خريطة Cesium 3D</h2>
+        <h2>تعذر تحميل خريطة Cesium ثلاثية الأبعاد</h2>
         <p style="max-width:380px">${msg || 'يرجى التحقق من الاتصال بالإنترنت وإعادة المحاولة.'}</p>
         <button class="cc-btn" onclick="location.reload()">
           <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> إعادة المحاولة
         </button>
+        <p style="margin-top:1rem;font-size:.8rem;color:#475569">
+          ملاحظة: جدول التصنيف ومؤشرات الأداء تعمل بشكل مستقل عن الخريطة
+        </p>
       </div>`;
+    // Still try to load data for the table/KPIs
+    fetchMapData();
   }
 }
 
@@ -1213,10 +1535,14 @@ function _on(id, ev, fn) {
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
-window.selectGovernorate = selectGovernorate;
-window.selectCity        = selectCity;
-window.resetCityFilter   = resetCityFilter;
-window.loadGovDetail     = loadGovDetail;
-window.populateRankings  = populateRankings;
-window.fetchMapData      = fetchMapData;
-window.CsApp             = CsApp;
+window.selectGovernorate  = selectGovernorate;
+window.selectCity         = selectCity;
+window.resetCityFilter    = resetCityFilter;
+window.loadGovDetail      = loadGovDetail;
+window.populateRankings   = populateRankings;
+window.fetchMapData       = fetchMapData;
+window.retryFetchMapData  = retryFetchMapData;
+window.exportAllCSV       = exportAllCSV;
+window.exportToPDF        = exportToPDF;
+window.exportGovReport    = exportGovReport;
+window.CsApp              = CsApp;

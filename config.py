@@ -171,7 +171,7 @@ class Settings(BaseSettings):
     DEFAULT_LANGUAGE: str = "ar"
     SUPPORTED_LANGUAGES: List[str] = ["ar", "en"]
 
-    # Public-facing organization contact info (shown on the public Contact/footer
+# Public-facing organization contact info (shown on the public Contact/footer
     # pages once the operator configures real values; left blank otherwise so we
     # never display fabricated contact details).
     SUPPORT_CONTACT_EMAIL: str = ""
@@ -194,7 +194,7 @@ class Settings(BaseSettings):
     CLAMAV_PORT: int = 3310
 
     # Business Rules
-    MIN_CHILD_AGE_DAYS: int = 70
+    MIN_CHILD_AGE_DAYS: int = 1
     MAX_CHILD_AGE_MONTHS: int = 56  # 4 years 8 months
     WAITLIST_OFFER_EXPIRY_HOURS: int = 48
     MANAGER_TO_MANAGER_ENABLED: bool = False

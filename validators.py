@@ -290,14 +290,14 @@ def _build_child_age_error_message(date_of_birth: date) -> Optional[str]:
 
 
 def validate_child_age(date_of_birth: date) -> bool:
-    """Validate child age is within acceptable range (70 days to 4 years 8 months)."""
+    """Validate child age is within acceptable range (1 day to 4 years 8 months)."""
     return is_dob_within_bounds(date_of_birth)
 
 
 def validate_child_age_strict(date_of_birth: date) -> None:
     """
     Validate child age is within acceptable range and raise ValidationError if not.
-    Age constraints: 70 days minimum to 4 years 8 months (56 months) maximum.
+    Age constraints: 1 day minimum to 4 years 8 months (56 months) maximum.
     """
     message = _build_child_age_error_message(date_of_birth)
     if message:

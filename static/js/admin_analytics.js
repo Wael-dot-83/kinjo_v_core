@@ -334,6 +334,7 @@ async function loadAdminAnalytics(retryCount = 0) {
     await loadTargets();
     await loadBenchmarks();
     await loadRecommendations();
+    await loadRegistrationAnalytics();
 
     showToast(
       adminAnalyticsText("تم تحديث البيانات بنجاح", "Data refreshed successfully"),
@@ -407,6 +408,17 @@ function showSkeletonLoaders() {
   document.querySelector("#enrollmentRateBar").style.width = "0%";
   document.querySelector("#kpiKgGrowth").innerHTML = '<div class="skeleton-text w-75"></div>';
 
+  // Show skeleton for registration KPI cards
+  document
+    .querySelectorAll("#regTotalApplications, #regNewApplications, #regApproved, #regPending, #regRejected")
+    .forEach((el) => {
+      el.innerHTML = '<div class="skeleton-text w-50"></div>';
+    });
+  ["regConversionValue", "regRejectionValue", "regApprovalTimeValue"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div class="skeleton-text w-50 d-inline-block"></div>';
+  });
+
   // Show skeleton for governorate table
   const tbody = document.getElementById("governorateTableBody");
   if (tbody) {
@@ -461,9 +473,29 @@ function showSkeletonLoaders() {
         </div>
     `;
 
+  // Skeleton for registration table
+  const regTbody = document.getElementById("registrationTableBody");
+  if (regTbody) {
+    regTbody.innerHTML = Array(3).fill(`
+      <tr>
+        <td><div class="skeleton-text w-75"></div></td>
+        <td><div class="skeleton-text w-50"></div></td>
+        <td><div class="skeleton-text w-75"></div></td>
+        <td><div class="skeleton-text w-50"></div></td>
+        <td><div class="skeleton-text w-50 mx-auto"></div></td>
+        <td><div class="skeleton-text w-50"></div></td>
+        <td><div class="skeleton-text w-50 mx-auto"></div></td>
+        <td><div class="skeleton-text w-50 mx-auto"></div></td>
+        <td><div class="skeleton-text w-25 mx-auto"></div></td>
+      </tr>
+    `).join("");
+  }
+
   // Clear charts if they exist
   if (trendChartInstance) trendChartInstance.destroy();
   if (governanceChart) governanceChart.destroy();
+  if (funnelChartInstance) { funnelChartInstance.destroy(); funnelChartInstance = null; }
+  if (sourceChartInstance) { sourceChartInstance.destroy(); sourceChartInstance = null; }
 }
 
 function hideSkeletonLoaders() {
@@ -1813,15 +1845,20 @@ function renderSparklines(dashboardData) {
 function getSparklineData(data, metric) {
   if (!data) return null;
 
+  function validNums(arr) {
+    var filtered = (arr || []).filter(function (v) { return v != null && isFinite(v); });
+    return filtered.length >= 2 ? filtered : null;
+  }
+
   switch (metric) {
     case 'total_kg':
-      return data.total_kindergartens_trend || [data.previous_period?.total_kindergartens, data.network_summary?.total_kindergartens];
+      return validNums(data.total_kindergartens_trend) || validNums([data.previous_period?.total_kindergartens, data.network_summary?.total_kindergartens]);
     case 'total_children':
-      return data.total_children_trend || [data.previous_period?.total_children, data.network_summary?.total_children];
+      return validNums(data.total_children_trend) || validNums([data.previous_period?.total_children, data.network_summary?.total_children]);
     case 'attendance_rate':
-      return data.attendance_rate_trend || [data.previous_period?.attendance_rate, data.network_summary?.attendance_rate];
+      return validNums(data.attendance_rate_trend) || validNums([data.previous_period?.attendance_rate, data.network_summary?.attendance_rate]);
     case 'incident_rate':
-      return data.incident_rate_trend || [data.previous_period?.incident_rate, data.network_summary?.incident_rate];
+      return validNums(data.incident_rate_trend) || validNums([data.previous_period?.incident_rate, data.network_summary?.incident_rate]);
     default:
       return null;
   }
@@ -1852,6 +1889,768 @@ function renderMiniSparkline(container, data) {
     '<polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</svg>';
   container.innerHTML = svg;
+}
+
+// =============================================================================
+// Registration Analytics
+// =============================================================================
+
+let funnelChartInstance = null;
+let sourceChartInstance = null;
+let regTablePage = 1;
+let regTableTotalPages = 1;
+
+function getRegistrationFilters() {
+  return {
+    status: document.getElementById("regStatusFilter")?.value || "",
+    source: document.getElementById("regSourceFilter")?.value || "",
+    reviewer_id: document.getElementById("regReviewerFilter")?.value || "",
+  };
+}
+
+async function loadRegistrationAnalytics() {
+  const start = document.getElementById("periodStart")?.value || "";
+  const end = document.getElementById("periodEnd")?.value || "";
+  const gov = document.getElementById("governorateFilter")?.value || "";
+  const filters = getRegistrationFilters();
+
+  if (!start || !end) return;
+
+  const params = new URLSearchParams({ start_date: start, end_date: end });
+  if (gov) params.set("governorate", gov);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.source) params.set("source", filters.source);
+  if (filters.reviewer_id) params.set("reviewer_id", filters.reviewer_id);
+
+  try {
+    const res = await fetchWithAuth(`/api/analytics/registration/analytics?${params.toString()}`);
+    if (!res) return;
+    const data = await res.json();
+    updateRegistrationKPIs(data);
+    renderFunnelChart(data.funnel || {});
+    renderRejectionReasons(data.rejection_reasons || {});
+    renderSourceChart(data.source_breakdown || {});
+    regTablePage = 1;
+    await loadRegistrationTable();
+  } catch (error) {
+    console.error("Registration analytics load error:", error);
+  }
+
+  // Load entity-level summary (users / KGs / children / quality) and quality breakdown in parallel
+  await Promise.all([
+    loadRegistrationEntitySummary(),
+    loadRegistrationQualityBreakdown(),
+  ]);
+}
+
+// =============================================================================
+// Registration Entity Summary — users, KGs, children, quality, action queue
+// =============================================================================
+
+async function loadRegistrationEntitySummary() {
+  const start = document.getElementById("periodStart")?.value || "";
+  const end   = document.getElementById("periodEnd")?.value   || "";
+  const gov   = document.getElementById("governorateFilter")?.value || "";
+
+  if (!start || !end) return;
+
+  const params = new URLSearchParams({ start_date: start, end_date: end });
+  if (gov) params.set("governorate", gov);
+
+  try {
+    const res = await fetchWithAuth(`/api/analytics/registration/entity-summary?${params}`);
+    if (!res) return;
+    const data = await res.json();
+
+    _renderEntitySummaryCards(data);
+    _renderStatusMatrix(data.enrollments || {});
+    _renderActionQueue(data.actions_required || []);
+    _renderRoleBreakdown(data.users?.by_role || {});
+
+    const freshEl = document.getElementById("regStatusFreshness");
+    if (freshEl) {
+      const ts = new Date().toLocaleTimeString(adminAnalyticsLocale());
+      freshEl.textContent = adminAnalyticsText(
+        `آخر تحديث: ${ts}`,
+        `Last updated: ${ts}`
+      );
+    }
+  } catch (err) {
+    console.error("Entity summary load error:", err);
+  }
+}
+
+function _setBarWidth(id, pct) {
+  const el = document.getElementById(id);
+  if (el) el.style.width = `${Math.min(100, Math.max(0, pct || 0)).toFixed(1)}%`;
+}
+
+function _renderEntitySummaryCards(data) {
+  const u      = data.users          || {};
+  const k      = data.kindergartens  || {};
+  const c      = data.children       || {};
+  const locale = adminAnalyticsLocale();
+
+  // Users
+  safeSetText("regUsersTotal",     (u.total     || 0).toLocaleString(locale));
+  safeSetText("regUsersNew",       `+${(u.new_this_period || 0).toLocaleString(locale)}`);
+  safeSetText("regUsersActive",    (u.active    || 0).toLocaleString(locale));
+  safeSetText("regUsersSuspended", (u.suspended || 0).toLocaleString(locale));
+  safeSetText("regUsersInactive",  (u.inactive  || 0).toLocaleString(locale));
+  const uT = u.total || 1;
+  _setBarWidth("regUsersActiveBar",    (u.active    || 0) / uT * 100);
+  _setBarWidth("regUsersSuspendedBar", (u.suspended || 0) / uT * 100);
+  _setBarWidth("regUsersInactiveBar",  (u.inactive  || 0) / uT * 100);
+
+  // Kindergartens
+  safeSetText("regKgTotal",    (k.total    || 0).toLocaleString(locale));
+  safeSetText("regKgNew",      `+${(k.new_this_period || 0).toLocaleString(locale)}`);
+  safeSetText("regKgActive",   (k.active   || 0).toLocaleString(locale));
+  safeSetText("regKgInactive", (k.inactive || 0).toLocaleString(locale));
+  safeSetText("regKgDraft",    (k.draft    || 0).toLocaleString(locale));
+  const kT = k.total || 1;
+  _setBarWidth("regKgActiveBar",   (k.active   || 0) / kT * 100);
+  _setBarWidth("regKgInactiveBar", (k.inactive || 0) / kT * 100);
+  _setBarWidth("regKgDraftBar",    (k.draft    || 0) / kT * 100);
+
+  // Children
+  safeSetText("regChildrenTotal",         (c.total              || 0).toLocaleString(locale));
+  safeSetText("regChildrenEnrolled",      (c.enrolled           || 0).toLocaleString(locale));
+  safeSetText("regChildrenEnrolledCount", (c.enrolled           || 0).toLocaleString(locale));
+  safeSetText("regChildrenPending",       (c.pending            || 0).toLocaleString(locale));
+  safeSetText("regChildrenNone",          (c.without_enrollment || 0).toLocaleString(locale));
+  const cT = c.total || 1;
+  _setBarWidth("regChildrenEnrolledBar", (c.enrolled           || 0) / cT * 100);
+  _setBarWidth("regChildrenPendingBar",  (c.pending            || 0) / cT * 100);
+  _setBarWidth("regChildrenNoEnrollBar", (c.without_enrollment || 0) / cT * 100);
+}
+
+function _renderStatusMatrix(enrollments) {
+  const container = document.getElementById("regStatusMatrix");
+  if (!container) return;
+
+  const byStatus = enrollments.by_status || {};
+  const total    = enrollments.total     || 1;
+  const locale   = adminAnalyticsLocale();
+
+  const STATUSES = [
+    { key: "DRAFT",          ar: "مسودة",            en: "Draft",          color: "#94A3B8", icon: "bi-file-earmark" },
+    { key: "SUBMITTED",      ar: "مقدّم",            en: "Submitted",      color: "#3B82F6", icon: "bi-send" },
+    { key: "PENDING_REVIEW", ar: "قيد المراجعة",     en: "Pending Review", color: "#F59E0B", icon: "bi-hourglass-split" },
+    { key: "ACCEPTED",       ar: "مقبول",            en: "Accepted",       color: "#10B981", icon: "bi-check-circle" },
+    { key: "ACTIVE",         ar: "نشط",              en: "Active",         color: "#059669", icon: "bi-circle-fill" },
+    { key: "REJECTED",       ar: "مرفوض",            en: "Rejected",       color: "#EF4444", icon: "bi-x-circle" },
+    { key: "WAITLISTED",     ar: "قائمة الانتظار",   en: "Waitlisted",     color: "#6366F1", icon: "bi-clock-history" },
+    { key: "WITHDRAWN",      ar: "منسحب",            en: "Withdrawn",      color: "#64748B", icon: "bi-dash-circle" },
+  ];
+
+  container.innerHTML = STATUSES.map(s => {
+    const count = byStatus[s.key] || 0;
+    const pct   = ((count / total) * 100).toFixed(1);
+    const label = adminAnalyticsText(s.ar, s.en);
+    return `
+      <div class="mb-2">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <small class="d-flex align-items-center gap-1 fw-medium" style="font-size:.72rem;">
+            <i class="bi ${s.icon}" style="color:${s.color};font-size:.6rem;" aria-hidden="true"></i>
+            ${label}
+          </small>
+          <small style="color:${s.color};font-weight:600;font-size:.72rem;">
+            ${count.toLocaleString(locale)}
+            <span class="text-muted fw-normal">(${pct}%)</span>
+          </small>
+        </div>
+        <div class="progress" style="height:4px;"
+             role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"
+             aria-label="${label}: ${pct}%">
+          <div class="progress-bar" style="width:${pct}%;background:${s.color};transition:width .4s ease;"></div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function _renderActionQueue(actions) {
+  const container = document.getElementById("regActionQueue");
+  const badge     = document.getElementById("regActionsBadge");
+  if (!container) return;
+
+  if (badge) {
+    badge.textContent = actions.length;
+    badge.className   = `badge ms-auto ${actions.length > 0 ? "bg-warning text-dark" : "bg-secondary"}`;
+  }
+
+  if (!actions.length) {
+    container.innerHTML = `
+      <div class="text-center py-3">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:2rem;" aria-hidden="true"></i>
+        <div class="small text-muted mt-2">
+          ${adminAnalyticsText("لا توجد إجراءات مطلوبة حالياً", "No actions required")}
+        </div>
+      </div>`;
+    return;
+  }
+
+  const priorityBadge = { high: "danger", medium: "warning text-dark", low: "info text-dark" };
+  const locale = adminAnalyticsLocale();
+
+  container.innerHTML = actions.map(a => `
+    <div class="d-flex align-items-start gap-2 mb-2 p-2 rounded"
+         style="background:rgba(0,0,0,.04);">
+      <span class="badge bg-${priorityBadge[a.priority] || "secondary"} flex-shrink-0 mt-1">
+        ${(a.count || 0).toLocaleString(locale)}
+      </span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="small fw-medium lh-sm" style="font-size:.75rem;">
+          ${escapeHtml(a.label_ar || "")}
+        </div>
+        ${a.url ? `
+          <a href="${escapeHtml(a.url)}"
+             class="small text-primary text-decoration-none d-inline-flex align-items-center gap-1 mt-1"
+             style="font-size:.68rem;">
+            ${escapeHtml(a.action_ar || adminAnalyticsText("عرض", "View"))}
+            <i class="bi bi-arrow-left-short" aria-hidden="true"></i>
+          </a>` : ""}
+      </div>
+    </div>`).join("");
+}
+
+function _renderRoleBreakdown(byRole) {
+  const container = document.getElementById("regRoleBreakdown");
+  if (!container) return;
+
+  const ROLES = [
+    { key: "ADMIN",      ar: "مدير النظام",    en: "Admin",      color: "#1F5E47", icon: "bi-shield-lock" },
+    { key: "MANAGER",    ar: "مدير روضة",      en: "Manager",    color: "#2563EB", icon: "bi-person-workspace" },
+    { key: "SUPERVISOR", ar: "مشرف تربوي",     en: "Supervisor", color: "#7C3AED", icon: "bi-binoculars" },
+    { key: "PARENT",     ar: "ولي أمر",        en: "Parent",     color: "#0891B2", icon: "bi-people" },
+  ];
+
+  const total  = Object.values(byRole).reduce((a, b) => a + b, 0) || 1;
+  const locale = adminAnalyticsLocale();
+
+  container.innerHTML = ROLES.map(r => {
+    const count = byRole[r.key] || 0;
+    const pct   = ((count / total) * 100).toFixed(1);
+    const label = adminAnalyticsText(r.ar, r.en);
+    return `
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+             style="width:30px;height:30px;background:${r.color}1a;" aria-hidden="true">
+          <i class="bi ${r.icon}" style="color:${r.color};font-size:.75rem;"></i>
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <small class="fw-medium" style="font-size:.75rem;">${label}</small>
+            <small class="fw-bold" style="color:${r.color};font-size:.75rem;">${count.toLocaleString(locale)}</small>
+          </div>
+          <div class="progress" style="height:4px;"
+               role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"
+               aria-label="${label}: ${pct}%">
+            <div class="progress-bar" style="width:${pct}%;background:${r.color};transition:width .4s ease;"></div>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function updateRegistrationKPIs(data) {
+  safeSetText("regTotalApplications", (data.total_applications || 0).toLocaleString(adminAnalyticsLocale()));
+  safeSetText("regNewApplications", (data.new_applications || 0).toLocaleString(adminAnalyticsLocale()));
+  safeSetText("regApproved", (data.status_breakdown?.ACCEPTED || 0).toLocaleString(adminAnalyticsLocale()));
+  safeSetText("regPending", (data.status_breakdown?.PENDING_REVIEW || 0).toLocaleString(adminAnalyticsLocale()));
+  safeSetText("regRejected", (data.status_breakdown?.REJECTED || 0).toLocaleString(adminAnalyticsLocale()));
+  safeSetText("regConversionValue", `${data.conversion_rate ?? 0}%`);
+  safeSetText("regRejectionValue", `${data.approval_workflow?.rejection_rate ?? 0}%`);
+  safeSetText("regApprovalTimeValue", `${data.approval_workflow?.avg_approval_hours ?? 0}h`);
+}
+
+function renderFunnelChart(funnel) {
+  const canvas = document.getElementById("funnelChart");
+  const empty = document.getElementById("funnelEmpty");
+  if (!canvas) return;
+
+  const stages = [
+    { label: adminAnalyticsText("مسودة", "Draft"), value: funnel.draft || 0, color: "#94A3B8" },
+    { label: adminAnalyticsText("مقدّم", "Submitted"), value: funnel.submitted || 0, color: "#3B82F6" },
+    { label: adminAnalyticsText("قيد المراجعة", "Pending Review"), value: funnel.pending_review || 0, color: "#F59E0B" },
+    { label: adminAnalyticsText("مقبول", "Accepted"), value: funnel.accepted || 0, color: "#10B981" },
+    { label: adminAnalyticsText("نشط", "Active"), value: funnel.active || 0, color: "#059669" },
+  ];
+
+  const hasData = stages.some(s => s.value > 0);
+  if (empty) empty.classList.toggle("d-none", hasData);
+  if (!hasData) {
+    if (funnelChartInstance) { funnelChartInstance.destroy(); funnelChartInstance = null; }
+    return;
+  }
+
+  if (!adminAnalyticsHasChart()) return;
+
+  if (funnelChartInstance) funnelChartInstance.destroy();
+
+  funnelChartInstance = new window.Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: stages.map(s => s.label),
+      datasets: [{
+        label: adminAnalyticsText("الطلبات", "Applications"),
+        data: stages.map(s => s.value),
+        backgroundColor: stages.map(s => s.color),
+        borderWidth: 0,
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 1 } },
+        y: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+function renderRejectionReasons(reasons) {
+  const container = document.getElementById("rejectionReasonsList");
+  const empty = document.getElementById("rejectionEmpty");
+  if (!container) return;
+
+  const entries = Object.entries(reasons).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const hasData = entries.length > 0;
+  if (empty) empty.classList.toggle("d-none", hasData);
+
+  if (!hasData) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const maxCount = entries[0][1];
+  container.innerHTML = entries.map(([reason, count]) => `
+    <div class="list-group-item border-0 px-0">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <small class="fw-medium text-truncate" style="max-width: 70%;" title="${escapeHtml(reason)}">${escapeHtml(reason)}</small>
+        <span class="badge bg-danger rounded-pill">${count}</span>
+      </div>
+      <div class="progress" style="height: 4px;">
+        <div class="progress-bar bg-danger" style="width: ${(count / maxCount) * 100}%"></div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderSourceChart(sources) {
+  const canvas = document.getElementById("sourceChart");
+  const empty = document.getElementById("sourceEmpty");
+  if (!canvas) return;
+
+  const entries = Object.entries(sources);
+  const hasData = entries.length > 0;
+  if (empty) empty.classList.toggle("d-none", hasData);
+
+  if (!hasData) {
+    if (sourceChartInstance) { sourceChartInstance.destroy(); sourceChartInstance = null; }
+    return;
+  }
+
+  if (!adminAnalyticsHasChart()) return;
+  if (sourceChartInstance) sourceChartInstance.destroy();
+
+  const colors = ["#1F5E47", "#2F7D62", "#10B981", "#F59E0B", "#EF4444", "#6366F1"];
+  sourceChartInstance = new window.Chart(canvas, {
+    type: "doughnut",
+    data: {
+      labels: entries.map(e => e[0]),
+      datasets: [{
+        data: entries.map(e => e[1]),
+        backgroundColor: entries.map((_, i) => colors[i % colors.length]),
+        borderWidth: 2,
+        borderColor: "#fff",
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 12, padding: 8, font: { size: 11 } } },
+      },
+    },
+  });
+}
+
+async function loadRegistrationTable() {
+  const tbody = document.getElementById("registrationTableBody");
+  const info = document.getElementById("regTableInfo");
+  if (!tbody) return;
+
+  const start = document.getElementById("periodStart")?.value || "";
+  const end = document.getElementById("periodEnd")?.value || "";
+  const gov = document.getElementById("governorateFilter")?.value || "";
+  const filters = getRegistrationFilters();
+  const search = document.getElementById("regSearchInput")?.value || "";
+
+  const params = new URLSearchParams({
+    start_date: start,
+    end_date: end,
+    page: regTablePage,
+    page_size: 10,
+  });
+  if (gov) params.set("governorate", gov);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.source) params.set("source", filters.source);
+  if (filters.reviewer_id) params.set("reviewer_id", filters.reviewer_id);
+  if (search) params.set("search", search);
+
+  try {
+    const res = await fetchWithAuth(`/api/analytics/registration/drilldown?${params.toString()}`);
+    if (!res) return;
+    const data = await res.json();
+    regTableTotalPages = data.pagination?.total_pages || 1;
+
+    const statusBadge = (status) => {
+      const map = {
+        DRAFT: "bg-secondary",
+        SUBMITTED: "bg-info",
+        PENDING_REVIEW: "bg-warning text-dark",
+        ACCEPTED: "bg-success",
+        REJECTED: "bg-danger",
+        ACTIVE: "bg-primary",
+        WAITLISTED: "bg-info",
+        WITHDRAWN: "bg-secondary",
+      };
+      return map[status] || "bg-secondary";
+    };
+
+    tbody.innerHTML = (data.data || []).map(item => `
+      <tr>
+        <td class="fw-medium">${escapeHtml(item.child_name)}</td>
+        <td>${escapeHtml(item.parent_name)}</td>
+        <td>${escapeHtml(item.kindergarten_name)}</td>
+        <td>${escapeHtml(item.kindergarten_city)}</td>
+        <td><span class="badge ${statusBadge(item.status)}">${escapeHtml(item.status)}</span></td>
+        <td>${escapeHtml(item.source || "-")}</td>
+        <td>${item.submitted_at ? new Date(item.submitted_at).toLocaleDateString(adminAnalyticsLocale()) : "-"}</td>
+        <td>${escapeHtml(item.reviewer_name || "-")}</td>
+        <td class="text-center">
+          <a href="/enrollments/${item.id}" class="btn btn-sm btn-outline-primary" title="{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}">
+            <i class="bi bi-eye"></i>
+          </a>
+        </td>
+      </tr>
+    `).join("") || `<tr><td colspan="9" class="text-center py-4 text-muted">${adminAnalyticsText("لا توجد بيانات", "No data")}</td></tr>`;
+
+    if (info) {
+      info.textContent = adminAnalyticsText(
+        `الصفحة ${data.pagination?.page || 1} من ${data.pagination?.total_pages || 1}`,
+        `Page ${data.pagination?.page || 1} of ${data.pagination?.total_pages || 1}`
+      );
+    }
+
+    document.getElementById("regPrevPage")?.toggleAttribute("disabled", (data.pagination?.page || 1) <= 1);
+    document.getElementById("regNextPage")?.toggleAttribute("disabled", (data.pagination?.page || 1) >= regTableTotalPages);
+  } catch (error) {
+    console.error("Registration table load error:", error);
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">${adminAnalyticsText("تعذر تحميل البيانات.", "Failed to load data.")}</td></tr>`;
+  }
+}
+
+async function loadReviewerOptions() {
+  const select = document.getElementById("regReviewerFilter");
+  if (!select) return;
+  try {
+    const res = await fetchWithAuth(`/api/admin/users?role=MANAGER&limit=100`);
+    if (!res) return;
+    const data = await res.json();
+    const users = data.data || [];
+    const current = select.value;
+    // Keep the first option
+    select.innerHTML = `<option value="">${adminAnalyticsText("كل المُراجعين", "All Reviewers")}</option>`;
+    users.forEach(u => {
+      const opt = document.createElement("option");
+      opt.value = u.id;
+      opt.textContent = u.full_name || u.username;
+      select.appendChild(opt);
+    });
+    if (current) select.value = current;
+  } catch (error) {
+    console.error("Reviewer options load error:", error);
+  }
+}
+
+// Wire up registration filters
+document.addEventListener("DOMContentLoaded", function () {
+  const regStatus = document.getElementById("regStatusFilter");
+  const regSource = document.getElementById("regSourceFilter");
+  const regReviewer = document.getElementById("regReviewerFilter");
+  const regSearch = document.getElementById("regSearchInput");
+  const regRefresh = document.getElementById("regRefreshTable");
+  const regPrev = document.getElementById("regPrevPage");
+  const regNext = document.getElementById("regNextPage");
+
+  [regStatus, regSource, regReviewer].forEach(el => {
+    el?.addEventListener("change", () => {
+      regTablePage = 1;
+      loadRegistrationAnalytics();
+    });
+  });
+
+  regSearch?.addEventListener("input", () => {
+    regTablePage = 1;
+    loadRegistrationTable();
+  });
+
+  regRefresh?.addEventListener("click", () => loadRegistrationAnalytics());
+  regPrev?.addEventListener("click", () => {
+    if (regTablePage > 1) { regTablePage--; loadRegistrationTable(); }
+  });
+  regNext?.addEventListener("click", () => {
+    if (regTablePage < regTableTotalPages) { regTablePage++; loadRegistrationTable(); }
+  });
+
+  loadReviewerOptions();
+
+  document.getElementById("regEntityRefreshBtn")?.addEventListener("click", () => {
+    loadRegistrationEntitySummary();
+    loadRegistrationQualityBreakdown();
+  });
+});
+
+// =============================================================================
+// Registration Quality Breakdown — governorate table, completeness, monthly trend
+// =============================================================================
+
+let _regMonthlyChart = null;
+
+async function loadRegistrationQualityBreakdown() {
+  const start = document.getElementById("periodStart")?.value || "";
+  const end   = document.getElementById("periodEnd")?.value   || "";
+  const gov   = document.getElementById("governorateFilter")?.value || "";
+
+  if (!start || !end) return;
+
+  const params = new URLSearchParams({ start_date: start, end_date: end });
+  if (gov) params.set("governorate", gov);
+
+  try {
+    const res = await fetchWithAuth(`/api/analytics/registration/quality-breakdown?${params}`);
+    if (!res) return;
+    const data = await res.json();
+    _renderGovernorateBreakdown(data.governorate_breakdown || []);
+    _renderCompletenessPanel(data.completeness || {});
+    _renderMonthlyTrendChart(data.monthly_trends || {});
+  } catch (err) {
+    console.error("Quality breakdown load error:", err);
+    const tbody = document.getElementById("regGovTableBody");
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-3 text-danger small">
+      ${adminAnalyticsText("تعذر تحميل البيانات", "Failed to load data")}
+    </td></tr>`;
+  }
+}
+
+function _renderGovernorateBreakdown(rows) {
+  const tbody   = document.getElementById("regGovTableBody");
+  const counter = document.getElementById("regGovCount");
+  const sub     = document.getElementById("regGovSubtitle");
+  if (!tbody) return;
+
+  if (counter) counter.textContent = `${rows.length}`;
+  if (sub) {
+    const hasDraft = rows.some(r => r.kg_draft > 0);
+    const hasPend  = rows.some(r => r.enrollments_pending > 0);
+    sub.textContent = hasDraft || hasPend
+      ? adminAnalyticsText("توجد محافظات تحتاج اهتماماً", "Some governorates need attention")
+      : adminAnalyticsText("جميع المحافظات في وضع جيد", "All governorates in good standing");
+    sub.style.color = (hasDraft || hasPend) ? "#D97706" : "#10B981";
+  }
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">
+      ${adminAnalyticsText("لا توجد بيانات محافظات", "No governorate data")}
+    </td></tr>`;
+    return;
+  }
+
+  const locale = adminAnalyticsLocale();
+  tbody.innerHTML = rows.map(r => {
+    const pct   = r.completion_rate || 0;
+    const color = pct >= 75 ? "#10B981" : pct >= 50 ? "#F59E0B" : "#EF4444";
+    const draftBadge = r.kg_draft > 0
+      ? `<span class="badge" style="background:#FEF9C3;color:#92400E;font-size:.65rem;">${r.kg_draft}</span>`
+      : `<span class="text-muted" style="font-size:.8rem;">—</span>`;
+    const pendBadge = r.enrollments_pending > 0
+      ? `<span class="badge" style="background:#FEE2E2;color:#991B1B;font-size:.65rem;">${r.enrollments_pending.toLocaleString(locale)}</span>`
+      : `<span class="text-muted" style="font-size:.8rem;">—</span>`;
+    return `
+      <tr>
+        <td class="fw-medium" style="font-size:.8rem;">${escapeHtml(r.governorate)}</td>
+        <td class="text-center" style="font-size:.8rem;">${r.kg_total.toLocaleString(locale)}</td>
+        <td class="text-center">
+          <span class="badge" style="background:#D1FAE5;color:#065F46;font-size:.65rem;">${r.kg_active}</span>
+        </td>
+        <td class="text-center">${draftBadge}</td>
+        <td class="text-center" style="font-size:.8rem;">${r.enrollments_total.toLocaleString(locale)}</td>
+        <td class="text-center">${pendBadge}</td>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <div class="progress flex-grow-1" style="height:5px;"
+                 role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+              <div class="progress-bar" style="width:${pct}%;background:${color};"></div>
+            </div>
+            <small style="color:${color};font-weight:600;font-size:.72rem;min-width:32px;">${pct}%</small>
+          </div>
+        </td>
+      </tr>`;
+  }).join("");
+}
+
+function _renderCompletenessPanel(comp) {
+  const container = document.getElementById("regCompletenessPanel");
+  const badge     = document.getElementById("avgCompletenessBadge");
+  if (!container) return;
+
+  const ITEMS = [
+    { key: "parent_profiles",   ar: "ملفات أولياء الأمور",      en: "Parent Profiles",   color: "#2563EB", icon: "bi-person-vcard" },
+    { key: "children_profiles", ar: "ملفات الأطفال",            en: "Children Profiles", color: "#0891B2", icon: "bi-emoji-smile" },
+    { key: "kg_licensed",       ar: "الروضات المرخصة",          en: "Licensed KGs",      color: "#1F5E47", icon: "bi-patch-check" },
+    { key: "kg_geolocated",     ar: "الروضات محددة جغرافياً",   en: "Geolocated KGs",   color: "#7C3AED", icon: "bi-geo-alt" },
+    { key: "staff_profiles",    ar: "ملفات الموظفين والمشرفين", en: "Staff Profiles",    color: "#D97706", icon: "bi-person-workspace" },
+  ];
+
+  const pcts = ITEMS.map(i => comp[i.key]?.pct || 0);
+  const avg  = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : 0;
+  if (badge) {
+    badge.textContent = `${avg}%`;
+    badge.className = `badge border fw-semibold ${
+      avg >= 80 ? "bg-success-subtle text-success border-success-subtle"
+      : avg >= 60 ? "bg-warning-subtle text-warning border-warning-subtle"
+      : "bg-danger-subtle text-danger border-danger-subtle"}`;
+  }
+
+  const locale = adminAnalyticsLocale();
+  container.innerHTML = ITEMS.map(item => {
+    const d     = comp[item.key] || { total: 0, complete: 0, pct: 0 };
+    const pct   = d.pct || 0;
+    const color = pct >= 80 ? "#10B981" : pct >= 60 ? "#F59E0B" : "#EF4444";
+    const label = adminAnalyticsText(item.ar, item.en);
+    return `
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <div class="d-flex align-items-center gap-1">
+            <i class="bi ${item.icon}" style="color:${item.color};font-size:.65rem;" aria-hidden="true"></i>
+            <small class="fw-medium" style="font-size:.75rem;">${label}</small>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <small style="color:${color};font-weight:700;font-size:.72rem;">${pct.toFixed(1)}%</small>
+            <small class="text-muted" style="font-size:.66rem;">(${d.complete}/${d.total})</small>
+          </div>
+        </div>
+        <div class="progress" style="height:5px;"
+             role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"
+             aria-label="${label}: ${pct.toFixed(1)}%">
+          <div class="progress-bar" style="width:${pct}%;background:${color};transition:width .5s ease;"></div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function _renderMonthlyTrendChart(trends) {
+  const canvas = document.getElementById("regMonthlyTrendChart");
+  const empty  = document.getElementById("regTrendEmpty");
+  if (!canvas) return;
+
+  const labels = trends.labels || [];
+  const hasData = labels.length > 0 && (
+    (trends.users        || []).some(v => v > 0) ||
+    (trends.enrollments  || []).some(v => v > 0) ||
+    (trends.kindergartens || []).some(v => v > 0)
+  );
+
+  if (empty) empty.classList.toggle("d-none", hasData);
+
+  if (!hasData) {
+    if (_regMonthlyChart) { _regMonthlyChart.destroy(); _regMonthlyChart = null; }
+    return;
+  }
+
+  if (!adminAnalyticsHasChart()) return;
+  if (_regMonthlyChart) _regMonthlyChart.destroy();
+
+  const locale = adminAnalyticsLocale();
+  const displayLabels = labels.map(l => {
+    const [yr, mo] = l.split("-");
+    return new Date(parseInt(yr, 10), parseInt(mo, 10) - 1, 1)
+      .toLocaleDateString(locale, { month: "short", year: "2-digit" });
+  });
+
+  _regMonthlyChart = new window.Chart(canvas, {
+    type: "line",
+    data: {
+      labels: displayLabels,
+      datasets: [
+        {
+          label: adminAnalyticsText("مستخدمون جدد", "New Users"),
+          data: trends.users || [],
+          borderColor: "#2563EB",
+          backgroundColor: "rgba(37,99,235,.07)",
+          tension: 0.35,
+          fill: true,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+        },
+        {
+          label: adminAnalyticsText("طلبات تسجيل", "Enrollments"),
+          data: trends.enrollments || [],
+          borderColor: "#0891B2",
+          backgroundColor: "rgba(8,145,178,.06)",
+          tension: 0.35,
+          fill: true,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+        },
+        {
+          label: adminAnalyticsText("روضات جديدة", "New KGs"),
+          data: trends.kindergartens || [],
+          borderColor: "#1F5E47",
+          backgroundColor: "transparent",
+          tension: 0.35,
+          fill: false,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 1.5,
+          borderDash: [5, 4],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          rtl: document.documentElement.dir === "rtl",
+          callbacks: {
+            title: ctx => ctx[0]?.label || "",
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 10 }, maxRotation: 0 },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { font: { size: 10 }, stepSize: 1 },
+          grid: { color: "rgba(0,0,0,.04)" },
+        },
+      },
+    },
+  });
 }
 
 window.addEventListener("languageChanged", () => {
