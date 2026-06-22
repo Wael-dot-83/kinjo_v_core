@@ -914,6 +914,7 @@ class EnhancedKPIDashboardResponse(BaseModel):
     period_end: date
     overall_gcei: EnhancedKPICard
     attendance_rate: EnhancedKPICard
+    excused_absence_rate: Optional[EnhancedKPICard] = None
     ratio_compliance: EnhancedKPICard
     incident_rate: EnhancedKPICard
     serious_incident_rate: EnhancedKPICard
@@ -3580,6 +3581,9 @@ def get_consolidated_kpi_dashboard_data(
         "incident_followup_sla": 0.0,
         "new_enrollments": 0,
     }
+    # Summed numerators and denominators across all bundles for confidence calculation
+    agg_nums: Dict[str, float] = {}
+    agg_dens: Dict[str, float] = {}
 
     for bundle in base_bundle_by_kg.values():
         totals["gce_score"] += float(bundle["governance_score"])
@@ -3593,6 +3597,10 @@ def get_consolidated_kpi_dashboard_data(
         totals["chronic_absence_rate"] += float(bundle["chronic_absence_rate"])
         totals["incident_followup_sla"] += float(bundle["incident_followup_sla"])
         totals["new_enrollments"] += int(bundle["new_enrollments"])
+        for k, v in bundle.get("numerators", {}).items():
+            agg_nums[k] = agg_nums.get(k, 0.0) + float(v or 0)
+        for k, v in bundle.get("denominators", {}).items():
+            agg_dens[k] = agg_dens.get(k, 0.0) + float(v or 0)
 
     total_active_enrollments = (
         sum(int(bundle["active_enrollments"]) for bundle in base_bundle_by_kg.values())
@@ -3662,17 +3670,41 @@ def get_consolidated_kpi_dashboard_data(
     ) -> KPICardData:
         target = KPIService.get_kpi_target(db, kpi_name, single_kindergarten_id, period_end)
         lower_is_better = kpi_name in LOWER_IS_BETTER
-        band = _determine_band(value, target, lower_is_better)
-        alert = "threshold_breached" if band == "RED" else None
+        band_str = _determine_band(value, target, lower_is_better)
+        alert = "threshold_breached" if band_str == "RED" else None
         quality_info = _aggregate_quality(quality_key or kpi_name)
+        has_data = bool(quality_info["has_data"])
+
+        # Populate enriched fields from kpi_standards
+        std = STANDARDS.get(kpi_name)
+        denom = int(agg_dens.get(kpi_name, 0))
+        numer = agg_nums.get(kpi_name)
+        confidence_level = compute_confidence(
+            denom, std.min_denominator if std else 10,
+            std.min_denominator_high if std else 30, has_data,
+        )
+        band_color = BandColor(band_str.lower()) if band_str.lower() in [b.value for b in BandColor] else BandColor.GRAY
+        meaning_ar = get_band_meaning(kpi_name, band_color, "ar")
+        meaning_en = get_band_meaning(kpi_name, band_color, "en")
+        decision_ar = get_band_action(kpi_name, band_color, "ar")
+        decision_en = get_band_action(kpi_name, band_color, "en")
+
         return KPICardData(
             value=round(value, 2),
             unit="%" if is_percentage else unit,
-            band=band,
+            band=band_str,
             alert=alert,
-            has_data=bool(quality_info["has_data"]),
+            has_data=has_data,
             data_coverage=float(quality_info["coverage_pct"]),
-            no_data_reason=quality_info["reason"] if not quality_info["has_data"] else None,
+            no_data_reason=quality_info["reason"] if not has_data else None,
+            numerator=round(numer, 2) if numer is not None else None,
+            denominator=round(denom, 2) if denom > 0 else None,
+            confidence=confidence_level.value,
+            threshold_source=get_threshold_source_dict(kpi_name) or None,
+            meaning_ar=meaning_ar or None,
+            meaning_en=meaning_en or None,
+            decision_guidance_ar=decision_ar or None,
+            decision_guidance_en=decision_en or None,
         )
 
     def _next_period_start(dt: date) -> date:
@@ -4334,6 +4366,13 @@ def get_enhanced_manager_kpi_dashboard(
         previous_value=_prev_rate("report_submission_rate"),
     )
 
+    excused_absence_rate_card = KPIService.create_enhanced_kpi_card(
+        "excused_absence_rate", bundle.get("excused_absence_rate", 0.0), "%", last_updated, period_days,
+        numerator=nums.get("excused_absence_rate"), denominator=dens.get("excused_absence_rate"),
+        has_data=dens.get("excused_absence_rate", 0) > 0,
+        previous_value=_prev_rate("excused_absence_rate"),
+    )
+
     # Build alerts
     alerts = []
     today = date.today()
@@ -4394,6 +4433,7 @@ def get_enhanced_manager_kpi_dashboard(
         capacity_utilization_rate=capacity_utilization_rate_card,
         training_completion_rate=training_completion_rate_card,
         report_submission_rate=report_submission_rate_card,
+        excused_absence_rate=excused_absence_rate_card,
         alerts=alerts,
         last_updated=last_updated,
         data_freshness=data_freshness
@@ -4848,7 +4888,7 @@ def get_kpi_recommended_actions(
     if period_start is None:
         period_start = period_end - timedelta(days=29)
 
-    if current_user.role == models.UserRole.MANAGER:
+    if current_user.role in (models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
         kg_id = current_user.kindergarten_id
         if not kg_id:
             return {"recommended_actions": []}

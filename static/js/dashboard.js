@@ -2506,6 +2506,11 @@ function buildKpiRows(payload) {
       explanation,
       managerNote,
       actions,
+      confidence: card.confidence || null,
+      numerator: card.numerator != null ? card.numerator : null,
+      denominator: card.denominator != null ? card.denominator : null,
+      meaning: card.meaning_ar || card.meaning_en || null,
+      decisionGuidance: card.decision_guidance_ar || card.decision_guidance_en || null,
     });
   }
   return rows;
@@ -2531,16 +2536,40 @@ function renderKpiCards(kpis) {
         const unit = kpi.unit || "";
         const hasActions = Array.isArray(kpi.actions) && kpi.actions.length > 0;
 
+        const confIcon = kpi.confidence === "high" ? "bi-check-circle-fill text-success"
+          : kpi.confidence === "medium" ? "bi-exclamation-circle-fill text-warning"
+          : kpi.confidence === "low" ? "bi-exclamation-triangle-fill text-danger"
+          : kpi.confidence === "insufficient" ? "bi-question-circle-fill text-secondary"
+          : "";
+        const confLabel = kpi.confidence === "high" ? dashboardLiteral("ثقة عالية")
+          : kpi.confidence === "medium" ? dashboardLiteral("ثقة متوسطة")
+          : kpi.confidence === "low" ? dashboardLiteral("عينة صغيرة")
+          : kpi.confidence === "insufficient" ? dashboardLiteral("بيانات غير كافية")
+          : "";
+        const denomStr = (kpi.numerator != null && kpi.denominator != null && kpi.denominator > 0)
+          ? `<small class="text-muted font-monospace">${Math.round(kpi.numerator)}/${Math.round(kpi.denominator)}</small>`
+          : "";
+        const meaningHtml = kpi.meaning
+          ? `<div class="mt-1 fst-italic text-muted" style="font-size:.75rem">${escapeHtml(kpi.meaning)}</div>`
+          : "";
+
         return `
         <div class="col-md-6 col-lg-4">
           <div class="kpi-card card border-0 shadow-sm h-100" data-status="${kpi.band}" style="border-radius: 16px;">
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <h6 class="text-muted mb-0">${escapeHtml(kpi.label)}</h6>
-                <span class="badge bg-${color}">${bandText}</span>
+                <div class="d-flex align-items-center gap-1">
+                  ${confIcon ? `<i class="bi ${confIcon}" title="${confLabel}" aria-hidden="true"></i>` : ""}
+                  <span class="badge bg-${color}">${bandText}</span>
+                </div>
               </div>
-              <div class="display-6 fw-bold text-${color}">${formattedValue}${escapeHtml(unit)}</div>
-              <div class="text-muted small mt-1">${dashboardLiteral("الاتجاه")}: ${trendSymbol(kpi.trend)}</div>
+              <div class="display-6 fw-bold text-${color}">${formattedValue}<small class="fs-6 ms-1 text-muted">${escapeHtml(unit)}</small></div>
+              <div class="d-flex align-items-center justify-content-between mt-1">
+                <span class="text-muted small">${trendSymbol(kpi.trend)}</span>
+                ${denomStr}
+              </div>
+              ${meaningHtml}
               ${
                 hasActions
                   ? `<button type="button" class="btn btn-sm btn-outline-${color} mt-3" onclick="openKpiActionItems('${kpi.key}')">${dashboardLiteral("عرض الإجراءات")}</button>`
