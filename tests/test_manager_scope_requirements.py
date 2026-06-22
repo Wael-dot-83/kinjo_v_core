@@ -316,7 +316,8 @@ class TestIdentityValidation:
         }
         r = client.post("/api/admin/users", json=payload, headers=headers)
         assert r.status_code == 400
-        assert "national id" in r.json()["detail"].lower() or "الرقم الوطني" in r.json()["detail"]
+        msg = r.json().get("error", {}).get("message", r.json().get("detail", ""))
+        assert "national id" in msg.lower() or "الرقم الوطني" in msg
 
     def test_non_jordanian_supervisor_requires_passport(self, client, test_db):
         kg = _make_kg(test_db)
@@ -616,7 +617,8 @@ class TestDeactivationGuard:
             headers=headers,
         )
         assert r.status_code == 400
-        assert "supervisor" in r.json()["detail"].lower()
+        msg = r.json().get("error", {}).get("message", r.json().get("detail", ""))
+        assert "supervisor" in msg.lower()
 
     def test_deactivate_supervisor_others_exist_ok(self, client, test_db):
         kg = _make_kg(test_db)

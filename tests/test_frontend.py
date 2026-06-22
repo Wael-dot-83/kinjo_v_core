@@ -1659,7 +1659,7 @@ class TestFrontendRoutes:
         assert 'id="classificationBandChart"' in html
         assert 'id="classificationScoreChart"' in html
         assert 'id="classificationAspectChart"' in html
-        assert "/static/js/admin_classification.js?v=5" in html
+        assert "/static/js/admin_classification.js?v=6" in html
 
         app.dependency_overrides.clear()
 

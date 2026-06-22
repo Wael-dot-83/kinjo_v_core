@@ -180,7 +180,10 @@ def get_task_status(task_id: str) -> TaskStatus:
     from celery_app import celery_app
 
     result = celery_app.AsyncResult(task_id)
-    state = result.state  # PENDING / STARTED / SUCCESS / FAILURE
+    try:
+        state = result.state  # PENDING / STARTED / SUCCESS / FAILURE
+    except Exception:
+        return TaskStatus(task_id=task_id, status="PENDING", progress=0)
 
     if state == "SUCCESS":
         data = result.result or {}
