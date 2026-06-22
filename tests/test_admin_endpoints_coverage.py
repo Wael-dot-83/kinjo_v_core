@@ -1216,6 +1216,7 @@ class TestCSVImportManagerConflictCoverage:
                         "date_of_birth": "2024-01-01",
                         "father_name": "Ahmad",
                         "mother_first_name": "Sara",
+                        "mother_last_name": "Ahmad",
                     }
                 ],
             },
