@@ -218,11 +218,9 @@ function filterKPIsByStatus(status) {
 }
 
 function showAllAlerts() {
-  const section = document.getElementById("alertsSection");
-  if (section) {
-    section.style.display = "";
-    section.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
+  // alertsSection is now always visible at top of page
+  const zone = document.getElementById("kinjoAlertZone");
+  if (zone) zone.scrollIntoView({ behavior: "smooth", block: "start" });
   const panel = document.getElementById("dfe-alerts-panel");
   if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
 }

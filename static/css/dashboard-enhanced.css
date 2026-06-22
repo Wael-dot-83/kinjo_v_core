@@ -45,7 +45,7 @@
   background: var(--bs-primary);
   border-color: var(--bs-primary);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(13,110,253,.28);
+  box-shadow: 0 2px 8px rgba(31,94,71,.28);
 }
 
 /* Date range inputs */
@@ -162,7 +162,7 @@
   cursor: pointer;
   transition: all 160ms;
 }
-.dfe-chart-type-btn.active { border-color: var(--bs-primary); color: var(--bs-primary); background: rgba(13,110,253,.06); }
+.dfe-chart-type-btn.active { border-color: var(--bs-primary); color: var(--bs-primary); background: rgba(31,94,71,.06); }
 
 .dfe-chart-body {
   padding: .75rem 1.25rem 1.25rem;
@@ -234,7 +234,7 @@
   cursor: pointer;
   transition: all 160ms;
 }
-.dfe-alert-filter.active { border-color: var(--bs-primary); color: var(--bs-primary); background: rgba(13,110,253,.06); }
+.dfe-alert-filter.active { border-color: var(--bs-primary); color: var(--bs-primary); background: rgba(31,94,71,.06); }
 
 .dfe-alert-list { display:flex; flex-direction:column; gap:.625rem; }
 
@@ -327,4 +327,203 @@
   .dfe-mini-stats { grid-template-columns:1fr 1fr; }
   .dfe-period-group { flex-wrap:wrap; }
   .dfe-bar-end { margin-inline-start:0; width:100%; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   THEME ALIGNMENT — User Dashboard ↔ Admin Dashboard
+   Override Bootstrap defaults so both dashboards share the
+   exact same brand palette from admin_design_system.css
+   ════════════════════════════════════════════════════════════ */
+
+/* 1. Override --bs-info to brand teal (admin uses #2F7D62) */
+:root {
+  --bs-info:            #2F7D62;
+  --bs-info-rgb:        47, 125, 98;
+  --bs-info-bg-subtle:  #e0f0eb;
+  --bs-info-border-subtle: #a8d4c4;
+  --bs-info-text-emphasis: #163d2e;
+}
+
+/* 2. Card header: match admin #f8fafc background */
+.card > .card-header {
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* 3. Status widget cards — add left border accent */
+.status-widget .card-body {
+  padding: 1.5rem !important;
+}
+.status-widget {
+  border-inline-start: 4px solid transparent !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+#attendanceCard      { border-inline-start-color: #198754 !important; }
+#pendingEnrollmentsCard { border-inline-start-color: #f59e0b !important; }
+#pendingReportsCard  { border-inline-start-color: #2F7D62 !important; }
+#incidentsCard       { border-inline-start-color: #ef4444 !important; }
+
+/* 4. Quick access pill buttons — brand-aware hover */
+.quick-actions-bar .btn-white:hover {
+  background: var(--bs-primary-bg-subtle, #e0f0eb) !important;
+  border-color: var(--bs-primary, #1F5E47) !important;
+  color: var(--bs-primary, #1F5E47) !important;
+}
+
+/* 5. Section zone dividers */
+.kinjo-zone-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 2rem 0 1rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 2px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.kinjo-zone-header i {
+  font-size: 1rem;
+  color: var(--bs-primary, #1F5E47);
+}
+.kinjo-zone-header .zone-line {
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+/* 6. Priority alert zone (always visible at top) */
+.kinjo-alert-zone {
+  margin-bottom: 1.25rem;
+}
+.kinjo-alert-zone-clear {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 1rem;
+  background: #f0f8f5;
+  border: 1px solid #a8d4c4;
+  border-radius: 10px;
+  color: #1F5E47;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.kinjo-alert-zone-clear i { font-size: 1rem; }
+
+/* 7. Smart alerts panel — make visible by default with "all clear" state */
+#alertsSection {
+  display: block !important;
+}
+#alertsSection .card-header {
+  background: #f8fafc;
+}
+
+/* 8. KPI status bar alignment with admin theme */
+.kpi-status-container {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.kpi-status-item {
+  flex: 1;
+  min-width: 130px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  border: 1.5px solid transparent;
+}
+.kpi-status-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.kpi-status-item.status-green  { background: #d1fae5; border-color: #a7f3d0; color: #047857; }
+.kpi-status-item.status-amber  { background: #fef3c7; border-color: #fde68a; color: #b45309; }
+.kpi-status-item.status-red    { background: #fee2e2; border-color: #fecaca; color: #b91c1c; }
+.kpi-status-item.status-info   { background: #e0f0eb; border-color: #a8d4c4; color: #1F5E47; }
+.kpi-status-icon { font-size: 1.25rem; }
+.kpi-status-content .label { font-size: 0.75rem; font-weight: 600; }
+.kpi-status-content .count  { font-size: 1.375rem; font-weight: 800; line-height: 1; }
+
+/* 9. Table improvements — sticky header, row risk coloring */
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  white-space: nowrap;
+}
+tr.row-risk-high  td { background-color: #fff5f5 !important; }
+tr.row-risk-medium td { background-color: #fffbeb !important; }
+tr.row-risk-low   td { background-color: #f0fdf4 !important; }
+
+/* 10. Network Summary cards — match admin design */
+.ds-summary-card {
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.ds-summary-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1) !important;
+  transform: translateY(-2px);
+}
+
+/* 11. Decision Support section header override */
+#decisionSupportSection .card-header.bg-primary {
+  background: var(--bs-primary, #1F5E47) !important;
+}
+
+/* 12. Manager section card headers */
+.manager-section-card > .card-header {
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+.manager-section-subtitle {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+/* 13. Unified action card hover */
+.action-card {
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  border-color: #e2e8f0 !important;
+}
+.action-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1) !important;
+  border-color: var(--bs-primary, #1F5E47) !important;
+}
+
+/* 14. System stat value consistency */
+.system-value, .kpi-value {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.system-label, .kpi-label {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 0.375rem;
+}
+
+/* 15. Today's Overview table — action column */
+#kindergartensOverviewTable tr:hover,
+#classOverviewTable tr:hover {
+  background-color: #f0f8f5 !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .kpi-status-container { gap: 0.5rem; }
+  .kpi-status-item { min-width: 45%; padding: 0.625rem 0.75rem; }
+  .kinjo-zone-header { margin: 1.25rem 0 0.75rem; }
 }

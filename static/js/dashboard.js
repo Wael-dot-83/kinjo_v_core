@@ -1658,14 +1658,22 @@ function renderAdminKindergartensTable(kindergartens) {
               ? dashboardLiteral("قارب على الانتهاء")
               : dashboardLiteral("منتهي");
 
+        // Row risk coloring: high = license expired or over capacity, medium = expiring or pending reports, low = all good
+        const capUtil = parseFloat(kg.capacity_utilization || 0);
+        const rowRisk = license === "expired" || capUtil > 100
+          ? "row-risk-high"
+          : license === "expiring_soon" || safeNumber(kg.pending_reports) > 0
+          ? "row-risk-medium"
+          : "";
+
         return `
-        <tr>
+        <tr class="${rowRisk}">
           <td>${escapeHtml(kg.name_ar || kg.name_en || "-")}</td>
           <td><span class="badge bg-${statusClass}">${statusLabel(kg.status)}</span></td>
           <td>${formatNumber(kg.enrollments || 0)}</td>
           <td>${formatNumber(kg.attendance_today || 0)}</td>
           <td>${formatNumber(kg.pending_reports || 0)}</td>
-          <td>${formatOneDecimal(kg.capacity_utilization || 0)}%</td>
+          <td class="${capUtil > 100 ? "text-danger fw-bold" : capUtil > 85 ? "text-warning fw-semibold" : ""}">${formatOneDecimal(capUtil)}%</td>
           <td><span class="badge bg-${licenseClass}">${licenseText}</span></td>
           <td>
             <a href="/kindergartens/${kg.id}" class="btn btn-sm btn-outline-primary" aria-label="${dashboardLiteral("عرض الروضة")}">
@@ -1783,51 +1791,82 @@ function normalizeAlerts(alerts) {
 
 function renderAlerts(rawAlerts) {
   const alerts = normalizeAlerts(rawAlerts);
-  const section = document.getElementById("alertsSection");
   const container = document.getElementById("alertsContainer");
+  const allClear = document.getElementById("alertsAllClear");
+  const badge = document.getElementById("alertCountBadge");
 
   updateElementText("alertCount", String(alerts.length));
 
-  if (!section || !container) return;
+  if (!container) return;
+
+  // Update counter badge
+  if (badge) {
+    badge.textContent = alerts.length;
+    badge.style.display = alerts.length > 0 ? "" : "none";
+  }
 
   if (alerts.length === 0) {
-    section.style.display = "none";
-    container.innerHTML = dashboardTemplate(
-      '<div class="text-muted text-center py-2">لا توجد تنبيهات نشطة</div>'
-    );
+    if (allClear) allClear.style.display = "";
+    // Clear any old alert items but keep allClear
+    Array.from(container.children).forEach(function (el) {
+      if (el.id !== "alertsAllClear") el.remove();
+    });
     return;
   }
 
+  // Hide all-clear, show real alerts
+  if (allClear) allClear.style.display = "none";
+
+  const severityColor = {
+    critical: "#dc3545",
+    high:     "#f59e0b",
+    medium:   "#2F7D62",
+    low:      "#64748b",
+  };
+  const severityIcon = {
+    critical: "bi-exclamation-circle-fill",
+    high:     "bi-exclamation-triangle-fill",
+    medium:   "bi-info-circle-fill",
+    low:      "bi-bell-fill",
+  };
   const priorityClass = {
     critical: "danger",
-    high: "warning",
-    medium: "info",
-    low: "secondary",
+    high:     "warning",
+    medium:   "info",
+    low:      "secondary",
   };
 
-  container.innerHTML = dashboardTemplate(
-    alerts
-      .map((alert) => {
-        const klass = priorityClass[alert.priority] || "secondary";
-        const actionUrl = alert.kindergartenId
-          ? `/kindergartens/${alert.kindergartenId}`
-          : "/dashboard";
-        return `
-        <div class="alert alert-${klass} mb-0">
-          <div class="d-flex justify-content-between align-items-start gap-2">
-            <div>
-              <div class="fw-semibold">${escapeHtml(alert.type)}</div>
-              <div class="small">${escapeHtml(alert.message)}</div>
-            </div>
-            <a href="${actionUrl}" class="btn btn-sm btn-outline-${klass}">${dashboardLiteral("فتح")}</a>
-          </div>
-        </div>
-      `;
-      })
-      .join("")
-  );
+  // Remove old alert items (keep allClear)
+  Array.from(container.children).forEach(function (el) {
+    if (el.id !== "alertsAllClear") el.remove();
+  });
 
-  section.style.display = "block";
+  alerts.forEach(function (alert) {
+    const klass = priorityClass[alert.priority] || "secondary";
+    const color = severityColor[alert.priority] || "#64748b";
+    const icon = severityIcon[alert.priority] || "bi-bell-fill";
+    const actionUrl = alert.kindergartenId
+      ? `/kindergartens/${alert.kindergartenId}`
+      : "/dashboard";
+    const item = document.createElement("div");
+    item.className = "dfe-alert-item";
+    item.style.setProperty("--sev-color", color);
+    item.innerHTML = `
+      <div class="dfe-alert-icon"><i class="bi ${icon}"></i></div>
+      <div class="dfe-alert-body">
+        <div class="dfe-alert-name">${escapeHtml(alert.type)}</div>
+        <div class="dfe-alert-desc">${escapeHtml(alert.message)}</div>
+      </div>
+      <div class="dfe-alert-btns">
+        <a href="${actionUrl}" class="dfe-alert-btn view">
+          ${dashboardCurrentLang && dashboardCurrentLang() === "en" ? "View" : "فتح"}
+        </a>
+        <button class="dfe-alert-btn dismiss" onclick="this.closest('.dfe-alert-item').classList.add('dismissed')" type="button">
+          ${dashboardCurrentLang && dashboardCurrentLang() === "en" ? "Dismiss" : "تجاهل"}
+        </button>
+      </div>`;
+    container.appendChild(item);
+  });
 }
 
 function destroyChartInstance(chartInstance) {

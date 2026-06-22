@@ -147,6 +147,35 @@
      aria-label="{% if ui_lang == 'en' %}Dashboard filter controls{% else %}أدوات تصفية لوحة التحكم{% endif %}"></div>
 
 <div class="fade-in-up container-fluid px-0">
+
+    <!-- ── ZONE 1: PRIORITY ALERTS ─────────────────────── -->
+    <div class="kinjo-alert-zone" id="kinjoAlertZone">
+        <!-- Smart Alerts: shown here when alerts exist; JS moves content into #alertsContainer -->
+        <div id="alertsSection" aria-live="polite" aria-atomic="true">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header d-flex align-items-center gap-2 py-3">
+                    <span class="p-2 bg-danger-subtle rounded-circle">
+                        <i class="bi bi-bell-fill text-danger"></i>
+                    </span>
+                    <h5 class="card-title mb-0">
+                        {% if ui_lang == 'en' %}Smart Alerts{% else %}التنبيهات الذكية{% endif %}
+                    </h5>
+                    <span class="badge rounded-pill ms-auto" id="alertCountBadge" style="display:none; background:var(--bs-danger);">0</span>
+                </div>
+                <div class="card-body px-4 pb-4 pt-2">
+                    <div id="alertsContainer" class="d-flex flex-column gap-3">
+                        <!-- JS populates; default "all clear" state -->
+                        <div id="alertsAllClear" class="kinjo-alert-zone-clear">
+                            <i class="bi bi-check-circle-fill"></i>
+                            {% if ui_lang == 'en' %}All systems normal — no active alerts at this time.{% else %}جميع الأنظمة تعمل بشكل طبيعي — لا توجد تنبيهات نشطة حالياً.{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── ZONE 2: QUICK ACCESS ────────────────────────── -->
     <!-- Top Quick Actions Bar -->
     <div class="row g-3 mb-4 mt-1 border-bottom pb-4 px-2 quick-actions-bar">
         <div class="col-12">
@@ -184,6 +213,13 @@
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- ── ZONE 3: STATUS & KPIS ──────────────────────── -->
+    <div class="kinjo-zone-header">
+        <i class="bi bi-speedometer2"></i>
+        {% if ui_lang == 'en' %}Operational Status{% else %}الحالة التشغيلية{% endif %}
+        <span class="zone-line"></span>
     </div>
 
     <!-- Main 2-Column Dashboard Layout -->
@@ -336,13 +372,13 @@
                     <div class="card h-100 border-0 shadow-sm status-widget" id="pendingReportsCard">
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge badge-soft badge-soft-info-subtle text-info rounded-pill px-3"
+                                <span class="badge rounded-pill px-3" style="background:#e0f0eb; color:#1F5E47;"
                                     id="pendingReportsBadge">{% if ui_lang == 'en' %}Under Review{% else %}قيد المراجعة{% endif %}</span>
                                 <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
                             </div>
                             <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Pending Daily Reports{% else %}التقارير اليومية المعلقة{% endif %}</p>
                             <h2 class="display-5 fw-bold mb-4" id="pendingReportsValue"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>
-                            <a href="/daily-reports" class="btn btn-info text-white w-100 rounded-pill py-2 fw-bold">
+                            <a href="/daily-reports" class="btn w-100 rounded-pill py-2 fw-bold text-white" style="background:#2F7D62; border-color:#2F7D62;">
                                 {% if ui_lang == 'en' %}Review Reports{% else %}مراجعة التقارير{% endif %} <i class="bi bi-arrow-left ms-1"></i>
                             </a>
                         </div>
@@ -369,6 +405,13 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- ── ZONE 4: ANALYTICS & CHARTS ─────────────────── -->
+<div class="kinjo-zone-header">
+    <i class="bi bi-graph-up"></i>
+    {% if ui_lang == 'en' %}Analytics & Charts{% else %}التحليلات والمخططات{% endif %}
+    <span class="zone-line"></span>
 </div>
 
 <!-- Admin System Overview (Admin Only) -->
@@ -605,26 +648,7 @@
     </div>
 </div>
 
-<!-- Smart Alerts Section -->
-<div class="row g-3 mb-4" id="alertsSection" style="display: none;" aria-live="polite" aria-atomic="true">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent border-0 pt-4 px-4">
-                <h5 class="card-title mb-0 d-flex align-items-center">
-                    <span class="p-2 bg-danger-subtle rounded-circle me-3">
-                        <i class="bi bi-bell-fill text-danger"></i>
-                    </span>
-                    {% if ui_lang == 'en' %}Smart Alerts{% else %}التنبيهات الذكية{% endif %}
-                </h5>
-            </div>
-            <div class="card-body p-4">
-                <div id="alertsContainer" class="d-flex flex-column gap-3">
-                    <!-- Alerts will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Smart Alerts moved to top of page (kinjoAlertZone) -->
 
 <!-- KPI Explanations Modal -->
 <div class="modal fade" id="kpiExplanationsModal" tabindex="-1">
@@ -700,59 +724,24 @@
     </div>
 </div>
 
-<!-- Quick Actions and Recent Activity -->
-<div class="row g-3 mb-4">
-    <!-- Quick Actions -->
-    <div class="col-12 col-md-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-lightning me-2"></i>
-                    {% if ui_lang == 'en' %}Quick Actions{% else %}إجراءات سريعة{% endif %}
-                </h5>
-            </div>
-            <div class="card-body quick-actions">
-                <a href="/attendance/check-in" class="btn btn-outline-success w-100 mb-2 text-start">
-                    <i class="bi bi-box-arrow-in-left me-2"></i>
-                    {% if ui_lang == 'en' %}Record Attendance{% else %}تسجيل حضور{% endif %}
-                </a>
-                {% if current_user.role.value != 'ADMIN' %}
-                <a href="/daily-reports/create" class="btn btn-outline-primary w-100 mb-2 text-start">
-                    <i class="bi bi-journal-plus me-2"></i>
-                    {% if ui_lang == 'en' %}Create Daily Report{% else %}إنشاء تقرير يومي{% endif %}
-                </a>
-                {% endif %}
-                <a href="/enrollments/new" class="btn btn-outline-info w-100 mb-2 text-start">
-                    <i class="bi bi-person-plus me-2"></i>
-                    {% if ui_lang == 'en' %}New Enrollment Request{% else %}طلب تسجيل جديد{% endif %}
-                </a>
-                {% if current_user.role.value == 'ADMIN' %}
-                <a href="/kindergartens/create" class="btn btn-outline-success w-100 mb-2 text-start">
-                    <i class="bi bi-building-add me-2"></i>
-                    {% if ui_lang == 'en' %}Add New Kindergarten{% else %}إضافة روضة جديدة{% endif %}
-                </a>
-                {% endif %}
-                <a href="/incidents/create" class="btn btn-outline-warning w-100 mb-2 text-start">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    {% if ui_lang == 'en' %}Report Incident{% else %}إبلاغ عن حادث{% endif %}
-                </a>
-                <a href="/messages/new" class="btn btn-outline-secondary w-100 text-start">
-                    <i class="bi bi-envelope me-2"></i>
-                    {% if ui_lang == 'en' %}Send Message{% else %}إرسال رسالة{% endif %}
-                </a>
-            </div>
-        </div>
-    </div>
+<!-- ── ZONE 5: ACTIVITY ─────────────────────────────── -->
+<div class="kinjo-zone-header">
+    <i class="bi bi-activity"></i>
+    {% if ui_lang == 'en' %}Activity & Reports{% else %}النشاط والتقارير{% endif %}
+    <span class="zone-line"></span>
+</div>
 
+<!-- Pending Reports + Recent Activity -->
+<div class="row g-3 mb-4">
     <!-- Pending Reports -->
-    <div class="col-12 col-md-4">
+    <div class="col-12 col-md-6">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i class="bi bi-clock-history me-2"></i>
                     {% if ui_lang == 'en' %}Pending Reports{% else %}تقارير معلقة{% endif %}
                 </h5>
-                <span class="badge badge-soft badge-soft-warning" id="pendingReportsListBadge">0</span>
+                <span class="badge rounded-pill" style="background:#fef3c7; color:#b45309;" id="pendingReportsListBadge">0</span>
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush" id="pendingReportsList">
@@ -772,7 +761,7 @@
     </div>
 
     <!-- Recent Activity -->
-    <div class="col-12 col-md-4">
+    <div class="col-12 col-md-6">
         <div class="card h-100">
             <div class="card-header">
                 <h5 class="card-title mb-0">
@@ -798,6 +787,15 @@
         </div>
     </div>
 </div>
+
+<!-- ── ZONE 6: PERFORMANCE INDICATORS ─────────────── -->
+{% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
+<div class="kinjo-zone-header">
+    <i class="bi bi-bar-chart-line"></i>
+    {% if ui_lang == 'en' %}Performance Indicators{% else %}مؤشرات الأداء{% endif %}
+    <span class="zone-line"></span>
+</div>
+{% endif %}
 
 <!-- KPI Summary Row (Admin/Manager Only) -->
 {% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
@@ -1107,6 +1105,13 @@
 </section>
 {% endif %}
 
+<!-- ── ZONE 7: TODAY'S OVERVIEW TABLE ─────────────── -->
+<div class="kinjo-zone-header">
+    <i class="bi bi-calendar-day"></i>
+    {% if ui_lang == 'en' %}Today's Overview{% else %}نظرة اليوم{% endif %}
+    <span class="zone-line"></span>
+</div>
+
 <!-- Today's Overview -->
 <div class="row g-3">
     <div class="col-12">
@@ -1171,6 +1176,12 @@
 <!-- Decision Support Section (Admin/Manager Only)                          -->
 <!-- ====================================================================== -->
 {% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
+<!-- ── ZONE 8: DECISION SUPPORT ──────────────────── -->
+<div class="kinjo-zone-header mt-4">
+    <i class="bi bi-diagram-3"></i>
+    {% if ui_lang == 'en' %}Decision Support & Intelligence{% else %}دعم القرار والتحليل المتقدم{% endif %}
+    <span class="zone-line"></span>
+</div>
 <div id="decisionSupportSection">
 
 <!-- Network Summary Strip -->
