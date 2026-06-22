@@ -4236,86 +4236,102 @@ def get_enhanced_manager_kpi_dashboard(
     period_days = (period_end - period_start).days + 1
     last_updated = datetime.now(timezone.utc)
 
-    # Calculate all KPIs
-    gce_score, _ = KPIService.compute_governance_score(
-        db, single_kindergarten_id, period_start, period_end
-    )
+    # Compute all KPIs in one pass via bundle (authoritative path)
+    bundle = KPIService.compute_kpi_bundle(db, single_kindergarten_id, period_start, period_end)
+    prev_start, prev_end = KPIService._compute_previous_period(period_start, period_end)
+    prev_bundle = KPIService.compute_kpi_bundle(db, single_kindergarten_id, prev_start, prev_end)
 
-    attendance_rate = KPIService.compute_attendance_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
+    nums = bundle.get("numerators", {})
+    dens = bundle.get("denominators", {})
+    p_nums = prev_bundle.get("numerators", {})
+    p_dens = prev_bundle.get("denominators", {})
 
-    ratio_compliance = KPIService.compute_ratio_compliance(
-        db, single_kindergarten_id, period_start, period_end
-    )
+    def _prev_rate(key: str) -> Optional[float]:
+        pd = p_dens.get(key)
+        pn = p_nums.get(key)
+        if pd and pd > 0 and pn is not None:
+            return round(pn / pd * 100, 2)
+        return prev_bundle.get(key)
 
-    incident_rate = KPIService.compute_incident_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
+    gce_score = bundle.get("governance_score", 0.0)
+    attendance_rate = bundle.get("attendance_rate", 0.0)
+    ratio_compliance = bundle.get("ratio_compliance", 0.0)
+    incident_rate = bundle.get("incident_rate", 0.0)
+    serious_incident_rate = bundle.get("serious_incident_rate", 0.0)
+    incident_followup_sla = bundle.get("incident_followup_sla", 0.0)
+    chronic_absence_rate = bundle.get("chronic_absence_rate", 0.0)
+    capacity_utilization_rate = bundle.get("capacity_utilization_rate", 0.0)
+    training_completion_rate = bundle.get("training_completion_rate", 0.0)
+    report_submission_rate = bundle.get("report_submission_rate", 0.0)
 
-    serious_incident_rate = KPIService.compute_serious_incident_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
-
-    incident_followup_sla = KPIService.compute_incident_followup_sla_compliance(
-        db, single_kindergarten_id, period_start, period_end
-    )
-
-    chronic_absence_rate = KPIService.compute_chronic_absence_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
-
-    capacity_utilization_rate = KPIService.compute_capacity_utilization_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
-
-    training_completion_rate = KPIService.compute_training_completion_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
-
-    report_submission_rate = KPIService.compute_report_submission_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
-
-    # Create enhanced KPI cards
+    # Create enhanced KPI cards — numerator/denominator/previous_value all wired up
     overall_gcei_card = KPIService.create_enhanced_kpi_card(
-        "overall_gcei", gce_score, "%", last_updated, period_days
+        "overall_gcei", gce_score, "%", last_updated, period_days,
+        previous_value=prev_bundle.get("governance_score"),
     )
 
     attendance_rate_card = KPIService.create_enhanced_kpi_card(
-        "attendance_rate", attendance_rate, "%", last_updated, period_days
+        "attendance_rate", attendance_rate, "%", last_updated, period_days,
+        numerator=nums.get("attendance_rate"), denominator=dens.get("attendance_rate"),
+        has_data=bundle.get("quality", {}).get("attendance_rate", {}).get("has_data", True),
+        data_coverage=bundle.get("quality", {}).get("attendance_rate", {}).get("coverage_pct"),
+        previous_value=_prev_rate("attendance_rate"),
     )
 
     ratio_compliance_card = KPIService.create_enhanced_kpi_card(
-        "ratio_compliance", ratio_compliance, "%", last_updated, period_days
+        "ratio_compliance", ratio_compliance, "%", last_updated, period_days,
+        numerator=nums.get("ratio_compliance"), denominator=dens.get("ratio_compliance"),
+        has_data=bundle.get("quality", {}).get("ratio_compliance", {}).get("has_data", True),
+        previous_value=_prev_rate("ratio_compliance"),
     )
 
     incident_rate_card = KPIService.create_enhanced_kpi_card(
-        "incident_rate", incident_rate, translator("per 100 child-days"), last_updated, period_days
+        "incident_rate", incident_rate, translator("per 100 child-days"), last_updated, period_days,
+        numerator=nums.get("incident_rate"), denominator=dens.get("incident_rate"),
+        has_data=bundle.get("quality", {}).get("incident_rate", {}).get("has_data", True),
+        previous_value=_prev_rate("incident_rate"),
     )
 
     serious_incident_rate_card = KPIService.create_enhanced_kpi_card(
-        "serious_incident_rate", serious_incident_rate, translator("per 100 child-days"), last_updated, period_days
+        "serious_incident_rate", serious_incident_rate, translator("per 100 child-days"), last_updated, period_days,
+        numerator=nums.get("serious_incident_rate"), denominator=dens.get("serious_incident_rate"),
+        has_data=bundle.get("quality", {}).get("incident_rate", {}).get("has_data", True),
+        previous_value=_prev_rate("serious_incident_rate"),
     )
 
     incident_followup_sla_card = KPIService.create_enhanced_kpi_card(
-        "incident_followup_sla", incident_followup_sla, "%", last_updated, period_days
+        "incident_followup_sla", incident_followup_sla, "%", last_updated, period_days,
+        numerator=nums.get("incident_followup_sla"), denominator=dens.get("incident_followup_sla"),
+        has_data=dens.get("incident_followup_sla", 0) > 0,
+        previous_value=_prev_rate("incident_followup_sla"),
     )
 
     chronic_absence_rate_card = KPIService.create_enhanced_kpi_card(
-        "chronic_absence_rate", chronic_absence_rate, "%", last_updated, period_days
+        "chronic_absence_rate", chronic_absence_rate, "%", last_updated, period_days,
+        numerator=nums.get("chronic_absence_rate"), denominator=dens.get("chronic_absence_rate"),
+        has_data=dens.get("chronic_absence_rate", 0) > 0,
+        previous_value=_prev_rate("chronic_absence_rate"),
     )
 
     capacity_utilization_rate_card = KPIService.create_enhanced_kpi_card(
-        "capacity_utilization_rate", capacity_utilization_rate, "%", last_updated, period_days
+        "capacity_utilization_rate", capacity_utilization_rate, "%", last_updated, period_days,
+        numerator=nums.get("capacity_utilization_rate"), denominator=dens.get("capacity_utilization_rate"),
+        has_data=dens.get("capacity_utilization_rate", 0) > 0,
+        previous_value=_prev_rate("capacity_utilization_rate"),
     )
 
     training_completion_rate_card = KPIService.create_enhanced_kpi_card(
-        "training_completion_rate", training_completion_rate, "%", last_updated, period_days
+        "training_completion_rate", training_completion_rate, "%", last_updated, period_days,
+        numerator=nums.get("training_completion_rate"), denominator=dens.get("training_completion_rate"),
+        has_data=dens.get("training_completion_rate", 0) > 0,
+        previous_value=_prev_rate("training_completion_rate"),
     )
 
     report_submission_rate_card = KPIService.create_enhanced_kpi_card(
-        "report_submission_rate", report_submission_rate, "%", last_updated, period_days
+        "report_submission_rate", report_submission_rate, "%", last_updated, period_days,
+        numerator=nums.get("report_submission_rate"), denominator=dens.get("report_submission_rate"),
+        has_data=dens.get("report_submission_rate", 0) > 0,
+        previous_value=_prev_rate("report_submission_rate"),
     )
 
     # Build alerts
@@ -4382,6 +4398,113 @@ def get_enhanced_manager_kpi_dashboard(
         last_updated=last_updated,
         data_freshness=data_freshness
     )
+
+
+@router.get("/kpi/bundle/{kindergarten_id}")
+def get_kpi_bundle(
+    kindergarten_id: int,
+    period_start: Optional[date] = Query(None),
+    period_end: Optional[date] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Return the full structured KPI bundle for a single kindergarten, enriched with
+    band, confidence, numerator, denominator, formula, meaning, and decision guidance
+    for every KPI. This is the primary per-kindergarten KPI API for dashboards and
+    external integrations.
+
+    Managers see only their own kindergarten. Admins may specify any.
+    """
+    if current_user.role == models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if current_user.role == models.UserRole.MANAGER:
+        if current_user.kindergarten_id != kindergarten_id:
+            raise HTTPException(status_code=403, detail="You may only view your own kindergarten's KPIs.")
+    if current_user.role not in (models.UserRole.ADMIN, models.UserRole.MANAGER, models.UserRole.SUPERVISOR):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kindergarten_id).first()
+    if not kg:
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
+
+    if period_end is None:
+        period_end = date.today()
+    if period_start is None:
+        period_start = period_end - timedelta(days=29)
+
+    bundle = KPIService.compute_kpi_bundle(db, kindergarten_id, period_start, period_end)
+    prev_start, prev_end = KPIService._compute_previous_period(period_start, period_end)
+    prev_bundle = KPIService.compute_kpi_bundle(db, kindergarten_id, prev_start, prev_end)
+
+    nums = bundle.get("numerators", {})
+    dens = bundle.get("denominators", {})
+    quality = bundle.get("quality", {})
+
+    def _enrich(key: str, value: float, unit: str = "%") -> dict:
+        std = STANDARDS.get(key)
+        denom = dens.get(key, 0)
+        numer = nums.get(key)
+        has_data = quality.get(key, {}).get("has_data", denom > 0 if denom else value > 0)
+        cov = quality.get(key, {}).get("coverage_pct", 100.0 if has_data else 0.0)
+        prev_val = prev_bundle.get(key)
+        trend_dir, trend_chg = KPIService._trend_from_values(value, prev_val) if prev_val is not None else ("flat", 0.0)
+        band = assign_band(key, value, has_data, compute_confidence(denom, std.min_denominator if std else 10, std.min_denominator_high if std else 30, has_data), cov)
+        confidence = compute_confidence(denom, std.min_denominator if std else 10, std.min_denominator_high if std else 30, has_data)
+        return {
+            "value": value,
+            "unit": unit,
+            "numerator": numer,
+            "denominator": denom if denom else None,
+            "formula": std.formula_en if std else None,
+            "formula_ar": std.formula_ar if std else None,
+            "band": band.value,
+            "confidence": confidence.value,
+            "trend": trend_dir,
+            "trend_change": trend_chg,
+            "previous_value": prev_val,
+            "meaning_en": get_band_meaning(key, band, "en"),
+            "meaning_ar": get_band_meaning(key, band, "ar"),
+            "decision_guidance_en": get_band_action(key, band, "en"),
+            "decision_guidance_ar": get_band_action(key, band, "ar"),
+            "threshold_source": get_threshold_source_dict(key),
+            "has_data": has_data,
+            "data_coverage_pct": cov,
+            "data_quality_reason": quality.get(key, {}).get("reason"),
+        }
+
+    kpis = {
+        "attendance_rate": _enrich("attendance_rate", bundle.get("attendance_rate", 0.0)),
+        "excused_absence_rate": _enrich("excused_absence_rate", bundle.get("excused_absence_rate", 0.0)),
+        "chronic_absence_rate": _enrich("chronic_absence_rate", bundle.get("chronic_absence_rate", 0.0)),
+        "incident_rate": _enrich("incident_rate", bundle.get("incident_rate", 0.0), "per 100 child-days"),
+        "incident_rate_per_1000": _enrich("incident_rate", bundle.get("incident_rate_per_1000", 0.0), "per 1000 child-days"),
+        "serious_incident_rate": _enrich("serious_incident_rate", bundle.get("serious_incident_rate", 0.0), "per 100 child-days"),
+        "serious_incident_rate_per_1000": _enrich("serious_incident_rate", bundle.get("serious_incident_rate_per_1000", 0.0), "per 1000 child-days"),
+        "incident_followup_sla": _enrich("incident_followup_sla", bundle.get("incident_followup_sla", 0.0)),
+        "ratio_compliance": _enrich("ratio_compliance", bundle.get("ratio_compliance", 0.0)),
+        "training_completion_rate": _enrich("training_completion_rate", bundle.get("training_completion_rate", 0.0)),
+        "report_submission_rate": _enrich("report_submission_rate", bundle.get("report_submission_rate", 0.0)),
+        "checklist_compliance": _enrich("checklist_compliance", bundle.get("checklist_compliance", 0.0)),
+        "capacity_utilization_rate": _enrich("capacity_utilization_rate", bundle.get("capacity_utilization_rate", 0.0)),
+        "gqi_score": _enrich("gqi_score", bundle.get("gqi_score", 0.0)),
+        "cei_score": _enrich("cei_score", bundle.get("cei_score", 0.0)),
+        "overall_gcei": _enrich("overall_gcei", bundle.get("governance_score", 0.0)),
+    }
+
+    return {
+        "kindergarten_id": kindergarten_id,
+        "kindergarten_name_ar": kg.name_ar,
+        "kindergarten_name_en": kg.name_en,
+        "governorate": kg.governorate,
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat(),
+        "previous_period_start": prev_start.isoformat(),
+        "previous_period_end": prev_end.isoformat(),
+        "overall_band": bundle.get("governance_band", "GRAY"),
+        "override_rules_triggered": bundle.get("override_rules_triggered", []),
+        "kpis": kpis,
+    }
 
 
 @router.get("/kpi/standards")

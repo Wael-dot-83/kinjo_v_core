@@ -770,6 +770,10 @@ STANDARDS: Dict[str, KPIStandard] = {
     ),
 }
 
+# Aliases — bundle and legacy code use these short names; point to canonical standards
+STANDARDS["attendance_rate"] = STANDARDS["physical_attendance_rate"]
+STANDARDS["parent_satisfaction"] = STANDARDS["parent_satisfaction_score"]
+
 
 # ---------------------------------------------------------------------------
 # Hard override rules
