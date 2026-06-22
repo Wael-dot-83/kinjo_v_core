@@ -287,8 +287,10 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
         return templates.TemplateResponse(request=request, name="dashboard/supervisor.html", context={"current_user": current_user, "today": date.today()})
     elif user_role == "PARENT":
         return templates.TemplateResponse(request=request, name="dashboard/parent.html", context={"current_user": current_user, "today": date.today()})
+    elif user_role == "ADMIN":
+        return templates.TemplateResponse(request=request, name="admin_dashboard.html", context={"current_user": current_user, "today": date.today()})
     else:
-        # Admin or Manager
+        # Manager
         return templates.TemplateResponse(request=request, name="dashboard/index.html", context={"current_user": current_user, "today": date.today()})
 
 
