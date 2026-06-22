@@ -1329,7 +1329,15 @@ class TestKindergartenExcelImportErrorsCoverage:
         buf = BytesIO()
         wb.save(buf)
         buf.seek(0)
-        with patch.object(test_db, "add", side_effect=ValueError("bad data")):
+        import models as _models
+        _real_add = test_db.add
+
+        def _add_raises_for_kg(obj):
+            if isinstance(obj, _models.Kindergarten):
+                raise ValueError("bad data")
+            return _real_add(obj)
+
+        with patch.object(test_db, "add", side_effect=_add_raises_for_kg):
             r = client.post(
                 "/api/admin/kindergartens/import-excel",
                 headers=headers,

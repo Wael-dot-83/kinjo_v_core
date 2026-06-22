@@ -221,13 +221,18 @@ class TestFrontendRoutes:
         assert "text/html" in response.headers.get("content-type", "")
         assert b"dashboard" in response.content.lower()
         page = response.text
-        assert 'id="validationStatusIndicator"' in page
-        assert 'role="button"' in page
-        assert 'aria-live="polite"' in page
-        assert 'data-chart-type="line"' in page
-        assert 'data-chart-type="bar"' in page
-        assert "window.dashboardDateRange" in page
-        assert "function setDateRange(range)" in page
+        # Admin dashboard theme indicators (extends admin_base.html)
+        assert 'id="admin-dashboard"' in page
+        assert 'data-ui-state="loading"' in page
+        assert 'id="dashboard-loading"' in page
+        assert 'aria-busy="true"' in page
+        assert 'id="kpi-cards"' in page
+        assert 'id="dashboard-content"' in page
+        assert 'id="refresh-dashboard"' in page
+        assert '/static/js/admin_dashboard.js' in page
+        # Admin profile display with full name and avatar
+        assert 'admin-sidebar-profile' in page
+        assert 'admin_avatar.png' in page
 
         app.dependency_overrides.clear()
 

@@ -19,6 +19,22 @@ from translations import setup_translator
 from child_age_policy import get_child_age_bounds
 from cache_service import dashboard_cache
 from config import settings
+from kpi_standards import (
+    STANDARDS,
+    HARD_OVERRIDE_RULES,
+    BandColor,
+    ConfidenceLevel,
+    ThresholdDirection,
+    compute_confidence,
+    assign_band,
+    get_band_label,
+    get_band_meaning,
+    get_band_action,
+    get_threshold_source_dict,
+    list_all_standards,
+    list_hard_override_rules,
+    MIN_COVERAGE_FOR_RATING,
+)
 
 # Set up translator for Arabic/English support
 _ = setup_translator("ar")  # Default to Arabic, can be made configurable
@@ -69,7 +85,7 @@ class KPICardData(BaseModel):
     trend_indicator: Optional[str] = None  # "up", "down", "flat"
     trend_change: Optional[float] = None  # percentage change vs prev period
     previous_value: Optional[float] = None  # value from previous period
-    band: Optional[str] = None  # "GREEN", "AMBER", "RED"
+    band: Optional[str] = None  # "green", "amber", "red", "gray", "insufficient_data"
     threshold: Optional[KPIThreshold] = None
     explanation: Optional[KPIExplanation] = None
     manager_note: Optional[KPIManagerNote] = None
@@ -79,6 +95,17 @@ class KPICardData(BaseModel):
     has_data: bool = True
     data_coverage: Optional[float] = None
     no_data_reason: Optional[str] = None
+    # --- enriched fields for decision-grade transparency ---
+    numerator: Optional[float] = None
+    denominator: Optional[float] = None
+    formula: Optional[str] = None
+    confidence: Optional[str] = None          # "high", "medium", "low", "insufficient"
+    min_denominator_met: Optional[bool] = None
+    threshold_source: Optional[dict] = None   # source metadata from kpi_standards
+    meaning_ar: Optional[str] = None
+    meaning_en: Optional[str] = None
+    decision_guidance_ar: Optional[str] = None
+    decision_guidance_en: Optional[str] = None
 
 class StudentDistributionItem(BaseModel):
     label: str
@@ -933,6 +960,9 @@ class KPIService:
         has_data: bool = True,
         no_data_reason: Optional[str] = None,
         data_coverage: Optional[float] = None,
+        numerator: Optional[float] = None,
+        denominator: Optional[float] = None,
+        previous_value: Optional[float] = None,
     ) -> EnhancedKPICard:
         """Create an enhanced KPI card with all metadata"""
         if last_updated is None:
@@ -960,28 +990,29 @@ class KPIService:
                 no_data_reason=no_data_reason,
             )
 
-        # Determine status based on thresholds
-        threshold = definition["threshold"]
-        if threshold.lower_is_better:
-            # For KPIs where lower values are better (e.g., incident rates, chronic absence)
-            if value <= threshold.green_min:
-                status = "green"
-            elif value <= threshold.amber_max:
-                status = "amber"
-            else:
-                status = "red"
-        else:
-            # For KPIs where higher values are better (e.g., attendance rate)
-            if value >= threshold.green_min:
-                status = "green"
-            elif value >= threshold.amber_min:
-                status = "amber"
-            else:
-                status = "red"
+        # Use centralized standards for band and confidence
+        std = STANDARDS.get(kpi_key)
+        denom_int = int(denominator) if denominator is not None else 0
+        confidence = ConfidenceLevel.INSUFFICIENT
+        if std:
+            confidence = compute_confidence(
+                denom_int,
+                std.min_denominator,
+                std.min_denominator_high,
+                has_data,
+            )
+        coverage = data_coverage if data_coverage is not None else (100.0 if has_data else 0.0)
+        band = assign_band(kpi_key, value, has_data, confidence, coverage)
 
-        # For now, set trend as stable (can be enhanced later with historical data)
-        trend = "stable"
-        trend_value = 0.0
+        # Legacy threshold object for backward-compat with existing dashboard cards
+        threshold = definition["threshold"]
+
+        # Trend from previous period
+        if previous_value is not None:
+            trend, trend_value = KPIService._trend_from_values(value, previous_value)
+        else:
+            trend = "flat"
+            trend_value = 0.0
 
         return EnhancedKPICard(
             kpi_key=kpi_key,
@@ -989,7 +1020,7 @@ class KPIService:
             name_en=definition["name_en"],
             value=value,
             unit=unit,
-            status=status,
+            status=band.value,
             trend=trend,
             trend_value=trend_value,
             threshold=threshold,
@@ -1143,6 +1174,11 @@ class KPIService:
         period_start: date,
         period_end: date,
     ) -> Dict[int, int]:
+        """
+        PHYSICAL attendance only: PRESENT + LATE.
+        Excused absences are NOT counted as physical attendance per policy.
+        Use _excused_child_days_by_child for excused counts.
+        """
         if not child_ids:
             return {}
         rows = db.query(
@@ -1155,8 +1191,49 @@ class KPIService:
             models.AttendanceLog.status.in_([
                 models.AttendanceStatus.PRESENT,
                 models.AttendanceStatus.LATE,
-                models.AttendanceStatus.EXCUSED,
             ]),
+        ).group_by(models.AttendanceLog.child_id).all()
+        return {int(row[0]): int(row[1] or 0) for row in rows}
+
+    @staticmethod
+    def _excused_child_days_by_child(
+        db: Session,
+        child_ids: List[int],
+        period_start: date,
+        period_end: date,
+    ) -> Dict[int, int]:
+        """Count excused absence days per child (separate from physical attendance)."""
+        if not child_ids:
+            return {}
+        rows = db.query(
+            models.AttendanceLog.child_id,
+            func.count(models.AttendanceLog.id).label("excused_count"),
+        ).filter(
+            models.AttendanceLog.child_id.in_(child_ids),
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status == models.AttendanceStatus.EXCUSED,
+        ).group_by(models.AttendanceLog.child_id).all()
+        return {int(row[0]): int(row[1] or 0) for row in rows}
+
+    @staticmethod
+    def _late_child_days_by_child(
+        db: Session,
+        child_ids: List[int],
+        period_start: date,
+        period_end: date,
+    ) -> Dict[int, int]:
+        """Count late arrival days per child."""
+        if not child_ids:
+            return {}
+        rows = db.query(
+            models.AttendanceLog.child_id,
+            func.count(models.AttendanceLog.id).label("late_count"),
+        ).filter(
+            models.AttendanceLog.child_id.in_(child_ids),
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status == models.AttendanceStatus.LATE,
         ).group_by(models.AttendanceLog.child_id).all()
         return {int(row[0]): int(row[1] or 0) for row in rows}
 
@@ -1169,7 +1246,8 @@ class KPIService:
         active_child_ids: Optional[List[int]] = None,
     ) -> int:
         """
-        Count attended child-days (PRESENT/LATE/EXCUSED) for active children.
+        Count physically attended child-days (PRESENT + LATE only) for active children.
+        Excused absences are NOT counted as physical attendance.
         """
         if active_child_ids is None:
             active_child_ids = KPIService._get_active_child_ids(db, kindergarten_id)
@@ -1182,6 +1260,22 @@ class KPIService:
         return int(sum(attended_map.values()))
 
     @staticmethod
+    def _compute_previous_period(period_start: date, period_end: date) -> tuple:
+        """Return (prev_start, prev_end) of the same length immediately before period_start."""
+        period_len = (period_end - period_start).days + 1
+        prev_end = period_start - timedelta(days=1)
+        prev_start = prev_end - timedelta(days=period_len - 1)
+        return prev_start, prev_end
+
+    @staticmethod
+    def _trend_from_values(current: float, previous: float) -> tuple:
+        """Return (direction, change) tuple. direction: 'up'|'down'|'flat'."""
+        change = round(current - previous, 2)
+        if abs(change) < 0.01:
+            return "flat", 0.0
+        return ("up" if change > 0 else "down"), change
+
+    @staticmethod
     def compute_attendance_rate(
         db: Session,
         kindergarten_id: int,
@@ -1189,7 +1283,8 @@ class KPIService:
         period_end: date
     ) -> float:
         """
-        Attendance rate % = (Child-days attended / expected child-days) x 100
+        Physical attendance rate % = (PRESENT + LATE child-days / expected child-days) × 100.
+        Excused absences are NOT included — use compute_excused_absence_rate separately.
         """
         expected_days, expected_by_child, _ = KPIService._count_expected_child_days(
             db, kindergarten_id, period_start, period_end
@@ -1204,6 +1299,29 @@ class KPIService:
 
         rate = (attended_days / expected_days) * 100
         return round(rate, 2)
+
+    @staticmethod
+    def compute_excused_absence_rate(
+        db: Session,
+        kindergarten_id: int,
+        period_start: date,
+        period_end: date,
+    ) -> float:
+        """
+        Excused absence rate % = EXCUSED child-days / expected child-days × 100.
+        Separate from physical attendance rate.
+        """
+        expected_days, expected_by_child, _ = KPIService._count_expected_child_days(
+            db, kindergarten_id, period_start, period_end
+        )
+        if expected_days == 0:
+            return 0.0
+        active_child_ids = list(expected_by_child.keys())
+        excused_map = KPIService._excused_child_days_by_child(
+            db, active_child_ids, period_start, period_end
+        )
+        excused_total = int(sum(excused_map.values()))
+        return round((excused_total / expected_days) * 100, 2)
 
     @staticmethod
     def compute_incident_rate(
@@ -1992,10 +2110,16 @@ class KPIService:
             db, kindergarten_id, period_start, period_end
         )
         child_ids = list(expected_by_child.keys())
+        # Physical attendance: PRESENT + LATE only (excludes EXCUSED)
         attended_by_child = KPIService._attended_child_days_by_child(
             db, child_ids, period_start, period_end
         )
         attended_child_days = int(sum(attended_by_child.values()))
+        # Excused absence: separate count
+        excused_by_child = KPIService._excused_child_days_by_child(
+            db, child_ids, period_start, period_end
+        )
+        excused_child_days = int(sum(excused_by_child.values()))
 
         incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
@@ -2116,10 +2240,16 @@ class KPIService:
             if expected_days <= 0:
                 continue
             chronic_denominator += 1
-            attended_days = int(attended_by_child.get(child_id, 0))
-            if attended_days > 0:
+            # Physical attendance only (PRESENT + LATE) for chronic absence calculation
+            physically_attended = int(attended_by_child.get(child_id, 0))
+            # Include excused as "not physically present" for chronic absence purposes
+            # Chronic absence measures total absence regardless of excuse
+            total_absent = expected_days - physically_attended - int(excused_by_child.get(child_id, 0))
+            total_absent = max(0, total_absent)
+            total_unexcused_and_excused = expected_days - physically_attended
+            if physically_attended > 0 or int(excused_by_child.get(child_id, 0)) > 0:
                 has_attendance_data = True
-            absence_rate = ((expected_days - attended_days) / expected_days) * 100
+            absence_rate = (total_unexcused_and_excused / expected_days) * 100
             if absence_rate >= 10.0:
                 chronic_absence_count += 1
         if chronic_denominator > 0 and has_attendance_data:
@@ -2128,6 +2258,11 @@ class KPIService:
             chronic_absence_rate = 0.0
 
         attendance_rate = round((attended_child_days / expected_child_days) * 100, 2) if expected_child_days > 0 else 0.0
+        excused_absence_rate = round((excused_child_days / expected_child_days) * 100, 2) if expected_child_days > 0 else 0.0
+        # Incident rates expressed per 1,000 child-days (not per 100) for rare events
+        incident_rate_per_1000 = round((incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
+        serious_incident_rate_per_1000 = round((serious_incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
+        # Keep per-100 as legacy aliases for backward compat with existing dashboard cards
         incident_rate = round((incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
         serious_incident_rate = round((serious_incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
         incident_followup_sla = round((followup_closed_within_sla / followup_required) * 100, 2) if followup_required > 0 else 0.0
@@ -2192,10 +2327,33 @@ class KPIService:
             models.EnrollmentApplication.created_at <= period_end,
         ).scalar() or 0
 
+        # --- hard override rules ---
+        open_critical_incidents = db.query(func.count(models.Incident.id)).filter(
+            models.Incident.kindergarten_id == kindergarten_id,
+            models.Incident.severity_level == models.SeverityLevel.CRITICAL,
+            models.Incident.followup_required_flag == True,
+            models.Incident.closed_at.is_(None),
+            models.Incident.deleted_at.is_(None),
+        ).scalar() or 0
+
+        override_rules_triggered = []
+        if kg and kg.license_valid_until and kg.license_valid_until < date.today():
+            governance_band = "RED"
+            override_rules_triggered.append("LICENSE_EXPIRED")
+        if open_critical_incidents > 0 and governance_band == "GREEN":
+            governance_band = "AMBER"
+            override_rules_triggered.append("UNRESOLVED_CRITICAL_INCIDENT")
+        if ratio_rate < 60.0 and ratio_operating_minutes > 0:
+            governance_band = "RED"
+            override_rules_triggered.append("RATIO_BELOW_MINIMUM")
+
         return {
             "attendance_rate": attendance_rate,
+            "excused_absence_rate": excused_absence_rate,
             "incident_rate": incident_rate,
+            "incident_rate_per_1000": incident_rate_per_1000,
             "serious_incident_rate": serious_incident_rate,
+            "serious_incident_rate_per_1000": serious_incident_rate_per_1000,
             "incident_followup_sla": incident_followup_sla,
             "ratio_compliance": ratio_rate,
             "training_completion_rate": training_rate,
@@ -2212,6 +2370,34 @@ class KPIService:
             "capacity_utilization_rate": capacity_utilization_rate,
             "active_enrollments": int(active_enrollments),
             "new_enrollments": int(new_enrollments),
+            "override_rules_triggered": override_rules_triggered,
+            # numerators and denominators for transparency
+            "numerators": {
+                "attendance_rate": attended_child_days,
+                "excused_absence_rate": excused_child_days,
+                "incident_rate": incident_count,
+                "serious_incident_rate": serious_incident_count,
+                "incident_followup_sla": followup_closed_within_sla,
+                "ratio_compliance": ratio_compliant_minutes,
+                "training_completion_rate": training_completed,
+                "report_submission_rate": submitted_reports,
+                "chronic_absence_rate": chronic_absence_count,
+                "checklist_compliance": checklist_completed,
+                "capacity_utilization_rate": int(active_enrollments),
+            },
+            "denominators": {
+                "attendance_rate": expected_child_days,
+                "excused_absence_rate": expected_child_days,
+                "incident_rate": attended_child_days,
+                "serious_incident_rate": attended_child_days,
+                "incident_followup_sla": followup_required,
+                "ratio_compliance": ratio_operating_minutes,
+                "training_completion_rate": training_expected,
+                "report_submission_rate": expected_child_days,
+                "chronic_absence_rate": chronic_denominator,
+                "checklist_compliance": checklist_required,
+                "capacity_utilization_rate": int(total_capacity),
+            },
             "quality": {
                 "attendance_rate": {
                     "has_data": expected_child_days > 0,
@@ -3580,7 +3766,7 @@ def get_consolidated_kpi_dashboard_data(
             models.AttendanceLog.status.in_([
                 models.AttendanceStatus.PRESENT,
                 models.AttendanceStatus.LATE,
-                models.AttendanceStatus.EXCUSED,
+                # EXCUSED is NOT physical attendance — excluded per policy
             ]),
         ).group_by(models.AttendanceLog.date).all()
         att_by_date: Dict[date, int] = {r[0]: int(r[1]) for r in att_rows}
@@ -4196,6 +4382,457 @@ def get_enhanced_manager_kpi_dashboard(
         last_updated=last_updated,
         data_freshness=data_freshness
     )
+
+
+@router.get("/kpi/standards")
+def get_kpi_standards(
+    current_user: models.User = Depends(require_admin_or_manager),
+):
+    """
+    Return the full KPI standards registry: formulas, numerators, denominators,
+    thresholds with source metadata, min denominator rules, and hard override rules.
+    """
+    return {
+        "standards": list_all_standards(),
+        "hard_override_rules": list_hard_override_rules(),
+        "min_coverage_for_rating_pct": MIN_COVERAGE_FOR_RATING,
+    }
+
+
+@router.get("/kpi/definitions")
+def get_kpi_definitions(
+    locale: str = Query("ar", description="Language locale ('ar' or 'en')"),
+    current_user: models.User = Depends(require_admin_or_manager),
+):
+    """Return KPI definitions — names, formulas, and explanations — in the requested locale."""
+    result = []
+    for key, defn in KPI_DEFINITIONS.items():
+        std = STANDARDS.get(key)
+        entry = {
+            "kpi_key": key,
+            "name": defn["name_ar"] if locale == "ar" else defn["name_en"],
+            "name_ar": defn["name_ar"],
+            "name_en": defn["name_en"],
+            "description": defn.get("description_ar" if locale == "ar" else "description_en", ""),
+            "formula": defn.get("formula_ar" if locale == "ar" else "formula_en", ""),
+        }
+        if std:
+            entry["unit"] = std.unit
+            entry["category"] = std.category
+            entry["direction"] = std.threshold.direction.value
+            entry["threshold_source"] = get_threshold_source_dict(key)
+        result.append(entry)
+    return {"definitions": result, "count": len(result)}
+
+
+@router.get("/kpi/thresholds")
+def get_kpi_thresholds(
+    current_user: models.User = Depends(require_admin_or_manager),
+):
+    """Return all KPI thresholds with source metadata and hard override rules."""
+    thresholds = []
+    for key, std in STANDARDS.items():
+        t = std.threshold
+        thresholds.append({
+            "kpi_key": key,
+            "name_en": std.name_en,
+            "name_ar": std.name_ar,
+            "unit": std.unit,
+            "direction": t.direction.value,
+            "green": {"min": t.green[0], "max": t.green[1], "label_en": t.green_label_en, "label_ar": t.green_label_ar},
+            "amber": {"min": t.amber[0], "max": t.amber[1], "label_en": t.amber_label_en, "label_ar": t.amber_label_ar},
+            "red": {"min": t.red[0], "max": t.red[1], "label_en": t.red_label_en, "label_ar": t.red_label_ar},
+            "source": get_threshold_source_dict(key),
+            "min_denominator": std.min_denominator,
+            "min_denominator_high": std.min_denominator_high,
+        })
+    return {"thresholds": thresholds, "hard_override_rules": list_hard_override_rules()}
+
+
+@router.get("/kpi/levels/country")
+def get_kpi_country_level(
+    period_start: Optional[date] = Query(None),
+    period_end: Optional[date] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Country-wide KPI aggregation (Admin only)."""
+    if period_end is None:
+        period_end = date.today()
+    if period_start is None:
+        period_start = period_end - timedelta(days=29)
+
+    kindergartens = db.query(models.Kindergarten).filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+    ).all()
+
+    if not kindergartens:
+        return {"level": "country", "country": "Jordan", "kindergarten_count": 0, "kpis": {}}
+
+    all_bundles = []
+    for kg in kindergartens:
+        try:
+            bundle = KPIService.compute_kpi_bundle(db, kg.id, period_start, period_end)
+            all_bundles.append(bundle)
+        except Exception:
+            continue
+
+    count = len(all_bundles)
+    if count == 0:
+        return {"level": "country", "country": "Jordan", "kindergarten_count": 0, "kpis": {}}
+
+    def _avg(key: str) -> float:
+        vals = [b.get(key, 0.0) or 0.0 for b in all_bundles]
+        return round(sum(vals) / count, 2)
+
+    green_count = sum(1 for b in all_bundles if b.get("governance_band") == "GREEN")
+    amber_count = sum(1 for b in all_bundles if b.get("governance_band") == "AMBER")
+    red_count = sum(1 for b in all_bundles if b.get("governance_band") == "RED")
+
+    return {
+        "level": "country",
+        "country": "Jordan",
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat(),
+        "kindergarten_count": count,
+        "band_distribution": {"green": green_count, "amber": amber_count, "red": red_count},
+        "kpis": {
+            "attendance_rate": _avg("attendance_rate"),
+            "excused_absence_rate": _avg("excused_absence_rate"),
+            "chronic_absence_rate": _avg("chronic_absence_rate"),
+            "incident_rate_per_1000": _avg("incident_rate_per_1000"),
+            "serious_incident_rate_per_1000": _avg("serious_incident_rate_per_1000"),
+            "incident_followup_sla": _avg("incident_followup_sla"),
+            "ratio_compliance": _avg("ratio_compliance"),
+            "training_completion_rate": _avg("training_completion_rate"),
+            "report_submission_rate": _avg("report_submission_rate"),
+            "checklist_compliance": _avg("checklist_compliance"),
+            "capacity_utilization_rate": _avg("capacity_utilization_rate"),
+            "gqi_score": _avg("gqi_score"),
+            "cei_score": _avg("cei_score"),
+            "governance_score": _avg("governance_score"),
+        },
+    }
+
+
+@router.get("/kpi/levels/governorates")
+def get_kpi_governorate_level(
+    period_start: Optional[date] = Query(None),
+    period_end: Optional[date] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """KPI aggregation per governorate (Admin only)."""
+    if period_end is None:
+        period_end = date.today()
+    if period_start is None:
+        period_start = period_end - timedelta(days=29)
+
+    kindergartens = db.query(models.Kindergarten).filter(
+        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+    ).all()
+
+    governorate_bundles: Dict[str, List[Dict[str, Any]]] = {}
+    for kg in kindergartens:
+        gov = kg.governorate or "Unknown"
+        try:
+            bundle = KPIService.compute_kpi_bundle(db, kg.id, period_start, period_end)
+            governorate_bundles.setdefault(gov, []).append(bundle)
+        except Exception:
+            continue
+
+    result = []
+    kpi_keys = [
+        "attendance_rate", "excused_absence_rate", "chronic_absence_rate",
+        "incident_rate_per_1000", "serious_incident_rate_per_1000",
+        "incident_followup_sla", "ratio_compliance", "training_completion_rate",
+        "report_submission_rate", "checklist_compliance", "capacity_utilization_rate",
+        "gqi_score", "cei_score", "governance_score",
+    ]
+    for gov, bundles in sorted(governorate_bundles.items()):
+        n = len(bundles)
+        kpis = {
+            k: round(sum(b.get(k, 0.0) or 0.0 for b in bundles) / n, 2)
+            for k in kpi_keys
+        }
+        band_dist = {
+            "green": sum(1 for b in bundles if b.get("governance_band") == "GREEN"),
+            "amber": sum(1 for b in bundles if b.get("governance_band") == "AMBER"),
+            "red": sum(1 for b in bundles if b.get("governance_band") == "RED"),
+        }
+        result.append({
+            "governorate": gov,
+            "kindergarten_count": n,
+            "band_distribution": band_dist,
+            "kpis": kpis,
+        })
+
+    return {
+        "level": "governorate",
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat(),
+        "governorates": result,
+    }
+
+
+@router.get("/kpi/alerts")
+def get_kpi_alerts(
+    period_start: Optional[date] = Query(None),
+    period_end: Optional[date] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Return actionable KPI alerts for the authenticated user's scope.
+    Managers see their own kindergarten; Admins see all or a specific one.
+    """
+    if current_user.role == models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if period_end is None:
+        period_end = date.today()
+    if period_start is None:
+        period_start = period_end - timedelta(days=29)
+
+    if current_user.role == models.UserRole.MANAGER:
+        target_kg_id = current_user.kindergarten_id
+        if not target_kg_id:
+            return {"alerts": []}
+        kg_ids = [target_kg_id]
+    elif current_user.role == models.UserRole.ADMIN:
+        if kindergarten_id:
+            kg_ids = [kindergarten_id]
+        else:
+            kg_ids = [row[0] for row in db.query(models.Kindergarten.id).filter(
+                models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+            ).all()]
+    else:
+        kg_ids = []
+
+    alerts = []
+    today = date.today()
+
+    for kg_id in kg_ids:
+        kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kg_id).first()
+        if not kg:
+            continue
+        kg_name = kg.name_ar or kg.name_en or f"KG #{kg_id}"
+
+        # License expiry
+        if kg.license_valid_until:
+            if kg.license_valid_until < today:
+                alerts.append({
+                    "type": "LICENSE_EXPIRED", "priority": "critical",
+                    "kindergarten_id": kg_id, "kindergarten_name": kg_name,
+                    "message_ar": f"ترخيص {kg_name} منتهٍ منذ {kg.license_valid_until}",
+                    "message_en": f"{kg_name} license expired on {kg.license_valid_until}",
+                    "action_ar": "تجديد الترخيص فوراً",
+                    "action_en": "Renew the license immediately",
+                })
+            elif kg.license_valid_until <= today + timedelta(days=30):
+                alerts.append({
+                    "type": "LICENSE_EXPIRING", "priority": "high",
+                    "kindergarten_id": kg_id, "kindergarten_name": kg_name,
+                    "message_ar": f"ترخيص {kg_name} ينتهي في {kg.license_valid_until}",
+                    "message_en": f"{kg_name} license expires on {kg.license_valid_until}",
+                    "action_ar": "ابدأ إجراءات تجديد الترخيص",
+                    "action_en": "Initiate license renewal process",
+                })
+
+        # Open critical incidents
+        open_critical = db.query(func.count(models.Incident.id)).filter(
+            models.Incident.kindergarten_id == kg_id,
+            models.Incident.severity_level == models.SeverityLevel.CRITICAL,
+            models.Incident.followup_required_flag == True,
+            models.Incident.closed_at.is_(None),
+            models.Incident.deleted_at.is_(None),
+        ).scalar() or 0
+        if open_critical > 0:
+            alerts.append({
+                "type": "OPEN_CRITICAL_INCIDENT", "priority": "critical",
+                "kindergarten_id": kg_id, "kindergarten_name": kg_name,
+                "message_ar": f"يوجد {open_critical} حادث حرج مفتوح في {kg_name}",
+                "message_en": f"{open_critical} open critical incident(s) in {kg_name}",
+                "action_ar": "راجع وأغلق الحوادث الحرجة المفتوحة فوراً",
+                "action_en": "Review and close open critical incidents immediately",
+            })
+
+        # KPI threshold breaches
+        try:
+            bundle = KPIService.compute_kpi_bundle(db, kg_id, period_start, period_end)
+            if bundle.get("attendance_rate", 100.0) < 70.0 and bundle["quality"]["attendance_rate"]["has_data"]:
+                alerts.append({
+                    "type": "LOW_ATTENDANCE", "priority": "high",
+                    "kindergarten_id": kg_id, "kindergarten_name": kg_name,
+                    "value": bundle["attendance_rate"],
+                    "message_ar": f"نسبة الحضور في {kg_name}: {bundle['attendance_rate']}% — أقل من الحد الأدنى 70%",
+                    "message_en": f"Attendance rate at {kg_name}: {bundle['attendance_rate']}% — below 70% threshold",
+                    "action_ar": "تواصل مع الأسر وراجع أسباب الغياب",
+                    "action_en": "Contact families and investigate absence causes",
+                })
+            if bundle.get("chronic_absence_rate", 0.0) > 10.0:
+                alerts.append({
+                    "type": "HIGH_CHRONIC_ABSENCE", "priority": "high",
+                    "kindergarten_id": kg_id, "kindergarten_name": kg_name,
+                    "value": bundle["chronic_absence_rate"],
+                    "message_ar": f"معدل الغياب المزمن في {kg_name}: {bundle['chronic_absence_rate']}%",
+                    "message_en": f"Chronic absence rate at {kg_name}: {bundle['chronic_absence_rate']}%",
+                    "action_ar": "حدد الأطفال المتغيبين بشكل مزمن وتواصل مع أسرهم",
+                    "action_en": "Identify chronically absent children and contact their families",
+                })
+            if bundle.get("ratio_compliance", 100.0) < 80.0 and bundle["quality"]["ratio_compliance"]["has_data"]:
+                alerts.append({
+                    "type": "LOW_RATIO_COMPLIANCE", "priority": "critical" if bundle["ratio_compliance"] < 60 else "high",
+                    "kindergarten_id": kg_id, "kindergarten_name": kg_name,
+                    "value": bundle["ratio_compliance"],
+                    "message_ar": f"امتثال نسبة الموظف للأطفال في {kg_name}: {bundle['ratio_compliance']}%",
+                    "message_en": f"Staff-child ratio compliance at {kg_name}: {bundle['ratio_compliance']}%",
+                    "action_ar": "راجع جدولة الموظفين وضمان الغطاء الكافي",
+                    "action_en": "Review staff scheduling and ensure adequate coverage",
+                })
+        except Exception:
+            pass
+
+    priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    alerts.sort(key=lambda a: priority_order.get(a.get("priority", "low"), 3))
+
+    return {
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat(),
+        "alerts": alerts,
+        "total": len(alerts),
+    }
+
+
+@router.get("/kpi/recommended-actions")
+def get_kpi_recommended_actions(
+    period_start: Optional[date] = Query(None),
+    period_end: Optional[date] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Return prioritized recommended actions based on current KPI status.
+    Each action is tied to a specific KPI breach or data quality issue.
+    """
+    if current_user.role == models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if period_end is None:
+        period_end = date.today()
+    if period_start is None:
+        period_start = period_end - timedelta(days=29)
+
+    if current_user.role == models.UserRole.MANAGER:
+        kg_id = current_user.kindergarten_id
+        if not kg_id:
+            return {"recommended_actions": []}
+    elif current_user.role == models.UserRole.ADMIN:
+        kg_id = kindergarten_id
+        if not kg_id:
+            return {"message": "Specify kindergarten_id for action recommendations, or use /kpi/alerts for network-wide alerts."}
+    else:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kg_id).first()
+    if not kg:
+        raise HTTPException(status_code=404, detail="Kindergarten not found")
+
+    try:
+        bundle = KPIService.compute_kpi_bundle(db, kg_id, period_start, period_end)
+    except Exception:
+        return {"recommended_actions": [], "error": "Could not compute KPI bundle"}
+
+    actions = []
+
+    kpi_action_map = [
+        ("attendance_rate", 90.0, 70.0, True,
+         "راجع أسباب غياب الأطفال وتواصل مع أسر ذوي الغياب المتكرر.",
+         "Review causes of child absences and contact families of frequently absent children."),
+        ("chronic_absence_rate", None, 10.0, False,
+         "حدد الأطفال الغائبين بشكل مزمن وضع خطة متابعة مع الأسر.",
+         "Identify chronically absent children and develop a follow-up plan with families."),
+        ("ratio_compliance", 95.0, 80.0, True,
+         "حسّن جدولة الموظفين لضمان الامتثال لنسب المعلم للأطفال.",
+         "Improve staff scheduling to ensure staff-child ratio compliance."),
+        ("incident_followup_sla", 100.0, 90.0, True,
+         "راجع الحوادث المفتوحة وأغلق جميع الحوادث التي تجاوزت مهلة 48 ساعة.",
+         "Review open incidents and close all that have exceeded the 48-hour SLA deadline."),
+        ("report_submission_rate", 95.0, 85.0, True,
+         "راجع معدلات تقديم التقارير للمشرفين وحدد سبب الانخفاض.",
+         "Review supervisor report submission rates and identify the cause of any shortfall."),
+        ("training_completion_rate", 90.0, 75.0, True,
+         "جدوِل جلسات تدريبية للموظفين المتأخرين في إتمام الوحدات الإلزامية.",
+         "Schedule training sessions for staff who have not completed mandatory modules."),
+        ("checklist_compliance", 95.0, 80.0, True,
+         "راجع قوائم الفحص الناقصة وتحقق من الإجراءات اليومية للمشرفين.",
+         "Review missing checklists and verify supervisors are following daily procedures."),
+    ]
+
+    for kpi_key, green_thresh, amber_thresh, higher_is_better, action_ar, action_en in kpi_action_map:
+        val = bundle.get(kpi_key)
+        if val is None:
+            continue
+        quality = bundle.get("quality", {}).get(kpi_key, {})
+        if not quality.get("has_data", False):
+            actions.append({
+                "kpi_key": kpi_key,
+                "priority": "medium",
+                "type": "data_quality",
+                "action_ar": f"أضف بيانات {STANDARDS[kpi_key].name_ar if kpi_key in STANDARDS else kpi_key} لتفعيل هذا المؤشر.",
+                "action_en": f"Add {STANDARDS[kpi_key].name_en if kpi_key in STANDARDS else kpi_key} data to activate this indicator.",
+                "value": None,
+                "band": "gray",
+            })
+            continue
+
+        if higher_is_better:
+            if amber_thresh is not None and val < amber_thresh:
+                priority = "critical" if (green_thresh and val < green_thresh - 20) else "high"
+                actions.append({"kpi_key": kpi_key, "priority": priority, "type": "kpi_breach",
+                                 "action_ar": action_ar, "action_en": action_en,
+                                 "value": val, "band": "red" if val < amber_thresh else "amber"})
+            elif green_thresh is not None and val < green_thresh:
+                actions.append({"kpi_key": kpi_key, "priority": "medium", "type": "kpi_watch",
+                                 "action_ar": action_ar, "action_en": action_en,
+                                 "value": val, "band": "amber"})
+        else:
+            if amber_thresh is not None and val > amber_thresh:
+                actions.append({"kpi_key": kpi_key, "priority": "high", "type": "kpi_breach",
+                                 "action_ar": action_ar, "action_en": action_en,
+                                 "value": val, "band": "red"})
+            elif green_thresh is not None and val > green_thresh:
+                actions.append({"kpi_key": kpi_key, "priority": "medium", "type": "kpi_watch",
+                                 "action_ar": action_ar, "action_en": action_en,
+                                 "value": val, "band": "amber"})
+
+    # Add override-rule triggered actions
+    for rule_id in bundle.get("override_rules_triggered", []):
+        rule = next((r for r in HARD_OVERRIDE_RULES if r.rule_id == rule_id), None)
+        if rule:
+            actions.insert(0, {
+                "kpi_key": "hard_override",
+                "rule_id": rule_id,
+                "priority": "critical",
+                "type": "hard_override",
+                "action_ar": rule.description_ar,
+                "action_en": rule.description_en,
+                "band": rule.forces_band.value,
+            })
+
+    priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    actions.sort(key=lambda a: priority_order.get(a.get("priority", "low"), 3))
+
+    return {
+        "kindergarten_id": kg_id,
+        "kindergarten_name": kg.name_ar or kg.name_en,
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat(),
+        "recommended_actions": actions,
+        "total": len(actions),
+    }
 
 
 @router.get("/kpi/network-summary")

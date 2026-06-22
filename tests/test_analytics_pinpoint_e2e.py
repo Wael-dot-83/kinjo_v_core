@@ -30,24 +30,22 @@ class TestAnalyticsDOMVisibility:
         yield
         app.dependency_overrides.clear()
 
-    def test_pagehelpcontent_is_closed_before_analytics_dashboard(self):
-        help_pos = self.page.index('id="pageHelpContent"')
-        dash_pos = self.page.index('class="analytics-dashboard"')
-        assert help_pos < dash_pos
+    def test_pagehelpcontent_is_absent(self):
+        assert 'id="pageHelpContent"' not in self.page, (
+            "#pageHelpContent help section was removed and must not be present"
+        )
 
-    def test_no_live_widget_inside_hidden_help_container(self):
-        help_start = self.page.index('id="pageHelpContent"')
+    def test_all_live_widgets_in_visible_dashboard(self):
         dash_start = self.page.index('class="analytics-dashboard"')
-        help_section = self.page[help_start:dash_start]
+        visible = self.page[dash_start:]
         live_ids = [
             "attendanceForecast", "incidentForecast", "enrollmentForecast",
-            "attendanceForecastBand", "incidentForecastBand", "enrollmentForecastBand",
             "modelMeta", "anomalyList", "anomalyCount", "riskHeatmap",
             "alertList", "alertBanner", "dataQualityScore", "dataQualityStatus",
             "targetList", "benchmarkList", "recommendationList",
         ]
         for wid in live_ids:
-            assert wid not in help_section, f"#{wid} leaked into hidden #pageHelpContent"
+            assert f'id="{wid}"' in visible, f"#{wid} missing from visible .analytics-dashboard"
 
     def test_kpi_card_ids_in_visible_dashboard(self):
         visible = self.page[self.page.index('class="analytics-dashboard"'):]
