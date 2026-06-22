@@ -1268,6 +1268,7 @@ async function loadManagerDashboard() {
   ]);
 
   renderManagerSummary();
+  loadSuggestedActions();
 
   const failedJobs = jobs.filter((job) => job.status === "rejected");
   if (failedJobs.length > 0) {
@@ -1324,9 +1325,56 @@ async function loadAdminDashboard() {
       console.error("Error loading KPI payload:", kpiResult.reason);
       await loadKPIs();
     }
+    loadSuggestedActions();
   } catch (error) {
     console.error("Error loading admin dashboard:", error);
     await Promise.all([loadKindergartensOverview(), loadKPIs()]);
+  }
+}
+
+async function loadSuggestedActions() {
+  try {
+    const data = await dashboardFetch("/api/dashboard/suggested-actions");
+    if (!data || !data.success || !Array.isArray(data.data)) return;
+    const isEn = document.documentElement.lang === "en";
+
+    for (const action of data.data) {
+      if (action.id === "attendance_trend") {
+        const cardEl  = document.getElementById("actionAttendanceCard");
+        const descEl  = document.getElementById("actionAttendanceDesc");
+
+        if (action.change !== null && action.change !== undefined) {
+          const sign       = action.change >= 0 ? "↑" : "↓";
+          const absChange  = Math.abs(action.change).toFixed(1);
+          const rate       = action.current_rate != null ? action.current_rate.toFixed(1) : "—";
+
+          if (descEl) {
+            descEl.textContent = isEn
+              ? `Attendance rate this week: ${rate}% (${sign} ${absChange}% vs last week).`
+              : `معدل الحضور هذا الأسبوع: ${rate}% (${sign} ${absChange}% مقارنة بالأسبوع الماضي).`;
+          }
+
+          if (cardEl && action.change < -1) {
+            cardEl.classList.add("border-danger");
+          }
+        }
+
+        if (action.route && cardEl) {
+          cardEl.href = action.route;
+        }
+      }
+
+      if (action.id === "pending_enrollments") {
+        const descEl = document.getElementById("actionEnrollmentDesc");
+        if (descEl && action.pending_count > 0) {
+          descEl.textContent = isEn
+            ? `${action.pending_count} enrollment request(s) pending your review.`
+            : `${action.pending_count} طلب تسجيل معلق بانتظار مراجعتك.`;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Suggested actions load failed:", e);
   }
 }
 

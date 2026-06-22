@@ -206,6 +206,84 @@ def get_dashboard_summary(
         raise HTTPException(status_code=500, detail="Failed to fetch dashboard summary")
 
 
+@router.get("/suggested-actions")
+def get_suggested_actions(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns live-computed action-card data for the dashboard (week-over-week attendance change, pending enrollments)."""
+    if current_user.role == models.UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    today = date.today()
+    week_start = today - timedelta(days=6)
+    prev_week_end = today - timedelta(days=7)
+    prev_week_start = today - timedelta(days=13)
+
+    try:
+        # Pending enrollment count
+        pending_count: int = db.query(func.count(models.EnrollmentApplication.id)).filter(
+            models.EnrollmentApplication.status == models.EnrollmentStatus.PENDING_REVIEW,
+        ).scalar() or 0
+
+        # Week-over-week attendance rate
+        def _att_rate(start: date, end: date) -> Optional[float]:
+            total = db.query(func.count(models.AttendanceLog.id)).filter(
+                models.AttendanceLog.date >= start,
+                models.AttendanceLog.date <= end,
+            ).scalar() or 0
+            if not total:
+                return None
+            present = db.query(func.count(models.AttendanceLog.id)).filter(
+                models.AttendanceLog.date >= start,
+                models.AttendanceLog.date <= end,
+                models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
+            ).scalar() or 0
+            return round(present / total * 100, 1)
+
+        curr_rate = _att_rate(week_start, today)
+        prev_rate = _att_rate(prev_week_start, prev_week_end)
+        change: Optional[float] = (
+            round(curr_rate - prev_rate, 1)
+            if curr_rate is not None and prev_rate is not None
+            else None
+        )
+
+        att_route = (
+            f"/attendance/history?period=week&reason=attendance_decline&change={change}"
+            if change is not None
+            else "/attendance/history?period=week"
+        )
+
+        actions = [
+            {
+                "id": "pending_enrollments",
+                "pending_count": pending_count,
+            },
+            {
+                "id": "attendance_trend",
+                "current_rate": curr_rate,
+                "prev_rate": prev_rate,
+                "change": change,
+                "route": att_route,
+            },
+        ]
+
+        logger.info(
+            "suggested-actions: user_id=%s pending=%d curr_rate=%s change=%s",
+            current_user.id, pending_count, curr_rate, change,
+        )
+
+        return {
+            "success": True,
+            "data": actions,
+            "generated_at": datetime.utcnow().isoformat(),
+        }
+    except Exception as e:
+        logger.error("Suggested actions error: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to compute suggested actions")
+
+
 @router.get("/widgets/available")
 async def get_available_widgets(
     current_user: models.User = Depends(get_current_user),

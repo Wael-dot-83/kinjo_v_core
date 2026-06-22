@@ -287,32 +287,28 @@
                     <div class="row g-3" id="nextActionsContainer">
                         <!-- Populated via JS or Template -->
                         <div class="col-md-6">
-                            <div class="action-card d-flex align-items-start p-3 border rounded-4 bg-light bg-opacity-10"
-                                onclick="window.location.href='/enrollments'">
+                            <a href="/enrollments" class="action-card d-flex align-items-start p-3 border rounded-4 bg-light bg-opacity-10 text-decoration-none" id="actionEnrollmentCard">
                                 <div class="action-icon me-3 bg-primary text-white p-2 rounded-3">
                                     <i class="bi bi-plus-circle"></i>
                                 </div>
                                 <div>
-                                    <p class="mb-1 fw-bold">{% if ui_lang == 'en' %}Speed Up Enrollment Review{% else %}تسريع مراجعة التسجيلات{% endif %}</p>
-                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}Pending enrollment requests are awaiting your review.{% else %}طلبات التسجيل المعلقة بانتظار مراجعتك.{% endif %}</small>
-                                    <span class="text-primary small fw-bold">{% if ui_lang == 'en' %}Review requests now{% else %}راجع الطلبات الآن{% endif %} <i
-                                            class="bi bi-arrow-left ms-1"></i></span>
+                                    <p class="mb-1 fw-bold text-body">{% if ui_lang == 'en' %}Speed Up Enrollment Review{% else %}تسريع مراجعة التسجيلات{% endif %}</p>
+                                    <small class="text-muted d-block mb-2" id="actionEnrollmentDesc">{% if ui_lang == 'en' %}Pending enrollment requests are awaiting your review.{% else %}طلبات التسجيل المعلقة بانتظار مراجعتك.{% endif %}</small>
+                                    <span class="text-primary small fw-bold">{% if ui_lang == 'en' %}Review requests now{% else %}راجع الطلبات الآن{% endif %} <i class="bi bi-arrow-left ms-1"></i></span>
                                 </div>
-                            </div>
+                            </a>
                         </div>
                         <div class="col-md-6">
-                            <div class="action-card d-flex align-items-start p-3 border rounded-4 bg-light bg-opacity-10"
-                                onclick="window.location.href='{% if current_user.role.value == 'ADMIN' %}/admin/daily-reports-organization{% else %}/attendance/history{% endif %}'">
+                            <a href="/attendance/history?period=week" class="action-card d-flex align-items-start p-3 border rounded-4 bg-light bg-opacity-10 text-decoration-none" id="actionAttendanceCard" aria-label="{% if ui_lang == 'en' %}Review attendance report{% else %}مراجعة تقرير الحضور{% endif %}">
                                 <div class="action-icon me-3 bg-success text-white p-2 rounded-3">
                                     <i class="bi bi-calendar-check"></i>
                                 </div>
                                 <div>
-                                    <p class="mb-1 fw-bold">{% if ui_lang == 'en' %}Follow Up on Repeated Absences{% else %}متابعة الغياب المتكرر{% endif %}</p>
-                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}Review attendance patterns across your network to identify absenteeism trends.{% else %}راجع أنماط الحضور عبر شبكتك لتحديد اتجاهات الغياب.{% endif %}</small>
-                                    <span class="text-success small fw-bold">{% if ui_lang == 'en' %}Check attendance report{% else %}افحص تقرير الحضور{% endif %} <i
-                                            class="bi bi-arrow-left ms-1"></i></span>
+                                    <p class="mb-1 fw-bold text-body">{% if ui_lang == 'en' %}Follow Up on Repeated Absences{% else %}متابعة الغياب المتكرر{% endif %}</p>
+                                    <small class="text-muted d-block mb-2" id="actionAttendanceDesc">{% if ui_lang == 'en' %}Review attendance patterns across your network to identify absenteeism trends.{% else %}راجع أنماط الحضور عبر شبكتك لتحديد اتجاهات الغياب.{% endif %}</small>
+                                    <span class="text-success small fw-bold" id="actionAttendanceCta">{% if ui_lang == 'en' %}Review attendance report{% else %}مراجعة تقرير الحضور{% endif %} <i class="bi bi-arrow-left ms-1"></i></span>
                                 </div>
-                            </div>
+                            </a>
                         </div>
                     </div>
                 </div>

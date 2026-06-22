@@ -20,6 +20,37 @@
 {% endblock %}
 
 {% block content %}
+{% if filter_reason == 'attendance_decline' %}
+<div class="alert alert-warning border-warning d-flex align-items-start gap-3 mb-4 rounded-4" role="alert" id="attendanceDeclineBanner">
+    <i class="bi bi-exclamation-triangle-fill fs-4 text-warning mt-1 flex-shrink-0"></i>
+    <div class="flex-grow-1">
+        <p class="fw-bold mb-1">
+            {% if ui_lang == 'en' %}Attendance Decline Detected{% else %}تم رصد انخفاض في معدل الحضور{% endif %}
+        </p>
+        <p class="mb-0 small">
+            {% if filter_change %}
+                {% set change_val = filter_change | float %}
+                {% if change_val < 0 %}
+                    {% if ui_lang == 'en' %}
+                        Attendance dropped by <strong>{{ (change_val * -1) | round(1) }}%</strong> compared to last week. The records below cover the current week — review daily attendance patterns to identify the cause.
+                    {% else %}
+                        انخفض معدل الحضور بمقدار <strong>{{ (change_val * -1) | round(1) }}%</strong> مقارنةً بالأسبوع الماضي. السجلات أدناه تغطي الأسبوع الحالي — راجع أنماط الحضور اليومية لتحديد السبب.
+                    {% endif %}
+                {% else %}
+                    {% if ui_lang == 'en' %}
+                        Attendance changed by <strong>{{ change_val | round(1) }}%</strong> compared to last week.
+                    {% else %}
+                        تغيّر معدل الحضور بمقدار <strong>{{ change_val | round(1) }}%</strong> مقارنةً بالأسبوع الماضي.
+                    {% endif %}
+                {% endif %}
+            {% else %}
+                {% if ui_lang == 'en' %}Review this week's attendance records to identify absenteeism patterns.{% else %}راجع سجلات الحضور لهذا الأسبوع لتحديد أنماط الغياب.{% endif %}
+            {% endif %}
+        </p>
+    </div>
+    <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+</div>
+{% endif %}
 <div class="card mb-4">
     <div class="card-header">
         <h5 class="mb-0">{% if ui_lang == 'en' %}Filter Options{% else %}خيارات التصفية{% endif %}</h5>

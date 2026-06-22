@@ -615,11 +615,11 @@ class TestFrontendRoutes:
         app.dependency_overrides.clear()
 
     def test_attendance_history(self, client, admin_user, sample_kindergarten):
-        """Test attendance history page is blocked for admin"""
+        """Test attendance history page is accessible for admin"""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
 
         response = client.get("/attendance/history")
-        assert response.status_code == 403
+        assert response.status_code == 200
 
         app.dependency_overrides.clear()
 

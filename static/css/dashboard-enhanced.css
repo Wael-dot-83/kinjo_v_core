@@ -493,9 +493,11 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 
 /* 13. Unified action card hover */
 .action-card {
+  display: flex;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
   border-color: #e2e8f0 !important;
+  color: inherit;
 }
 .action-card:hover {
   transform: translateY(-3px);

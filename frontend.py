@@ -674,25 +674,38 @@ async def view_enrollment(request: Request, app_id: int, db: Session = Depends(g
 @router.get("/attendance/history", response_class=HTMLResponse)
 async def attendance_history(
     request: Request,
+    period: Optional[str] = None,
+    reason: Optional[str] = None,
+    change: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_or_redirect)
 ):
     user_role = current_user.role.value if hasattr(current_user.role, "value") else current_user.role
     if user_role == "PARENT":
         return RedirectResponse(url="/parent/dashboard")
-    if user_role == "ADMIN":
-        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
 
     today = date.today()
+    # Pre-set the week range when coming from the dashboard action card
+    if period == "week":
+        default_start = (today - timedelta(days=6)).isoformat()
+        default_end = today.isoformat()
+    else:
+        default_start = (today - timedelta(days=29)).isoformat()
+        default_end = today.isoformat()
+
     context = {
         "current_user": current_user,
         "is_admin": user_role == "ADMIN",
         "today": today,
-        "default_start_date": (today - timedelta(days=29)).isoformat(),
-        "default_end_date": today.isoformat(),
+        "default_start_date": default_start,
+        "default_end_date": default_end,
         "kindergartens": [],
         "governorates": [],
         "user_kindergarten": None,
+        # Passed to template for the contextual banner
+        "filter_period": period,
+        "filter_reason": reason,
+        "filter_change": change,
     }
 
     if user_role == "ADMIN":
