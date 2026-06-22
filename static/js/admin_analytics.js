@@ -1622,8 +1622,8 @@ async function loadAlerts() {
         priority: (a.severity || "MEDIUM").toLowerCase(),
       }));
     }
-  } catch (e) {
-    console.warn("analytics/alerts unavailable", e);
+  } catch (_) {
+    // analytics/alerts unavailable — continue with KPI alerts only
   }
 
   // Pull from KPI-based alerts (new)
@@ -1637,8 +1637,8 @@ async function loadAlerts() {
         priority: a.priority || "medium",
       }));
     }
-  } catch (e) {
-    console.warn("kpi/alerts unavailable", e);
+  } catch (_) {
+    // kpi/alerts unavailable — show whatever analytics alerts were collected
   }
 
   // Sort: critical → high → medium → low
