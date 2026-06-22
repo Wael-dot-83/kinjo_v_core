@@ -1123,6 +1123,13 @@ async function loadAdminDashboard() {
       renderEnrollmentChart(dashboard.charts?.enrollment || {});
       adminAlerts = Array.isArray(dashboard.alerts) ? dashboard.alerts : [];
       renderAlerts(adminAlerts);
+      if (dashboard.generated_at) {
+        const tsEl = document.getElementById("dashboardLastUpdated");
+        if (tsEl) {
+          const dt = new Date(dashboard.generated_at);
+          tsEl.textContent = dt.toLocaleTimeString(dashboardCurrentLocale(), { hour: "2-digit", minute: "2-digit" });
+        }
+      }
     } else {
       console.error("Error loading admin dashboard payload:", adminResult.reason);
       await loadKindergartensOverview();
@@ -1827,8 +1834,50 @@ function normalizeAlerts(alerts) {
   });
 }
 
+function _getDismissedAlertIds() {
+  try {
+    return JSON.parse(localStorage.getItem("kinjo_dismissed_alerts") || "[]");
+  } catch (_) {
+    return [];
+  }
+}
+
+function _saveDismissedAlertId(alertId) {
+  try {
+    const ids = _getDismissedAlertIds();
+    if (!ids.includes(String(alertId))) ids.push(String(alertId));
+    localStorage.setItem("kinjo_dismissed_alerts", JSON.stringify(ids.slice(-200)));
+  } catch (_) {}
+}
+
+function dismissAlertItem(btn, alertId) {
+  _saveDismissedAlertId(alertId);
+  const item = btn.closest(".dfe-alert-item");
+  if (!item) return;
+  item.classList.add("dismissed");
+  item.addEventListener("transitionend", function handler() {
+    item.removeEventListener("transitionend", handler);
+    item.remove();
+    const container = document.getElementById("alertsContainer");
+    const remaining = container ? container.querySelectorAll(".dfe-alert-item").length : 0;
+    const badge = document.getElementById("alertCountBadge");
+    if (badge) {
+      badge.textContent = remaining;
+      badge.style.display = remaining > 0 ? "" : "none";
+    }
+    updateElementText("alertCount", String(remaining));
+    if (remaining === 0) {
+      const allClear = document.getElementById("alertsAllClear");
+      if (allClear) allClear.style.display = "";
+    }
+  });
+}
+
 function renderAlerts(rawAlerts) {
-  const alerts = normalizeAlerts(rawAlerts);
+  const dismissedIds = _getDismissedAlertIds();
+  const alerts = normalizeAlerts(rawAlerts).filter(function (a) {
+    return !dismissedIds.includes(String(a.id));
+  });
   const container = document.getElementById("alertsContainer");
   const allClear = document.getElementById("alertsAllClear");
   const badge = document.getElementById("alertCountBadge");
@@ -1899,7 +1948,7 @@ function renderAlerts(rawAlerts) {
         <a href="${actionUrl}" class="dfe-alert-btn view">
           ${dashboardCurrentLang && dashboardCurrentLang() === "en" ? "View" : "فتح"}
         </a>
-        <button class="dfe-alert-btn dismiss" onclick="this.closest('.dfe-alert-item').classList.add('dismissed')" type="button">
+        <button class="dfe-alert-btn dismiss" onclick="dismissAlertItem(this, '${escapeHtml(String(alert.id))}')" type="button">
           ${dashboardCurrentLang && dashboardCurrentLang() === "en" ? "Dismiss" : "تجاهل"}
         </button>
       </div>`;

@@ -3,7 +3,7 @@ Dashboard customization API endpoints + unified summary endpoint.
 """
 import json
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -199,6 +199,7 @@ def get_dashboard_summary(
             "alerts": alerts,
             "chart": trend,
             "period": {"start": start.isoformat(), "end": end.isoformat()},
+            "generated_at": datetime.utcnow().isoformat(),
         }
     except Exception as e:
         logger.error("Dashboard summary error: %s", str(e), exc_info=True)

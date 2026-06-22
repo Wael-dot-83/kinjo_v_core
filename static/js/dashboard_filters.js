@@ -260,6 +260,13 @@ async function updateDashboard() {
     _dfeUpdateMiniStats(data);
     _dfeUpdateChart(data.chart || []);
     _dfePulseKpiCards();
+    if (data.generated_at) {
+      const tsEl = document.getElementById("dashboardLastUpdated");
+      if (tsEl && !tsEl.textContent) {
+        const dt = new Date(data.generated_at);
+        tsEl.textContent = dt.toLocaleTimeString(typeof dashboardCurrentLocale === "function" ? dashboardCurrentLocale() : "ar-JO", { hour: "2-digit", minute: "2-digit" });
+      }
+    }
   } catch (_) {
     // silent: existing dashboard still works
   }
