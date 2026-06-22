@@ -1,7 +1,7 @@
 {% extends "admin_base.html" %}
 
 {% block title %}
-  {% if ui_lang == 'en' %}Geographic Indicator Heatmaps — KinJo{% else %}خرائط المؤشرات الجغرافية — كينجو{% endif %}
+  {% if ui_lang == 'en' %}3D Globe Heatmaps — KinJo{% else %}خريطة الكرة الأرضية ثلاثية الأبعاد — كينجو{% endif %}
 {% endblock %}
 
 {% block breadcrumb %}
@@ -10,16 +10,16 @@
 </a>
 <span class="admin-breadcrumb-separator">/</span>
 <span class="admin-breadcrumb-item active">
-  {% if ui_lang == 'en' %}Geographic Heatmaps{% else %}الخرائط الجغرافية{% endif %}
+  {% if ui_lang == 'en' %}3D Geographic Heatmaps{% else %}الخرائط الجغرافية ثلاثية الأبعاد{% endif %}
 </span>
 {% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin="anonymous" />
+{# ── Cesium JS CDN ──────────────────────────────────────────────── #}
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet" crossorigin="anonymous">
+
 <style>
-/* ── BASE THEME ──────────────────────────────────────────────────── */
+/* ── BASE THEME ─────────────────────────────────────────────────── */
 .geo-cc { position:relative; min-height:100vh; font-family:var(--admin-font-family-ar); background:#0a0f1a; color:#f1f5f9; }
 .geo-cc[dir="ltr"] { font-family:var(--admin-font-family-en); }
 
@@ -31,25 +31,21 @@
 .cc-subtitle { font-size:0.875rem; color:rgba(255,255,255,0.55); }
 .cc-status-strip { display:flex; gap:0.5rem; margin-top:0.75rem; flex-wrap:wrap; }
 .status-chip { padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.8125rem; display:inline-flex; align-items:center; gap:0.375rem; }
-.status-chip.live { background:rgba(34,197,94,0.15); color:#22c55e; }
+.status-chip.live  { background:rgba(34,197,94,0.15); color:#22c55e; }
 .status-chip.error { background:rgba(239,68,68,0.15); color:#ef4444; }
-.status-chip.info { background:rgba(255,255,255,0.08); color:#cbd5e1; }
-.status-chip.alert { background:rgba(239,68,68,0.15); color:#ef4444; }
-.live-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; animation:pulse 2s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+.status-chip.info  { background:rgba(255,255,255,0.08); color:#cbd5e1; }
+.live-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; animation:dot-pulse 2s infinite; }
+@keyframes dot-pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
 
 /* ── FILTER BAR ──────────────────────────────────────────────────── */
 .cc-filters { padding:0.75rem 1.5rem; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap; background:rgba(10,15,26,0.5); }
 .filter-label { font-size:0.8125rem; color:#94a3b8; white-space:nowrap; }
 .cc-select { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); color:#f1f5f9; border-radius:0.5rem; padding:0.375rem 0.75rem; font-size:0.875rem; min-width:140px; }
 .cc-select option { background:#163d2e; color:#f1f5f9; }
-.cc-btn { padding:0.375rem 0.875rem; border-radius:0.5rem; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.08); color:#e2e8f0; font-size:0.875rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.375rem; }
-.cc-btn:hover { background:rgba(255,255,255,0.12); }
-
-/* ── PAGE-LEVEL ERROR ────────────────────────────────────────────── */
-.page-error-state { display:flex; flex-direction:column; align-items:center; padding:4rem 2rem; text-align:center; gap:0.5rem; }
-.page-error-state h2 { margin:0; color:#f1f5f9; font-size:1.1rem; }
-.page-error-state p { color:#94a3b8; margin:0; font-size:0.875rem; }
+.cc-btn { padding:0.375rem 0.875rem; border-radius:0.5rem; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.08); color:#e2e8f0; font-size:0.875rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.375rem; transition:background 0.12s; }
+.cc-btn:hover { background:rgba(255,255,255,0.14); }
+.cc-btn.spinning i { animation:spin 0.7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg) } }
 
 /* ── KPI STRIP ───────────────────────────────────────────────────── */
 .kpi-strip { display:flex; gap:0.5rem; padding:0.5rem 1rem; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(15,23,36,0.3); flex-wrap:wrap; }
@@ -58,77 +54,41 @@
 .kpi-value { font-size:1.25rem; font-weight:700; margin-top:0.125rem; }
 .kpi-sub { font-size:0.75rem; color:rgba(255,255,255,0.4); margin-top:0.125rem; }
 
-/* ── MULTI-MAP INTRO ─────────────────────────────────────────────── */
-.multi-map-intro { padding:0.875rem 1.5rem 0; }
-.multi-map-title { font-size:1rem; font-weight:700; color:#f1f5f9; margin:0 0 0.25rem; }
-.multi-map-desc { font-size:0.8125rem; color:#94a3b8; margin:0; }
+/* ── 3-PANEL CESIUM SCENE ────────────────────────────────────────── */
+.cs-scene { display:flex; height:calc(100vh - 280px); min-height:520px; }
 
-/* ── GRID LOADING ────────────────────────────────────────────────── */
-.grid-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4rem; gap:0.75rem; }
-.load-spinner { width:36px; height:36px; border:3px solid rgba(255,255,255,0.1); border-top-color:#2F7D62; border-radius:50%; animation:spin 1s linear infinite; }
-.load-text { color:#94a3b8; font-size:0.875rem; }
-@keyframes spin { to { transform:rotate(360deg) } }
+/* Left panel — governorate list */
+.cs-left { width:230px; flex-shrink:0; background:rgba(10,15,26,0.92); border-inline-end:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; overflow:hidden; }
+.cs-left-head { padding:0.625rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:0.5rem; }
+.cs-search { width:100%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.10); color:#f1f5f9; border-radius:0.375rem; padding:0.35rem 0.625rem; font-size:0.8125rem; }
+.cs-search::placeholder { color:#475569; }
+.cs-left-actions { display:flex; gap:0.375rem; }
+.cs-left-body { flex:1; overflow-y:auto; }
+.cs-gov-item { padding:0.5rem 0.875rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.1s; }
+.cs-gov-item:hover { background:rgba(255,255,255,0.06); }
+.cs-gov-item.selected { background:rgba(47,125,98,0.20); border-inline-start:3px solid #2F7D62; }
+.cs-gov-name { font-size:0.8125rem; color:#e2e8f0; }
 
-/* ── 6-CARD GRID ─────────────────────────────────────────────────── */
-.hm-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; padding:1rem; }
-@media (max-width:700px) { .hm-grid { grid-template-columns:1fr; } }
-@media (min-width:1400px) { .hm-grid { grid-template-columns:repeat(3,1fr); } }
+/* Center — Cesium globe */
+#cesiumContainer { flex:1; min-width:0; position:relative; background:#0a0f1a; }
 
-.hm-card { background:rgba(15,23,36,0.75); border:1px solid rgba(255,255,255,0.08); border-radius:0.75rem; overflow:hidden; display:flex; flex-direction:column; transition:border-color 0.15s; }
-.hm-card:hover { border-color:rgba(255,255,255,0.14); }
-.hm-card-header { padding:0.875rem 1rem 0.5rem; }
-.hm-card-title { font-size:0.9375rem; font-weight:700; color:#f1f5f9; margin:0 0 0.25rem; }
-.hm-card-desc { font-size:0.75rem; color:#64748b; margin:0; line-height:1.4; }
+/* Cesium widget overrides */
+.cesium-viewer-toolbar { background:rgba(10,15,26,0.80)!important; border:1px solid rgba(255,255,255,0.10)!important; }
+.cesium-button { background:rgba(15,23,36,0.85)!important; color:#e2e8f0!important; }
+.cesium-button:hover { background:rgba(47,125,98,0.6)!important; }
+.cesium-timeline-main { background:rgba(10,15,26,0.90)!important; }
+.cesium-timeline-bar { background:rgba(255,255,255,0.06)!important; }
+.cesium-timeline-ticLabel { color:#94a3b8!important; }
+.cesium-animation-theme .cesium-animation-rectButton { fill:#2F7D62!important; }
+.cesium-sceneModePicker-wrapper { background:rgba(10,15,26,0.85)!important; }
 
-/* Card map area */
-.hm-card-map-wrap { position:relative; flex:1; min-height:160px; background:rgba(0,0,0,0.18); }
-.hm-card-map-wrap svg { display:block; width:100%; height:auto; }
-.hm-card-map-wrap path { transition:fill-opacity 0.12s,stroke-width 0.12s; }
-.hm-card-map-wrap path:hover { fill-opacity:1!important; stroke:rgba(255,255,255,0.65)!important; stroke-width:1.2!important; }
+/* Layer toggles row (beneath globe) */
+.cs-layer-toggles { padding:0.5rem 0.875rem; background:rgba(10,15,26,0.6); border-top:1px solid rgba(255,255,255,0.06); display:flex; gap:1.25rem; flex-wrap:wrap; border-inline-end:1px solid rgba(255,255,255,0.08); }
+.cs-toggle-label { display:flex; align-items:center; gap:0.45rem; font-size:0.8125rem; color:#94a3b8; cursor:pointer; user-select:none; }
+.cs-toggle-label input[type="checkbox"] { accent-color:#1F5E47; width:15px; height:15px; }
 
-/* Selected governorate highlight (used in single map too) */
-.hm-selected-gov { stroke:#fff!important; stroke-width:2!important; filter:brightness(1.25); }
-
-/* Card loading/error states */
-.hm-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem 1rem; text-align:center; font-size:0.8125rem; color:#64748b; min-height:160px; gap:0.5rem; }
-.hm-spinner { width:22px; height:22px; border:2px solid rgba(255,255,255,0.1); border-top-color:#2F7D62; border-radius:50%; animation:spin 0.8s linear infinite; }
-.hm-error { flex-direction:column; align-items:center; justify-content:center; padding:1.5rem 1rem; text-align:center; font-size:0.8125rem; color:#ef4444; min-height:160px; gap:0.5rem; }
-.hm-error i { font-size:1.75rem; }
-.hm-error-retry { margin-top:0.25rem; background:transparent; border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:0.25rem 0.75rem; border-radius:0.375rem; font-size:0.8rem; cursor:pointer; }
-.hm-error-retry:hover { background:rgba(239,68,68,0.08); }
-
-/* Card legend */
-.hm-card-legend { display:flex; gap:0.5rem; padding:0.375rem 0.875rem; border-top:1px solid rgba(255,255,255,0.05); flex-wrap:wrap; background:rgba(0,0,0,0.12); }
-.hm-leg-item { display:inline-flex; align-items:center; gap:0.25rem; font-size:0.6875rem; color:#94a3b8; }
-.hm-leg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; display:inline-block; }
-
-/* Card stats */
-.hm-card-stats { padding:0.5rem 0.875rem 0.625rem; display:grid; grid-template-columns:1fr auto; gap:0.2rem 0.5rem; font-size:0.75rem; border-top:1px solid rgba(255,255,255,0.05); }
-.hm-stat-label { color:#64748b; }
-.hm-stat-value { color:#e2e8f0; font-weight:600; text-align:end; }
-
-/* ── SINGLE-MAP SECTION ──────────────────────────────────────────── */
-.cc-main { display:flex; gap:1rem; padding:1rem; }
-.map-col { flex:1; min-width:0; }
-.single-map-header { padding:0.75rem 0 0.5rem; }
-.single-map-title { font-size:1.1rem; font-weight:700; color:#f1f5f9; margin:0 0 0.25rem; }
-.single-map-desc { font-size:0.875rem; color:#64748b; margin:0; }
-.single-map-wrap { border-radius:0.5rem; overflow:hidden; background:rgba(0,0,0,0.2); margin:0.375rem 0; }
-.single-map-wrap path { cursor:pointer; transition:fill-opacity 0.12s,stroke-width 0.12s; }
-.single-map-wrap path:hover { fill-opacity:1!important; stroke:rgba(255,255,255,0.7)!important; stroke-width:1!important; }
-.single-map-loading { display:flex; flex-direction:column; align-items:center; padding:3rem; min-height:250px; justify-content:center; gap:0.75rem; color:#94a3b8; font-size:0.875rem; }
-.single-map-error { flex-direction:column; align-items:center; justify-content:center; padding:2rem; min-height:250px; text-align:center; color:#ef4444; gap:0.5rem; }
-.single-map-error i { font-size:2rem; }
-
-/* Risk legend (single map) */
-.risk-legend { display:flex; gap:0.5rem; padding:0.5rem 0.5rem; flex-wrap:wrap; align-items:center; font-size:0.8125rem; border-top:1px solid rgba(255,255,255,0.06); margin-top:0.25rem; }
-.legend-label { color:#94a3b8; }
-.legend-item { display:flex; align-items:center; gap:0.3rem; color:#cbd5e1; }
-.legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-
-/* ── INTEL PANEL ─────────────────────────────────────────────────── */
-.intel-panel { width:340px; background:rgba(15,23,36,0.7); border-left:1px solid rgba(255,255,255,0.08); padding:1rem 1.25rem; overflow-y:auto; max-height:calc(100vh - 180px); }
-.geo-cc[dir="rtl"] .intel-panel { border-right:1px solid rgba(255,255,255,0.08); border-left:none; }
+/* Right panel — intel / detail */
+.intel-panel { width:320px; flex-shrink:0; background:rgba(15,23,36,0.70); border-inline-start:1px solid rgba(255,255,255,0.08); padding:1rem 1.25rem; overflow-y:auto; }
 .intel-placeholder { text-align:center; padding:2rem 1rem; color:rgba(255,255,255,0.4); }
 .intel-placeholder-icon { margin-bottom:1rem; }
 .intel-placeholder-title { font-weight:600; color:#f1f5f9; margin-bottom:0.5rem; font-size:0.9375rem; }
@@ -141,7 +101,7 @@
 .intel-error p { margin:0.5rem 0 1rem; color:#94a3b8; font-size:0.875rem; }
 .intel-gov-header { margin-bottom:1rem; }
 .intel-gov-namerow { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
-.intel-gov-name { margin:0; font-size:1.2rem; font-weight:700; color:#f1f5f9; }
+.intel-gov-name { margin:0; font-size:1.1rem; font-weight:700; color:#f1f5f9; }
 .intel-gov-code { font-size:0.8125rem; color:#64748b; }
 .intel-gov-name-sub { font-size:0.875rem; color:#94a3b8; margin-top:0.125rem; }
 .intel-risk-row { display:flex; align-items:center; gap:0.75rem; margin-top:0.5rem; }
@@ -150,18 +110,31 @@
 .intel-action-box { margin-top:0.75rem; padding:0.625rem 0.875rem; background:rgba(31,94,71,0.07); border:1px solid rgba(31,94,71,0.2); border-radius:0.375rem; font-size:0.875rem; display:flex; gap:0.5rem; align-items:flex-start; color:#cbd5e1; }
 .intel-action-box i { color:#B49B3B; flex-shrink:0; margin-top:0.1rem; }
 .intel-section { margin-top:1rem; }
-.intel-section-title { font-size:0.875rem; font-weight:600; color:#cbd5e1; margin-bottom:0.5rem; }
+.intel-section-title { font-size:0.875rem; font-weight:600; color:#cbd5e1; margin-bottom:0.5rem; display:flex; gap:0.35rem; align-items:center; }
 .intel-count { font-weight:400; color:#64748b; }
-.intel-ind-row { margin-bottom:0.5rem; }
-.intel-ind-label { font-size:0.775rem; color:#94a3b8; margin-bottom:0.2rem; }
-.intel-ind-bar { display:flex; align-items:center; gap:0.375rem; }
+.intel-ind-row { margin-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between; }
+.intel-ind-label { font-size:0.775rem; color:#94a3b8; flex:1; }
+.intel-ind-bar { display:flex; align-items:center; gap:0.375rem; flex:1; }
 .intel-ind-track { flex:1; height:5px; background:rgba(255,255,255,0.08); border-radius:9999px; overflow:hidden; }
 .intel-ind-fill { height:100%; border-radius:9999px; transition:width 0.4s ease; }
 .intel-ind-score { font-size:0.75rem; font-weight:700; min-width:26px; text-align:end; }
 .intel-alert-row { display:flex; align-items:flex-start; gap:0.5rem; font-size:0.875rem; padding:0.25rem 0; color:#cbd5e1; }
 .intel-alert-dot { width:8px; height:8px; border-radius:50%; background:#ef4444; flex-shrink:0; margin-top:0.3rem; }
 .intel-no-alerts { color:#64748b; font-size:0.875rem; }
-.intel-footer { margin-top:1rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.07); font-size:0.75rem; color:#64748b; line-height:1.6; }
+.intel-footer { margin-top:1rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.07); font-size:0.8125rem; color:#94a3b8; line-height:1.8; }
+
+/* Risk badges (shared) */
+.rank-badge { display:inline-flex; padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.75rem; font-weight:600; }
+.rank-badge.risk-low,.intel-risk-badge.risk-low       { background:rgba(34,197,94,0.15); color:#22c55e; }
+.rank-badge.risk-medium,.intel-risk-badge.risk-medium { background:rgba(245,158,11,0.15); color:#f59e0b; }
+.rank-badge.risk-high,.intel-risk-badge.risk-high     { background:rgba(249,115,22,0.15); color:#f97316; }
+.rank-badge.risk-critical,.intel-risk-badge.risk-critical { background:rgba(239,68,68,0.15); color:#ef4444; }
+
+/* ── RISK LEGEND ─────────────────────────────────────────────────── */
+.risk-legend { display:flex; gap:0.5rem; padding:0.5rem 0.875rem; flex-wrap:wrap; align-items:center; font-size:0.8125rem; border-top:1px solid rgba(255,255,255,0.06); background:rgba(10,15,26,0.4); }
+.legend-label { color:#94a3b8; }
+.legend-item  { display:flex; align-items:center; gap:0.3rem; color:#cbd5e1; }
+.legend-dot   { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 
 /* ── RANKINGS TABLE ──────────────────────────────────────────────── */
 .rankings-section { padding:0 1rem 1.5rem; }
@@ -170,132 +143,103 @@
 .rankings-subtitle { color:#64748b; font-weight:400; font-size:0.75rem; }
 .rankings-table-wrap { max-height:320px; overflow-y:auto; border:1px solid rgba(255,255,255,0.06); border-radius:0.5rem; }
 #rankingsTable { width:100%; border-collapse:collapse; font-size:0.875rem; }
-#rankingsTable th { background:rgba(255,255,255,0.04); padding:0.5rem 0.75rem; text-align:start; color:#94a3b8; font-weight:600; cursor:pointer; user-select:none; }
-#rankingsTable th:hover { background:rgba(255,255,255,0.08); }
+#rankingsTable th { background:rgba(255,255,255,0.04); padding:0.5rem 0.75rem; text-align:start; color:#94a3b8; font-weight:600; }
 #rankingsTable td { padding:0.5rem 0.75rem; border-top:1px solid rgba(255,255,255,0.04); }
 #rankingsTable tbody tr { cursor:pointer; }
 #rankingsTable tbody tr:hover { background:rgba(255,255,255,0.03); }
-#rankingsTable tbody tr.selected { background:rgba(31,94,71,0.12); }
 .rank-num { font-weight:700; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.08); color:#f1f5f9; font-size:0.8rem; }
 .top-1 { background:#f59e0b; color:#fff; }
 .top-2 { background:#94a3b8; color:#fff; }
 .top-3 { background:#d97706; color:#fff; }
 .rank-name { font-weight:600; color:#f1f5f9; }
 .rank-code { font-size:0.75rem; color:#64748b; }
-.rank-badge { display:inline-flex; padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.75rem; font-weight:600; }
-.rank-badge.risk-low,.intel-risk-badge.risk-low { background:rgba(34,197,94,0.15); color:#22c55e; }
-.rank-badge.risk-medium,.intel-risk-badge.risk-medium { background:rgba(245,158,11,0.15); color:#f59e0b; }
-.rank-badge.risk-high,.intel-risk-badge.risk-high { background:rgba(249,115,22,0.15); color:#f97316; }
-.rank-badge.risk-critical,.intel-risk-badge.risk-critical { background:rgba(239,68,68,0.15); color:#ef4444; }
 .rank-drill { background:transparent; border:none; color:#64748b; cursor:pointer; padding:0.25rem; border-radius:0.25rem; }
 .rank-drill:hover { background:rgba(255,255,255,0.08); color:#f1f5f9; }
 .mini-bar-track { flex:1; background:rgba(255,255,255,0.08); border-radius:9999px; height:6px; overflow:hidden; }
-.mini-bar-fill { height:100%; border-radius:9999px; }
+.mini-bar-fill  { height:100%; border-radius:9999px; }
 .skeleton { background:rgba(255,255,255,0.06); border-radius:0.25rem; }
 
 /* ── TOOLTIP ─────────────────────────────────────────────────────── */
-#geoTooltip { position:fixed; pointer-events:none; background:rgba(10,15,26,0.96); border:1px solid rgba(255,255,255,0.12); border-radius:0.5rem; padding:0.625rem 0.875rem; font-size:0.875rem; z-index:9999; max-width:230px; color:#f1f5f9; }
-.tt-name { font-weight:700; color:#f1f5f9; margin-bottom:0.25rem; font-size:0.9375rem; }
-.tt-badge { margin-bottom:0.375rem; font-size:0.8125rem; }
+#geoTooltip { position:fixed; pointer-events:none; background:rgba(10,15,26,0.96); border:1px solid rgba(255,255,255,0.12); border-radius:0.5rem; padding:0.625rem 0.875rem; font-size:0.875rem; z-index:9999; max-width:240px; color:#f1f5f9; }
+.tt-name    { font-weight:700; color:#f1f5f9; margin-bottom:0.25rem; font-size:0.9375rem; }
+.tt-badge   { margin-bottom:0.375rem; font-size:0.8125rem; }
 .tt-divider { height:1px; background:rgba(255,255,255,0.08); margin:0.375rem 0; }
-.tt-row { display:flex; justify-content:space-between; gap:0.75rem; font-size:0.8125rem; margin-bottom:0.125rem; }
+.tt-row     { display:flex; justify-content:space-between; gap:0.75rem; font-size:0.8125rem; margin-bottom:0.125rem; }
 .tt-row span { color:#94a3b8; }
-.tt-hint { margin-top:0.375rem; font-size:0.75rem; color:#475569; }
+.tt-hint    { margin-top:0.375rem; font-size:0.75rem; color:#475569; }
 
-/* ── LEAFLET OVERRIDES ──────────────────────────────────────────── */
-.kg-popup-dark .leaflet-popup-content-wrapper { background:rgba(10,15,26,0.96); color:#f1f5f9; border:1px solid rgba(255,255,255,0.12); border-radius:0.5rem; box-shadow:0 8px 32px rgba(0,0,0,0.4); }
-.kg-popup-dark .leaflet-popup-tip { background:#0a0f1a; border:1px solid rgba(255,255,255,0.12); }
-.kg-popup-dark .leaflet-popup-close-button { color:#94a3b8!important; }
-.leaflet-container { font-family:var(--admin-font-family-ar),system-ui; }
-.leaflet-container .leaflet-control-zoom { border:none!important; box-shadow:0 4px 12px rgba(0,0,0,0.5)!important; }
-.leaflet-container .leaflet-control-zoom a { background:rgba(10,15,26,0.92); color:#e2e8f0; border:1px solid rgba(255,255,255,0.14)!important; width:32px; height:32px; line-height:30px; font-size:16px; }
-.leaflet-container .leaflet-control-zoom a:hover { background:rgba(47,125,98,0.8); color:#fff; }
-.leaflet-container .leaflet-control-zoom a.leaflet-disabled { color:#475569; }
-.leaflet-container path { cursor:pointer!important; }
-.leaflet-attribution-flag { display:none!important; }
-.leaflet-container .leaflet-control-attribution { background:rgba(10,15,26,0.7); color:#64748b; font-size:0.6rem; }
+/* ── CITY ROWS ───────────────────────────────────────────────────── */
+.city-row { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; padding:0.45rem 0.5rem; border-radius:0.375rem; cursor:pointer; transition:background 0.1s; border:1px solid transparent; }
+.city-row:hover  { background:rgba(255,255,255,0.05); }
+.city-row.selected { background:rgba(47,125,98,0.15); border-color:rgba(47,125,98,0.35); }
+.city-row-name { flex:1; min-width:0; font-size:0.8125rem; color:#e2e8f0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.city-row-score { display:flex; align-items:center; gap:0.375rem; flex-shrink:0; }
+.intel-loading-inline { display:flex; align-items:center; gap:0.5rem; font-size:0.8125rem; color:#64748b; padding:0.5rem 0; }
+.intel-loading-inline .intel-loading-spinner { animation:spin 0.8s linear infinite; border:1.5px solid rgba(255,255,255,0.1); border-top-color:#2F7D62; border-radius:50%; }
 
-/* ── KG PIN ICON ────────────────────────────────────────────────── */
-.kj-pin-icon { background:transparent!important; border:none!important; }
-.kj-pin-body {
-  width:26px; height:26px; border-radius:50% 50% 50% 0;
-  transform:rotate(-45deg);
-  display:flex; align-items:center; justify-content:center;
-  border:2px solid rgba(255,255,255,0.3);
-  transition:transform 0.15s;
-}
-.kj-pin-body:hover { transform:rotate(-45deg) scale(1.15); }
-.kj-pin-body i { transform:rotate(45deg); font-size:11px; color:#fff; }
-.kj-pin-tip {
-  width:0; height:0;
-  border-left:5px solid transparent;
-  border-right:5px solid transparent;
-  border-top:8px solid;
-  margin:-1px auto 0;
-  display:block; width:0;
-}
+/* ── DATA QUALITY STRIP ───────────────────────────────────────────── */
+#dataQualityStrip { display:flex; flex-direction:column; gap:0.375rem; padding:0.5rem 1rem; background:rgba(245,158,11,0.07); border-bottom:1px solid rgba(245,158,11,0.2); }
+.dq-warning { display:flex; align-items:flex-start; gap:0.5rem; font-size:0.8125rem; color:#f59e0b; line-height:1.4; }
+.dq-warning i { flex-shrink:0; margin-top:0.1rem; }
 
-/* ── GOVERNORATE BADGE ICON ─────────────────────────────────────── */
-.kj-gov-icon { background:transparent!important; border:none!important; overflow:visible!important; }
-.kj-gov-wrap {
-  display:flex; flex-direction:column; align-items:center;
-  transform:translate(-50%,-50%);
-  pointer-events:auto; cursor:pointer;
-  filter:drop-shadow(0 2px 6px rgba(0,0,0,0.7));
-  transition:filter 0.15s;
-}
-.kj-gov-wrap:hover { filter:drop-shadow(0 3px 10px rgba(0,0,0,0.9)) brightness(1.15); }
-.kj-gov-name {
-  background:rgba(10,15,26,0.90);
-  color:#f1f5f9;
-  font-size:0.68rem; font-weight:700;
-  padding:2px 7px;
-  border-radius:4px 4px 0 0;
-  white-space:nowrap;
-  letter-spacing:0.01em;
-}
-.kj-gov-score {
-  font-size:0.62rem; font-weight:800;
-  padding:1px 7px;
-  border-radius:0 0 4px 4px;
-  text-align:center; min-width:32px;
-  color:#fff;
-}
-.kj-gov-tt { background:rgba(10,15,26,0.92)!important; color:#f1f5f9!important; border:1px solid rgba(255,255,255,0.12)!important; font-size:0.8rem!important; }
+/* ── PAGE ERROR ──────────────────────────────────────────────────── */
+.page-error-state { display:flex; flex-direction:column; align-items:center; padding:4rem 2rem; text-align:center; gap:0.5rem; }
+.page-error-state h2 { margin:0; color:#f1f5f9; font-size:1.1rem; }
+.page-error-state p  { color:#94a3b8; margin:0; font-size:0.875rem; }
 
-/* ── KG POPUP CONTENT ───────────────────────────────────────────── */
-.kj-popup { font-family:system-ui,sans-serif; min-width:185px; }
-.kj-popup-title { font-weight:700; font-size:0.92rem; margin-bottom:5px; display:flex; align-items:center; gap:5px; }
-.kj-popup-gov { font-size:0.8rem; color:#94a3b8; margin-bottom:7px; display:flex; align-items:center; gap:4px; }
-.kj-popup-row { display:flex; justify-content:space-between; gap:12px; font-size:0.8rem; }
+/* ── RISK FILTER PILLS ───────────────────────────────────────────── */
+.cs-risk-filter { display:flex; gap:0.3rem; padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; background:rgba(10,15,26,0.5); }
+.risk-filter-btn { padding:0.2rem 0.6rem; border-radius:9999px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.06); color:#94a3b8; font-size:0.75rem; cursor:pointer; transition:background 0.12s,color 0.12s,border-color 0.12s; white-space:nowrap; }
+.risk-filter-btn.active          { background:rgba(255,255,255,0.14); color:#f1f5f9; border-color:rgba(255,255,255,0.28); font-weight:600; }
+.risk-filter-btn.risk-btn-low    { border-color:rgba(34,197,94,0.3); }
+.risk-filter-btn.risk-btn-low.active    { background:rgba(34,197,94,0.18); color:#22c55e; border-color:#22c55e; }
+.risk-filter-btn.risk-btn-medium { border-color:rgba(245,158,11,0.3); }
+.risk-filter-btn.risk-btn-medium.active { background:rgba(245,158,11,0.18); color:#f59e0b; border-color:#f59e0b; }
+.risk-filter-btn.risk-btn-high   { border-color:rgba(249,115,22,0.3); }
+.risk-filter-btn.risk-btn-high.active   { background:rgba(249,115,22,0.18); color:#f97316; border-color:#f97316; }
+.risk-filter-btn.risk-btn-critical { border-color:rgba(239,68,68,0.3); }
+.risk-filter-btn.risk-btn-critical.active { background:rgba(239,68,68,0.18); color:#ef4444; border-color:#ef4444; }
 
 /* ── RESPONSIVE ──────────────────────────────────────────────────── */
-@media (max-width:992px) {
-  .intel-panel { width:100%; border-left:none!important; border-right:none!important; border-top:1px solid rgba(255,255,255,0.08); max-height:none; }
-  .cc-main { flex-direction:column; }
+@media (max-width:1100px) {
+  .cs-left { width:190px; }
+  .intel-panel { width:270px; }
 }
-@media (max-width:600px) {
+@media (max-width:800px) {
+  .cs-scene { flex-direction:column; height:auto; }
+  .cs-left  { width:100%; height:200px; border-inline-end:none; border-bottom:1px solid rgba(255,255,255,0.08); flex-direction:row; }
+  .cs-left-body { display:flex; flex-direction:row; overflow-x:auto; overflow-y:hidden; }
+  .cs-gov-item { border-bottom:none; border-inline-end:1px solid rgba(255,255,255,0.04); min-width:130px; flex-direction:column; align-items:flex-start; gap:0.25rem; }
+  #cesiumContainer { height:400px; }
+  .intel-panel { width:100%; border-inline-start:none; border-top:1px solid rgba(255,255,255,0.08); }
+}
+@media (max-width:500px) {
   .kpi-strip { gap:0.375rem; }
-  .kpi-card { min-width:90px; }
+  .kpi-card  { min-width:90px; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
+{# ── Pass Cesium token to JS ──────────────────────────────────────── #}
+<script>
+  window.CESIUM_ION_TOKEN = {{ cesium_token | tojson | safe }};
+</script>
+
 <div class="p-section">
 <div class="geo-cc"
      dir="{% if ui_lang == 'en' %}ltr{% else %}rtl{% endif %}"
      lang="{% if ui_lang == 'en' %}en{% else %}ar{% endif %}"
      role="main"
-     aria-label="{% if ui_lang == 'ar' %}خرائط المؤشرات الجغرافية للأردن{% else %}Jordan Geographic Indicator Heatmaps{% endif %}">
+     aria-label="{% if ui_lang == 'ar' %}خريطة الأردن الجغرافية ثلاثية الأبعاد{% else %}Jordan 3D Geographic Heatmap{% endif %}">
 
-  <!-- ═══════════════════════════════════════════════════════════
-       PAGE HEADER
-       ═══════════════════════════════════════════════════════════ -->
+  {# ═══════════════════════════════════════════════════════════
+     PAGE HEADER
+     ═══════════════════════════════════════════════════════════ #}
   <header class="cc-header">
     <div class="cc-identity">
       <div class="hkj-emblem" aria-label="المملكة الأردنية الهاشمية" role="img">
-        <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
+        <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="40" height="40" aria-hidden="true">
           <rect width="40" height="13.3" fill="#000"/>
           <rect y="13.3" width="40" height="13.3" fill="#FFF"/>
           <rect y="26.6" width="40" height="13.4" fill="#007A3D"/>
@@ -307,10 +251,10 @@
       </div>
       <div class="cc-titles">
         <h1 class="cc-title">
-          {% if ui_lang == 'ar' %}خرائط المؤشرات الجغرافية{% else %}Geographic Indicator Heatmaps{% endif %}
+          {% if ui_lang == 'ar' %}خريطة الكرة الأرضية ثلاثية الأبعاد{% else %}3D Geographic Heatmap{% endif %}
         </h1>
         <div class="cc-subtitle">
-          {% if ui_lang == 'ar' %}خريطة الأقمار الاصطناعية التفاعلية لمؤشرات الأداء في محافظات الأردن{% else %}Interactive satellite map of performance indicators across Jordan's 12 governorates{% endif %}
+          {% if ui_lang == 'ar' %}Cesium Globe • بيانات KPI مباشرة • عرض زمني ديناميكي{% else %}Cesium Globe • Live KPI data • Time-dynamic 4D visualisation{% endif %}
         </div>
       </div>
     </div>
@@ -329,58 +273,57 @@
     </div>
   </header>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       FILTER BAR
-       ═══════════════════════════════════════════════════════════ -->
-  <div class="cc-filters" role="toolbar" aria-label="{% if ui_lang == 'ar' %}فلاتر الخريطة{% else %}Map filters{% endif %}">
+  {# ═══════════════════════════════════════════════════════════
+     FILTER BAR
+     ═══════════════════════════════════════════════════════════ #}
+  <div class="cc-filters" role="toolbar"
+       aria-label="{% if ui_lang == 'ar' %}فلاتر الخريطة{% else %}Map filters{% endif %}">
 
     <span class="filter-label">
-      {% if ui_lang == 'ar' %}عرض المؤشرات:{% else %}Show Indicators:{% endif %}
+      {% if ui_lang == 'ar' %}المؤشر:{% else %}Indicator:{% endif %}
     </span>
-    <select id="indicatorViewSelect" class="cc-select" aria-label="{% if ui_lang == 'ar' %}اختر المؤشر{% else %}Select indicator{% endif %}">
-      <option value="">{% if ui_lang == 'ar' %}الكل{% else %}All{% endif %}</option>
+    <select id="indicatorViewSelect" class="cc-select"
+            aria-label="{% if ui_lang == 'ar' %}اختر المؤشر{% else %}Select indicator{% endif %}">
       <option value="overall_risk">{% if ui_lang == 'ar' %}مؤشر الخطر العام{% else %}Overall Risk{% endif %}</option>
-      <option value="attendance">{% if ui_lang == 'ar' %}مؤشر الحضور{% else %}Attendance{% endif %}</option>
-      <option value="incidents">{% if ui_lang == 'ar' %}مؤشر الحوادث{% else %}Incidents{% endif %}</option>
-      <option value="governance">{% if ui_lang == 'ar' %}مؤشر الحوكمة{% else %}Governance{% endif %}</option>
-      <option value="data_quality">{% if ui_lang == 'ar' %}مؤشر جودة البيانات{% else %}Data Quality{% endif %}</option>
-      <option value="occupancy">{% if ui_lang == 'ar' %}مؤشر الإشغال{% else %}Occupancy{% endif %}</option>
+      <option value="nursery_status">{% if ui_lang == 'ar' %}حالة الروضات{% else %}Nursery Status{% endif %}</option>
+      <option value="children_registration">{% if ui_lang == 'ar' %}الأطفال والتسجيل{% else %}Children & Registration{% endif %}</option>
+      <option value="staff_classrooms">{% if ui_lang == 'ar' %}الموظفون والفصول{% else %}Staff & Classrooms{% endif %}</option>
+      <option value="safety_incidents">{% if ui_lang == 'ar' %}السلامة والحوادث{% else %}Safety & Incidents{% endif %}</option>
+      <option value="reports_attendance">{% if ui_lang == 'ar' %}التقارير والحضور{% else %}Reports & Attendance{% endif %}</option>
+      <option value="tasks_governance">{% if ui_lang == 'ar' %}المهام والحوكمة{% else %}Tasks & Governance{% endif %}</option>
     </select>
 
     <span class="filter-label">{% if ui_lang == 'ar' %}المحافظة:{% else %}Governorate:{% endif %}</span>
-    <select id="govSelect" class="cc-select" aria-label="{% if ui_lang == 'ar' %}اختر محافظة{% else %}Select governorate{% endif %}">
+    <select id="govSelect" class="cc-select"
+            aria-label="{% if ui_lang == 'ar' %}اختر محافظة{% else %}Select governorate{% endif %}">
       <option value="">{% if ui_lang == 'ar' %}الكل{% else %}All{% endif %}</option>
     </select>
 
-    <button id="tileToggleBtn" class="cc-btn" aria-label="{% if ui_lang == 'ar' %}تبديل نوع الخريطة{% else %}Toggle map style{% endif %}">
+    <button id="tileToggleBtn" class="cc-btn"
+            aria-label="{% if ui_lang == 'ar' %}تبديل نوع صورة الخريطة{% else %}Toggle imagery style{% endif %}">
       <i class="bi bi-globe2" aria-hidden="true"></i>
       {% if ui_lang == 'ar' %}صورة القمر الاصطناعي{% else %}Satellite{% endif %}
     </button>
 
-    <button id="refreshBtn" class="cc-btn" aria-label="{% if ui_lang == 'ar' %}تحديث البيانات{% else %}Refresh data{% endif %}">
+    <button id="csColumbusBtn" class="cc-btn"
+            aria-label="{% if ui_lang == 'ar' %}تبديل العرض ثنائي الأبعاد{% else %}Toggle 2.5D Columbus view{% endif %}">
+      <i class="bi bi-layers" aria-hidden="true"></i>
+      2.5D
+    </button>
+
+    <button id="refreshBtn" class="cc-btn"
+            aria-label="{% if ui_lang == 'ar' %}تحديث البيانات{% else %}Refresh data{% endif %}">
       <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
       {% if ui_lang == 'ar' %}تحديث{% else %}Refresh{% endif %}
     </button>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       PAGE-LEVEL GeoJSON ERROR
-       ═══════════════════════════════════════════════════════════ -->
-  <div id="pageError" style="display:none" class="page-error-state" role="alert" aria-live="assertive">
-    <i class="bi bi-exclamation-octagon" style="font-size:2.5rem;color:#ef4444" aria-hidden="true"></i>
-    <h2>{% if ui_lang == 'ar' %}تعذر تحميل الخريطة الجغرافية{% else %}Failed to Load Geographic Map{% endif %}</h2>
-    <p>{% if ui_lang == 'ar' %}تعذر تحميل بيانات الخريطة الجغرافية للأردن. يرجى التحقق من الاتصال وإعادة المحاولة.{% else %}Could not load Jordan geographic data. Please check your connection and retry.{% endif %}</p>
-    <button id="retryPageBtn" class="cc-btn">
-      <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
-      {% if ui_lang == 'ar' %}إعادة المحاولة{% else %}Retry{% endif %}
-    </button>
-    <div id="pageErrorDetails" style="margin-top:0.5rem;font-size:0.75rem;color:#64748b"></div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════════
-       KPI STRIP
-       ═══════════════════════════════════════════════════════════ -->
-  <div class="kpi-strip" role="region" aria-label="{% if ui_lang == 'ar' %}مؤشرات الأداء الرئيسية{% else %}Key Performance Indicators{% endif %}">
+  {# ═══════════════════════════════════════════════════════════
+     KPI STRIP
+     ═══════════════════════════════════════════════════════════ #}
+  <div class="kpi-strip"
+       role="region"
+       aria-label="{% if ui_lang == 'ar' %}مؤشرات الأداء الرئيسية{% else %}Key Performance Indicators{% endif %}">
     <div class="kpi-card">
       <div class="kpi-label">{% if ui_lang == 'ar' %}المحافظات{% else %}Governorates{% endif %}</div>
       <div class="kpi-value">12</div>
@@ -396,123 +339,133 @@
       <div class="kpi-value" id="kpiCritical">--</div>
       <div class="kpi-sub">{% if ui_lang == 'ar' %}خطر ≥ 75{% else %}Risk ≥ 75{% endif %}</div>
     </div>
-    <div class="kpi-card" title="{% if ui_lang == 'ar' %}عدد الحضانات المسجلة في قاعدة البيانات{% else %}Number of registered kindergartens in the database{% endif %}">
+    <div class="kpi-card">
       <div class="kpi-label">{% if ui_lang == 'ar' %}الروضات المسجلة{% else %}Registered KGs{% endif %}</div>
       <div class="kpi-value" id="kpiInstitutions">--</div>
-      <div class="kpi-sub">{% if ui_lang == 'ar' %}حضانة مسجلة{% else %}Registered{% endif %}</div>
+      <div class="kpi-sub">{% if ui_lang == 'ar' %}حضانة{% else %}Kindergartens{% endif %}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">{% if ui_lang == 'ar' %}الأطفال المسجلون{% else %}Enrolled Children{% endif %}</div>
+      <div class="kpi-value" id="kpiStudents">--</div>
+      <div class="kpi-sub">{% if ui_lang == 'ar' %}طالب نشط{% else %}Active students{% endif %}</div>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       SINGLE-MAP SECTION (default view — satellite map)
-       ═══════════════════════════════════════════════════════════ -->
-  <div id="singleMapSection">
-    <div class="cc-main">
-      <!-- MAP COLUMN -->
-      <div class="map-col">
-        <div class="single-map-header">
-          <h2 id="singleMapTitle" class="single-map-title" aria-label="{% if ui_lang == 'ar' %}عنوان المؤشر{% else %}Indicator title{% endif %}">&#8203;</h2>
-          <p id="singleMapDesc" class="single-map-desc"></p>
-        </div>
+  {# ── DATA QUALITY WARNINGS ───────────────────────────────────── #}
+  <div id="dataQualityStrip" role="alert" aria-live="assertive" style="display:none"></div>
 
-        <!-- Loading state -->
-        <div id="singleMapLoading" class="single-map-loading" style="display:none">
-          <div class="load-spinner" aria-hidden="true"></div>
-          <div class="load-text">{% if ui_lang == 'ar' %}جاري تحميل الخريطة…{% else %}Loading map…{% endif %}</div>
-        </div>
+  {# ═══════════════════════════════════════════════════════════
+     3-PANEL CESIUM SCENE
+       LEFT:   Governorate list
+       CENTER: Cesium 3D globe
+       RIGHT:  Intelligence / detail panel
+     ═══════════════════════════════════════════════════════════ #}
+  <div class="cs-scene">
 
-        <!-- Leaflet map container -->
-        <div id="singleMapWrap" class="single-map-wrap" style="display:none">
-          <div id="leafletMap" style="width:100%;height:calc(100vh - 310px);min-height:520px;max-height:720px;border-radius:0.5rem;background:#0a0f1a;"></div>
-        </div>
-
-        <!-- Map layer toggles -->
-        <div class="cc-filters" style="padding:0.5rem 0;border:none;background:transparent;gap:1.25rem;">
-          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;color:#94a3b8;cursor:pointer;">
-            <input type="checkbox" id="kgToggle" checked style="accent-color:#1F5E47;width:16px;height:16px;">
-            <i class="bi bi-pin-map-fill" style="color:#f59e0b" aria-hidden="true"></i>
-            {% if ui_lang == 'ar' %}أماكن الروضات{% else %}Kindergarten Pins{% endif %}
-            <span id="kgCountBadge" style="background:#1F5E47;color:#fff;border-radius:9999px;padding:0.1rem 0.45rem;font-size:0.7rem;font-weight:700;">0</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;color:#94a3b8;cursor:pointer;">
-            <input type="checkbox" id="govBadgeToggle" checked style="accent-color:#1F5E47;width:16px;height:16px;">
-            <i class="bi bi-geo-alt-fill" style="color:#22c55e" aria-hidden="true"></i>
-            {% if ui_lang == 'ar' %}تسميات المحافظات{% else %}Governorate Labels{% endif %}
-          </label>
-        </div>
-
-        <!-- Error state -->
-        <div id="singleMapError" class="single-map-error" style="display:none" role="alert">
-          <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
-          <span>{% if ui_lang == 'ar' %}تعذر تحميل الخريطة{% else %}Failed to load map{% endif %}</span>
-          <button id="retrySingleBtn" class="cc-btn">
-            {% if ui_lang == 'ar' %}إعادة المحاولة{% else %}Retry{% endif %}
+    {# ── LEFT PANEL ─────────────────────────────────────────── #}
+    <aside class="cs-left"
+           role="complementary"
+           aria-label="{% if ui_lang == 'ar' %}قائمة المحافظات{% else %}Governorate list{% endif %}">
+      <div class="cs-left-head">
+        <input type="search" id="govSearch" class="cs-search"
+               placeholder="{% if ui_lang == 'ar' %}ابحث عن محافظة…{% else %}Search governorate…{% endif %}"
+               aria-label="{% if ui_lang == 'ar' %}البحث في المحافظات{% else %}Search governorates{% endif %}">
+        <div class="cs-left-actions">
+          <button id="csHomeBtn" class="cc-btn" style="flex:1;justify-content:center"
+                  title="{% if ui_lang == 'ar' %}العودة إلى الأردن{% else %}Reset to Jordan view{% endif %}"
+                  aria-label="{% if ui_lang == 'ar' %}العودة إلى الأردن{% else %}Reset to Jordan view{% endif %}">
+            <i class="bi bi-house" aria-hidden="true"></i>
+            {% if ui_lang == 'ar' %}عودة{% else %}Reset{% endif %}
+          </button>
+          <button id="csPlayBtn" class="cc-btn" style="flex:1;justify-content:center"
+                  title="{% if ui_lang == 'ar' %}تشغيل / إيقاف الجدول الزمني{% else %}Play / pause timeline{% endif %}"
+                  aria-label="{% if ui_lang == 'ar' %}تشغيل الجدول الزمني{% else %}Play timeline{% endif %}">
+            <i class="bi bi-play-fill" aria-hidden="true"></i>
           </button>
         </div>
+      </div>
+      {# Risk-level filter pills #}
+      <div class="cs-risk-filter" role="group" aria-label="{% if ui_lang == 'ar' %}تصفية حسب مستوى الخطر{% else %}Filter by risk level{% endif %}">
+        <button class="risk-filter-btn active" data-risk="all">{% if ui_lang == 'ar' %}الكل{% else %}All{% endif %}</button>
+        <button class="risk-filter-btn risk-btn-low" data-risk="low">{% if ui_lang == 'ar' %}منخفض{% else %}Low{% endif %}</button>
+        <button class="risk-filter-btn risk-btn-medium" data-risk="medium">{% if ui_lang == 'ar' %}متوسط{% else %}Medium{% endif %}</button>
+        <button class="risk-filter-btn risk-btn-high" data-risk="high">{% if ui_lang == 'ar' %}مرتفع{% else %}High{% endif %}</button>
+        <button class="risk-filter-btn risk-btn-critical" data-risk="critical">{% if ui_lang == 'ar' %}حرج{% else %}Critical{% endif %}</button>
+      </div>
 
-        <!-- Risk legend -->
-        <div class="risk-legend" role="region" aria-label="{% if ui_lang == 'ar' %}مفتاح مستويات الخطر{% else %}Risk level legend{% endif %}">
-          <span class="legend-label">{% if ui_lang == 'ar' %}مستوى الخطر:{% else %}Risk Level:{% endif %}</span>
-          <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span><span>{% if ui_lang == 'ar' %}منخفض (0–24){% else %}Low (0–24){% endif %}</span></div>
-          <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span><span>{% if ui_lang == 'ar' %}متوسط (25–49){% else %}Medium (25–49){% endif %}</span></div>
-          <div class="legend-item"><span class="legend-dot" style="background:#f97316"></span><span>{% if ui_lang == 'ar' %}مرتفع (50–74){% else %}High (50–74){% endif %}</span></div>
-          <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span><span>{% if ui_lang == 'ar' %}حرج (75–100){% else %}Critical (75–100){% endif %}</span></div>
+      <div class="cs-left-body" id="govListBody" role="list" aria-label="{% if ui_lang == 'ar' %}المحافظات{% else %}Governorates{% endif %}">
+        {% for i in range(12) %}
+        <div class="cs-gov-item" style="opacity:0.35">
+          <div class="skeleton" style="height:11px;width:{{ [55,75,60,80,65,70,50,85,60,72,55,68][i] }}%;"></div>
+          <div class="skeleton" style="height:16px;width:32px;border-radius:9999px"></div>
         </div>
-      </div><!-- /map-col -->
+        {% endfor %}
+      </div>
 
-      <!-- INTELLIGENCE PANEL -->
-      <div class="intel-panel" id="intelPanel"
-           role="complementary"
-           aria-label="{% if ui_lang == 'ar' %}لوحة تحليل المخاطر{% else %}Risk Analysis Panel{% endif %}"
-           aria-live="polite">
-        <div class="intel-placeholder">
-          <div class="intel-placeholder-icon">
-            <i class="bi bi-map" style="font-size:3rem;opacity:0.18" aria-hidden="true"></i>
-          </div>
-          <div class="intel-placeholder-title">
-            {% if ui_lang == 'ar' %}اختر محافظة{% else %}Select a Governorate{% endif %}
-          </div>
-          <div class="intel-placeholder-sub">
-            {% if ui_lang == 'ar' %}انقر على أي محافظة في الخريطة لعرض تقرير المحافظة الكامل.{% else %}Click any governorate on the map to load its full report.{% endif %}
-          </div>
-        </div>
-      </div><!-- /intel-panel -->
+      {# Layer toggles beneath the list #}
+      <div class="cs-layer-toggles">
+        <label class="cs-toggle-label">
+          <input type="checkbox" id="kgToggle" checked>
+          <i class="bi bi-pin-map-fill" style="color:#f59e0b" aria-hidden="true"></i>
+          {% if ui_lang == 'ar' %}الروضات{% else %}KGs{% endif %}
+          <span id="kgCountBadge" style="background:#1F5E47;color:#fff;border-radius:9999px;padding:0.1rem 0.4rem;font-size:0.7rem;font-weight:700">0</span>
+        </label>
+        <label class="cs-toggle-label">
+          <input type="checkbox" id="govBadgeToggle" checked>
+          <i class="bi bi-geo-alt-fill" style="color:#22c55e" aria-hidden="true"></i>
+          {% if ui_lang == 'ar' %}التسميات{% else %}Labels{% endif %}
+        </label>
+        <label class="cs-toggle-label">
+          <input type="checkbox" id="govOverlayToggle" checked>
+          <i class="bi bi-layers-fill" style="color:#818cf8" aria-hidden="true"></i>
+          {% if ui_lang == 'ar' %}الحدود{% else %}Borders{% endif %}
+        </label>
+      </div>
+    </aside>
 
-    </div><!-- /cc-main -->
-  </div><!-- /singleMapSection -->
-
-  <!-- ═══════════════════════════════════════════════════════════
-       MULTI-MAP SECTION (shown when "All" indicators selected)
-       ═══════════════════════════════════════════════════════════ -->
-  <div id="multiMapSection" style="display:none">
-    <div class="multi-map-intro">
-      <h2 class="multi-map-title">
-        {% if ui_lang == 'ar' %}خرائط المؤشرات الجغرافية{% else %}Geographic Indicator Heatmaps{% endif %}
-      </h2>
-      <p class="multi-map-desc">
-        {% if ui_lang == 'ar' %}عرض ست خرائط حرارية منفصلة حسب المؤشر على مستوى محافظات الأردن.{% else %}Six separate heatmaps by indicator across Jordan's 12 governorates.{% endif %}
-      </p>
-    </div>
-
-    <!-- Grid loading overlay (shown while fetching) -->
-    <div id="gridLoading" class="grid-loading" aria-live="polite">
-      <div class="load-spinner" aria-hidden="true"></div>
-      <div class="load-text">{% if ui_lang == 'ar' %}جاري تحميل الخرائط…{% else %}Loading maps…{% endif %}</div>
-    </div>
-
-    <!-- 6-card grid (populated by JS) -->
-    <div id="multiMapGrid"
-         class="hm-grid"
-         style="visibility:hidden"
+    {# ── CENTER: CESIUM GLOBE ────────────────────────────────── #}
+    <div id="cesiumContainer"
          role="region"
-         aria-label="{% if ui_lang == 'ar' %}خرائط المؤشرات الجغرافية{% else %}Geographic indicator heatmaps{% endif %}">
+         aria-label="{% if ui_lang == 'ar' %}خريطة الأردن ثلاثية الأبعاد{% else %}Jordan 3D globe{% endif %}">
+      {# Cesium renders here — fallback shown if JS fails #}
     </div>
+
+    {# ── RIGHT: INTELLIGENCE PANEL ──────────────────────────── #}
+    <div class="intel-panel" id="intelPanel"
+         role="complementary"
+         aria-label="{% if ui_lang == 'ar' %}لوحة تحليل المخاطر{% else %}Risk Analysis Panel{% endif %}"
+         aria-live="polite">
+      <div class="intel-placeholder">
+        <div class="intel-placeholder-icon">
+          <i class="bi bi-globe2" style="font-size:3rem;opacity:0.18" aria-hidden="true"></i>
+        </div>
+        <div class="intel-placeholder-title">
+          {% if ui_lang == 'ar' %}اختر محافظة{% else %}Select a Governorate{% endif %}
+        </div>
+        <div class="intel-placeholder-sub">
+          {% if ui_lang == 'ar' %}انقر على أي محافظة في الكرة الأرضية أو من القائمة لعرض التفرير الكامل.{% else %}Click any governorate on the globe or in the list to load its full report.{% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>{# /cs-scene #}
+
+  {# ── RISK LEGEND ─────────────────────────────────────────── #}
+  <div class="risk-legend" role="region"
+       aria-label="{% if ui_lang == 'ar' %}مفتاح مستويات الخطر{% else %}Risk level legend{% endif %}">
+    <span class="legend-label">{% if ui_lang == 'ar' %}مستوى الخطر:{% else %}Risk Level:{% endif %}</span>
+    <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span><span>{% if ui_lang == 'ar' %}منخفض (0–24){% else %}Low (0–24){% endif %}</span></div>
+    <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span><span>{% if ui_lang == 'ar' %}متوسط (25–49){% else %}Medium (25–49){% endif %}</span></div>
+    <div class="legend-item"><span class="legend-dot" style="background:#f97316"></span><span>{% if ui_lang == 'ar' %}مرتفع (50–74){% else %}High (50–74){% endif %}</span></div>
+    <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span><span>{% if ui_lang == 'ar' %}حرج (75–100){% else %}Critical (75–100){% endif %}</span></div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       GOVERNORATE RANKINGS TABLE
-       ═══════════════════════════════════════════════════════════ -->
-  <div class="rankings-section" role="region" aria-label="{% if ui_lang == 'ar' %}تصنيف المحافظات{% else %}Governorate Rankings{% endif %}">
+  {# ═══════════════════════════════════════════════════════════
+     GOVERNORATE RANKINGS TABLE
+     ═══════════════════════════════════════════════════════════ #}
+  <div class="rankings-section"
+       role="region"
+       aria-label="{% if ui_lang == 'ar' %}تصنيف المحافظات{% else %}Governorate Rankings{% endif %}">
     <div class="rankings-head">
       <div class="rankings-title">
         <i class="bi bi-list-ol" aria-hidden="true"></i>
@@ -521,13 +474,14 @@
       </div>
     </div>
     <div class="rankings-table-wrap">
-      <table id="rankingsTable" aria-label="{% if ui_lang == 'ar' %}تصنيف المحافظات{% else %}Governorate rankings{% endif %}">
+      <table id="rankingsTable"
+             aria-label="{% if ui_lang == 'ar' %}تصنيف المحافظات{% else %}Governorate rankings{% endif %}">
         <thead>
           <tr>
-            <th data-sort="display_order">#</th>
-            <th data-sort="name_ar">{% if ui_lang == 'ar' %}المحافظة{% else %}Governorate{% endif %}</th>
-            <th data-sort="risk_score">{% if ui_lang == 'ar' %}مؤشر الخطر{% else %}Risk Score{% endif %} ↕</th>
-            <th data-sort="risk_level">{% if ui_lang == 'ar' %}المستوى{% else %}Level{% endif %}</th>
+            <th>#</th>
+            <th>{% if ui_lang == 'ar' %}المحافظة{% else %}Governorate{% endif %}</th>
+            <th>{% if ui_lang == 'ar' %}مؤشر الخطر{% else %}Risk Score{% endif %}</th>
+            <th>{% if ui_lang == 'ar' %}المستوى{% else %}Level{% endif %}</th>
             <th><span class="visually-hidden">{% if ui_lang == 'ar' %}إجراءات{% else %}Actions{% endif %}</span></th>
           </tr>
         </thead>
@@ -544,17 +498,19 @@
     </div>
   </div>
 
-</div><!-- /geo-cc -->
-</div><!-- /p-section -->
+</div>{# /geo-cc #}
+</div>{# /p-section #}
 
-<!-- Hover tooltip (shared by all maps) -->
+{# Hover tooltip (shared) #}
 <div id="geoTooltip" role="tooltip" aria-hidden="true" style="display:none"></div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+{# ── Cesium JS ──────────────────────────────────────────────────────── #}
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"
         crossorigin="anonymous"></script>
-<script src="/static/js/jordan_geo_intelligence.js?v=4" charset="utf-8"></script>
-<script src="/static/js/jordan_heatmap.js?v=5" charset="utf-8"></script>
+
+{# ── Cesium heatmap application ─────────────────────────────────── #}
+<script src="/static/js/jordan_cesium_map.js?v=4" charset="utf-8"></script>
+
 {% endblock %}

@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Request, Depends, status, HTTPException
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 from jinja2 import pass_context
 import models
 from i18n import gettext as _i18n_gettext
@@ -10,11 +9,10 @@ from sqlalchemy import or_
 from datetime import date, timedelta
 import typing
 from typing import Optional
-import secrets
 
 from database import get_db
-from dependencies import get_current_user_optional, get_current_user, get_current_user_or_redirect
-from models import User, UserRole, Kindergarten, EnrollmentApplication, AttendanceLog, DailyReport
+from dependencies import get_current_user_optional, get_current_user_or_redirect
+from models import User, UserRole, Kindergarten, EnrollmentApplication
 from config import settings
 from validators import validate_jordan_governorate
 
@@ -848,7 +846,6 @@ async def attendance_main(request: Request, current_user: User = Depends(get_cur
 @router.get("/attendance/daily", response_class=HTMLResponse)
 async def attendance_daily(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
     """Daily attendance page with role-based kindergarten filtering"""
-    from sqlalchemy import or_
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
 
     # Admin and Supervisor are blocked from daily attendance (operational Manager page)
@@ -1688,7 +1685,11 @@ async def admin_heatmap_page(request: Request, current_user: User = Depends(get_
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="admin/heatmap.html", context={"current_user": current_user, "today": date.today()})
+    return templates.TemplateResponse(request=request, name="admin/heatmap.html", context={
+        "current_user": current_user,
+        "today": date.today(),
+        "cesium_token": settings.CESIUM_ION_TOKEN,
+    })
 
 
 # -----------------------------------------------------------------------------

@@ -237,7 +237,7 @@ function openKPIExplanations() {
 function quickAction(action) {
   const map = {
     reviewEnrollments: "/enrollments",
-    checkAttendance: "/attendance",
+    checkAttendance: "/attendance/history",
   };
   if (map[action]) window.location.href = map[action];
 }

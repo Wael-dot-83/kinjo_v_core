@@ -268,7 +268,7 @@ class TestBackupCreate:
         headers = _tok(client, "bkp_adm1")
         with patch("backup_manager.backup_manager.create_database_backup",
                    side_effect=OSError("disk full")):
-            r = client.post("/api/backup/create", headers=headers,
+            r = client.post("/api/admin/backup/create", headers=headers,
                             json={"backup_type": "database"})
         assert r.status_code == 500
 
@@ -278,7 +278,7 @@ class TestBackupCreate:
                          kg_id=sample_kindergarten.id)
         r_login = client.post("/token", data={"username": "bkp_mgr_create", "password": "Pass123!"})
         headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
-        r = client.post("/api/backup/create", headers=headers, json={"backup_type": "database"})
+        r = client.post("/api/admin/backup/create", headers=headers, json={"backup_type": "database"})
         assert r.status_code == 403
 
 
@@ -288,7 +288,7 @@ class TestBackupList:
         mgr = _make_user(test_db, "bkp_mgr", models.UserRole.MANAGER, kg_id=sample_kindergarten.id)
         r_login = client.post("/token", data={"username": "bkp_mgr", "password": "Pass123!"})
         headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
-        r = client.get("/api/backup/list", headers=headers)
+        r = client.get("/api/admin/backup/list", headers=headers)
         assert r.status_code == 403
 
     def test_backup_list_error_returns_500(self, client, test_db):
@@ -297,7 +297,7 @@ class TestBackupList:
         headers = _tok(client, "bkp_adm2")
         with patch("backup_manager.backup_manager.list_backups",
                    side_effect=OSError("disk error")):
-            r = client.get("/api/backup/list", headers=headers)
+            r = client.get("/api/admin/backup/list", headers=headers)
         assert r.status_code == 500
 
 
@@ -311,7 +311,7 @@ class TestBackupRestore:
         with patch("backup_manager.backup_manager.validate_backup", return_value=True), \
              patch("backup_manager.backup_manager.get_backup_info", return_value=mock_meta):
             # Step 1: get confirmation token
-            r1 = client.post(f"/api/backup/restore/{backup_name}", headers=headers,
+            r1 = client.post(f"/api/admin/backup/restore/{backup_name}", headers=headers,
                              json={})
         assert r1.status_code == 200
         assert r1.json().get("requires_confirmation") is True
@@ -321,7 +321,7 @@ class TestBackupRestore:
         with patch("backup_manager.backup_manager.validate_backup", return_value=True), \
              patch("backup_manager.backup_manager.get_backup_info", return_value=mock_meta), \
              patch("backup_manager.backup_manager.restore_database_backup", return_value=True):
-            r2 = client.post(f"/api/backup/restore/{backup_name}", headers=headers,
+            r2 = client.post(f"/api/admin/backup/restore/{backup_name}", headers=headers,
                              json={"confirmation_token": token})
         assert r2.status_code == 200
         assert "restored" in r2.json().get("message", "").lower()
@@ -334,12 +334,12 @@ class TestBackupRestore:
         mock_meta = {"type": "database", "created_at": "2026-01-01T00:00:00"}
         with patch("backup_manager.backup_manager.validate_backup", return_value=True), \
              patch("backup_manager.backup_manager.get_backup_info", return_value=mock_meta):
-            r1 = client.post(f"/api/backup/restore/{backup_name}", headers=headers, json={})
+            r1 = client.post(f"/api/admin/backup/restore/{backup_name}", headers=headers, json={})
         token = r1.json().get("confirmation_token")
         with patch("backup_manager.backup_manager.validate_backup", return_value=True), \
              patch("backup_manager.backup_manager.get_backup_info", return_value=mock_meta), \
              patch("backup_manager.backup_manager.restore_database_backup", return_value=False):
-            r2 = client.post(f"/api/backup/restore/{backup_name}", headers=headers,
+            r2 = client.post(f"/api/admin/backup/restore/{backup_name}", headers=headers,
                              json={"confirmation_token": token})
         assert r2.status_code == 500
 
@@ -351,13 +351,13 @@ class TestBackupRestore:
         mock_meta = {"type": "database", "created_at": "2026-01-01T00:00:00"}
         with patch("backup_manager.backup_manager.validate_backup", return_value=True), \
              patch("backup_manager.backup_manager.get_backup_info", return_value=mock_meta):
-            r1 = client.post(f"/api/backup/restore/{backup_name}", headers=headers, json={})
+            r1 = client.post(f"/api/admin/backup/restore/{backup_name}", headers=headers, json={})
         token = r1.json().get("confirmation_token")
         with patch("backup_manager.backup_manager.validate_backup", return_value=True), \
              patch("backup_manager.backup_manager.get_backup_info", return_value=mock_meta), \
              patch("backup_manager.backup_manager.restore_database_backup",
                    side_effect=OSError("disk full")):
-            r2 = client.post(f"/api/backup/restore/{backup_name}", headers=headers,
+            r2 = client.post(f"/api/admin/backup/restore/{backup_name}", headers=headers,
                              json={"confirmation_token": token})
         assert r2.status_code == 500
 
@@ -367,7 +367,7 @@ class TestBackupRestore:
                          kg_id=sample_kindergarten.id)
         r_login = client.post("/token", data={"username": "bkp_mgr_restore", "password": "Pass123!"})
         headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
-        r = client.post("/api/backup/restore/some_backup.sql.gz", headers=headers, json={})
+        r = client.post("/api/admin/backup/restore/some_backup.sql.gz", headers=headers, json={})
         assert r.status_code == 403
 
 
@@ -376,7 +376,7 @@ class TestBackupDelete:
         """Lines 3712: '..' in backup_name → 400."""
         admin = _make_admin(test_db, "bkp_adm", "6")
         headers = _tok(client, "bkp_adm6")
-        r = client.delete("/api/backup/..evil_backup.sql.gz", headers=headers)
+        r = client.delete("/api/admin/backup/..evil_backup.sql.gz", headers=headers)
         assert r.status_code in [400, 404, 422]
 
     def test_backup_not_found(self, client, test_db):
@@ -384,7 +384,7 @@ class TestBackupDelete:
         admin = _make_admin(test_db, "bkp_adm", "7")
         headers = _tok(client, "bkp_adm7")
         with patch("backup_manager.backup_manager.get_backup_info", return_value=None):
-            r = client.delete("/api/backup/nonexistent_backup.sql.gz", headers=headers)
+            r = client.delete("/api/admin/backup/nonexistent_backup.sql.gz", headers=headers)
         assert r.status_code == 404
 
     def test_delete_backup_success_with_file_remove(self, client, test_db):
@@ -406,7 +406,7 @@ class TestBackupDelete:
              patch("os.remove") as mock_remove, \
              patch.object(bm_module.backup_manager, "metadata", mock_metadata), \
              patch.object(bm_module.backup_manager, "_save_metadata"):
-            r = client.delete(f"/api/backup/{backup_name}", headers=headers)
+            r = client.delete(f"/api/admin/backup/{backup_name}", headers=headers)
         assert r.status_code in [200, 204]
         mock_remove.assert_called_once()
 
@@ -424,7 +424,7 @@ class TestBackupDelete:
         with patch("backup_manager.backup_manager.get_backup_info", return_value=mock_info), \
              patch("os.path.exists", return_value=True), \
              patch("os.remove", side_effect=OSError("disk error")):
-            r = client.delete("/api/backup/err_backup.sql.gz", headers=headers)
+            r = client.delete("/api/admin/backup/err_backup.sql.gz", headers=headers)
         assert r.status_code == 500
 
     def test_delete_forbidden_for_non_admin(self, client, test_db, sample_kindergarten):
@@ -433,7 +433,7 @@ class TestBackupDelete:
                          kg_id=sample_kindergarten.id)
         r_login = client.post("/token", data={"username": "bkp_mgr_del", "password": "Pass123!"})
         headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
-        r = client.delete("/api/backup/some_backup.sql.gz", headers=headers)
+        r = client.delete("/api/admin/backup/some_backup.sql.gz", headers=headers)
         assert r.status_code in [401, 403]
 
 
@@ -450,7 +450,7 @@ class TestBackupInfo:
         }
         with patch("backup_manager.backup_manager.get_backup_info", return_value=mock_info), \
              patch("backup_manager.backup_manager.validate_backup", return_value=True):
-            r = client.get("/api/backup/info/info_backup.sql.gz", headers=headers)
+            r = client.get("/api/admin/backup/info/info_backup.sql.gz", headers=headers)
         assert r.status_code == 200
         assert "is_valid" in r.json()
 
@@ -459,7 +459,7 @@ class TestBackupInfo:
         admin = _make_admin(test_db, "bkp_adm", "10")
         headers = _tok(client, "bkp_adm10")
         with patch("backup_manager.backup_manager.get_backup_info", return_value=None):
-            r = client.get("/api/backup/info/missing.sql.gz", headers=headers)
+            r = client.get("/api/admin/backup/info/missing.sql.gz", headers=headers)
         assert r.status_code == 404
 
 
@@ -470,7 +470,7 @@ class TestBackupInfoExtra:
         headers = _tok(client, "bkp_adm9b")
         with patch("backup_manager.backup_manager.get_backup_info",
                    side_effect=OSError("disk error")):
-            r = client.get("/api/backup/info/broken.sql.gz", headers=headers)
+            r = client.get("/api/admin/backup/info/broken.sql.gz", headers=headers)
         assert r.status_code == 500
 
     def test_backup_info_forbidden_for_non_admin(self, client, test_db, sample_kindergarten):
@@ -479,14 +479,14 @@ class TestBackupInfoExtra:
                          kg_id=sample_kindergarten.id)
         r_login = client.post("/token", data={"username": "bkp_mgr_info", "password": "Pass123!"})
         headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
-        r = client.get("/api/backup/info/some_backup.sql.gz", headers=headers)
+        r = client.get("/api/admin/backup/info/some_backup.sql.gz", headers=headers)
         assert r.status_code == 403
 
     def test_backup_info_path_traversal(self, client, test_db):
         """Line 3763: '..' in name → 400."""
         admin = _make_admin(test_db, "bkp_adm", "9c")
         headers = _tok(client, "bkp_adm9c")
-        r = client.get("/api/backup/info/..evil.sql.gz", headers=headers)
+        r = client.get("/api/admin/backup/info/..evil.sql.gz", headers=headers)
         assert r.status_code in [400, 422]
 
 
@@ -496,7 +496,7 @@ class TestBackupCleanup:
         admin = _make_admin(test_db, "bkp_adm", "11")
         headers = _tok(client, "bkp_adm11")
         with patch("backup_manager.backup_manager.cleanup_old_backups", return_value={"deleted": 3}):
-            r = client.post("/api/backup/cleanup", headers=headers)
+            r = client.post("/api/admin/backup/cleanup", headers=headers)
         assert r.status_code == 200
 
     def test_cleanup_error_returns_500(self, client, test_db):
@@ -505,7 +505,7 @@ class TestBackupCleanup:
         headers = _tok(client, "bkp_adm12")
         with patch("backup_manager.backup_manager.cleanup_old_backups",
                    side_effect=OSError("disk error")):
-            r = client.post("/api/backup/cleanup", headers=headers)
+            r = client.post("/api/admin/backup/cleanup", headers=headers)
         assert r.status_code == 500
 
     def test_cleanup_forbidden_for_non_admin(self, client, test_db, sample_kindergarten):
@@ -514,7 +514,7 @@ class TestBackupCleanup:
                          kg_id=sample_kindergarten.id)
         r_login = client.post("/token", data={"username": "bkp_mgr_cln", "password": "Pass123!"})
         headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
-        r = client.post("/api/backup/cleanup", headers=headers)
+        r = client.post("/api/admin/backup/cleanup", headers=headers)
         assert r.status_code == 403
 
 
@@ -524,7 +524,7 @@ class TestBackupValidate:
         admin = _make_admin(test_db, "bkp_adm", "13")
         headers = _tok(client, "bkp_adm13")
         with patch("backup_manager.backup_manager.validate_backup", return_value=True):
-            r = client.post("/api/backup/validate/good_backup.sql.gz", headers=headers)
+            r = client.post("/api/admin/backup/validate/good_backup.sql.gz", headers=headers)
         assert r.status_code == 200
         assert r.json()["is_valid"] is True
 
@@ -533,7 +533,7 @@ class TestBackupValidate:
         admin = _make_admin(test_db, "bkp_adm", "14")
         headers = _tok(client, "bkp_adm14")
         with patch("backup_manager.backup_manager.validate_backup", return_value=False):
-            r = client.post("/api/backup/validate/bad_backup.sql.gz", headers=headers)
+            r = client.post("/api/admin/backup/validate/bad_backup.sql.gz", headers=headers)
         assert r.status_code == 200
         assert r.json()["is_valid"] is False
 
@@ -543,14 +543,14 @@ class TestBackupValidate:
         headers = _tok(client, "bkp_adm15")
         with patch("backup_manager.backup_manager.validate_backup",
                    side_effect=OSError("disk error")):
-            r = client.post("/api/backup/validate/err_backup.sql.gz", headers=headers)
+            r = client.post("/api/admin/backup/validate/err_backup.sql.gz", headers=headers)
         assert r.status_code == 500
 
     def test_validate_path_traversal(self, client, test_db):
         """Lines 3825-3826: '..' in name → 400."""
         admin = _make_admin(test_db, "bkp_adm", "16")
         headers = _tok(client, "bkp_adm16")
-        r = client.post("/api/backup/validate/..evil.sql.gz", headers=headers)
+        r = client.post("/api/admin/backup/validate/..evil.sql.gz", headers=headers)
         assert r.status_code in [400, 422]
 
     def test_validate_forbidden_for_non_admin(self, client, test_db, sample_kindergarten):
@@ -559,7 +559,7 @@ class TestBackupValidate:
                          kg_id=sample_kindergarten.id)
         r_login = client.post("/token", data={"username": "bkp_mgr_val", "password": "Pass123!"})
         headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
-        r = client.post("/api/backup/validate/some_backup.sql.gz", headers=headers)
+        r = client.post("/api/admin/backup/validate/some_backup.sql.gz", headers=headers)
         assert r.status_code == 403
 
 
@@ -586,7 +586,7 @@ class TestKGExcelImport:
         r_login = client.post("/token", data={"username": "kg_mgr_imp", "password": "Pass123!"})
         headers = {"Authorization": f"Bearer {r_login.json()['access_token']}"}
         xlsx = self._make_xlsx([["روضة", "Test", "عمان", "عمان", "منطقة", "عنوان", "0777"]])
-        r = client.post("/api/kindergartens/import-excel",
+        r = client.post("/api/admin/kindergartens/import-excel",
                         headers=headers,
                         files={"file": ("test.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
         assert r.status_code == 403
@@ -595,7 +595,7 @@ class TestKGExcelImport:
         """Lines 3877-3878: non-.xlsx file → 400."""
         admin = _make_admin(test_db, "kgimp_adm", "1")
         headers = _tok(client, "kgimp_adm1")
-        r = client.post("/api/kindergartens/import-excel",
+        r = client.post("/api/admin/kindergartens/import-excel",
                         headers=headers,
                         files={"file": ("test.csv", io.BytesIO(b"bad"), "text/csv")})
         assert r.status_code == 400
@@ -607,7 +607,7 @@ class TestKGExcelImport:
         xlsx = self._make_xlsx([
             ["روضة الأمل", "Hope KG", "عمان", "عمان", "منطقة", "شارع 1", "0777123456"],
         ])
-        r = client.post("/api/kindergartens/import-excel?dry_run=true",
+        r = client.post("/api/admin/kindergartens/import-excel?dry_run=true",
                         headers=headers,
                         files={"file": ("import.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
         assert r.status_code == 200
@@ -621,7 +621,7 @@ class TestKGExcelImport:
         xlsx = self._make_xlsx([
             ["روضة النجوم", "Stars KG", "عمان", "عمان", "منطقة", "شارع 2", "0777234567"],
         ])
-        r = client.post("/api/kindergartens/import-excel",
+        r = client.post("/api/admin/kindergartens/import-excel",
                         headers=headers,
                         files={"file": ("import2.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
         assert r.status_code == 200
@@ -635,7 +635,7 @@ class TestKGExcelImport:
         xlsx = self._make_xlsx([
             ["", "No Name KG", "عمان", "عمان", "منطقة", "شارع 3", "0777345678"],
         ])
-        r = client.post("/api/kindergartens/import-excel",
+        r = client.post("/api/admin/kindergartens/import-excel",
                         headers=headers,
                         files={"file": ("empty.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
         assert r.status_code == 200
@@ -649,14 +649,14 @@ class TestKGExcelImport:
         xlsx1 = self._make_xlsx([
             ["روضة مكررة", "Dup KG", "عمان", "عمان", "منطقة", "شارع 4", "0777456789"],
         ])
-        client.post("/api/kindergartens/import-excel",
+        client.post("/api/admin/kindergartens/import-excel",
                     headers=headers,
                     files={"file": ("first.xlsx", xlsx1, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
         # Second import of same row
         xlsx2 = self._make_xlsx([
             ["روضة مكررة", "Dup KG", "عمان", "عمان", "منطقة", "شارع 4", "0777456789"],
         ])
-        r = client.post("/api/kindergartens/import-excel",
+        r = client.post("/api/admin/kindergartens/import-excel",
                         headers=headers,
                         files={"file": ("second.xlsx", xlsx2, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")})
         assert r.status_code == 200

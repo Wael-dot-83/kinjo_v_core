@@ -20,6 +20,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from dependencies import require_admin_or_manager
+from rate_limiter import limiter
+from config import settings
 from frontend import templates  # use the singleton with globals/filters pre-configured
 from charts.schemas import (
     ChartRequest,
@@ -37,7 +39,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Charts"])
 _svc = ChartService()
 
-
 # ---------------------------------------------------------------------------
 # Helper: resolve optional chart_type override from query param
 # ---------------------------------------------------------------------------
@@ -51,7 +52,6 @@ def _parse_source(source: str) -> ChartSource:
             detail=f"Invalid source '{source}'. Valid: {[s.value for s in ChartSource]}",
         )
 
-
 def _parse_chart_type(ct: Optional[str]) -> Optional[ChartType]:
     if ct is None:
         return None
@@ -62,7 +62,6 @@ def _parse_chart_type(ct: Optional[str]) -> Optional[ChartType]:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Invalid chart_type '{ct}'. Valid: {[t.value for t in ChartType]}",
         )
-
 
 # ---------------------------------------------------------------------------
 # GET /admin/charts/data
@@ -101,7 +100,6 @@ def get_chart_data(
         "columns": list(df.columns),
         "data": df.to_dict(orient="records"),
     }
-
 
 # ---------------------------------------------------------------------------
 # GET /admin/charts/render
@@ -147,10 +145,10 @@ def render_chart(
             detail=f"Chart rendering failed: {exc}",
         )
 
-
 # ---------------------------------------------------------------------------
 # POST /admin/charts/suggest
-# ---------------------------------------------------------------------------
+
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 
 @router.post(
     "/admin/charts/suggest",
@@ -158,10 +156,7 @@ def render_chart(
     summary="Auto-suggest chart types for a data source",
     dependencies=[Depends(require_admin_or_manager)],
 )
-def suggest_charts(
-    req: SuggestRequest,
-    db: Session = Depends(get_db),
-) -> SuggestResponse:
+def suggest_charts(request: Request, req: SuggestRequest, db: Session = Depends(get_db),) -> SuggestResponse:
     try:
         return _svc.suggest(db, req)
     except Exception as exc:
@@ -170,7 +165,6 @@ def suggest_charts(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Suggestion failed: {exc}",
         )
-
 
 # ---------------------------------------------------------------------------
 # GET /admin/charts/task/{task_id}
@@ -201,7 +195,6 @@ def get_task_status(task_id: str) -> TaskStatus:
     else:
         progress = result.info.get("progress", 10) if isinstance(result.info, dict) else 10
         return TaskStatus(task_id=task_id, status=state, progress=progress)
-
 
 # ---------------------------------------------------------------------------
 # GET /admin/charts/dashboard (HTML page)

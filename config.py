@@ -281,6 +281,10 @@ class Settings(BaseSettings):
     GOVERNANCE_REPORT_DEADLINE_HOUR: int = 16  # 4 PM Amman time
     AMMAN_TIMEZONE: str = "Asia/Amman"
 
+    # Cesium ion access token for 3D globe terrain + satellite imagery
+    # Get a free token at https://cesium.com/ion/tokens
+    CESIUM_ION_TOKEN: str = ""
+
     # AI/ML (ai/ package: ml.py, llm.py, insights.py, embeddings.py) — local Ollama
     OLLAMA_URL: str = "http://localhost:11434"
     OLLAMA_LLM_MODEL: str = "llama3"

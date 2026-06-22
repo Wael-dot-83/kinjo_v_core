@@ -58,6 +58,7 @@ from admin_security import (
     log_audit_event, model_to_dict, get_correlation_id,
     # Authorization
     can_admin_access_user,
+     validate_bulk_targets,
     # Schemas
     UserCreateSchema, UserUpdateSchema, BulkStatusUpdateSchema,
     BulkDeleteSchema, BulkCreateSchema, AdminPasswordResetSchema,
@@ -1310,7 +1311,6 @@ def bulk_delete_users(
     for user_id in access_result["allowed"]:
         user = target_users.get(user_id)
         if user:
-            before_state = model_to_dict(user)
             db.delete(user)
             deleted_ids.append(user_id)
 
@@ -1834,6 +1834,7 @@ def resolve_contact_message(
     if not msg:
         raise not_found_error("Contact message not found")
 
+    _validate_csrf_token(request)
     if not msg.is_resolved:
         msg.is_resolved = True
         msg.resolved_by_id = current_user.id
@@ -1944,24 +1945,8 @@ def _dedupe_int_list(values: Optional[List[int]]) -> List[int]:
     return list(dict.fromkeys([v for v in cleaned if v]))
 
 
-def _normalize_governorates(governorates: Optional[List[str]]) -> List[str]:
-    normalized: List[str] = []
-    for gov in governorates or []:
-        if not gov:
-            continue
-        try:
-            ar_value = validators.validate_jordan_governorate(gov)
-        except validators.ValidationError:
-            raise validation_error("Invalid governorate", fields={"governorates": "invalid"})
-        normalized.append(ar_value)
-        if ar_value in settings.JORDAN_GOVERNORATES:
-            idx = settings.JORDAN_GOVERNORATES.index(ar_value)
-            if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
-                normalized.append(settings.JORDAN_GOVERNORATES_ENGLISH[idx])
-    return list(dict.fromkeys(normalized))
-
-
-def _canonical_governorates(governorates: Optional[List[str]]) -> List[str]:
+def _validate_jordan_governorates(governorates: Optional[List[str]]) -> List[str]:
+    """Validate and deduplicate governorates, returning canonical Arabic forms."""
     canonical: List[str] = []
     for gov in governorates or []:
         if not gov:
@@ -1972,6 +1957,23 @@ def _canonical_governorates(governorates: Optional[List[str]]) -> List[str]:
             raise validation_error("Invalid governorate", fields={"governorates": "invalid"})
     return list(dict.fromkeys(canonical))
 
+
+
+
+def _normalize_governorates(governorates: Optional[List[str]]) -> List[str]:
+    normalized = _validate_jordan_governorates(governorates)
+    for ar_value in list(normalized):
+        if ar_value in settings.JORDAN_GOVERNORATES:
+            idx = settings.JORDAN_GOVERNORATES.index(ar_value)
+            if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
+                normalized.append(settings.JORDAN_GOVERNORATES_ENGLISH[idx])
+    return list(dict.fromkeys(normalized))
+
+
+
+
+def _canonical_governorates(governorates: Optional[List[str]]) -> List[str]:
+    return _validate_jordan_governorates(governorates)
 
 def _validate_csrf_token(request: Request) -> None:
     header_token = request.headers.get("x-csrf-token")
@@ -3947,7 +3949,7 @@ def import_kindergartens_from_excel(
         ws = wb.worksheets[0]  # Use first sheet
         rows = list(ws.iter_rows(min_row=2, values_only=True))  # skip header
         wb.close()
-    except (OSError, IOError, KeyError, ValueError, IndexError, BadZipFile) as e:
+    except (OSError, IOError, KeyError, ValueError, IndexError, BadZipFile):
         logger.exception("Failed to read uploaded Excel file")
         raise HTTPException(status_code=400, detail="Could not read Excel file")
 
@@ -4012,7 +4014,7 @@ def import_kindergartens_from_excel(
     if not dry_run:
         try:
             db.commit()
-        except (SQLAlchemyError, OSError) as e:
+        except (SQLAlchemyError, OSError):
             db.rollback()
             logger.exception("Failed to commit kindergarten import")
             raise HTTPException(status_code=500, detail="Database commit failed")

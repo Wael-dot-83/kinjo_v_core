@@ -283,7 +283,7 @@ def get_heat_map_data(
     if indicator and indicator in [i["key"] for i in overview["indicators"]]:
         overview["selected_indicator"] = indicator
     else:
-        overview["selected_indicator"] = "tasks_governance"
+        overview["selected_indicator"] = "overall_risk"
     heatmap_cache.cached_set(cache_name, overview, ttl=heatmap_cache.HEAT_MAP_TTL_SECONDS)
     return overview
 
@@ -498,6 +498,36 @@ def list_runs(
         ],
         "count": len(runs),
     }
+
+
+# ---------------------------------------------------------------------------
+# City-level aggregation
+# ---------------------------------------------------------------------------
+@router.get("/governorate/{slug}/cities")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_governorate_cities(
+    request: Request,
+    slug: str,
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Return city-level KPI summary for all cities within a governorate.
+
+    Groups kindergartens by their `city` field and returns aggregated KPI
+    scores, risk levels, and child/enrollment counts per city.
+    """
+    if slug not in [g["slug"] for g in heatmap_service.get_governorates()]:
+        raise not_found_error(f"Unknown governorate: {slug!r}")
+    cache_name = f"cities:{slug}"
+    cached = heatmap_cache.cached_get(cache_name)
+    if cached is not None:
+        return cached
+    try:
+        data = heatmap_service.get_city_summary(db, slug)
+    except ValueError as exc:
+        raise validation_error(str(exc))
+    heatmap_cache.cached_set(cache_name, data, ttl=heatmap_cache.HEAT_MAP_TTL_SECONDS)
+    return data
 
 
 # ---------------------------------------------------------------------------

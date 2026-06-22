@@ -251,13 +251,13 @@
                         <!-- Populated via JS or Template -->
                         <div class="col-md-6">
                             <div class="action-card d-flex align-items-start p-3 border rounded-4 bg-light bg-opacity-10"
-                                onclick="quickAction('reviewEnrollments')">
+                                onclick="window.location.href='/enrollments'">
                                 <div class="action-icon me-3 bg-primary text-white p-2 rounded-3">
                                     <i class="bi bi-plus-circle"></i>
                                 </div>
                                 <div>
                                     <p class="mb-1 fw-bold">{% if ui_lang == 'en' %}Speed Up Enrollment Review{% else %}تسريع مراجعة التسجيلات{% endif %}</p>
-                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}There are 5 requests pending review for over 2 days. Review them now.{% else %}هناك 5 طلبات تنتظر المراجعة منذ أكثر من يومين. راجع الطلبات الآن.{% endif %}</small>
+                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}Pending enrollment requests are awaiting your review.{% else %}طلبات التسجيل المعلقة بانتظار مراجعتك.{% endif %}</small>
                                     <span class="text-primary small fw-bold">{% if ui_lang == 'en' %}Review requests now{% else %}راجع الطلبات الآن{% endif %} <i
                                             class="bi bi-arrow-left ms-1"></i></span>
                                 </div>
@@ -265,13 +265,13 @@
                         </div>
                         <div class="col-md-6">
                             <div class="action-card d-flex align-items-start p-3 border rounded-4 bg-light bg-opacity-10"
-                                onclick="quickAction('checkAttendance')">
+                                onclick="window.location.href='{% if current_user.role.value == 'ADMIN' %}/admin/daily-reports-organization{% else %}/attendance/history{% endif %}'">
                                 <div class="action-icon me-3 bg-success text-white p-2 rounded-3">
                                     <i class="bi bi-calendar-check"></i>
                                 </div>
                                 <div>
                                     <p class="mb-1 fw-bold">{% if ui_lang == 'en' %}Follow Up on Repeated Absences{% else %}متابعة الغياب المتكرر{% endif %}</p>
-                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}A 4% decrease in children's attendance was detected this week. Check the attendance report.{% else %}تم رصد تراجع في حضور الأطفال هذا الأسبوع بنسبة 4%. افحص تقرير الحضور.{% endif %}</small>
+                                    <small class="text-muted d-block mb-2">{% if ui_lang == 'en' %}Review attendance patterns across your network to identify absenteeism trends.{% else %}راجع أنماط الحضور عبر شبكتك لتحديد اتجاهات الغياب.{% endif %}</small>
                                     <span class="text-success small fw-bold">{% if ui_lang == 'en' %}Check attendance report{% else %}افحص تقرير الحضور{% endif %} <i
                                             class="bi bi-arrow-left ms-1"></i></span>
                                 </div>
@@ -281,29 +281,6 @@
                 </div>
             </div>
 
-            <!-- Recent Activity Table -->
-            <div class="card border-0 shadow-sm rounded-xl">
-                <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
-                    <h5 class="fw-bold mb-0">{% if ui_lang == 'en' %}Class Overview{% else %}نظرة عامة على الفصول{% endif %}</h5>
-                </div>
-                <div class="card-body p-4">
-                    <div class="table-responsive">
-                        <table class="table table-borderless align-middle mb-0">
-                            <thead class="text-muted small text-uppercase">
-                                <tr>
-                                    <th>{% if ui_lang == 'en' %}Class Name{% else %}اسم الفصل{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Level{% else %}المستوى{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Est. Status{% else %}الحالة التقديرية{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
-                                </tr>
-                            </thead>
-                            <tbody id="classOverviewTable">
-                                <!-- Populated via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Left Column: Status Widgets (Secondary Content) -->
@@ -805,52 +782,19 @@
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush" id="recentActivityList">
-                    <a href="#" class="list-group-item list-group-item-action">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0 me-3">
-                                <span class="badge badge-soft badge-soft-success rounded-pill p-2">
-                                    <i class="bi bi-check"></i>
-                                </span>
-                            </div>
-                            <div class="flex-grow-1">
-                                <p class="mb-1 small">{% if ui_lang == 'en' %}Enrollment request accepted{% else %}تم قبول طلب تسجيل{% endif %}</p>
-                                <small class="text-muted">{% if ui_lang == 'en' %}Ahmed Mohammed - 5 min ago{% else %}أحمد محمد - منذ 5 دقائق{% endif %}</small>
-                            </div>
-                        </div>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0 me-3">
-                                <span class="badge badge-soft badge-soft-primary rounded-pill p-2">
-                                    <i class="bi bi-journal"></i>
-                                </span>
-                            </div>
-                            <div class="flex-grow-1">
-                                <p class="mb-1 small">{% if ui_lang == 'en' %}New daily report{% else %}تقرير يومي جديد{% endif %}</p>
-                                <small class="text-muted">{% if ui_lang == 'en' %}Sara Ahmed - 15 min ago{% else %}سارة أحمد - منذ 15 دقيقة{% endif %}</small>
-                            </div>
-                        </div>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0 me-3">
-                                <span class="badge badge-soft badge-soft-info rounded-pill p-2">
-                                    <i class="bi bi-box-arrow-in-left"></i>
-                                </span>
-                            </div>
-                            <div class="flex-grow-1">
-                                <p class="mb-1 small">{% if ui_lang == 'en' %}Attendance recorded{% else %}تسجيل حضور{% endif %}</p>
-                                <small class="text-muted">{% if ui_lang == 'en' %}15 children - 30 min ago{% else %}15 طفلاً - منذ 30 دقيقة{% endif %}</small>
-                            </div>
-                        </div>
-                    </a>
+                    <div class="text-center py-4 text-muted" id="recentActivityEmpty">
+                        <i class="bi bi-clock-history fs-1 d-block mb-2 opacity-25"></i>
+                        <span class="small">{% if ui_lang == 'en' %}Activity will appear here as operations are performed.{% else %}سيظهر النشاط هنا عند تنفيذ العمليات.{% endif %}</span>
+                    </div>
                 </div>
             </div>
+            {% if current_user.role.value == 'ADMIN' %}
             <div class="card-footer bg-transparent">
                 <a href="/audit-logs" class="small text-decoration-none" aria-label="{% if ui_lang == 'en' %}View full activity log{% else %}عرض السجل الكامل للنشاط{% endif %}">
                     {% if ui_lang == 'en' %}View Full Log{% else %}عرض السجل الكامل{% endif %} <i class="bi bi-arrow-left"></i>
                 </a>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -865,7 +809,7 @@
                     <i class="bi bi-bar-chart me-2"></i>
                     {% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}
                 </h5>
-                <a href="/kpi" class="btn btn-sm btn-outline-primary" aria-label="{% if ui_lang == 'en' %}View KPI details{% else %}عرض تفاصيل مؤشرات الأداء الرئيسية{% endif %}">
+                <a href="/kpi/dashboard" class="btn btn-sm btn-outline-primary" aria-label="{% if ui_lang == 'en' %}View KPI details{% else %}عرض تفاصيل مؤشرات الأداء الرئيسية{% endif %}">
                     {% if ui_lang == 'en' %}View Details{% else %}عرض التفاصيل{% endif %} <i class="bi bi-arrow-left ms-1"></i>
                 </a>
             </div>
@@ -875,27 +819,18 @@
                         <div class="kpi-card">
                             <div class="kpi-value text-success" id="kpiAttendance">--</div>
                             <div class="kpi-label">{% if ui_lang == 'en' %}Attendance Rate{% else %}نسبة الحضور{% endif %}</div>
-                            <div class="kpi-trend up">
-                                <i class="bi bi-arrow-up"></i> 2.5%
-                            </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="kpi-card">
                             <div class="kpi-value text-info" id="kpiRatioCompliance">--</div>
                             <div class="kpi-label">{% if ui_lang == 'en' %}Ratio Compliance{% else %}امتثال نسبة الإشراف{% endif %}</div>
-                            <div class="kpi-trend up">
-                                <i class="bi bi-arrow-up"></i> 1.2%
-                            </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="kpi-card">
                             <div class="kpi-value text-warning" id="kpiIncidentRate">--</div>
                             <div class="kpi-label">{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}</div>
-                            <div class="kpi-trend down">
-                                <i class="bi bi-arrow-down"></i> 0.5%
-                            </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">

@@ -5,6 +5,8 @@
  * window.KINJO_LANG must be set before this script executes (injected by template).
  */
 
+window.KINJO_LANG = window.KINJO_LANG || (document.documentElement.lang === 'en' ? 'en' : 'ar');
+
 /** Safe HTML escaping for any string inserted via innerHTML */
 function escapeHtml(str) {
   return String(str == null ? "" : str)
@@ -312,25 +314,49 @@ class AdminDashboard {
     const ctx = document.getElementById("user-activity-chart");
     if (!ctx) return;
     this.charts.userActivity?.destroy();
+    const context = ctx.getContext("2d");
+    const gradient = context ? (() => {
+      const g = context.createLinearGradient(0, 0, 0, 220);
+      g.addColorStop(0, "rgba(31, 94, 71, 0.28)");
+      g.addColorStop(1, "rgba(31, 94, 71, 0.02)");
+      return g;
+    })() : "rgba(31, 94, 71, 0.1)";
     this.charts.userActivity = new Chart(ctx, {
       type: "line",
       data: {
         labels:   safeChartData(data.labels),
         datasets: [{
-          label:           this.t("dashboard.active_users", "Active Users"),
-          data:            safeChartData(data.values),
-          borderColor:     "#1F5E47",
-          backgroundColor: "rgba(31, 94, 71, 0.1)",
-          tension:         0.4,
-          fill:            true,
+          label:                this.t("dashboard.active_users", "Active Users"),
+          data:                 safeChartData(data.values),
+          borderColor:          "#1F5E47",
+          backgroundColor:      gradient,
+          tension:              0.4,
+          fill:                 true,
+          pointRadius:          4,
+          pointHoverRadius:     6,
+          pointBackgroundColor: "#1F5E47",
+          pointBorderColor:     "#fff",
+          pointBorderWidth:     2,
+          borderWidth:          2.5,
         }],
       },
       options: {
+        animation: { duration: 600, easing: "easeOutQuart" },
+        interaction: { mode: "index", intersect: false },
         plugins: {
-          legend:  { position: "top" },
-          tooltip: { mode: "index", intersect: false },
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "rgba(17,24,39,0.92)",
+            titleColor: "#f8fafc",
+            bodyColor:  "#f8fafc",
+            padding:    10,
+            cornerRadius: 8,
+          },
         },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        scales: {
+          x: { ticks: { color: "#6c757d" }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0, color: "#6c757d" }, grid: { color: "rgba(0,0,0,0.06)" } },
+        },
       },
     });
   }
@@ -339,6 +365,7 @@ class AdminDashboard {
     const ctx = document.getElementById("data-submissions-chart");
     if (!ctx) return;
     this.charts.dataSubmissions?.destroy();
+    const palette = ["#0d6efd", "#198754", "#ffc107", "#dc3545", "#6c757d", "#0dcaf0"];
     this.charts.dataSubmissions = new Chart(ctx, {
       type: "bar",
       data: {
@@ -346,14 +373,31 @@ class AdminDashboard {
         datasets: [{
           label:           this.t("dashboard.enrollment_status", "Enrollment Status"),
           data:            safeChartData(data.values),
-          backgroundColor: "rgba(245, 158, 11, 0.8)",
-          borderColor:     "#f59e0b",
-          borderWidth:     1,
+          backgroundColor: safeChartData(data.labels).map((_, i) => palette[i % palette.length]),
+          borderWidth:     0,
+          borderRadius:    6,
         }],
       },
       options: {
-        plugins: { legend: { position: "top" } },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        indexAxis: "y",
+        animation: { duration: 600, easing: "easeOutQuart" },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "rgba(17,24,39,0.92)",
+            titleColor: "#f8fafc",
+            bodyColor:  "#f8fafc",
+            padding:    10,
+            cornerRadius: 8,
+            callbacks: {
+              label: (ctx) => ` ${ctx.parsed.x.toLocaleString()}`,
+            },
+          },
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "rgba(0,0,0,0.06)" } },
+          y: { ticks: { color: "#495057" }, grid: { display: false } },
+        },
       },
     });
   }

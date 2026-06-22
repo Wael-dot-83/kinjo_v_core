@@ -1205,14 +1205,33 @@ function updateGovernanceChart(green, amber, red) {
         {
           data: safeChartData([green, amber, red]),
           backgroundColor: ["#198754", "#ffc107", "#dc3545"],
+          hoverBackgroundColor: ["#157347", "#e0a800", "#bb2d3b"],
           borderWidth: 0,
+          hoverOffset: 6,
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      animation: { duration: 600, easing: "easeOutQuart" },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(17,24,39,0.92)",
+          titleColor: "#f8fafc",
+          bodyColor:  "#f8fafc",
+          padding:    10,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(ctx) {
+              const total = (ctx.dataset.data || []).reduce((a, b) => a + (b || 0), 0);
+              const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : "0.0";
+              return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+            },
+          },
+        },
+      },
       cutout: "70%",
     },
   });

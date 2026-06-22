@@ -213,17 +213,34 @@
             {
               label: dsText("ds.kg_count"),
               data: values,
-              backgroundColor: "rgba(13, 110, 253, 0.7)",
+              backgroundColor: "rgba(13, 110, 253, 0.75)",
+              hoverBackgroundColor: "rgba(13, 110, 253, 1)",
               borderRadius: 6,
+              borderWidth: 0,
             },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          animation: { duration: 600, easing: "easeOutQuart" },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "rgba(17,24,39,0.92)",
+              titleColor: "#f9fafb",
+              bodyColor: "#d1d5db",
+              padding: 10,
+              cornerRadius: 6,
+            },
+          },
           scales: {
-            y: { beginAtZero: true, ticks: { stepSize: 1 } },
+            x: { grid: { display: false } },
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1 },
+              grid: { color: "rgba(0,0,0,0.06)" },
+            },
           },
         },
       });
@@ -303,18 +320,43 @@
       const colors = bands.map(function (b) {
         return b.band === "green" ? "#198754" : b.band === "amber" ? "#ffc107" : "#dc3545";
       });
+      const hoverColors = bands.map(function (b) {
+        return b.band === "green" ? "#157347" : b.band === "amber" ? "#e0a800" : "#bb2d3b";
+      });
       destroyChart("classification");
       chartInstances["classification"] = new Chart(chartEl, {
         type: "doughnut",
         data: {
           labels: labels,
-          datasets: [{ data: values, backgroundColor: colors, borderWidth: 2 }],
+          datasets: [{
+            data: values,
+            backgroundColor: colors,
+            hoverBackgroundColor: hoverColors,
+            borderWidth: 0,
+            hoverOffset: 6,
+          }],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          cutout: "65%",
+          animation: { duration: 600, easing: "easeOutQuart" },
           plugins: {
             legend: { position: "bottom" },
+            tooltip: {
+              backgroundColor: "rgba(17,24,39,0.92)",
+              titleColor: "#f9fafb",
+              bodyColor: "#d1d5db",
+              padding: 10,
+              cornerRadius: 6,
+              callbacks: {
+                label: function (ctx) {
+                  const total = (ctx.dataset.data || []).reduce(function (a, b) { return a + (b || 0); }, 0);
+                  const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : "0.0";
+                  return " " + ctx.label + ": " + ctx.parsed + " (" + pct + "%)";
+                },
+              },
+            },
           },
         },
       });
@@ -375,19 +417,41 @@
       return t.count;
     });
     const colors = ["#0dcaf0", "#198754", "#ffc107", "#dc3545"];
+    const hoverColors = ["#0aa6c9", "#157347", "#e0a800", "#bb2d3b"];
     destroyChart("capacity");
     chartInstances["capacity"] = new Chart(chartEl, {
       type: "pie",
       data: {
         labels: labels,
-        datasets: [
-          { data: values, backgroundColor: colors.slice(0, tiers.length), borderWidth: 2 },
-        ],
+        datasets: [{
+          data: values,
+          backgroundColor: colors.slice(0, tiers.length),
+          hoverBackgroundColor: hoverColors.slice(0, tiers.length),
+          borderWidth: 0,
+          hoverOffset: 6,
+        }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { position: "bottom" } },
+        animation: { duration: 600, easing: "easeOutQuart" },
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            backgroundColor: "rgba(17,24,39,0.92)",
+            titleColor: "#f9fafb",
+            bodyColor: "#d1d5db",
+            padding: 10,
+            cornerRadius: 6,
+            callbacks: {
+              label: function (ctx) {
+                const total = (ctx.dataset.data || []).reduce(function (a, b) { return a + (b || 0); }, 0);
+                const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : "0.0";
+                return " " + ctx.label + ": " + ctx.parsed + " (" + pct + "%)";
+              },
+            },
+          },
+        },
       },
     });
   }
@@ -542,7 +606,11 @@
             backgroundColor: stages.map(function (s) {
               return s.color;
             }),
+            hoverBackgroundColor: stages.map(function (s) {
+              return s.color;
+            }),
             borderRadius: 6,
+            borderWidth: 0,
           },
         ],
       },
@@ -550,8 +618,21 @@
         indexAxis: "y",
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { x: { beginAtZero: true } },
+        animation: { duration: 600, easing: "easeOutQuart" },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "rgba(17,24,39,0.92)",
+            titleColor: "#f9fafb",
+            bodyColor: "#d1d5db",
+            padding: 10,
+            cornerRadius: 6,
+          },
+        },
+        scales: {
+          x: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.06)" } },
+          y: { grid: { display: false } },
+        },
       },
     });
   }
@@ -566,19 +647,42 @@
       return a.count;
     });
     const colors = ["#0d6efd", "#198754", "#ffc107", "#dc3545", "#6f42c1", "#0dcaf0"];
+    const hoverColors = ["#0b5ed7", "#157347", "#e0a800", "#bb2d3b", "#59359a", "#0aa6c9"];
     destroyChart("age");
     chartInstances["age"] = new Chart(chartEl, {
       type: "doughnut",
       data: {
         labels: labels,
-        datasets: [
-          { data: values, backgroundColor: colors.slice(0, items.length), borderWidth: 2 },
-        ],
+        datasets: [{
+          data: values,
+          backgroundColor: colors.slice(0, items.length),
+          hoverBackgroundColor: hoverColors.slice(0, items.length),
+          borderWidth: 0,
+          hoverOffset: 6,
+        }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { position: "bottom" } },
+        cutout: "65%",
+        animation: { duration: 600, easing: "easeOutQuart" },
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            backgroundColor: "rgba(17,24,39,0.92)",
+            titleColor: "#f9fafb",
+            bodyColor: "#d1d5db",
+            padding: 10,
+            cornerRadius: 6,
+            callbacks: {
+              label: function (ctx) {
+                const total = (ctx.dataset.data || []).reduce(function (a, b) { return a + (b || 0); }, 0);
+                const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : "0.0";
+                return " " + ctx.label + ": " + ctx.parsed + " (" + pct + "%)";
+              },
+            },
+          },
+        },
       },
     });
   }

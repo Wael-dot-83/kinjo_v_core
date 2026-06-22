@@ -655,14 +655,25 @@ def get_kindergarten_map_data(
     for kg in rows:
         kg_dict = kindergarten_to_dict(db, kg, include_details=False)
         if kg.latitude is None or kg.longitude is None:
-            missing_location_count += 1
-            continue
+            gov_match = None
+            for g in C.GOVERNORATES:
+                if g.get("name_ar") == kg.governorate or g.get("name_en", "").lower() == (kg.governorate or "").lower():
+                    gov_match = g
+                    break
+            if gov_match and gov_match.get("center"):
+                kg_lon, kg_lat = gov_match["center"]
+            else:
+                missing_location_count += 1
+                continue
+        else:
+            kg_lat = float(kg.latitude)
+            kg_lon = float(kg.longitude)
         features.append({
             "type": "Feature",
             "id": kg.id,
             "geometry": {
                 "type": "Point",
-                "coordinates": [float(kg.longitude), float(kg.latitude)],
+                "coordinates": [kg_lon, kg_lat],
             },
             "properties": kg_dict,
         })
@@ -894,6 +905,105 @@ def get_governorate_overview(db: Session, slug: str) -> Dict:
     }
 
 
+def get_city_summary(db: Session, slug: str) -> Dict:
+    """Return city-level KPI aggregation for all cities within a governorate.
+
+    Groups kindergartens by their `city` field, computes average KPI scores
+    per city, converts to risk scale, and sorts by descending risk.
+
+    Response shape::
+
+        {
+          "slug": "amman",
+          "governorate_ar": "عمان",
+          "cities": [
+            {
+              "city": "عمّان",
+              "kindergarten_count": 42,
+              "avg_kpi_score": 81.5,
+              "risk_score": 18.5,
+              "risk_level": {"key": "low", "name_ar": "منخفض", "color": "..."},
+              "critical_kindergartens": 2,
+              "children_count": 1200,
+            }
+          ],
+          "city_count": 1,
+          "data_status": "loaded" | "empty",
+          "warnings": [],
+          "last_update": "...",
+        }
+    """
+    gov = C.GOVERNORATE_BY_SLUG.get(slug)
+    if not gov:
+        raise ValueError(f"Unknown governorate slug: {slug!r}")
+
+    names = _names_for_slug(slug)
+    kgs = (db.query(models.Kindergarten)
+             .filter(models.Kindergarten.governorate.in_(names))
+             .all())
+
+    if not kgs:
+        return {
+            "slug": slug,
+            "governorate_ar": gov["name_ar"],
+            "cities": [],
+            "city_count": 0,
+            "data_status": "empty",
+            "warnings": ["لا توجد روضات مسجلة في هذه المحافظة."],
+            "last_update": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        }
+
+    from collections import defaultdict
+    city_map: Dict[str, list] = defaultdict(list)
+    for kg in kgs:
+        city_name = (kg.city or '').strip() or 'غير محدد'
+        city_map[city_name].append(kg)
+
+    cities = []
+    for city_name, city_kgs in city_map.items():
+        scores: List[float] = []
+        enrollments = 0
+        for kg in city_kgs:
+            try:
+                kpi = compute_kindergarten_kpi_scores(db, kg)
+                scores.append(float(kpi["score"]))
+                enrollments += int(kpi["supporting_counts"].get("active_enrollments", 0))
+            except Exception as exc:
+                logger.debug("City summary KPI error for KG %s: %s", kg.id, exc)
+                scores.append(0.0)
+
+        avg_perf = round(sum(scores) / len(scores), 1) if scores else 0.0
+        risk_score = round(100.0 - avg_perf, 1)
+        rl = C.risk_level_for_score(risk_score)
+        critical_count = sum(1 for s in scores if (100.0 - s) >= 75)
+
+        cities.append({
+            "city": city_name,
+            "kindergarten_count": len(city_kgs),
+            "avg_kpi_score": avg_perf,
+            "risk_score": risk_score,
+            "risk_level": {
+                "key": rl["key"],
+                "name_ar": rl["name_ar"],
+                "color": rl["color"],
+            },
+            "critical_kindergartens": critical_count,
+            "children_count": enrollments,
+        })
+
+    cities.sort(key=lambda c: c["risk_score"], reverse=True)
+
+    return {
+        "slug": slug,
+        "governorate_ar": gov["name_ar"],
+        "cities": cities,
+        "city_count": len(cities),
+        "data_status": "loaded",
+        "warnings": [],
+        "last_update": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    }
+
+
 def get_map_overview(db: Session) -> Dict:
     """Build the full heat-map payload for the admin dashboard."""
     governors = []
@@ -918,6 +1028,8 @@ def get_map_overview(db: Session) -> Dict:
                     "name_ar": overall_risk["name_ar"],
                     "color": overall_risk["color"],
                 },
+                "kg_count": int(sub.get("active_nurseries", 0)),
+                "student_count": int(sub.get("registered_children", 0)),
             })
             overall_risk_total += risk_score
         except Exception as exc:

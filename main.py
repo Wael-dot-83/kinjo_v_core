@@ -1225,6 +1225,67 @@ async def dashboard_websocket(websocket: WebSocket):
     await realtime_ws_endpoint(websocket, user_id, role)
 
 
+@app.websocket("/ws/heatmap")
+async def heatmap_websocket(websocket: WebSocket):
+    """Real-time heatmap WebSocket — streams KPI updates to the Cesium globe every 30 s."""
+    from jose import JWTError, jwt as _jwt
+
+    def decode_token(value: str):
+        payload = _jwt.decode(value, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username = payload.get("sub")
+        if not username:
+            raise JWTError("missing subject")
+        return username
+
+    token = websocket.query_params.get("token")
+    session_token = websocket.cookies.get(settings.SESSION_COOKIE_NAME)
+    username = None
+    try:
+        username = decode_token(token) if token else None
+    except JWTError:
+        pass
+    if not username and session_token:
+        try:
+            username = decode_token(session_token)
+        except JWTError:
+            pass
+    if not username:
+        await websocket.close(code=4001, reason="Authentication required")
+        return
+
+    db = next(get_db())
+    try:
+        user = db.query(models.User).filter(models.User.username == username).first()
+        if not user or user.status != models.UserStatus.ACTIVE:
+            await websocket.close(code=4003, reason="User not found or inactive")
+            return
+        if user.role != models.UserRole.ADMIN:
+            await websocket.close(code=4003, reason="Admin role required")
+            return
+    finally:
+        db.close()
+
+    await websocket.accept()
+    try:
+        while True:
+            db = next(get_db())
+            try:
+                from heatmap.backend.service import get_map_overview
+                data = get_map_overview(db)
+                await websocket.send_json({
+                    "type": "kpi_update",
+                    "governorates": data.get("governorates", []),
+                    "timestamp": datetime.utcnow().isoformat(),
+                })
+            except Exception:
+                pass
+            finally:
+                db.close()
+            await asyncio.sleep(30)
+    except Exception:
+        pass
+
+
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/hour")
 async def register(

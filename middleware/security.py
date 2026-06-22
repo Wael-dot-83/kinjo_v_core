@@ -28,16 +28,58 @@ AUDIT_EXCLUDED_PATHS = {
 }
 
 
-def _security_csp() -> str:
-    connect_sources = [
-        "'self'",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "ws://localhost:8000",
-        "ws://127.0.0.1:8000",
-        "https://cdn.jsdelivr.net",
-        "https://cdnjs.cloudflare.com",
-    ]
+_CESIUM_CONNECT = [
+    "'self'",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "ws://localhost:8000",
+    "ws://127.0.0.1:8000",
+    "https://cdn.jsdelivr.net",
+    "https://cdnjs.cloudflare.com",
+    # Cesium CDN: workers, terrain, Ion API, and asset manifest fetched at runtime
+    "https://cesium.com",
+    "https://*.cesium.com",
+    # ESRI satellite imagery tiles (fallback when no Cesium Ion token)
+    "https://server.arcgisonline.com",
+    "https://services.arcgisonline.com",
+]
+
+_BASE_CONNECT = [
+    "'self'",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "ws://localhost:8000",
+    "ws://127.0.0.1:8000",
+    "https://cdn.jsdelivr.net",
+    "https://cdnjs.cloudflare.com",
+]
+
+
+def _security_csp(heatmap: bool = False) -> str:
+    # Cesium's Knockout.js widget bindings use new Function() to parse binding
+    # expressions, which requires 'unsafe-eval'. Scope it to /admin/heatmap only.
+    script_src = (
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://cesium.com"
+        if heatmap
+        else
+        "script-src 'self' 'unsafe-inline' "
+        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com"
+    )
+    connect_sources = _CESIUM_CONNECT if heatmap else _BASE_CONNECT
+    img_src = (
+        "img-src 'self' data: blob: https://cesium.com https://server.arcgisonline.com https://services.arcgisonline.com"
+        if heatmap
+        else "img-src 'self' data: blob:"
+    )
+    style_src = (
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+        "https://fonts.googleapis.com https://cesium.com"
+        if heatmap
+        else
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+        "https://fonts.googleapis.com"
+    )
     return "; ".join(
         [
             "default-src 'self'",
@@ -45,10 +87,10 @@ def _security_csp() -> str:
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
+            script_src,
+            style_src,
             "font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com",
-            "img-src 'self' data: blob:",
+            img_src,
             f"connect-src {' '.join(connect_sources)}",
             "worker-src 'self' blob:",
         ]
@@ -89,7 +131,9 @@ async def security_headers_middleware(request: Request, call_next: Callable):
         response.headers["Referrer-Policy"] = "no-referrer"
     else:
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = _security_csp()
+    response.headers["Content-Security-Policy"] = _security_csp(
+        heatmap=request.url.path == "/admin/heatmap"
+    )
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
     if settings.ENVIRONMENT.lower() == "production":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"

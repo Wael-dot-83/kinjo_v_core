@@ -236,7 +236,10 @@
     let pendingPayload = null;
 
     function getHeaders() {
-        return { 'Content-Type': 'application/json' };
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const headers = { 'Content-Type': 'application/json' };
+        if (csrf) headers['X-CSRF-Token'] = csrf;
+        return headers;
     }
 
     document.addEventListener('DOMContentLoaded', () => {

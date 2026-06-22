@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import logging
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session
@@ -24,6 +24,8 @@ from dependencies import get_current_user
 from kpi_service import KPIService
 from admin_security import log_audit_event
 from audit_actions import AuditAction
+from rate_limiter import limiter
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -1441,8 +1443,9 @@ def _load_filters(db: Session) -> ClassificationFiltersResponse:
         raise
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/admin/classification/filters", response_model=ClassificationFiltersResponse)
-def get_admin_classification_filters(
+def get_admin_classification_filters(request: Request, 
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -1450,8 +1453,9 @@ def get_admin_classification_filters(
     return _load_filters(db)
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/admin/classification/kindergartens", response_model=ClassificationResponse)
-def get_admin_kindergarten_leaderboard(
+def get_admin_kindergarten_leaderboard(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     level: str = Query("NETWORK"),
@@ -1487,8 +1491,9 @@ def get_admin_kindergarten_leaderboard(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/admin/classification/managers", response_model=ClassificationResponse)
-def get_admin_manager_leaderboard(
+def get_admin_manager_leaderboard(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     level: str = Query("NETWORK"),
@@ -1522,8 +1527,9 @@ def get_admin_manager_leaderboard(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/admin/classification/supervisors", response_model=ClassificationResponse)
-def get_admin_supervisor_leaderboard(
+def get_admin_supervisor_leaderboard(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     level: str = Query("NETWORK"),
@@ -1557,8 +1563,9 @@ def get_admin_supervisor_leaderboard(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/admin/classification/detail", response_model=ClassificationDetailResponse)
-def get_admin_classification_detail(
+def get_admin_classification_detail(request: Request, 
     entity_type: str = Query(..., pattern="^(KINDERGARTEN|MANAGER|SUPERVISOR)$"),
     entity_id: int = Query(..., ge=1),
     period_start: Optional[date] = Query(None),
@@ -1683,8 +1690,9 @@ def get_admin_classification_detail(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 @router.post("/admin/classification/cache/warm", response_model=CacheWarmResponse)
-def warm_admin_classification_cache(
+def warm_admin_classification_cache(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     db: Session = Depends(get_db),
@@ -1724,8 +1732,9 @@ def warm_admin_classification_cache(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 @router.post("/admin/classification/cache/invalidate", response_model=CacheInvalidateResponse)
-def invalidate_admin_classification_cache(
+def invalidate_admin_classification_cache(request: Request, 
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -1740,8 +1749,9 @@ def invalidate_admin_classification_cache(
     return CacheInvalidateResponse(message="تمت إعادة تهيئة الذاكرة المؤقتة للتصنيف", deleted_entries=deleted)
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/manager/benchmarking/summary", response_model=ManagerBenchmarkSummaryResponse)
-def get_manager_benchmarking_summary(
+def get_manager_benchmarking_summary(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     size_mode: str = Query("ENROLLMENT"),
@@ -1818,8 +1828,9 @@ def get_manager_benchmarking_summary(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/supervisor/performance/summary", response_model=SupervisorPerformanceSummaryResponse)
-def get_supervisor_performance_summary(
+def get_supervisor_performance_summary(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     size_mode: str = Query("ENROLLMENT"),
@@ -1867,8 +1878,9 @@ def get_supervisor_performance_summary(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/parent/kindergarten/quality-band", response_model=ParentQualityBandResponse)
-def get_parent_kindergarten_quality_band(
+def get_parent_kindergarten_quality_band(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     db: Session = Depends(get_db),
