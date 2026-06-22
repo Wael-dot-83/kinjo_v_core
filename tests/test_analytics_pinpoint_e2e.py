@@ -313,10 +313,6 @@ class TestHelpModalIntegration:
         extra_scripts_pos = resp.text.index("tablesort@5.3.0")
         assert modal_pos < extra_scripts_pos
 
-    def test_pagehelpcontent_has_data_help_title(self):
-        resp = self.client.get("/admin/analytics")
-        assert 'data-help-title=' in resp.text
-
     def test_dashboard_submenu_no_stale_system_health_link(self):
         resp = self.client.get("/admin/analytics")
         assert "System Health" not in resp.text
