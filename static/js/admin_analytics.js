@@ -1604,42 +1604,80 @@ async function loadAnomalies(start, end, scopeType, scopeId) {
 }
 
 async function loadAlerts() {
+  const alertList = document.getElementById("alertList");
+  const banner = document.getElementById("alertBanner");
+  if (!alertList) return;
+  alertList.innerHTML = "";
+
+  const combinedAlerts = [];
+
+  // Pull from legacy analytics alerts
   try {
     const res = await fetchWithAuth(`/api/analytics/alerts`);
-    if (!res) return;
-    const data = await res.json();
-    const alertList = document.getElementById("alertList");
-    const banner = document.getElementById("alertBanner");
-    if (!alertList) return;
-    alertList.innerHTML = "";
-    const alerts = data.alerts || [];
-    if (alerts.length) {
-      banner.classList.remove("d-none");
-      banner.textContent = adminAnalyticsText(
-        `يوجد ${alerts.length} تنبيه نشط يتطلب المراجعة.`,
-        `${alerts.length} active alerts require review.`
-      );
-    } else {
-      banner.classList.add("d-none");
+    if (res) {
+      const data = await res.json();
+      (data.alerts || []).forEach((a) => combinedAlerts.push({
+        message: a.message,
+        subtitle: formatMetricType(a.metric_type),
+        priority: (a.severity || "MEDIUM").toLowerCase(),
+      }));
     }
-    alerts.slice(0, 5).forEach((alert) => {
-      const row = document.createElement("div");
-      row.className = "list-group-item border-0";
-      const severityClass = alert.severity === "CRITICAL" ? "bg-danger" :
-                          alert.severity === "HIGH" ? "bg-warning text-dark" :
-                          alert.severity === "MEDIUM" ? "bg-warning" : "bg-info text-dark";
-      row.innerHTML = `<div class="d-flex justify-content-between">
-        <div>
-          <div class="fw-semibold">${escapeHtml(alert.message)}</div>
-          <small class="text-muted">${formatMetricType(alert.metric_type)}</small>
-        </div>
-        <span class="badge ${severityClass}">${formatAnomalySeverity(alert.severity)}</span>
-      </div>`;
-      alertList.appendChild(row);
-    });
-  } catch (error) {
-    console.error("Alerts load error", error);
+  } catch (e) {
+    console.warn("analytics/alerts unavailable", e);
   }
+
+  // Pull from KPI-based alerts (new)
+  try {
+    const res2 = await fetchWithAuth(`/api/kpi/alerts`);
+    if (res2) {
+      const data2 = await res2.json();
+      (data2.alerts || []).forEach((a) => combinedAlerts.push({
+        message: a.message_ar || a.message_en || "",
+        subtitle: a.type || "",
+        priority: a.priority || "medium",
+      }));
+    }
+  } catch (e) {
+    console.warn("kpi/alerts unavailable", e);
+  }
+
+  // Sort: critical → high → medium → low
+  const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+  combinedAlerts.sort((a, b) => (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3));
+
+  if (combinedAlerts.length && banner) {
+    banner.classList.remove("d-none");
+    banner.textContent = adminAnalyticsText(
+      `يوجد ${combinedAlerts.length} تنبيه نشط يتطلب المراجعة.`,
+      `${combinedAlerts.length} active alert(s) require review.`
+    );
+  } else if (banner) {
+    banner.classList.add("d-none");
+  }
+
+  combinedAlerts.slice(0, 8).forEach((alert) => {
+    const row = document.createElement("div");
+    row.className = "list-group-item border-0 py-2";
+    const badgeClass = alert.priority === "critical" ? "bg-danger"
+      : alert.priority === "high" ? "bg-warning text-dark"
+      : alert.priority === "medium" ? "bg-secondary"
+      : "bg-info text-dark";
+    const badgeLabel = alert.priority === "critical"
+      ? adminAnalyticsText("حرج", "Critical")
+      : alert.priority === "high"
+      ? adminAnalyticsText("عالي", "High")
+      : alert.priority === "medium"
+      ? adminAnalyticsText("متوسط", "Medium")
+      : adminAnalyticsText("منخفض", "Low");
+    row.innerHTML = `<div class="d-flex justify-content-between align-items-start gap-2">
+      <div class="flex-grow-1">
+        <div class="fw-semibold small">${escapeHtml(alert.message)}</div>
+        ${alert.subtitle ? `<small class="text-muted">${escapeHtml(alert.subtitle)}</small>` : ""}
+      </div>
+      <span class="badge ${badgeClass} flex-shrink-0">${badgeLabel}</span>
+    </div>`;
+    alertList.appendChild(row);
+  });
 }
 
 async function loadDataQuality() {
