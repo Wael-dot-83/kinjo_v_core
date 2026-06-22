@@ -143,29 +143,29 @@ function showCustomDateRange() {
 }
 
 function toggleKPIView(view) {
-  const cardsView = document.getElementById("kpiCardsView");
-  const tableView = document.getElementById("kpiTableView");
-  const chartPanel = document.getElementById("dfe-chart-panel");
-  const viewCardsBtn = document.getElementById("viewCardsBtn");
-  const viewTableBtn = document.getElementById("viewTableBtn");
-  const viewChartBtn = document.getElementById("dfe-view-chart-btn");
+  const cardsView   = document.getElementById("kpiCardsView");
+  const tableView   = document.getElementById("kpiTableView");
+  const chartPanel  = document.getElementById("dfe-chart-panel");
+  const explainView = document.getElementById("kpiExplainView");
+  const viewCardsBtn   = document.getElementById("viewCardsBtn");
+  const viewTableBtn   = document.getElementById("viewTableBtn");
+  const viewChartBtn   = document.getElementById("dfe-view-chart-btn");
+  const viewExplainBtn = document.getElementById("dfe-view-explain-btn");
 
-  // cards
-  if (cardsView) cardsView.style.display = view === "cards" ? "" : "none";
-  if (tableView) tableView.style.display = view === "table" ? "" : "none";
-  if (chartPanel) chartPanel.classList.toggle("dfe-visible", view === "chart");
+  if (cardsView)   cardsView.style.display   = view === "cards"   ? "" : "none";
+  if (tableView)   tableView.style.display   = view === "table"   ? "" : "none";
+  if (chartPanel)  chartPanel.classList.toggle("dfe-visible", view === "chart");
+  if (explainView) explainView.style.display = view === "explain" ? "" : "none";
 
-  // active states
-  [viewCardsBtn, viewTableBtn, viewChartBtn].forEach((btn) => {
+  [viewCardsBtn, viewTableBtn, viewChartBtn, viewExplainBtn].forEach((btn) => {
     if (btn) {
       btn.classList.remove("active");
       if (
-        (btn === viewCardsBtn && view === "cards") ||
-        (btn === viewTableBtn && view === "table") ||
-        (btn === viewChartBtn && view === "chart")
-      ) {
-        btn.classList.add("active");
-      }
+        (btn === viewCardsBtn   && view === "cards")   ||
+        (btn === viewTableBtn   && view === "table")   ||
+        (btn === viewChartBtn   && view === "chart")   ||
+        (btn === viewExplainBtn && view === "explain")
+      ) btn.classList.add("active");
     }
   });
 
@@ -395,6 +395,28 @@ function _dfeInjectChartPanel() {
       chartBtn.innerHTML = '<i class="bi bi-graph-up-arrow"></i>';
       chartBtn.addEventListener("click", () => toggleKPIView("chart"));
       btnGroup.appendChild(chartBtn);
+    }
+    if (btnGroup && !document.getElementById("dfe-view-explain-btn")) {
+      const explainBtn = document.createElement("button");
+      explainBtn.type = "button";
+      explainBtn.id = "dfe-view-explain-btn";
+      explainBtn.className = "btn btn-outline-secondary";
+      explainBtn.title = _dfeTxt("شرح مؤشرات الأداء الرئيسية", "KPI Guide");
+      explainBtn.setAttribute("aria-label", _dfeTxt("شرح المؤشرات", "KPI Guide"));
+      explainBtn.innerHTML = '<i class="bi bi-journal-text me-1"></i>' + _dfeTxt("شرح", "Guide");
+      explainBtn.addEventListener("click", () => toggleKPIView("explain"));
+      btnGroup.appendChild(explainBtn);
+    }
+  }
+
+  // Inject kpiExplainView div (sibling of kpiCardsView / kpiTableView)
+  if (!document.getElementById("kpiExplainView")) {
+    const explainView = document.createElement("div");
+    explainView.id = "kpiExplainView";
+    explainView.style.display = "none";
+    const tableView = document.getElementById("kpiTableView");
+    if (tableView && tableView.parentNode) {
+      tableView.parentNode.insertBefore(explainView, tableView.nextSibling);
     }
   }
 

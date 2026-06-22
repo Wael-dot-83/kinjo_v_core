@@ -593,3 +593,170 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   #overviewTableSearch { width: 140px !important; }
   #overviewStatusFilter { width: 110px !important; }
 }
+
+/* ── KPI Explanation View ─────────────────────────────────────────── */
+#kpiExplainView { padding: 0 0 1rem; }
+
+.kpi-explain-intro {
+  background: linear-gradient(135deg, rgba(31,94,71,.06), rgba(47,125,98,.03));
+  border: 1px solid rgba(31,94,71,.15);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  font-size: .875rem;
+  line-height: 2;
+  color: #334155;
+}
+
+.kpi-explain-search {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: .45rem .875rem;
+  font-size: .875rem;
+  width: 100%;
+  margin-bottom: 1rem;
+  direction: rtl;
+  color: #334155;
+  background: #fafbfc;
+}
+.kpi-explain-search:focus {
+  outline: none;
+  border-color: #1F5E47;
+  box-shadow: 0 0 0 3px rgba(31,94,71,.1);
+}
+
+.kpi-explain-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  margin-bottom: .875rem;
+  overflow: hidden;
+  background: #fff;
+  transition: box-shadow .2s, border-color .2s;
+}
+.kpi-explain-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.07); }
+.kpi-explain-card.kec-open { border-color: #b8d8cc; }
+
+.kpi-explain-header {
+  display: flex;
+  align-items: center;
+  gap: .875rem;
+  padding: .875rem 1.125rem;
+  cursor: pointer;
+  user-select: none;
+}
+.kpi-explain-header:hover { background: #fafbfc; }
+
+.kpi-explain-icon {
+  width: 42px; min-width: 42px; height: 42px;
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem;
+}
+
+.kpi-explain-title { flex: 1; min-width: 0; }
+.kpi-explain-name { font-weight: 700; font-size: .92rem; color: #1e293b; }
+.kpi-explain-val  { font-size: .78rem; color: #64748b; margin-top: 3px; }
+
+.kpi-explain-badge { white-space: nowrap; }
+.kpi-explain-chevron {
+  color: #94a3b8; font-size: .8rem;
+  transition: transform .25s ease;
+  margin-inline-start: .25rem;
+}
+.kpi-explain-card.kec-open .kpi-explain-chevron { transform: rotate(180deg); }
+
+.kpi-explain-body {
+  display: none;
+  border-top: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+.kpi-explain-card.kec-open .kpi-explain-body { display: block; }
+
+.kpi-explain-section {
+  padding: .875rem 1.125rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.kpi-explain-section:last-child { border-bottom: none; }
+
+.kpi-explain-section-title {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #94a3b8;
+  margin-bottom: .5rem;
+}
+
+.kpi-formula {
+  font-family: 'Courier New', monospace;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: .5rem .875rem;
+  font-size: .83rem;
+  color: #1F5E47;
+  direction: rtl;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.kpi-threshold-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .625rem;
+  margin-top: .25rem;
+}
+.kpi-threshold-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  border-radius: 20px;
+  padding: .25rem .65rem;
+  font-size: .78rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.kpi-threshold-pill.tp-green  { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+.kpi-threshold-pill.tp-amber  { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.kpi-threshold-pill.tp-red    { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+
+.kpi-action-list {
+  list-style: none; padding: 0; margin: 0;
+}
+.kpi-action-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: .45rem;
+  padding: .3rem 0;
+  font-size: .84rem;
+  color: #475569;
+  border-bottom: 1px dashed #f1f5f9;
+}
+.kpi-action-list li:last-child { border-bottom: none; }
+.kpi-action-list .ai-icon { color: #1F5E47; flex-shrink: 0; margin-top: 2px; }
+
+.kpi-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: .25rem .6rem;
+  font-size: .73rem;
+  color: #475569;
+  font-family: 'Courier New', monospace;
+  direction: ltr;
+  word-break: break-all;
+}
+
+.kpi-explain-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #94a3b8;
+  font-size: .9rem;
+}
+
+@media (max-width: 768px) {
+  .kpi-explain-header { gap: .625rem; padding: .75rem .875rem; }
+  .kpi-explain-icon { width: 36px; min-width: 36px; height: 36px; font-size: 1rem; }
+}

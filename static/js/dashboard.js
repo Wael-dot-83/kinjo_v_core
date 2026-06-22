@@ -252,6 +252,186 @@ const KPI_DEFINITIONS = [
   },
 ];
 
+/* ── KPI Explanation Metadata ──────────────────────────────────────────── */
+const KPI_EXPLAIN_META = {
+  overall_gcei: {
+    icon: "bi-speedometer2",
+    iconBg: "rgba(31,94,71,.1)",
+    iconColor: "#1F5E47",
+    meaning: "مؤشر شامل يقيّم أداء الروضة من خلال دمج عاملين رئيسيين: الحوكمة والإدارة (60%) وتجربة الطفل (40%). كلما ارتفعت الدرجة دلّت على تميّز في جميع الجوانب.",
+    formula: "GCEI = (درجة الحوكمة × 60%) + (درجة تجربة الطفل × 40%)",
+    importance: "هو المرجع الأول لتقييم أي روضة دفعةً واحدة ومقارنة الروضات وتحديد الأولويات الإشرافية.",
+    thresholds: [
+      { cls: "tp-green", label: "ممتاز",         range: "≥ 80"       },
+      { cls: "tp-amber", label: "يحتاج تحسين",   range: "60 – 79.9"  },
+      { cls: "tp-red",   label: "حرج",            range: "< 60"       },
+    ],
+    criticalAction: "إجراء تدقيق شامل للعمليات الإدارية، وتحديد المؤشرات الفرعية المنخفضة (الحضور / التقارير / الحوادث) وإعداد خطة تصحيح فورية.",
+    dataSource: "/api/kpi/dashboard-data → overall_gcei",
+  },
+  attendance_rate: {
+    icon: "bi-calendar-check",
+    iconBg: "rgba(25,135,84,.1)",
+    iconColor: "#198754",
+    meaning: "نسبة الأيام التي حضر فيها الأطفال المسجّلون نشطاً إلى مجموع أيام الحضور المتوقعة في الفترة الزمنية المحددة (مع مراعاة تاريخَي بداية ونهاية كل تسجيل).",
+    formula: "(أيام الحضور الفعلية للأطفال ÷ أيام الحضور المتوقعة) × 100",
+    importance: "يعكس جاذبية البرامج التعليمية وجودة الرعاية، ويساعد في تحديد الأطفال الذين يحتاجون متابعة خاصة.",
+    thresholds: [
+      { cls: "tp-green", label: "ممتاز",         range: "≥ 90%"      },
+      { cls: "tp-amber", label: "يحتاج متابعة",  range: "70 – 89.9%" },
+      { cls: "tp-red",   label: "حرج",            range: "< 70%"      },
+    ],
+    criticalAction: "التواصل مع أولياء الأمور لمعرفة أسباب الغياب، ومراجعة جدول الأنشطة لرفع مستوى الجاذبية.",
+    dataSource: "/api/kpi/dashboard-data → attendance_rate",
+  },
+  ratio_compliance: {
+    icon: "bi-people-fill",
+    iconBg: "rgba(13,110,253,.1)",
+    iconColor: "#0d6efd",
+    meaning: "نسبة الدقائق التي التزمت فيها الروضة بالنسبة المعتمدة (معلم لكل 10 أطفال) إلى إجمالي دقائق التشغيل خلال الفترة.",
+    formula: "(دقائق الامتثال ÷ دقائق التشغيل الكلية) × 100",
+    importance: "يضمن سلامة الأطفال وجودة الرعاية الفردية؛ النسبة المنخفضة تُشير إلى نقص في الكوادر.",
+    thresholds: [
+      { cls: "tp-green", label: "ممتاز",   range: "≥ 95%"      },
+      { cls: "tp-amber", label: "مقبول",    range: "80 – 94.9%" },
+      { cls: "tp-red",   label: "خطر",      range: "< 80%"      },
+    ],
+    criticalAction: "تحسين جدولة الموظفين، وإعداد خطة طوارئ للكوادر الاحتياطية عند الغياب.",
+    dataSource: "/api/kpi/dashboard-data → ratio_compliance",
+  },
+  training_completion_rate: {
+    icon: "bi-mortarboard-fill",
+    iconBg: "rgba(111,66,193,.1)",
+    iconColor: "#6f42c1",
+    meaning: "نسبة الموظفين الذين أكملوا التدريبات الإلزامية (السلامة، الإسعافات الأولية، الرعاية التعليمية) إلى إجمالي الموظفين النشطين.",
+    formula: "(الموظفون الذين أكملوا التدريب ÷ إجمالي الموظفين) × 100",
+    importance: "يعكس مستوى الالتزام بالمعايير المهنية ويؤثر مباشرة على جودة الرعاية المقدمة للأطفال.",
+    thresholds: [
+      { cls: "tp-green", label: "ممتاز",   range: "≥ 90%"      },
+      { cls: "tp-amber", label: "مقبول",    range: "75 – 89.9%" },
+      { cls: "tp-red",   label: "متدنٍّ",   range: "< 75%"      },
+    ],
+    criticalAction: "إعداد خطة تدريب سنوية شاملة وجدولة دورات فورية للموظفين المتأخرين، مع برنامج حوافز للمتميزين.",
+    dataSource: "/api/kpi/dashboard-data → training_completion_rate",
+  },
+  report_submission_rate: {
+    icon: "bi-file-earmark-text-fill",
+    iconBg: "rgba(32,201,151,.1)",
+    iconColor: "#20c997",
+    meaning: "نسبة التقارير اليومية المُرسَلة إلى التقارير المتوقعة خلال الفترة. يقيس انتظام التواصل مع أولياء الأمور.",
+    formula: "(التقارير المُرسَلة ÷ التقارير المتوقعة) × 100",
+    importance: "يبني الثقة مع أولياء الأمور ويُمكّن المشرفين من متابعة تطور كل طفل بشكل يومي.",
+    thresholds: [
+      { cls: "tp-green", label: "ممتاز",   range: "≥ 95%"      },
+      { cls: "tp-amber", label: "مقبول",    range: "85 – 94.9%" },
+      { cls: "tp-red",   label: "ضعيف",     range: "< 85%"      },
+    ],
+    criticalAction: "تبسيط نموذج التقرير وإعداد تذكيرات تلقائية للمشرفين مع قوالب جاهزة للإرسال السريع.",
+    dataSource: "/api/kpi/dashboard-data → report_submission_rate",
+  },
+  incident_rate: {
+    icon: "bi-shield-exclamation",
+    iconBg: "rgba(255,193,7,.12)",
+    iconColor: "#d97706",
+    meaning: "عدد الحوادث (من أي نوع) لكل 100 طفل-يوم حضور خلال الفترة. يُوحّد القياس بين الروضات بأحجام مختلفة.",
+    formula: "(عدد الحوادث الكلية ÷ أيام الحضور الفعلية للأطفال) × 100",
+    importance: "يُقيّم مستوى السلامة ويكشف الأنماط المتكررة التي تتطلب تدخلاً وقائياً.",
+    thresholds: [
+      { cls: "tp-green", label: "آمن",               range: "≤ 0.5"      },
+      { cls: "tp-amber", label: "تحت المراقبة",      range: "0.51 – 1.0" },
+      { cls: "tp-red",   label: "خطر",               range: "> 1.0"      },
+    ],
+    criticalAction: "إجراء تدقيق أمني شامل، وتحليل جذور الحوادث، وتدريب شهري للموظفين على إجراءات السلامة والوقاية.",
+    dataSource: "/api/kpi/dashboard-data → incident_rate",
+  },
+  serious_incident_rate: {
+    icon: "bi-shield-fill-exclamation",
+    iconBg: "rgba(220,53,69,.1)",
+    iconColor: "#dc3545",
+    meaning: "الحوادث ذات الخطورة العالية (HIGH) أو الحرجة (CRITICAL) التي تتطلب تدخلاً طبياً أو إسعافاً، لكل 100 طفل-يوم.",
+    formula: "(الحوادث HIGH أو CRITICAL ÷ أيام الحضور الفعلية) × 100",
+    importance: "الهدف الصفر المطلق. أي حادثة جسيمة تستوجب إبلاغاً فورياً وتحقيقاً منهجياً.",
+    thresholds: [
+      { cls: "tp-green", label: "آمن",     range: "= 0"         },
+      { cls: "tp-amber", label: "تنبيه",   range: "0.01 – 0.1" },
+      { cls: "tp-red",   label: "طارئ",    range: "> 0.1"      },
+    ],
+    criticalAction: "إطلاق بروتوكول الطوارئ فوراً، وإبلاغ الجهات الرسمية وأولياء الأمور، وإجراء تحقيق شامل في غضون 24 ساعة.",
+    dataSource: "/api/kpi/dashboard-data → serious_incident_rate",
+  },
+  incident_followup_sla: {
+    icon: "bi-clock-history",
+    iconBg: "rgba(253,126,20,.1)",
+    iconColor: "#fd7e14",
+    meaning: "نسبة الحوادث التي تم إغلاق ملفاتها (التحقيق + الإجراءات التصحيحية + إبلاغ الأهل) خلال 48 ساعة من وقوع الحادثة.",
+    formula: "(الحوادث المغلقة ≤ 48 ساعة ÷ الحوادث التي تستوجب متابعة) × 100",
+    importance: "يعكس سرعة استجابة الإدارة ويبني الثقة مع أولياء الأمور من خلال الشفافية والسرعة في التعامل.",
+    thresholds: [
+      { cls: "tp-green", label: "مثالي",   range: "= 100%"      },
+      { cls: "tp-amber", label: "مقبول",   range: "90 – 99.9%"  },
+      { cls: "tp-red",   label: "ضعيف",    range: "< 90%"       },
+    ],
+    criticalAction: "توحيد عملية متابعة الحوادث بخطوات واضحة ومواعيد نهائية، وإنشاء نظام تتبع إلكتروني بتذكيرات تلقائية.",
+    dataSource: "/api/kpi/dashboard-data → incident_followup_sla",
+  },
+  chronic_absence_rate: {
+    icon: "bi-person-dash-fill",
+    iconBg: "rgba(108,117,125,.1)",
+    iconColor: "#6c757d",
+    meaning: "نسبة الأطفال الذين تجاوز غيابهم 10% من أيامهم المتوقعة في الفترة. يُحسب لكل طفل بناءً على تاريخ تسجيله الخاص.",
+    formula: "(الأطفال الذين غابوا > 10% من أيامهم المتوقعة ÷ إجمالي الأطفال) × 100",
+    importance: "الغياب المزمن يؤثر سلباً على التعلم والتطور الاجتماعي ويكشف عن مشكلات صحية أو أسرية تحتاج دعماً.",
+    thresholds: [
+      { cls: "tp-green", label: "ممتاز",        range: "< 5%"   },
+      { cls: "tp-amber", label: "مثير للقلق",   range: "5 – 10%" },
+      { cls: "tp-red",   label: "حرج",          range: "> 10%"  },
+    ],
+    criticalAction: "تفعيل نظام تتبع فردي مع إشعارات مبكرة للأهل، وتقديم دعم استشاري لحالات الغياب المتكرر.",
+    dataSource: "/api/kpi/dashboard-data → chronic_absence_rate",
+  },
+  capacity_utilization_rate: {
+    icon: "bi-building-fill",
+    iconBg: "rgba(13,202,240,.1)",
+    iconColor: "#0dcaf0",
+    meaning: "نسبة الأطفال المسجلين نشطاً إلى الطاقة الاستيعابية القصوى للروضة. تجاوز 100% يعني اكتظاظاً.",
+    formula: "(الأطفال المسجلون نشطاً ÷ الطاقة الاستيعابية القصوى) × 100",
+    importance: "يساعد في التخطيط للنمو والتوسع ويضمن توفير مساحة ورعاية كافية لكل طفل.",
+    thresholds: [
+      { cls: "tp-green", label: "مثالي",   range: "90 – 100%"  },
+      { cls: "tp-amber", label: "مقبول",   range: "80 – 89.9%" },
+      { cls: "tp-red",   label: "مشكلة",   range: "< 80% أو > 100%" },
+    ],
+    criticalAction: "إجراء دراسة توسع عند الاقتراب من الحد الأقصى، ودراسة خيارات الجدولة المرنة عند الاكتظاظ.",
+    dataSource: "/api/kpi/dashboard-data → capacity_utilization_rate",
+  },
+  active_enrollments: {
+    icon: "bi-person-check-fill",
+    iconBg: "rgba(47,125,98,.1)",
+    iconColor: "#2F7D62",
+    meaning: "عدد الأطفال المسجّلين حالياً بحالة نشطة (ACTIVE) في الروضة أو مجموعة الروضات المُحدَّدة.",
+    formula: "عدّ سجلات التسجيل ذات الحالة = ACTIVE",
+    importance: "يُعطي صورة فورية عن الطلب الحالي ويُستخدم قاسماً في حساب معظم المؤشرات الأخرى.",
+    thresholds: [
+      { cls: "tp-green", label: "طبيعي",   range: "حسب الطاقة الاستيعابية" },
+    ],
+    criticalAction: "مقارنة العدد بالطاقة الاستيعابية وتفعيل قائمة الانتظار عند الامتلاء.",
+    dataSource: "/api/kpi/dashboard-data → active_enrollments",
+  },
+  new_enrollments: {
+    icon: "bi-person-plus-fill",
+    iconBg: "rgba(102,16,242,.1)",
+    iconColor: "#6610f2",
+    meaning: "عدد التسجيلات الجديدة التي أُضيفت خلال الفترة الزمنية المحددة في لوحة التحكم.",
+    formula: "عدّ سجلات التسجيل المُنشَأة خلال نطاق التاريخ المحدد",
+    importance: "يعكس معدل النمو وفعالية حملات التسويق والتوعية المجتمعية.",
+    thresholds: [
+      { cls: "tp-green", label: "نمو",   range: "أعلى من المتوسط السابق" },
+    ],
+    criticalAction: "مقارنة الأرقام بالفترات السابقة وتحليل أسباب الانخفاض إن وُجد.",
+    dataSource: "/api/kpi/dashboard-data → new_enrollments",
+  },
+};
+
 const BAND_BOOTSTRAP = {
   green: "success",
   amber: "warning",
@@ -2376,35 +2556,163 @@ function renderKpiStatusCounts(kpis, alertCount) {
   }
 }
 
-function renderKpiExplanations(kpis) {
-  const container = document.getElementById("explanationsContainer");
-  if (!container) return;
+function _kpiExplainCard(kpi, meta, now) {
+  const color     = BAND_BOOTSTRAP[kpi.band] || "secondary";
+  const bandText  = (BAND_LABEL[kpi.band] || BAND_LABEL.neutral)();
+  const fmtVal    = Number.isFinite(kpi.value) ? formatOneDecimal(kpi.value) : "--";
+  const unit      = kpi.unit || "";
+  const icon      = meta ? meta.icon      : "bi-bar-chart-fill";
+  const iconBg    = meta ? meta.iconBg    : "rgba(100,116,139,.1)";
+  const iconColor = meta ? meta.iconColor : "#64748b";
 
+  const thresholdPills = meta && Array.isArray(meta.thresholds)
+    ? meta.thresholds.map((t) => `
+        <span class="kpi-threshold-pill ${t.cls}">
+          ${escapeHtml(t.label)} — ${escapeHtml(t.range)}
+        </span>`).join("")
+    : "";
+
+  const actionList = kpi.actions && kpi.actions.length > 0
+    ? kpi.actions.map((a) => `
+        <li>
+          <i class="bi bi-arrow-left-circle-fill ai-icon"></i>
+          <span>${escapeHtml(a.ar || a.action || a.en || "")}</span>
+        </li>`).join("")
+    : (meta && meta.criticalAction
+        ? `<li><i class="bi bi-arrow-left-circle-fill ai-icon"></i><span>${escapeHtml(meta.criticalAction)}</span></li>`
+        : "");
+
+  const managerNote = kpi.managerNote
+    ? `<div class="kpi-explain-section">
+        <div class="kpi-explain-section-title"><i class="bi bi-lightbulb-fill me-1"></i>ملاحظة المشرف</div>
+        <div style="font-size:.84rem;color:#475569;line-height:1.8;">${escapeHtml(kpi.managerNote)}</div>
+       </div>`
+    : "";
+
+  return `
+  <div class="kpi-explain-card" data-kpi-key="${kpi.key}" data-kpi-label="${escapeHtml(kpi.label)}">
+    <div class="kpi-explain-header" onclick="this.closest('.kpi-explain-card').classList.toggle('kec-open')" role="button" aria-expanded="false">
+      <div class="kpi-explain-icon" style="background:${iconBg}; color:${iconColor};">
+        <i class="bi ${icon}"></i>
+      </div>
+      <div class="kpi-explain-title">
+        <div class="kpi-explain-name">${escapeHtml(kpi.label)}</div>
+        <div class="kpi-explain-val">
+          القيمة الحالية:
+          <strong style="color:${iconColor};">${fmtVal}${escapeHtml(unit)}</strong>
+        </div>
+      </div>
+      <span class="badge bg-${color} kpi-explain-badge">${bandText}</span>
+      <i class="bi bi-chevron-down kpi-explain-chevron"></i>
+    </div>
+
+    <div class="kpi-explain-body">
+
+      ${meta && meta.meaning ? `
+      <div class="kpi-explain-section">
+        <div class="kpi-explain-section-title"><i class="bi bi-info-circle me-1"></i>ماذا يعني هذا المؤشر؟</div>
+        <p style="font-size:.875rem;color:#334155;line-height:1.9;margin:0;">${escapeHtml(meta.meaning)}</p>
+      </div>` : ""}
+
+      ${meta && meta.formula ? `
+      <div class="kpi-explain-section">
+        <div class="kpi-explain-section-title"><i class="bi bi-calculator me-1"></i>طريقة الحساب</div>
+        <div class="kpi-formula">${escapeHtml(meta.formula)}</div>
+      </div>` : ""}
+
+      ${meta && meta.importance ? `
+      <div class="kpi-explain-section">
+        <div class="kpi-explain-section-title"><i class="bi bi-star-fill me-1"></i>لماذا هذا المؤشر مهم؟</div>
+        <p style="font-size:.875rem;color:#334155;line-height:1.9;margin:0;">${escapeHtml(meta.importance)}</p>
+      </div>` : ""}
+
+      ${thresholdPills ? `
+      <div class="kpi-explain-section">
+        <div class="kpi-explain-section-title"><i class="bi bi-thermometer-half me-1"></i>تفسير النطاقات</div>
+        <div class="kpi-threshold-row">${thresholdPills}</div>
+      </div>` : ""}
+
+      ${actionList ? `
+      <div class="kpi-explain-section">
+        <div class="kpi-explain-section-title"><i class="bi bi-tools me-1"></i>الإجراءات المقترحة عند التراجع</div>
+        <ul class="kpi-action-list">${actionList}</ul>
+      </div>` : ""}
+
+      ${managerNote}
+
+      <div class="kpi-explain-section">
+        <div class="kpi-explain-section-title"><i class="bi bi-database me-1"></i>مصدر البيانات والفترة</div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <code class="kpi-source-badge"><i class="bi bi-plug me-1"></i>${escapeHtml(meta ? meta.dataSource : "/api/kpi/dashboard-data")}</code>
+          <span style="font-size:.78rem;color:#64748b;">
+            <i class="bi bi-calendar3 me-1"></i>الفترة المحددة في لوحة التحكم
+          </span>
+          ${now ? `<span style="font-size:.78rem;color:#94a3b8;"><i class="bi bi-clock me-1"></i>آخر تحديث: ${escapeHtml(now)}</span>` : ""}
+        </div>
+      </div>
+
+    </div>
+  </div>`;
+}
+
+function renderKpiExplanations(kpis) {
+  // ── 1. Update legacy modal explanationsContainer (keep old modal working) ──
+  const legacyContainer = document.getElementById("explanationsContainer");
+  if (legacyContainer) {
+    if (!Array.isArray(kpis) || kpis.length === 0) {
+      legacyContainer.innerHTML = dashboardTemplate('<p class="text-muted mb-0">لا توجد شروحات متاحة للمؤشرات.</p>');
+    } else {
+      legacyContainer.innerHTML = dashboardTemplate(
+        kpis.map((kpi) => {
+          const meta = KPI_EXPLAIN_META[kpi.key];
+          return `<div class="mb-3"><h6 class="fw-bold">${escapeHtml(kpi.label)}</h6>
+            <p class="small mb-1 text-muted">${escapeHtml(meta ? meta.meaning : (kpi.explanation || ""))}</p>
+            ${meta && meta.formula ? `<code class="kpi-source-badge">${escapeHtml(meta.formula)}</code>` : ""}
+          </div>`;
+        }).join("")
+      );
+    }
+  }
+
+  // ── 2. Populate rich explain panel ─────────────────────────────────────────
+  const explainView = document.getElementById("kpiExplainView");
+  if (!explainView) return;
   if (!Array.isArray(kpis) || kpis.length === 0) {
-    container.innerHTML = dashboardTemplate(
-      '<p class="text-muted mb-0">لا توجد شروحات متاحة للمؤشرات.</p>'
+    explainView.innerHTML = dashboardTemplate(
+      '<div class="kpi-explain-empty"><i class="bi bi-hourglass-split fs-3 d-block mb-2"></i>لم تُحمَّل بيانات المؤشرات بعد.</div>'
     );
     return;
   }
 
-  container.innerHTML = dashboardTemplate(
-    kpis
-      .map((kpi) => {
-        return `
-        <div class="item">
-          <h6 class="mb-1">${escapeHtml(kpi.label)}</h6>
-          <p class="mb-1">${escapeHtml(kpi.explanation || dashboardLiteral("لا يوجد شرح متاح."))}</p>
-          ${
-            kpi.managerNote
-              ? `<small class="text-muted">${escapeHtml(kpi.managerNote)}</small>`
-              : ""
-          }
-        </div>
-      `;
-      })
-      .join("")
-  );
+  const now = new Date().toLocaleTimeString("ar-JO", { hour: "2-digit", minute: "2-digit" });
+  const periodEl = document.getElementById("dashboardLastUpdated");
+  const periodText = periodEl && periodEl.textContent ? periodEl.textContent : now;
+
+  const cards = kpis.map((kpi) => _kpiExplainCard(kpi, KPI_EXPLAIN_META[kpi.key] || null, periodText)).join("");
+
+  explainView.innerHTML = dashboardTemplate(`
+    <div class="kpi-explain-intro">
+      <strong><i class="bi bi-info-circle-fill me-1"></i>دليل مؤشرات الأداء الرئيسية</strong><br>
+      تساعد مؤشرات الأداء الرئيسية في فهم مستوى أداء الروضات والحضانات من حيث الحضور، الالتزام بالتقارير، السلامة، الإشراف، التدريب، استغلال السعة، وجودة الحوكمة. يتم احتساب هذه المؤشرات بناءً على البيانات المسجلة في النظام خلال الفترة المحددة، وتساعد الإدارة على تحديد الأولويات واتخاذ الإجراءات المناسبة.
+    </div>
+    <input
+      type="search"
+      class="kpi-explain-search"
+      placeholder="ابحث عن مؤشر..."
+      oninput="window._kpiExplainSearch(this.value)"
+      aria-label="بحث في المؤشرات"
+    >
+    <div id="kpiExplainCards">${cards}</div>
+  `);
 }
+
+window._kpiExplainSearch = function(term) {
+  const q = term.trim().toLowerCase();
+  document.querySelectorAll("#kpiExplainCards .kpi-explain-card").forEach(function(card) {
+    const label = (card.dataset.kpiLabel || "").toLowerCase();
+    card.style.display = (!q || label.includes(q)) ? "" : "none";
+  });
+};
 
 function renderKpiSummaryRow(payload) {
   const attendanceValue = safeNumber(payload?.attendance_rate?.value);
