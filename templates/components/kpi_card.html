@@ -1,12 +1,44 @@
-{% macro kpi_card(title, value, unit, band='GREEN', tooltip='', icon='', has_data=true, no_data_reason='', data_coverage=None) %}
+{% macro kpi_card(title, value, unit, band='GREEN', tooltip='', icon='', has_data=true, no_data_reason='', data_coverage=None, numerator=None, denominator=None, confidence=None, trend=None, trend_value=None, meaning=None) %}
 {% if ui_lang == 'en' %}
-  {% set band_label = 'Excellent' if band == 'GREEN' else 'Average' if band == 'AMBER' else 'Poor' %}
+  {% set band_label = 'Good' if band == 'GREEN' else 'Needs Attention' if band == 'AMBER' else 'Action Required' if band == 'RED' else 'No Data' %}
 {% else %}
-  {% set band_label = 'ممتاز' if band == 'GREEN' else 'متوسط' if band == 'AMBER' else 'ضعيف' %}
+  {% set band_label = 'جيد' if band == 'GREEN' else 'يحتاج مراجعة' if band == 'AMBER' else 'إجراء مطلوب' if band == 'RED' else 'لا توجد بيانات' %}
 {% endif %}
-{% set band_css = 'band-green' if band == 'GREEN' else 'band-amber' if band == 'AMBER' else 'band-red' %}
-{% set badge_variant = 'success' if band == 'GREEN' else 'warning' if band == 'AMBER' else 'danger' %}
-{% set display_value = 'غير متاح' if not has_data else value %}
+{% set band_css = 'band-green' if band == 'GREEN' else 'band-amber' if band == 'AMBER' else 'band-red' if band == 'RED' else 'band-gray' %}
+{% set badge_variant = 'success' if band == 'GREEN' else 'warning' if band == 'AMBER' else 'danger' if band == 'RED' else 'secondary' %}
+{% set display_value = ('غير متاح' if ui_lang != 'en' else 'N/A') if not has_data else value %}
+
+{# Confidence badge color #}
+{% if confidence == 'high' %}
+  {% set conf_color = 'text-success' %}
+  {% set conf_icon = 'bi-check-circle-fill' %}
+  {% set conf_label = 'عينة كافية' if ui_lang != 'en' else 'High Confidence' %}
+{% elif confidence == 'medium' %}
+  {% set conf_color = 'text-warning' %}
+  {% set conf_icon = 'bi-exclamation-circle-fill' %}
+  {% set conf_label = 'عينة متوسطة' if ui_lang != 'en' else 'Medium Confidence' %}
+{% elif confidence == 'low' %}
+  {% set conf_color = 'text-danger' %}
+  {% set conf_icon = 'bi-exclamation-triangle-fill' %}
+  {% set conf_label = 'عينة صغيرة' if ui_lang != 'en' else 'Small Sample' %}
+{% else %}
+  {% set conf_color = 'text-secondary' %}
+  {% set conf_icon = 'bi-question-circle-fill' %}
+  {% set conf_label = 'بيانات غير كافية' if ui_lang != 'en' else 'Insufficient Data' %}
+{% endif %}
+
+{# Trend icon and color #}
+{% if trend == 'up' %}
+  {% set trend_icon = 'bi-arrow-up-short' %}
+  {% set trend_color = 'text-success' %}
+{% elif trend == 'down' %}
+  {% set trend_icon = 'bi-arrow-down-short' %}
+  {% set trend_color = 'text-danger' %}
+{% else %}
+  {% set trend_icon = 'bi-dash' %}
+  {% set trend_color = 'text-muted' %}
+{% endif %}
+
 <div class="kpi-card card border-0 shadow-sm h-100 {{ band_css }}" data-has-data="{{ has_data|lower }}">
     <div class="card-body p-3">
         <div class="d-flex align-items-center justify-content-between mb-2">
@@ -14,17 +46,55 @@
                 {% if icon %}<i class="bi {{ icon }} me-1" aria-hidden="true"></i>{% endif %}
                 {{ title }}
             </h6>
-            {% if tooltip %}
-            <i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip" title="{{ tooltip }}" aria-label="{{ _('معلومات إضافية') }}"></i>
+            <div class="d-flex align-items-center gap-1">
+                {% if confidence %}
+                <span data-bs-toggle="tooltip" title="{{ conf_label }}" tabindex="0" role="img">
+                    <i class="bi {{ conf_icon }} small {{ conf_color }}" aria-hidden="true"></i>
+                    <span class="visually-hidden">{{ conf_label }}</span>
+                </span>
+                {% endif %}
+                {% if tooltip %}
+                <span data-bs-toggle="tooltip" title="{{ tooltip }}" tabindex="0" role="img">
+                    <i class="bi bi-info-circle text-muted" aria-hidden="true"></i>
+                    <span class="visually-hidden">{{ tooltip }}</span>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="d-flex align-items-baseline gap-2">
+            <span class="display-6 fw-bold text-dark" data-kpi-value>{{ display_value }}</span>
+            {% if unit and has_data %}<span class="text-muted small">{{ unit }}</span>{% endif %}
+            {% if trend and has_data %}
+            <span class="small {{ trend_color }} ms-1" aria-live="polite">
+                <i class="bi {{ trend_icon }}" aria-hidden="true"></i>
+                {% if trend_value is not none and trend_value != 0 %}{{ '%.1f'|format(trend_value|abs) }}%{% endif %}
+            </span>
             {% endif %}
         </div>
-        <div class="d-flex align-items-baseline">
-            <span class="display-6 fw-bold text-dark me-2" data-kpi-value>{{ display_value }}</span>
-            {% if unit and has_data and value != '--' and value != 'غير متاح' %}<span class="text-muted small">{{ unit }}</span>{% endif %}
+        {% if has_data and numerator is not none and denominator is not none and denominator > 0 %}
+        <div class="mt-1">
+            <small class="text-muted" data-bs-toggle="tooltip"
+                   title="{{ ('البسط / المقام') if ui_lang != 'en' else 'Numerator / Denominator' }}">
+                <span class="font-monospace">{{ numerator|int }}/{{ denominator|int }}</span>
+            </small>
         </div>
-        {% if has_data and value != '--' and value != 'غير متاح' %}
-        <div class="mt-2">
+        {% endif %}
+        {% if has_data %}
+        <div class="mt-2 d-flex align-items-center justify-content-between">
             <span class="badge badge-soft badge-soft-{{ badge_variant }}">{{ band_label }}</span>
+            {% if data_coverage is not none and data_coverage < 80 %}
+            <small class="text-warning" data-bs-toggle="tooltip"
+                   title="{{ 'تغطية البيانات: %s%%'|format(data_coverage|round(0)|int) if ui_lang != 'en' else 'Data coverage: %s%%'|format(data_coverage|round(0)|int) }}">
+                <i class="bi bi-database-exclamation" aria-hidden="true"></i>
+                <span>{{ data_coverage|round(0)|int }}%</span>
+                <span class="visually-hidden">{{ 'تغطية البيانات: %s%%'|format(data_coverage|round(0)|int) if ui_lang != 'en' else 'Data coverage: %s%%'|format(data_coverage|round(0)|int) }}</span>
+            </small>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if meaning and has_data %}
+        <div class="mt-1">
+            <small class="text-muted fst-italic" style="font-size:.7rem">{{ meaning }}</small>
         </div>
         {% endif %}
         {% if no_data_reason and not has_data %}
