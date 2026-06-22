@@ -521,9 +521,75 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   background-color: #f0f8f5 !important;
 }
 
+/* 16. Chart insight text below each chart */
+.chart-insight {
+  margin-top: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  min-height: 1rem;
+  transition: background 0.2s;
+}
+.chart-insight:empty { display: none; }
+.chart-insight-warn { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+.chart-insight-good { background: #f0fdf4; border-color: #bbf7d0; color: #14532d; }
+
+/* 17. Arabic font for RTL content */
+[dir="rtl"] body,
+[dir="rtl"] .card-title,
+[dir="rtl"] .card-body,
+[dir="rtl"] .btn,
+[dir="rtl"] .badge,
+[dir="rtl"] td,
+[dir="rtl"] th {
+  font-family: "Cairo", "Noto Sans Arabic", Tahoma, sans-serif;
+}
+
+/* 18. Table controls styling */
+#overviewTableSearch, #overviewStatusFilter {
+  border-color: #e2e8f0;
+  border-radius: 8px;
+}
+#overviewTableSearch:focus, #overviewStatusFilter:focus {
+  border-color: var(--bs-primary, #1F5E47);
+  box-shadow: 0 0 0 0.2rem rgba(31,94,71,.15);
+}
+#overviewActionToggle.btn-warning {
+  background-color: #f59e0b;
+  border-color: #f59e0b;
+}
+
+/* 19. Enrollment pending badge zero-state */
+#pendingEnrollmentsValue + small,
+.status-widget .zero-help {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+/* 20. KPI card category group label */
+.kpi-category-label {
+  grid-column: 1 / -1;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  padding: 0.5rem 0 0.25rem;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 0.25rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .kpi-status-container { gap: 0.5rem; }
   .kpi-status-item { min-width: 45%; padding: 0.625rem 0.75rem; }
   .kinjo-zone-header { margin: 1.25rem 0 0.75rem; }
+  #overviewTableSearch { width: 140px !important; }
+  #overviewStatusFilter { width: 110px !important; }
 }

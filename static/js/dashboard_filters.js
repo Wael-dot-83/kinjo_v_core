@@ -740,6 +740,74 @@ document.addEventListener("DOMContentLoaded", function () {
   _dfeStartAutoRefresh();
 });
 
+/* ── Today's Overview Table Filtering ────────────────────────────────────── */
+var _overviewNeedsActionOnly = false;
+
+function filterOverviewTable() {
+  var search = (document.getElementById("overviewTableSearch") || {}).value || "";
+  var statusFilter = (document.getElementById("overviewStatusFilter") || {}).value || "";
+  search = search.toLowerCase().trim();
+
+  var table = document.getElementById("kindergartensOverviewTable") ||
+              document.getElementById("classOverviewTable");
+  if (!table) return;
+
+  Array.from(table.querySelectorAll("tr")).forEach(function (row) {
+    var text = row.textContent.toLowerCase();
+    var matchSearch = !search || text.includes(search);
+
+    // Status filter: check if any cell has a badge matching the status
+    var matchStatus = true;
+    if (statusFilter) {
+      var badgeCells = row.querySelectorAll(".badge");
+      matchStatus = Array.from(badgeCells).some(function (b) {
+        return b.textContent.trim().toUpperCase().includes(statusFilter);
+      });
+    }
+
+    // "Needs action" filter: row has risk class
+    var matchAction = !_overviewNeedsActionOnly ||
+      row.classList.contains("row-risk-high") ||
+      row.classList.contains("row-risk-medium");
+
+    row.style.display = (matchSearch && matchStatus && matchAction) ? "" : "none";
+  });
+}
+
+function toggleNeedsActionFilter(btn) {
+  _overviewNeedsActionOnly = !_overviewNeedsActionOnly;
+  if (_overviewNeedsActionOnly) {
+    btn.classList.remove("btn-outline-warning");
+    btn.classList.add("btn-warning", "text-white");
+  } else {
+    btn.classList.add("btn-outline-warning");
+    btn.classList.remove("btn-warning", "text-white");
+  }
+  filterOverviewTable();
+}
+
+/* ── KPI Category Grouping ───────────────────────────────────────────────── */
+var KPI_CATEGORIES = {
+  en: {
+    operational: ["Attendance Rate", "Absent Children", "Pending Daily Reports", "Enrollment Rate"],
+    governance:  ["Incident Rate", "Ratio Compliance", "Governance Rating", "License Compliance"],
+    network:     ["Active Kindergartens", "Total Children", "Capacity Utilization", "Network Coverage"],
+  },
+  ar: {
+    operational: ["نسبة الحضور", "الأطفال الغائبون", "التقارير اليومية المعلقة", "معدل التسجيل"],
+    governance:  ["معدل الحوادث", "امتثال نسبة الإشراف", "تقييم الحوكمة", "امتثال التراخيص"],
+    network:     ["الروضات النشطة", "إجمالي الأطفال", "استغلال السعة", "التغطية الشبكية"],
+  },
+};
+
+function getKpiCategory(label, lang) {
+  var cats = KPI_CATEGORIES[lang] || KPI_CATEGORIES.ar;
+  for (var cat in cats) {
+    if (cats[cat].some(function (k) { return label.includes(k); })) return cat;
+  }
+  return "operational";
+}
+
 /* expose to global scope so template onclick attrs work */
 window.setDateRange = setDateRange;
 window.showCustomDateRange = showCustomDateRange;
@@ -755,3 +823,5 @@ window._dfeApplyCustomRange = _dfeApplyCustomRange;
 window._dfeAlertFilter = _dfeAlertFilter;
 window._dfeDismissAlert = _dfeDismissAlert;
 window._dfeSwitchChartType = _dfeSwitchChartType;
+window.filterOverviewTable = filterOverviewTable;
+window.toggleNeedsActionFilter = toggleNeedsActionFilter;

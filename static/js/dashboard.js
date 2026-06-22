@@ -1567,19 +1567,57 @@ function renderAdminSummaryCards(summary) {
   updateElementText("pendingReportsValue", formatNumber(pendingReports));
   updateElementText("incidentsTodayValue", formatNumber(recentIncidents));
 
-  const progress = document.querySelector("#attendanceCard .progress-bar");
+  const progress = document.getElementById("attendanceProgressBar") ||
+    document.querySelector("#attendanceCard .progress-bar");
   if (progress) {
     const pct = clampPercent(attendanceRate);
     progress.style.width = `${pct}%`;
     progress.setAttribute("aria-valuenow", String(pct));
+    progress.className = `progress-bar ${pct >= 85 ? "bg-success" : pct >= 70 ? "bg-warning" : "bg-danger"}`;
   }
 
-  const attendanceNote = document.querySelector("#attendanceCard small.text-muted.mt-1");
-  if (attendanceNote) {
-    attendanceNote.textContent =
-      dashboardCurrentLang() === "en"
-        ? `${formatOneDecimal(attendanceRate)}% attendance rate`
-        : `${formatOneDecimal(attendanceRate)}% ${dashboardText("dashboard.attendance_rate_suffix", "نسبة الحضور", "attendance rate")}`;
+  const attendanceRateText = document.getElementById("attendanceRateText");
+  if (attendanceRateText) {
+    const isEn = dashboardCurrentLang() === "en";
+    if (attendanceToday === 0) {
+      attendanceRateText.innerHTML = `<i class="bi bi-bell me-1"></i>` + (isEn
+        ? "No attendance recorded yet today — send reminders to kindergartens."
+        : "لم يُسجَّل حضور اليوم بعد — أرسل تذكيرات للروضات.");
+    } else {
+      attendanceRateText.textContent = isEn
+        ? `${formatOneDecimal(attendanceRate)}% attendance rate today`
+        : `نسبة الحضور اليوم: ${formatOneDecimal(attendanceRate)}%`;
+    }
+  }
+
+  const attendanceBadge = document.getElementById("attendanceBadge");
+  if (attendanceBadge) {
+    if (attendanceToday === 0) {
+      attendanceBadge.style.background = "#fef3c7";
+      attendanceBadge.style.color = "#b45309";
+      attendanceBadge.textContent = dashboardCurrentLang() === "en" ? "No data yet" : "لا توجد بيانات بعد";
+    } else if (attendanceRate >= 85) {
+      attendanceBadge.style.background = "#d1fae5";
+      attendanceBadge.style.color = "#047857";
+      attendanceBadge.textContent = dashboardCurrentLang() === "en" ? "On track" : "مؤشر إيجابي";
+    } else if (attendanceRate >= 70) {
+      attendanceBadge.style.background = "#fef3c7";
+      attendanceBadge.style.color = "#b45309";
+      attendanceBadge.textContent = dashboardCurrentLang() === "en" ? "Below average" : "دون المتوسط";
+    } else {
+      attendanceBadge.style.background = "#fee2e2";
+      attendanceBadge.style.color = "#b91c1c";
+      attendanceBadge.textContent = dashboardCurrentLang() === "en" ? "Critical" : "حرج";
+    }
+  }
+
+  const attendanceLastUpdate = document.getElementById("attendanceLastUpdate");
+  if (attendanceLastUpdate) {
+    const now = new Date();
+    attendanceLastUpdate.textContent = now.toLocaleTimeString(
+      dashboardCurrentLang() === "en" ? "en-US" : "ar-JO",
+      { hour: "2-digit", minute: "2-digit" }
+    );
   }
 
   const pendingBadge = document.getElementById("pendingEnrollmentsBadge");
@@ -1944,11 +1982,11 @@ function renderAttendanceChart(series) {
   const areaGradient = context
     ? (() => {
         const gradient = context.createLinearGradient(0, 0, 0, 260);
-        gradient.addColorStop(0, "rgba(13, 110, 253, 0.30)");
-        gradient.addColorStop(1, "rgba(13, 110, 253, 0.02)");
+        gradient.addColorStop(0, "rgba(31, 94, 71, 0.30)");
+        gradient.addColorStop(1, "rgba(31, 94, 71, 0.02)");
         return gradient;
       })()
-    : "rgba(13, 110, 253, 0.15)";
+    : "rgba(31, 94, 71, 0.15)";
 
   destroyChartInstance(DASHBOARD_STATE.attendanceChart);
   DASHBOARD_STATE.attendanceChart = new Chart(canvas, {
@@ -1961,13 +1999,13 @@ function renderAttendanceChart(series) {
           label: dashboardLiteral("الحضور"),
           data: values.length > 0 ? values : [0],
           fill: chartType === "line",
-          borderColor: "#0d6efd",
-          backgroundColor: chartType === "line" ? areaGradient : "rgba(13, 110, 253, 0.45)",
+          borderColor: "#1F5E47",
+          backgroundColor: chartType === "line" ? areaGradient : "rgba(31, 94, 71, 0.45)",
           borderWidth: chartType === "line" ? 2.5 : 1,
           tension: 0.35,
           pointRadius: chartType === "line" ? 3.5 : 0,
           pointHoverRadius: chartType === "line" ? 5 : 0,
-          pointBackgroundColor: "#0d6efd",
+          pointBackgroundColor: "#1F5E47",
           borderRadius: chartType === "bar" ? 8 : 0,
           maxBarThickness: chartType === "bar" ? 36 : undefined,
         },
@@ -2023,6 +2061,41 @@ function renderAttendanceChart(series) {
       },
     },
   });
+
+  // Chart insight: compute trend from series data
+  const insightEl = document.getElementById("attendanceChartInsight");
+  if (insightEl && values.length >= 2) {
+    const latest = values[values.length - 1];
+    const prev = values[values.length - 2];
+    const diff = latest - prev;
+    const isEn = dashboardCurrentLang() === "en";
+    let insightText = "";
+    let insightIcon = "";
+    let insightClass = "";
+    if (diff < -2) {
+      insightText = isEn
+        ? `Attendance dropped ${Math.abs(diff)} this period — follow up on absences.`
+        : `انخفض الحضور بمقدار ${Math.abs(diff)} في هذه الفترة — تابع حالات الغياب.`;
+      insightIcon = "bi-arrow-down-right text-danger";
+      insightClass = "chart-insight-warn";
+    } else if (diff > 2) {
+      insightText = isEn
+        ? `Attendance improved by ${diff} — good progress this period.`
+        : `تحسّن الحضور بمقدار ${diff} — تقدم جيد في هذه الفترة.`;
+      insightIcon = "bi-arrow-up-right text-success";
+      insightClass = "chart-insight-good";
+    } else {
+      insightText = isEn
+        ? "Attendance is stable compared to the previous period."
+        : "الحضور مستقر مقارنةً بالفترة السابقة.";
+      insightIcon = "bi-dash-circle text-muted";
+      insightClass = "";
+    }
+    insightEl.className = `chart-insight ${insightClass}`;
+    insightEl.innerHTML = `<i class="bi ${insightIcon} me-1"></i>${insightText}`;
+  } else if (insightEl) {
+    insightEl.innerHTML = "";
+  }
 }
 
 function renderEnrollmentChart(enrollmentMap) {
@@ -2045,7 +2118,7 @@ function renderEnrollmentChart(enrollmentMap) {
         {
           data: hasData ? values : [0],
           backgroundColor: hasData
-            ? ["#0d6efd", "#16a34a", "#f59e0b", "#dc2626", "#64748b", "#0ea5e9"]
+            ? ["#1F5E47", "#10b981", "#f59e0b", "#ef4444", "#64748b", "#2F7D62"]
             : ["#dee2e6"],
           borderWidth: 2,
           borderColor: "#ffffff",
@@ -2089,6 +2162,29 @@ function renderEnrollmentChart(enrollmentMap) {
       },
     },
   });
+
+  // Enrollment chart insight
+  const enrollInsight = document.getElementById("enrollmentChartInsight");
+  if (enrollInsight && hasData) {
+    const isEn = dashboardCurrentLang() === "en";
+    const total = values.reduce((a, b) => a + b, 0);
+    const pendingIdx = labels.findIndex((l) => /pending|انتظار/i.test(l));
+    const pending = pendingIdx >= 0 ? values[pendingIdx] : 0;
+    const pendingPct = total > 0 ? ((pending / total) * 100).toFixed(0) : 0;
+    if (pending > 0) {
+      enrollInsight.className = "chart-insight chart-insight-warn";
+      enrollInsight.innerHTML = `<i class="bi bi-hourglass-split text-warning me-1"></i>` + (isEn
+        ? `${pendingPct}% of applications (${pending}) are pending review.`
+        : `${pendingPct}% من الطلبات (${pending}) بانتظار المراجعة.`);
+    } else {
+      enrollInsight.className = "chart-insight chart-insight-good";
+      enrollInsight.innerHTML = `<i class="bi bi-check-circle text-success me-1"></i>` + (isEn
+        ? "All enrollment requests have been processed."
+        : "تمت معالجة جميع طلبات التسجيل.");
+    }
+  } else if (enrollInsight) {
+    enrollInsight.innerHTML = "";
+  }
 }
 
 function bindChartTypeToggles() {

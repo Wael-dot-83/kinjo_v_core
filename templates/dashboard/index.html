@@ -329,18 +329,20 @@
                     <div class="card h-100 border-0 shadow-sm status-widget overflow-hidden" id="attendanceCard">
                         <div class="card-body p-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge badge-soft badge-soft-success-subtle text-success rounded-pill px-3">{% if ui_lang == 'en' %}Positive{% else %}مؤشر إيجابي{% endif %}</span>
-                                <small class="text-muted">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</small>
+                                <span class="badge rounded-pill px-3" id="attendanceBadge" style="background:#d1fae5; color:#047857;">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</span>
+                                <small class="text-muted" id="attendanceLastUpdate">--</small>
                             </div>
                             <p class="text-muted small mb-1 fw-medium">{% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}</p>
-                            <h2 class="display-5 fw-bold mb-3" id="presentTodayValue"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>
-                            <div class="mb-4">
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: 85%"
-                                        aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"
+                            <h2 class="display-5 fw-bold mb-1" id="presentTodayValue"><span class="kj-stat-pending">&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>
+                            <div class="mb-3">
+                                <div class="progress mb-1" style="height: 6px;">
+                                    <div class="progress-bar bg-success" id="attendanceProgressBar" role="progressbar" style="width: 0%"
+                                        aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
                                         aria-label="{% if ui_lang == 'en' %}Attendance rate{% else %}نسبة الحضور{% endif %}"></div>
                                 </div>
-                                <small class="text-muted mt-1 d-block">{% if ui_lang == 'en' %}85% of total children{% else %}85% من إجمالي الأطفال{% endif %}</small>
+                                <small class="text-muted d-block" id="attendanceRateText">
+                                    {% if ui_lang == 'en' %}No attendance recorded yet today — send reminders to kindergartens.{% else %}لم يُسجَّل حضور اليوم بعد — أرسل تذكيرات للروضات.{% endif %}
+                                </small>
                             </div>
                             <a href="/attendance" class="btn btn-success w-100 rounded-pill py-2 fw-bold">
                                 {% if ui_lang == 'en' %}Manage Attendance{% else %}إدارة الحضور{% endif %} <i class="bi bi-arrow-left ms-1"></i>
@@ -479,6 +481,7 @@
                 <div class="chart-container">
                     <canvas id="attendanceChart"></canvas>
                 </div>
+                <div class="chart-insight" id="attendanceChartInsight"></div>
             </div>
         </div>
     </div>
@@ -496,6 +499,7 @@
                 <div class="chart-container">
                     <canvas id="enrollmentPieChart"></canvas>
                 </div>
+                <div class="chart-insight" id="enrollmentChartInsight"></div>
             </div>
         </div>
     </div>
@@ -1116,8 +1120,8 @@
 <div class="row g-3">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
+            <div class="card-header d-flex flex-wrap align-items-center gap-2">
+                <h5 class="card-title mb-0 me-auto">
                     <i class="bi bi-calendar-day me-2"></i>
                     {% if current_user.role.value == 'ADMIN' %}
                     {% if ui_lang == 'en' %}Kindergarten Overview - {{ today }}{% else %}نظرة عامة على الروضات - {{ today }}{% endif %}
@@ -1125,9 +1129,29 @@
                     {% if ui_lang == 'en' %}Today's Overview - {{ today }}{% else %}نظرة عامة على اليوم - {{ today }}{% endif %}
                     {% endif %}
                 </h5>
+                <!-- Table controls: search + action filter -->
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <input type="search" id="overviewTableSearch" class="form-control form-control-sm" style="width:180px;"
+                        placeholder="{% if ui_lang == 'en' %}Search…{% else %}بحث…{% endif %}"
+                        oninput="filterOverviewTable()"
+                        aria-label="{% if ui_lang == 'en' %}Search table{% else %}بحث في الجدول{% endif %}">
+                    {% if current_user.role.value == 'ADMIN' %}
+                    <select id="overviewStatusFilter" class="form-select form-select-sm" style="width:140px;" onchange="filterOverviewTable()">
+                        <option value="">{% if ui_lang == 'en' %}All statuses{% else %}جميع الحالات{% endif %}</option>
+                        <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+                        <option value="INACTIVE">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</option>
+                    </select>
+                    <button id="overviewActionToggle" type="button"
+                        class="btn btn-sm btn-outline-warning"
+                        onclick="toggleNeedsActionFilter(this)"
+                        title="{% if ui_lang == 'en' %}Show only institutions needing attention{% else %}عرض المؤسسات التي تحتاج إجراء فقط{% endif %}">
+                        <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Needs Action{% else %}يحتاج إجراء{% endif %}
+                    </button>
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
+                <div class="table-responsive" style="max-height:480px; overflow-y:auto;">
                     <table class="table table-hover">
                         {% if current_user.role.value == 'ADMIN' %}
                         <thead>
