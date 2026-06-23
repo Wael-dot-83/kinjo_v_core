@@ -3683,7 +3683,7 @@ def get_kpi_network_summary(
 
             per_kg.append({
                 "kindergarten_id": kg.id,
-                "kindergarten_name": kg.name or f"KG-{kg.id}",
+                "kindergarten_name": kg.name_ar or kg.name_en or f"KG-{kg.id}",
                 "governorate": kg.governorate or "",
                 "attendance_rate": ar,
                 "incident_rate": ir,
