@@ -94,7 +94,9 @@
     "minutes_ago": "دقائق مضت",
     "hours_ago": "ساعات مضت",
     "days_ago": "أيام مضت",
-    "locale": "ar-SA"
+    "locale": "ar-SA",
+    "table": "جدول",
+    "cards": "بطاقات"
   },
   "status": {
     "active": "نشط",

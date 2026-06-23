@@ -94,7 +94,9 @@
     "minutes_ago": "minutes ago",
     "hours_ago": "hours ago",
     "days_ago": "days ago",
-    "locale": "en-US"
+    "locale": "en-US",
+    "table": "Table",
+    "cards": "Cards"
   },
   "status": {
     "active": "Active",

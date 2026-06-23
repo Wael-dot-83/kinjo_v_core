@@ -4,12 +4,8 @@
  * safeChartData() is provided globally by chart_utils.js.
  */
 
-/* ── XSS guard ──────────────────────────────────────────────────────────── */
-function esc(str) {
-  return String(str == null ? "" : str)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
+/* ── XSS guard — delegates to sanitize.js (loaded before this file) ──── */
+function esc(str) { return escapeHtml(str); }
 
 /* ── i18n shim ──────────────────────────────────────────────────────────── */
 function t(key, fallback) {
