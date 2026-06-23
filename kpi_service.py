@@ -3558,8 +3558,27 @@ def get_enhanced_manager_kpi_dashboard(
                 )
             )
 
-        # Determine data freshness
-        data_freshness = "fresh"  # Can be enhanced with actual timestamp checks
+        # Determine data freshness from most-recent attendance record in period
+        latest_data_date = (
+            db.query(func.max(models.AttendanceLog.date))
+            .join(models.Class, models.AttendanceLog.class_id == models.Class.id)
+            .filter(
+                models.Class.kindergarten_id == single_kindergarten_id,
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end,
+            )
+            .scalar()
+        )
+        if latest_data_date is None:
+            data_freshness = "outdated"
+        else:
+            age_days = (date.today() - latest_data_date).days
+            if age_days <= 2:
+                data_freshness = "fresh"
+            elif age_days <= 7:
+                data_freshness = "stale"
+            else:
+                data_freshness = "outdated"
 
         return EnhancedKPIDashboardResponse(
             kindergarten_id=single_kindergarten_id,
