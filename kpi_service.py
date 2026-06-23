@@ -20,6 +20,9 @@ from translations import setup_translator
 from child_age_policy import get_child_age_bounds
 from cache_service import dashboard_cache
 from config import settings
+import logging
+import time as _time
+from sqlalchemy.exc import SQLAlchemyError
 
 # Set up translator for Arabic/English support
 _ = setup_translator("ar")  # Default to Arabic, can be made configurable
@@ -28,6 +31,7 @@ _ = setup_translator("ar")  # Default to Arabic, can be made configurable
 from models import TrainingStatus, TrainingModule, StaffTrainingCompletion, KPITarget
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 KPI_SUPPORTED_DIMENSION_TYPES: Tuple[str, ...] = (
     models.AnalyticsDimensionType.NETWORK.value,
@@ -3425,155 +3429,168 @@ def get_enhanced_manager_kpi_dashboard(
             detail="Kindergarten not found"
         )
 
-    period_days = (period_end - period_start).days + 1
-    last_updated = datetime.now(timezone.utc)
+    _t0 = _time.time()
+    try:
+        period_days = (period_end - period_start).days + 1
+        last_updated = datetime.now(timezone.utc)
 
-    # Calculate all KPIs
-    gce_score, _ = KPIService.compute_governance_score(
-        db, single_kindergarten_id, period_start, period_end
-    )
+        # Calculate all KPIs
+        gce_score, _ = KPIService.compute_governance_score(
+            db, single_kindergarten_id, period_start, period_end
+        )
 
-    attendance_rate = KPIService.compute_attendance_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
+        attendance_rate = KPIService.compute_attendance_rate(
+            db, single_kindergarten_id, period_start, period_end
+        )
 
-    ratio_compliance = KPIService.compute_ratio_compliance(
-        db, single_kindergarten_id, period_start, period_end
-    )
+        ratio_compliance = KPIService.compute_ratio_compliance(
+            db, single_kindergarten_id, period_start, period_end
+        )
 
-    incident_rate = KPIService.compute_incident_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
+        incident_rate = KPIService.compute_incident_rate(
+            db, single_kindergarten_id, period_start, period_end
+        )
 
-    serious_incident_rate = KPIService.compute_serious_incident_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
+        serious_incident_rate = KPIService.compute_serious_incident_rate(
+            db, single_kindergarten_id, period_start, period_end
+        )
 
-    incident_followup_sla = KPIService.compute_incident_followup_sla_compliance(
-        db, single_kindergarten_id, period_start, period_end
-    )
+        incident_followup_sla = KPIService.compute_incident_followup_sla_compliance(
+            db, single_kindergarten_id, period_start, period_end
+        )
 
-    chronic_absence_rate = KPIService.compute_chronic_absence_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
+        chronic_absence_rate = KPIService.compute_chronic_absence_rate(
+            db, single_kindergarten_id, period_start, period_end
+        )
 
-    capacity_utilization_rate = KPIService.compute_capacity_utilization_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
+        capacity_utilization_rate = KPIService.compute_capacity_utilization_rate(
+            db, single_kindergarten_id, period_start, period_end
+        )
 
-    training_completion_rate = KPIService.compute_training_completion_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
+        training_completion_rate = KPIService.compute_training_completion_rate(
+            db, single_kindergarten_id, period_start, period_end
+        )
 
-    report_submission_rate = KPIService.compute_report_submission_rate(
-        db, single_kindergarten_id, period_start, period_end
-    )
+        report_submission_rate = KPIService.compute_report_submission_rate(
+            db, single_kindergarten_id, period_start, period_end
+        )
 
-    # Create enhanced KPI cards
-    overall_gcei_card = KPIService.create_enhanced_kpi_card(
-        "overall_gcei", gce_score, "%", last_updated, period_days
-    )
+        # Create enhanced KPI cards
+        overall_gcei_card = KPIService.create_enhanced_kpi_card(
+            "overall_gcei", gce_score, "%", last_updated, period_days
+        )
 
-    attendance_rate_card = KPIService.create_enhanced_kpi_card(
-        "attendance_rate", attendance_rate, "%", last_updated, period_days
-    )
+        attendance_rate_card = KPIService.create_enhanced_kpi_card(
+            "attendance_rate", attendance_rate, "%", last_updated, period_days
+        )
 
-    ratio_compliance_card = KPIService.create_enhanced_kpi_card(
-        "ratio_compliance", ratio_compliance, "%", last_updated, period_days
-    )
+        ratio_compliance_card = KPIService.create_enhanced_kpi_card(
+            "ratio_compliance", ratio_compliance, "%", last_updated, period_days
+        )
 
-    incident_rate_card = KPIService.create_enhanced_kpi_card(
-        "incident_rate", incident_rate, translator("per 100 child-days"), last_updated, period_days
-    )
+        incident_rate_card = KPIService.create_enhanced_kpi_card(
+            "incident_rate", incident_rate, translator("per 100 child-days"), last_updated, period_days
+        )
 
-    serious_incident_rate_card = KPIService.create_enhanced_kpi_card(
-        "serious_incident_rate", serious_incident_rate, translator("per 100 child-days"), last_updated, period_days
-    )
+        serious_incident_rate_card = KPIService.create_enhanced_kpi_card(
+            "serious_incident_rate", serious_incident_rate, translator("per 100 child-days"), last_updated, period_days
+        )
 
-    incident_followup_sla_card = KPIService.create_enhanced_kpi_card(
-        "incident_followup_sla", incident_followup_sla, "%", last_updated, period_days
-    )
+        incident_followup_sla_card = KPIService.create_enhanced_kpi_card(
+            "incident_followup_sla", incident_followup_sla, "%", last_updated, period_days
+        )
 
-    chronic_absence_rate_card = KPIService.create_enhanced_kpi_card(
-        "chronic_absence_rate", chronic_absence_rate, "%", last_updated, period_days
-    )
+        chronic_absence_rate_card = KPIService.create_enhanced_kpi_card(
+            "chronic_absence_rate", chronic_absence_rate, "%", last_updated, period_days
+        )
 
-    capacity_utilization_rate_card = KPIService.create_enhanced_kpi_card(
-        "capacity_utilization_rate", capacity_utilization_rate, "%", last_updated, period_days
-    )
+        capacity_utilization_rate_card = KPIService.create_enhanced_kpi_card(
+            "capacity_utilization_rate", capacity_utilization_rate, "%", last_updated, period_days
+        )
 
-    training_completion_rate_card = KPIService.create_enhanced_kpi_card(
-        "training_completion_rate", training_completion_rate, "%", last_updated, period_days
-    )
+        training_completion_rate_card = KPIService.create_enhanced_kpi_card(
+            "training_completion_rate", training_completion_rate, "%", last_updated, period_days
+        )
 
-    report_submission_rate_card = KPIService.create_enhanced_kpi_card(
-        "report_submission_rate", report_submission_rate, "%", last_updated, period_days
-    )
+        report_submission_rate_card = KPIService.create_enhanced_kpi_card(
+            "report_submission_rate", report_submission_rate, "%", last_updated, period_days
+        )
 
-    # Build alerts
-    alerts = []
-    today = date.today()
-    if kg.license_valid_until:
-        if kg.license_valid_until < today:
-            alerts.append(
-                AlertsSummary(
-                    type="REGULATORY",
-                    message=f"{kg.name_ar or 'الروضة'} رخصتها منتهية الصلاحية منذ {kg.license_valid_until}",
-                    priority="high",
-                    entity_id=kg.id,
+        # Build alerts
+        alerts = []
+        today = date.today()
+        if kg.license_valid_until:
+            if kg.license_valid_until < today:
+                alerts.append(
+                    AlertsSummary(
+                        type="REGULATORY",
+                        message=f"{kg.name_ar or 'الروضة'} رخصتها منتهية الصلاحية منذ {kg.license_valid_until}",
+                        priority="high",
+                        entity_id=kg.id,
+                    )
                 )
-            )
-        elif kg.license_valid_until <= today + timedelta(days=30):
+            elif kg.license_valid_until <= today + timedelta(days=30):
+                alerts.append(
+                    AlertsSummary(
+                        type="REGULATORY",
+                        message=f"{kg.name_ar or 'الروضة'} رخصتها تنتهي في {kg.license_valid_until}",
+                        priority="medium",
+                        entity_id=kg.id,
+                    )
+                )
+
+        # Check KPI thresholds for alerts
+        if incident_rate > 5.0:
             alerts.append(
                 AlertsSummary(
-                    type="REGULATORY",
-                    message=f"{kg.name_ar or 'الروضة'} رخصتها تنتهي في {kg.license_valid_until}",
+                    type="KPI",
+                    message=f"معدل الحوادث {incident_rate}% يتجاوز الحد المسموح",
                     priority="medium",
-                    entity_id=kg.id,
                 )
             )
 
-    # Check KPI thresholds for alerts
-    if incident_rate > 5.0:
-        alerts.append(
-            AlertsSummary(
-                type="KPI",
-                message=f"معدل الحوادث {incident_rate}% يتجاوز الحد المسموح",
-                priority="medium",
+        if chronic_absence_rate > 10.0:
+            alerts.append(
+                AlertsSummary(
+                    type="KPI",
+                    message=f"معدل الغياب المزمن {chronic_absence_rate}% مرتفع جداً",
+                    priority="high",
+                )
             )
+
+        # Determine data freshness
+        data_freshness = "fresh"  # Can be enhanced with actual timestamp checks
+
+        return EnhancedKPIDashboardResponse(
+            kindergarten_id=single_kindergarten_id,
+            kindergarten_name=kg.name_ar or kg.name_en,
+            period_start=period_start,
+            period_end=period_end,
+            overall_gcei=overall_gcei_card,
+            attendance_rate=attendance_rate_card,
+            ratio_compliance=ratio_compliance_card,
+            incident_rate=incident_rate_card,
+            serious_incident_rate=serious_incident_rate_card,
+            incident_followup_sla=incident_followup_sla_card,
+            chronic_absence_rate=chronic_absence_rate_card,
+            capacity_utilization_rate=capacity_utilization_rate_card,
+            training_completion_rate=training_completion_rate_card,
+            report_submission_rate=report_submission_rate_card,
+            alerts=alerts,
+            last_updated=last_updated,
+            data_freshness=data_freshness
         )
-
-    if chronic_absence_rate > 10.0:
-        alerts.append(
-            AlertsSummary(
-                type="KPI",
-                message=f"معدل الغياب المزمن {chronic_absence_rate}% مرتفع جداً",
-                priority="high",
-            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(
+            "GET /api/manager/dashboard/enhanced failed in %.2fs: %s",
+            _time.time() - _t0, exc, exc_info=True,
         )
-
-    # Determine data freshness
-    data_freshness = "fresh"  # Can be enhanced with actual timestamp checks
-
-    return EnhancedKPIDashboardResponse(
-        kindergarten_id=single_kindergarten_id,
-        kindergarten_name=kg.name_ar or kg.name_en,
-        period_start=period_start,
-        period_end=period_end,
-        overall_gcei=overall_gcei_card,
-        attendance_rate=attendance_rate_card,
-        ratio_compliance=ratio_compliance_card,
-        incident_rate=incident_rate_card,
-        serious_incident_rate=serious_incident_rate_card,
-        incident_followup_sla=incident_followup_sla_card,
-        chronic_absence_rate=chronic_absence_rate_card,
-        capacity_utilization_rate=capacity_utilization_rate_card,
-        training_completion_rate=training_completion_rate_card,
-        report_submission_rate=report_submission_rate_card,
-        alerts=alerts,
-        last_updated=last_updated,
-        data_freshness=data_freshness
-    )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="KPI dashboard unavailable",
+        )
 
 
 @router.get("/manager/kpi", response_model=EnhancedKPIDashboardResponse)
@@ -3585,13 +3602,26 @@ def get_manager_kpi_alias(
     current_user: models.User = Depends(require_manager)
 ):
     """Backward-compatible alias for /manager/dashboard/enhanced."""
-    return get_enhanced_manager_kpi_dashboard(
-        period_start=period_start,
-        period_end=period_end,
-        locale=locale,
-        db=db,
-        current_user=current_user,
-    )
+    _t0 = _time.time()
+    try:
+        return get_enhanced_manager_kpi_dashboard(
+            period_start=period_start,
+            period_end=period_end,
+            locale=locale,
+            db=db,
+            current_user=current_user,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(
+            "GET /api/manager/kpi failed in %.2fs: %s",
+            _time.time() - _t0, exc, exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="KPI dashboard unavailable",
+        )
 
 
 @router.get("/kpi/network-summary")
@@ -3610,59 +3640,79 @@ def get_kpi_network_summary(
     if start_date is None:
         start_date = end_date - timedelta(days=30)
 
-    kg_query = db.query(models.Kindergarten).filter(
-        models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-    )
-    if governorate:
-        try:
-            normalized_gov = validators.validate_jordan_governorate(governorate)
-            gov_values = {normalized_gov}
-            if normalized_gov in settings.JORDAN_GOVERNORATES:
-                idx = settings.JORDAN_GOVERNORATES.index(normalized_gov)
-                gov_values.add(settings.JORDAN_GOVERNORATES_ENGLISH[idx])
-            kg_query = kg_query.filter(models.Kindergarten.governorate.in_(list(gov_values)))
-        except validators.ValidationError:
-            pass
-    kindergartens = kg_query.all()
+    cache_key = f"kpi_network_summary:{start_date}:{end_date}:{governorate or ''}"
+    cached = dashboard_cache.get(cache_key)
+    if cached is not None:
+        return cached
 
-    per_kg = []
-    attendance_rates = []
-    incident_rates = []
-    ratio_compliances = []
-    gqi_scores = []
+    _t0 = _time.time()
+    try:
+        kg_query = db.query(models.Kindergarten).filter(
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+        )
+        if governorate:
+            try:
+                normalized_gov = validators.validate_jordan_governorate(governorate)
+                gov_values = {normalized_gov}
+                if normalized_gov in settings.JORDAN_GOVERNORATES:
+                    idx = settings.JORDAN_GOVERNORATES.index(normalized_gov)
+                    gov_values.add(settings.JORDAN_GOVERNORATES_ENGLISH[idx])
+                kg_query = kg_query.filter(models.Kindergarten.governorate.in_(list(gov_values)))
+            except validators.ValidationError:
+                pass
+        kindergartens = kg_query.all()
 
-    for kg in kindergartens:
-        ar = KPIService.compute_attendance_rate(db, kg.id, start_date, end_date)
-        ir = KPIService.compute_incident_rate(db, kg.id, start_date, end_date)
-        rc = KPIService.compute_ratio_compliance(db, kg.id, start_date, end_date)
-        gs_tuple = KPIService.compute_governance_score(db, kg.id, start_date, end_date)
-        gs = gs_tuple[0] if isinstance(gs_tuple, tuple) else float(gs_tuple)
-        band = gs_tuple[1] if isinstance(gs_tuple, tuple) else ("GREEN" if gs >= 70 else ("AMBER" if gs >= 40 else "RED"))
+        per_kg = []
+        attendance_rates = []
+        incident_rates = []
+        ratio_compliances = []
+        gqi_scores = []
 
-        attendance_rates.append(ar)
-        incident_rates.append(ir)
-        ratio_compliances.append(rc)
-        gqi_scores.append(gs)
+        for kg in kindergartens:
+            ar = KPIService.compute_attendance_rate(db, kg.id, start_date, end_date)
+            ir = KPIService.compute_incident_rate(db, kg.id, start_date, end_date)
+            rc = KPIService.compute_ratio_compliance(db, kg.id, start_date, end_date)
+            gs_tuple = KPIService.compute_governance_score(db, kg.id, start_date, end_date)
+            gs = gs_tuple[0] if isinstance(gs_tuple, tuple) else float(gs_tuple)
+            band = gs_tuple[1] if isinstance(gs_tuple, tuple) else ("GREEN" if gs >= 70 else ("AMBER" if gs >= 40 else "RED"))
 
-        per_kg.append({
-            "kindergarten_id": kg.id,
-            "kindergarten_name": kg.name or f"KG-{kg.id}",
-            "governorate": kg.governorate or "",
-            "attendance_rate": ar,
-            "incident_rate": ir,
-            "ratio_compliance": rc,
-            "governance_score": gs,
-            "governance_band": band,
-        })
+            attendance_rates.append(ar)
+            incident_rates.append(ir)
+            ratio_compliances.append(rc)
+            gqi_scores.append(gs)
 
-    def _avg(lst: list) -> float:
-        return round(sum(lst) / len(lst), 2) if lst else 0.0
+            per_kg.append({
+                "kindergarten_id": kg.id,
+                "kindergarten_name": kg.name or f"KG-{kg.id}",
+                "governorate": kg.governorate or "",
+                "attendance_rate": ar,
+                "incident_rate": ir,
+                "ratio_compliance": rc,
+                "governance_score": gs,
+                "governance_band": band,
+            })
 
-    return {
-        "kindergarten_count": len(kindergartens),
-        "avg_attendance_rate": _avg(attendance_rates),
-        "avg_incident_rate": _avg(incident_rates),
-        "avg_ratio_compliance": _avg(ratio_compliances),
-        "avg_gqi_score": _avg(gqi_scores),
-        "per_kindergarten": per_kg,
-    }
+        def _avg(lst: list) -> float:
+            return round(sum(lst) / len(lst), 2) if lst else 0.0
+
+        result = {
+            "kindergarten_count": len(kindergartens),
+            "avg_attendance_rate": _avg(attendance_rates),
+            "avg_incident_rate": _avg(incident_rates),
+            "avg_ratio_compliance": _avg(ratio_compliances),
+            "avg_gqi_score": _avg(gqi_scores),
+            "per_kindergarten": per_kg,
+        }
+        dashboard_cache.set(cache_key, result, ttl_seconds=300)
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(
+            "GET /api/kpi/network-summary failed in %.2fs: %s",
+            _time.time() - _t0, exc, exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Network KPI summary unavailable",
+        )

@@ -845,6 +845,42 @@ class TestKPIEndpoints:
         # Manager KPI endpoint returns operational data
         assert isinstance(data, dict) and len(data) > 0
 
+    def test_manager_kpi_alias_schema_parity(
+        self,
+        client,
+        manager_user,
+        sample_class,
+        supervisor_user,
+        sample_supervisor_assignment,
+        manager_token,
+    ):
+        """Alias /api/manager/kpi must return the same schema as /api/manager/dashboard/enhanced."""
+        params = {"period_start": "2026-05-01", "period_end": "2026-05-31", "locale": "en"}
+        r_alias = client.get("/api/manager/kpi", params=params, headers=_hdr(manager_token))
+        r_enhanced = client.get(
+            "/api/manager/dashboard/enhanced", params=params, headers=_hdr(manager_token)
+        )
+        assert r_alias.status_code == 200, f"alias returned {r_alias.status_code}"
+        assert r_enhanced.status_code == 200, f"enhanced returned {r_enhanced.status_code}"
+
+        alias_data = r_alias.json()
+        enhanced_data = r_enhanced.json()
+
+        # Top-level keys must be identical
+        assert set(alias_data.keys()) == set(enhanced_data.keys()), (
+            f"Key mismatch — alias has {set(alias_data.keys())}, "
+            f"enhanced has {set(enhanced_data.keys())}"
+        )
+
+        # overall_gcei must be present and have correct kpi_key
+        assert "overall_gcei" in alias_data
+        assert alias_data["overall_gcei"]["kpi_key"] == "overall_gcei"
+
+        # data_freshness must be one of the documented sentinel values
+        assert alias_data.get("data_freshness") in ("fresh", "stale", "outdated"), (
+            f"unexpected data_freshness: {alias_data.get('data_freshness')}"
+        )
+
 
 # ===========================================================================
 # 7. Regression — existing RBAC still works
