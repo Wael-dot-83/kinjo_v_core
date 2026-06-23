@@ -1,227 +1,215 @@
-<!DOCTYPE html>
 {% extends "admin_base.html" %}
 
-{% block title %}لوحة التحكم — كينجو{% endblock %}
-
-{% block extra_head %}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}KinJo Admin — Dashboard{% else %}إدارة كينجو — لوحة التحكم{% endif %}{% endblock %}
 
 {% block content %}
-<div class="kd-page" id="kinjo-dashboard" dir="rtl">
-
-  <!-- ═══════════════════════════════════════════════════════════
-       WELCOME BANNER
-  ═══════════════════════════════════════════════════════════ -->
-  <div class="kd-welcome-banner" id="kd-welcome-banner">
-    <div class="kd-welcome-inner">
-      <div class="kd-welcome-text">
-        <h1 class="kd-welcome-title">
-          <i class="bi bi-speedometer2" aria-hidden="true"></i>
-          <span data-i18n="dashboard.title">لوحة تحكم كينجو</span>
-        </h1>
-        <p class="kd-welcome-subtitle" data-i18n="dashboard.subtitle">
-          مراقبة النظام وإدارة العمليات — رياض الأطفال في المملكة الأردنية الهاشمية
-        </p>
-      </div>
-      <div class="kd-welcome-meta">
-        <div class="kd-meta-item">
-          <i class="bi bi-calendar3" aria-hidden="true"></i>
-          <span id="kd-today-date">جارٍ التحميل…</span>
-        </div>
-        <div class="kd-meta-item">
-          <i class="bi bi-clock" aria-hidden="true"></i>
-          <span id="kd-last-updated">—</span>
-        </div>
-        <button class="kd-refresh-btn" id="kd-refresh-btn" aria-label="تحديث لوحة التحكم">
-          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
-          <span>تحديث</span>
-        </button>
-      </div>
+<div class="admin-main-content">
+  <!-- Page Header -->
+  <div class="admin-page-header">
+    <div class="admin-page-header-content">
+      <h1 class="admin-page-title">
+        {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
+      </h1>
+      <p class="admin-page-subtitle">
+        {% if ui_lang == 'en' %}Monitor system performance and manage operations{% else %}مراقبة أداء النظام وإدارة العمليات{% endif %}
+      </p>
     </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════════
-       LOADING STATE
-  ═══════════════════════════════════════════════════════════ -->
-  <div class="kd-loading" id="kd-loading" aria-live="polite" aria-label="جارٍ تحميل بيانات لوحة التحكم">
-    <div class="kd-loading-spinner" aria-hidden="true">
-      <i class="bi bi-arrow-repeat"></i>
-    </div>
-    <p>جارٍ تحميل البيانات…</p>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════════
-       ERROR STATE
-  ═══════════════════════════════════════════════════════════ -->
-  <div class="kd-error" id="kd-error" style="display:none;" role="alert">
-    <div class="kd-error-inner">
-      <div class="kd-error-icon" aria-hidden="true"><i class="bi bi-exclamation-triangle-fill"></i></div>
-      <h2 class="kd-error-title">تعذّر تحميل لوحة التحكم</h2>
-      <p class="kd-error-msg" id="kd-error-msg">حدث خطأ أثناء تحميل البيانات. يرجى المحاولة مجدداً.</p>
-      <button class="kd-btn kd-btn-primary" id="kd-retry-btn">
-        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
-        إعادة المحاولة
+    <div class="admin-page-header-actions">
+      <button class="admin-btn admin-btn-secondary" id="refresh-dashboard">
+        <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
       </button>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       MAIN CONTENT
-  ═══════════════════════════════════════════════════════════ -->
-  <div class="kd-content" id="kd-content" style="display:none;">
+  <!-- Dashboard Root — initial state is "loading"; JS drives transitions -->
+  <div class="admin-dashboard" id="admin-dashboard" data-ui-state="loading">
 
-    <!-- ─── SECTION 1: KPI Cards ──────────────────────────── -->
-    <section class="kd-section" aria-labelledby="kd-kpi-heading">
-      <div class="kd-section-header">
-        <div class="kd-section-title-group">
-          <i class="bi bi-bar-chart-line-fill kd-section-icon" aria-hidden="true"></i>
-          <h2 class="kd-section-title" id="kd-kpi-heading">المؤشرات الرئيسية</h2>
-        </div>
-        <span class="kd-section-badge" id="kd-kpi-timestamp"></span>
-      </div>
-      <div class="kd-kpi-grid" id="kd-kpi-grid" role="list" aria-label="مؤشرات الأداء الرئيسية">
-        <!-- populated by JS -->
-      </div>
-    </section>
+    <!-- Loading State — skeleton loader -->
+    <div class="admin-dashboard-skeleton" id="dashboard-loading" aria-busy="true" role="status">
+      <span class="visually-hidden">{% if ui_lang == 'en' %}Loading dashboard data…{% else %}جارٍ تحميل البيانات…{% endif %}</span>
 
-    <!-- ─── SECTION 2: Charts ─────────────────────────────── -->
-    <section class="kd-section" aria-labelledby="kd-charts-heading">
-      <div class="kd-section-header">
-        <div class="kd-section-title-group">
-          <i class="bi bi-graph-up kd-section-icon" aria-hidden="true"></i>
-          <h2 class="kd-section-title" id="kd-charts-heading">الاتجاهات والإحصائيات</h2>
-        </div>
-      </div>
-      <div class="kd-charts-grid">
-        <!-- Chart 1: User Activity -->
-        <div class="kd-chart-card">
-          <div class="kd-chart-card-header">
-            <i class="bi bi-people-fill" aria-hidden="true"></i>
-            <span>نشاط المستخدمين</span>
-          </div>
-          <div class="kd-chart-body">
-            <canvas id="kd-chart-activity" aria-label="مخطط نشاط المستخدمين"></canvas>
+      <!-- Skeleton KPI cards (4 placeholders) -->
+      <div class="admin-skeleton-kpi-row">
+        <div class="admin-skeleton-kpi-card" aria-hidden="true">
+          <div class="admin-skeleton-icon"></div>
+          <div class="admin-skeleton-content">
+            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
+            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
           </div>
         </div>
-        <!-- Chart 2: Enrollment -->
-        <div class="kd-chart-card">
-          <div class="kd-chart-card-header">
-            <i class="bi bi-file-earmark-check-fill" aria-hidden="true"></i>
-            <span>الطلبات والتسجيل</span>
-          </div>
-          <div class="kd-chart-body">
-            <canvas id="kd-chart-enrollment" aria-label="مخطط بيانات التسجيل"></canvas>
+        <div class="admin-skeleton-kpi-card" aria-hidden="true">
+          <div class="admin-skeleton-icon"></div>
+          <div class="admin-skeleton-content">
+            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
+            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
           </div>
         </div>
-      </div>
-    </section>
-
-    <!-- ─── SECTION 3: Activity + Alerts + Quick Actions ──── -->
-    <section class="kd-section kd-tri-grid" aria-labelledby="kd-ops-heading">
-      <h2 class="visually-hidden" id="kd-ops-heading">العمليات الحية</h2>
-
-      <!-- Recent Activity -->
-      <div class="kd-panel" aria-labelledby="kd-activity-heading">
-        <div class="kd-panel-header">
-          <div class="kd-panel-title-row">
-            <i class="bi bi-activity" aria-hidden="true"></i>
-            <h3 class="kd-panel-title" id="kd-activity-heading">النشاط الأخير</h3>
+        <div class="admin-skeleton-kpi-card" aria-hidden="true">
+          <div class="admin-skeleton-icon"></div>
+          <div class="admin-skeleton-content">
+            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
+            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
           </div>
-          <span class="kd-panel-badge kd-badge-blue" id="kd-activity-count">—</span>
         </div>
-        <div class="kd-panel-body">
-          <div class="kd-feed" id="kd-activity-feed" role="log" aria-live="polite" aria-label="تدفق النشاط الأخير">
-            <!-- populated by JS -->
+        <div class="admin-skeleton-kpi-card" aria-hidden="true">
+          <div class="admin-skeleton-icon"></div>
+          <div class="admin-skeleton-content">
+            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
+            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
           </div>
         </div>
       </div>
 
-      <!-- System Alerts -->
-      <div class="kd-panel kd-panel-alerts" aria-labelledby="kd-alerts-heading">
-        <div class="kd-panel-header">
-          <div class="kd-panel-title-row">
-            <i class="bi bi-bell-fill" aria-hidden="true"></i>
-            <h3 class="kd-panel-title" id="kd-alerts-heading">تنبيهات النظام</h3>
-          </div>
-          <span class="kd-panel-badge kd-badge-orange" id="kd-alerts-count">—</span>
-        </div>
-        <div class="kd-panel-body">
-          <div class="kd-alerts-list" id="kd-alerts-list" role="list" aria-label="قائمة التنبيهات">
-            <!-- populated by JS -->
-          </div>
-        </div>
-        <div class="kd-panel-footer">
-          <a href="/admin/alerts" class="kd-link-btn">
-            <i class="bi bi-arrow-left" aria-hidden="true"></i>
-            عرض جميع التنبيهات
-          </a>
-        </div>
+      <!-- Skeleton Charts -->
+      <div class="admin-skeleton-chart-row">
+        <div class="admin-skeleton-chart-card" aria-hidden="true"></div>
+        <div class="admin-skeleton-chart-card" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div class="admin-dashboard-error" id="dashboard-error">
+      <div class="admin-error-state">
+        <i class="bi bi-exclamation-triangle"></i>
+        <h3>{% if ui_lang == 'en' %}Error Loading Dashboard{% else %}خطأ في تحميل لوحة التحكم{% endif %}</h3>
+        <p id="error-message">
+          {% if ui_lang == 'en' %}Unable to load dashboard data. Please try again.{% else %}تعذّر تحميل البيانات. يرجى المحاولة مرة أخرى.{% endif %}
+        </p>
+        <button class="admin-btn admin-btn-primary" id="retry-dashboard">
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+          {% if ui_lang == 'en' %}Try Again{% else %}إعادة المحاولة{% endif %}
+        </button>
+      </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div class="admin-dashboard-grid" id="dashboard-content">
+
+      <!-- KPI Cards -->
+      <div class="admin-dashboard-cards" id="kpi-cards">
+        <!-- Populated by JavaScript -->
       </div>
 
-      <!-- Quick Actions -->
-      <div class="kd-panel kd-panel-actions" aria-labelledby="kd-actions-heading">
-        <div class="kd-panel-header">
-          <div class="kd-panel-title-row">
-            <i class="bi bi-lightning-fill" aria-hidden="true"></i>
-            <h3 class="kd-panel-title" id="kd-actions-heading">الإجراءات السريعة</h3>
+      <!-- Charts -->
+      <div class="admin-dashboard-charts">
+
+        <div class="admin-dashboard-chart-container">
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3 class="admin-card-title">
+                {% if ui_lang == 'en' %}User Activity{% else %}نشاط المستخدمين{% endif %}
+              </h3>
+            </div>
+            <div class="admin-card-body">
+              <canvas id="user-activity-chart" width="400" height="200"></canvas>
+            </div>
           </div>
         </div>
-        <div class="kd-panel-body">
-          <div class="kd-actions-grid">
-            <a href="/admin/users/create" class="kd-action-btn kd-action-primary">
-              <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
-              <span>إضافة مستخدم</span>
-            </a>
-            <a href="/admin/users" class="kd-action-btn kd-action-blue">
-              <i class="bi bi-people-fill" aria-hidden="true"></i>
-              <span>إدارة المستخدمين</span>
-            </a>
-            <a href="/admin/messages/compose" class="kd-action-btn kd-action-teal">
-              <i class="bi bi-envelope-fill" aria-hidden="true"></i>
-              <span>إرسال رسالة</span>
-            </a>
-            <a href="/admin/analytics" class="kd-action-btn kd-action-purple">
-              <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
-              <span>التحليلات</span>
-            </a>
-            <a href="/admin/reports/incidents" class="kd-action-btn kd-action-orange">
-              <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
-              <span>تقارير الحوادث</span>
-            </a>
-            <a href="/admin/import-kindergartens" class="kd-action-btn kd-action-gray">
-              <i class="bi bi-database-fill-up" aria-hidden="true"></i>
-              <span>استيراد بيانات</span>
-            </a>
-            <a href="/admin/governance-reports" class="kd-action-btn kd-action-green">
-              <i class="bi bi-bank" aria-hidden="true"></i>
-              <span>تقارير الحوكمة</span>
-            </a>
-            <a href="/admin/audit-logs" class="kd-action-btn kd-action-dark">
-              <i class="bi bi-shield-check" aria-hidden="true"></i>
-              <span>سجلات التدقيق</span>
-            </a>
+
+        <div class="admin-dashboard-chart-container">
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3 class="admin-card-title">
+                {% if ui_lang == 'en' %}Enrollment Status{% else %}حالة التسجيل{% endif %}
+              </h3>
+            </div>
+            <div class="admin-card-body">
+              <canvas id="data-submissions-chart" width="400" height="200"></canvas>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- ─── SECTION 4: System Health ─────────────────────── -->
-    <section class="kd-section" aria-labelledby="kd-health-heading">
-      <div class="kd-section-header">
-        <div class="kd-section-title-group">
-          <i class="bi bi-heart-pulse-fill kd-section-icon kd-icon-red" aria-hidden="true"></i>
-          <h2 class="kd-section-title" id="kd-health-heading">حالة النظام</h2>
+      </div>
+
+      <!-- Activity, Alerts & Quick Actions -->
+      <div class="admin-dashboard-bottom">
+
+        <div class="admin-dashboard-activity">
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3 class="admin-card-title">
+                {% if ui_lang == 'en' %}Recent Activity{% else %}النشاط الأخير{% endif %}
+              </h3>
+            </div>
+            <div class="admin-card-body">
+              <div class="admin-activity-feed" id="activity-feed"></div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="kd-health-grid" id="kd-health-grid" role="list" aria-label="حالة مكونات النظام">
-        <!-- populated by JS -->
-      </div>
-    </section>
 
-  </div><!-- /kd-content -->
-</div><!-- /kd-page -->
+        <div class="admin-dashboard-alerts">
+          <!-- Alerts -->
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3 class="admin-card-title">
+                {% if ui_lang == 'en' %}System Alerts{% else %}تنبيهات النظام{% endif %}
+              </h3>
+            </div>
+            <div class="admin-card-body">
+              <div class="admin-alerts-list" id="alerts-list"></div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="admin-card">
+            <div class="admin-card-header">
+              <h3 class="admin-card-title">
+                {% if ui_lang == 'en' %}Quick Actions{% else %}الإجراءات السريعة{% endif %}
+              </h3>
+            </div>
+            <div class="admin-card-body">
+              <div class="admin-quick-actions">
+
+                <a href="/admin/users/create" class="admin-quick-action-card">
+                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--primary">
+                    <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
+                  </span>
+                  <span class="admin-quick-action-card-label">
+                    {% if ui_lang == 'en' %}Manage Users{% else %}إدارة المستخدمين{% endif %}
+                  </span>
+                </a>
+
+                <a href="/admin/messages/compose" class="admin-quick-action-card">
+                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--success">
+                    <i class="bi bi-envelope-fill" aria-hidden="true"></i>
+                  </span>
+                  <span class="admin-quick-action-card-label">
+                    {% if ui_lang == 'en' %}Send Message{% else %}إرسال رسالة{% endif %}
+                  </span>
+                </a>
+
+                <a href="/admin/analytics" class="admin-quick-action-card">
+                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--info">
+                    <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
+                  </span>
+                  <span class="admin-quick-action-card-label">
+                    {% if ui_lang == 'en' %}View Analytics{% else %}عرض التحليلات{% endif %}
+                  </span>
+                </a>
+
+                <a href="/admin/imported-kindergartens" class="admin-quick-action-card">
+                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--warning">
+                    <i class="bi bi-database-fill" aria-hidden="true"></i>
+                  </span>
+                  <span class="admin-quick-action-card-label">
+                    {% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}
+                  </span>
+                </a>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.admin-dashboard-bottom -->
+    </div><!-- /#dashboard-content -->
+  </div><!-- /#admin-dashboard -->
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/chart_utils.js"></script>
-<script src="/static/js/admin_dashboard.js"></script>
+<script>window.KINJO_LANG = "{{ ui_lang }}";</script>
+<script src="/static/js/chart_utils.js?v=2.1"></script>
+<script src="/static/js/admin_dashboard.js?v=2.7"></script>
 {% endblock %}

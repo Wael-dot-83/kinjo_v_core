@@ -32,7 +32,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -54,6 +54,18 @@ INDICATOR_MAP: Dict[str, List[str]] = {
 }
 
 
+def _names_for_slug(slug: str) -> list[str]:
+    g = C.GOVERNORATE_BY_SLUG.get(slug)
+    if not g:
+        return [slug]
+    en = g["name_en"]
+    ar = g["name_ar"]
+    variants = {en, ar}
+    variants.add(ar.replace("أ", "ا").replace("إ", "ا"))
+    variants.add(ar.replace("ة", "ه"))
+    return list(variants)
+
+
 # ---------------------------------------------------------------------------
 # Sub-indicator computation
 # ---------------------------------------------------------------------------
@@ -61,7 +73,7 @@ def _query_kindergarten_count(db: Session, governorate_en: str) -> int:
     try:
         import models
         return int(db.query(models.Kindergarten)
-                    .filter(models.Kindergarten.governorate == governorate_en)
+                    .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
                     .count())
     except Exception:
         return 0
@@ -70,11 +82,12 @@ def _query_kindergarten_count(db: Session, governorate_en: str) -> int:
 def _query_children_count(db: Session, governorate_en: str) -> int:
     try:
         import models
-        from sqlalchemy import func
-        return int(db.query(func.count(models.Child.id))
+        names = _names_for_slug(governorate_en)
+        return int(db.query(func.count(models.EnrollmentApplication.id))
                     .join(models.Kindergarten,
-                          models.Child.kindergarten_id == models.Kindergarten.id)
-                    .filter(models.Kindergarten.governorate == governorate_en)
+                          models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id)
+                    .filter(models.Kindergarten.governorate.in_(names))
+                    .filter(models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE)
                     .scalar() or 0)
     except Exception:
         return 0
@@ -83,13 +96,12 @@ def _query_children_count(db: Session, governorate_en: str) -> int:
 def _query_supervisor_count(db: Session, governorate_en: str) -> int:
     try:
         import models
-        from sqlalchemy import func
         return int(db.query(func.count(models.User.id))
                     .filter(models.User.role == models.UserRole.SUPERVISOR)
                     .filter(models.User.kindergarten_id.isnot(None))
                     .join(models.Kindergarten,
                           models.User.kindergarten_id == models.Kindergarten.id)
-                    .filter(models.Kindergarten.governorate == governorate_en)
+                    .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
                     .scalar() or 0)
     except Exception:
         return 0
@@ -98,11 +110,10 @@ def _query_supervisor_count(db: Session, governorate_en: str) -> int:
 def _query_classroom_count(db: Session, governorate_en: str) -> int:
     try:
         import models
-        from sqlalchemy import func
-        return int(db.query(func.count(models.Classroom.id))
+        return int(db.query(func.count(models.Class.id))
                     .join(models.Kindergarten,
-                          models.Classroom.kindergarten_id == models.Kindergarten.id)
-                    .filter(models.Kindergarten.governorate == governorate_en)
+                          models.Class.kindergarten_id == models.Kindergarten.id)
+                    .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
                     .scalar() or 0)
     except Exception:
         return 0
@@ -111,14 +122,13 @@ def _query_classroom_count(db: Session, governorate_en: str) -> int:
 def _query_incident_count(db: Session, governorate_en: str, critical_only: bool = False) -> int:
     try:
         import models
-        from sqlalchemy import func
         q = (db.query(func.count(models.Incident.id))
                .join(models.Kindergarten,
                      models.Incident.kindergarten_id == models.Kindergarten.id)
-               .filter(models.Kindergarten.governorate == governorate_en))
-        if critical_only and hasattr(models.Incident, "severity"):
+               .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en))))
+        if critical_only and hasattr(models.Incident, "severity_level"):
             from models import SeverityLevel
-            q = q.filter(models.Incident.severity == SeverityLevel.CRITICAL)
+            q = q.filter(models.Incident.severity_level == SeverityLevel.CRITICAL)
         return int(q.scalar() or 0)
     except Exception:
         return 0
@@ -127,9 +137,10 @@ def _query_incident_count(db: Session, governorate_en: str, critical_only: bool 
 def _query_governance_score(db: Session, governorate_en: str) -> float:
     try:
         import models
-        from sqlalchemy import func
-        return float(db.query(func.avg(models.Kindergarten.governance_score))
-                       .filter(models.Kindergarten.governorate == governorate_en)
+        return float(db.query(func.avg(models.GovernanceScore.final_governance_score))
+                       .join(models.Kindergarten,
+                             models.GovernanceScore.kindergarten_id == models.Kindergarten.id)
+                       .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
                        .scalar() or 0)
     except Exception:
         return 0.0
@@ -138,12 +149,11 @@ def _query_governance_score(db: Session, governorate_en: str) -> float:
 def _query_reports_count(db: Session, governorate_en: str, since: date) -> int:
     try:
         import models
-        from sqlalchemy import func
         return int(db.query(func.count(models.DailyReport.id))
                     .join(models.Kindergarten,
                           models.DailyReport.kindergarten_id == models.Kindergarten.id)
-                    .filter(models.Kindergarten.governorate == governorate_en)
-                    .filter(models.DailyReport.report_date >= since)
+                    .filter(models.Kindergarten.governorate.in_(_names_for_slug(governorate_en)))
+                    .filter(models.DailyReport.date >= since)
                     .scalar() or 0)
     except Exception:
         return 0

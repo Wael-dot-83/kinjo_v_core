@@ -396,5 +396,150 @@ def test_compute_checklist_compliance_uses_daily_checklist_records(
     assert rate == 50.0
 
 
+def test_attendance_rate_excludes_excused(
+    test_db,
+    sample_kindergarten,
+    sample_class,
+    sample_child,
+    active_enrollment,
+    supervisor_user,
+):
+    """EXCUSED absences must NOT be counted as physical attendance."""
+    start = date(2026, 4, 1)
+    end = date(2026, 4, 3)  # 3 days
+
+    test_db.add_all([
+        models.AttendanceLog(child_id=sample_child.id, class_id=sample_class.id,
+                             date=start, status=models.AttendanceStatus.PRESENT,
+                             recorded_by=supervisor_user.id),
+        models.AttendanceLog(child_id=sample_child.id, class_id=sample_class.id,
+                             date=start + timedelta(days=1),
+                             status=models.AttendanceStatus.EXCUSED,  # must NOT count
+                             recorded_by=supervisor_user.id),
+        models.AttendanceLog(child_id=sample_child.id, class_id=sample_class.id,
+                             date=start + timedelta(days=2),
+                             status=models.AttendanceStatus.ABSENT,
+                             recorded_by=supervisor_user.id),
+    ])
+    test_db.commit()
+
+    rate = KPIService.compute_attendance_rate(test_db, sample_kindergarten.id, start, end)
+    # 1 PRESENT / 3 expected days = 33.33%
+    assert rate == pytest.approx(33.33, abs=0.1)
+
+
+def test_excused_absence_rate_counts_excused(
+    test_db,
+    sample_kindergarten,
+    sample_class,
+    sample_child,
+    active_enrollment,
+    supervisor_user,
+):
+    """Excused absence rate: EXCUSED / expected × 100."""
+    start = date(2026, 4, 7)
+    end = date(2026, 4, 8)  # 2 days
+
+    test_db.add_all([
+        models.AttendanceLog(child_id=sample_child.id, class_id=sample_class.id,
+                             date=start, status=models.AttendanceStatus.EXCUSED,
+                             recorded_by=supervisor_user.id),
+        models.AttendanceLog(child_id=sample_child.id, class_id=sample_class.id,
+                             date=start + timedelta(days=1),
+                             status=models.AttendanceStatus.PRESENT,
+                             recorded_by=supervisor_user.id),
+    ])
+    test_db.commit()
+
+    rate = KPIService.compute_excused_absence_rate(test_db, sample_kindergarten.id, start, end)
+    assert rate == 50.0
+
+
+def test_kpi_standards_endpoint_returns_all_kpis(client, admin_user):
+    token = get_token_for_admin(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    r = client.get("/api/kpi/standards", headers=headers)
+    assert r.status_code == 200
+    data = r.json()
+    assert "standards" in data
+    assert "hard_override_rules" in data
+    assert len(data["standards"]) >= 15
+    assert len(data["hard_override_rules"]) >= 3
+    # Every standard must have source metadata
+    for std in data["standards"]:
+        assert "threshold_source" in std
+        assert std["threshold_source"]["source_name"]
+
+
+def test_kpi_bundle_endpoint_returns_enriched_kpis(client, admin_user, sample_kindergarten):
+    token = get_token_for_admin(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    r = client.get(f"/api/kpi/bundle/{sample_kindergarten.id}", headers=headers)
+    assert r.status_code == 200
+    data = r.json()
+    assert "kpis" in data
+    assert "overall_band" in data
+    assert "period_start" in data
+    kpis = data["kpis"]
+    for key in ("attendance_rate", "ratio_compliance", "incident_rate", "overall_gcei"):
+        assert key in kpis, f"Missing KPI: {key}"
+        kpi = kpis[key]
+        assert "value" in kpi
+        assert "band" in kpi
+        assert "confidence" in kpi
+        assert "trend" in kpi
+        assert "meaning_en" in kpi
+        assert "decision_guidance_en" in kpi
+
+
+def test_kpi_definitions_endpoint(client, admin_user):
+    token = get_token_for_admin(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    r = client.get("/api/kpi/definitions?locale=ar", headers=headers)
+    assert r.status_code == 200
+    data = r.json()
+    assert "definitions" in data
+    assert data["count"] >= 10
+
+
+def test_kpi_alerts_endpoint_no_alerts_for_empty_kg(client, admin_user, sample_kindergarten):
+    token = get_token_for_admin(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    r = client.get(
+        f"/api/kpi/alerts?kindergarten_id={sample_kindergarten.id}",
+        headers=headers,
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert "alerts" in data
+
+
+def test_kpi_levels_country_admin_only(client, admin_user, sample_kindergarten):
+    token = get_token_for_admin(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    r = client.get("/api/kpi/levels/country", headers=headers)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["level"] == "country"
+    assert "kpis" in data
+
+
+def test_kpi_standards_aliases_resolve(client, admin_user):
+    """attendance_rate and parent_satisfaction aliases must resolve in standards."""
+    from kpi_standards import STANDARDS
+    assert "attendance_rate" in STANDARDS
+    assert "parent_satisfaction" in STANDARDS
+    assert STANDARDS["attendance_rate"] is STANDARDS["physical_attendance_rate"]
+
+
+def test_compute_confidence_levels():
+    """compute_confidence returns correct levels based on denominator size."""
+    from kpi_standards import compute_confidence, ConfidenceLevel
+    assert compute_confidence(50, 30, 50, True) == ConfidenceLevel.HIGH
+    assert compute_confidence(30, 30, 50, True) == ConfidenceLevel.MEDIUM  # exactly at min_denominator
+    assert compute_confidence(29, 30, 50, True) == ConfidenceLevel.LOW     # below min_denominator
+    assert compute_confidence(0, 30, 50, False) == ConfidenceLevel.INSUFFICIENT
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

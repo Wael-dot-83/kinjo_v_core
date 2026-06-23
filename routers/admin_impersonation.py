@@ -18,6 +18,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import AuditLog, Kindergarten, User, UserRole
+from rate_limiter import limiter
+from config import settings
 from rbac import IMPERSONATION_SESSION_KEY, require_role
 
 router = APIRouter()
@@ -82,6 +84,7 @@ def _write_audit(
 # Start impersonation
 # ---------------------------------------------------------------------------
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 @router.post("/admin/impersonate", status_code=status.HTTP_200_OK)
 def start_impersonation(
     payload: ImpersonateRequest,
@@ -157,6 +160,7 @@ def start_impersonation(
 # Exit impersonation
 # ---------------------------------------------------------------------------
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 @router.post("/admin/exit-impersonation", status_code=status.HTTP_200_OK)
 def exit_impersonation(
     request: Request,

@@ -3,70 +3,11 @@
 'components/filter_panel.html' import filter_panel %} {% from
 'components/alert_banner.html' import alert_banner %} {% block title %}{% if
 ui_lang == 'en' %}KPI Dashboard{% else %}لوحة مؤشرات الأداء{% endif %}{%
-endblock %} {% block page_header %}
-<div class="row pt-4 pb-2 mb-3 border-bottom align-items-center">
-  <div class="col-md-8">
-    <nav
-      aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}"
-    >
-      <ol class="breadcrumb bg-transparent p-0 mb-2">
-        <li class="breadcrumb-item">
-          <a href="/dashboard" class="text-decoration-none"
-            >{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif
-            %}</a
-          >
-        </li>
-        <li class="breadcrumb-item active">
-          {% if ui_lang == 'en' %}KPI{% else %}مؤشرات الأداء{% endif %}
-        </li>
-      </ol>
-    </nav>
-    <h1 class="h2 fw-bold text-dark mb-1">
-      <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
-      {% if ui_lang == 'en' %}KPI & Governance Dashboard{% else %}لوحة مؤشرات
-      الأداء والحوكمة{% endif %}
-    </h1>
-    <p class="text-muted small">
-      {% if ui_lang == 'en' %}Comprehensive analysis of kindergarten
-      performance, quality standards, safety and compliance rates.{% else
-      %}تحليل شامل لأداء الروضة، معايير الجودة، ومعدلات السلامة والالتزام.{%
-      endif %}
-    </p>
-  </div>
-  <div class="col-md-4 text-md-end">
-    <button
-      id="refreshBtn"
-      type="button"
-      class="btn btn-white shadow-sm border rounded-pill px-4 py-2"
-      onclick="document.getElementById('applyFiltersBtn').click()"
-    >
-      <i class="bi bi-arrow-clockwise me-1 text-primary"></i>
-      {% if ui_lang == 'en' %}Refresh Data{% else %}تحديث البيانات{% endif %}
-    </button>
-    {% if current_user and current_user.role.value == 'ADMIN' %}
-    <a
-      href="/admin/classification"
-      class="btn btn-outline-primary rounded-pill px-4 py-2 ms-2"
-    >
-      <i class="bi bi-trophy me-1"></i>
-      {% if ui_lang == 'en' %}Classification & Comparisons{% else %}التصنيف
-      والمقارنات{% endif %}
-    </a>
-    {% endif %}
-    <span
-      id="wsStatusIndicator"
-      class="badge rounded-pill ms-2 d-none align-middle"
-    >
-      <i class="bi bi-wifi-off me-1"></i>
-      <span id="wsStatusText"></span>
-    </span>
-  </div>
-</div>
-{% endblock %} {% block content %}
+endblock %} {% block extra_css %}
 <style>
-  /* Professional KPI Dashboard - Redesign */
+  /* Professional KPI Dashboard */
   :root {
-    --kpi-primary: #4285f4;
+    --kpi-primary: #1F5E47;
     --kpi-success: #34a853;
     --kpi-warning: #fbbc05;
     --kpi-danger: #ea4335;
@@ -85,7 +26,7 @@ endblock %} {% block page_header %}
   }
 
   .governance-hero {
-    background: linear-gradient(135deg, #f8faff 0%, #ffffff 100%);
+    background: linear-gradient(135deg, #f0f7f4 0%, #ffffff 100%);
     border-right: 4px solid var(--kpi-primary);
   }
 
@@ -172,7 +113,6 @@ endblock %} {% block page_header %}
     border-right: 3px solid #ffc107;
   }
 
-  /* Skeleton Loading Overlay */
   .skeleton-text {
     height: 20px;
     background: #eee;
@@ -212,7 +152,71 @@ endblock %} {% block page_header %}
     color: var(--kpi-primary);
   }
 </style>
-
+{% endblock %} {% block page_header %}
+<div class="row pt-4 pb-2 mb-3 border-bottom align-items-center">
+  <div class="col-md-8">
+    <nav
+      aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}"
+    >
+      <ol class="breadcrumb bg-transparent p-0 mb-2">
+        <li class="breadcrumb-item">
+          <a href="/dashboard" class="text-decoration-none"
+            >{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif
+            %}</a
+          >
+        </li>
+        <li class="breadcrumb-item active">
+          {% if ui_lang == 'en' %}KPI{% else %}مؤشرات الأداء{% endif %}
+        </li>
+      </ol>
+    </nav>
+    <h1 class="h2 fw-bold text-dark mb-1">
+      <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
+      {% if ui_lang == 'en' %}KPI & Governance Dashboard{% else %}لوحة مؤشرات
+      الأداء والحوكمة{% endif %}
+    </h1>
+    <p class="text-muted small">
+      {% if ui_lang == 'en' %}Comprehensive analysis of kindergarten
+      performance, quality standards, safety and compliance rates.{% else
+      %}تحليل شامل لأداء الروضة، معايير الجودة، ومعدلات السلامة والالتزام.{%
+      endif %}
+    </p>
+  </div>
+  <div class="col-md-4 text-md-end">
+    <button
+      id="refreshBtn"
+      type="button"
+      class="btn btn-white shadow-sm border rounded-pill px-4 py-2"
+      onclick="document.getElementById('applyFiltersBtn').click()"
+    >
+      <i class="bi bi-arrow-clockwise me-1 text-primary"></i>
+      {% if ui_lang == 'en' %}Refresh Data{% else %}تحديث البيانات{% endif %}
+    </button>
+    {% if current_user and current_user.role.value == 'ADMIN' %}
+    <a
+      href="/admin/classification"
+      class="btn btn-outline-primary rounded-pill px-4 py-2 ms-2"
+    >
+      <i class="bi bi-trophy me-1"></i>
+      {% if ui_lang == 'en' %}Classification & Comparisons{% else %}التصنيف
+      والمقارنات{% endif %}
+    </a>
+    {% endif %}
+<span
+       id="wsStatusIndicator"
+       class="badge rounded-pill ms-2 d-none align-middle"
+     >
+       <i class="bi bi-wifi-off me-1"></i>
+       <span id="wsStatusText"></span>
+     </span>
+     <span
+       id="dataQualityScore"
+       class="badge rounded-pill ms-2 d-none align-middle"
+       aria-label="{% if ui_lang == 'en' %}Data quality score{% else %}درجة جودة البيانات{% endif %}"
+     ></span>
+   </div>
+ </div>
+ {% endblock %} {% block content %}
 <div
   id="kpiDashboardRoot"
   data-user-role="{{ current_user.role.value if current_user else '' }}"
@@ -266,18 +270,10 @@ endblock %} {% block page_header %}
               </p>
 
               <div class="d-flex align-items-baseline gap-3 mb-2">
-                <h2
-                  class="display-3 fw-bold text-dark metric-value mb-0"
-                  id="gceiValue"
-                >
-                  --
-                </h2>
-                <h2
-                  class="display-3 fw-bold text-dark metric-value mb-0"
-                  id="gceiValuePlaceholder"
-                >
-                  --
-                </h2>
+<span class="h2 fw-bold text-dark metric-value mb-0" id="gceiValue">
+                   --
+                 </span>
+                 <span class="fs-6 text-muted ms-1">/ 100</span>
                 <span
                   class="badge badge-lg"
                   id="gceiStatusBadge"
@@ -407,7 +403,7 @@ endblock %} {% block page_header %}
                 </div>
                 <div
                   class="progress rounded-pill mb-2"
-                  style="height: 10px; background: rgba(66, 133, 244, 0.1)"
+                  style="height: 10px; background: rgba(31, 94, 71, 0.1)"
                 >
                   <div
                     class="progress-bar rounded-pill shadow-sm"
@@ -453,10 +449,10 @@ endblock %} {% block page_header %}
     التقارير اليومية والأسبوعية لرئاسة الروضة.' if ui_lang != 'en' else
     'Regularity of submitting daily and weekly reports to kindergarten
     management.')) ] %} {% for metric,title,band,icon,desc in ops %}
-    <div class="col">
-      {{ kpi_card(title=title, value='--', unit='%', band=band, tooltip=desc,
-      icon=icon) }}
-    </div>
+<div class="col">
+       {{ kpi_card(title=title, value='--', unit='%', band=band, tooltip=desc,
+       icon=icon, has_data=false) }}
+     </div>
     {% endfor %}
   </div>
 
@@ -479,39 +475,42 @@ endblock %} {% block page_header %}
     من إجمالي أيام الدراسة.' if ui_lang != 'en' else 'Percentage of children
     absent more than 10% of total school days.')) ] %} {% for
     metric,title,color,icon,desc in safety %}
-    <div class="col">
-      <div
-        class="card kpi-card shadow-sm border-0 h-100 border-bottom border-3 border-{{ color }}"
-      >
-        <div class="card-body p-4 d-flex flex-column h-100">
-          <div class="d-flex justify-content-between mb-3 align-items-center">
-            <div class="fw-bold text-secondary small">{{ title }}</div>
-            <div class="bg-{{ color }}-subtle p-2 rounded-3">
-              <i class="bi {{ icon }} text-{{ color }}"></i>
-            </div>
-          </div>
+<div class="col">
+       <div
+         class="card kpi-card shadow-sm border-0 h-100 border-bottom border-3 border-{{ color }}"
+       >
+         <div class="card-body p-4 d-flex flex-column h-100">
+           <div class="d-flex justify-content-between mb-3 align-items-center">
+             <div class="fw-bold text-secondary small">{{ title }}</div>
+             <div class="bg-{{ color }}-subtle p-2 rounded-3">
+               <i class="bi {{ icon }} text-{{ color }}"></i>
+             </div>
+           </div>
 
-          <div
-            class="d-flex align-items-center justify-content-between mt-auto"
-          >
-            <span
-              class="h2 fw-bold text-dark metric-value d-none mb-0"
-              data-value="{{ metric }}"
-              >--</span
-            >
-            <span
-              class="skeleton-text w-50"
-              data-skeleton="{{ metric }}"
-            ></span>
-            <i
-              class="bi bi-info-circle tooltip-icon"
-              data-bs-toggle="tooltip"
-              title="{{ desc }}"
-            ></i>
-          </div>
-        </div>
-      </div>
-    </div>
+           <div class="d-flex align-items-center justify-content-between mt-auto">
+             <span
+               class="h2 fw-bold text-dark metric-value mb-0"
+               data-value="{{ metric }}"
+               data-has-data="false"
+               >--</span
+             >
+             <span
+               class="skeleton-text w-50"
+               data-skeleton="{{ metric }}"
+             ></span>
+             <i
+               class="bi bi-info-circle tooltip-icon"
+               data-bs-toggle="tooltip"
+               title="{{ desc }}"
+               aria-label="{{ _('معلومات إضافية') }}"
+             ></i>
+           </div>
+           <div class="mt-2 status-badge-container d-none">
+             <span class="badge badge-soft badge-soft-{{ color }}" data-status-badge>{{ 'ممتاز' if title == 'نسبة الحضور' else 'متوسط' }}</span>
+           </div>
+         </div>
+       </div>
+     </div>
     {% endfor %}
   </div>
   {% set dist_col_class = 'col-12' if current_user and current_user.role.value
@@ -530,18 +529,20 @@ endblock %} {% block page_header %}
             >
           </h6>
         </div>
-        <div class="card-body">
-          <div
-            class="chart-container"
-            style="position: relative; height: 250px"
-          >
-            <canvas
-              id="distributionChart"
-              aria-label="{% if ui_lang == 'en' %}Student distribution chart{% else %}مخطط توزيع الطلاب حسب الروضات{% endif %}"
-              role="img"
-            ></canvas>
-          </div>
-        </div>
+<div class="card-body">
+           <div
+             class="chart-container distribution"
+           >
+             <canvas
+               id="distributionChart"
+               aria-label="{% if ui_lang == 'en' %}Student distribution chart{% else %}مخطط توزيع الطلاب حسب الروضات{% endif %}"
+               role="img"
+             ></canvas>
+             <div class="no-data-overlay d-none">
+               <span class="text-muted small">{% if ui_lang == 'en' %}No distribution data available{% else %}لا يوجد بيانات للتوزيع{% endif %}</span>
+             </div>
+           </div>
+         </div>
       </div>
     </div>
     {% if current_user and current_user.role.value == 'ADMIN' %}
@@ -602,8 +603,9 @@ endblock %} {% block page_header %}
   </div>
 </div>
 {% endblock %} {% block extra_js %}
-<script>
-  (function () {
+<script src="/static/js/kpi-validation.js?v=1.0"></script>
+         <script>
+   (function () {
     const root = document.getElementById("kpiDashboardRoot");
     const userRole = root ? (root.dataset.userRole || "").toUpperCase() : "";
     const userKindergartenId = root
@@ -1002,9 +1004,9 @@ endblock %} {% block page_header %}
       ),
     ) {
       if (isManagerView) {
-        return `${prefix}: ${kpiText("filters.your_kindergarten", "الروضة الخاصة بك", "Your kindergarten")} | ${state.startDate} → ${state.endDate}`;
+        return `${prefix}: ${kpiText("filters.your_kindergarten", "الروضة الخاصة بك", "Your kindergarten")} | ${formatArabicDate(state.startDate, state.endDate)}`;
       }
-      const parts = [`${state.startDate} → ${state.endDate}`];
+      const parts = [`${formatArabicDate(state.startDate, state.endDate)}`];
       parts.push(
         `${kpiText("common.governorate", "المحافظة", "Governorate")}: ${governorateLabel(state.governorate)}`,
       );
@@ -1153,13 +1155,26 @@ endblock %} {% block page_header %}
       day: "numeric",
     });
     const chartPalette = [
-      "#1a73e8",
-      "#34a853",
-      "#f9ab00",
-      "#ea4335",
-      "#8e24aa",
-      "#00acc1",
+      "#1F5E47",
+      "#B49B3B",
+      "#2F7D62",
+      "#D97706",
+      "#7C3AED",
+      "#163d2e",
     ];
+
+    function formatArabicDate(start, end) {
+      if (!start || !end) return "--";
+      const monthNames = kpiLang() === "en"
+        ? ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        : ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+      const format = (iso) => {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return iso;
+        return `${d.getDate()} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+      };
+      return `${format(start)} ${kpiText("", " إلى ", " to ")} ${format(end)}`;
+    }
 
     const noDataOverlayPlugin = {
       id: "noDataOverlay",
@@ -1218,7 +1233,7 @@ endblock %} {% block page_header %}
         typeof hexColor !== "string" ||
         !hexColor.startsWith("#")
       ) {
-        return `rgba(66, 133, 244, ${alpha})`;
+        return `rgba(31, 94, 71, ${alpha})`;
       }
       const value = hexColor.replace("#", "");
       const full =
@@ -1515,7 +1530,7 @@ endblock %} {% block page_header %}
         suffix: "",
       });
       enrollmentTrendChart = createTrendChart("enrollmentTrendChart", {
-        color: "#1a73e8",
+        color: "#2F7D62",
         percent: false,
         decimals: 0,
         suffix: "",
@@ -1624,17 +1639,39 @@ endblock %} {% block page_header %}
         }
       }
     }
-    function renderDashboard(data) {
-      if (!data || typeof data !== "object") {
-        showAlert(
-          kpiText(
-            "common.invalid_payload",
-            "البيانات المستلمة غير صالحة للعرض.",
-            "Received data is invalid for display.",
-          ),
-        );
-        return;
-      }
+function renderDashboard(data) {
+       // Centralized validation
+       if (window.KpiValidation && window.KpiValidation.validatePayload) {
+         const validation = window.KpiValidation.validatePayload(data);
+         if (!validation.valid) {
+           console.warn("Data validation issues:", validation.issues);
+         }
+         // Display data quality score
+         const qualityScore = validation.quality_score || 0;
+         const qualityEl = document.getElementById("dataQualityScore");
+         if (qualityEl) {
+           qualityEl.textContent = qualityScore + "%";
+           qualityEl.className = "badge rounded-pill ms-2";
+           if (qualityScore >= 80) {
+             qualityEl.classList.add("bg-success-subtle", "text-success");
+           } else if (qualityScore >= 50) {
+             qualityEl.classList.add("bg-warning-subtle", "text-warning");
+           } else {
+             qualityEl.classList.add("bg-danger-subtle", "text-danger");
+           }
+         }
+       }
+
+       if (!data || typeof data !== "object") {
+         showAlert(
+           kpiText(
+             "common.invalid_payload",
+             "البيانات المستلمة غير صالحة للعرض.",
+             "Received data is invalid for display.",
+           ),
+         );
+         return;
+       }
       // 1. Overall Governance Hero
       const gv = data.overall_gcei || {};
       const gcei = clamp(gv.value, 0, 100);
@@ -1705,7 +1742,11 @@ endblock %} {% block page_header %}
         badge.style.color = color;
       }
       if (desc) {
-        const explanation =
+        let explanation = "";
+        if (gv.components && gv.components.length) {
+          explanation = gv.components.map(c => `${c.name}: ${c.weight * 100}%`).join(" | ");
+        }
+        explanation = explanation ||
           (gv.explanation && (gv.explanation.ar || gv.explanation.en)) ||
           gv.description ||
           kpiText(
@@ -1715,7 +1756,7 @@ endblock %} {% block page_header %}
           );
         const coverageText =
           gv.data_coverage !== undefined && gv.data_coverage !== null
-            ? ` | ${kpiText("common.coverage", "التغطية", "Coverage")}: ${Number(gv.data_coverage).toFixed(1)}%`
+            ? ` | ${kpiText("kpi.data_coverage", "تغطية البيانات", "Data coverage")}: ${Number(gv.data_coverage).toFixed(1)}%`
             : "";
         const reasonText = gv.no_data_reason ? ` | ${gv.no_data_reason}` : "";
         desc.textContent = kpiLiteral(
@@ -1771,13 +1812,14 @@ endblock %} {% block page_header %}
 
         if (valEl) {
           const hasData = metric.has_data !== false;
+          valEl.dataset.hasData = hasData;
           const numericValue = Number(metric.value);
           let displayValue = "--";
           if (!hasData) {
             displayValue = kpiText(
-              "common.no_data",
-              "لا توجد بيانات",
-              "No data",
+              "kpi.not_available",
+              "غير متاح",
+              "Not available",
             );
           } else if (Number.isFinite(numericValue)) {
             if (key === "active_enrollments" || key === "new_enrollments") {
@@ -1792,6 +1834,10 @@ endblock %} {% block page_header %}
             }
           }
           valEl.textContent = displayValue;
+          const badgeContainer = valEl.parentElement?.parentElement?.querySelector('.status-badge-container');
+          if (badgeContainer) {
+            badgeContainer.classList.toggle('d-none', !hasData);
+          }
           if (
             metric.data_coverage !== undefined &&
             metric.data_coverage !== null
@@ -1838,28 +1884,35 @@ endblock %} {% block page_header %}
       renderAlerts(data.alerts || []);
     }
 
-    function renderRankingList(listId, items, color) {
-      const list = document.getElementById(listId);
-      if (!list) return;
-      if (!items || !items.length) {
-        list.innerHTML = `<li class="list-group-item border-0 text-muted small bg-transparent">${kpiText("common.no_data", "لا توجد بيانات", "No data")}</li>`;
-        return;
-      }
+function renderRankingList(listId, items, color) {
+       const list = document.getElementById(listId);
+       if (!list) return;
+       if (!items || !items.length) {
+         list.innerHTML = `<li class="list-group-item border-0 text-muted small bg-transparent">${kpiText("common.no_data", "لا توجد بيانات", "No data")}</li>`;
+         return;
+       }
 
-      list.innerHTML = items
-        .map(
-          (entry, index) => `
-                <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 bg-transparent py-2">
-                    <div class="d-flex align-items-center gap-2" style="max-width: 72%;">
-                        <span class="badge bg-light text-secondary">${index + 1}</span>
-                        <span class="small fw-semibold text-truncate">${escapeHtml((entry && entry.name) || kpiText("kpi.kindergarten_fallback", "روضة", "Kindergarten") + ` #${index + 1}`)}</span>
-                    </div>
-                    <span class="badge bg-${color}-subtle text-${color} rounded-pill">${formatValue(Number(entry.value) || 0)}</span>
-                </li>
-            `,
-        )
-        .join("");
-    }
+       const seenIds = new Set();
+       list.innerHTML = items
+         .filter((entry) => {
+           if (!entry || !entry.id) return true;
+           if (seenIds.has(entry.id)) return false;
+           seenIds.add(entry.id);
+           return true;
+         })
+         .map(
+           (entry, index) => `
+                 <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 bg-transparent py-2">
+                     <div class="d-flex align-items-center gap-2" style="max-width: 72%;">
+                         <span class="badge bg-light text-secondary">${index + 1}</span>
+                         <span class="small fw-semibold text-truncate" title="${escapeHtml(entry.governorate || '')}">${escapeHtml((entry && entry.name) || kpiText("kpi.kindergarten_fallback", "روضة", "Kindergarten") + ` #${index + 1}`)}</span>
+                     </div>
+                     <span class="badge bg-${color}-subtle text-${color} rounded-pill">${formatValue(Number(entry.value) || 0)}</span>
+                 </li>
+             `,
+         )
+         .join("");
+     }
 
     function updateTrendChart(chart, points) {
       if (!chart) return;
@@ -1884,6 +1937,13 @@ endblock %} {% block page_header %}
     function renderStudentDistribution(items) {
       if (!distributionChart) return;
       const list = Array.isArray(items) ? items : [];
+      const hasData = list.length > 0;
+      const noDataOverlay = document.querySelector("#distributionChart").parentElement?.querySelector(".no-data-overlay");
+
+      if (noDataOverlay) {
+        noDataOverlay.classList.toggle("d-none", hasData);
+      }
+
       const labels = list.map((item) =>
         kpiLiteral(
           String(
@@ -2313,34 +2373,37 @@ endblock %} {% block page_header %}
       return div;
     }
 
-    // Export functionality
-    async function exportDashboard(format = "csv") {
-      try {
-        const response = await requestWithAuth(
-          `/api/export/kpi-dashboard?format=${encodeURIComponent(format)}`,
-        );
-        if (!response || !response.ok) {
-          const errorText = response ? await response.text() : "";
-          throw new Error(
-            errorText ||
-              kpiText(
-                "export.failed",
-                "تعذر تصدير البيانات",
-                "Unable to export data",
-              ),
-          );
-        }
+// Export functionality
+     async function exportDashboard(format = "csv") {
+       try {
+         const response = await requestWithAuth(
+           `/api/export/kpi-dashboard?format=${encodeURIComponent(format)}`,
+         );
+         if (!response || !response.ok) {
+           const errorText = response ? await response.text() : "";
+           throw new Error(
+             errorText ||
+               kpiText(
+                 "export.failed",
+                 "تعذر تصدير البيانات",
+                 "Unable to export data",
+               ),
+           );
+         }
 
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `kpi_dashboard_${new Date().toISOString().split("T")[0]}.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      } catch (error) {
+         const blob = await response.blob();
+         const url = window.URL.createObjectURL(blob);
+         const a = document.createElement("a");
+         a.href = url;
+         // Include current filter context in filename for traceability
+         const filenameDate = new Date().toISOString().slice(0, 10);
+         const filenameContext = state.kindergartenIds.length ? `_kg${state.kindergartenIds.join("-")}` : "";
+         a.download = `kpi_dashboard${filenameContext}_${filenameDate}.${format}`;
+         document.body.appendChild(a);
+         a.click();
+         document.body.removeChild(a);
+         window.URL.revokeObjectURL(url);
+       } catch (error) {
         showAlert(
           extractErrorMessage(
             error,

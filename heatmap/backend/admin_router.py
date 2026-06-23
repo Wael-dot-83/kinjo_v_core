@@ -23,7 +23,7 @@ Uses standardized APIError responses from admin_security.
 from __future__ import annotations
 import logging
 from datetime import date, datetime, timedelta
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
@@ -41,6 +41,7 @@ import models
 
 from . import service as heatmap_service
 from . import cache as heatmap_cache
+from .kpi_status import KPIStatus, normalize_kpi_status
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,54 @@ def _require_admin(current_user: models.User = Depends(get_current_user)) -> mod
     if getattr(current_user, "role", None) != models.UserRole.ADMIN:
         raise forbidden_error("Admin access required")
     return current_user
+
+
+def _pagination_meta(page: int, page_size: int, total: int) -> Dict[str, Any]:
+    total_pages = (total + page_size - 1) // page_size if total else 0
+    return {
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages,
+        "has_next": page < total_pages,
+        "has_prev": page > 1,
+    }
+
+
+def _kindergarten_filters(
+    governorate: Optional[str],
+    city: Optional[str],
+    status: Optional[str],
+    from_date: Optional[date],
+    to_date: Optional[date],
+) -> Dict[str, Any]:
+    return {
+        "governorate": governorate,
+        "city": city,
+        "status": status,
+        "from": from_date.isoformat() if from_date else None,
+        "to": to_date.isoformat() if to_date else None,
+    }
+
+
+def _normalize_kindergarten_status(status: Optional[str]) -> Optional[str]:
+    if status is None:
+        return None
+    normalized = normalize_kpi_status(status).value
+    allowed = {s.value for s in KPIStatus}
+    if normalized not in allowed:
+        raise validation_error(f"Unknown kindergarten KPI status: {status!r}")
+    return normalized
+
+
+def _filter_kindergarten_rows_by_status(db: Session, rows, status: Optional[str]):
+    normalized = _normalize_kindergarten_status(status)
+    if normalized is None:
+        return rows
+    return [
+        row for row in rows
+        if heatmap_service.compute_kindergarten_kpi_scores(db, row)["kpi_status"]["status"] == normalized
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +145,125 @@ def list_indicators(
 
 
 # ---------------------------------------------------------------------------
+# Kindergarten-level heat map endpoints
+# ---------------------------------------------------------------------------
+@router.get("/kindergartens")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def list_kindergartens(
+    request: Request,
+    governorate: Optional[str] = Query(None, description="Governorate slug, e.g. amman"),
+    city: Optional[str] = Query(None),
+    status: Optional[str] = Query(None, pattern="^(normal|warning|risk|critical|unknown)$"),
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    page_size: int = Query(50, ge=1, le=200, description="Rows per page"),
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    """List kindergartens with normalized KPI status and pagination."""
+    try:
+        query = heatmap_service.build_kindergarten_query(
+            db,
+            governorate=governorate,
+            city=city,
+            status=status,
+            from_date=from_date,
+            to_date=to_date,
+        )
+        rows = query.order_by(models.Kindergarten.id.asc()).all()
+        rows = _filter_kindergarten_rows_by_status(db, rows, status)
+    except ValueError as exc:
+        raise validation_error(str(exc))
+
+    total = len(rows)
+    offset = (page - 1) * page_size
+    page_rows = rows[offset:offset + page_size]
+    items = [
+        heatmap_service.kindergarten_to_dict(db, row, include_details=True)
+        for row in page_rows
+    ]
+    return {
+        "items": items,
+        "count": len(items),
+        "total": total,
+        "pagination": _pagination_meta(page, page_size, total),
+        "filters": _kindergarten_filters(governorate, city, status, from_date, to_date),
+        "last_update": datetime.now().isoformat(),
+    }
+
+
+@router.get("/kindergartens/map-data")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_kindergarten_map_data(
+    request: Request,
+    governorate: Optional[str] = Query(None, description="Governorate slug, e.g. amman"),
+    city: Optional[str] = Query(None),
+    status: Optional[str] = Query(None, pattern="^(normal|warning|risk|critical|unknown)$"),
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Return GeoJSON point data for kindergarten map visualization."""
+    try:
+        return heatmap_service.get_kindergarten_map_data(
+            db,
+            governorate=governorate,
+            city=city,
+            status=status,
+            from_date=from_date,
+            to_date=to_date,
+        )
+    except ValueError as exc:
+        raise validation_error(str(exc))
+
+
+@router.get("/kindergartens/stats")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_kindergarten_stats(
+    request: Request,
+    governorate: Optional[str] = Query(None, description="Governorate slug, e.g. amman"),
+    city: Optional[str] = Query(None),
+    status: Optional[str] = Query(None, pattern="^(normal|warning|risk|critical|unknown)$"),
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Return aggregated kindergarten KPI statistics for the data table."""
+    try:
+        return heatmap_service.get_kindergarten_stats(
+            db,
+            governorate=governorate,
+            city=city,
+            status=status,
+            from_date=from_date,
+            to_date=to_date,
+        )
+    except ValueError as exc:
+        raise validation_error(str(exc))
+
+
+@router.get("/kindergartens/{id}")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_kindergarten_detail(
+    request: Request,
+    id: int,
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Return one kindergarten with normalized KPI status and indicator details."""
+    data = heatmap_service.get_kindergarten_detail(db, id)
+    if data is None:
+        raise not_found_error(f"Unknown kindergarten: {id}")
+    return {
+        "kindergarten": data,
+        "last_update": datetime.now().isoformat(),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Map data
 # ---------------------------------------------------------------------------
 @router.get("/data")
@@ -115,7 +283,7 @@ def get_heat_map_data(
     if indicator and indicator in [i["key"] for i in overview["indicators"]]:
         overview["selected_indicator"] = indicator
     else:
-        overview["selected_indicator"] = "tasks_governance"
+        overview["selected_indicator"] = "overall_risk"
     heatmap_cache.cached_set(cache_name, overview, ttl=heatmap_cache.HEAT_MAP_TTL_SECONDS)
     return overview
 
@@ -330,6 +498,36 @@ def list_runs(
         ],
         "count": len(runs),
     }
+
+
+# ---------------------------------------------------------------------------
+# City-level aggregation
+# ---------------------------------------------------------------------------
+@router.get("/governorate/{slug}/cities")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_governorate_cities(
+    request: Request,
+    slug: str,
+    current_user: models.User = Depends(_require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Return city-level KPI summary for all cities within a governorate.
+
+    Groups kindergartens by their `city` field and returns aggregated KPI
+    scores, risk levels, and child/enrollment counts per city.
+    """
+    if slug not in [g["slug"] for g in heatmap_service.get_governorates()]:
+        raise not_found_error(f"Unknown governorate: {slug!r}")
+    cache_name = f"cities:{slug}"
+    cached = heatmap_cache.cached_get(cache_name)
+    if cached is not None:
+        return cached
+    try:
+        data = heatmap_service.get_city_summary(db, slug)
+    except ValueError as exc:
+        raise validation_error(str(exc))
+    heatmap_cache.cached_set(cache_name, data, ttl=heatmap_cache.HEAT_MAP_TTL_SECONDS)
+    return data
 
 
 # ---------------------------------------------------------------------------

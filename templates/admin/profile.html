@@ -1,6 +1,88 @@
-﻿{% extends "admin_base.html" %}
+{% extends "admin_base.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %} — KinJo{% endblock %}
+
+{% block extra_head %}
+<style>
+.profile-hero {
+  background: linear-gradient(135deg, var(--admin-primary, #1F5E47) 0%, var(--admin-primary-hover, #2F7D62) 100%);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.profile-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+  pointer-events: none;
+}
+.profile-hero-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 4px solid rgba(255,255,255,0.4);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+.profile-hero-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-hero-avatar .avatar-fallback {
+  font-size: 2.5rem;
+  color: rgba(255,255,255,0.8);
+  display: none;
+}
+.profile-hero-info {
+  position: relative;
+  z-index: 1;
+}
+.profile-hero-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  line-height: 1.3;
+}
+.profile-hero-dept {
+  font-size: 0.9rem;
+  opacity: 0.85;
+  margin-bottom: 0.6rem;
+}
+.profile-hero-badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 20px;
+  padding: 0.2rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.profile-hero-meta {
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  opacity: 0.75;
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+.profile-hero-meta i { margin-inline-end: 0.3rem; }
+</style>
+{% endblock extra_head %}
 
 {% block breadcrumb %}
 <a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard">
@@ -13,11 +95,40 @@
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4">
-  <h1 class="admin-page-title">
-    <i class="bi bi-person-circle me-2"></i>
-    {% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %}
-  </h1>
+
+<!-- Profile Hero -->
+<div class="profile-hero">
+  <div class="profile-hero-avatar">
+    <img
+      src="/static/img/admin_avatar.png"
+      alt="{% if ui_lang == 'en' %}Admin profile photo{% else %}صورة الملف الشخصي{% endif %}"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+    />
+    <span class="avatar-fallback" style="display:none;">
+      <i class="bi bi-person-fill"></i>
+    </span>
+  </div>
+  <div class="profile-hero-info">
+    <div class="profile-hero-name">
+      {{ current_user.full_name or current_user.username }}
+    </div>
+    <div class="profile-hero-dept">
+      {% if ui_lang == 'en' %}Family &amp; Childhood Directorate{% else %}مديرية الأسرة والطفولة{% endif %}
+    </div>
+    <div class="profile-hero-badge">
+      {% if ui_lang == 'en' %}Administrator{% else %}مدير النظام{% endif %}
+    </div>
+    <div class="profile-hero-meta">
+      <span><i class="bi bi-person"></i>{{ current_user.username }}</span>
+      <span><i class="bi bi-envelope"></i>{{ current_user.email or '—' }}</span>
+      {% if current_user.created_at %}
+      <span><i class="bi bi-calendar3"></i>
+        {% if ui_lang == 'en' %}Since{% else %}عضو منذ{% endif %}
+        {{ current_user.created_at.strftime('%Y-%m-%d') }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
 <div class="row g-4">
@@ -25,45 +136,53 @@
     <div class="admin-card">
       <div class="admin-card-header">
         <h2 class="admin-card-title">
+          <i class="bi bi-person-vcard me-2"></i>
           {% if ui_lang == 'en' %}Account Information{% else %}معلومات الحساب{% endif %}
         </h2>
       </div>
       <div class="admin-card-body">
         <dl class="row mb-0">
-          <dt class="col-sm-4 fw-semibold text-muted">
-            {% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}
-          </dt>
-          <dd class="col-sm-8">{{ current_user.username }}</dd>
-
-          <dt class="col-sm-4 fw-semibold text-muted">
-            {% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}
-          </dt>
-          <dd class="col-sm-8">{{ current_user.email or '—' }}</dd>
-
-          <dt class="col-sm-4 fw-semibold text-muted">
-            {% if ui_lang == 'en' %}Full Name{% else %}الاسم الكامل{% endif %}
-          </dt>
-          <dd class="col-sm-8">{{ current_user.full_name or '—' }}</dd>
-
-          <dt class="col-sm-4 fw-semibold text-muted">
-            {% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}
-          </dt>
-          <dd class="col-sm-8">
-            <span class="badge bg-primary">{{ current_user.role.value if current_user.role else '—' }}</span>
-          </dd>
-
-          <dt class="col-sm-4 fw-semibold text-muted">
-            {% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}
-          </dt>
-          <dd class="col-sm-8">
-            <span class="badge bg-success">{{ current_user.status.value if current_user.status else '—' }}</span>
-          </dd>
-
+          <div class="col-12 row mb-0">
+            <dt class="col-sm-4 fw-semibold text-muted">
+              {% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}
+            </dt>
+            <dd class="col-sm-8">{{ current_user.username }}</dd>
+          </div>
+          <div class="col-12 row mb-0">
+            <dt class="col-sm-4 fw-semibold text-muted">
+              {% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}
+            </dt>
+            <dd class="col-sm-8">{{ current_user.email or '—' }}</dd>
+          </div>
+          <div class="col-12 row mb-0">
+            <dt class="col-sm-4 fw-semibold text-muted">
+              {% if ui_lang == 'en' %}Full Name{% else %}الاسم الكامل{% endif %}
+            </dt>
+            <dd class="col-sm-8">{{ current_user.full_name or '—' }}</dd>
+          </div>
+          <div class="col-12 row mb-0">
+            <dt class="col-sm-4 fw-semibold text-muted">
+              {% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}
+            </dt>
+            <dd class="col-sm-8">
+              <span class="badge bg-primary">{{ current_user.role.value if current_user.role else '—' }}</span>
+            </dd>
+          </div>
+          <div class="col-12 row mb-0">
+            <dt class="col-sm-4 fw-semibold text-muted">
+              {% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}
+            </dt>
+            <dd class="col-sm-8">
+              <span class="badge bg-success">{{ current_user.status.value if current_user.status else '—' }}</span>
+            </dd>
+          </div>
           {% if current_user.created_at %}
-          <dt class="col-sm-4 fw-semibold text-muted">
-            {% if ui_lang == 'en' %}Member Since{% else %}عضو منذ{% endif %}
-          </dt>
-          <dd class="col-sm-8">{{ current_user.created_at.strftime('%Y-%m-%d') }}</dd>
+          <div class="col-12 row mb-0">
+            <dt class="col-sm-4 fw-semibold text-muted">
+              {% if ui_lang == 'en' %}Member Since{% else %}عضو منذ{% endif %}
+            </dt>
+            <dd class="col-sm-8">{{ current_user.created_at.strftime('%Y-%m-%d') }}</dd>
+          </div>
           {% endif %}
         </dl>
       </div>
@@ -74,6 +193,7 @@
     <div class="admin-card">
       <div class="admin-card-header">
         <h2 class="admin-card-title">
+          <i class="bi bi-shield-lock me-2"></i>
           {% if ui_lang == 'en' %}Security{% else %}الأمان{% endif %}
         </h2>
       </div>

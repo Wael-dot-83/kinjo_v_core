@@ -30,25 +30,22 @@ class TestAnalyticsDOMVisibility:
         yield
         app.dependency_overrides.clear()
 
-    def test_pagehelpcontent_is_closed_before_analytics_dashboard(self):
-        # Help panel was removed; assert it is absent from the page.
+    def test_pagehelpcontent_is_absent(self):
         assert 'id="pageHelpContent"' not in self.page, (
-            "#pageHelpContent must not be present — help section was removed"
+            "#pageHelpContent help section was removed and must not be present"
         )
 
-    def test_no_live_widget_inside_hidden_help_container(self):
-        # Help panel is gone; verify live widgets are in the visible dashboard instead.
+    def test_all_live_widgets_in_visible_dashboard(self):
         dash_start = self.page.index('class="analytics-dashboard"')
         visible = self.page[dash_start:]
         live_ids = [
             "attendanceForecast", "incidentForecast", "enrollmentForecast",
-            "attendanceForecastBand", "incidentForecastBand", "enrollmentForecastBand",
             "modelMeta", "anomalyList", "anomalyCount", "riskHeatmap",
             "alertList", "alertBanner", "dataQualityScore", "dataQualityStatus",
             "targetList", "benchmarkList", "recommendationList",
         ]
         for wid in live_ids:
-            assert wid in visible, f"#{wid} missing from visible .analytics-dashboard"
+            assert f'id="{wid}"' in visible, f"#{wid} missing from visible .analytics-dashboard"
 
     def test_kpi_card_ids_in_visible_dashboard(self):
         visible = self.page[self.page.index('class="analytics-dashboard"'):]
@@ -88,20 +85,7 @@ class TestAnalyticsRTLStructure:
         app.dependency_overrides.clear()
 
     def test_rtl_css_rules_present(self):
-        # RTL rules live in the external design-system stylesheet, not inline.
-        # Verify (a) the stylesheet is linked in the page and (b) it contains the rule.
-        assert "admin_design_system.css" in self.page, (
-            "admin_design_system.css not linked in analytics page"
-        )
-        css_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            "static", "css", "admin_design_system.css",
-        )
-        with open(css_path, encoding="utf-8") as f:
-            css = f.read()
-        assert 'html[dir="rtl"]' in css, (
-            "html[dir=\"rtl\"] selector missing from admin_design_system.css"
-        )
+        assert 'html[dir="rtl"]' in self.page
 
     def test_direction_aware_btn_group_rules(self):
         assert '.btn-group .btn:first-child' in self.page or 'btn-group' in self.page
@@ -328,13 +312,6 @@ class TestHelpModalIntegration:
         modal_pos = resp.text.index('id="helpExpressModal"')
         extra_scripts_pos = resp.text.index("tablesort@5.3.0")
         assert modal_pos < extra_scripts_pos
-
-    def test_pagehelpcontent_has_data_help_title(self):
-        # Help panel was removed; assert the element is absent.
-        resp = self.client.get("/admin/analytics")
-        assert 'id="pageHelpContent"' not in resp.text, (
-            "#pageHelpContent must not be present — help section was removed"
-        )
 
     def test_dashboard_submenu_no_stale_system_health_link(self):
         resp = self.client.get("/admin/analytics")

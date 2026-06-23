@@ -96,6 +96,8 @@ def list_enrollments(
         "skip": skip,
         "limit": limit
     }
+
+
 class EnrollmentApplicationRequest(BaseModel):
     first_name: str
     second_name: Optional[str] = None
@@ -194,8 +196,8 @@ def create_enrollment_application(
     age_days = (today - dob).days
     age_months = age_days / 30.44  # Average days per month
 
-    if age_days < 1:
-        raise HTTPException(status_code=400, detail=_api("Child must be at least 1 day old", _ulang(current_user)))
+    if age_days < settings.MIN_CHILD_AGE_DAYS:
+        raise HTTPException(status_code=400, detail=_api(f"Child must be at least {settings.MIN_CHILD_AGE_DAYS} days old", _ulang(current_user)))
     if age_months > 56:
         raise HTTPException(status_code=400, detail=_api("Child must be under 56 months old", _ulang(current_user)))
 
@@ -342,6 +344,7 @@ def review_enrollment(
             raise HTTPException(status_code=400, detail="Rejection reason is required.")
         enrollment.status = models.EnrollmentStatus.REJECTED
         enrollment.rejected_at = datetime.now(timezone.utc)
+        enrollment.status_reason = reason.strip()[:255]
         audit_action = "REJECT"
     else:
         # Verify profile completeness before accepting
@@ -392,6 +395,7 @@ def review_enrollment(
 
         enrollment.status = models.EnrollmentStatus.ACCEPTED
         enrollment.accepted_at = datetime.now(timezone.utc)
+        enrollment.status_reason = None
         audit_action = "ACCEPT"
 
     enrollment.decision_by = current_user.id

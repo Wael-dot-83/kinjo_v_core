@@ -194,12 +194,20 @@ def compute_timeliness_metrics(
 
     rows = q.all()
 
+    def _as_naive(dt: Optional[datetime]) -> Optional[datetime]:
+        """Strip tzinfo so that naive and aware datetimes can be subtracted."""
+        if dt is None:
+            return None
+        return dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
+
     # Group by KG
     kg_deltas: Dict[int, List[float]] = {}
     for row in rows:
         if not row.created_at or not row.submitted_at:
             continue
-        delta_hours = (row.submitted_at - row.created_at).total_seconds() / 3600
+        created = _as_naive(row.created_at)
+        submitted = _as_naive(row.submitted_at)
+        delta_hours = (submitted - created).total_seconds() / 3600
         kg_deltas.setdefault(row.kindergarten_id, []).append(delta_hours)
 
     per_kg = {}

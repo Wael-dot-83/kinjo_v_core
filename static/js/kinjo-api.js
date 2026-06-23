@@ -203,6 +203,9 @@ class KinJoAPI {
 
     const data = await response.json();
     this.setToken(data.access_token);
+    if (window.AuthService && typeof AuthService.setToken === "function") {
+      AuthService.setToken(data.access_token);
+    }
     return data;
   }
 
@@ -625,22 +628,22 @@ class KinJoAPI {
    * @param {File} file - CSV file
    * @param {boolean} dryRun - If true, validate without importing
    */
-  async importUsersCSV(file, dryRun = false) {
-    const formData = new FormData();
-    formData.append("file", file);
+async importUsersCSV(file, dryRun = false) {
+     const formData = new FormData();
+     formData.append("file", file);
 
-    const url = `/api/admin/users/import-csv?dry_run=${dryRun}`;
-    if (!this.isAuthenticated()) {
-      window.location.href = "/login";
-      throw new Error(
-        kinjoApiText("auth.login.required", "يتطلب تسجيل الدخول", "Sign-in is required")
-      );
-    }
+     const url = `/api/admin/users/import-csv?dry_run=${dryRun}`;
+     if (!this.isAuthenticated()) {
+       window.location.href = "/login";
+       throw new Error(
+         kinjoApiText("auth.login.required", "يتطلب تسجيل الدخول", "Sign-in is required")
+       );
+     }
 
-    const response = await fetch(url, {
-      method: "POST",
-      body: formData,
-    });
+     const response = await fetchWithAuth(url, {
+       method: "POST",
+       body: formData,
+     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -660,18 +663,18 @@ class KinJoAPI {
    * Download CSV import error report.
    * @param {Array} errors - Error list returned by importUsersCSV
    */
-  async downloadCSVErrorReport(errors) {
-    if (!this.isAuthenticated()) {
-      window.location.href = "/login";
-      throw new Error("Sign-in is required");
-    }
-    const response = await fetch("/api/admin/users/import-csv/error-report", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ errors }),
-    });
+async downloadCSVErrorReport(errors) {
+     if (!this.isAuthenticated()) {
+       window.location.href = "/login";
+       throw new Error("Sign-in is required");
+     }
+     const response = await fetchWithAuth("/api/admin/users/import-csv/error-report", {
+       method: "POST",
+       headers: {
+         "Content-Type": "application/json",
+       },
+       body: JSON.stringify({ errors }),
+     });
     if (!response.ok) {
       throw new Error("Failed to download error report");
     }
@@ -703,7 +706,13 @@ class KinJoAPI {
       );
     }
 
-    const response = await fetch(url);
+const response = await fetchWithAuth(url);
+
+    if (!response) {
+      throw new Error(
+        kinjoApiText("auth.login.required", "يتطلب تسجيل الدخول", "Sign-in is required")
+      );
+    }
 
     if (!response.ok) {
       throw new Error(kinjoApiText("common.export_failed", "فشل التصدير", "Export failed"));

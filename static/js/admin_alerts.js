@@ -1,43 +1,42 @@
 (function () {
-    function tokenValue() {
-        return localStorage.getItem("kinjo_token") || sessionStorage.getItem("kinjo_token") || "";
-    }
+    "use strict";
 
-    function authHeaders() {
-        const headers = { "Content-Type": "application/json" };
-        const token = tokenValue();
-        if (token) {
-            headers.Authorization = `Bearer ${token}`;
-        }
-        return headers;
+    const isRtl = document.documentElement.lang === "ar" || document.documentElement.dir === "rtl";
+
+    // Read kinjo_csrf_token cookie (JS-visible, set by server)
+    function getCsrfToken() {
+        const match = document.cookie.match(/(?:^|;\s*)kinjo_csrf_token=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : "";
     }
 
     async function apiRequest(url, options = {}) {
-        const headers = authHeaders();
-        const response = await fetch(url, { ...options, headers });
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(text || "تعذر تنفيذ الطلب");
+        const method = (options.method || "GET").toUpperCase();
+        const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+        if (method !== "GET" && method !== "HEAD") {
+            headers["X-CSRF-Token"] = getCsrfToken();
         }
-        return response.json();
+        const resp = await fetch(url, { ...options, headers, credentials: "same-origin" });
+        if (!resp.ok) {
+            const text = await resp.text().catch(() => "");
+            throw new Error(text || `HTTP ${resp.status}`);
+        }
+        return resp.json();
     }
 
     function formatNumber(value, digits = 2) {
-        if (value === null || value === undefined || Number.isNaN(Number(value))) {
-            return "--";
-        }
+        if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
         return Number(value).toFixed(digits);
     }
 
     function formatDate(dateStr) {
         if (!dateStr) return "--";
-        const date = new Date(dateStr);
-        if (Number.isNaN(date.getTime())) return dateStr;
-        return date.toLocaleString();
+        const d = new Date(dateStr);
+        if (Number.isNaN(d.getTime())) return dateStr;
+        return d.toLocaleString(isRtl ? "ar-JO" : "en-GB");
     }
 
     function escapeHtml(str) {
-        return String(str || "")
+        return String(str ?? "")
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
@@ -45,110 +44,224 @@
             .replace(/'/g, "&#39;");
     }
 
+    const SEVERITY_META = {
+        CRITICAL: { cls: "bg-danger",          ar: "حرج",     en: "Critical" },
+        HIGH:     { cls: "bg-warning text-dark", ar: "عالي",   en: "High" },
+        MEDIUM:   { cls: "bg-warning",           ar: "متوسط",  en: "Medium" },
+        LOW:      { cls: "bg-info text-dark",    ar: "منخفض",  en: "Low" },
+    };
+
+    const STATUS_META = {
+        ACTIVE:       { cls: "bg-danger",   ar: "نشط",        en: "Active" },
+        ACKNOWLEDGED: { cls: "bg-warning text-dark", ar: "مُعترَف به", en: "Acknowledged" },
+        RESOLVED:     { cls: "bg-success",  ar: "محلول",       en: "Resolved" },
+    };
+
     function severityBadge(severity) {
-        const classes = {
-            CRITICAL: "bg-danger",
-            HIGH: "bg-warning text-dark",
-            MEDIUM: "bg-warning",
-            LOW: "bg-info",
-        };
-        const labels = {
-            CRITICAL: "حرج",
-            HIGH: "عالي",
-            MEDIUM: "متوسط",
-            LOW: "منخفض",
-        };
-        return `<span class="badge ${classes[severity] || "bg-secondary"}">${labels[severity] || severity}</span>`;
+        const meta = SEVERITY_META[severity];
+        if (!meta) return `<span class="badge bg-secondary">${escapeHtml(severity)}</span>`;
+        const label = isRtl ? meta.ar : meta.en;
+        return `<span class="badge ${meta.cls}">${label}</span>`;
     }
 
-    function setLoading(isLoading) {
-        const el = document.getElementById("alertsLoading");
-        if (el) el.classList.toggle("d-none", !isLoading);
+    function statusBadge(status) {
+        const meta = STATUS_META[status];
+        if (!meta) return `<span class="badge bg-secondary">${escapeHtml(status)}</span>`;
+        const label = isRtl ? meta.ar : meta.en;
+        return `<span class="badge ${meta.cls}">${label}</span>`;
     }
 
-    function setError(message) {
+    function setLoading(on) {
+        document.getElementById("alertsLoading")?.classList.toggle("d-none", !on);
+    }
+
+    function setError(msg) {
         const el = document.getElementById("alertsError");
-        if (el) {
-            el.textContent = message || "";
-            el.classList.toggle("d-none", !message);
-        }
+        if (!el) return;
+        el.textContent = msg || "";
+        el.classList.toggle("d-none", !msg);
     }
 
-    function setEmpty(isEmpty) {
-        const el = document.getElementById("alertsEmpty");
-        if (el) el.classList.toggle("d-none", !isEmpty);
+    function setEmpty(on) {
+        document.getElementById("alertsEmpty")?.classList.toggle("d-none", !on);
     }
 
-    function filterParams() {
+    // Convert timeFilter value to a date_from ISO string
+    function timeFilterToDateFrom(timeValue) {
+        if (!timeValue) return null;
+        const now = new Date();
+        const hours = { "24h": 24, "7d": 168, "30d": 720 };
+        const h = hours[timeValue];
+        if (!h) return null;
+        return new Date(now.getTime() - h * 3600 * 1000).toISOString();
+    }
+
+    // Pagination state
+    let currentPage = 1;
+    const PAGE_SIZE = 50;
+
+    function filterParams(page = 1) {
         const params = new URLSearchParams();
-        const severity = document.getElementById("severityFilter")?.value;
+        const severity   = document.getElementById("severityFilter")?.value;
         const governorate = document.getElementById("governorateFilter")?.value;
-        const status = document.getElementById("statusFilter")?.value;
-        const timeFilter = document.getElementById("timeFilter")?.value;
+        const status     = document.getElementById("statusFilter")?.value;
+        const timeVal    = document.getElementById("timeFilter")?.value;
+        const dateFrom   = timeFilterToDateFrom(timeVal);
 
-        if (severity) params.set("severity", severity);
+        if (severity)    params.set("severity", severity);
         if (governorate) params.set("governorate", governorate);
-        if (status) params.set("status", status);
+        if (status)      params.set("status", status);
+        if (dateFrom)    params.set("date_from", dateFrom);
+        params.set("skip", String((page - 1) * PAGE_SIZE));
+        params.set("limit", String(PAGE_SIZE));
         return params;
     }
 
     function renderAlerts(alerts) {
         const tbody = document.getElementById("alertsTableBody");
         if (!tbody) return;
-
         if (!alerts || alerts.length === 0) {
             tbody.innerHTML = "";
             setEmpty(true);
             return;
         }
-
         setEmpty(false);
-        tbody.innerHTML = alerts
-            .map((alert) => `
-            <tr>
-                <td>${severityBadge(alert.severity)}</td>
-                <td>${escapeHtml(alert.governorate || "--")}</td>
-                <td>${escapeHtml(alert.kindergarten_name || "--")}</td>
-                <td>${escapeHtml(alert.metric || "--")}</td>
-                <td>${formatNumber(alert.current_value)}</td>
-                <td>${formatNumber(alert.threshold)}</td>
-                <td>${formatDate(alert.triggered_at)}</td>
+        const viewLabel = isRtl ? "عرض" : "View";
+        tbody.innerHTML = alerts.map((a) => `
+            <tr data-alert-id="${a.id}">
+                <td>${severityBadge(a.severity)}</td>
+                <td>${escapeHtml(a.governorate || "--")}</td>
+                <td>${escapeHtml(a.kindergarten_name || "--")}</td>
+                <td>${escapeHtml(a.metric || "--")}</td>
+                <td>${formatNumber(a.current_value)}</td>
+                <td>${formatNumber(a.threshold)}</td>
+                <td>${formatDate(a.triggered_at)}</td>
+                <td>${statusBadge(a.status)}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary" data-alert-id="${alert.id}" data-action="view">
-                        عرض
+                    <button class="btn btn-sm btn-outline-primary" data-action="view" data-alert-id="${a.id}">
+                        ${viewLabel}
                     </button>
                 </td>
             </tr>
-        `)
-            .join("");
+        `).join("");
+    }
+
+    function renderPagination(total, page) {
+        const wrap = document.getElementById("alertsPagination");
+        if (!wrap) return;
+        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        const prevLabel = isRtl ? "السابق" : "Previous";
+        const nextLabel = isRtl ? "التالي"  : "Next";
+        wrap.innerHTML = `
+            <div class="d-flex align-items-center gap-2 mt-3">
+                <button class="btn btn-sm btn-outline-secondary" id="prevPageBtn" ${page <= 1 ? "disabled" : ""}>
+                    ${prevLabel}
+                </button>
+                <span class="text-muted small">${page} / ${totalPages} &nbsp;(${total})</span>
+                <button class="btn btn-sm btn-outline-secondary" id="nextPageBtn" ${page >= totalPages ? "disabled" : ""}>
+                    ${nextLabel}
+                </button>
+            </div>
+        `;
+        document.getElementById("prevPageBtn")?.addEventListener("click", () => goToPage(page - 1));
+        document.getElementById("nextPageBtn")?.addEventListener("click", () => goToPage(page + 1));
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        loadAlerts(page);
+    }
+
+    // In-memory cache of the last loaded alert page
+    let cachedAlerts = [];
+
+    // Holds the currently-viewed alert object for the acknowledge action
+    let currentAlert = null;
+
+    function renderDetailModal(alert) {
+        currentAlert = alert;
+        const content = document.getElementById("alertDetailContent");
+        if (!content) return;
+
+        const ackRow = alert.status !== "ACTIVE" ? `
+            <tr>
+                <th>${isRtl ? "تاريخ الاعتراف" : "Acknowledged At"}</th>
+                <td>${formatDate(alert.acknowledged_at)}</td>
+            </tr>` : "";
+
+        content.innerHTML = `
+            <table class="table table-sm">
+                <tbody>
+                    <tr><th>${isRtl ? "المعرّف" : "ID"}</th><td>${escapeHtml(alert.id)}</td></tr>
+                    <tr><th>${isRtl ? "الخطورة" : "Severity"}</th><td>${severityBadge(alert.severity)}</td></tr>
+                    <tr><th>${isRtl ? "الحالة" : "Status"}</th><td>${statusBadge(alert.status)}</td></tr>
+                    <tr><th>${isRtl ? "المقياس" : "Metric"}</th><td>${escapeHtml(alert.metric)}</td></tr>
+                    <tr><th>${isRtl ? "المحافظة" : "Governorate"}</th><td>${escapeHtml(alert.governorate || "--")}</td></tr>
+                    <tr><th>${isRtl ? "الروضة" : "Kindergarten"}</th><td>${escapeHtml(alert.kindergarten_name || "--")}</td></tr>
+                    <tr><th>${isRtl ? "القيمة الحالية" : "Current Value"}</th><td>${formatNumber(alert.current_value)}</td></tr>
+                    <tr><th>${isRtl ? "العتبة" : "Threshold"}</th><td>${formatNumber(alert.threshold)}</td></tr>
+                    <tr><th>${isRtl ? "وقت التفعيل" : "Triggered At"}</th><td>${formatDate(alert.triggered_at)}</td></tr>
+                    ${ackRow}
+                    <tr><th>${isRtl ? "الرسالة" : "Message"}</th><td>${escapeHtml(alert.message || "--")}</td></tr>
+                </tbody>
+            </table>
+        `;
+
+        const ackBtn = document.getElementById("acknowledgeAlertBtn");
+        if (ackBtn) {
+            ackBtn.disabled = alert.status !== "ACTIVE";
+            ackBtn.dataset.alertId = alert.id;
+        }
+
+        const modal = document.getElementById("alertDetailModal");
+        if (modal && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        }
+    }
+
+    async function acknowledgeAlert(alertId) {
+        const ackBtn = document.getElementById("acknowledgeAlertBtn");
+        if (ackBtn) ackBtn.disabled = true;
+        try {
+            const updated = await apiRequest(`/api/admin/alerts/${alertId}/acknowledge`, { method: "PATCH" });
+            renderDetailModal(updated);
+            await loadAlerts(currentPage);
+        } catch (err) {
+            const msg = isRtl ? "فشل الاعتراف بالتنبيه." : "Failed to acknowledge alert.";
+            setError(msg);
+            if (ackBtn) ackBtn.disabled = false;
+        }
     }
 
     async function loadGovernorates() {
         try {
-            const response = await apiRequest("/api/admin/options/governorates");
+            const resp = await apiRequest("/api/admin/options/governorates");
             const select = document.getElementById("governorateFilter");
-            if (select && response.governorates) {
-                response.governorates.forEach((gov) => {
-                    const option = document.createElement("option");
-                    option.value = gov.id || gov;
-                    option.textContent = gov.name_ar || gov.name_en || gov.id || gov;
-                    select.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.warn("Could not load governorates:", error);
+            if (!select || !resp.governorates) return;
+            resp.governorates.forEach((gov) => {
+                const opt = document.createElement("option");
+                opt.value = gov.id || gov;
+                opt.textContent = gov.name_ar || gov.name_en || gov.id || gov;
+                select.appendChild(opt);
+            });
+        } catch (e) {
+            console.warn("Could not load governorates:", e);
         }
     }
 
-    async function loadAlerts() {
+    async function loadAlerts(page = 1) {
         setLoading(true);
         setError("");
         try {
-            const params = filterParams();
-            const data = await apiRequest(`/api/admin/alerts?${params.toString()}`);
-            renderAlerts(data.alerts || []);
-        } catch (error) {
-            setError("تعذر تحميل التنبيهات. يرجى إعادة المحاولة.");
+            const params = filterParams(page);
+            const data = await apiRequest(`/api/admin/alerts?${params}`);
+            cachedAlerts = data.alerts || [];
+            renderAlerts(cachedAlerts);
+            renderPagination(data.total || 0, data.page || page);
+            currentPage = data.page || page;
+        } catch (err) {
+            const msg = isRtl ? "تعذر تحميل التنبيهات. يرجى إعادة المحاولة." : "Failed to load alerts. Please try again.";
+            setError(msg);
             setEmpty(false);
         } finally {
             setLoading(false);
@@ -156,18 +269,42 @@
     }
 
     function bindEvents() {
-        document.getElementById("refreshAlertsBtn")?.addEventListener("click", loadAlerts);
-        document.getElementById("severityFilter")?.addEventListener("change", loadAlerts);
-        document.getElementById("governorateFilter")?.addEventListener("change", loadAlerts);
-        document.getElementById("statusFilter")?.addEventListener("change", loadAlerts);
-        document.getElementById("timeFilter")?.addEventListener("change", loadAlerts);
+        document.getElementById("refreshAlertsBtn")?.addEventListener("click", () => loadAlerts(1));
+        document.getElementById("severityFilter")?.addEventListener("change", () => loadAlerts(1));
+        document.getElementById("governorateFilter")?.addEventListener("change", () => loadAlerts(1));
+        document.getElementById("statusFilter")?.addEventListener("change", () => loadAlerts(1));
+        document.getElementById("timeFilter")?.addEventListener("change", () => loadAlerts(1));
+
+        // Delegated click — handles dynamically-rendered View buttons
+        document.getElementById("alertsTableBody")?.addEventListener("click", (e) => {
+            const btn = e.target.closest("[data-action='view']");
+            if (!btn) return;
+            const alertId = parseInt(btn.dataset.alertId, 10);
+            if (!alertId) return;
+            // Find the alert object in the last loaded results or fetch it
+            fetchAndShowAlert(alertId);
+        });
+
+        document.getElementById("acknowledgeAlertBtn")?.addEventListener("click", (e) => {
+            const alertId = parseInt(e.currentTarget.dataset.alertId, 10);
+            if (alertId) acknowledgeAlert(alertId);
+        });
+    }
+
+    function fetchAndShowAlert(alertId) {
+        const alert = cachedAlerts.find((a) => a.id === alertId);
+        if (alert) {
+            renderDetailModal(alert);
+        } else {
+            console.warn("Alert not found in cache:", alertId);
+        }
     }
 
     async function init() {
         if (!document.getElementById("alertsRoot")) return;
         bindEvents();
         await loadGovernorates();
-        await loadAlerts();
+        await loadAlerts(1);
     }
 
     init();

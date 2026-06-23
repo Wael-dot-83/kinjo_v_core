@@ -1,5 +1,55 @@
 /* Dashboard Pro Styles */
 
+/* Chart containers - responsive and clipping-safe */
+.chart-card,
+.chart-container {
+  width: 100%;
+  min-width: 0;
+}
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chart-container {
+  min-height: 320px;
+  height: var(--chart-height, 320px);
+  position: relative;
+  padding: 0.5rem;
+}
+
+.chart-container canvas {
+  max-width: 100%;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.no-data-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+/* Small charts (trend charts) */
+.chart-container.chart-trend {
+  min-height: 200px;
+  height: 200px;
+}
+
+/* Distribution chart */
+.chart-container.distribution {
+  min-height: 260px;
+}
+
 /* Fade-in animation */
 .fade-in-up {
     animation: fadeInUp 0.4s ease-out;
@@ -51,7 +101,7 @@
 .status-widget {
     border-radius: 20px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid rgba(13, 110, 253, 0.05);
+    border: 1px solid rgba(31, 94, 71, 0.05);
     background: linear-gradient(180deg, #ffffff 0%, #fbfbfd 100%);
 }
 
@@ -112,12 +162,12 @@
 }
 
 .kpi-status-item.status-info {
-    background-color: rgba(13, 110, 253, 0.08);
-    border: 1px solid rgba(13, 110, 253, 0.2);
+    background-color: rgba(31, 94, 71, 0.08);
+    border: 1px solid rgba(31, 94, 71, 0.2);
 }
 
 .kpi-status-item.status-info .kpi-status-icon {
-    color: #0d6efd;
+    color: #1F5E47;
 }
 
 .kpi-status-icon {
@@ -167,7 +217,7 @@
 
 /* Dashboard header polish */
 .dashboard-header {
-    background: linear-gradient(135deg, rgba(13, 110, 253, 0.06), rgba(13, 110, 253, 0));
+    background: linear-gradient(135deg, rgba(31, 94, 71, 0.06), rgba(31, 94, 71, 0));
     border-radius: 16px;
     padding: 1rem 1.25rem;
 }
@@ -198,7 +248,7 @@
     background: #ffffff;
     border-radius: 14px;
     padding: 1rem;
-    border: 1px solid rgba(13, 110, 253, 0.06);
+    border: 1px solid rgba(31, 94, 71, 0.06);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -216,7 +266,7 @@
 
 .manager-overview-strip .manager-stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08) !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
 }
 
 .manager-stat-icon {
@@ -238,12 +288,12 @@
     border-radius: 18px;
     overflow: hidden;
     background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05) !important;
 }
 
 .manager-section-card .card-header {
-    background: linear-gradient(180deg, rgba(13, 110, 253, 0.05) 0%, rgba(13, 110, 253, 0.01) 100%);
-    border-bottom: 1px solid rgba(13, 110, 253, 0.08);
+    background: linear-gradient(180deg, rgba(31, 94, 71, 0.05) 0%, rgba(31, 94, 71, 0.01) 100%);
+    border-bottom: 1px solid rgba(31, 94, 71, 0.08);
     padding-top: 1rem;
     padding-bottom: 1rem;
 }
@@ -264,17 +314,17 @@
 }
 
 .manager-tabs .nav-link {
-    border: 1px solid rgba(13, 110, 253, 0.16);
+    border: 1px solid rgba(31, 94, 71, 0.16);
     border-radius: 999px;
-    color: #0d6efd;
+    color: #1F5E47;
     font-weight: 600;
     padding: 0.45rem 1rem;
 }
 
 .manager-tabs .nav-link.active {
-    background: #0d6efd;
+    background: #1F5E47;
     color: #ffffff;
-    border-color: #0d6efd;
+    border-color: #1F5E47;
 }
 
 .manager-table thead th {
@@ -290,7 +340,7 @@
 
 .manager-table tbody tr:hover {
     transform: translateX(-2px);
-    background-color: rgba(13, 110, 253, 0.03);
+    background-color: rgba(31, 94, 71, 0.03);
 }
 
 .manager-user {
@@ -306,8 +356,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(13, 110, 253, 0.12);
-    color: #0d6efd;
+    background: rgba(31, 94, 71, 0.12);
+    color: #1F5E47;
     font-weight: 700;
     font-size: 0.8rem;
 }

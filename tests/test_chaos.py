@@ -215,7 +215,7 @@ class TestDiskFullChaos:
         with patch("backup_manager.BackupManager.create_database_backup") as mock_backup:
             mock_backup.side_effect = OSError(28, "No space left on device")
 
-            r = client.post("/api/backup/create", headers=headers)
+            r = client.post("/api/admin/backup/create", headers=headers)
             assert r.status_code in (500, 507, 503, 400), (
                 f"Backup during disk-full returned {r.status_code} — expected server error"
             )

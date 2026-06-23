@@ -611,3 +611,48 @@ class TestAnalyticsService:
             f"/api/analytics/network-summary?period_start={period_start}&period_end={period_end}"
         )
         assert response.status_code == 401
+
+    def test_registration_analytics_endpoint(self, client, admin_user, sample_data):
+        """Test registration analytics endpoint"""
+        response = client.post("/token", data={
+            "username": "testadmin",
+            "password": "Admin123!"
+        })
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+
+        today = date.today()
+        period_start = (today - timedelta(days=30)).isoformat()
+        period_end = today.isoformat()
+        response = client.get(
+            f"/api/analytics/registration/analytics?start_date={period_start}&end_date={period_end}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "status_breakdown" in data
+        assert "funnel" in data
+        assert "rejection_reasons" in data
+        assert "approval_workflow" in data
+        assert "source_breakdown" in data
+
+    def test_registration_drilldown_endpoint(self, client, admin_user, sample_data):
+        """Test registration drilldown endpoint"""
+        response = client.post("/token", data={
+            "username": "testadmin",
+            "password": "Admin123!"
+        })
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+
+        today = date.today()
+        period_start = (today - timedelta(days=30)).isoformat()
+        period_end = today.isoformat()
+        response = client.get(
+            f"/api/analytics/registration/drilldown?start_date={period_start}&end_date={period_end}&page=1&page_size=10",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "data" in data
+        assert "pagination" in data

@@ -64,7 +64,6 @@ refresh_btn_id=None, on_refresh=None, show_export=True, governorate_id=None, exp
         endId = endId || '{{ end_field_id }}';
         document.getElementById(startId).value = '';
         document.getElementById(endId).value = '';
-        // Trigger filter application
         if (typeof applyDateFilter === 'function') {
             applyDateFilter();
         }
@@ -80,13 +79,11 @@ refresh_btn_id=None, on_refresh=None, show_export=True, governorate_id=None, exp
         document.getElementById(startId).value = lastMonth.toISOString().split('T')[0];
         document.getElementById(endId).value = lastMonthEnd.toISOString().split('T')[0];
 
-        // Trigger filter application
         if (typeof applyDateFilter === 'function') {
             applyDateFilter();
         }
     }
 
-    // Set default to current month on load
     document.addEventListener('DOMContentLoaded', function () {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);

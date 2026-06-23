@@ -337,7 +337,7 @@ class AdminComponents {
       success: "#10b981",
       warning: "#f59e0b",
       error: "#ef4444",
-      info: "#3b82f6",
+      info: "#2F7D62",
     };
     notification.style.borderLeftColor = colors[type] || colors.info;
 
@@ -697,6 +697,48 @@ class AdminComponents {
 // INITIALIZATION
 // ============================================================================
 
+
+// ============================================================================
+// GLOBAL showToast FUNCTION
+// Provides toast notification functionality for admin templates (wraps
+// AdminComponents.showNotification for compatibility with kinjo-app.js style calls)
+// ============================================================================
+
+window.showToast = function(message, type) {
+  type = type || 'info';
+  if (window.AdminComponents && typeof window.AdminComponents.showNotification === 'function') {
+    window.AdminComponents.showNotification({ type: type, title: '', message: message });
+    return;
+  }
+  var isRtl = document.documentElement.dir === 'rtl';
+  var container = document.querySelector('.admin-notifications');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'admin-notifications';
+    container.setAttribute('role', 'region');
+    container.setAttribute('aria-live', 'polite');
+    container.style.cssText = 'position:fixed;top:24px;' + (isRtl ? 'left' : 'right') + ':24px;z-index:1070;display:flex;flex-direction:column;gap:12px;max-width:400px;';
+    document.body.appendChild(container);
+  }
+  var colors = { success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#2F7D62' };
+  var notification = document.createElement('div');
+  notification.className = 'admin-notification admin-notification-' + type;
+  var slideOut = isRtl ? 'translateX(-100%)' : 'translateX(100%)';
+  notification.style.cssText = 'background:white;border-radius:8px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);padding:16px;transform:' + slideOut + ';transition:transform 0.3s ease;border-' + (isRtl ? 'right' : 'left') + ':4px solid;';
+  if (colors[type]) { notification.style.borderLeftColor = colors[type]; }
+  var contentDiv = document.createElement('div');
+  contentDiv.textContent = message;
+  contentDiv.style.cssText = 'flex:1;color:#1f2937;';
+  notification.appendChild(contentDiv);
+  container.appendChild(notification);
+  requestAnimationFrame(function() { notification.style.transform = 'translateX(0)'; });
+  setTimeout(function() {
+    notification.style.transform = isRtl ? 'translateX(-100%)' : 'translateX(100%)';
+    setTimeout(function() { if (notification.parentNode) notification.parentNode.removeChild(notification); }, 300);
+  }, 5000);
+};
+
+
 // Initialize components when DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
   window.AdminComponents = new AdminComponents({
@@ -830,10 +872,11 @@ if (typeof module !== "undefined" && module.exports) {
       el = document.createElement("div");
       el.id = WARNING_BANNER_ID;
       el.setAttribute("role", "alert");
+      const _isRtl = document.documentElement.dir === "rtl";
       el.style.cssText = [
         "position:fixed",
         "bottom:24px",
-        "right:24px",
+        (_isRtl ? "left:24px" : "right:24px"),
         "z-index:99998",
         "background:#92400e",
         "color:#fff",
@@ -918,9 +961,9 @@ if (typeof module !== "undefined" && module.exports) {
       ? window.AdminI18n.translate("components.session_expired", "Your session expired due to inactivity. Please sign in again.")
       : "Your session expired due to inactivity. Please sign in again.";
     notice.style.cssText =
-      "position:fixed;top:0;left:0;right:0;z-index:99999;background:#1e40af;" +
+      "position:fixed;top:0;left:0;right:0;z-index:99999;background:#1F5E47;" +
       "color:#fff;text-align:center;padding:10px;font-size:14px;font-weight:600;";
     document.body.prepend(notice);
     setTimeout(() => notice.remove(), 5000);
   }
-})();
+})()

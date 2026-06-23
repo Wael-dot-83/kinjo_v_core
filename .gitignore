@@ -45,6 +45,7 @@ npm-debug.log*
 # AI tooling
 .blackboxcli/
 .claude/
+.kilo/
 tmpclaude-*-cwd
 nul
 

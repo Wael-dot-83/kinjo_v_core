@@ -170,26 +170,26 @@ class ExportService:
 
     def _get_attendance_report_data(self, db: Session, user: models.User, date_from: date, date_to: date) -> List[Dict]:
         """Get attendance report data"""
-        # Simplified implementation
-        query = db.query(models.Attendance).filter(
-            models.Attendance.date.between(date_from, date_to)
+        query = db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.date >= date_from,
+            models.AttendanceLog.date <= date_to
         )
 
         if user.role != models.UserRole.ADMIN:
-            query = query.join(models.Child).join(models.Class).filter(
-                models.Class.kindergarten_id == user.kindergarten_id
+            query = query.join(models.Child).join(models.EnrollmentApplication).filter(
+                models.EnrollmentApplication.kindergarten_id == user.kindergarten_id
             )
 
-        attendances = query.limit(1000).all()  # Limit for performance
+        attendances = query.limit(1000).all()
 
         return [
             {
                 "date": att.date.isoformat(),
                 "child_id": att.child_id,
-                "status": att.status.value,
-                "method": att.method.value if att.method else None,
-                "check_in_time": att.check_in_time.isoformat() if att.check_in_time else None,
-                "check_out_time": att.check_out_time.isoformat() if att.check_out_time else None
+                "status": att.status.value if hasattr(att.status, "value") else str(att.status),
+                "method": att.method.value if hasattr(att.method, "value") and att.method else None,
+                "check_in_time": att.check_in_at.isoformat() if att.check_in_at else None,
+                "check_out_time": att.check_out_at.isoformat() if att.check_out_at else None,
             }
             for att in attendances
         ]
@@ -197,7 +197,8 @@ class ExportService:
     def _get_incidents_report_data(self, db: Session, user: models.User, date_from: date, date_to: date) -> List[Dict]:
         """Get incidents report data"""
         query = db.query(models.Incident).filter(
-            models.Incident.date.between(date_from, date_to)
+            models.Incident.occurred_at >= datetime.combine(date_from, datetime.min.time()),
+            models.Incident.occurred_at <= datetime.combine(date_to, datetime.max.time()),
         )
 
         if user.role != models.UserRole.ADMIN:
@@ -207,12 +208,11 @@ class ExportService:
 
         return [
             {
-                "date": inc.date.isoformat(),
-                "type": inc.type.value,
-                "severity": inc.severity.value,
+                "date": inc.occurred_at.date().isoformat(),
+                "type": inc.type.value if hasattr(inc.type, "value") else str(inc.type),
+                "severity": inc.severity_level.value if hasattr(inc.severity_level, "value") else str(inc.severity_level),
                 "description": inc.description,
-                "reported_by": inc.reported_by,
-                "kindergarten_id": inc.kindergarten_id
+                "kindergarten_id": inc.kindergarten_id,
             }
             for inc in incidents
         ]
@@ -220,10 +220,8 @@ class ExportService:
     def _get_enrollment_report_data(self, db: Session, user: models.User, date_from: date, date_to: date) -> List[Dict]:
         """Get enrollment report data"""
         query = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.created_at.between(
-                datetime.combine(date_from, datetime.min.time()),
-                datetime.combine(date_to, datetime.max.time())
-            )
+            models.EnrollmentApplication.created_at >= datetime.combine(date_from, datetime.min.time()),
+            models.EnrollmentApplication.created_at <= datetime.combine(date_to, datetime.max.time()),
         )
 
         if user.role != models.UserRole.ADMIN:
@@ -231,16 +229,20 @@ class ExportService:
 
         enrollments = query.limit(1000).all()
 
-        return [
-            {
-                "created_at": app.created_at.isoformat(),
-                "status": app.status.value,
-                "child_name": f"{app.first_name_ar} {app.last_name_ar}",
-                "parent_name": f"{app.parent_first_name_ar} {app.parent_last_name_ar}",
-                "kindergarten_id": app.kindergarten_id
-            }
-            for app in enrollments
-        ]
+        result = []
+        for app in enrollments:
+            child = db.query(models.Child).filter(models.Child.id == app.child_id).first()
+            parent = None
+            if child:
+                parent = db.query(models.ParentProfile).filter(models.ParentProfile.id == child.parent_id).first()
+            result.append({
+                "created_at": app.created_at.isoformat() if app.created_at else None,
+                "status": app.status.value if hasattr(app.status, "value") else str(app.status),
+                "child_name": f"{child.first_name} {child.last_name}" if child else "",
+                "parent_name": f"{parent.first_name} {parent.last_name}" if parent else "",
+                "kindergarten_id": app.kindergarten_id,
+            })
+        return result
 
     def _export_report_json(self, report_data: List[Dict], report_type: str) -> Dict[str, Any]:
         """Export report data as JSON"""

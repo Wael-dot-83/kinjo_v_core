@@ -1,4 +1,4 @@
-﻿{% extends "admin_base.html" %}
+{% extends "admin_base.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}Alert Management{% else %}إدارة التنبيهات{% endif %} — KinJo{% endblock %}
 
@@ -17,13 +17,16 @@
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
+<div class="page-header-wrap mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
   <div>
-    <h1 class="admin-page-title">
-      <i class="bi bi-exclamation-triangle me-2"></i>
+    <div class="page-header-eyebrow">
+      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+      {% if ui_lang == 'en' %}System Monitoring{% else %}مراقبة النظام{% endif %}
+    </div>
+    <h1 class="page-header-title">
       {% if ui_lang == 'en' %}Alert Management{% else %}إدارة التنبيهات{% endif %}
     </h1>
-    <p class="admin-page-subtitle text-muted">
+    <p class="text-muted mt-1 mb-0">
       {% if ui_lang == 'en' %}View and manage system alerts across all governorates.{% else %}عرض وإدارة تنبيهات النظام عبر جميع المحافظات.{% endif %}
     </p>
   </div>
@@ -63,9 +66,10 @@
             {% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}
           </label>
           <select id="statusFilter" class="form-select form-select-sm">
-            <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
             <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}جميع الحالات{% endif %}</option>
-            <option value="ACKNOWLEDGED">{% if ui_lang == 'en' %}Acknowledged{% else %}تم التعميم{% endif %}</option>
+            <option value="ACTIVE" selected>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+            <option value="ACKNOWLEDGED">{% if ui_lang == 'en' %}Acknowledged{% else %}مُعترَف به{% endif %}</option>
+            <option value="RESOLVED">{% if ui_lang == 'en' %}Resolved{% else %}محلول{% endif %}</option>
           </select>
         </div>
         <div class="col-md-3">
@@ -73,6 +77,7 @@
             {% if ui_lang == 'en' %}Time Range{% else %}النطاق الزمني{% endif %}
           </label>
           <select id="timeFilter" class="form-select form-select-sm">
+            <option value="">{% if ui_lang == 'en' %}All Time{% else %}كل الأوقات{% endif %}</option>
             <option value="24h">{% if ui_lang == 'en' %}Last 24 Hours{% else %}آخر 24 ساعة{% endif %}</option>
             <option value="7d">{% if ui_lang == 'en' %}Last 7 Days{% else %}آخر 7 أيام{% endif %}</option>
             <option value="30d" selected>{% if ui_lang == 'en' %}Last 30 Days{% else %}آخر 30 يوم{% endif %}</option>
@@ -83,10 +88,10 @@
   </div>
 
   <div id="alertsLoading" class="d-none alert alert-secondary py-2">
-    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+    <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
     {% if ui_lang == 'en' %}Loading alerts…{% else %}جار تحميل التنبيهات…{% endif %}
   </div>
-  <div id="alertsError" class="d-none alert alert-danger py-2"></div>
+  <div id="alertsError" class="d-none alert alert-danger py-2" role="alert"></div>
   <div id="alertsEmpty" class="d-none alert alert-success py-2">
     <i class="bi bi-check-circle me-2"></i>
     {% if ui_lang == 'en' %}No alerts found matching the criteria.{% else %}لا توجد تنبيهات تطابق المعايير.{% endif %}
@@ -96,7 +101,7 @@
   <div class="admin-card">
     <div class="admin-card-header">
       <h2 class="admin-card-title mb-0">
-        {% if ui_lang == 'en' %}Active Alerts{% else %}التنبيهات النشطة{% endif %}
+        {% if ui_lang == 'en' %}Alerts{% else %}التنبيهات{% endif %}
       </h2>
     </div>
     <div class="admin-card-body p-0">
@@ -111,6 +116,7 @@
               <th>{% if ui_lang == 'en' %}Current Value{% else %}القيمة الحالية{% endif %}</th>
               <th>{% if ui_lang == 'en' %}Threshold{% else %}الحد{% endif %}</th>
               <th>{% if ui_lang == 'en' %}Triggered{% else %}وقت الإنشاء{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
               <th>{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</th>
             </tr>
           </thead>
@@ -119,6 +125,8 @@
       </div>
     </div>
   </div>
+
+  <div id="alertsPagination"></div>
 
   <!-- Detail Modal -->
   <div class="modal fade" id="alertDetailModal" tabindex="-1" aria-hidden="true">
@@ -141,7 +149,7 @@
           </button>
           <button class="btn btn-warning" id="acknowledgeAlertBtn">
             <i class="bi bi-check-lg me-1"></i>
-            {% if ui_lang == 'en' %}Acknowledge{% else %}تعميم{% endif %}
+            {% if ui_lang == 'en' %}Acknowledge{% else %}اعتراف{% endif %}
           </button>
         </div>
       </div>
@@ -151,5 +159,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/admin_alerts.js?v=1" charset="utf-8"></script>
+<script src="/static/js/admin_alerts.js?v=2" charset="utf-8"></script>
 {% endblock %}

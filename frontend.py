@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Request, Depends, status, HTTPException
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 from jinja2 import pass_context
 import models
 from i18n import gettext as _i18n_gettext
@@ -10,11 +9,10 @@ from sqlalchemy import or_
 from datetime import date, timedelta, datetime, timezone
 import typing
 from typing import Optional
-import secrets
 
 from database import get_db
-from dependencies import get_current_user_optional, get_current_user, get_current_user_or_redirect
-from models import User, UserRole, Kindergarten, EnrollmentApplication, AttendanceLog, DailyReport
+from dependencies import get_current_user_optional, get_current_user_or_redirect
+from models import User, UserRole, Kindergarten, EnrollmentApplication
 from config import settings
 from validators import validate_jordan_governorate
 
@@ -289,8 +287,10 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
         return templates.TemplateResponse(request=request, name="dashboard/supervisor.html", context={"current_user": current_user, "today": date.today()})
     elif user_role == "PARENT":
         return templates.TemplateResponse(request=request, name="dashboard/parent.html", context={"current_user": current_user, "today": date.today()})
+    elif user_role == "ADMIN":
+        return templates.TemplateResponse(request=request, name="admin_dashboard.html", context={"current_user": current_user, "today": date.today()})
     else:
-        # Admin or Manager
+        # Manager
         return templates.TemplateResponse(request=request, name="dashboard/index.html", context={"current_user": current_user, "today": date.today()})
 
 
@@ -423,8 +423,6 @@ async def list_kindergartens(
         total = 0
 
     # Get filter options for the UI
-    from config import Settings
-    settings = Settings()
     governorates = settings.JORDAN_GOVERNORATES
 
     return templates.TemplateResponse(
@@ -678,25 +676,38 @@ async def view_enrollment(request: Request, app_id: int, db: Session = Depends(g
 @router.get("/attendance/history", response_class=HTMLResponse)
 async def attendance_history(
     request: Request,
+    period: Optional[str] = None,
+    reason: Optional[str] = None,
+    change: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user_or_redirect)
 ):
     user_role = current_user.role.value if hasattr(current_user.role, "value") else current_user.role
     if user_role == "PARENT":
         return RedirectResponse(url="/parent/dashboard")
-    if user_role == "ADMIN":
-        return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
 
     today = date.today()
+    # Pre-set the week range when coming from the dashboard action card
+    if period == "week":
+        default_start = (today - timedelta(days=6)).isoformat()
+        default_end = today.isoformat()
+    else:
+        default_start = (today - timedelta(days=29)).isoformat()
+        default_end = today.isoformat()
+
     context = {
         "current_user": current_user,
         "is_admin": user_role == "ADMIN",
         "today": today,
-        "default_start_date": (today - timedelta(days=29)).isoformat(),
-        "default_end_date": today.isoformat(),
+        "default_start_date": default_start,
+        "default_end_date": default_end,
         "kindergartens": [],
         "governorates": [],
         "user_kindergarten": None,
+        # Passed to template for the contextual banner
+        "filter_period": period,
+        "filter_reason": reason,
+        "filter_change": change,
     }
 
     if user_role == "ADMIN":
@@ -850,7 +861,6 @@ async def attendance_main(request: Request, current_user: User = Depends(get_cur
 @router.get("/attendance/daily", response_class=HTMLResponse)
 async def attendance_daily(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user_or_redirect)):
     """Daily attendance page with role-based kindergarten filtering"""
-    from sqlalchemy import or_
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
 
     # Admin and Supervisor are blocked from daily attendance (operational Manager page)
@@ -873,22 +883,9 @@ async def attendance_daily(request: Request, db: Session = Depends(get_db), curr
             "today": date.today(),
             "user_kindergarten": kindergarten,
             "is_manager_supervisor": True,
-            "is_supervisor": user_role == 'SUPERVISOR',
-            "supervisor_class_ids": []
+            "is_supervisor": False,
+            "supervisor_class_ids": [],
         }
-
-        # For supervisors, get their assigned class IDs
-        if user_role == 'SUPERVISOR':
-            today = date.today()
-            assignments = db.query(models.SupervisorAssignment).filter(
-                models.SupervisorAssignment.supervisor_id == current_user.id,
-                models.SupervisorAssignment.start_date <= today,
-                or_(
-                    models.SupervisorAssignment.end_date.is_(None),
-                    models.SupervisorAssignment.end_date >= today
-                )
-            ).all()
-            context["supervisor_class_ids"] = [a.class_id for a in assignments]
     else:
         # Admin can see all kindergartens
         context = {
@@ -994,19 +991,25 @@ async def create_daily_report(request: Request, current_user: User = Depends(get
 
 @router.get("/curriculum", response_class=HTMLResponse)
 async def curriculum_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Curriculum management page.
+
+    TODO: Implement full curriculum management template.
+    Currently redirects to dashboard as curriculum module is not yet built.
+    """
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role in ('ADMIN', 'SUPERVISOR'):
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
+    # Curriculum module placeholder — redirect to dashboard
     return RedirectResponse(url="/dashboard")
 
 
 @router.get("/incidents", response_class=HTMLResponse)
 async def incidents_list(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """List incident reports for admins"""
+    """Redirect to admin incidents page for admins."""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return RedirectResponse(url="/admin/reports/incidents", status_code=302)
+    return RedirectResponse(url="/admin/reports/incidents")
 
 
 @router.get("/incidents/create", response_class=HTMLResponse)
@@ -1409,6 +1412,18 @@ async def admin_governance_reports(request: Request, current_user: User = Depend
     )
 
 
+@router.get("/admin/kg-overview", response_class=HTMLResponse)
+async def admin_kg_overview(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Interactive Kindergarten Overview dashboard"""
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/kg_overview.html",
+        context={"current_user": current_user, "today": date.today()}
+    )
+
+
 @router.get("/admin/classification", response_class=HTMLResponse)
 async def admin_classification(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Admin classification and benchmarking page"""
@@ -1738,7 +1753,11 @@ async def admin_heatmap_page(request: Request, current_user: User = Depends(get_
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="admin/heatmap.html", context={"current_user": current_user, "today": date.today()})
+    return templates.TemplateResponse(request=request, name="admin/heatmap.html", context={
+        "current_user": current_user,
+        "today": date.today(),
+        "cesium_token": settings.CESIUM_ION_TOKEN,
+    })
 
 
 # -----------------------------------------------------------------------------

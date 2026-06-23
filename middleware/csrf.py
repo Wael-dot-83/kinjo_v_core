@@ -86,7 +86,7 @@ async def csrf_protection_middleware(request: Request, call_next: Callable):
             value=csrf_token,
             path="/",
             samesite="strict",
-            secure=True,
+            secure=settings.secure_cookies,
             httponly=False,
             domain=settings.COOKIE_DOMAIN or None,
         )

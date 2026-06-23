@@ -171,7 +171,7 @@ class Settings(BaseSettings):
     DEFAULT_LANGUAGE: str = "ar"
     SUPPORTED_LANGUAGES: List[str] = ["ar", "en"]
 
-    # Public-facing organization contact info (shown on the public Contact/footer
+# Public-facing organization contact info (shown on the public Contact/footer
     # pages once the operator configures real values; left blank otherwise so we
     # never display fabricated contact details).
     SUPPORT_CONTACT_EMAIL: str = ""
@@ -280,6 +280,10 @@ class Settings(BaseSettings):
     GOVERNANCE_REMINDER_COOLDOWN_HOURS: int = 48
     GOVERNANCE_REPORT_DEADLINE_HOUR: int = 16  # 4 PM Amman time
     AMMAN_TIMEZONE: str = "Asia/Amman"
+
+    # Cesium ion access token for 3D globe terrain + satellite imagery
+    # Get a free token at https://cesium.com/ion/tokens
+    CESIUM_ION_TOKEN: str = ""
 
     # AI/ML (ai/ package: ml.py, llm.py, insights.py, embeddings.py) — local Ollama
     OLLAMA_URL: str = "http://localhost:11434"

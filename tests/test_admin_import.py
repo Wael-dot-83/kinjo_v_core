@@ -9,6 +9,7 @@ Verifies:
 - Dry-run mode works
 """
 import io
+import secrets
 import pytest
 from auth import get_password_hash
 import models
@@ -201,11 +202,13 @@ class TestImportErrorReport:
     def test_error_report_endpoint_uses_post(self, client, test_db):
         _create_admin(test_db)
         token = _get_admin_token(client)
+        csrf = secrets.token_hex(32)
         errors = [{"row_number": 1, "field": "email", "error_code": "INVALID_EMAIL", "message": "Bad email"}]
         r = client.post(
             "/api/admin/users/import-csv/error-report",
             json={"errors": errors},
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {token}", "X-CSRF-Token": csrf},
+            cookies={"kinjo_csrf_token": csrf},
         )
         assert r.status_code == 200
         assert "text/csv" in r.headers.get("content-type", "")

@@ -1,6 +1,39 @@
 // safeChartData() is provided globally by chart_utils.js (loaded before this script).
 
 var lastDashboardData = null;
+var fetchWithAuth = window.fetchWithAuth || async function adminAnalyticsFetchFallback(url, options) {
+  const opts = Object.assign({ credentials: "same-origin" }, options || {});
+  const method = (opts.method || "GET").toUpperCase();
+  opts.headers = Object.assign({ "Accept": "application/json" }, opts.headers || {});
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+    const csrfToken = (window.CSRF_CONFIG && window.CSRF_CONFIG.cookieName && window.AuthStorage && window.AuthStorage.getCookie && window.AuthStorage.getCookie(window.CSRF_CONFIG.cookieName)) ||
+                      document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+    if (csrfToken) {
+      opts.headers["X-CSRF-Token"] = csrfToken;
+    }
+  }
+  const response = await fetch(url, opts);
+  if (response.status === 401) {
+    window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(response.statusText || `Request failed with status ${response.status}`);
+  }
+  return response;
+};
+
+function adminAnalyticsHasChart() {
+  return typeof window.Chart === "function" && typeof window.safeChartData === "function";
+}
+
+function adminAnalyticsUnavailableText() {
+  return adminAnalyticsText("غير متاح", "Unavailable");
+}
+
+function adminAnalyticsNoDataText() {
+  return adminAnalyticsText("لا توجد بيانات متاحة للفترة المحددة", "No data available for the selected period");
+}
 
 document.addEventListener("DOMContentLoaded", function () {
   // Set default date range (Current Month)
@@ -12,7 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const lastDay = new Date(currentYear, currentMonth + 1, 0); // Last day of current month
 
   // Format dates as YYYY-MM-DD
-  const formatDate = (d) => d.toISOString().split("T")[0];
+  const formatDate = (d) => { const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, "0"); const day = String(d.getDate()).padStart(2, "0"); return `${year}-${month}-${day}`; };
 
   const startInput = document.getElementById("periodStart");
   const endInput = document.getElementById("periodEnd");
@@ -33,7 +66,7 @@ document.addEventListener("DOMContentLoaded", function () {
       var pStart = document.getElementById('periodStart');
       var pEnd = document.getElementById('periodEnd');
       var govFilter = document.getElementById('governorateFilter');
-      
+
       if (saved.periodStart && pStart) pStart.value = saved.periodStart;
       if (saved.periodEnd && pEnd) pEnd.value = saved.periodEnd;
       if (saved.governorate && govFilter) {
@@ -47,6 +80,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Load governorates for filter
   if (govSelect) {
+    while (govSelect.options.length > 1) {
+      govSelect.remove(1);
+    }
+
     fetchWithAuth("/api/admin/options/governorates")
       .then((res) => {
         if (!res) return;
@@ -136,6 +173,29 @@ function adminAnalyticsText(arText, enText) {
 
 function adminAnalyticsLocale() {
   return adminAnalyticsText("ar-JO", "en-US");
+}
+
+const SEVERITY_LABELS = {
+  LOW: { ar: "منخفض", en: "Low" },
+  MEDIUM: { ar: "متوسط", en: "Medium" },
+  HIGH: { ar: "عالي", en: "High" },
+  CRITICAL: { ar: "حرج", en: "Critical" },
+};
+
+function formatAnomalySeverity(severity) {
+  const labels = SEVERITY_LABELS[severity] || { ar: severity, en: severity };
+  return adminAnalyticsText(labels.ar, labels.en);
+}
+
+const METRIC_TYPE_LABELS = {
+  attendance: { ar: "الحضور", en: "Attendance" },
+  incidents: { ar: "الحوادث", en: "Incidents" },
+  enrollment: { ar: "الالتحاق", en: "Enrollment" },
+};
+
+function formatMetricType(metricType) {
+  const labels = METRIC_TYPE_LABELS[metricType] || { ar: metricType.replace(/_/g, " "), en: metricType.replace(/_/g, " ") };
+  return adminAnalyticsText(labels.ar, labels.en);
 }
 
 function normalizeGovernorateOption(option, locale) {
@@ -274,6 +334,7 @@ async function loadAdminAnalytics(retryCount = 0) {
     await loadTargets();
     await loadBenchmarks();
     await loadRecommendations();
+    await loadRegistrationAnalytics();
 
     showToast(
       adminAnalyticsText("تم تحديث البيانات بنجاح", "Data refreshed successfully"),
@@ -347,6 +408,17 @@ function showSkeletonLoaders() {
   document.querySelector("#enrollmentRateBar").style.width = "0%";
   document.querySelector("#kpiKgGrowth").innerHTML = '<div class="skeleton-text w-75"></div>';
 
+  // Show skeleton for registration KPI cards
+  document
+    .querySelectorAll("#regTotalApplications, #regNewApplications, #regApproved, #regPending, #regRejected")
+    .forEach((el) => {
+      el.innerHTML = '<div class="skeleton-text w-50"></div>';
+    });
+  ["regConversionValue", "regRejectionValue", "regApprovalTimeValue"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div class="skeleton-text w-50 d-inline-block"></div>';
+  });
+
   // Show skeleton for governorate table
   const tbody = document.getElementById("governorateTableBody");
   if (tbody) {
@@ -401,9 +473,29 @@ function showSkeletonLoaders() {
         </div>
     `;
 
+  // Skeleton for registration table
+  const regTbody = document.getElementById("registrationTableBody");
+  if (regTbody) {
+    regTbody.innerHTML = Array(3).fill(`
+      <tr>
+        <td><div class="skeleton-text w-75"></div></td>
+        <td><div class="skeleton-text w-50"></div></td>
+        <td><div class="skeleton-text w-75"></div></td>
+        <td><div class="skeleton-text w-50"></div></td>
+        <td><div class="skeleton-text w-50 mx-auto"></div></td>
+        <td><div class="skeleton-text w-50"></div></td>
+        <td><div class="skeleton-text w-50 mx-auto"></div></td>
+        <td><div class="skeleton-text w-50 mx-auto"></div></td>
+        <td><div class="skeleton-text w-25 mx-auto"></div></td>
+      </tr>
+    `).join("");
+  }
+
   // Clear charts if they exist
   if (trendChartInstance) trendChartInstance.destroy();
   if (governanceChart) governanceChart.destroy();
+  if (funnelChartInstance) { funnelChartInstance.destroy(); funnelChartInstance = null; }
+  if (sourceChartInstance) { sourceChartInstance.destroy(); sourceChartInstance = null; }
 }
 
 function hideSkeletonLoaders() {
@@ -521,6 +613,21 @@ function updateTrendCharts(attendanceData, incidentData) {
   if (overlay) overlay.classList.remove("d-none");
   if (errorDiv) errorDiv.classList.remove("show");
 
+  if (!adminAnalyticsHasChart()) {
+    if (overlay) overlay.classList.add("d-none");
+    if (errorDiv) {
+      errorDiv.classList.add("show");
+      const message = errorDiv.querySelector("p");
+      if (message) {
+        message.textContent = adminAnalyticsText(
+          "تعذر تحميل مكتبة الرسوم البيانية.",
+          "Chart library could not be loaded."
+        );
+      }
+    }
+    return;
+  }
+
   if (trendChartInstance) {
     trendChartInstance.destroy();
   }
@@ -551,7 +658,9 @@ function setupTrendControls(_attendanceData, _incidentData) {
   const attendanceRadio = document.getElementById("attendanceTrend");
   const incidentsRadio = document.getElementById("incidentsTrend");
 
-  if (attendanceRadio && incidentsRadio) {
+  if (attendanceRadio && incidentsRadio && !attendanceRadio.dataset.analyticsBound) {
+    attendanceRadio.dataset.analyticsBound = "true";
+    incidentsRadio.dataset.analyticsBound = "true";
     attendanceRadio.addEventListener("change", () => {
       if (attendanceRadio.checked) {
         updateTrendChart("attendance");
@@ -615,7 +724,7 @@ function buildTrendChartData(type) {
           data: new Array(dataSeries.length - 1)
             .fill(null)
             .concat(forecastPoints.map((d) => d.value)),
-          borderColor: "#0d6efd",
+          borderColor: "#2F7D62",
           borderDash: [6, 4],
           fill: false,
           pointRadius: 2,
@@ -625,8 +734,8 @@ function buildTrendChartData(type) {
           data: new Array(dataSeries.length - 1)
             .fill(null)
             .concat((confidence.lower || []).map((d) => d.value)),
-          borderColor: "rgba(13,110,253,0.2)",
-          backgroundColor: "rgba(13,110,253,0.1)",
+          borderColor: "rgba(31,94,71,0.2)",
+          backgroundColor: "rgba(31,94,71,0.1)",
           fill: "+1",
           pointRadius: 0,
         },
@@ -635,8 +744,8 @@ function buildTrendChartData(type) {
           data: new Array(dataSeries.length - 1)
             .fill(null)
             .concat((confidence.upper || []).map((d) => d.value)),
-          borderColor: "rgba(13,110,253,0.2)",
-          backgroundColor: "rgba(13,110,253,0.1)",
+          borderColor: "rgba(31,94,71,0.2)",
+          backgroundColor: "rgba(31,94,71,0.1)",
           fill: false,
           pointRadius: 0,
         },
@@ -757,7 +866,40 @@ function updateRiskRadar(riskData) {
   // Clear existing content
   list.innerHTML = "";
 
+  // Validate risk items - filter out invalid/placeholder items
   if (!riskData || riskData.length === 0) {
+    container.classList.add("d-none");
+    noData.classList.remove("d-none");
+    return;
+  }
+
+  const validRiskItems = riskData.filter(function (item) {
+    if (!item) return false;
+    const name = typeof item.name === "string" ? item.name.trim() : "";
+    const kindergarten = typeof item.kindergarten === "string" ? item.kindergarten.trim() : "";
+    const reason = typeof item.reason === "string" ? item.reason.trim() : "";
+    const placeholderValues = new Set([
+      "غير محدد",
+      "غير متاح",
+      "سبب غير محدد",
+      "Not specified",
+      "Unavailable",
+      "Unspecified reason",
+    ]);
+    const hasValidName = name.length > 0 && !placeholderValues.has(name);
+    const hasValidKindergarten = kindergarten.length > 0 && !placeholderValues.has(kindergarten);
+    const hasValidScore = Number.isFinite(Number(item.risk_score)) && item.risk_score >= 0 && item.risk_score <= 100;
+    const hasValidReason = reason.length > 0 && !placeholderValues.has(reason);
+    const noCorruptedText = window.KpiValidation
+      ? !window.KpiValidation.containsCorruptedArabic(item.name) &&
+        !window.KpiValidation.containsCorruptedArabic(item.kindergarten) &&
+        !window.KpiValidation.containsCorruptedArabic(item.reason)
+      : true;
+    const isNotPlaceholder = hasValidName && hasValidKindergarten && hasValidScore && hasValidReason && noCorruptedText;
+    return isNotPlaceholder;
+  });
+
+  if (validRiskItems.length === 0) {
     container.classList.add("d-none");
     noData.classList.remove("d-none");
     return;
@@ -768,42 +910,44 @@ function updateRiskRadar(riskData) {
   noData.classList.add("d-none");
 
   // Sort by risk score descending
-  riskData.sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0));
+  validRiskItems.sort(function (a, b) { return (b.risk_score || 0) - (a.risk_score || 0); });
 
-  riskData.forEach((item) => {
+  validRiskItems.forEach(function (item) {
     const li = document.createElement("li");
-    li.className =
-      "list-group-item d-flex justify-content-between align-items-center border-0 py-3";
+    li.className = "list-group-item d-flex justify-content-between align-items-center border-0 py-3";
 
     const riskScore = item.risk_score || 0;
-    const riskColor =
-      riskScore >= 80
-        ? "danger"
-        : riskScore >= 60
-          ? "warning"
-          : riskScore >= 40
-            ? "orange"
-            : "success";
+    const riskColor = riskScore >= 80 ? "danger" : riskScore >= 40 ? "warning" : "success";
+
+    const safeName = window.KpiValidation
+      ? window.KpiValidation.sanitizeCorruptedText(item.name, "غير متاح")
+      : (item.name || "غير متاح");
+    const safeKindergarten = window.KpiValidation
+      ? window.KpiValidation.sanitizeCorruptedText(item.kindergarten, "غير محدد")
+      : (item.kindergarten || "غير محدد");
+    const safeReason = window.KpiValidation
+      ? window.KpiValidation.sanitizeCorruptedText(item.reason, "سبب غير محدد")
+      : (item.reason || "سبب غير ممدد");
 
     li.innerHTML = `
-            <div class="flex-grow-1">
-                <div class="d-flex align-items-center mb-1">
-                    <span class="fw-bold text-dark me-2">${adminAnalyticsLiteral(item.name || adminAnalyticsText("غير محدد", "Not specified"))}</span>
-                    <small class="badge bg-${riskColor} text-white">${riskScore}% ${adminAnalyticsText("خطر", "risk")}</small>
-                </div>
-                <small class="text-muted d-block">${adminAnalyticsLiteral(item.kindergarten || adminAnalyticsText("غير محدد", "Not specified"))}</small>
-                <div class="small text-danger mt-1">${adminAnalyticsLiteral(item.reason || adminAnalyticsText("سبب غير محدد", "Unspecified reason"))}</div>
-            </div>
-            <div class="text-end">
-                <div class="progress" style="width: 60px; height: 6px;">
-                    <div class="progress-bar bg-${riskColor}" style="width: ${riskScore}%"></div>
-                </div>
-            </div>
-        `;
+             <div class="flex-grow-1">
+                 <div class="d-flex align-items-center mb-1">
+                     <span class="fw-bold text-dark me-2">${adminAnalyticsLiteral(safeName)}</span>
+                     <small class="badge bg-${riskColor} text-white">${riskScore}% ${adminAnalyticsText("خطر", "risk")}</small>
+                 </div>
+                 <small class="text-muted d-block">${adminAnalyticsLiteral(safeKindergarten)}</small>
+                 <div class="small text-danger mt-1">${adminAnalyticsLiteral(safeReason)}</div>
+             </div>
+             <div class="text-end">
+                 <div class="progress" style="width: 60px; height: 6px;">
+                     <div class="progress-bar bg-${riskColor}" style="width: ${riskScore}%"></div>
+                 </div>
+             </div>
+         `;
 
     // Add click handler for drill-down
     li.style.cursor = "pointer";
-    li.addEventListener("click", () => {
+    li.addEventListener("click", function () {
       if (item.kindergarten_id) {
         window.location.href = `/admin/analytics/drilldown/KINDERGARTEN/${item.kindergarten_id}`;
       }
@@ -814,85 +958,109 @@ function updateRiskRadar(riskData) {
 }
 
 function updateGovernorateBreakdown(breakdownData) {
-  const table = document.getElementById("governorateTable");
-  const tbody = document.getElementById("governorateTableBody");
-  if (!tbody || !table) return;
+   const table = document.getElementById("governorateTable");
+   const tbody = document.getElementById("governorateTableBody");
+   if (!tbody || !table) return;
 
-  tbody.innerHTML = "";
+   tbody.innerHTML = "";
 
-  if (!breakdownData || breakdownData.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">${adminAnalyticsText("لا توجد بيانات للفترة المحددة", "No data for the selected period")}</td></tr>`;
-    if (governorateTableSorter) {
-      governorateTableSorter.destroy();
-      governorateTableSorter = null;
-    }
-    return;
-  }
+   const rows = (breakdownData || []).filter(function (row) {
+     if (!row || typeof row.governorate !== "string" || !row.governorate.trim()) return false;
+     if (window.KpiValidation && window.KpiValidation.containsCorruptedArabic(row.governorate)) return false;
+     return true;
+   });
 
-  let green = 0,
-    amber = 0,
-    red = 0;
+   if (rows.length === 0) {
+     tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">${adminAnalyticsText("لا توجد بيانات للفترة المحددة", "No data for the selected period")}</td></tr>`;
+     if (governorateTableSorter) {
+       governorateTableSorter.destroy();
+       governorateTableSorter = null;
+     }
+     return;
+   }
 
-  breakdownData.forEach((row) => {
-    const tr = document.createElement("tr");
-    tr.setAttribute("data-gov-id", row.governorate);
-    tr.style.cursor = "pointer";
-    tr.title = adminAnalyticsText(
-      `انقر لعرض تفاصيل محافظة ${row.governorate}`,
-      `Click to view details for governorate ${row.governorate}`
-    );
-    tr.addEventListener("click", () => {
-      window.location.href = `/admin/analytics/drilldown/GOVERNORATE/${row.governorate}`;
-    });
-    tr.innerHTML = `
-            <td class="fw-bold">${row.governorate}</td>
-            <td class="text-center">${row.kindergarten_count}</td>
-            <td class="text-center">${row.children_count}</td>
-            <td class="text-center" data-sort="${row.attendance_rate}">
-                <span class="badge ${row.attendance_rate >= 85 ? "bg-success-subtle text-success-emphasis" : "bg-warning-subtle text-warning-emphasis"}">
-                    ${(row.attendance_rate ?? 0).toFixed(1)}%
-                </span>
-            </td>
-            <td class="text-center" data-sort="${row.incident_rate}">${(row.incident_rate ?? 0).toFixed(2)}</td>
-            <td class="text-center" data-sort="${row.governance_score}">
-                <div class="d-flex align-items-center justify-content-center">
-                    <span class="fw-bold me-2">${(row.governance_score ?? 0).toFixed(1)}</span>
-                    <div class="progress" style="width: 50px; height: 4px;" role="progressbar" aria-valuenow="${row.governance_score}" aria-valuemin="0" aria-valuemax="100">
-                        <div class="progress-bar ${getScoreColor(row.governance_score)}" style="width: ${row.governance_score}%"></div>
-                    </div>
-                </div>
-            </td>
-        `;
-    tbody.appendChild(tr);
+   let green = 0, amber = 0, red = 0;
 
-    if (row.governance_score >= 80) green++;
-    else if (row.governance_score >= 60) amber++;
-    else if (row.governance_score > 0) red++;
-  });
+   rows.forEach(function (row) {
+     const tr = document.createElement("tr");
+     tr.setAttribute("data-gov-id", row.governorate);
+     tr.style.cursor = "pointer";
+     tr.title = adminAnalyticsText(
+       `انقر لعرض تفاصيل محافظة ${row.governorate}`,
+       `Click to view details for governorate ${row.governorate}`
+     );
+     tr.addEventListener("click", function () {
+       window.location.href = `/admin/analytics/drilldown/GOVERNORATE/${row.governorate}`;
+     });
 
-  updateGovernanceChart(green, amber, red);
-  updateRiskHeatmap(breakdownData);
+     // Validate and format values
+     const govScore = Number(row.governance_score);
+     const govScoreValid = Number.isFinite(govScore) && govScore >= 0 && govScore <= 100;
+     const displayScore = govScoreValid ? govScore.toFixed(1) : "--";
+     const scorePercent = govScoreValid ? govScore : 0;
 
-  // Initialize or refresh sorter
-  if (governorateTableSorter) {
-    governorateTableSorter.refresh();
-  } else {
-    governorateTableSorter = new Tablesort(table);
-  }
-}
+     tr.innerHTML = `
+             <td class="fw-bold">${adminAnalyticsLiteral(row.governorate)}</td>
+             <td class="text-center">${row.kindergarten_count}</td>
+             <td class="text-center">${row.children_count}</td>
+             <td class="text-center" data-sort="${row.attendance_rate}">
+                 <span class="badge ${row.attendance_rate >= 85 ? "bg-success-subtle text-success-emphasis" : "bg-warning-subtle text-warning-emphasis"}">
+                     ${(row.attendance_rate ?? 0).toFixed(1)}%
+                 </span>
+             </td>
+             <td class="text-center" data-sort="${row.incident_rate}">${(row.incident_rate ?? 0).toFixed(2)}</td>
+             <td class="text-center" data-sort="${govScore}">
+                 <div class="d-flex align-items-center justify-content-center">
+                     <span class="fw-bold me-2">${displayScore}</span>
+                     <div class="progress" style="width: 50px; height: 4px;" role="progressbar" aria-valuenow="${govScoreValid ? govScore : 0}" aria-valuemin="0" aria-valuemax="100">
+                         <div class="progress-bar ${govScoreValid ? getScoreColor(govScore) : "bg-secondary"}" style="width: ${scorePercent}%"></div>
+                     </div>
+                 </div>
+             </td>
+         `;
+     tbody.appendChild(tr);
+
+     // Use the same classification as KPI service (>=80 Green, >=60 Amber, else Red)
+     if (govScoreValid) {
+       if (govScore >= 80) green++;
+       else if (govScore >= 60) amber++;
+       else red++;
+     }
+   });
+
+   updateGovernanceChart(green, amber, red);
+   updateRiskHeatmap(rows);
+
+   // Initialize or refresh sorter
+   if (typeof window.Tablesort !== "function") {
+     return;
+   }
+   if (governorateTableSorter) {
+     governorateTableSorter.refresh();
+   } else {
+     governorateTableSorter = new window.Tablesort(table);
+   }
+ }
 
 function updateRiskHeatmap(breakdownData) {
   const container = document.getElementById("riskHeatmap");
   if (!container) return;
   container.innerHTML = "";
-  breakdownData.slice(0, 12).forEach((row) => {
-    const score = row.governance_score || 0;
+  const rows = (breakdownData || []).filter(function (row) {
+    return row && typeof row.governorate === "string" && row.governorate.trim();
+  });
+  if (!rows.length) {
+    container.innerHTML = `<div class="analytics-empty-state">${adminAnalyticsNoDataText()}</div>`;
+    return;
+  }
+  rows.slice(0, 12).forEach((row) => {
+    const score = Number.isFinite(Number(row.governance_score)) ? Number(row.governance_score) : 0;
     const colorClass = score >= 80 ? "bg-success" : score >= 60 ? "bg-warning" : "bg-danger";
     const cell = document.createElement("div");
     cell.className = "col-6 col-md-4";
     cell.innerHTML = `
       <div class="p-2 rounded text-white ${colorClass}" style="cursor:pointer;">
-        <div class="small fw-semibold">${row.governorate}</div>
+        <div class="small fw-semibold">${adminAnalyticsLiteral(row.governorate)}</div>
         <div class="small">${score.toFixed(1)}%</div>
       </div>
     `;
@@ -904,100 +1072,144 @@ function updateRiskHeatmap(breakdownData) {
 }
 
 async function loadComparativeAnalysis(start, end) {
-  const topList = document.getElementById("topPerformersList");
-  const lowList = document.getElementById("lowPerformersList");
-  if (!topList || !lowList) return;
+   const topList = document.getElementById("topPerformersList");
+   const lowList = document.getElementById("lowPerformersList");
+   if (!topList || !lowList) return;
 
-  topList.innerHTML = `<div class="list-group-item text-center text-muted small">${adminAnalyticsText("جاري التحميل...", "Loading...")}</div>`;
-  lowList.innerHTML = `<div class="list-group-item text-center text-muted small">${adminAnalyticsText("جاري التحميل...", "Loading...")}</div>`;
+   topList.innerHTML = `<div class="list-group-item text-center text-muted small">${adminAnalyticsText("جاري التحميل...", "Loading...")}</div>`;
+   lowList.innerHTML = `<div class="list-group-item text-center text-muted small">${adminAnalyticsText("جاري التحميل...", "Loading...")}</div>`;
 
-  try {
-    const gov = document.getElementById("governorateFilter")?.value || "";
-    const govParam = gov ? `&governorate=${encodeURIComponent(gov)}` : "";
-    const [topResponse, lowResponse] = await Promise.all([
-      fetchWithAuth(
-        `/api/analytics/rankings/governance_score?top_n=5&period_start=${start}&period_end=${end}${govParam}`
-      ),
-      fetchWithAuth(
-        `/api/analytics/rankings/governance_score?top_n=5&bottom=true&period_start=${start}&period_end=${end}${govParam}`
-      ),
-    ]);
+   try {
+     const gov = document.getElementById("governorateFilter")?.value || "";
+     const govParam = gov ? `&governorate=${encodeURIComponent(gov)}` : "";
+     const [topResponse, lowResponse] = await Promise.all([
+       fetchWithAuth(
+         `/api/analytics/rankings/governance_score?top_n=5&period_start=${start}&period_end=${end}${govParam}`
+       ),
+       fetchWithAuth(
+         `/api/analytics/rankings/governance_score?top_n=5&bottom=true&period_start=${start}&period_end=${end}${govParam}`
+       ),
+     ]);
 
-    if (!topResponse || !lowResponse) return;
+     if (!topResponse || !lowResponse) return;
 
-    const topData = await topResponse.json();
-    const lowData = await lowResponse.json();
+     const topData = await topResponse.json();
+     const lowData = await lowResponse.json();
 
-    renderRankingList(topList, topData.rankings, "top");
-    renderRankingList(lowList, lowData.rankings, "low");
-  } catch (error) {
-    console.error("Comparative analysis error:", error);
-    topList.innerHTML = `<div class="list-group-item text-danger small">${adminAnalyticsText("تعذر تحميل التصنيفات.", "Unable to load rankings.")}</div>`;
-    lowList.innerHTML = `<div class="list-group-item text-danger small">${adminAnalyticsText("تعذر تحميل التصنيفات.", "Unable to load rankings.")}</div>`;
-  }
-}
+     // Track seen kindergarten IDs to prevent duplicates across lists
+     const seenTopIds = new Set((topData.rankings || []).map(function (r) { return r.kindergarten_id; }));
+     const topCount = (topData.rankings || []).length;
+     const lowCount = (lowData.rankings || []).length;
 
-function renderRankingList(element, rankings, type) {
-  element.innerHTML = "";
+     renderRankingList(topList, topData.rankings, "top", seenTopIds);
+     renderRankingList(lowList, lowData.rankings, "low", seenTopIds, topCount);
+   } catch (error) {
+     console.error("Comparative analysis error:", error);
+     topList.innerHTML = `<div class="list-group-item text-danger small">${adminAnalyticsText("تعذر تحميل التصنيفات.", "Unable to load rankings.")}</div>`;
+     lowList.innerHTML = `<div class="list-group-item text-danger small">${adminAnalyticsText("تعذر تحميل التصنيفات.", "Unable to load rankings.")}</div>`;
+   }
+ }
 
-  if (!rankings || rankings.length === 0) {
-    const emptyItem = document.createElement("div");
-    emptyItem.className = "list-group-item text-muted text-center py-4 border-0";
-    emptyItem.innerHTML = `
-            <i class="bi bi-info-circle fs-2 mb-2 ${type === "top" ? "text-success" : "text-danger"}"></i>
-            <div class="small">${adminAnalyticsText("لا توجد بيانات متاحة لهذه الفترة", "No data available for this period")}</div>
-        `;
-    element.appendChild(emptyItem);
-    return;
-  }
+function renderRankingList(element, rankings, type, seenIds, otherListCount) {
+   element.innerHTML = "";
 
-  rankings.forEach((item, index) => {
-    const div = document.createElement("div");
-    div.className =
-      "list-group-item d-flex justify-content-between align-items-center border-0 py-3";
+   if (!rankings || rankings.length === 0) {
+     const emptyItem = document.createElement("div");
+     emptyItem.className = "list-group-item text-muted text-center py-4 border-0";
+     emptyItem.innerHTML = `
+             <i class="bi bi-info-circle fs-2 mb-2 ${type === "top" ? "text-success" : "text-danger"}"></i>
+             <div class="small">${adminAnalyticsText("لا توجد بيانات متاحة لهذه الفترة", "No data available for this period")}</div>
+         `;
+     element.appendChild(emptyItem);
+     return;
+   }
 
-    const rank = index + 1;
-    const score = item.value || 0;
-    const scoreColor = type === "top" ? "text-success" : "text-danger";
-    const rankIcon = type === "top" ? "bi-trophy" : "bi-exclamation-triangle";
+   // Filter out invalid/corrupted items and items already seen in other list
+   const validRankings = rankings.filter(function (item) {
+     if (!item) return false;
+     if (!item.kindergarten_name || typeof item.kindergarten_name !== "string") return false;
+     if (!item.kindergarten_name.trim()) return false;
+     // Check for corrupted Arabic text
+     if (window.KpiValidation && window.KpiValidation.containsCorruptedArabic(item.kindergarten_name)) return false;
+     if (window.KpiValidation && window.KpiValidation.containsCorruptedArabic(item.governorate || "")) return false;
+     // For low performers list, filter out items already in top performers
+     if (type === "low" && seenIds && seenIds.has(item.kindergarten_id)) return false;
+     return true;
+   });
 
-    div.innerHTML = `
-            <div class="d-flex align-items-center flex-grow-1">
-                <div class="rank-circle ${type === "top" ? "bg-success" : "bg-danger"} text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px; font-size: 14px; font-weight: bold;">
-                    ${rank}
-                </div>
-                <div class="flex-grow-1">
-                    <a href="/kindergartens/${item.kindergarten_id}" class="fw-bold text-dark text-decoration-none d-block" title="${adminAnalyticsText("انقر لعرض تفاصيل الروضة", "Click to view kindergarten details")}">
-                        ${adminAnalyticsLiteral(item.kindergarten_name || adminAnalyticsText("غير محدد", "Not specified"))}
-                    </a>
-                    <small class="text-muted d-block">
-                        <i class="bi bi-geo-alt me-1"></i>${adminAnalyticsLiteral(item.governorate || adminAnalyticsText("غير محدد", "Not specified"))}
-                    </small>
-                </div>
-            </div>
-            <div class="text-end">
-                <div class="d-flex align-items-center">
-                    <span class="badge ${type === "top" ? "bg-success-subtle text-success-emphasis" : "bg-danger-subtle text-danger-emphasis"} rounded-pill me-2 fs-6">
-                        ${score.toFixed(1)}
-                    </span>
-                    <i class="bi ${rankIcon} ${scoreColor}"></i>
-                </div>
-            </div>
-        `;
+   // Show overlap note if both lists have less than 5 items
+   const totalAvailable = (otherListCount || 0) + validRankings.length;
+   if (totalAvailable < 5) {
+     const noteDiv = document.createElement("div");
+     noteDiv.className = "list-group-item text-muted small text-center border-0";
+     noteDiv.innerHTML = `<i class="bi bi-info-circle me-1"></i>${adminAnalyticsText(
+       `ملاحظة: عدد الروضات المتاحة أقل من 5، لذا قد تظهر نفس الروضات في أكثر من قائمة.`,
+       `Note: Fewer than 5 kindergartens available, so some may appear in both lists.`
+     )}`;
+     element.appendChild(noteDiv);
+   }
 
-    // Add hover effect
-    div.addEventListener("mouseenter", () => {
-      div.style.backgroundColor =
-        type === "top" ? "rgba(25, 135, 84, 0.05)" : "rgba(220, 53, 69, 0.05)";
-    });
+   if (validRankings.length === 0) {
+     const emptyItem = document.createElement("div");
+     emptyItem.className = "list-group-item text-muted text-center py-4 border-0";
+     emptyItem.innerHTML = `<i class="bi bi-info-circle fs-2 mb-2 ${type === "top" ? "text-success" : "text-danger"}"></i>
+       <div class="small">${adminAnalyticsNoDataText()}</div>`;
+     element.appendChild(emptyItem);
+     return;
+   }
 
-    div.addEventListener("mouseleave", () => {
-      div.style.backgroundColor = "";
-    });
+   validRankings.forEach(function (item, index) {
+     const div = document.createElement("div");
+     div.className = "list-group-item d-flex justify-content-between align-items-center border-0 py-3";
 
-    element.appendChild(div);
-  });
-}
+     const rank = index + 1;
+     const score = item.value || 0;
+     const scoreColor = type === "top" ? "text-success" : "text-danger";
+     const rankIcon = type === "top" ? "bi-trophy" : "bi-exclamation-triangle";
+
+     const safeName = window.KpiValidation
+       ? window.KpiValidation.sanitizeCorruptedText(item.kindergarten_name, "غير متاح")
+       : (item.kindergarten_name || "غير متاح");
+     const safeGovernorate = window.KpiValidation
+       ? window.KpiValidation.sanitizeCorruptedText(item.governorate, "غير محدد")
+       : (item.governorate || "غير محدد");
+
+     div.innerHTML = `
+             <div class="d-flex align-items-center flex-grow-1">
+                 <div class="rank-circle ${type === "top" ? "bg-success" : "bg-danger"} text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px; font-size: 14px; font-weight: bold;">
+                     ${rank}
+                 </div>
+                 <div class="flex-grow-1">
+                     <a href="/admin/analytics/drilldown/KINDERGARTEN/${item.kindergarten_id}" class="fw-bold text-dark text-decoration-none d-block" title="${adminAnalyticsText("انقر لعرض تفاصيل الروضة", "Click to view kindergarten details")}">
+                         ${adminAnalyticsLiteral(safeName)}
+                     </a>
+                     <small class="text-muted d-block">
+                         <i class="bi bi-geo-alt me-1"></i>${adminAnalyticsLiteral(safeGovernorate)}
+                     </small>
+                 </div>
+             </div>
+             <div class="text-end">
+                 <div class="d-flex align-items-center">
+                     <span class="badge ${type === "top" ? "bg-success-subtle text-success-emphasis" : "bg-danger-subtle text-danger-emphasis"} rounded-pill me-2 fs-6">
+                         ${score.toFixed(1)}
+                     </span>
+                     <i class="bi ${rankIcon} ${scoreColor}"></i>
+                 </div>
+             </div>
+         `;
+
+     // Add hover effect
+     div.addEventListener("mouseenter", function () {
+       div.style.backgroundColor = type === "top" ? "rgba(25, 135, 84, 0.05)" : "rgba(220, 53, 69, 0.05)";
+     });
+
+     div.addEventListener("mouseleave", function () {
+       div.style.backgroundColor = "";
+     });
+
+     element.appendChild(div);
+   });
+ }
 
 function updateGovernanceChart(green, amber, red) {
   const ctx = document.getElementById("governancePieChart");
@@ -1006,6 +1218,10 @@ function updateGovernanceChart(green, amber, red) {
   safeSetText("countGreen", green);
   safeSetText("countAmber", amber);
   safeSetText("countRed", red);
+
+  if (!adminAnalyticsHasChart()) {
+    return;
+  }
 
   if (governanceChart) governanceChart.destroy();
 
@@ -1021,14 +1237,33 @@ function updateGovernanceChart(green, amber, red) {
         {
           data: safeChartData([green, amber, red]),
           backgroundColor: ["#198754", "#ffc107", "#dc3545"],
+          hoverBackgroundColor: ["#157347", "#e0a800", "#bb2d3b"],
           borderWidth: 0,
+          hoverOffset: 6,
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      animation: { duration: 600, easing: "easeOutQuart" },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(17,24,39,0.92)",
+          titleColor: "#f8fafc",
+          bodyColor:  "#f8fafc",
+          padding:    10,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(ctx) {
+              const total = (ctx.dataset.data || []).reduce((a, b) => a + (b || 0), 0);
+              const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : "0.0";
+              return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+            },
+          },
+        },
+      },
       cutout: "70%",
     },
   });
@@ -1115,7 +1350,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Initialize export dates for either dashboard modal or reports page form.
   const today = new Date();
   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-  const formatDate = (d) => d.toISOString().split("T")[0];
+  const formatDate = (d) => { const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, "0"); const day = String(d.getDate()).padStart(2, "0"); return `${year}-${month}-${day}`; };
 
   const exportStartDate =
     document.getElementById("exportStartDate") || document.getElementById("startDate");
@@ -1160,7 +1395,7 @@ async function handleExport(event) {
   }
 
   if (!startDate || !endDate) {
-    showToast("Please select a valid date range.", "warning");
+    showToast(adminAnalyticsText("يرجى تحديد نطاق تاريخ صالح.", "Please select a valid date range."), "warning");
     return;
   }
 
@@ -1279,41 +1514,77 @@ function updatePredictiveCards(attendanceData, incidentsData, enrollmentData) {
   const enrollmentForecast = document.getElementById("enrollmentForecast");
   const enrollmentBand = document.getElementById("enrollmentForecastBand");
 
+  // Validate and format attendance forecast (percentage)
+  const attValidation = window.KpiValidation?.validateForecastMetric
+    ? window.KpiValidation.validateForecastMetric(attendanceData, "attendance")
+    : { valid: true };
   const lastAttendance = attendanceData.forecast_points?.slice(-1)[0];
-  const lastIncident = incidentsData.forecast_points?.slice(-1)[0];
-  const lastEnrollment = enrollmentData.forecast_points?.slice(-1)[0];
-
   if (attendanceForecast && lastAttendance) {
-    attendanceForecast.textContent = `${lastAttendance.value.toFixed(1)}%`;
-    const lower = attendanceData.confidence?.lower?.slice(-1)[0]?.value ?? 0;
-    const upper = attendanceData.confidence?.upper?.slice(-1)[0]?.value ?? 0;
-    if (attendanceBand) {
-      attendanceBand.textContent = adminAnalyticsText(
-        `نطاق الثقة: ${lower.toFixed(1)}% - ${upper.toFixed(1)}%`,
-        `Confidence range: ${lower.toFixed(1)}% - ${upper.toFixed(1)}%`
-      );
+    if (attValidation.valid) {
+      const numericValue = Number(lastAttendance.value);
+      const value = Number.isFinite(numericValue) ? numericValue.toFixed(1) : "--";
+      attendanceForecast.textContent = `${value}%`;
+      const lower = attendanceData.confidence?.lower?.slice(-1)[0]?.value ?? 0;
+      const upper = attendanceData.confidence?.upper?.slice(-1)[0]?.value ?? 0;
+      if (attendanceBand) {
+        attendanceBand.textContent = adminAnalyticsText(
+          `نطاق الثقة: ${lower.toFixed(1)}% - ${upper.toFixed(1)}%`,
+          `Confidence range: ${lower.toFixed(1)}% - ${upper.toFixed(1)}%`
+        );
+      }
+    } else {
+      attendanceForecast.innerHTML = `<span class="text-danger-emphasis">${attValidation.message || "غير متاح"}</span>`;
+      if (attendanceBand) {
+        attendanceBand.textContent = "--";
+      }
     }
   }
+
+  // Validate and format incident forecast (count - must be non-negative)
+  const incValidation = window.KpiValidation?.validateForecastMetric
+    ? window.KpiValidation.validateForecastMetric(incidentsData, "incidents")
+    : { valid: true };
+  const lastIncident = incidentsData.forecast_points?.slice(-1)[0];
   if (incidentForecast && lastIncident) {
-    incidentForecast.textContent = `${lastIncident.value.toFixed(2)}`;
-    const lower = incidentsData.confidence?.lower?.slice(-1)[0]?.value ?? 0;
-    const upper = incidentsData.confidence?.upper?.slice(-1)[0]?.value ?? 0;
-    if (incidentBand) {
-      incidentBand.textContent = adminAnalyticsText(
-        `نطاق الثقة: ${lower.toFixed(2)} - ${upper.toFixed(2)}`,
-        `Confidence range: ${lower.toFixed(2)} - ${upper.toFixed(2)}`
-      );
+    if (incValidation.valid) {
+      const lower = incidentsData.confidence?.lower?.slice(-1)[0]?.value ?? 0;
+      const upper = incidentsData.confidence?.upper?.slice(-1)[0]?.value ?? 0;
+      incidentForecast.textContent = `${lastIncident.value.toFixed(2)}`;
+      if (incidentBand) {
+        incidentBand.textContent = adminAnalyticsText(
+          `نطاق الثقة: ${lower.toFixed(2)} - ${upper.toFixed(2)}`,
+          `Confidence range: ${lower.toFixed(2)} - ${upper.toFixed(2)}`
+        );
+      }
+    } else {
+      incidentForecast.innerHTML = `<span class="text-danger-emphasis">${incValidation.message || "غير متاح"}</span>`;
+      if (incidentBand) {
+        incidentBand.textContent = "--";
+      }
     }
   }
+
+  // Validate and format enrollment forecast (count - must be non-negative)
+  const enrValidation = window.KpiValidation?.validateForecastMetric
+    ? window.KpiValidation.validateForecastMetric(enrollmentData, "enrollment")
+    : { valid: true };
+  const lastEnrollment = enrollmentData.forecast_points?.slice(-1)[0];
   if (enrollmentForecast && lastEnrollment) {
-    enrollmentForecast.textContent = `${lastEnrollment.value.toFixed(0)}`;
-    const lower = enrollmentData.confidence?.lower?.slice(-1)[0]?.value ?? 0;
-    const upper = enrollmentData.confidence?.upper?.slice(-1)[0]?.value ?? 0;
-    if (enrollmentBand) {
-      enrollmentBand.textContent = adminAnalyticsText(
-        `نطاق الثقة: ${lower.toFixed(0)} - ${upper.toFixed(0)}`,
-        `Confidence range: ${lower.toFixed(0)} - ${upper.toFixed(0)}`
-      );
+    if (enrValidation.valid) {
+      const lower = enrollmentData.confidence?.lower?.slice(-1)[0]?.value ?? 0;
+      const upper = enrollmentData.confidence?.upper?.slice(-1)[0]?.value ?? 0;
+      enrollmentForecast.textContent = `${lastEnrollment.value.toFixed(0)}`;
+      if (enrollmentBand) {
+        enrollmentBand.textContent = adminAnalyticsText(
+          `نطاق الثقة: ${lower.toFixed(0)} - ${upper.toFixed(0)}`,
+          `Confidence range: ${lower.toFixed(0)} - ${upper.toFixed(0)}`
+        );
+      }
+    } else {
+      enrollmentForecast.innerHTML = `<span class="text-danger-emphasis">${enrValidation.message || "غير متاح"}</span>`;
+      if (enrollmentBand) {
+        enrollmentBand.textContent = "--";
+      }
     }
   }
 }
@@ -1347,12 +1618,15 @@ async function loadAnomalies(start, end, scopeType, scopeId) {
     items.slice(0, 5).forEach((item) => {
       const row = document.createElement("div");
       row.className = "list-group-item border-0";
+      const severityClass = item.severity === "CRITICAL" ? "bg-danger" :
+                          item.severity === "HIGH" ? "bg-warning text-dark" :
+                          item.severity === "MEDIUM" ? "bg-warning" : "bg-info text-dark";
       row.innerHTML = `<div class="d-flex justify-content-between">
         <div>
           <div class="fw-semibold">${escapeHtml(item.message)}</div>
-          <small class="text-muted">${escapeHtml(item.detected_at)}</small>
+          <small class="text-muted">${formatDateForDisplay(item.detected_at)}</small>
         </div>
-        <span class="badge bg-danger">${escapeHtml(item.severity)}</span>
+        <span class="badge ${severityClass}">${formatAnomalySeverity(item.severity)}</span>
       </div>`;
       list.appendChild(row);
     });
@@ -1362,39 +1636,80 @@ async function loadAnomalies(start, end, scopeType, scopeId) {
 }
 
 async function loadAlerts() {
+  const alertList = document.getElementById("alertList");
+  const banner = document.getElementById("alertBanner");
+  if (!alertList) return;
+  alertList.innerHTML = "";
+
+  const combinedAlerts = [];
+
+  // Pull from legacy analytics alerts
   try {
     const res = await fetchWithAuth(`/api/analytics/alerts`);
-    if (!res) return;
-    const data = await res.json();
-    const alertList = document.getElementById("alertList");
-    const banner = document.getElementById("alertBanner");
-    if (!alertList) return;
-    alertList.innerHTML = "";
-    const alerts = data.alerts || [];
-    if (alerts.length) {
-      banner.classList.remove("d-none");
-      banner.textContent = adminAnalyticsText(
-        `يوجد ${alerts.length} تنبيه نشط يتطلب المراجعة.`,
-        `${alerts.length} active alerts require review.`
-      );
-    } else {
-      banner.classList.add("d-none");
+    if (res) {
+      const data = await res.json();
+      (data.alerts || []).forEach((a) => combinedAlerts.push({
+        message: a.message,
+        subtitle: formatMetricType(a.metric_type),
+        priority: (a.severity || "MEDIUM").toLowerCase(),
+      }));
     }
-    alerts.slice(0, 5).forEach((alert) => {
-      const row = document.createElement("div");
-      row.className = "list-group-item border-0";
-      row.innerHTML = `<div class="d-flex justify-content-between">
-        <div>
-          <div class="fw-semibold">${escapeHtml(alert.message)}</div>
-          <small class="text-muted">${escapeHtml(alert.metric_type)}</small>
-        </div>
-        <span class="badge bg-warning">${escapeHtml(alert.severity)}</span>
-      </div>`;
-      alertList.appendChild(row);
-    });
-  } catch (error) {
-    console.error("Alerts load error", error);
+  } catch (_) {
+    // analytics/alerts unavailable — continue with KPI alerts only
   }
+
+  // Pull from KPI-based alerts (new)
+  try {
+    const res2 = await fetchWithAuth(`/api/kpi/alerts`);
+    if (res2) {
+      const data2 = await res2.json();
+      (data2.alerts || []).forEach((a) => combinedAlerts.push({
+        message: a.message_ar || a.message_en || "",
+        subtitle: a.type || "",
+        priority: a.priority || "medium",
+      }));
+    }
+  } catch (_) {
+    // kpi/alerts unavailable — show whatever analytics alerts were collected
+  }
+
+  // Sort: critical → high → medium → low
+  const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+  combinedAlerts.sort((a, b) => (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3));
+
+  if (combinedAlerts.length && banner) {
+    banner.classList.remove("d-none");
+    banner.textContent = adminAnalyticsText(
+      `يوجد ${combinedAlerts.length} تنبيه نشط يتطلب المراجعة.`,
+      `${combinedAlerts.length} active alert(s) require review.`
+    );
+  } else if (banner) {
+    banner.classList.add("d-none");
+  }
+
+  combinedAlerts.slice(0, 8).forEach((alert) => {
+    const row = document.createElement("div");
+    row.className = "list-group-item border-0 py-2";
+    const badgeClass = alert.priority === "critical" ? "bg-danger"
+      : alert.priority === "high" ? "bg-warning text-dark"
+      : alert.priority === "medium" ? "bg-secondary"
+      : "bg-info text-dark";
+    const badgeLabel = alert.priority === "critical"
+      ? adminAnalyticsText("حرج", "Critical")
+      : alert.priority === "high"
+      ? adminAnalyticsText("عالي", "High")
+      : alert.priority === "medium"
+      ? adminAnalyticsText("متوسط", "Medium")
+      : adminAnalyticsText("منخفض", "Low");
+    row.innerHTML = `<div class="d-flex justify-content-between align-items-start gap-2">
+      <div class="flex-grow-1">
+        <div class="fw-semibold small">${escapeHtml(alert.message)}</div>
+        ${alert.subtitle ? `<small class="text-muted">${escapeHtml(alert.subtitle)}</small>` : ""}
+      </div>
+      <span class="badge ${badgeClass} flex-shrink-0">${badgeLabel}</span>
+    </div>`;
+    alertList.appendChild(row);
+  });
 }
 
 async function loadDataQuality() {
@@ -1530,15 +1845,20 @@ function renderSparklines(dashboardData) {
 function getSparklineData(data, metric) {
   if (!data) return null;
 
+  function validNums(arr) {
+    var filtered = (arr || []).filter(function (v) { return v != null && isFinite(v); });
+    return filtered.length >= 2 ? filtered : null;
+  }
+
   switch (metric) {
     case 'total_kg':
-      return data.total_kindergartens_trend || [data.previous_period?.total_kindergartens, data.network_summary?.total_kindergartens];
+      return validNums(data.total_kindergartens_trend) || validNums([data.previous_period?.total_kindergartens, data.network_summary?.total_kindergartens]);
     case 'total_children':
-      return data.total_children_trend || [data.previous_period?.total_children, data.network_summary?.total_children];
+      return validNums(data.total_children_trend) || validNums([data.previous_period?.total_children, data.network_summary?.total_children]);
     case 'attendance_rate':
-      return data.attendance_rate_trend || [data.previous_period?.attendance_rate, data.network_summary?.attendance_rate];
+      return validNums(data.attendance_rate_trend) || validNums([data.previous_period?.attendance_rate, data.network_summary?.attendance_rate]);
     case 'incident_rate':
-      return data.incident_rate_trend || [data.previous_period?.incident_rate, data.network_summary?.incident_rate];
+      return validNums(data.incident_rate_trend) || validNums([data.previous_period?.incident_rate, data.network_summary?.incident_rate]);
     default:
       return null;
   }
@@ -1569,6 +1889,768 @@ function renderMiniSparkline(container, data) {
     '<polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</svg>';
   container.innerHTML = svg;
+}
+
+// =============================================================================
+// Registration Analytics
+// =============================================================================
+
+let funnelChartInstance = null;
+let sourceChartInstance = null;
+let regTablePage = 1;
+let regTableTotalPages = 1;
+
+function getRegistrationFilters() {
+  return {
+    status: document.getElementById("regStatusFilter")?.value || "",
+    source: document.getElementById("regSourceFilter")?.value || "",
+    reviewer_id: document.getElementById("regReviewerFilter")?.value || "",
+  };
+}
+
+async function loadRegistrationAnalytics() {
+  const start = document.getElementById("periodStart")?.value || "";
+  const end = document.getElementById("periodEnd")?.value || "";
+  const gov = document.getElementById("governorateFilter")?.value || "";
+  const filters = getRegistrationFilters();
+
+  if (!start || !end) return;
+
+  const params = new URLSearchParams({ start_date: start, end_date: end });
+  if (gov) params.set("governorate", gov);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.source) params.set("source", filters.source);
+  if (filters.reviewer_id) params.set("reviewer_id", filters.reviewer_id);
+
+  try {
+    const res = await fetchWithAuth(`/api/analytics/registration/analytics?${params.toString()}`);
+    if (!res) return;
+    const data = await res.json();
+    updateRegistrationKPIs(data);
+    renderFunnelChart(data.funnel || {});
+    renderRejectionReasons(data.rejection_reasons || {});
+    renderSourceChart(data.source_breakdown || {});
+    regTablePage = 1;
+    await loadRegistrationTable();
+  } catch (error) {
+    console.error("Registration analytics load error:", error);
+  }
+
+  // Load entity-level summary (users / KGs / children / quality) and quality breakdown in parallel
+  await Promise.all([
+    loadRegistrationEntitySummary(),
+    loadRegistrationQualityBreakdown(),
+  ]);
+}
+
+// =============================================================================
+// Registration Entity Summary — users, KGs, children, quality, action queue
+// =============================================================================
+
+async function loadRegistrationEntitySummary() {
+  const start = document.getElementById("periodStart")?.value || "";
+  const end   = document.getElementById("periodEnd")?.value   || "";
+  const gov   = document.getElementById("governorateFilter")?.value || "";
+
+  if (!start || !end) return;
+
+  const params = new URLSearchParams({ start_date: start, end_date: end });
+  if (gov) params.set("governorate", gov);
+
+  try {
+    const res = await fetchWithAuth(`/api/analytics/registration/entity-summary?${params}`);
+    if (!res) return;
+    const data = await res.json();
+
+    _renderEntitySummaryCards(data);
+    _renderStatusMatrix(data.enrollments || {});
+    _renderActionQueue(data.actions_required || []);
+    _renderRoleBreakdown(data.users?.by_role || {});
+
+    const freshEl = document.getElementById("regStatusFreshness");
+    if (freshEl) {
+      const ts = new Date().toLocaleTimeString(adminAnalyticsLocale());
+      freshEl.textContent = adminAnalyticsText(
+        `آخر تحديث: ${ts}`,
+        `Last updated: ${ts}`
+      );
+    }
+  } catch (err) {
+    console.error("Entity summary load error:", err);
+  }
+}
+
+function _setBarWidth(id, pct) {
+  const el = document.getElementById(id);
+  if (el) el.style.width = `${Math.min(100, Math.max(0, pct || 0)).toFixed(1)}%`;
+}
+
+function _renderEntitySummaryCards(data) {
+  const u      = data.users          || {};
+  const k      = data.kindergartens  || {};
+  const c      = data.children       || {};
+  const locale = adminAnalyticsLocale();
+
+  // Users
+  safeSetText("regUsersTotal",     (u.total     || 0).toLocaleString(locale));
+  safeSetText("regUsersNew",       `+${(u.new_this_period || 0).toLocaleString(locale)}`);
+  safeSetText("regUsersActive",    (u.active    || 0).toLocaleString(locale));
+  safeSetText("regUsersSuspended", (u.suspended || 0).toLocaleString(locale));
+  safeSetText("regUsersInactive",  (u.inactive  || 0).toLocaleString(locale));
+  const uT = u.total || 1;
+  _setBarWidth("regUsersActiveBar",    (u.active    || 0) / uT * 100);
+  _setBarWidth("regUsersSuspendedBar", (u.suspended || 0) / uT * 100);
+  _setBarWidth("regUsersInactiveBar",  (u.inactive  || 0) / uT * 100);
+
+  // Kindergartens
+  safeSetText("regKgTotal",    (k.total    || 0).toLocaleString(locale));
+  safeSetText("regKgNew",      `+${(k.new_this_period || 0).toLocaleString(locale)}`);
+  safeSetText("regKgActive",   (k.active   || 0).toLocaleString(locale));
+  safeSetText("regKgInactive", (k.inactive || 0).toLocaleString(locale));
+  safeSetText("regKgDraft",    (k.draft    || 0).toLocaleString(locale));
+  const kT = k.total || 1;
+  _setBarWidth("regKgActiveBar",   (k.active   || 0) / kT * 100);
+  _setBarWidth("regKgInactiveBar", (k.inactive || 0) / kT * 100);
+  _setBarWidth("regKgDraftBar",    (k.draft    || 0) / kT * 100);
+
+  // Children
+  safeSetText("regChildrenTotal",         (c.total              || 0).toLocaleString(locale));
+  safeSetText("regChildrenEnrolled",      (c.enrolled           || 0).toLocaleString(locale));
+  safeSetText("regChildrenEnrolledCount", (c.enrolled           || 0).toLocaleString(locale));
+  safeSetText("regChildrenPending",       (c.pending            || 0).toLocaleString(locale));
+  safeSetText("regChildrenNone",          (c.without_enrollment || 0).toLocaleString(locale));
+  const cT = c.total || 1;
+  _setBarWidth("regChildrenEnrolledBar", (c.enrolled           || 0) / cT * 100);
+  _setBarWidth("regChildrenPendingBar",  (c.pending            || 0) / cT * 100);
+  _setBarWidth("regChildrenNoEnrollBar", (c.without_enrollment || 0) / cT * 100);
+}
+
+function _renderStatusMatrix(enrollments) {
+  const container = document.getElementById("regStatusMatrix");
+  if (!container) return;
+
+  const byStatus = enrollments.by_status || {};
+  const total    = enrollments.total     || 1;
+  const locale   = adminAnalyticsLocale();
+
+  const STATUSES = [
+    { key: "DRAFT",          ar: "مسودة",            en: "Draft",          color: "#94A3B8", icon: "bi-file-earmark" },
+    { key: "SUBMITTED",      ar: "مقدّم",            en: "Submitted",      color: "#3B82F6", icon: "bi-send" },
+    { key: "PENDING_REVIEW", ar: "قيد المراجعة",     en: "Pending Review", color: "#F59E0B", icon: "bi-hourglass-split" },
+    { key: "ACCEPTED",       ar: "مقبول",            en: "Accepted",       color: "#10B981", icon: "bi-check-circle" },
+    { key: "ACTIVE",         ar: "نشط",              en: "Active",         color: "#059669", icon: "bi-circle-fill" },
+    { key: "REJECTED",       ar: "مرفوض",            en: "Rejected",       color: "#EF4444", icon: "bi-x-circle" },
+    { key: "WAITLISTED",     ar: "قائمة الانتظار",   en: "Waitlisted",     color: "#6366F1", icon: "bi-clock-history" },
+    { key: "WITHDRAWN",      ar: "منسحب",            en: "Withdrawn",      color: "#64748B", icon: "bi-dash-circle" },
+  ];
+
+  container.innerHTML = STATUSES.map(s => {
+    const count = byStatus[s.key] || 0;
+    const pct   = ((count / total) * 100).toFixed(1);
+    const label = adminAnalyticsText(s.ar, s.en);
+    return `
+      <div class="mb-2">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <small class="d-flex align-items-center gap-1 fw-medium" style="font-size:.72rem;">
+            <i class="bi ${s.icon}" style="color:${s.color};font-size:.6rem;" aria-hidden="true"></i>
+            ${label}
+          </small>
+          <small style="color:${s.color};font-weight:600;font-size:.72rem;">
+            ${count.toLocaleString(locale)}
+            <span class="text-muted fw-normal">(${pct}%)</span>
+          </small>
+        </div>
+        <div class="progress" style="height:4px;"
+             role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"
+             aria-label="${label}: ${pct}%">
+          <div class="progress-bar" style="width:${pct}%;background:${s.color};transition:width .4s ease;"></div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function _renderActionQueue(actions) {
+  const container = document.getElementById("regActionQueue");
+  const badge     = document.getElementById("regActionsBadge");
+  if (!container) return;
+
+  if (badge) {
+    badge.textContent = actions.length;
+    badge.className   = `badge ms-auto ${actions.length > 0 ? "bg-warning text-dark" : "bg-secondary"}`;
+  }
+
+  if (!actions.length) {
+    container.innerHTML = `
+      <div class="text-center py-3">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:2rem;" aria-hidden="true"></i>
+        <div class="small text-muted mt-2">
+          ${adminAnalyticsText("لا توجد إجراءات مطلوبة حالياً", "No actions required")}
+        </div>
+      </div>`;
+    return;
+  }
+
+  const priorityBadge = { high: "danger", medium: "warning text-dark", low: "info text-dark" };
+  const locale = adminAnalyticsLocale();
+
+  container.innerHTML = actions.map(a => `
+    <div class="d-flex align-items-start gap-2 mb-2 p-2 rounded"
+         style="background:rgba(0,0,0,.04);">
+      <span class="badge bg-${priorityBadge[a.priority] || "secondary"} flex-shrink-0 mt-1">
+        ${(a.count || 0).toLocaleString(locale)}
+      </span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="small fw-medium lh-sm" style="font-size:.75rem;">
+          ${escapeHtml(a.label_ar || "")}
+        </div>
+        ${a.url ? `
+          <a href="${escapeHtml(a.url)}"
+             class="small text-primary text-decoration-none d-inline-flex align-items-center gap-1 mt-1"
+             style="font-size:.68rem;">
+            ${escapeHtml(a.action_ar || adminAnalyticsText("عرض", "View"))}
+            <i class="bi bi-arrow-left-short" aria-hidden="true"></i>
+          </a>` : ""}
+      </div>
+    </div>`).join("");
+}
+
+function _renderRoleBreakdown(byRole) {
+  const container = document.getElementById("regRoleBreakdown");
+  if (!container) return;
+
+  const ROLES = [
+    { key: "ADMIN",      ar: "مدير النظام",    en: "Admin",      color: "#1F5E47", icon: "bi-shield-lock" },
+    { key: "MANAGER",    ar: "مدير روضة",      en: "Manager",    color: "#2563EB", icon: "bi-person-workspace" },
+    { key: "SUPERVISOR", ar: "مشرف تربوي",     en: "Supervisor", color: "#7C3AED", icon: "bi-binoculars" },
+    { key: "PARENT",     ar: "ولي أمر",        en: "Parent",     color: "#0891B2", icon: "bi-people" },
+  ];
+
+  const total  = Object.values(byRole).reduce((a, b) => a + b, 0) || 1;
+  const locale = adminAnalyticsLocale();
+
+  container.innerHTML = ROLES.map(r => {
+    const count = byRole[r.key] || 0;
+    const pct   = ((count / total) * 100).toFixed(1);
+    const label = adminAnalyticsText(r.ar, r.en);
+    return `
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+             style="width:30px;height:30px;background:${r.color}1a;" aria-hidden="true">
+          <i class="bi ${r.icon}" style="color:${r.color};font-size:.75rem;"></i>
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <small class="fw-medium" style="font-size:.75rem;">${label}</small>
+            <small class="fw-bold" style="color:${r.color};font-size:.75rem;">${count.toLocaleString(locale)}</small>
+          </div>
+          <div class="progress" style="height:4px;"
+               role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"
+               aria-label="${label}: ${pct}%">
+            <div class="progress-bar" style="width:${pct}%;background:${r.color};transition:width .4s ease;"></div>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function updateRegistrationKPIs(data) {
+  safeSetText("regTotalApplications", (data.total_applications || 0).toLocaleString(adminAnalyticsLocale()));
+  safeSetText("regNewApplications", (data.new_applications || 0).toLocaleString(adminAnalyticsLocale()));
+  safeSetText("regApproved", (data.status_breakdown?.ACCEPTED || 0).toLocaleString(adminAnalyticsLocale()));
+  safeSetText("regPending", (data.status_breakdown?.PENDING_REVIEW || 0).toLocaleString(adminAnalyticsLocale()));
+  safeSetText("regRejected", (data.status_breakdown?.REJECTED || 0).toLocaleString(adminAnalyticsLocale()));
+  safeSetText("regConversionValue", `${data.conversion_rate ?? 0}%`);
+  safeSetText("regRejectionValue", `${data.approval_workflow?.rejection_rate ?? 0}%`);
+  safeSetText("regApprovalTimeValue", `${data.approval_workflow?.avg_approval_hours ?? 0}h`);
+}
+
+function renderFunnelChart(funnel) {
+  const canvas = document.getElementById("funnelChart");
+  const empty = document.getElementById("funnelEmpty");
+  if (!canvas) return;
+
+  const stages = [
+    { label: adminAnalyticsText("مسودة", "Draft"), value: funnel.draft || 0, color: "#94A3B8" },
+    { label: adminAnalyticsText("مقدّم", "Submitted"), value: funnel.submitted || 0, color: "#3B82F6" },
+    { label: adminAnalyticsText("قيد المراجعة", "Pending Review"), value: funnel.pending_review || 0, color: "#F59E0B" },
+    { label: adminAnalyticsText("مقبول", "Accepted"), value: funnel.accepted || 0, color: "#10B981" },
+    { label: adminAnalyticsText("نشط", "Active"), value: funnel.active || 0, color: "#059669" },
+  ];
+
+  const hasData = stages.some(s => s.value > 0);
+  if (empty) empty.classList.toggle("d-none", hasData);
+  if (!hasData) {
+    if (funnelChartInstance) { funnelChartInstance.destroy(); funnelChartInstance = null; }
+    return;
+  }
+
+  if (!adminAnalyticsHasChart()) return;
+
+  if (funnelChartInstance) funnelChartInstance.destroy();
+
+  funnelChartInstance = new window.Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: stages.map(s => s.label),
+      datasets: [{
+        label: adminAnalyticsText("الطلبات", "Applications"),
+        data: stages.map(s => s.value),
+        backgroundColor: stages.map(s => s.color),
+        borderWidth: 0,
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 1 } },
+        y: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+function renderRejectionReasons(reasons) {
+  const container = document.getElementById("rejectionReasonsList");
+  const empty = document.getElementById("rejectionEmpty");
+  if (!container) return;
+
+  const entries = Object.entries(reasons).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const hasData = entries.length > 0;
+  if (empty) empty.classList.toggle("d-none", hasData);
+
+  if (!hasData) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const maxCount = entries[0][1];
+  container.innerHTML = entries.map(([reason, count]) => `
+    <div class="list-group-item border-0 px-0">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <small class="fw-medium text-truncate" style="max-width: 70%;" title="${escapeHtml(reason)}">${escapeHtml(reason)}</small>
+        <span class="badge bg-danger rounded-pill">${count}</span>
+      </div>
+      <div class="progress" style="height: 4px;">
+        <div class="progress-bar bg-danger" style="width: ${(count / maxCount) * 100}%"></div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderSourceChart(sources) {
+  const canvas = document.getElementById("sourceChart");
+  const empty = document.getElementById("sourceEmpty");
+  if (!canvas) return;
+
+  const entries = Object.entries(sources);
+  const hasData = entries.length > 0;
+  if (empty) empty.classList.toggle("d-none", hasData);
+
+  if (!hasData) {
+    if (sourceChartInstance) { sourceChartInstance.destroy(); sourceChartInstance = null; }
+    return;
+  }
+
+  if (!adminAnalyticsHasChart()) return;
+  if (sourceChartInstance) sourceChartInstance.destroy();
+
+  const colors = ["#1F5E47", "#2F7D62", "#10B981", "#F59E0B", "#EF4444", "#6366F1"];
+  sourceChartInstance = new window.Chart(canvas, {
+    type: "doughnut",
+    data: {
+      labels: entries.map(e => e[0]),
+      datasets: [{
+        data: entries.map(e => e[1]),
+        backgroundColor: entries.map((_, i) => colors[i % colors.length]),
+        borderWidth: 2,
+        borderColor: "#fff",
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 12, padding: 8, font: { size: 11 } } },
+      },
+    },
+  });
+}
+
+async function loadRegistrationTable() {
+  const tbody = document.getElementById("registrationTableBody");
+  const info = document.getElementById("regTableInfo");
+  if (!tbody) return;
+
+  const start = document.getElementById("periodStart")?.value || "";
+  const end = document.getElementById("periodEnd")?.value || "";
+  const gov = document.getElementById("governorateFilter")?.value || "";
+  const filters = getRegistrationFilters();
+  const search = document.getElementById("regSearchInput")?.value || "";
+
+  const params = new URLSearchParams({
+    start_date: start,
+    end_date: end,
+    page: regTablePage,
+    page_size: 10,
+  });
+  if (gov) params.set("governorate", gov);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.source) params.set("source", filters.source);
+  if (filters.reviewer_id) params.set("reviewer_id", filters.reviewer_id);
+  if (search) params.set("search", search);
+
+  try {
+    const res = await fetchWithAuth(`/api/analytics/registration/drilldown?${params.toString()}`);
+    if (!res) return;
+    const data = await res.json();
+    regTableTotalPages = data.pagination?.total_pages || 1;
+
+    const statusBadge = (status) => {
+      const map = {
+        DRAFT: "bg-secondary",
+        SUBMITTED: "bg-info",
+        PENDING_REVIEW: "bg-warning text-dark",
+        ACCEPTED: "bg-success",
+        REJECTED: "bg-danger",
+        ACTIVE: "bg-primary",
+        WAITLISTED: "bg-info",
+        WITHDRAWN: "bg-secondary",
+      };
+      return map[status] || "bg-secondary";
+    };
+
+    tbody.innerHTML = (data.data || []).map(item => `
+      <tr>
+        <td class="fw-medium">${escapeHtml(item.child_name)}</td>
+        <td>${escapeHtml(item.parent_name)}</td>
+        <td>${escapeHtml(item.kindergarten_name)}</td>
+        <td>${escapeHtml(item.kindergarten_city)}</td>
+        <td><span class="badge ${statusBadge(item.status)}">${escapeHtml(item.status)}</span></td>
+        <td>${escapeHtml(item.source || "-")}</td>
+        <td>${item.submitted_at ? new Date(item.submitted_at).toLocaleDateString(adminAnalyticsLocale()) : "-"}</td>
+        <td>${escapeHtml(item.reviewer_name || "-")}</td>
+        <td class="text-center">
+          <a href="/enrollments/${item.id}" class="btn btn-sm btn-outline-primary" title="{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}">
+            <i class="bi bi-eye"></i>
+          </a>
+        </td>
+      </tr>
+    `).join("") || `<tr><td colspan="9" class="text-center py-4 text-muted">${adminAnalyticsText("لا توجد بيانات", "No data")}</td></tr>`;
+
+    if (info) {
+      info.textContent = adminAnalyticsText(
+        `الصفحة ${data.pagination?.page || 1} من ${data.pagination?.total_pages || 1}`,
+        `Page ${data.pagination?.page || 1} of ${data.pagination?.total_pages || 1}`
+      );
+    }
+
+    document.getElementById("regPrevPage")?.toggleAttribute("disabled", (data.pagination?.page || 1) <= 1);
+    document.getElementById("regNextPage")?.toggleAttribute("disabled", (data.pagination?.page || 1) >= regTableTotalPages);
+  } catch (error) {
+    console.error("Registration table load error:", error);
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">${adminAnalyticsText("تعذر تحميل البيانات.", "Failed to load data.")}</td></tr>`;
+  }
+}
+
+async function loadReviewerOptions() {
+  const select = document.getElementById("regReviewerFilter");
+  if (!select) return;
+  try {
+    const res = await fetchWithAuth(`/api/admin/users?role=MANAGER&limit=100`);
+    if (!res) return;
+    const data = await res.json();
+    const users = data.data || [];
+    const current = select.value;
+    // Keep the first option
+    select.innerHTML = `<option value="">${adminAnalyticsText("كل المُراجعين", "All Reviewers")}</option>`;
+    users.forEach(u => {
+      const opt = document.createElement("option");
+      opt.value = u.id;
+      opt.textContent = u.full_name || u.username;
+      select.appendChild(opt);
+    });
+    if (current) select.value = current;
+  } catch (error) {
+    console.error("Reviewer options load error:", error);
+  }
+}
+
+// Wire up registration filters
+document.addEventListener("DOMContentLoaded", function () {
+  const regStatus = document.getElementById("regStatusFilter");
+  const regSource = document.getElementById("regSourceFilter");
+  const regReviewer = document.getElementById("regReviewerFilter");
+  const regSearch = document.getElementById("regSearchInput");
+  const regRefresh = document.getElementById("regRefreshTable");
+  const regPrev = document.getElementById("regPrevPage");
+  const regNext = document.getElementById("regNextPage");
+
+  [regStatus, regSource, regReviewer].forEach(el => {
+    el?.addEventListener("change", () => {
+      regTablePage = 1;
+      loadRegistrationAnalytics();
+    });
+  });
+
+  regSearch?.addEventListener("input", () => {
+    regTablePage = 1;
+    loadRegistrationTable();
+  });
+
+  regRefresh?.addEventListener("click", () => loadRegistrationAnalytics());
+  regPrev?.addEventListener("click", () => {
+    if (regTablePage > 1) { regTablePage--; loadRegistrationTable(); }
+  });
+  regNext?.addEventListener("click", () => {
+    if (regTablePage < regTableTotalPages) { regTablePage++; loadRegistrationTable(); }
+  });
+
+  loadReviewerOptions();
+
+  document.getElementById("regEntityRefreshBtn")?.addEventListener("click", () => {
+    loadRegistrationEntitySummary();
+    loadRegistrationQualityBreakdown();
+  });
+});
+
+// =============================================================================
+// Registration Quality Breakdown — governorate table, completeness, monthly trend
+// =============================================================================
+
+let _regMonthlyChart = null;
+
+async function loadRegistrationQualityBreakdown() {
+  const start = document.getElementById("periodStart")?.value || "";
+  const end   = document.getElementById("periodEnd")?.value   || "";
+  const gov   = document.getElementById("governorateFilter")?.value || "";
+
+  if (!start || !end) return;
+
+  const params = new URLSearchParams({ start_date: start, end_date: end });
+  if (gov) params.set("governorate", gov);
+
+  try {
+    const res = await fetchWithAuth(`/api/analytics/registration/quality-breakdown?${params}`);
+    if (!res) return;
+    const data = await res.json();
+    _renderGovernorateBreakdown(data.governorate_breakdown || []);
+    _renderCompletenessPanel(data.completeness || {});
+    _renderMonthlyTrendChart(data.monthly_trends || {});
+  } catch (err) {
+    console.error("Quality breakdown load error:", err);
+    const tbody = document.getElementById("regGovTableBody");
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-3 text-danger small">
+      ${adminAnalyticsText("تعذر تحميل البيانات", "Failed to load data")}
+    </td></tr>`;
+  }
+}
+
+function _renderGovernorateBreakdown(rows) {
+  const tbody   = document.getElementById("regGovTableBody");
+  const counter = document.getElementById("regGovCount");
+  const sub     = document.getElementById("regGovSubtitle");
+  if (!tbody) return;
+
+  if (counter) counter.textContent = `${rows.length}`;
+  if (sub) {
+    const hasDraft = rows.some(r => r.kg_draft > 0);
+    const hasPend  = rows.some(r => r.enrollments_pending > 0);
+    sub.textContent = hasDraft || hasPend
+      ? adminAnalyticsText("توجد محافظات تحتاج اهتماماً", "Some governorates need attention")
+      : adminAnalyticsText("جميع المحافظات في وضع جيد", "All governorates in good standing");
+    sub.style.color = (hasDraft || hasPend) ? "#D97706" : "#10B981";
+  }
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">
+      ${adminAnalyticsText("لا توجد بيانات محافظات", "No governorate data")}
+    </td></tr>`;
+    return;
+  }
+
+  const locale = adminAnalyticsLocale();
+  tbody.innerHTML = rows.map(r => {
+    const pct   = r.completion_rate || 0;
+    const color = pct >= 75 ? "#10B981" : pct >= 50 ? "#F59E0B" : "#EF4444";
+    const draftBadge = r.kg_draft > 0
+      ? `<span class="badge" style="background:#FEF9C3;color:#92400E;font-size:.65rem;">${r.kg_draft}</span>`
+      : `<span class="text-muted" style="font-size:.8rem;">—</span>`;
+    const pendBadge = r.enrollments_pending > 0
+      ? `<span class="badge" style="background:#FEE2E2;color:#991B1B;font-size:.65rem;">${r.enrollments_pending.toLocaleString(locale)}</span>`
+      : `<span class="text-muted" style="font-size:.8rem;">—</span>`;
+    return `
+      <tr>
+        <td class="fw-medium" style="font-size:.8rem;">${escapeHtml(r.governorate)}</td>
+        <td class="text-center" style="font-size:.8rem;">${r.kg_total.toLocaleString(locale)}</td>
+        <td class="text-center">
+          <span class="badge" style="background:#D1FAE5;color:#065F46;font-size:.65rem;">${r.kg_active}</span>
+        </td>
+        <td class="text-center">${draftBadge}</td>
+        <td class="text-center" style="font-size:.8rem;">${r.enrollments_total.toLocaleString(locale)}</td>
+        <td class="text-center">${pendBadge}</td>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <div class="progress flex-grow-1" style="height:5px;"
+                 role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+              <div class="progress-bar" style="width:${pct}%;background:${color};"></div>
+            </div>
+            <small style="color:${color};font-weight:600;font-size:.72rem;min-width:32px;">${pct}%</small>
+          </div>
+        </td>
+      </tr>`;
+  }).join("");
+}
+
+function _renderCompletenessPanel(comp) {
+  const container = document.getElementById("regCompletenessPanel");
+  const badge     = document.getElementById("avgCompletenessBadge");
+  if (!container) return;
+
+  const ITEMS = [
+    { key: "parent_profiles",   ar: "ملفات أولياء الأمور",      en: "Parent Profiles",   color: "#2563EB", icon: "bi-person-vcard" },
+    { key: "children_profiles", ar: "ملفات الأطفال",            en: "Children Profiles", color: "#0891B2", icon: "bi-emoji-smile" },
+    { key: "kg_licensed",       ar: "الروضات المرخصة",          en: "Licensed KGs",      color: "#1F5E47", icon: "bi-patch-check" },
+    { key: "kg_geolocated",     ar: "الروضات محددة جغرافياً",   en: "Geolocated KGs",   color: "#7C3AED", icon: "bi-geo-alt" },
+    { key: "staff_profiles",    ar: "ملفات الموظفين والمشرفين", en: "Staff Profiles",    color: "#D97706", icon: "bi-person-workspace" },
+  ];
+
+  const pcts = ITEMS.map(i => comp[i.key]?.pct || 0);
+  const avg  = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : 0;
+  if (badge) {
+    badge.textContent = `${avg}%`;
+    badge.className = `badge border fw-semibold ${
+      avg >= 80 ? "bg-success-subtle text-success border-success-subtle"
+      : avg >= 60 ? "bg-warning-subtle text-warning border-warning-subtle"
+      : "bg-danger-subtle text-danger border-danger-subtle"}`;
+  }
+
+  const locale = adminAnalyticsLocale();
+  container.innerHTML = ITEMS.map(item => {
+    const d     = comp[item.key] || { total: 0, complete: 0, pct: 0 };
+    const pct   = d.pct || 0;
+    const color = pct >= 80 ? "#10B981" : pct >= 60 ? "#F59E0B" : "#EF4444";
+    const label = adminAnalyticsText(item.ar, item.en);
+    return `
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <div class="d-flex align-items-center gap-1">
+            <i class="bi ${item.icon}" style="color:${item.color};font-size:.65rem;" aria-hidden="true"></i>
+            <small class="fw-medium" style="font-size:.75rem;">${label}</small>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <small style="color:${color};font-weight:700;font-size:.72rem;">${pct.toFixed(1)}%</small>
+            <small class="text-muted" style="font-size:.66rem;">(${d.complete}/${d.total})</small>
+          </div>
+        </div>
+        <div class="progress" style="height:5px;"
+             role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"
+             aria-label="${label}: ${pct.toFixed(1)}%">
+          <div class="progress-bar" style="width:${pct}%;background:${color};transition:width .5s ease;"></div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function _renderMonthlyTrendChart(trends) {
+  const canvas = document.getElementById("regMonthlyTrendChart");
+  const empty  = document.getElementById("regTrendEmpty");
+  if (!canvas) return;
+
+  const labels = trends.labels || [];
+  const hasData = labels.length > 0 && (
+    (trends.users        || []).some(v => v > 0) ||
+    (trends.enrollments  || []).some(v => v > 0) ||
+    (trends.kindergartens || []).some(v => v > 0)
+  );
+
+  if (empty) empty.classList.toggle("d-none", hasData);
+
+  if (!hasData) {
+    if (_regMonthlyChart) { _regMonthlyChart.destroy(); _regMonthlyChart = null; }
+    return;
+  }
+
+  if (!adminAnalyticsHasChart()) return;
+  if (_regMonthlyChart) _regMonthlyChart.destroy();
+
+  const locale = adminAnalyticsLocale();
+  const displayLabels = labels.map(l => {
+    const [yr, mo] = l.split("-");
+    return new Date(parseInt(yr, 10), parseInt(mo, 10) - 1, 1)
+      .toLocaleDateString(locale, { month: "short", year: "2-digit" });
+  });
+
+  _regMonthlyChart = new window.Chart(canvas, {
+    type: "line",
+    data: {
+      labels: displayLabels,
+      datasets: [
+        {
+          label: adminAnalyticsText("مستخدمون جدد", "New Users"),
+          data: trends.users || [],
+          borderColor: "#2563EB",
+          backgroundColor: "rgba(37,99,235,.07)",
+          tension: 0.35,
+          fill: true,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+        },
+        {
+          label: adminAnalyticsText("طلبات تسجيل", "Enrollments"),
+          data: trends.enrollments || [],
+          borderColor: "#0891B2",
+          backgroundColor: "rgba(8,145,178,.06)",
+          tension: 0.35,
+          fill: true,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+        },
+        {
+          label: adminAnalyticsText("روضات جديدة", "New KGs"),
+          data: trends.kindergartens || [],
+          borderColor: "#1F5E47",
+          backgroundColor: "transparent",
+          tension: 0.35,
+          fill: false,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 1.5,
+          borderDash: [5, 4],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          rtl: document.documentElement.dir === "rtl",
+          callbacks: {
+            title: ctx => ctx[0]?.label || "",
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 10 }, maxRotation: 0 },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { font: { size: 10 }, stepSize: 1 },
+          grid: { color: "rgba(0,0,0,.04)" },
+        },
+      },
+    },
+  });
 }
 
 window.addEventListener("languageChanged", () => {

@@ -1,250 +1,144 @@
 {% extends "admin_base.html" %}
 
-{% block title %}KinJo Admin - Kindergarten Overview{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %} — KinJo{% endblock %}
 
-{% block extra_head %}{% endblock %}
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard">
+  <i class="bi bi-house" aria-hidden="true"></i>
+</a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">
+  {% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}
+</span>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/kg_overview.css">
+{% endblock %}
 
 {% block content %}
-    <!-- Page Header -->
-    <div class="admin-page-header">
-        <div>
-            <h1 class="admin-page-title">{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}</h1>
-            <p class="admin-page-subtitle">{% if ui_lang == 'en' %}Monitor attendance, occupancy, alerts, and operational readiness of kindergartens{% else %}مراقبة الحضور، الإشغال، التنبيهات، والجاهزية التشغيلية للروضات{% endif %}</p>
-            <small class="text-muted">{% if ui_lang == 'en' %}Last updated: {{ now }}{% else %}آخر تحديث: {{ now }}{% endif %}</small>
-        </div>
-        <div class="admin-page-actions">
-            <button class="admin-btn admin-btn-secondary" id="refresh-kg-overview">
-                <i class="bi bi-arrow-repeat"></i> {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
-            </button>
-            <a href="/admin/dashboard" class="admin-btn admin-btn-secondary">
-                <i class="bi bi-speedometer2"></i> {% if ui_lang == 'en' %}Admin Dashboard{% else %}لوحة التحكم{% endif %}
-            </a>
-        </div>
-    </div>
+<div class="ko-root" id="ko-root" dir="{{ 'rtl' if ui_lang != 'en' else 'ltr' }}">
 
-    <!-- Executive Health Banner -->
-    <div class="row g-3 mb-4" id="executive-health-banner" style="display:none;">
-        <div class="col-12">
-            <div class="alert alert-info d-flex align-items-center" role="alert">
-                <i class="bi bi-info-circle-fill flex-shrink-0 me-2"></i>
-                <div id="executive-health-text">
-                    {% if ui_lang == 'en' %}Loading operational health summary...{% else %}جاري تحميل ملخص الصحة التشغيلية...{% endif %}
-                </div>
-            </div>
-        </div>
+  <!-- ══ TOP CONTROL BAR ══════════════════════════════════ -->
+  <div class="ko-control-bar" id="ko-control-bar" role="toolbar"
+       aria-label="{% if ui_lang == 'en' %}Dashboard controls{% else %}أدوات لوحة التحكم{% endif %}">
+    <!-- populated by JS -->
+    <div style="height:36px;display:flex;gap:.75rem;width:100%">
+      <div class="ko-skeleton" style="width:260px;height:36px"></div>
+      <div class="ko-skeleton" style="width:150px;height:36px"></div>
+      <div class="ko-skeleton" style="width:150px;height:36px"></div>
+      <div class="ko-skeleton" style="width:100px;height:36px;margin-inline-start:auto"></div>
     </div>
+  </div>
 
-    <!-- Error State -->
-    <div class="row g-3 mb-4" id="kg-overview-error" style="display:none;">
-        <div class="col-12">
-            <div class="alert alert-danger d-flex align-items-center" role="alert">
-                <i class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2"></i>
-                <div id="kg-overview-error-text">
-                    {% if ui_lang == 'en' %}Error loading overview data. Please try again.{% else %}خطأ في تحميل البيانات. يرجى المحاولة مرة أخرى.{% endif %}
-                </div>
-            </div>
-        </div>
+  <!-- ══ PAGE TITLE ROW ═══════════════════════════════════ -->
+  <div style="padding:1.25rem 1.5rem .25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+    <div>
+      <h1 style="font-size:1.25rem;font-weight:800;color:var(--ko-text);margin:0;display:flex;align-items:center;gap:.5rem;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:rgba(37,99,235,.1);color:#2563eb;">
+          <i class="bi bi-buildings-fill"></i>
+        </span>
+        {% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}
+      </h1>
+      <p style="font-size:.8rem;color:var(--ko-text-muted);margin:.25rem 0 0;display:flex;align-items:center;gap:.5rem;">
+        <span class="ko-rt-dot"></span>
+        <span id="ko-last-updated">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+      </p>
     </div>
+    <small style="color:var(--ko-text-muted);font-size:.78rem;">
+      <i class="bi bi-calendar3 me-1"></i>
+      {{ today.strftime('%d %B %Y') if today else '21 June 2026' }}
+    </small>
+  </div>
 
-    <!-- Filters -->
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body py-2">
-                    <div class="row g-2 align-items-center">
-                        <div class="col-auto">
-                            <label class="form-label mb-0 small fw-semibold">{% if ui_lang == 'en' %}Period{% else %}الفترة{% endif %}</label>
-                            <select class="form-select form-select-sm" id="kg-period" style="min-width: 130px;">
-                                <option value="today">{% if ui_lang == 'en' %}Today{% else %}اليوم{% endif %}</option>
-                                <option value="week">{% if ui_lang == 'en' %}Week{% else %}الأسبوع{% endif %}</option>
-                                <option value="month" selected>{% if ui_lang == 'en' %}Month{% else %}الشهر{% endif %}</option>
-                                <option value="custom">{% if ui_lang == 'en' %}Custom{% else %}مخصص{% endif %}</option>
-                            </select>
-                        </div>
-                        <div class="col-auto">
-                            <label class="form-label mb-0 small fw-semibold">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-                            <select class="form-select form-select-sm" id="kg-governorate" style="min-width: 150px;">
-                                <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
-                            </select>
-                        </div>
-                        <div class="col-auto">
-                            <label class="form-label mb-0 small fw-semibold">{% if ui_lang == 'en' %}Risk Level{% else %}مستوى الخطر{% endif %}</label>
-                            <select class="form-select form-select-sm" id="kg-risk" style="min-width: 150px;">
-                                <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
-                                <option value="critical">{% if ui_lang == 'en' %}Critical{% else %}حرج{% endif %}</option>
-                                <option value="at_risk">{% if ui_lang == 'en' %}At Risk{% else %}معرّض للخطر{% endif %}</option>
-                                <option value="needs_attention">{% if ui_lang == 'en' %}Needs Attention{% else %}يحتاج متابعة{% endif %}</option>
-                                <option value="good">{% if ui_lang == 'en' %}Good{% else %}جيد{% endif %}</option>
-                                <option value="excellent">{% if ui_lang == 'en' %}Excellent{% else %}ممتاز{% endif %}</option>
-                            </select>
-                        </div>
-                        <div class="col-auto ms-auto">
-                            <button class="admin-btn admin-btn-primary btn-sm" id="apply-kg-filters">
-                                <i class="bi bi-funnel"></i> {% if ui_lang == 'en' %}Apply{% else %}تطبيق{% endif %}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  <!-- ══ CUSTOMISE DRAWER ══════════════════════════════════ -->
+  <div id="ko-customise-wrap"></div>
 
-    <!-- KPI Cards -->
-    <div class="row g-3 mb-4" id="kpi-cards-row">
-        <div class="col-12">
-            <div class="row g-3" id="kpi-cards">
-                <div class="col-12 text-center py-4">
-                    <div class="spinner-border spinner-border-sm" role="status"></div>
-                    <span class="ms-2">{% if ui_lang == 'en' %}Loading KPIs...{% else %}جاري تحميل المؤشرات...{% endif %}</span>
-                </div>
-            </div>
-        </div>
-    </div>
+  <!-- ══ QUICK ACTIONS ════════════════════════════════════ -->
+  <div class="ko-actions-bar" id="ko-quick-actions"
+       role="navigation"
+       aria-label="{% if ui_lang == 'en' %}Quick actions{% else %}إجراءات سريعة{% endif %}">
+    <!-- populated by JS -->
+    <div class="ko-skeleton" style="width:130px;height:38px;border-radius:8px"></div>
+    <div class="ko-skeleton" style="width:150px;height:38px;border-radius:8px"></div>
+    <div class="ko-skeleton" style="width:120px;height:38px;border-radius:8px"></div>
+    <div class="ko-skeleton" style="width:160px;height:38px;border-radius:8px"></div>
+  </div>
 
-    <!-- Kindergarten Risk Ranking / Table -->
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">
-                        {% if ui_lang == 'en' %}Kindergarten Health Ranking{% else %}ترتيب الروضات حسب مستوى الخطر{% endif %}
-                    </h5>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button class="btn btn-outline-primary active" data-tab="table" data-i18n="common.table">{% if ui_lang == 'en' %}Table{% else %}جدول{% endif %}</button>
-                        <button class="btn btn-outline-primary" data-tab="cards" data-i18n="common.cards">{% if ui_lang == 'en' %}Cards{% else %}بطاقات{% endif %}</button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="kg-table-view">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle" id="kg-table">
-                                <thead>
-                                    <tr>
-                                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
-                                        <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-                                        <th>{% if ui_lang == 'en' %}Children{% else %}الأطفال{% endif %}</th>
-                                        <th>{% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}</th>
-                                        <th>{% if ui_lang == 'en' %}Occupancy{% else %}الإشغال{% endif %}</th>
-                                        <th>{% if ui_lang == 'en' %}Teachers{% else %}المعلمات{% endif %}</th>
-                                        <th>{% if ui_lang == 'en' %}Alerts{% else %}التنبيهات{% endif %}</th>
-                                        <th>{% if ui_lang == 'en' %}Health{% else %}الصحة{% endif %}</th>
-                                        <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="kg-table-body">
-                                    <tr><td colspan="9" class="text-center py-4">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div id="kg-cards-view" style="display:none;">
-                        <div class="row g-3" id="kg-cards-container">
-                            <div class="col-12 text-center py-4">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  <div class="ko-divider"></div>
 
-    <!-- Charts -->
-    <div class="row g-3 mb-4" id="charts-section">
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Attendance by Kindergarten{% else %}نسبة الحضور حسب الروضة{% endif %}</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="attendance-chart" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Occupancy Pressure{% else %}ضغط الطاقة الاستيعابية{% endif %}</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="occupancy-chart" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Alerts by Severity{% else %}التنبيهات حسب الخطورة{% endif %}</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="alerts-severity-chart" height="250"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Governorate Comparison{% else %}مقارنة المحافظات{% endif %}</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="governorate-chart" height="250"></canvas>
-                </div>
-            </div>
-        </div>
+  <!-- ══ KPI CARDS ════════════════════════════════════════ -->
+  <section aria-label="{% if ui_lang == 'en' %}Key performance indicators{% else %}مؤشرات الأداء{% endif %}">
+    <div class="ko-kpi-grid" id="ko-kpi-grid">
+      <!-- Skeleton placeholders -->
+      {% for _ in range(4) %}
+      <div class="ko-skeleton ko-skeleton-kpi"></div>
+      {% endfor %}
     </div>
+  </section>
 
-    <!-- Smart Alerts Center -->
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Smart Alerts{% else %}التنبيهات الذكية{% endif %}</h5>
-                    <div class="btn-group btn-group-sm" role="group" id="alert-filter-group">
-                        <button class="btn btn-outline-primary active" data-severity="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</button>
-                        <button class="btn btn-outline-danger" data-severity="CRITICAL">{% if ui_lang == 'en' %}Critical{% else %}حرج{% endif %}</button>
-                        <button class="btn btn-outline-warning" data-severity="HIGH">{% if ui_lang == 'en' %}High{% else %}عالي{% endif %}</button>
-                        <button class="btn btn-outline-info" data-severity="MEDIUM">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</button>
-                        <button class="btn btn-outline-secondary" data-severity="LOW">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle" id="alerts-table">
-                            <thead>
-                                <tr>
-                                    <th>{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Message{% else %}الرسالة{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Metric{% else %}المؤشر{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Value{% else %}القيمة{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Age{% else %}العمر{% endif %}</th>
-                                    <th>{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
-                                </tr>
-                            </thead>
-                            <tbody id="alerts-table-body">
-                                <tr><td colspan="7" class="text-center py-4">{% if ui_lang == 'en' %}Loading alerts...{% else %}جاري تحميل التنبيهات...{% endif %}</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  <div class="ko-divider"></div>
 
-    <!-- Alerts by Type -->
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Alerts by Type{% else %}التنبيهات حسب النوع{% endif %}</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="alerts-type-chart" height="250"></canvas>
-                </div>
-            </div>
-        </div>
+  <!-- ══ DATA EXPLORATION SECTION ══════════════════════════ -->
+  <section class="ko-section" aria-live="polite">
+    <div id="ko-data-section">
+      <!-- populated by JS -->
+      <div style="padding:2rem;text-align:center;color:var(--ko-text-muted);">
+        <div class="ko-skeleton" style="height:320px;border-radius:14px"></div>
+      </div>
     </div>
+  </section>
+
+  <div class="ko-divider"></div>
+
+  <!-- ══ SMART ALERTS ══════════════════════════════════════ -->
+  <section class="ko-alerts-wrap" aria-label="{% if ui_lang == 'en' %}Smart alerts{% else %}التنبيهات الذكية{% endif %}">
+    <div class="ko-section-header">
+      <h2 class="ko-section-title">
+        <i class="bi bi-bell-fill"></i>
+        {% if ui_lang == 'en' %}Smart Alerts{% else %}التنبيهات الذكية{% endif %}
+      </h2>
+    </div>
+    <div id="ko-alerts-section">
+      {% for _ in range(3) %}
+      <div class="ko-skeleton" style="height:80px;border-radius:10px;margin-bottom:.75rem"></div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ══ SIDE PANEL OVERLAY ════════════════════════════════ -->
+  <div class="ko-overlay" id="ko-overlay" aria-hidden="true"></div>
+  <aside class="ko-side-panel" id="ko-side-panel" role="complementary"
+         aria-label="{% if ui_lang == 'en' %}Detail panel{% else %}لوحة التفاصيل{% endif %}">
+    <div class="ko-panel-header">
+      <i class="bi bi-info-circle text-primary fs-5"></i>
+      <span class="ko-panel-title" id="ko-panel-title">التفاصيل</span>
+      <button class="ko-panel-close" id="ko-panel-close"
+              aria-label="{% if ui_lang == 'en' %}Close panel{% else %}إغلاق اللوحة{% endif %}">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="ko-panel-body" id="ko-panel-body"></div>
+  </aside>
+
+</div><!-- /ko-root -->
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/chart_utils.js"></script>
-<script src="/static/js/admin_kg_overview.js"></script>
+<!-- Chart.js (reuse already loaded if present) -->
+<script>
+if (!window.Chart) {
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+  s.onload = function() { document.dispatchEvent(new Event('chartjs:ready')); };
+  document.head.appendChild(s);
+} else {
+  document.dispatchEvent(new Event('chartjs:ready'));
+}
+</script>
+<script>
+  /* Pass server-side lang to JS before kg_overview.js boots */
+  window.KINJO_LANG = {{ '"en"' if ui_lang == 'en' else '"ar"' }};
+</script>
+<script src="/static/js/kg_overview.js?v=1.0"></script>
 {% endblock %}

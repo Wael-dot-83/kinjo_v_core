@@ -744,48 +744,67 @@ def get_supervisors_in_class(
 def get_safety_analytics(
     kindergarten_id: Optional[int] = None,
     governorate: Optional[str] = None,
-    child_id: Optional[int] = None,
     incident_type: Optional[str] = None,
+    classification: Optional[str] = None,
     severity: Optional[str] = None,
+    parent_informed: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Admin-only safety analytics endpoint — aggregate incident statistics."""
     validators.validate_admin_role(current_user)
 
-    query = db.query(models.Incident)
+    # Base query — always exclude soft-deleted incidents
+    query = db.query(models.Incident).filter(models.Incident.deleted_at.is_(None))
 
     if kindergarten_id:
         query = query.filter(models.Incident.kindergarten_id == kindergarten_id)
-    if child_id:
-        query = query.filter(models.Incident.child_id == child_id)
 
     if incident_type:
         try:
             query = query.filter(models.Incident.type == models.IncidentType(incident_type.upper()))
         except ValueError:
             pass
+
+    if classification:
+        query = query.filter(
+            func.upper(models.Incident.classification) == classification.upper()
+        )
+
     if severity:
         try:
             query = query.filter(models.Incident.severity_level == models.SeverityLevel(severity.upper()))
         except ValueError:
             pass
 
+    if parent_informed is not None and parent_informed != "":
+        pi_bool = parent_informed.lower() in ("true", "1", "yes")
+        query = query.filter(models.Incident.parent_informed == pi_bool)
+
     if date_from:
         try:
-            query = query.filter(models.Incident.occurred_at >= datetime.fromisoformat(date_from))
+            df = datetime.fromisoformat(date_from)
+            query = query.filter(models.Incident.occurred_at >= df)
         except ValueError:
             pass
     if date_to:
         try:
-            query = query.filter(models.Incident.occurred_at <= datetime.fromisoformat(date_to))
+            dt = datetime.fromisoformat(date_to)
+            # inclusive end-of-day
+            if "T" not in date_to:
+                dt = dt.replace(hour=23, minute=59, second=59)
+            query = query.filter(models.Incident.occurred_at <= dt)
         except ValueError:
             pass
 
     if governorate:
-        query = query.join(models.Kindergarten, models.Incident.kindergarten_id == models.Kindergarten.id)
+        query = query.join(
+            models.Kindergarten,
+            models.Incident.kindergarten_id == models.Kindergarten.id,
+            isouter=False,
+        )
         query = query.filter(models.Kindergarten.governorate == governorate)
 
     incidents = query.all()
@@ -793,37 +812,107 @@ def get_safety_analytics(
     total = len(incidents)
     open_count = sum(1 for i in incidents if not i.closed_at)
     closed_count = total - open_count
+    informed_count = sum(1 for i in incidents if i.parent_informed)
+    not_informed_count = total - informed_count
 
-    by_severity: dict = {}
-    by_type: dict = {}
-    by_kindergarten: dict = {}
-    by_child: dict = {}
+    # Aggregation buckets
+    by_severity: dict[str, int] = {}
+    by_type: dict[str, int] = {}
+    by_classification: dict[str, int] = {}
+    by_kg_id: dict[int, int] = {}
+    by_child_id: dict[int, int] = {}
+    by_month: dict[str, int] = {}
 
-    for i in incidents:
-        sev = i.severity_level.value if i.severity_level else "UNKNOWN"
-        by_severity[sev] = by_severity.get(sev, 0) + 1
+    for inc in incidents:
+        sev_key = inc.severity_level.value if inc.severity_level else "UNKNOWN"
+        by_severity[sev_key] = by_severity.get(sev_key, 0) + 1
 
-        t = i.type.value if i.type else "UNKNOWN"
-        by_type[t] = by_type.get(t, 0) + 1
+        type_key = inc.type.value if inc.type else "UNKNOWN"
+        by_type[type_key] = by_type.get(type_key, 0) + 1
 
-        kg = str(i.kindergarten_id)
-        by_kindergarten[kg] = by_kindergarten.get(kg, 0) + 1
+        cls_key = (inc.classification or "OTHER").upper()
+        by_classification[cls_key] = by_classification.get(cls_key, 0) + 1
 
-        ch = str(i.child_id)
-        by_child[ch] = by_child.get(ch, 0) + 1
+        if inc.kindergarten_id:
+            by_kg_id[inc.kindergarten_id] = by_kg_id.get(inc.kindergarten_id, 0) + 1
 
-    repeated_children = {k: v for k, v in by_child.items() if v > 1}
-    high_risk_kg = {k: v for k, v in by_kindergarten.items() if v >= 5}
+        if inc.child_id:
+            by_child_id[inc.child_id] = by_child_id.get(inc.child_id, 0) + 1
+
+        if inc.occurred_at:
+            month_key = inc.occurred_at.strftime("%Y-%m")
+            by_month[month_key] = by_month.get(month_key, 0) + 1
+
+    # Build by_kindergarten list with names
+    kg_ids = list(by_kg_id.keys())
+    kg_map: dict[int, models.Kindergarten] = {}
+    if kg_ids:
+        for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all():
+            kg_map[kg.id] = kg
+
+    HIGH_RISK_THRESHOLD = 5
+    by_kindergarten = sorted(
+        [
+            {
+                "id": kg_id,
+                "name_ar": kg_map[kg_id].name_ar if kg_id in kg_map else f"روضة #{kg_id}",
+                "name_en": kg_map[kg_id].name_en if kg_id in kg_map else f"Kindergarten #{kg_id}",
+                "count": count,
+                "is_high_risk": count >= HIGH_RISK_THRESHOLD,
+            }
+            for kg_id, count in by_kg_id.items()
+        ],
+        key=lambda x: x["count"],
+        reverse=True,
+    )
+    high_risk_count = sum(1 for x in by_kindergarten if x["is_high_risk"])
+
+    # Build repeated_children list with names
+    child_ids = [cid for cid, cnt in by_child_id.items() if cnt > 1]
+    child_map: dict[int, models.Child] = {}
+    if child_ids:
+        for child in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all():
+            child_map[child.id] = child
+
+    repeated_children = sorted(
+        [
+            {
+                "id": child_id,
+                "name_ar": (
+                    f"{child_map[child_id].first_name} {child_map[child_id].last_name}"
+                    if child_id in child_map
+                    else f"طفل #{child_id}"
+                ),
+                "name_en": (
+                    f"{child_map[child_id].first_name} {child_map[child_id].last_name}"
+                    if child_id in child_map
+                    else f"Child #{child_id}"
+                ),
+                "count": cnt,
+            }
+            for child_id, cnt in by_child_id.items()
+            if cnt > 1
+        ],
+        key=lambda x: x["count"],
+        reverse=True,
+    )
+
+    # Monthly trend — sort by month key
+    trend = [{"month": m, "count": c} for m, c in sorted(by_month.items())]
 
     return {
         "total": total,
         "open": open_count,
         "closed": closed_count,
+        "parent_informed": informed_count,
+        "parent_not_informed": not_informed_count,
         "by_severity": by_severity,
         "by_type": by_type,
+        "by_classification": by_classification,
         "by_kindergarten": by_kindergarten,
+        "high_risk_count": high_risk_count,
         "repeated_children": repeated_children,
-        "high_risk_kindergartens": high_risk_kg,
+        "trend": trend,
     }
 
 

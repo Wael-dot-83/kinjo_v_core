@@ -348,7 +348,7 @@ class TestBackupEndpoints:
         mock_bm.create_uploads_backup.return_value = {"file": "uploads.tar.gz"}
         mock_bm.create_config_backup.return_value = {"file": "config.tar.gz"}
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.post("/api/backup/create", headers=headers)
+            r = client.post("/api/admin/backup/create", headers=headers)
         assert r.status_code == 200
 
     def test_backup_create_handles_oserror(self, client, test_db):
@@ -357,7 +357,7 @@ class TestBackupEndpoints:
         mock_bm = MagicMock()
         mock_bm.create_database_backup.side_effect = OSError(28, "No space left on device")
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.post("/api/backup/create", headers=headers)
+            r = client.post("/api/admin/backup/create", headers=headers)
         assert r.status_code == 500
 
     def test_backup_list_returns_200(self, client, test_db):
@@ -366,14 +366,14 @@ class TestBackupEndpoints:
         mock_bm = MagicMock()
         mock_bm.list_backups.return_value = []
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.get("/api/backup/list", headers=headers)
+            r = client.get("/api/admin/backup/list", headers=headers)
         assert r.status_code == 200
 
     def test_backup_restore_path_traversal_rejected(self, client, test_db):
         admin = _make_admin(test_db, "bkp_admin", "4")
         headers = _tok(client, "bkp_admin4")
         # ..name stays in the path-param; endpoint checks ".." in backup_name → 400
-        r = client.post("/api/backup/restore/..evil_backup.sql.gz", headers=headers)
+        r = client.post("/api/admin/backup/restore/..evil_backup.sql.gz", headers=headers)
         assert r.status_code == 400
 
     def test_backup_restore_first_call_returns_token(self, client, test_db):
@@ -383,7 +383,7 @@ class TestBackupEndpoints:
         mock_bm.validate_backup.return_value = True
         mock_bm.get_backup_info.return_value = {"type": "database", "size": 1024}
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.post("/api/backup/restore/mybackup.sql.gz", headers=headers)
+            r = client.post("/api/admin/backup/restore/mybackup.sql.gz", headers=headers)
         assert r.status_code == 200
         body = r.json()
         assert body.get("requires_confirmation") is True
@@ -397,7 +397,7 @@ class TestBackupEndpoints:
         mock_bm.get_backup_info.return_value = {"type": "database", "size": 1024}
         with patch("backup_manager.backup_manager", mock_bm):
             r = client.post(
-                "/api/backup/restore/mybackup.sql.gz",
+                "/api/admin/backup/restore/mybackup.sql.gz",
                 headers=headers,
                 json={"confirmation_token": "bad-invalid-token"},
             )
@@ -410,7 +410,7 @@ class TestBackupEndpoints:
         mock_bm.validate_backup.return_value = True
         mock_bm.get_backup_info.return_value = None  # not found
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.post("/api/backup/restore/noexist.sql.gz", headers=headers)
+            r = client.post("/api/admin/backup/restore/noexist.sql.gz", headers=headers)
         assert r.status_code == 404
 
     def test_backup_restore_invalid_backup_returns_400(self, client, test_db):
@@ -419,7 +419,7 @@ class TestBackupEndpoints:
         mock_bm = MagicMock()
         mock_bm.validate_backup.return_value = False  # corrupted
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.post("/api/backup/restore/bad.sql.gz", headers=headers)
+            r = client.post("/api/admin/backup/restore/bad.sql.gz", headers=headers)
         assert r.status_code == 400
 
     def test_backup_restore_non_database_type_rejected(self, client, test_db):
@@ -429,14 +429,14 @@ class TestBackupEndpoints:
         mock_bm.validate_backup.return_value = True
         mock_bm.get_backup_info.return_value = {"type": "uploads", "size": 1024}
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.post("/api/backup/restore/uploads.tar.gz", headers=headers)
+            r = client.post("/api/admin/backup/restore/uploads.tar.gz", headers=headers)
         assert r.status_code == 400
 
     def test_backup_requires_admin(self, client, test_db, sample_kindergarten):
         _make_admin(test_db, "bkp_admin", "10")
         mgr = _make_user(test_db, "bkp_mgr10", models.UserRole.MANAGER, kg_id=sample_kindergarten.id)
         headers = _tok(client, "bkp_mgr10", "Pass123!")
-        r = client.post("/api/backup/create", headers=headers)
+        r = client.post("/api/admin/backup/create", headers=headers)
         assert r.status_code == 403
 
 
@@ -703,11 +703,11 @@ class TestBackupExtendedCoverage:
         mock_bm.get_backup_info.return_value = {"type": "database", "size": 1024}
         mock_bm.restore_database_backup.return_value = True
         with patch("backup_manager.backup_manager", mock_bm):
-            r1 = client.post("/api/backup/restore/mybackup.sql.gz", headers=headers)
+            r1 = client.post("/api/admin/backup/restore/mybackup.sql.gz", headers=headers)
             assert r1.status_code == 200
             token = r1.json()["confirmation_token"]
             r2 = client.post(
-                "/api/backup/restore/mybackup.sql.gz",
+                "/api/admin/backup/restore/mybackup.sql.gz",
                 headers=headers,
                 json={"confirmation_token": token},
             )
@@ -722,10 +722,10 @@ class TestBackupExtendedCoverage:
         mock_bm.get_backup_info.return_value = {"type": "database", "size": 1024}
         mock_bm.restore_database_backup.return_value = False
         with patch("backup_manager.backup_manager", mock_bm):
-            r1 = client.post("/api/backup/restore/mybackup2.sql.gz", headers=headers)
+            r1 = client.post("/api/admin/backup/restore/mybackup2.sql.gz", headers=headers)
             token = r1.json()["confirmation_token"]
             r2 = client.post(
-                "/api/backup/restore/mybackup2.sql.gz",
+                "/api/admin/backup/restore/mybackup2.sql.gz",
                 headers=headers,
                 json={"confirmation_token": token},
             )
@@ -734,13 +734,13 @@ class TestBackupExtendedCoverage:
     def test_backup_delete_non_admin_rejected(self, client, test_db, sample_kindergarten):
         mgr = _make_user(test_db, "bkx_mgr1", models.UserRole.MANAGER, kg_id=sample_kindergarten.id)
         headers = _tok(client, "bkx_mgr1", "Pass123!")
-        r = client.delete("/api/backup/foo.sql.gz", headers=headers)
+        r = client.delete("/api/admin/backup/foo.sql.gz", headers=headers)
         assert r.status_code == 403
 
     def test_backup_delete_path_traversal_rejected(self, client, test_db):
         _make_admin(test_db, "bkx_admin", "3")
         headers = _tok(client, "bkx_admin3")
-        r = client.delete("/api/backup/..evilbackup.sql.gz", headers=headers)
+        r = client.delete("/api/admin/backup/..evilbackup.sql.gz", headers=headers)
         assert r.status_code == 400
 
     def test_backup_delete_not_found(self, client, test_db):
@@ -749,7 +749,7 @@ class TestBackupExtendedCoverage:
         mock_bm = MagicMock()
         mock_bm.get_backup_info.return_value = None
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.delete("/api/backup/noexist.sql.gz", headers=headers)
+            r = client.delete("/api/admin/backup/noexist.sql.gz", headers=headers)
         assert r.status_code == 404
 
     def test_backup_delete_success_removes_file(self, client, test_db, tmp_path):
@@ -761,7 +761,7 @@ class TestBackupExtendedCoverage:
         mock_bm.get_backup_info.return_value = {"backup_path": str(real_file)}
         mock_bm.metadata = {"mybackup.sql.gz": {"backup_path": str(real_file)}}
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.delete("/api/backup/mybackup.sql.gz", headers=headers)
+            r = client.delete("/api/admin/backup/mybackup.sql.gz", headers=headers)
         assert r.status_code == 200
         assert not real_file.exists()
         assert "mybackup.sql.gz" not in mock_bm.metadata
@@ -772,7 +772,7 @@ class TestBackupExtendedCoverage:
         mock_bm = MagicMock()
         mock_bm.get_backup_info.side_effect = OSError("disk error")
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.delete("/api/backup/mybackup.sql.gz", headers=headers)
+            r = client.delete("/api/admin/backup/mybackup.sql.gz", headers=headers)
         assert r.status_code == 500
 
     def test_backup_info_not_found(self, client, test_db):
@@ -781,7 +781,7 @@ class TestBackupExtendedCoverage:
         mock_bm = MagicMock()
         mock_bm.get_backup_info.return_value = None
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.get("/api/backup/info/noexist.sql.gz", headers=headers)
+            r = client.get("/api/admin/backup/info/noexist.sql.gz", headers=headers)
         assert r.status_code == 404
 
     def test_backup_info_success(self, client, test_db):
@@ -791,7 +791,7 @@ class TestBackupExtendedCoverage:
         mock_bm.get_backup_info.return_value = {"type": "database", "size": 2048}
         mock_bm.validate_backup.return_value = True
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.get("/api/backup/info/mybackup.sql.gz", headers=headers)
+            r = client.get("/api/admin/backup/info/mybackup.sql.gz", headers=headers)
         assert r.status_code == 200
         assert r.json()["is_valid"] is True
 
@@ -801,13 +801,13 @@ class TestBackupExtendedCoverage:
         mock_bm = MagicMock()
         mock_bm.get_backup_info.side_effect = OSError("disk error")
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.get("/api/backup/info/mybackup.sql.gz", headers=headers)
+            r = client.get("/api/admin/backup/info/mybackup.sql.gz", headers=headers)
         assert r.status_code == 500
 
     def test_backup_cleanup_non_admin_rejected(self, client, test_db, sample_kindergarten):
         mgr = _make_user(test_db, "bkx_mgr2", models.UserRole.MANAGER, kg_id=sample_kindergarten.id)
         headers = _tok(client, "bkx_mgr2", "Pass123!")
-        r = client.post("/api/backup/cleanup", headers=headers)
+        r = client.post("/api/admin/backup/cleanup", headers=headers)
         assert r.status_code == 403
 
     def test_backup_cleanup_success(self, client, test_db):
@@ -815,7 +815,7 @@ class TestBackupExtendedCoverage:
         headers = _tok(client, "bkx_admin8")
         mock_bm = MagicMock()
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.post("/api/backup/cleanup", headers=headers)
+            r = client.post("/api/admin/backup/cleanup", headers=headers)
         assert r.status_code == 200
 
     def test_backup_cleanup_raises_oserror_returns_500(self, client, test_db):
@@ -824,13 +824,13 @@ class TestBackupExtendedCoverage:
         mock_bm = MagicMock()
         mock_bm.cleanup_old_backups.side_effect = OSError("disk error")
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.post("/api/backup/cleanup", headers=headers)
+            r = client.post("/api/admin/backup/cleanup", headers=headers)
         assert r.status_code == 500
 
     def test_backup_validate_path_traversal_rejected(self, client, test_db):
         _make_admin(test_db, "bkx_admin", "9")
         headers = _tok(client, "bkx_admin9")
-        r = client.post("/api/backup/validate/..evilbackup.sql.gz", headers=headers)
+        r = client.post("/api/admin/backup/validate/..evilbackup.sql.gz", headers=headers)
         assert r.status_code == 400
 
     def test_backup_validate_success(self, client, test_db):
@@ -839,7 +839,7 @@ class TestBackupExtendedCoverage:
         mock_bm = MagicMock()
         mock_bm.validate_backup.return_value = True
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.post("/api/backup/validate/mybackup.sql.gz", headers=headers)
+            r = client.post("/api/admin/backup/validate/mybackup.sql.gz", headers=headers)
         assert r.status_code == 200
         assert r.json()["is_valid"] is True
 
@@ -849,7 +849,7 @@ class TestBackupExtendedCoverage:
         mock_bm = MagicMock()
         mock_bm.validate_backup.side_effect = OSError("disk error")
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.post("/api/backup/validate/mybackup.sql.gz", headers=headers)
+            r = client.post("/api/admin/backup/validate/mybackup.sql.gz", headers=headers)
         assert r.status_code == 500
 
     def test_backup_list_raises_oserror_returns_500(self, client, test_db):
@@ -858,7 +858,7 @@ class TestBackupExtendedCoverage:
         mock_bm = MagicMock()
         mock_bm.list_backups.side_effect = OSError("disk error")
         with patch("backup_manager.backup_manager", mock_bm):
-            r = client.get("/api/backup/list", headers=headers)
+            r = client.get("/api/admin/backup/list", headers=headers)
         assert r.status_code == 500
 
     def test_backup_restore_raises_oserror_returns_500(self, client, test_db):
@@ -869,10 +869,10 @@ class TestBackupExtendedCoverage:
         mock_bm.get_backup_info.return_value = {"type": "database", "size": 1024}
         mock_bm.restore_database_backup.side_effect = OSError("disk error")
         with patch("backup_manager.backup_manager", mock_bm):
-            r1 = client.post("/api/backup/restore/mybackup3.sql.gz", headers=headers)
+            r1 = client.post("/api/admin/backup/restore/mybackup3.sql.gz", headers=headers)
             token = r1.json()["confirmation_token"]
             r2 = client.post(
-                "/api/backup/restore/mybackup3.sql.gz",
+                "/api/admin/backup/restore/mybackup3.sql.gz",
                 headers=headers,
                 json={"confirmation_token": token},
             )
@@ -902,7 +902,7 @@ class TestKindergartenExcelImportCoverage:
         headers = _tok(client, "xlx_mgr1", "Pass123!")
         content = self._make_xlsx_bytes([["روضة 1", "KG1", "Amman", "Amman", "Abdoun", "St 1", "0790000000"]])
         r = client.post(
-            "/api/kindergartens/import-excel",
+            "/api/admin/kindergartens/import-excel",
             headers=headers,
             files={"file": ("kgs.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         )
@@ -912,7 +912,7 @@ class TestKindergartenExcelImportCoverage:
         _make_admin(test_db, "xlx_admin", "1")
         headers = _tok(client, "xlx_admin1")
         r = client.post(
-            "/api/kindergartens/import-excel",
+            "/api/admin/kindergartens/import-excel",
             headers=headers,
             files={"file": ("kgs.csv", b"name_ar,name_en\n", "text/csv")},
         )
@@ -925,7 +925,7 @@ class TestKindergartenExcelImportCoverage:
             ["روضة الأمل الجديدة", "New Hope KG", "Amman", "Amman", "Abdoun", "Street 1", "0790000001"],
         ])
         r = client.post(
-            "/api/kindergartens/import-excel",
+            "/api/admin/kindergartens/import-excel",
             headers=headers,
             files={"file": ("kgs.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         )
@@ -941,7 +941,7 @@ class TestKindergartenExcelImportCoverage:
             ["روضة تجريبية", "Dry Run KG", "Zarqa", "Zarqa", "Center", "Street 2", "0790000002"],
         ])
         r = client.post(
-            "/api/kindergartens/import-excel?dry_run=true",
+            "/api/admin/kindergartens/import-excel?dry_run=true",
             headers=headers,
             files={"file": ("kgs.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         )
@@ -954,7 +954,7 @@ class TestKindergartenExcelImportCoverage:
             ["", "No Arabic Name", "Amman", "Amman", "Abdoun", "Street 3", "0790000003"],
         ])
         r = client.post(
-            "/api/kindergartens/import-excel",
+            "/api/admin/kindergartens/import-excel",
             headers=headers,
             files={"file": ("kgs.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         )
@@ -974,7 +974,7 @@ class TestKindergartenExcelImportCoverage:
         wb.save(buf)
         buf.seek(0)
         r = client.post(
-            "/api/kindergartens/import-excel",
+            "/api/admin/kindergartens/import-excel",
             headers=headers,
             files={"file": ("kgs.xlsx", buf.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         )
@@ -987,14 +987,14 @@ class TestKindergartenExcelImportCoverage:
         row = ["روضة مكررة", "Dup KG", "Irbid", "Irbid", "Center", "Street 4", "0790000004"]
         content = self._make_xlsx_bytes([row])
         r1 = client.post(
-            "/api/kindergartens/import-excel",
+            "/api/admin/kindergartens/import-excel",
             headers=headers,
             files={"file": ("kgs.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         )
         assert r1.json()["inserted"] == 1
         content2 = self._make_xlsx_bytes([row])
         r2 = client.post(
-            "/api/kindergartens/import-excel",
+            "/api/admin/kindergartens/import-excel",
             headers=headers,
             files={"file": ("kgs.xlsx", content2, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         )
@@ -1216,6 +1216,7 @@ class TestCSVImportManagerConflictCoverage:
                         "date_of_birth": "2024-01-01",
                         "father_name": "Ahmad",
                         "mother_first_name": "Sara",
+                        "mother_last_name": "Ahmad",
                     }
                 ],
             },
@@ -1299,7 +1300,7 @@ class TestKindergartenExcelImportErrorsCoverage:
             zf.writestr("dummy.txt", "not a real workbook")
         buf.seek(0)
         r = client.post(
-            "/api/kindergartens/import-excel",
+            "/api/admin/kindergartens/import-excel",
             headers=headers,
             files={"file": ("kgs.xlsx", buf.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         )
@@ -1310,7 +1311,7 @@ class TestKindergartenExcelImportErrorsCoverage:
         _make_admin(test_db, "xlxe_admin", "1b")
         headers = _tok(client, "xlxe_admin1b")
         r = client.post(
-            "/api/kindergartens/import-excel",
+            "/api/admin/kindergartens/import-excel",
             headers=headers,
             files={"file": ("kgs.xlsx", b"this is not a zip file at all", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         )
@@ -1328,9 +1329,17 @@ class TestKindergartenExcelImportErrorsCoverage:
         buf = BytesIO()
         wb.save(buf)
         buf.seek(0)
-        with patch.object(test_db, "add", side_effect=ValueError("bad data")):
+        import models as _models
+        _real_add = test_db.add
+
+        def _add_raises_for_kg(obj):
+            if isinstance(obj, _models.Kindergarten):
+                raise ValueError("bad data")
+            return _real_add(obj)
+
+        with patch.object(test_db, "add", side_effect=_add_raises_for_kg):
             r = client.post(
-                "/api/kindergartens/import-excel",
+                "/api/admin/kindergartens/import-excel",
                 headers=headers,
                 files={"file": ("kgs.xlsx", buf.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
             )
@@ -1355,7 +1364,7 @@ class TestKindergartenExcelImportErrorsCoverage:
 
         with patch.object(test_db, "commit", side_effect=SQLAlchemyError("commit failed")):
             r = client.post(
-                "/api/kindergartens/import-excel",
+                "/api/admin/kindergartens/import-excel",
                 headers=headers,
                 files={"file": ("kgs.xlsx", buf.read(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
             )

@@ -1,6 +1,8 @@
 """Smoke + integration tests for the Admin Jordan Heat Map feature."""
+import math
 import os
 import sys
+from datetime import date, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient
@@ -29,6 +31,133 @@ def override_get_db():
         yield db
     finally:
         db.close()
+
+
+Base.metadata.create_all(engine)
+
+
+def _reset_kindergarten_heatmap_data():
+    with TestingSessionLocal() as db:
+        for model in [
+            models.DailyReport,
+            models.EnrollmentApplication,
+            models.GovernanceScore,
+            models.Class,
+            models.SupervisorProfile,
+            models.User,
+            models.Child,
+            models.ParentProfile,
+            models.Kindergarten,
+        ]:
+            db.query(model).delete()
+        db.commit()
+
+
+def _seed_kindergarten(db, *, kg_id: int, governorate: str, city: str, status, high_score: bool):
+    kg = models.Kindergarten(
+        id=kg_id,
+        name_ar=f"روضة {kg_id}",
+        name_en=f"KG {kg_id}",
+        governorate=governorate,
+        city=city,
+        area="Area",
+        address_line="Street",
+        contact_phone="0790000000",
+        contact_email=f"kg{kg_id}@test.com",
+        status=status,
+        latitude=31.95 if high_score else None,
+        longitude=35.95 if high_score else None,
+        license_valid_until=date.today() + timedelta(days=30),
+    )
+    db.add(kg)
+    db.flush()
+
+    if high_score:
+        parent_user = models.User(
+            id=100 + kg_id,
+            username=f"parent{kg_id}",
+            role=models.UserRole.PARENT,
+            hashed_password="x",
+        )
+        parent = models.ParentProfile(
+            id=100 + kg_id,
+            user_id=parent_user.id,
+            first_name="Parent",
+            last_name="Test",
+            phone_number="0791111111",
+            gender=models.Gender.FEMALE,
+            nationality="Jordanian",
+            home_governorate=governorate,
+            home_city=city,
+            home_area="Area",
+            home_address_line="Home",
+            correspondence_preference=True,
+            notification_language="ar",
+        )
+        child = models.Child(
+            id=200 + kg_id,
+            parent_id=parent.id,
+            first_name="Child",
+            last_name="Test",
+            gender=models.Gender.FEMALE,
+            date_of_birth=date.today() - timedelta(days=365 * 4),
+            father_name="Father",
+            mother_first_name="Mother",
+            mother_last_name="Test",
+            mother_nationality="Jordanian",
+        )
+        supervisor = models.User(
+            id=300 + kg_id,
+            username=f"supervisor{kg_id}",
+            role=models.UserRole.SUPERVISOR,
+            kindergarten_id=kg.id,
+            hashed_password="x",
+        )
+        classroom = models.Class(
+            id=400 + kg_id,
+            kindergarten_id=kg.id,
+            name_ar="صف",
+            class_code=f"CLS{kg_id}",
+            age_group="AGE_0_1",
+            enrolled_children_count=1,
+            capacity_total=20,
+            min_age_months=36,
+            max_age_months=72,
+        )
+        db.add_all([parent_user, parent, child, supervisor, classroom])
+        db.flush()
+        db.add(models.SupervisorProfile(user_id=supervisor.id, kindergarten_id=kg.id))
+        db.add(
+            models.EnrollmentApplication(
+                child_id=child.id,
+                kindergarten_id=kg.id,
+                class_id=classroom.id,
+                status=models.EnrollmentStatus.ACTIVE,
+                source="TEST",
+            )
+        )
+        for day_offset in range(30):
+            db.add(
+                models.DailyReport(
+                    child_id=child.id,
+                    kindergarten_id=kg.id,
+                    date=date.today() - timedelta(days=day_offset),
+                    status=models.DailyReportStatus.SUBMITTED,
+                    submitted_by=supervisor.id,
+                    arrival_time="08:00",
+                )
+            )
+        db.add(
+            models.GovernanceScore(
+                kindergarten_id=kg.id,
+                period_start=date.today() - timedelta(days=30),
+                period_end=date.today(),
+                governance_quality_index=95,
+                child_experience_index=95,
+                final_governance_score=95,
+                band="A",
+            )
+        )
 
 
 async def override_current_user():
@@ -84,14 +213,14 @@ def test_risk_levels():
     assert len(constants.RISK_LEVELS) == 4
     levels = [r['key'] for r in constants.RISK_LEVELS]
     assert levels == ['low', 'medium', 'high', 'critical']
-    # Verify boundary logic
+    # Verify boundary logic (boundaries: low=0-24, medium=25-49, high=50-74, critical=75-100)
     assert constants.risk_level_for_score(0)['key'] == 'low'
-    assert constants.risk_level_for_score(25)['key'] == 'low'
-    assert constants.risk_level_for_score(26)['key'] == 'medium'
-    assert constants.risk_level_for_score(50)['key'] == 'medium'
-    assert constants.risk_level_for_score(51)['key'] == 'high'
-    assert constants.risk_level_for_score(75)['key'] == 'high'
-    assert constants.risk_level_for_score(76)['key'] == 'critical'
+    assert constants.risk_level_for_score(24)['key'] == 'low'
+    assert constants.risk_level_for_score(25)['key'] == 'medium'
+    assert constants.risk_level_for_score(49)['key'] == 'medium'
+    assert constants.risk_level_for_score(50)['key'] == 'high'
+    assert constants.risk_level_for_score(74)['key'] == 'high'
+    assert constants.risk_level_for_score(75)['key'] == 'critical'
     assert constants.risk_level_for_score(100)['key'] == 'critical'
 
 
@@ -159,6 +288,40 @@ def test_daily_update_summary():
     assert 'daily' in s['schedule'].lower()
 
 
+def test_service_governance_score_uses_governance_score_table():
+    from heatmap.backend import service
+    _reset_kindergarten_heatmap_data()
+    with TestingSessionLocal() as db:
+        _seed_kindergarten(db, kg_id=11, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=12, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=13, governorate="Irbid", city="Irbid", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        db.flush()
+        db.query(models.GovernanceScore).filter_by(kindergarten_id=11).one().final_governance_score = 80
+        db.query(models.GovernanceScore).filter_by(kindergarten_id=12).one().final_governance_score = 100
+        db.query(models.GovernanceScore).filter_by(kindergarten_id=13).one().final_governance_score = 10
+        db.commit()
+
+    with TestingSessionLocal() as db:
+        assert math.isclose(service._query_governance_score(db, "amman"), 90.0)
+
+
+def test_pipeline_governance_score_uses_governance_score_table():
+    from heatmap.backend import pipeline
+    _reset_kindergarten_heatmap_data()
+    with TestingSessionLocal() as db:
+        _seed_kindergarten(db, kg_id=21, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=22, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=23, governorate="Irbid", city="Irbid", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        db.flush()
+        db.query(models.GovernanceScore).filter_by(kindergarten_id=21).one().final_governance_score = 80
+        db.query(models.GovernanceScore).filter_by(kindergarten_id=22).one().final_governance_score = 100
+        db.query(models.GovernanceScore).filter_by(kindergarten_id=23).one().final_governance_score = 10
+        db.commit()
+
+    with TestingSessionLocal() as db:
+        assert math.isclose(pipeline._query_governance_score(db, "Amman"), 90.0)
+
+
 # ---------------------------------------------------------------------------
 # Integration tests for the admin API
 # ---------------------------------------------------------------------------
@@ -217,6 +380,98 @@ def test_api_governorate_detail():
         assert 'alerts' in data
         assert 'recommended_action' in data
         assert 'last_update' in data
+
+
+def test_api_kindergartens_list_filters_and_pagination():
+    _reset_kindergarten_heatmap_data()
+    with TestingSessionLocal() as db:
+        _seed_kindergarten(db, kg_id=1, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=2, governorate="Irbid", city="Irbid", status=models.KindergartenStatus.INACTIVE, high_score=False)
+        db.commit()
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        with TestClient(app) as client:
+            r = client.get('/api/admin/heat-map/kindergartens?governorate=amman&page=1&page_size=1')
+            assert r.status_code == 200, r.text
+            data = r.json()
+            assert data['total'] == 1
+            assert data['count'] == 1
+            assert data['pagination']['page'] == 1
+            assert data['pagination']['page_size'] == 1
+            assert data['items'][0]['latitude'] == 31.95
+            assert data['items'][0]['longitude'] == 35.95
+            assert data['items'][0]['kpi_status'] == 'normal'
+    finally:
+        if get_db in app.dependency_overrides:
+            del app.dependency_overrides[get_db]
+
+
+def test_api_kindergarten_detail():
+    _reset_kindergarten_heatmap_data()
+    with TestingSessionLocal() as db:
+        _seed_kindergarten(db, kg_id=3, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        db.commit()
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        with TestClient(app) as client:
+            r = client.get('/api/admin/heat-map/kindergartens/3')
+            assert r.status_code == 200, r.text
+            data = r.json()
+            assert data['kindergarten']['id'] == 3
+            assert data['kindergarten']['kpi_status'] == 'normal'
+            assert data['kindergarten']['main_indicators']['nursery_status']['status'] == 'normal'
+    finally:
+        if get_db in app.dependency_overrides:
+            del app.dependency_overrides[get_db]
+
+
+def test_api_kindergartens_map_data():
+    _reset_kindergarten_heatmap_data()
+    with TestingSessionLocal() as db:
+        _seed_kindergarten(db, kg_id=4, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=5, governorate="Amman", city="Amman", status=models.KindergartenStatus.INACTIVE, high_score=False)
+        db.commit()
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        with TestClient(app) as client:
+            r = client.get('/api/admin/heat-map/kindergartens/map-data?city=Amman')
+            assert r.status_code == 200, r.text
+            data = r.json()
+            assert data['type'] == 'FeatureCollection'
+            assert data['total_kindergartens'] == 2
+            # kg4 has explicit coords; kg5 (no lat/lon) gets Amman governorate-center fallback
+            assert data['count'] >= 1
+            assert data['missing_location_count'] >= 0
+            coords_list = [f['geometry']['coordinates'] for f in data['features']]
+            assert [35.95, 31.95] in coords_list
+    finally:
+        if get_db in app.dependency_overrides:
+            del app.dependency_overrides[get_db]
+
+
+def test_api_kindergartens_stats():
+    _reset_kindergarten_heatmap_data()
+    with TestingSessionLocal() as db:
+        _seed_kindergarten(db, kg_id=6, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=7, governorate="Irbid", city="Irbid", status=models.KindergartenStatus.INACTIVE, high_score=False)
+        db.commit()
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        with TestClient(app) as client:
+            r = client.get('/api/admin/heat-map/kindergartens/stats')
+            assert r.status_code == 200, r.text
+            data = r.json()
+            assert data['total'] == 2
+            assert sum(data['status_counts'].values()) == 2
+            assert data['governorate_counts']['amman']['total'] == 1
+            assert data['city_counts']['Amman']['total'] == 1
+    finally:
+        if get_db in app.dependency_overrides:
+            del app.dependency_overrides[get_db]
 
 
 def test_api_governorate_404():

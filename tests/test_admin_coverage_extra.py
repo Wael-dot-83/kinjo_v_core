@@ -697,7 +697,7 @@ class TestBackupHTTPExceptionReraise:
         with patch.object(bm_module.backup_manager, "cleanup_old_backups",
                           side_effect=FastAPIHTTPException(status_code=503,
                                                            detail="unavailable")):
-            r = client.post("/api/backup/cleanup", headers=headers)
+            r = client.post("/api/admin/backup/cleanup", headers=headers)
         assert r.status_code == 503
 
     def test_validate_http_exception_reraised_line_3840(self, client, test_db):
@@ -708,7 +708,7 @@ class TestBackupHTTPExceptionReraise:
         with patch.object(bm_module.backup_manager, "validate_backup",
                           side_effect=FastAPIHTTPException(status_code=404,
                                                            detail="not found")):
-            r = client.post("/api/backup/validate/fake_backup.db", headers=headers)
+            r = client.post("/api/admin/backup/validate/fake_backup.db", headers=headers)
         assert r.status_code == 404
 
 
@@ -724,7 +724,7 @@ class TestExcelKGImport:
         xlsx = _make_xlsx([["روضة", "KG", "عمان", "عمان", "a", "b", "0777"]])
         with patch("openpyxl.load_workbook", side_effect=OSError("disk read error")):
             r = client.post(
-                "/api/kindergartens/import-excel",
+                "/api/admin/kindergartens/import-excel",
                 headers=headers,
                 files={"file": ("ok.xlsx", xlsx,
                                 "application/vnd.openxmlformats-officedocument"
@@ -743,7 +743,7 @@ class TestExcelKGImport:
         ws.append(["روضة", "KG"])                 # data row: also only 2 cols
         buf = io.BytesIO(); wb.save(buf); buf.seek(0)
         r = client.post(
-            "/api/kindergartens/import-excel",
+            "/api/admin/kindergartens/import-excel",
             headers=headers,
             files={"file": ("short.xlsx", buf,
                             "application/vnd.openxmlformats-officedocument"
@@ -762,7 +762,7 @@ class TestExcelKGImport:
         with patch("sqlalchemy.orm.Session.commit",
                    side_effect=SQLAlchemyError("commit failed")):
             r = client.post(
-                "/api/kindergartens/import-excel",
+                "/api/admin/kindergartens/import-excel",
                 headers=headers,
                 files={"file": ("commit_err.xlsx", xlsx,
                                 "application/vnd.openxmlformats-officedocument"
@@ -1206,7 +1206,7 @@ class TestBackupCreateHTTPExceptionReraise:
         with patch.object(bm_module.backup_manager, "create_database_backup",
                           side_effect=FastAPIHTTPException(status_code=507,
                                                            detail="insufficient storage")):
-            r = client.post("/api/backup/create", headers=headers)
+            r = client.post("/api/admin/backup/create", headers=headers)
         assert r.status_code == 507
 
 
@@ -1296,7 +1296,7 @@ class TestExcelImportKGAddError:
 
         with patch.object(sqlalchemy.orm.Session, "add", _patched_add):
             r = client.post(
-                "/api/kindergartens/import-excel",
+                "/api/admin/kindergartens/import-excel",
                 headers=headers,
                 files={"file": ("kg_add_err.xlsx", xlsx,
                                 "application/vnd.openxmlformats-officedocument"

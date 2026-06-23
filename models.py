@@ -144,7 +144,10 @@ class DailyChecklistStatus(str, enum.Enum):
 class IncidentType(str, enum.Enum):
     INJURY = "INJURY"
     BEHAVIOR = "BEHAVIOR"
+    BEHAVIORAL = "BEHAVIORAL"
     ILLNESS = "ILLNESS"
+    ACCIDENT = "ACCIDENT"
+    HEALTH = "HEALTH"
     OTHER = "OTHER"
 
 
@@ -274,6 +277,8 @@ class Kindergarten(Base):
     address_line = Column(Text, nullable=False)
     contact_phone = Column(String(20), nullable=False)
     contact_email = Column(String(255), nullable=True)  # Made optional
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     status = Column(Enum(KindergartenStatus), nullable=False, default=KindergartenStatus.DRAFT)
     operating_hours_start = Column(String(5), nullable=True)
     operating_hours_end = Column(String(5), nullable=True)
@@ -285,7 +290,10 @@ class Kindergarten(Base):
     __table_args__ = (
         UniqueConstraint("license_number", name="uq_kindergartens_license_number"),
         Index("idx_kindergartens_governorate", "governorate"),
+        Index("idx_kindergartens_governorate_city", "governorate", "city"),
         Index("idx_kindergartens_status", "status"),
+        Index("idx_kindergartens_latitude", "latitude"),
+        Index("idx_kindergartens_longitude", "longitude"),
     )
 
     # Relationships
@@ -658,6 +666,8 @@ class EnrollmentApplication(Base):
     status_reason = Column(String(255), nullable=True)
     source = Column(String(50), nullable=False, default="WEB")
     submitted_at = Column(DateTime(timezone=True), nullable=True)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    rejected_at = Column(DateTime(timezone=True), nullable=True)
     decision_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     decision_at = Column(DateTime(timezone=True), nullable=True)
     enrollment_start_date = Column(Date, nullable=True)
@@ -675,6 +685,12 @@ class EnrollmentApplication(Base):
         Index("uq_enrollment_child_active", "child_id", "is_active", unique=True),
         Index("ix_enrollment_child_id", "child_id"),
         Index("ix_enrollment_child_status", "child_id", "status"),
+        Index("ix_enrollment_kg_status", "kindergarten_id", "status"),
+        Index("ix_enrollment_status", "status"),
+        Index("ix_enrollment_source", "source"),
+        Index("ix_enrollment_decision_by", "decision_by"),
+        Index("ix_enrollment_submitted_at", "submitted_at"),
+        Index("ix_enrollment_decision_at", "decision_at"),
     )
 
     # Relationships
@@ -730,6 +746,7 @@ class AttendanceLog(Base):
         Index("ix_attendance_class_id", "class_id"),
         Index("ix_attendance_class_date", "class_id", "date"),
         Index("ix_attendance_recorded_by", "recorded_by"),
+        Index("ix_attendance_child_date_status", "child_id", "date", "status"),
     )
 
     # Relationships
@@ -776,7 +793,8 @@ class DailyReport(Base):
 
     __table_args__ = (
         UniqueConstraint("kindergarten_id", "child_id", "date", name="uq_daily_report_kindergarten_child_date"),
-        Index("ix_daily_reports_child_date", "child_id", "date")
+        Index("ix_daily_reports_child_date", "child_id", "date"),
+        Index("ix_daily_reports_kg_date_status", "kindergarten_id", "date", "status"),
     )
 
     # Relationships
@@ -846,6 +864,11 @@ class Incident(Base):
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        Index("ix_incidents_kg_occurred_at", "kindergarten_id", "occurred_at"),
+        Index("ix_incidents_kg_severity", "kindergarten_id", "severity_level"),
+    )
 
     # Relationships
     child = relationship("Child", back_populates="incidents")
@@ -1269,6 +1292,10 @@ class RatioCompliance(Base):
     child_count_avg = Column(Float, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    __table_args__ = (
+        Index("ix_ratio_compliance_kg_date", "kindergarten_id", "date"),
+    )
+
 
 class KPISnapshot(Base):
     __tablename__ = "kpi_snapshots"
@@ -1565,6 +1592,53 @@ class ExportJob(Base):
 
     __table_args__ = (
         Index('ix_export_jobs_user_status', 'user_id', 'status'),
+    )
+
+
+class ReportTemplate(Base):
+    """Saved report configurations for quick reuse."""
+    __tablename__ = "report_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    report_type = Column(String(100), nullable=False)
+    filters = Column(JSON, nullable=True)
+    export_format = Column(String(20), nullable=False, default="CSV")
+    include_charts = Column(Boolean, nullable=False, default=True)
+    include_summary = Column(Boolean, nullable=False, default=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+
+    creator = relationship("User")
+
+    __table_args__ = (
+        Index("ix_report_templates_created_by", "created_by"),
+    )
+
+
+class ScheduledReport(Base):
+    """Scheduled report generation and delivery."""
+    __tablename__ = "scheduled_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    report_type = Column(String(100), nullable=False)
+    filters = Column(JSON, nullable=True)
+    export_format = Column(String(20), nullable=False, default="CSV")
+    frequency = Column(String(50), nullable=False)  # daily, weekly, monthly, quarterly, once
+    recipients = Column(JSON, nullable=True)  # list of user_ids or emails
+    next_run = Column(DateTime(timezone=True), nullable=True)
+    last_run = Column(DateTime(timezone=True), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    creator = relationship("User")
+
+    __table_args__ = (
+        Index("ix_scheduled_reports_created_by", "created_by"),
+        Index("ix_scheduled_reports_next_run", "next_run"),
     )
 
 

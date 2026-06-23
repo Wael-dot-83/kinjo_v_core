@@ -15,7 +15,6 @@ This module provides secure admin endpoints with:
 """
 import csv
 import io
-import json
 import os
 import secrets
 import enum
@@ -26,7 +25,7 @@ from typing import List, Optional, Dict, Any, Set, Tuple, Union
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, UploadFile, File, Form
 from fastapi.responses import Response, JSONResponse, StreamingResponse
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_, func, and_, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -34,8 +33,8 @@ from sqlalchemy.exc import SQLAlchemyError
 import models
 import validators
 from database import get_db
-from rate_limiter import limiter
 from dependencies import get_current_user
+from rate_limiter import limiter
 from config import settings
 from auth import get_password_hash, verify_password
 from notification_service import create_message_notifications
@@ -53,23 +52,24 @@ from audit_actions import AuditAction
 from admin_security import (
     # Error handling
     APIError, forbidden_error, unauthenticated_error, validation_error,
-    not_found_error, conflict_error, rate_limited_error, create_error_response,
+    not_found_error, conflict_error,
     ErrorCode,
     # Audit logging
-    log_audit_event, model_to_dict, get_correlation_id, get_request_ip,
+    log_audit_event, model_to_dict, get_correlation_id,
     # Authorization
-    can_admin_access_user, validate_bulk_targets,
+    can_admin_access_user,
+     validate_bulk_targets,
     # Schemas
     UserCreateSchema, UserUpdateSchema, BulkStatusUpdateSchema,
     BulkDeleteSchema, BulkCreateSchema, AdminPasswordResetSchema,
     PasswordResetRequestSchema, PasswordResetConfirmSchema,
     # Bulk operations
-    BulkOperationConfig, BulkOperationResult, generate_confirmation_token,
+    generate_confirmation_token,
     verify_confirmation_token,
     # CSV
-    CSVRowError, CSVImportResult, sanitize_csv_cell, validate_csv_row,
+    CSVRowError, CSVImportResult, sanitize_csv_cell,
     # Pagination
-    PaginationConfig, enforce_pagination,
+    enforce_pagination,
 )
 
 logger = logging.getLogger(__name__)
@@ -211,21 +211,16 @@ router = APIRouter(tags=["Admin"])
 # Authorization Helpers
 # =============================================================================
 
+# require_admin and require_admin_or_manager are wrappers that chain to
+# admin_security's functions via Depends(get_current_user).
 def require_admin(current_user: models.User = Depends(get_current_user)) -> models.User:
-    """
-    Dependency that enforces admin role.
-    Returns 401 if not authenticated, 403 if authenticated but not admin.
-    """
-    if current_user.role != models.UserRole.ADMIN:
-        raise forbidden_error("Admin access required")
-    return current_user
+    from admin_security import require_admin_role
+    return require_admin_role(current_user)
 
 
 def require_admin_or_manager(current_user: models.User = Depends(get_current_user)) -> models.User:
-    """Dependency that enforces admin or manager role."""
-    if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
-        raise forbidden_error("Admin or Manager access required")
-    return current_user
+    from admin_security import require_admin_or_manager_role
+    return require_admin_or_manager_role(current_user)
 
 
 def get_client_ip(request: Request) -> str:
@@ -441,7 +436,7 @@ def create_user(
                 user_data.passport_number,
             )
         except validators.ValidationError as exc:
-            raise HTTPException(status_code=400, detail=exc.message)
+            raise validation_error(exc.message, {"identity": exc.message})
 
     db.add(new_user)
     db.flush()
@@ -734,7 +729,7 @@ def update_user(
                 user_data.passport_number or user.passport_number,
             )
         except validators.ValidationError as exc:
-            raise HTTPException(status_code=400, detail=exc.message)
+            raise validation_error(exc.message, {"identity": exc.message})
 
     # Only admins can change role and status
     if current_user.role == models.UserRole.ADMIN:
@@ -757,7 +752,7 @@ def update_user(
                 try:
                     validators.validate_kg_has_supervisor(db, user.kindergarten_id, exclude_user_id=user.id)
                 except validators.ValidationError as exc:
-                    raise HTTPException(status_code=400, detail=exc.message)
+                    raise validation_error(exc.message, {"supervisor": exc.message})
             user.status = user_data.status
 
         if user_data.kindergarten_id is not None:
@@ -1316,7 +1311,6 @@ def bulk_delete_users(
     for user_id in access_result["allowed"]:
         user = target_users.get(user_id)
         if user:
-            before_state = model_to_dict(user)
             db.delete(user)
             deleted_ids.append(user_id)
 
@@ -1706,7 +1700,7 @@ def download_csv_error_report(
     body: _CSVErrorReportBody,
     current_user: models.User = Depends(require_admin),
 ):
-    """Download CSV import error report as CSV file."""
+    _validate_csrf_token(request)
     error_list = body.errors
 
     output = io.StringIO()
@@ -1840,6 +1834,7 @@ def resolve_contact_message(
     if not msg:
         raise not_found_error("Contact message not found")
 
+    _validate_csrf_token(request)
     if not msg.is_resolved:
         msg.is_resolved = True
         msg.resolved_by_id = current_user.id
@@ -1950,24 +1945,8 @@ def _dedupe_int_list(values: Optional[List[int]]) -> List[int]:
     return list(dict.fromkeys([v for v in cleaned if v]))
 
 
-def _normalize_governorates(governorates: Optional[List[str]]) -> List[str]:
-    normalized: List[str] = []
-    for gov in governorates or []:
-        if not gov:
-            continue
-        try:
-            ar_value = validators.validate_jordan_governorate(gov)
-        except validators.ValidationError:
-            raise validation_error("Invalid governorate", fields={"governorates": "invalid"})
-        normalized.append(ar_value)
-        if ar_value in settings.JORDAN_GOVERNORATES:
-            idx = settings.JORDAN_GOVERNORATES.index(ar_value)
-            if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
-                normalized.append(settings.JORDAN_GOVERNORATES_ENGLISH[idx])
-    return list(dict.fromkeys(normalized))
-
-
-def _canonical_governorates(governorates: Optional[List[str]]) -> List[str]:
+def _validate_jordan_governorates(governorates: Optional[List[str]]) -> List[str]:
+    """Validate and deduplicate governorates, returning canonical Arabic forms."""
     canonical: List[str] = []
     for gov in governorates or []:
         if not gov:
@@ -1979,9 +1958,26 @@ def _canonical_governorates(governorates: Optional[List[str]]) -> List[str]:
     return list(dict.fromkeys(canonical))
 
 
+
+
+def _normalize_governorates(governorates: Optional[List[str]]) -> List[str]:
+    normalized = _validate_jordan_governorates(governorates)
+    for ar_value in list(normalized):
+        if ar_value in settings.JORDAN_GOVERNORATES:
+            idx = settings.JORDAN_GOVERNORATES.index(ar_value)
+            if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
+                normalized.append(settings.JORDAN_GOVERNORATES_ENGLISH[idx])
+    return list(dict.fromkeys(normalized))
+
+
+
+
+def _canonical_governorates(governorates: Optional[List[str]]) -> List[str]:
+    return _validate_jordan_governorates(governorates)
+
 def _validate_csrf_token(request: Request) -> None:
     header_token = request.headers.get("x-csrf-token")
-    cookie_token = request.cookies.get("kinjo_csrf_token")
+    cookie_token = request.cookies.get(settings.CSRF_COOKIE_NAME)
     if not header_token or not cookie_token or not secrets.compare_digest(header_token, cookie_token):
         raise validation_error("Invalid CSRF token", fields={"csrf_token": "invalid"})
 
@@ -3373,18 +3369,16 @@ def get_admin_dashboard(
         ).group_by(models.EnrollmentApplication.kindergarten_id).all()
     ) if kg_ids else {}
 
+    # Use kindergarten_id directly on DailyReport — avoids a child_id cross-join
+    # that would be enormous when many enrollments share a small set of child_ids.
     kg_pending_report_counts = dict(
         db.query(
-            models.EnrollmentApplication.kindergarten_id,
+            models.DailyReport.kindergarten_id,
             func.count(models.DailyReport.id),
-        ).join(
-            models.EnrollmentApplication,
-            models.EnrollmentApplication.child_id == models.DailyReport.child_id,
         ).filter(
-            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            models.DailyReport.kindergarten_id.in_(kg_ids),
             models.DailyReport.status == models.DailyReportStatus.SUBMITTED,
-        ).group_by(models.EnrollmentApplication.kindergarten_id).all()
+        ).group_by(models.DailyReport.kindergarten_id).all()
     ) if kg_ids else {}
 
     kg_capacities = dict(
@@ -3399,14 +3393,11 @@ def get_admin_dashboard(
 
     kg_last_report_dates = dict(
         db.query(
-            models.EnrollmentApplication.kindergarten_id,
+            models.DailyReport.kindergarten_id,
             func.max(models.DailyReport.date),
-        ).join(
-            models.EnrollmentApplication,
-            models.EnrollmentApplication.child_id == models.DailyReport.child_id,
         ).filter(
-            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-        ).group_by(models.EnrollmentApplication.kindergarten_id).all()
+            models.DailyReport.kindergarten_id.in_(kg_ids),
+        ).group_by(models.DailyReport.kindergarten_id).all()
     ) if kg_ids else {}
 
     for kg in all_kindergartens:
@@ -3504,21 +3495,11 @@ def get_admin_dashboard(
         day_count = daily_enrollment_counts.get(day_value, 0)
         enrollment_trend.append(DashboardChartPoint(date=day_value.isoformat(), value=day_count))
 
-    # Build GCEI (Governance Compliance & Excellence Index) trend chart
-    # Based on active kindergartens ratio and license compliance
-    daily_incident_counts_full = dict(
-        db.query(
-            func.date(models.Incident.occurred_at),
-            func.count(models.Incident.id),
-        ).filter(
-            func.date(models.Incident.occurred_at) >= chart_start_date,
-            func.date(models.Incident.occurred_at) <= today,
-        ).group_by(func.date(models.Incident.occurred_at)).all()
-    )
+# Build GCEI (Governance Compliance & Excellence Index) trend chart
     gcei_chart: List[DashboardChartPoint] = []
     for i in range(chart_days):
         day_value = today - timedelta(days=(chart_days - 1 - i))
-        day_incidents = daily_incident_counts_full.get(day_value, 0)
+        day_incidents = daily_incident_counts.get(day_value, 0)
         # Simplified GCEI calculation: based on active kindergartens and incident rate
         day_enrollments = daily_attendance_counts.get(day_value, 0)
         if day_enrollments > 0:
@@ -4171,7 +4152,6 @@ def _period_trend(period: str) -> str:
 # =============================================================================
 
 @router.post("/admin/backup/create")
-@router.post("/backup/create", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def create_backup(
     request: Request,
@@ -4218,7 +4198,6 @@ def create_backup(
 
 
 @router.get("/admin/backup/list")
-@router.get("/backup/list", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def list_backups(
     request: Request,
@@ -4241,7 +4220,6 @@ class _RestoreConfirmBody(BaseModel):
 
 
 @router.post("/admin/backup/restore/{backup_name}")
-@router.post("/backup/restore/{backup_name}", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def restore_backup(
     request: Request,
@@ -4321,7 +4299,6 @@ def restore_backup(
 
 
 @router.delete("/admin/backup/{backup_name}")
-@router.delete("/backup/{backup_name}", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def delete_backup(
     request: Request,
@@ -4368,7 +4345,6 @@ def delete_backup(
 
 
 @router.get("/admin/backup/info/{backup_name}")
-@router.get("/backup/info/{backup_name}", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_backup_info(
     request: Request,
@@ -4403,7 +4379,6 @@ def get_backup_info(
 
 
 @router.post("/admin/backup/cleanup")
-@router.post("/backup/cleanup", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def cleanup_old_backups(
     request: Request,
@@ -4433,7 +4408,6 @@ def cleanup_old_backups(
 
 
 @router.post("/admin/backup/validate/{backup_name}")
-@router.post("/backup/validate/{backup_name}", include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def validate_backup(
     request: Request,
@@ -4480,8 +4454,9 @@ class KindergartenImportResult(BaseModel):
 
 
 @router.post("/admin/kindergartens/import-excel", response_model=KindergartenImportResult)
-@router.post("/kindergartens/import-excel", response_model=KindergartenImportResult, include_in_schema=False)
+@limiter.limit(settings.RATE_LIMIT_CSV_IMPORT)
 def import_kindergartens_from_excel(
+    request: Request,
     file: UploadFile = File(...),
     dry_run: bool = Query(False, description="Preview without writing to DB"),
     current_user: models.User = Depends(require_admin),
@@ -4520,7 +4495,7 @@ def import_kindergartens_from_excel(
         ws = wb.worksheets[0]  # Use first sheet
         rows = list(ws.iter_rows(min_row=2, values_only=True))  # skip header
         wb.close()
-    except (OSError, IOError, KeyError, ValueError, IndexError, BadZipFile) as e:
+    except (OSError, IOError, KeyError, ValueError, IndexError, BadZipFile):
         logger.exception("Failed to read uploaded Excel file")
         raise HTTPException(status_code=400, detail="Could not read Excel file")
 
@@ -4585,7 +4560,7 @@ def import_kindergartens_from_excel(
     if not dry_run:
         try:
             db.commit()
-        except (SQLAlchemyError, OSError) as e:
+        except (SQLAlchemyError, OSError):
             db.rollback()
             logger.exception("Failed to commit kindergarten import")
             raise HTTPException(status_code=500, detail="Database commit failed")
@@ -4596,6 +4571,18 @@ def import_kindergartens_from_excel(
         result.inserted, result.skipped_duplicate, result.skipped_empty,
         len(row_errors), dry_run,
     )
+
+    if not dry_run:
+        log_audit_event(
+            db,
+            AuditAction.KINDERGARTEN_IMPORT,
+            current_user,
+            target_type="kindergarten",
+            target_ids=[],
+            metadata={"imported_count": result.inserted, "errors": len(row_errors)},
+            sensitivity_level=2,
+        )
+
     return result
 
 
@@ -5317,10 +5304,14 @@ class AdminAlertResponse(BaseModel):
     kindergarten_name: Optional[str] = None
     metric: str
     current_value: float
-    threshold: float
+    threshold: Optional[float] = None
     triggered_at: str
+    acknowledged_at: Optional[str] = None
+    acknowledged_by_id: Optional[int] = None
     status: str
     message: Optional[str] = None
+    scope_type: Optional[str] = None
+    scope_id: Optional[str] = None
 
 
 class AdminAlertsListResponse(BaseModel):
@@ -5330,91 +5321,149 @@ class AdminAlertsListResponse(BaseModel):
     page_size: int
 
 
+_VALID_SEVERITIES = {s.value for s in models.SeverityLevel}
+_VALID_STATUSES   = {s.value for s in models.AlertStatus}
+
+
 @router.get("/admin/alerts", response_model=AdminAlertsListResponse)
 @limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 def get_admin_alerts(
     request: Request,
-    severity: Optional[str] = Query(None, description="Filter by severity (CRITICAL/HIGH/MEDIUM/LOW)"),
-    governorate: Optional[str] = Query(None, description="Filter by governorate"),
-    status: Optional[str] = Query("ACTIVE", description="Filter by status (ACTIVE/ACKNOWLEDGED)"),
+    severity: Optional[str] = Query(None),
+    governorate: Optional[str] = Query(None),
+    status: Optional[str] = Query("ACTIVE"),
+    date_from: Optional[str] = Query(None, description="ISO date — lower bound on triggered_at"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     current_user: models.User = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """Get admin alerts with optional filtering."""
+    """Get admin alerts with filtering, full threshold & kindergarten details."""
     try:
         query = db.query(models.ActiveAlert)
 
         if severity:
-            try:
-                query = query.filter(models.ActiveAlert.severity == models.SeverityLevel(severity))
-            except ValueError:
-                raise HTTPException(status_code=422, detail=f"Invalid severity '{severity}'. Use CRITICAL, HIGH, MEDIUM, or LOW.")
+            if severity.upper() not in _VALID_SEVERITIES:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid severity '{severity}'. Use: {', '.join(_VALID_SEVERITIES)}"
+                )
+            query = query.filter(models.ActiveAlert.severity == models.SeverityLevel(severity.upper()))
 
         if status:
-            try:
-                query = query.filter(models.ActiveAlert.status == models.AlertStatus(status))
-            except ValueError:
-                raise HTTPException(status_code=422, detail=f"Invalid status '{status}'. Use ACTIVE or ACKNOWLEDGED.")
+            if status.upper() not in _VALID_STATUSES:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid status '{status}'. Use: {', '.join(_VALID_STATUSES)}"
+                )
+            query = query.filter(models.ActiveAlert.status == models.AlertStatus(status.upper()))
 
+        if date_from:
+            try:
+                dt_from = datetime.fromisoformat(date_from)
+                query = query.filter(models.ActiveAlert.triggered_at >= dt_from)
+            except ValueError:
+                raise HTTPException(status_code=422, detail=f"Invalid date_from: '{date_from}'")
+
+        # Governorate filter: match GOVERNORATE-scoped alerts directly, and KINDERGARTEN
+        # alerts where the kindergarten sits in that governorate.
         if governorate:
+            kg_id_strings = [
+                str(row.id)
+                for row in db.query(models.Kindergarten.id).filter(
+                    models.Kindergarten.governorate == governorate
+                ).all()
+            ]
             query = query.filter(
-                models.ActiveAlert.scope_type == "GOVERNORATE",
-                models.ActiveAlert.scope_id == governorate
+                or_(
+                    and_(
+                        models.ActiveAlert.scope_type == "GOVERNORATE",
+                        models.ActiveAlert.scope_id == governorate,
+                    ),
+                    and_(
+                        models.ActiveAlert.scope_type == "KINDERGARTEN",
+                        models.ActiveAlert.scope_id.in_(kg_id_strings),
+                    ),
+                )
             )
 
         total = query.count()
-        alerts = query.order_by(
-            models.ActiveAlert.triggered_at.desc(),
-            models.ActiveAlert.severity.desc()
-        ).offset(skip).limit(limit).all()
+        alerts = (
+            query
+            .order_by(
+                models.ActiveAlert.severity.desc(),
+                models.ActiveAlert.triggered_at.desc(),
+            )
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
-        # Pre-load governorates for KINDERGARTEN-scoped alerts in a single query (avoids N+1).
+        # Batch-load kindergartens for KINDERGARTEN-scoped alerts (avoids N+1).
         kg_ids: Set[int] = set()
+        threshold_ids: Set[int] = set()
         for alert in alerts:
+            threshold_ids.add(alert.threshold_id)
             if alert.scope_type == "KINDERGARTEN" and alert.scope_id:
                 try:
                     kg_ids.add(int(alert.scope_id))
                 except (TypeError, ValueError):
-                    continue
-        kg_governorate_map: Dict[int, str] = {}
-        if kg_ids:
-            for kg_id, gov in db.query(
-                models.Kindergarten.id, models.Kindergarten.governorate
-            ).filter(models.Kindergarten.id.in_(kg_ids)).all():
-                kg_governorate_map[kg_id] = gov
+                    pass
 
-        alerts_data = []
+        # threshold_id → threshold_value
+        threshold_map: Dict[int, float] = {}
+        if threshold_ids:
+            for t_id, t_val in db.query(
+                models.AlertThreshold.id, models.AlertThreshold.threshold_value
+            ).filter(models.AlertThreshold.id.in_(threshold_ids)).all():
+                threshold_map[t_id] = float(t_val)
+
+        # kg_id → (name_ar, name_en, governorate)
+        kg_map: Dict[int, models.Kindergarten] = {}
+        if kg_ids:
+            for kg in db.query(models.Kindergarten).filter(
+                models.Kindergarten.id.in_(kg_ids)
+            ).all():
+                kg_map[kg.id] = kg
+
+        alerts_data: List[AdminAlertResponse] = []
         for alert in alerts:
-            # Extract governorate from scope_id if scope_type is GOVERNORATE
-            governorate_name = None
+            governorate_name: Optional[str] = None
+            kg_name: Optional[str] = None
+
             if alert.scope_type == "GOVERNORATE":
                 governorate_name = alert.scope_id
             elif alert.scope_type == "KINDERGARTEN" and alert.scope_id:
                 try:
-                    governorate_name = kg_governorate_map.get(int(alert.scope_id))
+                    kg = kg_map.get(int(alert.scope_id))
+                    if kg:
+                        governorate_name = kg.governorate
+                        kg_name = kg.name_ar or kg.name_en
                 except (TypeError, ValueError):
-                    governorate_name = None
+                    pass
 
             alerts_data.append(AdminAlertResponse(
                 id=alert.id,
-                severity=alert.severity.value if hasattr(alert.severity, 'value') else str(alert.severity),
+                severity=alert.severity.value if hasattr(alert.severity, "value") else str(alert.severity),
                 governorate=governorate_name,
-                kindergarten_name=None,
+                kindergarten_name=kg_name,
                 metric=alert.metric_type,
                 current_value=float(alert.current_value) if alert.current_value is not None else 0.0,
-                threshold=0.0,
+                threshold=threshold_map.get(alert.threshold_id),
                 triggered_at=alert.triggered_at.isoformat() if alert.triggered_at else "",
-                status=alert.status.value if hasattr(alert.status, 'value') else str(alert.status),
-                message=alert.message
+                acknowledged_at=alert.acknowledged_at.isoformat() if alert.acknowledged_at else None,
+                acknowledged_by_id=alert.acknowledged_by,
+                status=alert.status.value if hasattr(alert.status, "value") else str(alert.status),
+                message=alert.message,
+                scope_type=alert.scope_type,
+                scope_id=alert.scope_id,
             ))
 
         return AdminAlertsListResponse(
             alerts=alerts_data,
             total=total,
             page=(skip // limit) + 1,
-            page_size=limit
+            page_size=limit,
         )
 
     except HTTPException:
@@ -5422,6 +5471,70 @@ def get_admin_alerts(
     except (SQLAlchemyError, AttributeError, ValueError, TypeError) as e:
         logger.error(f"Failed to get admin alerts: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.patch("/admin/alerts/{alert_id}/acknowledge", response_model=AdminAlertResponse)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+def acknowledge_alert(
+    request: Request,
+    alert_id: int,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Mark an active alert as acknowledged."""
+    alert = db.query(models.ActiveAlert).filter(models.ActiveAlert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    if alert.status == models.AlertStatus.ACKNOWLEDGED:
+        raise HTTPException(status_code=409, detail="Alert is already acknowledged")
+
+    now = datetime.now(timezone.utc)
+    alert.status = models.AlertStatus.ACKNOWLEDGED
+    alert.acknowledged_by = current_user.id
+    alert.acknowledged_at = now
+    db.commit()
+    db.refresh(alert)
+
+    # Build response (mirrors get_admin_alerts logic for the single record)
+    threshold_val: Optional[float] = None
+    if alert.threshold_id:
+        t = db.query(models.AlertThreshold.threshold_value).filter(
+            models.AlertThreshold.id == alert.threshold_id
+        ).scalar()
+        if t is not None:
+            threshold_val = float(t)
+
+    governorate_name: Optional[str] = None
+    kg_name: Optional[str] = None
+    if alert.scope_type == "GOVERNORATE":
+        governorate_name = alert.scope_id
+    elif alert.scope_type == "KINDERGARTEN" and alert.scope_id:
+        try:
+            kg = db.query(models.Kindergarten).filter(
+                models.Kindergarten.id == int(alert.scope_id)
+            ).first()
+            if kg:
+                governorate_name = kg.governorate
+                kg_name = kg.name_ar or kg.name_en
+        except (TypeError, ValueError):
+            pass
+
+    return AdminAlertResponse(
+        id=alert.id,
+        severity=alert.severity.value if hasattr(alert.severity, "value") else str(alert.severity),
+        governorate=governorate_name,
+        kindergarten_name=kg_name,
+        metric=alert.metric_type,
+        current_value=float(alert.current_value) if alert.current_value is not None else 0.0,
+        threshold=threshold_val,
+        triggered_at=alert.triggered_at.isoformat() if alert.triggered_at else "",
+        acknowledged_at=alert.acknowledged_at.isoformat() if alert.acknowledged_at else None,
+        acknowledged_by_id=alert.acknowledged_by,
+        status=alert.status.value if hasattr(alert.status, "value") else str(alert.status),
+        message=alert.message,
+        scope_type=alert.scope_type,
+        scope_id=alert.scope_id,
+    )
 
 
 # =============================================================================
@@ -5592,10 +5705,10 @@ def _fallback_map_overview(db: Session) -> Dict[str, Any]:
             },
             "risk_score": risk_score,
             "risk_level": {
-                "key": "low" if risk_score < 25 else "medium",
-                "name_en": "Low" if risk_score < 25 else "Medium",
-                "name_ar": "منخفض" if risk_score < 25 else "متوسط",
-                "color": "#28A745" if risk_score < 25 else "#FFC107",
+                "key": "low" if risk_score < 25 else "medium" if risk_score < 50 else "high" if risk_score < 75 else "critical",
+                "name_en": "Low" if risk_score < 25 else "Medium" if risk_score < 50 else "High" if risk_score < 75 else "Critical",
+                "name_ar": "منخفض" if risk_score < 25 else "متوسط" if risk_score < 50 else "مرتفع" if risk_score < 75 else "حرج",
+                "color": "#22C55E" if risk_score < 25 else "#F59E0B" if risk_score < 50 else "#F97316" if risk_score < 75 else "#EF4444",
             },
         })
     return {
@@ -5605,8 +5718,8 @@ def _fallback_map_overview(db: Session) -> Dict[str, Any]:
         "summary": {
             "total_governorates": len(data),
             "average_risk": round(sum(d["risk_score"] for d in data) / len(data), 1) if data else 0,
-            "high_risk_count": sum(1 for d in data if d["risk_score"] > 50),
-            "critical_count": sum(1 for d in data if d["risk_score"] > 75),
+            "high_risk_count": sum(1 for d in data if d["risk_score"] >= 50),
+            "critical_count": sum(1 for d in data if d["risk_score"] >= 75),
         },
         "risk_legend": [],
     }

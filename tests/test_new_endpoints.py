@@ -664,9 +664,9 @@ class TestAdminFrontendBlocks:
         r = client.get("/daily-reports/create", headers=_hdr(admin_token))
         assert r.status_code == 403
 
-    def test_admin_blocked_from_attendance_history(self, client, admin_token):
+    def test_admin_can_access_attendance_history(self, client, admin_token):
         r = client.get("/attendance/history", headers=_hdr(admin_token))
-        assert r.status_code == 403
+        assert r.status_code == 200
 
 
 # ===========================================================================

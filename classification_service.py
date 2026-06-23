@@ -9,7 +9,10 @@ from datetime import date, timedelta
 from statistics import mean
 from typing import Any, Dict, List, Optional, Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import logging
+import time
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session
@@ -19,13 +22,48 @@ from cache_service import dashboard_cache
 from database import get_db
 from dependencies import get_current_user
 from kpi_service import KPIService
+from admin_security import log_audit_event
+from audit_actions import AuditAction
+from rate_limiter import limiter
+from config import settings
+
+logger = logging.getLogger(__name__)
+
+
+class ClassificationConfig:
+    """Centralized configuration for classification scoring and thresholds."""
+    # Band thresholds
+    GREEN_MIN: float = 80.0
+    AMBER_MIN: float = 60.0
+    RED_MIN: float = 0.0
+
+    # Scoring thresholds
+    MIN_COVERAGE_PCT: float = 40.0
+    DEFAULT_MIN_SAMPLE_DAYS: int = 30
+    DEFAULT_TREND_PERIODS: int = 6
+    CACHE_TTL_SECONDS: int = 3600
+
+    # Scoring weights
+    KINDERGARTEN_GQI_WEIGHT: float = 0.60
+    KINDERGARTEN_CEI_WEIGHT: float = 0.40
+    MANAGER_GOVERNANCE_WEIGHT: float = 0.60
+    MANAGER_ON_TIME_WEIGHT: float = 0.20
+    MANAGER_QUALITY_WEIGHT: float = 0.20
+    SUPERVISOR_ATTENDANCE_WEIGHT: float = 0.40
+    SUPERVISOR_REPORT_WEIGHT: float = 0.40
+    SUPERVISOR_TIMELINESS_WEIGHT: float = 0.20
+
+    # Trend
+    TREND_UP_THRESHOLD: float = 1.0
+    TREND_DOWN_THRESHOLD: float = -1.0
+
 
 router = APIRouter()
 
 BAND_RULES = [
-    ("GREEN", "أخضر", 80.0, 100.0),
-    ("AMBER", "كهرماني", 60.0, 79.99),
-    ("RED", "أحمر", 0.0, 59.99),
+    ("GREEN", "أخضر", ClassificationConfig.GREEN_MIN, 100.0),
+    ("AMBER", "كهرماني", ClassificationConfig.AMBER_MIN, ClassificationConfig.GREEN_MIN - 0.01),
+    ("RED", "أحمر", ClassificationConfig.RED_MIN, ClassificationConfig.AMBER_MIN - 0.01),
 ]
 
 SUPPORTED_LEVELS = {
@@ -97,15 +135,22 @@ def _band_for_score(score: Optional[float]) -> Tuple[Optional[str], str]:
 
 def _trend_direction(delta: Optional[float]) -> str:
     if delta is None:
-        return "لا يوجد"
-    if delta >= 1.0:
-        return "صاعد"
-    if delta <= -1.0:
-        return "هابط"
-    return "مستقر"
+        return "NONE"
+    if delta >= ClassificationConfig.TREND_UP_THRESHOLD:
+        return "UP"
+    if delta <= ClassificationConfig.TREND_DOWN_THRESHOLD:
+        return "DOWN"
+    return "STABLE"
 
 
-def _size_band(value: int) -> str:
+def _size_band(value: int, mode: str = "ENROLLMENT") -> str:
+    if mode == "CLASS_COUNT":
+        if value <= 3:
+            return "SMALL"
+        if value <= 7:
+            return "MEDIUM"
+        return "LARGE"
+    # CAPACITY and ENROLLMENT share the same child-count scale
     if value <= 60:
         return "SMALL"
     if value <= 120:
@@ -137,7 +182,7 @@ class ClassificationRow(BaseModel):
     band_code: Optional[str] = None
     band_label: str = "غير مصنف"
     trend_vs_previous: Optional[float] = None
-    trend_direction: str = "لا يوجد"
+    trend_direction: str = "NONE"
     coverage_pct: float = 0.0
     sample_size: int = 0
     insufficient_data: bool = False
@@ -162,6 +207,10 @@ class ClassificationResponse(BaseModel):
     rows: List[ClassificationRow]
     band_explanations: List[Dict[str, Any]]
     indicator_explanations: List[Dict[str, str]]
+    computation_time_ms: Optional[float] = None
+    applied_size_mode: str = ""
+    applied_size_band: Optional[str] = None
+    applied_level: str = ""
 
 
 class ClassificationDetailResponse(BaseModel):
@@ -228,6 +277,18 @@ class ClassificationFiltersResponse(BaseModel):
     governorates: List[str]
     cities: List[str]
     areas: List[str]
+
+
+class CacheWarmResponse(BaseModel):
+    message: str
+    period_start: str
+    period_end: str
+    warmed_entries: int
+
+
+class CacheInvalidateResponse(BaseModel):
+    message: str
+    deleted_entries: int
 
 
 class DataCoverageService:
@@ -354,10 +415,10 @@ class BenchmarkingService:
     @staticmethod
     def _size_band_for_kindergarten(size_mode: str, stats: Dict[str, int]) -> str:
         if size_mode == "CAPACITY":
-            return _size_band(int(stats.get("capacity_total", 0)))
+            return _size_band(int(stats.get("capacity_total", 0)), size_mode)
         if size_mode == "ENROLLMENT":
-            return _size_band(int(stats.get("active_enrollments", 0)))
-        return _size_band(int(stats.get("class_count", 0)))
+            return _size_band(int(stats.get("active_enrollments", 0)), size_mode)
+        return _size_band(int(stats.get("class_count", 0)), size_mode)
 
     @staticmethod
     def _peer_group_key(
@@ -391,13 +452,20 @@ class BenchmarkingService:
         cache_key = f"classification:bundle:{kindergarten_id}:{period_start}:{period_end}"
         cached = dashboard_cache.get(cache_key)
         if cached:
+            logger.debug("CACHE HIT for bundle kindergarten=%d period=%s..%s", kindergarten_id, period_start, period_end)
             return cached
+        logger.debug("CACHE MISS for bundle kindergarten=%d period=%s..%s", kindergarten_id, period_start, period_end)
 
-        bundle = KPIService.compute_kpi_bundle(db, kindergarten_id, period_start, period_end)
+        try:
+            bundle = KPIService.compute_kpi_bundle(db, kindergarten_id, period_start, period_end)
+        except Exception:
+            logger.exception("Failed to compute KPI bundle for kindergarten %d", kindergarten_id)
+            return {"expected_child_days": 0, "coverage_pct_total": 0.0, "governance_score": 0.0, "gqi_score": 0.0, "cei_score": 0.0, "quality": {}}
         expected_days, _, _ = KPIService._count_expected_child_days(db, kindergarten_id, period_start, period_end)
         bundle["expected_child_days"] = int(expected_days)
         bundle["coverage_pct_total"] = DataCoverageService.coverage_from_bundle(bundle)
-        dashboard_cache.set(cache_key, bundle, ttl_seconds=3600)
+        dashboard_cache.set(cache_key, bundle, ttl_seconds=ClassificationConfig.CACHE_TTL_SECONDS)
+        logger.debug("CACHE WARM for bundle kindergarten=%d period=%s..%s", kindergarten_id, period_start, period_end)
         return bundle
 
     @staticmethod
@@ -411,9 +479,13 @@ class BenchmarkingService:
         for group_rows in grouped.values():
             group_rows.sort(key=lambda item: float(item.final_score or 0.0), reverse=True)
             total = len(group_rows)
-            for index, row in enumerate(group_rows, start=1):
-                row.rank = index
-                row.percentile = round(((total - index + 1) / total) * 100.0, 2)
+            rank = 1
+            for index, row in enumerate(group_rows):
+                # Competition ranking: tied scores share the same rank
+                if index > 0 and row.final_score != group_rows[index - 1].final_score:
+                    rank = index + 1
+                row.rank = rank
+                row.percentile = round(((total - rank + 1) / total) * 100.0, 2)
                 row.band_code, row.band_label = _band_for_score(row.final_score)
 
     @staticmethod
@@ -457,6 +529,9 @@ class BenchmarkingService:
         kindergarten_id: Optional[int],
         min_sample_days: int,
     ) -> ClassificationResponse:
+        start = time.monotonic()
+        logger.info("KINDERGARTEN leaderboard start period=%s..%s level=%s", period_start, period_end, level)
+
         kindergartens = BenchmarkingService._get_kindergarten_scope(
             db,
             level=level,
@@ -468,6 +543,7 @@ class BenchmarkingService:
             kindergarten_id=kindergarten_id,
         )
         if not kindergartens:
+            logger.info("KINDERGARTEN leaderboard computed: 0 entities, 0 ranked in %.2fs", time.monotonic() - start)
             return ClassificationResponse(
                 period_start=period_start,
                 period_end=period_end,
@@ -487,6 +563,10 @@ class BenchmarkingService:
                 rows=[],
                 band_explanations=BenchmarkingService._band_explanations(),
                 indicator_explanations=BenchmarkingService._indicator_explanations(),
+                computation_time_ms=0.0,
+                applied_size_mode=size_mode,
+                applied_size_band=size_band,
+                applied_level=level,
             )
 
         kg_ids = [kg.id for kg in kindergartens]
@@ -510,7 +590,7 @@ class BenchmarkingService:
             if sample_size < min_sample_days:
                 insufficient_data = True
                 insufficient_reason = "عدد الأيام التعليمية المحتسبة أقل من الحد الأدنى للتصنيف"
-            elif coverage_pct < 40.0:
+            elif coverage_pct < ClassificationConfig.MIN_COVERAGE_PCT:
                 insufficient_data = True
                 insufficient_reason = "تغطية البيانات منخفضة ولا تسمح بمقارنة عادلة"
 
@@ -540,22 +620,9 @@ class BenchmarkingService:
                     "area": kg.area,
                 },
                 aspects={
-                    "الحوكمة": float(current_bundle.get("gqi_score", 0.0)),
-                    "تجربة_الطفل": float(current_bundle.get("cei_score", 0.0)),
-                    "التشغيل": _average([
-                        float(current_bundle.get("attendance_rate", 0.0)),
-                        float(current_bundle.get("ratio_compliance", 0.0)),
-                        float(current_bundle.get("report_submission_rate", 0.0)),
-                    ]),
-                    "الجودة": _average([
-                        float(current_bundle.get("training_completion_rate", 0.0)),
-                        float(current_bundle.get("incident_followup_sla", 0.0)),
-                        float(current_bundle.get("checklist_compliance", 0.0)),
-                    ]),
-                    "التفاعل": _average([
-                        float(current_bundle.get("parent_satisfaction", 0.0)),
-                        float(current_bundle.get("parent_response_rate", 0.0)),
-                    ]),
+                    # final_score = GQI_WEIGHT × GQI + CEI_WEIGHT × CEI — aspects mirror the formula exactly
+                    "جودة_الحوكمة (60%)": float(current_bundle.get("gqi_score", 0.0)),
+                    "تجربة_الطفل (40%)": float(current_bundle.get("cei_score", 0.0)),
                 },
             )
             rows.append(row)
@@ -570,6 +637,9 @@ class BenchmarkingService:
         )
         ranked_count = sum(1 for row in rows if row.rank is not None)
         insufficient_count = sum(1 for row in rows if row.insufficient_data)
+
+        duration = time.monotonic() - start
+        logger.info("KINDERGARTEN leaderboard computed: %d entities, %d ranked in %.2fs", len(rows), ranked_count, duration)
 
         return ClassificationResponse(
             period_start=period_start,
@@ -590,6 +660,10 @@ class BenchmarkingService:
             rows=rows,
             band_explanations=BenchmarkingService._band_explanations(),
             indicator_explanations=BenchmarkingService._indicator_explanations(),
+            computation_time_ms=round(duration * 1000, 2),
+            applied_size_mode=size_mode,
+            applied_size_band=size_band,
+            applied_level=level,
         )
 
     @staticmethod
@@ -677,6 +751,9 @@ class BenchmarkingService:
         area: Optional[str],
         min_sample_days: int,
     ) -> ClassificationResponse:
+        start = time.monotonic()
+        logger.info("SUPERVISOR leaderboard start period=%s..%s level=%s", period_start, period_end, level)
+
         kg_scope = BenchmarkingService._get_kindergarten_scope(
             db,
             level=level,
@@ -688,6 +765,8 @@ class BenchmarkingService:
             kindergarten_id=None,
         )
         if not kg_scope:
+            duration = time.monotonic() - start
+            logger.info("SUPERVISOR leaderboard computed: 0 entities, 0 ranked in %.2fs", duration)
             return ClassificationResponse(
                 period_start=period_start,
                 period_end=period_end,
@@ -701,6 +780,10 @@ class BenchmarkingService:
                 rows=[],
                 band_explanations=BenchmarkingService._band_explanations(),
                 indicator_explanations=BenchmarkingService._indicator_explanations(),
+                computation_time_ms=0.0,
+                applied_size_mode=size_mode,
+                applied_size_band=size_band,
+                applied_level=level,
             )
 
         kg_ids = [kg.id for kg in kg_scope]
@@ -830,9 +913,9 @@ class BenchmarkingService:
             timeliness_rate = _safe_percent(float(timely_count), float(submitted_count)) if submitted_count > 0 else 0.0
 
             components = [
-                (attendance_rate, 0.4, expected_total > 0),
-                (report_rate, 0.4, expected_total > 0),
-                (timeliness_rate, 0.2, submitted_count > 0),
+                (attendance_rate, ClassificationConfig.SUPERVISOR_ATTENDANCE_WEIGHT, expected_total > 0),
+                (report_rate, ClassificationConfig.SUPERVISOR_REPORT_WEIGHT, expected_total > 0),
+                (timeliness_rate, ClassificationConfig.SUPERVISOR_TIMELINESS_WEIGHT, submitted_count > 0),
             ]
             weight_sum = sum(weight for _, weight, enabled in components if enabled)
             final_score = (
@@ -847,7 +930,7 @@ class BenchmarkingService:
             if expected_total < min_sample_days:
                 insufficient_data = True
                 reason = "حجم البيانات الصفية أقل من الحد الأدنى للمقارنة"
-            elif coverage_pct < 40.0:
+            elif coverage_pct < ClassificationConfig.MIN_COVERAGE_PCT:
                 insufficient_data = True
                 reason = "تغطية إدخال الحضور والتقارير منخفضة"
             if insufficient_data:
@@ -864,7 +947,7 @@ class BenchmarkingService:
                     band_code=band_code,
                     band_label=band_label,
                     trend_vs_previous=None,
-                    trend_direction="لا يوجد",
+                    trend_direction=_trend_direction(None),
                     coverage_pct=coverage_pct,
                     sample_size=expected_total,
                     insufficient_data=insufficient_data,
@@ -895,6 +978,11 @@ class BenchmarkingService:
             )
         )
 
+        ranked_count = sum(1 for row in rows if row.rank is not None)
+        insufficient_count = sum(1 for row in rows if row.insufficient_data)
+        duration = time.monotonic() - start
+        logger.info("SUPERVISOR leaderboard computed: %d entities, %d ranked in %.2fs", len(rows), ranked_count, duration)
+
         return ClassificationResponse(
             period_start=period_start,
             period_end=period_end,
@@ -909,11 +997,15 @@ class BenchmarkingService:
                 "level_value": level_value,
             },
             total_entities=len(rows),
-            ranked_entities=sum(1 for row in rows if row.rank is not None),
-            insufficient_entities=sum(1 for row in rows if row.insufficient_data),
+            ranked_entities=ranked_count,
+            insufficient_entities=insufficient_count,
             rows=rows,
             band_explanations=BenchmarkingService._band_explanations(),
             indicator_explanations=BenchmarkingService._indicator_explanations(),
+            computation_time_ms=round(duration * 1000, 2),
+            applied_size_mode=size_mode,
+            applied_size_band=size_band,
+            applied_level=level,
         )
 
     @staticmethod
@@ -965,6 +1057,9 @@ class BenchmarkingService:
         area: Optional[str],
         min_sample_days: int,
     ) -> ClassificationResponse:
+        start = time.monotonic()
+        logger.info("MANAGER leaderboard start period=%s..%s level=%s", period_start, period_end, level)
+
         kg_result = BenchmarkingService.get_kindergarten_leaderboard(
             db,
             period_start=period_start,
@@ -985,6 +1080,12 @@ class BenchmarkingService:
             kg_result.rows = []
             kg_result.total_entities = 0
             kg_result.ranked_entities = 0
+            duration = time.monotonic() - start
+            logger.info("MANAGER leaderboard computed: 0 entities, 0 ranked in %.2fs", duration)
+            kg_result.computation_time_ms = round(duration * 1000, 2)
+            kg_result.applied_size_mode = size_mode
+            kg_result.applied_size_band = size_band
+            kg_result.applied_level = level
             return kg_result
 
         manager_rows = db.query(models.User).filter(
@@ -1027,9 +1128,9 @@ class BenchmarkingService:
             coverage_pct = _safe_percent(float(reviewed), float(expected_reviews)) if expected_reviews > 0 else 0.0
 
             components: List[Tuple[float, float, bool]] = [
-                (float(kg_row.final_score or 0.0), 0.6, kg_row.final_score is not None),
-                (on_time_rate, 0.2, reviewed > 0),
-                (quality_rate, 0.2, reviewed > 0),
+                (float(kg_row.final_score or 0.0), ClassificationConfig.MANAGER_GOVERNANCE_WEIGHT, kg_row.final_score is not None),
+                (on_time_rate, ClassificationConfig.MANAGER_ON_TIME_WEIGHT, reviewed > 0),
+                (quality_rate, ClassificationConfig.MANAGER_QUALITY_WEIGHT, reviewed > 0),
             ]
             weight_sum = sum(weight for _, weight, enabled in components if enabled)
             final_score = (
@@ -1043,7 +1144,7 @@ class BenchmarkingService:
             if expected_reviews < min_sample_days:
                 insufficient_data = True
                 reason = "عدد التقارير الإدارية في الفترة أقل من الحد الأدنى للمقارنة"
-            elif coverage_pct < 40.0:
+            elif coverage_pct < ClassificationConfig.MIN_COVERAGE_PCT:
                 insufficient_data = True
                 reason = "تغطية إجراءات الاعتماد منخفضة ولا تسمح بمقارنة عادلة"
 
@@ -1086,6 +1187,11 @@ class BenchmarkingService:
             )
         )
 
+        ranked_count = sum(1 for row in rows if row.rank is not None)
+        insufficient_count = sum(1 for row in rows if row.insufficient_data)
+        duration = time.monotonic() - start
+        logger.info("MANAGER leaderboard computed: %d entities, %d ranked in %.2fs", len(rows), ranked_count, duration)
+
         return ClassificationResponse(
             period_start=period_start,
             period_end=period_end,
@@ -1100,11 +1206,15 @@ class BenchmarkingService:
                 "level_value": level_value,
             },
             total_entities=len(rows),
-            ranked_entities=sum(1 for row in rows if row.rank is not None),
-            insufficient_entities=sum(1 for row in rows if row.insufficient_data),
+            ranked_entities=ranked_count,
+            insufficient_entities=insufficient_count,
             rows=rows,
             band_explanations=BenchmarkingService._band_explanations(),
             indicator_explanations=BenchmarkingService._indicator_explanations(),
+            computation_time_ms=round(duration * 1000, 2),
+            applied_size_mode=size_mode,
+            applied_size_band=size_band,
+            applied_level=level,
         )
 
 
@@ -1125,24 +1235,34 @@ def _row_by_entity_id(rows: List[ClassificationRow], entity_id: int) -> Optional
 
 
 def _actions_from_aspects(aspects: Dict[str, float]) -> List[str]:
+    seen: set = set()
     actions: List[str] = []
+
+    def _add(text: str) -> None:
+        if text not in seen:
+            seen.add(text)
+            actions.append(text)
+
     for key, value in aspects.items():
         if value >= 80:
             continue
         if "الحضور" in key:
-            actions.append("رفع اكتمال إدخال الحضور اليومي وتقليل التأخير في التوثيق.")
+            _add("رفع اكتمال إدخال الحضور اليومي وتقليل التأخير في التوثيق.")
         elif "التقارير" in key:
-            actions.append("متابعة تسليم التقارير اليومية واعتمادها خلال 24 ساعة.")
+            _add("متابعة تسليم التقارير اليومية واعتمادها خلال 24 ساعة.")
         elif "الوقت" in key:
-            actions.append("تحسين الالتزام بزمن الاعتماد ومراجعة أسباب التأخير.")
+            _add("تحسين الالتزام بزمن الاعتماد ومراجعة أسباب التأخير.")
         elif "الجودة" in key:
-            actions.append("تنفيذ خطة تحسين جودة الممارسات الصفية والتوثيق.")
+            _add("تنفيذ خطة تحسين جودة الممارسات الصفية والتوثيق.")
         elif "التفاعل" in key:
-            actions.append("زيادة تفاعل أولياء الأمور عبر الاستبيانات والتغذية الراجعة.")
+            _add("زيادة تفاعل أولياء الأمور عبر الاستبيانات والتغذية الراجعة.")
         elif "الحوكمة" in key:
-            actions.append("رفع انضباط الحوكمة عبر الالتزام بالسياسات ومتابعة مؤشرات المخاطر.")
+            _add("رفع انضباط الحوكمة عبر الالتزام بالسياسات ومتابعة مؤشرات المخاطر.")
+        elif "تجربة" in key:
+            _add("تعزيز جودة تجربة الطفل اليومية وتقليل فجوات الرعاية والتوثيق.")
         else:
-            actions.append("تنفيذ خطة تحسين لهذا المؤشر ومراجعته أسبوعياً.")
+            _add(f"تنفيذ خطة تحسين لمؤشر '{key.split('(')[0].strip()}' ومراجعته أسبوعياً.")
+
     if not actions:
         actions.append("الاستمرار على نفس النهج مع مراقبة الاستقرار شهرياً.")
     return actions[:5]
@@ -1164,8 +1284,16 @@ def _build_trend_points(
     city: Optional[str],
     area: Optional[str],
     min_sample_days: int,
-    periods: int = 6,
+    periods: int = ClassificationConfig.DEFAULT_TREND_PERIODS,
 ) -> List[Dict[str, Any]]:
+    cache_key = (
+        f"classification:trend:{entity_type}:{entity_id}:{level}:{level_value}:"
+        f"{size_mode}:{size_band}:{period_end}:{min_sample_days}:{periods}"
+    )
+    cached = dashboard_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     window_days = (period_end - period_start).days + 1
     if window_days <= 0:
         return []
@@ -1174,52 +1302,57 @@ def _build_trend_points(
     current_end = period_end
     for _ in range(periods):
         current_start = current_end - timedelta(days=window_days - 1)
-        if entity_type == "KINDERGARTEN":
-            response = BenchmarkingService.get_kindergarten_leaderboard(
-                db,
-                period_start=current_start,
-                period_end=current_end,
-                level=level,
-                level_value=level_value,
-                size_mode=size_mode,
-                size_band=size_band,
-                country=country,
-                governorate=governorate,
-                city=city,
-                area=area,
-                kindergarten_id=entity_id,
-                min_sample_days=min_sample_days,
-            )
-        elif entity_type == "MANAGER":
-            response = BenchmarkingService.get_manager_leaderboard(
-                db,
-                period_start=current_start,
-                period_end=current_end,
-                level=level,
-                level_value=level_value,
-                size_mode=size_mode,
-                size_band=size_band,
-                country=country,
-                governorate=governorate,
-                city=city,
-                area=area,
-                min_sample_days=min_sample_days,
-            )
-        else:
-            response = BenchmarkingService.get_supervisor_leaderboard(
-                db,
-                period_start=current_start,
-                period_end=current_end,
-                level=level,
-                level_value=level_value,
-                size_mode=size_mode,
-                size_band=size_band,
-                country=country,
-                governorate=governorate,
-                city=city,
-                area=area,
-                min_sample_days=min_sample_days,
-            )
+        try:
+            if entity_type == "KINDERGARTEN":
+                response = BenchmarkingService.get_kindergarten_leaderboard(
+                    db,
+                    period_start=current_start,
+                    period_end=current_end,
+                    level=level,
+                    level_value=level_value,
+                    size_mode=size_mode,
+                    size_band=size_band,
+                    country=country,
+                    governorate=governorate,
+                    city=city,
+                    area=area,
+                    kindergarten_id=entity_id,
+                    min_sample_days=min_sample_days,
+                )
+            elif entity_type == "MANAGER":
+                response = BenchmarkingService.get_manager_leaderboard(
+                    db,
+                    period_start=current_start,
+                    period_end=current_end,
+                    level=level,
+                    level_value=level_value,
+                    size_mode=size_mode,
+                    size_band=size_band,
+                    country=country,
+                    governorate=governorate,
+                    city=city,
+                    area=area,
+                    min_sample_days=min_sample_days,
+                )
+            else:
+                response = BenchmarkingService.get_supervisor_leaderboard(
+                    db,
+                    period_start=current_start,
+                    period_end=current_end,
+                    level=level,
+                    level_value=level_value,
+                    size_mode=size_mode,
+                    size_band=size_band,
+                    country=country,
+                    governorate=governorate,
+                    city=city,
+                    area=area,
+                    min_sample_days=min_sample_days,
+                )
+        except Exception:
+            logger.exception("Failed to compute trend point for %s %d period %s..%s", entity_type, entity_id, current_start, current_end)
+            current_end = current_start - timedelta(days=1)
+            continue
 
         row = _row_by_entity_id(response.rows, entity_id)
         points.append(
@@ -1233,80 +1366,86 @@ def _build_trend_points(
         current_end = current_start - timedelta(days=1)
 
     points.reverse()
+    dashboard_cache.set(cache_key, points, ttl_seconds=ClassificationConfig.CACHE_TTL_SECONDS)
     return points
 
 
 def _load_filters(db: Session) -> ClassificationFiltersResponse:
-    levels = [
-        {"value": "NETWORK", "label": "الشبكة"},
-        {"value": "COUNTRY", "label": "الدولة"},
-        {"value": "GOVERNORATE", "label": "المحافظة"},
-        {"value": "CITY", "label": "المدينة"},
-        {"value": "AREA", "label": "المنطقة"},
-        {"value": "KINDERGARTEN", "label": "الروضة"},
-    ]
-    size_modes = [
-        {"value": "CAPACITY", "label": "حسب السعة"},
-        {"value": "ENROLLMENT", "label": "حسب عدد الملتحقين"},
-        {"value": "CLASS_COUNT", "label": "حسب عدد الصفوف"},
-    ]
-    size_bands = [
-        {"value": "SMALL", "label": "صغير"},
-        {"value": "MEDIUM", "label": "متوسط"},
-        {"value": "LARGE", "label": "كبير"},
-    ]
+    try:
+        levels = [
+            {"value": "NETWORK", "label": "الشبكة"},
+            {"value": "COUNTRY", "label": "الدولة"},
+            {"value": "GOVERNORATE", "label": "المحافظة"},
+            {"value": "CITY", "label": "المدينة"},
+            {"value": "AREA", "label": "المنطقة"},
+            {"value": "KINDERGARTEN", "label": "الروضة"},
+        ]
+        size_modes = [
+            {"value": "CAPACITY", "label": "حسب السعة"},
+            {"value": "ENROLLMENT", "label": "حسب عدد الملتحقين"},
+            {"value": "CLASS_COUNT", "label": "حسب عدد الصفوف"},
+        ]
+        size_bands = [
+            {"value": "SMALL", "label": "صغير"},
+            {"value": "MEDIUM", "label": "متوسط"},
+            {"value": "LARGE", "label": "كبير"},
+        ]
 
-    has_country_column = BenchmarkingService._has_country_column()
-    if has_country_column:
-        country_rows = db.query(models.Kindergarten.country).filter(
-            models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
-            models.Kindergarten.country.isnot(None),
-            models.Kindergarten.country != "",
-        ).distinct().all()
-        countries = sorted({str(row[0]) for row in country_rows if row and row[0]})
-        if not countries:
+        has_country_column = BenchmarkingService._has_country_column()
+        if has_country_column:
+            country_rows = db.query(models.Kindergarten.country).filter(
+                models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+                models.Kindergarten.country.isnot(None),
+                models.Kindergarten.country != "",
+            ).distinct().all()
+            countries = sorted({str(row[0]) for row in country_rows if row and row[0]})
+            if not countries:
+                countries = [DEFAULT_COUNTRY_NAME]
+        else:
             countries = [DEFAULT_COUNTRY_NAME]
-    else:
-        countries = [DEFAULT_COUNTRY_NAME]
 
-    governorates = sorted(
-        {
-            str(row[0]) for row in db.query(models.Kindergarten.governorate).filter(
-                models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-            ).distinct().all()
-            if row and row[0]
-        }
-    )
-    cities = sorted(
-        {
-            str(row[0]) for row in db.query(models.Kindergarten.city).filter(
-                models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-            ).distinct().all()
-            if row and row[0]
-        }
-    )
-    areas = sorted(
-        {
-            str(row[0]) for row in db.query(models.Kindergarten.area).filter(
-                models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-            ).distinct().all()
-            if row and row[0]
-        }
-    )
+        governorates = sorted(
+            {
+                str(row[0]) for row in db.query(models.Kindergarten.governorate).filter(
+                    models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+                ).distinct().all()
+                if row and row[0]
+            }
+        )
+        cities = sorted(
+            {
+                str(row[0]) for row in db.query(models.Kindergarten.city).filter(
+                    models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+                ).distinct().all()
+                if row and row[0]
+            }
+        )
+        areas = sorted(
+            {
+                str(row[0]) for row in db.query(models.Kindergarten.area).filter(
+                    models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+                ).distinct().all()
+                if row and row[0]
+            }
+        )
 
-    return ClassificationFiltersResponse(
-        levels=levels,
-        size_modes=size_modes,
-        size_bands=size_bands,
-        countries=countries,
-        governorates=governorates,
-        cities=cities,
-        areas=areas,
-    )
+        return ClassificationFiltersResponse(
+            levels=levels,
+            size_modes=size_modes,
+            size_bands=size_bands,
+            countries=countries,
+            governorates=governorates,
+            cities=cities,
+            areas=areas,
+        )
+    except Exception:
+        logger.exception("Failed to load classification filters")
+        raise
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/admin/classification/filters", response_model=ClassificationFiltersResponse)
-def get_admin_classification_filters(
+def get_admin_classification_filters(request: Request, 
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -1314,8 +1453,9 @@ def get_admin_classification_filters(
     return _load_filters(db)
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/admin/classification/kindergartens", response_model=ClassificationResponse)
-def get_admin_kindergarten_leaderboard(
+def get_admin_kindergarten_leaderboard(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     level: str = Query("NETWORK"),
@@ -1327,7 +1467,7 @@ def get_admin_kindergarten_leaderboard(
     city: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
     kindergarten_id: Optional[int] = Query(None),
-    min_sample_days: int = Query(30, ge=1, le=365),
+    min_sample_days: int = Query(30, ge=1, le=365, description="Minimum expected child-days in period to qualify for ranking"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -1351,8 +1491,9 @@ def get_admin_kindergarten_leaderboard(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/admin/classification/managers", response_model=ClassificationResponse)
-def get_admin_manager_leaderboard(
+def get_admin_manager_leaderboard(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     level: str = Query("NETWORK"),
@@ -1363,7 +1504,7 @@ def get_admin_manager_leaderboard(
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
-    min_sample_days: int = Query(30, ge=1, le=365),
+    min_sample_days: int = Query(30, ge=1, le=365, description="Minimum number of submitted daily reports in period to qualify for ranking"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -1386,8 +1527,9 @@ def get_admin_manager_leaderboard(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/admin/classification/supervisors", response_model=ClassificationResponse)
-def get_admin_supervisor_leaderboard(
+def get_admin_supervisor_leaderboard(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     level: str = Query("NETWORK"),
@@ -1398,7 +1540,7 @@ def get_admin_supervisor_leaderboard(
     governorate: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
     area: Optional[str] = Query(None),
-    min_sample_days: int = Query(30, ge=1, le=365),
+    min_sample_days: int = Query(30, ge=1, le=365, description="Minimum expected child-days across assigned classes to qualify for ranking"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
@@ -1421,8 +1563,9 @@ def get_admin_supervisor_leaderboard(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/admin/classification/detail", response_model=ClassificationDetailResponse)
-def get_admin_classification_detail(
+def get_admin_classification_detail(request: Request, 
     entity_type: str = Query(..., pattern="^(KINDERGARTEN|MANAGER|SUPERVISOR)$"),
     entity_id: int = Query(..., ge=1),
     period_start: Optional[date] = Query(None),
@@ -1444,6 +1587,10 @@ def get_admin_classification_detail(
     period_start, period_end = _normalize_period(period_start, period_end)
 
     if entity_type == "KINDERGARTEN":
+        exists = db.query(models.Kindergarten.id).filter(models.Kindergarten.id == entity_id).first()
+        if not exists:
+            logger.warning("Classification detail lookup: %s id %d not found in database", entity_type, entity_id)
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{entity_type} with id {entity_id} not found")
         response = BenchmarkingService.get_kindergarten_leaderboard(
             db,
             period_start=period_start,
@@ -1460,6 +1607,13 @@ def get_admin_classification_detail(
             min_sample_days=min_sample_days,
         )
     elif entity_type == "MANAGER":
+        exists = db.query(models.User.id).filter(
+            models.User.id == entity_id,
+            models.User.role == models.UserRole.MANAGER,
+        ).first()
+        if not exists:
+            logger.warning("Classification detail lookup: %s id %d not found in database", entity_type, entity_id)
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{entity_type} with id {entity_id} not found")
         response = BenchmarkingService.get_manager_leaderboard(
             db,
             period_start=period_start,
@@ -1475,6 +1629,13 @@ def get_admin_classification_detail(
             min_sample_days=min_sample_days,
         )
     else:
+        exists = db.query(models.User.id).filter(
+            models.User.id == entity_id,
+            models.User.role == models.UserRole.SUPERVISOR,
+        ).first()
+        if not exists:
+            logger.warning("Classification detail lookup: %s id %d not found in database", entity_type, entity_id)
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{entity_type} with id {entity_id} not found")
         response = BenchmarkingService.get_supervisor_leaderboard(
             db,
             period_start=period_start,
@@ -1529,8 +1690,9 @@ def get_admin_classification_detail(
     )
 
 
-@router.post("/admin/classification/cache/warm")
-def warm_admin_classification_cache(
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+@router.post("/admin/classification/cache/warm", response_model=CacheWarmResponse)
+def warm_admin_classification_cache(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     db: Session = Depends(get_db),
@@ -1550,27 +1712,46 @@ def warm_admin_classification_cache(
     )
     warmed_entries = 0
     for kg in kindergartens:
-        BenchmarkingService._bundle(db, kg.id, period_start, period_end)
-        warmed_entries += 1
-    return {
-        "message": "تم تجهيز ذاكرة مؤقتة للتصنيف",
-        "period_start": period_start.isoformat(),
-        "period_end": period_end.isoformat(),
-        "warmed_entries": warmed_entries,
-    }
+        try:
+            BenchmarkingService._bundle(db, kg.id, period_start, period_end)
+            warmed_entries += 1
+        except Exception:
+            logger.exception("Cache warm failed for kindergarten %d", kg.id)
+    logger.info("Cache warm complete: %d/%d entries warmed", warmed_entries, len(kindergartens))
+    log_audit_event(
+        db, AuditAction.CLASSIFICATION_CACHE_WARM, current_user,
+        target_type="CLASSIFICATION_CACHE",
+        metadata={"period_start": period_start.isoformat(), "period_end": period_end.isoformat(), "warmed_entries": warmed_entries},
+        sensitivity_level=1,
+    )
+    return CacheWarmResponse(
+        message="تم تجهيز ذاكرة مؤقتة للتصنيف",
+        period_start=period_start.isoformat(),
+        period_end=period_end.isoformat(),
+        warmed_entries=warmed_entries,
+    )
 
 
-@router.post("/admin/classification/cache/invalidate")
-def invalidate_admin_classification_cache(
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+@router.post("/admin/classification/cache/invalidate", response_model=CacheInvalidateResponse)
+def invalidate_admin_classification_cache(request: Request, 
     current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     _ensure_admin(current_user)
-    dashboard_cache.clear()
-    return {"message": "تمت إعادة تهيئة الذاكرة المؤقتة للتصنيف"}
+    deleted = dashboard_cache.clear_prefix("classification:")
+    log_audit_event(
+        db, AuditAction.CLASSIFICATION_CACHE_INVALIDATE, current_user,
+        target_type="CLASSIFICATION_CACHE",
+        metadata={"deleted_entries": deleted},
+        sensitivity_level=2,
+    )
+    return CacheInvalidateResponse(message="تمت إعادة تهيئة الذاكرة المؤقتة للتصنيف", deleted_entries=deleted)
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/manager/benchmarking/summary", response_model=ManagerBenchmarkSummaryResponse)
-def get_manager_benchmarking_summary(
+def get_manager_benchmarking_summary(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     size_mode: str = Query("ENROLLMENT"),
@@ -1587,7 +1768,9 @@ def get_manager_benchmarking_summary(
     period_start, period_end = _normalize_period(period_start, period_end)
     manager_kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == current_user.kindergarten_id).first()
     if manager_kg is None:
+        logger.warning("Manager %d benchmarking: associated kindergarten %d not found", current_user.id, current_user.kindergarten_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Manager's associated kindergarten not found")
+    logger.info("Manager %d benchmarking summary for kindergarten %d (governorate=%s)", current_user.id, manager_kg.id, manager_kg.governorate)
 
     result = BenchmarkingService.get_manager_leaderboard(
         db,
@@ -1645,8 +1828,9 @@ def get_manager_benchmarking_summary(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/supervisor/performance/summary", response_model=SupervisorPerformanceSummaryResponse)
-def get_supervisor_performance_summary(
+def get_supervisor_performance_summary(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     size_mode: str = Query("ENROLLMENT"),
@@ -1694,8 +1878,9 @@ def get_supervisor_performance_summary(
     )
 
 
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
 @router.get("/parent/kindergarten/quality-band", response_model=ParentQualityBandResponse)
-def get_parent_kindergarten_quality_band(
+def get_parent_kindergarten_quality_band(request: Request, 
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     db: Session = Depends(get_db),

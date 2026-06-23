@@ -52,10 +52,16 @@
   };
 
   function isEnglishUi() {
+    if (typeof t === "function") {
+      return !t("ar", "en");
+    }
     return String(document.documentElement.lang || "").toLowerCase() === "en";
   }
 
   function t(arText, enText) {
+    if (typeof window.t === "function") {
+      return window.t(arText, enText);
+    }
     return isEnglishUi() ? enText : arText;
   }
 

@@ -40,7 +40,7 @@
       />
       {% endblock %}
       <meta name="author" content="KinJo" />
-      <meta name="theme-color" content="#2563eb" />
+      <meta name="theme-color" content="#1F5E47" />
       <meta name="color-scheme" content="light" />
       <title>
         {% block title %}KinJo{% endblock %} &ndash; KinJo
@@ -78,6 +78,89 @@
         integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+"
         crossorigin="anonymous"
       />
+
+      <!-- Brand token override: loaded AFTER Bootstrap so our values win over --bs-primary: #0d6efd -->
+      <style>
+        :root {
+          --bs-primary:               #1F5E47;
+          --bs-primary-rgb:           31, 94, 71;
+          --bs-primary-bg-subtle:     #e0f0eb;
+          --bs-primary-border-subtle: #a8d4c4;
+          --bs-primary-text-emphasis: #163d2e;
+          --bs-link-color:            #1F5E47;
+          --bs-link-color-rgb:        31, 94, 71;
+          --bs-link-hover-color:      #2F7D62;
+          --bs-link-hover-color-rgb:  47, 125, 98;
+          /* Remap info to brand green — Bootstrap default is cyan #0dcaf0 */
+          --bs-info:                  #2F7D62;
+          --bs-info-rgb:              47, 125, 98;
+          --bs-info-bg-subtle:        #e0f0eb;
+          --bs-info-border-subtle:    #a8d4c4;
+          --bs-info-text-emphasis:    #163d2e;
+        }
+        .form-check-input:checked {
+          background-color: #1F5E47 !important;
+          border-color: #1F5E47 !important;
+        }
+        .form-check-input:focus {
+          border-color: #1F5E47 !important;
+          box-shadow: 0 0 0 0.25rem rgba(31, 94, 71, 0.25) !important;
+        }
+        /* Bootstrap 5.3 uses component-scoped CSS vars for .btn-primary that
+           do NOT inherit from :root --bs-primary. Override all of them here. */
+        .btn-primary {
+          --bs-btn-color: #fff;
+          --bs-btn-bg: #1F5E47;
+          --bs-btn-border-color: #1F5E47;
+          --bs-btn-hover-color: #fff;
+          --bs-btn-hover-bg: #163d2e;
+          --bs-btn-hover-border-color: #163d2e;
+          --bs-btn-focus-shadow-rgb: 31, 94, 71;
+          --bs-btn-active-color: #fff;
+          --bs-btn-active-bg: #163d2e;
+          --bs-btn-active-border-color: #163d2e;
+          --bs-btn-disabled-bg: #1F5E47;
+          --bs-btn-disabled-border-color: #1F5E47;
+        }
+        .btn-outline-primary {
+          --bs-btn-color: #1F5E47;
+          --bs-btn-border-color: #1F5E47;
+          --bs-btn-hover-color: #fff;
+          --bs-btn-hover-bg: #1F5E47;
+          --bs-btn-hover-border-color: #1F5E47;
+          --bs-btn-focus-shadow-rgb: 31, 94, 71;
+          --bs-btn-active-color: #fff;
+          --bs-btn-active-bg: #1F5E47;
+          --bs-btn-active-border-color: #1F5E47;
+        }
+        /* Bootstrap .btn-info/.btn-outline-info use component-scoped vars
+           that do NOT inherit from :root --bs-info — must override explicitly. */
+        .btn-info {
+          --bs-btn-color: #fff;
+          --bs-btn-bg: #2F7D62;
+          --bs-btn-border-color: #2F7D62;
+          --bs-btn-hover-color: #fff;
+          --bs-btn-hover-bg: #1F5E47;
+          --bs-btn-hover-border-color: #1F5E47;
+          --bs-btn-focus-shadow-rgb: 47, 125, 98;
+          --bs-btn-active-color: #fff;
+          --bs-btn-active-bg: #1F5E47;
+          --bs-btn-active-border-color: #1F5E47;
+          --bs-btn-disabled-bg: #2F7D62;
+          --bs-btn-disabled-border-color: #2F7D62;
+        }
+        .btn-outline-info {
+          --bs-btn-color: #2F7D62;
+          --bs-btn-border-color: #2F7D62;
+          --bs-btn-hover-color: #fff;
+          --bs-btn-hover-bg: #2F7D62;
+          --bs-btn-hover-border-color: #2F7D62;
+          --bs-btn-focus-shadow-rgb: 47, 125, 98;
+          --bs-btn-active-color: #fff;
+          --bs-btn-active-bg: #2F7D62;
+          --bs-btn-active-border-color: #2F7D62;
+        }
+      </style>
 
       <!-- Custom CSS -->
       <link rel="stylesheet" href="/static/css/kinjo.css" />
@@ -280,8 +363,8 @@
           align-items: center;
           justify-content: center;
           background: #fff;
-          color: var(--kinjo-primary, #2563eb);
-          border: 1.5px solid var(--kinjo-primary, #2563eb);
+          color: var(--kinjo-primary, #1F5E47);
+          border: 1.5px solid var(--kinjo-primary, #1F5E47);
           box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
           cursor: pointer;
           font-size: 1.1rem;
@@ -321,9 +404,9 @@
           cursor: pointer;
         }
         .a11y-opt-btn.active {
-          background: var(--kinjo-primary, #2563eb);
+          background: var(--kinjo-primary, #1F5E47);
           color: #fff;
-          border-color: var(--kinjo-primary, #2563eb);
+          border-color: var(--kinjo-primary, #1F5E47);
         }
         .a11y-reset-btn {
           width: 100%;
@@ -357,7 +440,7 @@
           display: none;
           align-items: center;
           justify-content: center;
-          background: var(--kinjo-primary, #2563eb);
+          background: var(--kinjo-primary, #1F5E47);
           color: #fff;
           border: none;
           box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);

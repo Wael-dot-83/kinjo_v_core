@@ -331,6 +331,7 @@ class TestCreateUserBranches:
                 "date_of_birth": child_dob,
                 "father_name": "Ali Mohammed",
                 "mother_first_name": "Fatima",
+                "mother_last_name": "Ali",
             }]
         })
         assert r.status_code == 201

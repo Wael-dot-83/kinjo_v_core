@@ -22,8 +22,7 @@
     "toggle_menu": "تبديل قائمة التنقل",
     "language_switch": "تبديل اللغة",
     "user_menu": "قائمة المستخدم",
-    "heatmap": "خريطة المخاطر",
-    "kindergarten_overview": "نظرة عامة على الروضات"
+    "heatmap": "خريطة المخاطر"
   },
   "sidebar": {
     "messages": "الرسائل",
@@ -39,8 +38,7 @@
     "import_logs": "سجلات الاستيراد",
     "alerts": "التنبيهات",
     "safety_analytics": "تحليلات السلامة",
-    "impersonation": "انتحال الهوية",
-    "kpi_dashboard": "مؤشرات الأداء"
+    "impersonation": "انتحال الهوية"
   },
   "common": {
     "refresh": "تحديث",
@@ -95,60 +93,53 @@
     "minutes_ago": "دقائق مضت",
     "hours_ago": "ساعات مضت",
     "days_ago": "أيام مضت",
-    "locale": "ar-SA",
-    "table": "جدول",
-    "cards": "بطاقات"
-  },
-  "status": {
-    "active": "نشط",
-    "inactive": "غير نشط",
-    "suspended": "موقوف"
+    "locale": "ar-SA"
   },
   "dashboard": {
-    "title": "لوحة تحكم كينجو",
+    "title": "لوحة التحكم",
     "welcome": "مرحباً بك في إدارة كينجو",
-    "subtitle": "مراقبة النظام وإدارة العمليات — رياض الأطفال في المملكة الأردنية الهاشمية",
+    "subtitle": "مراقبة أداء النظام وإدارة العمليات",
     "total_users": "إجمالي المستخدمين",
-    "active_users": "مستخدمون نشطون اليوم",
+    "active_users": "المستخدمون النشطون",
     "total_kindergartens": "إجمالي الروضات",
     "active_kindergartens": "الروضات النشطة",
-    "total_submissions": "طلبات التسجيل المعلقة",
-    "pending_submissions": "تقارير يومية معلقة",
-    "page_load_time": "وقت تحميل الصفحة",
-    "page_load_subtitle": "أداء النظام",
-    "data_quality_score": "معدل الحضور",
-    "recent_incidents": "حوادث (آخر 7 أيام)",
+    "total_submissions": "إجمالي الطلبات",
+    "pending_submissions": "الطلبات المعلقة",
+    "data_quality_score": "مؤشر جودة البيانات",
     "no_recent_activity": "لا يوجد نشاط حديث",
     "no_activity_hint": "ابدأ بإضافة مستخدمين أو متابعة العمليات لعرض النشاط هنا",
     "no_alerts": "لا توجد تنبيهات نشطة",
     "manage_users": "إدارة المستخدمين",
-    "add_user": "إضافة مستخدم",
     "send_message": "إرسال رسالة",
-    "view_analytics": "التحليلات",
-    "data_management": "استيراد بيانات",
-    "incident_reports": "تقارير الحوادث",
-    "governance_reports": "تقارير الحوكمة",
-    "audit_logs": "سجلات التدقيق",
+    "view_analytics": "عرض التحليلات",
+    "data_management": "إدارة البيانات",
     "user_activity": "نشاط المستخدمين",
-    "data_submissions": "الطلبات والتسجيل",
+    "data_submissions": "عمليات الإدخال",
     "reports_today": "التقارير اليوم",
     "compliance_rate": "معدل الامتثال",
     "system_status": "حالة النظام",
     "recent_activity": "النشاط الأخير",
     "quick_actions": "الإجراءات السريعة",
     "notifications": "الإشعارات",
-    "alerts": "تنبيهات النظام",
-    "statistics": "المؤشرات الرئيسية",
+    "alerts": "التنبيهات",
+    "statistics": "الإحصائيات",
     "overview": "نظرة عامة",
     "performance": "الأداء",
-    "trends": "الاتجاهات والإحصائيات",
+    "trends": "الاتجاهات",
     "summary": "الملخص",
-    "system_health": "حالة النظام",
-    "last_updated": "آخر تحديث",
-    "refresh": "تحديث",
-    "loading": "جارٍ التحميل…",
-    "error_title": "تعذّر تحميل لوحة التحكم",
-    "retry": "إعادة المحاولة"
+    "dq_good": "جيد",
+    "dq_average": "متوسط",
+    "dq_low": "منخفض",
+    "enrollment_active": "نشط",
+    "enrollment_pending": "قيد الانتظار",
+    "enrollment_rejected": "مرفوض",
+    "enrollment_withdrawn": "منسحب",
+    "enrollment_waitlisted": "قائمة الانتظار",
+    "no_alerts_hint": "سيتم إخطارك عند وقوع أحداث مهمة في النظام",
+    "enrollment_status": "حالة التسجيل",
+    "time_minutes_ago": "منذ {{count}} دقيقة",
+    "time_hours_ago": "منذ {{count}} ساعة",
+    "time_days_ago": "منذ {{count}} يوم"
   },
   "users": {
     "title": "إدارة المستخدمين",
@@ -376,7 +367,8 @@
     "duplicate_entry": "هذا الإدخال موجود بالفعل.",
     "operation_failed": "فشلت العملية. يرجى المحاولة مرة أخرى.",
     "session_expired": "انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى.",
-    "maintenance_mode": "النظام قيد الصيانة حالياً."
+    "maintenance_mode": "النظام قيد الصيانة حالياً.",
+    "request_timeout": "انتهت مهلة الطلب. يرجى المحاولة مرة أخرى."
   },
   "success": {
     "operation_completed": "تم إكمال العملية بنجاح.",
@@ -468,6 +460,41 @@
     "cancel_text": "إلغاء",
     "loading": "جارٍ التحميل..."
   },
+  "heatmap": {
+    "multi_indicator_title": "خرائط المؤشرات الجغرافية",
+    "multi_indicator_description": "عرض ست خرائط حرارية منفصلة حسب المؤشر على مستوى محافظات الأردن.",
+    "show_indicators": "عرض المؤشرات",
+    "all_indicators": "الكل",
+    "covered_governorates": "المحافظات المغطاة",
+    "average_indicator": "متوسط المؤشر",
+    "highest_risk_governorate": "أعلى محافظة خطورة",
+    "general_level": "المستوى العام",
+    "no_data": "لا توجد بيانات كافية لهذا المؤشر",
+    "map_load_error": "تعذر تحميل الخريطة الجغرافية",
+    "retry": "إعادة المحاولة",
+    "risk_levels": {
+      "low": "منخفض",
+      "medium": "متوسط",
+      "high": "مرتفع",
+      "critical": "حرج"
+    },
+    "indicators": {
+      "overall_risk": "مؤشر الخطر العام",
+      "attendance": "مؤشر الحضور",
+      "incidents": "مؤشر الحوادث",
+      "governance": "مؤشر الحوكمة",
+      "data_quality": "مؤشر جودة البيانات",
+      "occupancy": "مؤشر الإشغال"
+    },
+    "indicator_descriptions": {
+      "overall_risk": "يوضح مستوى الخطر الكلي لكل محافظة.",
+      "attendance": "يوضح مستوى الخطر المرتبط بانخفاض الحضور.",
+      "incidents": "يوضح مستوى الخطر المرتبط بمعدل الحوادث.",
+      "governance": "يوضح مستوى الخطر المرتبط بانخفاض مؤشر الحوكمة.",
+      "data_quality": "يوضح مستوى الخطر المرتبط بجودة واكتمال البيانات.",
+      "occupancy": "يوضح مستوى الخطر المرتبط بالطاقة الاستيعابية ونسبة الإشغال."
+    }
+  },
   "kpi": {
     "title": "لوحة مؤشرات الأداء الرئيسية",
     "subtitle": "رصد مؤشرات الأداء عبر جميع روضات الشبكة",
@@ -497,5 +524,10 @@
     "trend_up": "ارتفاع",
     "trend_down": "انخفاض",
     "trend_stable": "مستقر"
+  },
+  "status": {
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "suspended": "موقوف"
   }
 }

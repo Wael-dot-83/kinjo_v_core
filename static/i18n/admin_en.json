@@ -114,8 +114,6 @@
     "active_kindergartens": "Active Kindergartens",
     "total_submissions": "Total Submissions",
     "pending_submissions": "Pending Submissions",
-    "page_load_time": "Page Load Time",
-    "page_load_subtitle": "System performance",
     "data_quality_score": "Data Quality",
     "no_recent_activity": "No recent activity",
     "no_activity_hint": "Add users or monitor operations to see activity here",
@@ -137,7 +135,20 @@
     "overview": "Overview",
     "performance": "Performance",
     "trends": "Trends",
-    "summary": "Summary"
+    "summary": "Summary",
+    "dq_good": "Good",
+    "dq_average": "Average",
+    "dq_low": "Low",
+    "enrollment_active": "Active",
+    "enrollment_pending": "Pending",
+    "enrollment_rejected": "Rejected",
+    "enrollment_withdrawn": "Withdrawn",
+    "enrollment_waitlisted": "Waitlisted",
+    "no_alerts_hint": "You'll be notified when important system events occur",
+    "enrollment_status": "Enrollment Status",
+    "time_minutes_ago": "{{count}} minutes ago",
+    "time_hours_ago": "{{count}} hours ago",
+    "time_days_ago": "{{count}} days ago"
   },
   "users": {
     "title": "User Management",
@@ -369,7 +380,8 @@
     "duplicate_entry": "This entry already exists.",
     "operation_failed": "Operation failed. Please try again.",
     "session_expired": "Your session has expired. Please log in again.",
-    "maintenance_mode": "System is currently under maintenance."
+    "maintenance_mode": "System is currently under maintenance.",
+    "request_timeout": "Request timed out. Please try again."
   },
   "success": {
     "operation_completed": "Operation completed successfully.",
@@ -490,5 +502,40 @@
     "confirm_text": "Confirm",
     "cancel_text": "Cancel",
     "loading": "Loading..."
+  },
+  "heatmap": {
+    "multi_indicator_title": "Geographic Indicator Heatmaps",
+    "multi_indicator_description": "Six separate heatmaps by indicator across Jordan's 12 governorates.",
+    "show_indicators": "Show Indicators",
+    "all_indicators": "All",
+    "covered_governorates": "Covered Governorates",
+    "average_indicator": "Average Indicator",
+    "highest_risk_governorate": "Highest Risk Governorate",
+    "general_level": "Overall Level",
+    "no_data": "Insufficient data for this indicator",
+    "map_load_error": "Failed to load geographic map",
+    "retry": "Retry",
+    "risk_levels": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "indicators": {
+      "overall_risk": "Overall Risk",
+      "attendance": "Attendance",
+      "incidents": "Incidents",
+      "governance": "Governance",
+      "data_quality": "Data Quality",
+      "occupancy": "Occupancy"
+    },
+    "indicator_descriptions": {
+      "overall_risk": "Shows overall risk level per governorate.",
+      "attendance": "Shows risk associated with low attendance rates.",
+      "incidents": "Shows risk associated with incident rates.",
+      "governance": "Shows risk associated with low governance scores.",
+      "data_quality": "Shows risk associated with data quality and completeness.",
+      "occupancy": "Shows risk associated with capacity and occupancy rates."
+    }
   }
 }

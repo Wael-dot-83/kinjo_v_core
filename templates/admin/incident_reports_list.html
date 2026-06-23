@@ -390,7 +390,7 @@
         }
 
         try {
-            const response = await fetch('/api/admin/reports/incidents/generate', {
+            const response = await fetchWithAuth('/api/admin/reports/incidents/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',

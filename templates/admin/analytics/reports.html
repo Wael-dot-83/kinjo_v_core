@@ -1,6 +1,7 @@
 ﻿{% extends "admin_base.html" %}
+{% from 'components/date-range-filter.html' import date_range_filter %}
 
-{% block title %}{% if ui_lang == 'en' %}System Reports{% else %}تقارير النظام{% endif %} — KinJo{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Reports Center{% else %}مركز التقارير{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
 <a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
@@ -11,135 +12,374 @@
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4">
-  <h1 class="admin-page-title">
-    <i class="bi bi-file-earmark-text me-2"></i>
-    {% if ui_lang == 'en' %}System Reports{% else %}تقارير النظام{% endif %}
-  </h1>
+<div class="admin-page-header reports-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
+  <div class="reports-page-titleblock">
+    <h1 class="admin-page-title mb-0" style="font: var(--type-page-title)">
+      <i class="bi bi-file-earmark-text me-2"></i>
+      {% if ui_lang == 'en' %}Reports Center{% else %}مركز التقارير{% endif %}
+    </h1>
+    <small class="text-muted mt-1" id="reportsLastUpdated">
+      <i class="bi bi-clock"></i>
+      <span>{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+    </small>
+  </div>
+  <div class="reports-page-actions">
+    {{ date_range_filter(
+      start_id="periodStart",
+      end_id="periodEnd",
+      governorate_id="governorateFilter",
+      show_governorate=(current_user.role in ["ADMIN","SUPERVISOR"]),
+      refresh_btn_id="refreshReportBtn",
+      on_refresh="loadReportPreview",
+      show_export=False,
+      user_role=current_user.role
+    ) }}
+  </div>
 </div>
 
-
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-header bg-white py-3">
-                <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Export Central Reports{% else %}تصدير التقارير المركزية{% endif %}</h5>
-            </div>
-            <div class="card-body p-4">
-                <form id="exportForm">
-                    <!-- Report Type -->
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">{% if ui_lang == 'en' %}Report Type{% else %}نوع التقرير{% endif %}</label>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="form-check custom-card-check">
-                                    <input class="form-check-input" type="radio" name="reportType" id="typeAttendance"
-                                        value="attendance" checked>
-                                    <label class="form-check-label w-100" for="typeAttendance">
-                                        <div class="p-3 border rounded">
-                                            <i class="bi bi-calendar-check text-success fs-4 mb-2 d-block"></i>
-                                            <strong>{% if ui_lang == 'en' %}Attendance Report{% else %}تقرير الحضور والغياب{% endif %}</strong>
-                                            <div class="small text-muted">{% if ui_lang == 'en' %}Attendance summary for all kindergartens{% else %}ملخص الحضور لكل الروضات{% endif %}</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check custom-card-check">
-                                    <input class="form-check-input" type="radio" name="reportType" id="typeIncidents"
-                                        value="incidents">
-                                    <label class="form-check-label w-100" for="typeIncidents">
-                                        <div class="p-3 border rounded">
-                                            <i class="bi bi-exclamation-triangle text-warning fs-4 mb-2 d-block"></i>
-                                            <strong>{% if ui_lang == 'en' %}Incidents Report{% else %}تقرير الحوادث{% endif %}</strong>
-                                            <div class="small text-muted">{% if ui_lang == 'en' %}Incident analysis and rates{% else %}تحليل الحوادث ومعدلاتها{% endif %}</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check custom-card-check">
-                                    <input class="form-check-input" type="radio" name="reportType" id="typeCompliance"
-                                        value="compliance">
-                                    <label class="form-check-label w-100" for="typeCompliance">
-                                        <div class="p-3 border rounded">
-                                            <i class="bi bi-shield-check text-info fs-4 mb-2 d-block"></i>
-                                            <strong>{% if ui_lang == 'en' %}Compliance & Governance Report{% else %}تقرير الامتثال والحوكمة{% endif %}</strong>
-                                            <div class="small text-muted">{% if ui_lang == 'en' %}Performance and evaluation indicators{% else %}مؤشرات الأداء والتقييم{% endif %}</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check custom-card-check">
-                                    <input class="form-check-input" type="radio" name="reportType" id="typeFull"
-                                        value="full_audit">
-                                    <label class="form-check-label w-100" for="typeFull">
-                                        <div class="p-3 border rounded">
-                                            <i class="bi bi-list-check text-primary fs-4 mb-2 d-block"></i>
-                                            <strong>{% if ui_lang == 'en' %}Comprehensive Audit Log{% else %}سجل التدقيق الشامل{% endif %}</strong>
-                                            <div class="small text-muted">{% if ui_lang == 'en' %}All operations and activities{% else %}كافة العمليات والنشاطات{% endif %}</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Date Range -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label for="startDate" class="form-label fw-bold">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %}</label>
-                            <input type="date" class="form-control" id="startDate" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="endDate" class="form-label fw-bold">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %}</label>
-                            <input type="date" class="form-control" id="endDate" required>
-                        </div>
-                    </div>
-
-                    <!-- Format -->
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">{% if ui_lang == 'en' %}File Format{% else %}صيغة الملف{% endif %}</label>
-                        <select class="form-select w-auto" id="exportFormat">
-                            <option value="csv">{% if ui_lang == 'en' %}CSV (Excel compatible){% else %}CSV (متوافق مع إكسل){% endif %}</option>
-                            <option value="pdf" disabled>{% if ui_lang == 'en' %}PDF (Coming soon){% else %}PDF (قريباً){% endif %}</option>
-                        </select>
-                    </div>
-
-                    <hr>
-
-                    <div class="d-flex justify-content-end gap-2">
-                        <button type="button" class="btn btn-outline-secondary"
-                            onclick="window.history.back()">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                        <button type="submit" class="btn btn-primary px-4">
-                            <i class="bi bi-download me-2"></i>{% if ui_lang == 'en' %}Download Report{% else %}تحميل التقرير{% endif %}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+<!-- Quick Summary Cards -->
+<div class="row g-4 mb-section gap-card" id="reportsSummaryCards">
+  <div class="col-md-6 col-xl-3">
+    <div class="card h-100 border-start border-4 border-primary shadow-sm" role="region">
+      <div class="card-body p-card">
+        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Reports Generated{% else %}التقارير المنشأة{% endif %}</h6>
+        <h3 class="mb-0 fw-bold text-primary" id="statReportsGenerated">--</h3>
+        <small class="text-muted">{% if ui_lang == 'en' %}This month{% else %}هذا الشهر{% endif %}</small>
+      </div>
     </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card h-100 border-start border-4 border-success shadow-sm" role="region">
+      <div class="card-body p-card">
+        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Scheduled Reports{% else %}تقارير مجدولة{% endif %}</h6>
+        <h3 class="mb-0 fw-bold text-success" id="statScheduledReports">--</h3>
+        <small class="text-muted">{% if ui_lang == 'en' %}Active schedules{% else %}جدولات نشطة{% endif %}</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card h-100 border-start border-4 border-warning shadow-sm" role="region">
+      <div class="card-body p-card">
+        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Failed Exports{% else %}تصديرات فاشلة{% endif %}</h6>
+        <h3 class="mb-0 fw-bold text-warning" id="statFailedExports">--</h3>
+        <small class="text-muted">{% if ui_lang == 'en' %}Requires attention{% else %}تتطلب انتباه{% endif %}</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card h-100 border-start border-4 border-info shadow-sm" role="region">
+      <div class="card-body p-card">
+        <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Last Generated{% else %}آخر تقرير{% endif %}</h6>
+        <h3 class="mb-0 fw-bold text-info" id="statLastGenerated">--</h3>
+        <small class="text-muted" id="statLastGeneratedTime">--</small>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- Report Category Tabs -->
+<div class="reports-tabs mb-4">
+  <ul class="nav nav-pills" id="reportCategoryTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-attendance" data-bs-toggle="pill" data-bs-target="#pane-attendance" type="button" role="tab">
+        <i class="bi bi-calendar-check me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور والغياب{% endif %}
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-incidents" data-bs-toggle="pill" data-bs-target="#pane-incidents" type="button" role="tab">
+        <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-compliance" data-bs-toggle="pill" data-bs-target="#pane-compliance" type="button" role="tab">
+        <i class="bi bi-shield-check me-1"></i>{% if ui_lang == 'en' %}Governance{% else %}الحوكمة والامتثال{% endif %}
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-enrollment" data-bs-toggle="pill" data-bs-target="#pane-enrollment" type="button" role="tab">
+        <i class="bi bi-folder2-open me-1"></i>{% if ui_lang == 'en' %}Enrollment{% else %}التسجيل{% endif %}
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-audit" data-bs-toggle="pill" data-bs-target="#pane-audit" type="button" role="tab">
+        <i class="bi bi-list-check me-1"></i>{% if ui_lang == 'en' %}Audit Log{% else %}سجل التدقيق{% endif %}
+      </button>
+    </li>
+  </ul>
+</div>
+
+<div class="row g-4 mb-section gap-card">
+  <!-- Report Builder Panel -->
+  <div class="col-lg-4">
+    <div class="card h-100 shadow-sm border-0 sticky-top" style="top: 80px; z-index: 10;">
+      <div class="card-header bg-transparent border-bottom">
+        <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+          <i class="bi bi-sliders me-2 text-primary"></i>{% if ui_lang == 'en' %}Report Builder{% else %}إعداد التقرير{% endif %}
+        </h5>
+      </div>
+      <div class="card-body p-card">
+        <form id="reportBuilderForm" novalidate>
+          <input type="hidden" id="reportType" value="attendance">
+
+          <!-- Dynamic Filters -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+            <select class="form-select" id="governorateFilter">
+              <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}كل المحافظات{% endif %}</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+            <select class="form-select" id="kindergartenFilter">
+              <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}كل الروضات{% endif %}</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+            <select class="form-select" id="statusFilter">
+              <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</label>
+            <select class="form-select" id="severityFilter">
+              <option value="">{% if ui_lang == 'en' %}All Severities{% else %}كل الدرجات{% endif %}</option>
+              <option value="LOW">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</option>
+              <option value="MEDIUM">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</option>
+              <option value="HIGH">{% if ui_lang == 'en' %}High{% else %}مرتفع{% endif %}</option>
+              <option value="CRITICAL">{% if ui_lang == 'en' %}Critical{% else %}حرج{% endif %}</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</label>
+            <select class="form-select" id="sourceFilter">
+              <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
+              <option value="WEB">Web</option>
+              <option value="MOBILE">{% if ui_lang == 'en' %}Mobile{% else %}موبايل{% endif %}</option>
+              <option value="OFFICE">{% if ui_lang == 'en' %}Office{% else %}مكتب{% endif %}</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Reviewer{% else %}المراجع{% endif %}</label>
+            <select class="form-select" id="reviewerFilter">
+              <option value="">{% if ui_lang == 'en' %}All Reviewers{% else %}كل المُراجعين{% endif %}</option>
+            </select>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-bold">{% if ui_lang == 'en' %}Format{% else %}الصيغة{% endif %}</label>
+              <select class="form-select" id="exportFormat">
+                <option value="CSV">CSV</option>
+                <option value="EXCEL">Excel</option>
+                <option value="PDF">PDF</option>
+                <option value="JSON">JSON</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-bold">{% if ui_lang == 'en' %}Language{% else %}اللغة{% endif %}</label>
+              <select class="form-select" id="reportLang">
+                <option value="ar">العربية</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="includeCharts" checked>
+            <label class="form-check-label" for="includeCharts">{% if ui_lang == 'en' %}Include charts{% else %}تضمين الرسوم البيانية{% endif %}</label>
+          </div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="includeSummary" checked>
+            <label class="form-check-label" for="includeSummary">{% if ui_lang == 'en' %}Include summary{% else %}تضمين الملخص{% endif %}</label>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-outline-primary" id="previewReportBtn">
+              <i class="bi bi-eye me-2"></i>{% if ui_lang == 'en' %}Preview{% else %}معاينة{% endif %}
+            </button>
+            <button type="button" class="btn btn-primary" id="exportReportBtn">
+              <i class="bi bi-download me-2"></i>{% if ui_lang == 'en' %}Export Report{% else %}تصدير التقرير{% endif %}
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="saveTemplateBtn">
+              <i class="bi bi-bookmark me-2"></i>{% if ui_lang == 'en' %}Save as Template{% else %}حفظ كقالب{% endif %}
+            </button>
+            <button type="button" class="btn btn-outline-info" id="scheduleReportBtn">
+              <i class="bi bi-calendar3 me-2"></i>{% if ui_lang == 'en' %}Schedule{% else %}جدولة{% endif %}
+            </button>
+            <button type="reset" class="btn btn-outline-secondary" id="resetFiltersBtn">
+              <i class="bi bi-arrow-counterclockwise me-2"></i>{% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
+            </button>
+          </div>
+          <div id="reportValidationErrors" class="text-danger small mt-2 d-none"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Preview & Output -->
+  <div class="col-lg-8">
+    <!-- Data Quality Banner -->
+    <div id="dataQualityBanner" class="alert alert-light border d-none mb-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <strong>{% if ui_lang == 'en' %}Data Quality{% else %}جودة البيانات{% endif %}:</strong>
+          <span id="dataQualityScore">--</span>%
+        </div>
+        <div id="dataQualityWarnings"></div>
+      </div>
+    </div>
+
+    <!-- Preview Content -->
+    <div class="card shadow-sm border-0 mb-4" id="previewCard">
+      <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+          <i class="bi bi-eye me-2 text-primary"></i>{% if ui_lang == 'en' %}Report Preview{% else %}معاينة التقرير{% endif %}
+        </h5>
+        <span class="badge bg-light text-dark" id="previewRecordCount">0 {% if ui_lang == 'en' %}records{% else %}سجل{% endif %}</span>
+      </div>
+      <div class="card-body p-card">
+        <!-- KPI Summary Row -->
+        <div class="row g-3 mb-3" id="previewKpis">
+          <div class="col-12 text-center text-muted py-4">
+            <i class="bi bi-inbox fs-1"></i>
+            <div class="small mt-2">{% if ui_lang == 'en' %}Click Preview to load report summary{% else %}اضغط معاينة لتحميل ملخص التقرير{% endif %}</div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row g-3 mb-3" id="previewCharts">
+          <div class="col-12 text-center text-muted py-4">
+            <i class="bi bi-bar-chart fs-1"></i>
+            <div class="small mt-2">{% if ui_lang == 'en' %}Charts will appear here{% else %}ستظهر الرسوم البيانية هنا{% endif %}</div>
+          </div>
+        </div>
+
+        <!-- Sample Data Table -->
+        <div class="table-responsive" id="previewTableWrapper" style="max-height: 400px; overflow-y: auto;">
+          <table class="table table-hover align-middle mb-0" id="previewTable">
+            <thead class="table-light">
+              <tr id="previewTableHead">
+                <th colspan="5" class="text-center text-muted">{% if ui_lang == 'en' %}No preview data{% else %}لا توجد بيانات معاينة{% endif %}</th>
+              </tr>
+            </thead>
+            <tbody id="previewTableBody">
+              <tr><td colspan="5" class="text-center py-4 text-muted">{% if ui_lang == 'en' %}No data{% else %}لا توجد بيانات{% endif %}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Insights & Warnings -->
+        <div id="previewInsights" class="mt-3 d-none">
+          <h6 class="fw-bold text-success"><i class="bi bi-lightbulb me-1"></i>{% if ui_lang == 'en' %}Key Insights{% else %}أهم النتائج{% endif %}</h6>
+          <ul class="list-group list-group-flush" id="insightsList"></ul>
+        </div>
+        <div id="previewWarnings" class="mt-3 d-none">
+          <h6 class="fw-bold text-warning"><i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Warnings{% else %}تحذيرات{% endif %}</h6>
+          <ul class="list-group list-group-flush" id="warningsList"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Reports History -->
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
+          <i class="bi bi-clock-history me-2 text-info"></i>{% if ui_lang == 'en' %}Recent Reports{% else %}التقارير الأخيرة{% endif %}
+        </h5>
+        <button class="btn btn-sm btn-outline-primary" id="refreshHistoryBtn">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="reportsHistoryTable">
+            <thead class="table-light">
+              <tr>
+                <th>{% if ui_lang == 'en' %}Report{% else %}التقرير{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Format{% else %}الصيغة{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Generated{% else %}تاريخ الإنشاء{% endif %}</th>
+                <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                <th class="text-center">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</th>
+              </tr>
+            </thead>
+            <tbody id="reportsHistoryBody">
+              <tr><td colspan="5" class="text-center py-4 text-muted">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Save Template Modal -->
+<div class="modal fade" id="saveTemplateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{% if ui_lang == 'en' %}Save as Template{% else %}حفظ كقالب{% endif %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-bold">{% if ui_lang == 'en' %}Template Name{% else %}اسم القالب{% endif %}</label>
+          <input type="text" class="form-control" id="templateName" placeholder="{% if ui_lang == 'en' %}e.g., Monthly Attendance{% else %}مثال: ملخص الحضور الشهري{% endif %}">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+        <button type="button" class="btn btn-primary" id="confirmSaveTemplate">{% if ui_lang == 'en' %}Save{% else %}حفظ{% endif %}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Schedule Modal -->
+<div class="modal fade" id="scheduleModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{% if ui_lang == 'en' %}Schedule Report{% else %}جدولة التقرير{% endif %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-bold">{% if ui_lang == 'en' %}Schedule Name{% else %}اسم الجدولة{% endif %}</label>
+          <input type="text" class="form-control" id="scheduleName" placeholder="{% if ui_lang == 'en' %}e.g., Weekly Incident Summary{% else %}مثال: ملخص الحوادث الأسبوعي{% endif %}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">{% if ui_lang == 'en' %}Frequency{% else %}التكرار{% endif %}</label>
+          <select class="form-select" id="scheduleFrequency">
+            <option value="daily">{% if ui_lang == 'en' %}Daily{% else %}يومي{% endif %}</option>
+            <option value="weekly">{% if ui_lang == 'en' %}Weekly{% else %}أسبوعي{% endif %}</option>
+            <option value="monthly" selected>{% if ui_lang == 'en' %}Monthly{% else %}شهري{% endif %}</option>
+            <option value="quarterly">{% if ui_lang == 'en' %}Quarterly{% else %}ربع سنوي{% endif %}</option>
+            <option value="once">{% if ui_lang == 'en' %}Run Once{% else %}تشغيل مرة واحدة{% endif %}</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">{% if ui_lang == 'en' %}Recipients (comma-separated user IDs or emails){% else %}المستلمون (معرّفات المستخدمين أو البريد مفصولة بفاصلة){% endif %}</label>
+          <input type="text" class="form-control" id="scheduleRecipients" placeholder="1, 2, admin@example.com">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+        <button type="button" class="btn btn-primary" id="confirmSchedule">{% if ui_lang == 'en' %}Schedule{% else %}جدولة{% endif %}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/chart_utils.js" charset="utf-8"></script>
-<script src="/static/js/admin_analytics.js" charset="utf-8"></script>
-<style>
-    .custom-card-check .form-check-input {
-        position: absolute;
-        opacity: 0;
-    }
-
-    .custom-card-check .form-check-input:checked+.form-check-label .p-3 {
-        border-color: var(--bs-primary) !important;
-        background-color: var(--bs-primary-bg-subtle);
-        border-width: 2px !important;
-    }
-
-    .custom-card-check label {
-        cursor: pointer;
-    }
-</style>
+<script src="/static/js/chart_utils.js?v=2.1" charset="utf-8"></script>
+<script src="/static/js/admin_analytics.js?v=2.1" charset="utf-8"></script>
+<script src="/static/js/admin_reports.js?v=1.0" charset="utf-8"></script>
 {% endblock %}

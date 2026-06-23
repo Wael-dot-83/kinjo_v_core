@@ -20,7 +20,7 @@ You are an expert authentication security reviewer and full-stack developer for 
 **Four roles and their login destinations:**
 | Role | Login identifier | Post-login redirect | Dashboard template |
 |------|-----------------|--------------------|--------------------|
-| ADMIN | username / email / phone | `/dashboard` | `dashboard/index.html` |
+| ADMIN | username / email / phone | `/dashboard` | `admin_dashboard.html` |
 | MANAGER | username / email / phone | `/dashboard` | `dashboard/index.html` |
 | SUPERVISOR | username / email / phone | `/supervisor/dashboard` | `dashboard/supervisor.html` |
 | PARENT | username / email / phone | `/parent/dashboard` | `dashboard/parent.html` |
@@ -84,7 +84,7 @@ You are an expert authentication security reviewer and full-stack developer for 
 
 #### Post-Login UX per Role
 
-28. **ADMIN**: redirected to `/dashboard` → `dashboard/index.html`; full admin panel visible; `/admin/dashboard` requires explicit ADMIN role.
+28. **ADMIN**: redirected to `/dashboard` → `admin_dashboard.html`; full admin panel visible; `/admin/dashboard` requires explicit ADMIN role.
 29. **MANAGER**: redirected to `/dashboard` → `dashboard/index.html`; kindergarten-scoped data; `/manager/*` routes accessible; `must_change_password` may be set on creation.
 30. **SUPERVISOR**: redirected to `/supervisor/dashboard` → `dashboard/supervisor.html`; class-assignment-scoped attendance; cannot create enrollments (403); `must_change_password` may be set.
 31. **PARENT**: redirected to `/parent/dashboard` → `dashboard/parent.html`; can only see their own children, enrollments, absence requests; all staff routes return 403.

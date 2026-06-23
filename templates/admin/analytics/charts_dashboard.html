@@ -1,0 +1,342 @@
+{% extends "admin_base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{% endif %} — KinJo{% endblock %}
+
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="admin-breadcrumb-separator">/</span>
+<a href="/admin/analytics" class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Charts{% else %}الرسوم البيانية{% endif %}</span>
+{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"
+  integrity="sha384-cCVCZkAjYNxaYKbM8lsArLznDF/SvMFr1jcZrvOpSTCa0W40ZAdLzHCEulnUa5i7"
+  crossorigin="anonymous"></script>
+<script>
+  if (typeof Plotly === 'undefined') {
+    document.write('<script src="/static/vendor/plotly-2.35.2.min.js" integrity="sha384-ymzmAVk+3V1std11H4NbH/o85BHnBJTNzz3SjtDbixaVMkt2qOIcV3dzOUSuONeA" crossorigin="anonymous"><\/script>');
+  }
+</script>
+<style>
+  .charts-panel { background: var(--admin-card-bg,#fff); border: 1px solid var(--admin-border,#e2e8f0); border-radius: 12px; padding: 1.5rem; }
+  .charts-sidebar { min-width: 260px; max-width: 320px; }
+  .chart-type-pill { cursor:pointer; transition:all .2s; border:2px solid transparent; }
+  .chart-type-pill.active, .chart-type-pill:hover { border-color:var(--admin-primary,#1F5E47); background:var(--admin-primary-light,#e0f0eb); }
+  .suggestion-card { border-left:4px solid var(--admin-primary,#1F5E47); padding:.75rem 1rem; background:var(--admin-primary-xlight,#f0f7f4); border-radius:0 8px 8px 0; }
+  .suggestion-card .confidence-badge { background:var(--admin-primary,#1F5E47); color:#fff; font-size:.75rem; padding:.15rem .5rem; border-radius:99px; }
+  #chartOutput { min-height:420px; }
+  .loading-spinner { display:none; }
+  .loading-spinner.active { display:flex; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
+  <div>
+    <h1 class="admin-page-title mb-0">
+      <i class="bi bi-graph-up-arrow me-2"></i>
+      {% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{% endif %}
+    </h1>
+    <p class="text-muted small mt-1 mb-0">
+      {% if ui_lang == 'en' %}
+        Adaptive chart generation with automatic chart-type selection.
+      {% else %}
+        توليد رسوم بيانية تكيفية مع اختيار تلقائي لنوع الرسم.
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+<div class="d-flex gap-4 flex-wrap align-items-start">
+
+  {# ── Control Sidebar ───────────────────────────────────────────────── #}
+  <aside class="charts-sidebar">
+
+    <div class="charts-panel mb-3">
+      <h6 class="fw-semibold mb-3 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
+        {% if ui_lang == 'en' %}Data Source{% else %}مصدر البيانات{% endif %}
+      </h6>
+      <select id="sourceSelect" class="form-select form-select-sm mb-3">
+        {% for src in sources %}
+        <option value="{{ src }}">{{ src | replace('_', ' ') | title }}</option>
+        {% endfor %}
+      </select>
+
+      <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
+        {% if ui_lang == 'en' %}Date Range{% else %}نطاق التاريخ{% endif %}
+      </h6>
+      <div class="d-flex gap-2 mb-3 flex-column">
+        <input type="date" id="dateFrom" class="form-control form-control-sm" placeholder="From">
+        <input type="date" id="dateTo" class="form-control form-control-sm" placeholder="To">
+      </div>
+
+      <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
+        {% if ui_lang == 'en' %}Chart Type{% else %}نوع الرسم{% endif %}
+      </h6>
+      <select id="chartTypeSelect" class="form-select form-select-sm mb-3">
+        <option value="">{% if ui_lang == 'en' %}Auto (Recommended){% else %}تلقائي (موصى به){% endif %}</option>
+        {% for ct in chart_types %}
+        <option value="{{ ct }}">{{ ct | title }}</option>
+        {% endfor %}
+      </select>
+
+      <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
+        {% if ui_lang == 'en' %}Top N{% else %}أعلى N{% endif %}
+      </h6>
+      <input type="number" id="topN" class="form-control form-control-sm mb-3" min="1" max="50" placeholder="All">
+
+      <div class="d-grid gap-2">
+        <button class="btn btn-primary btn-sm" id="renderBtn" onclick="renderChart()">
+          <i class="bi bi-play-fill me-1"></i>
+          {% if ui_lang == 'en' %}Render Chart{% else %}رسم المخطط{% endif %}
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" id="suggestBtn" onclick="getSuggestions()">
+          <i class="bi bi-lightbulb me-1"></i>
+          {% if ui_lang == 'en' %}Get Suggestions{% else %}اقتراحات ذكية{% endif %}
+        </button>
+      </div>
+    </div>
+
+    {# Suggestions panel #}
+    <div class="charts-panel" id="suggestionsPanel" style="display:none;">
+      <h6 class="fw-semibold mb-3 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
+        <i class="bi bi-magic me-1"></i>
+        {% if ui_lang == 'en' %}AI Suggestions{% else %}اقتراحات ذكية{% endif %}
+      </h6>
+      <div id="suggestionsList"></div>
+    </div>
+
+  </aside>
+
+  {# ── Chart Output Area ─────────────────────────────────────────────── #}
+  <div class="flex-grow-1" style="min-width:0;">
+    <div class="charts-panel">
+
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+          <span id="chartTitle" class="fw-semibold fs-6">
+            {% if ui_lang == 'en' %}Select a source and click Render{% else %}اختر المصدر واضغط رسم{% endif %}
+          </span>
+          <span id="rowCountBadge" class="badge ms-2" style="background:var(--admin-primary,#1F5E47);display:none;"></span>
+          <span id="cachedBadge" class="badge bg-secondary ms-1" style="display:none;">
+            {% if ui_lang == 'en' %}cached{% else %}مخزن{% endif %}
+          </span>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" id="exportBtn" style="display:none;" onclick="exportChart()">
+          <i class="bi bi-download me-1"></i>
+          {% if ui_lang == 'en' %}Export PNG{% else %}تصدير PNG{% endif %}
+        </button>
+      </div>
+
+      <div class="loading-spinner align-items-center justify-content-center" id="chartSpinner" style="min-height:300px;">
+        <div class="text-center text-muted">
+          <div class="spinner-border text-success mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <div class="small">{% if ui_lang == 'en' %}Generating chart...{% else %}جاري إنشاء الرسم...{% endif %}</div>
+        </div>
+      </div>
+
+      <div id="chartOutput"></div>
+
+      <div id="taskStatus" class="mt-2" style="display:none;">
+        <div class="alert alert-info py-2 mb-0">
+          <i class="bi bi-hourglass-split me-1"></i>
+          <span id="taskStatusText">
+            {% if ui_lang == 'en' %}Large dataset — processing in background...{% else %}مجموعة بيانات كبيرة — المعالجة في الخلفية...{% endif %}
+          </span>
+          <span id="taskProgress" class="badge bg-info ms-2">0%</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const LANG = '{{ ui_lang }}';
+let _activeTaskId = null;
+let _taskPollInterval = null;
+let _currentFigDiv = null;
+
+async function renderChart() {
+  const source = document.getElementById('sourceSelect').value;
+  const chartType = document.getElementById('chartTypeSelect').value;
+  const dateFrom = document.getElementById('dateFrom').value;
+  const dateTo = document.getElementById('dateTo').value;
+  const topN = document.getElementById('topN').value;
+
+  const params = new URLSearchParams({ source });
+  if (chartType) params.set('chart_type', chartType);
+  if (dateFrom) params.set('date_from', dateFrom);
+  if (dateTo) params.set('date_to', dateTo);
+  if (topN) params.set('top_n', topN);
+
+  setLoading(true);
+  clearChart();
+  clearTask();
+
+  try {
+    const resp = await fetch(`/admin/charts/render?${params}`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      showError(err.detail || 'Request failed');
+      return;
+    }
+    const data = await resp.json();
+
+    if (data.task_id) {
+      showTaskStatus(data.task_id);
+    } else {
+      injectChart(data);
+    }
+  } catch (e) {
+    showError(e.message || 'Network error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function injectChart(data) {
+  const out = document.getElementById('chartOutput');
+  out.innerHTML = data.html || '';
+  document.getElementById('chartTitle').textContent = data.title || (LANG === 'en' ? 'Chart' : 'رسم');
+  const badge = document.getElementById('rowCountBadge');
+  badge.textContent = `${data.row_count} ${LANG === 'en' ? 'rows' : 'صف'}`;
+  badge.style.display = '';
+  const cachedBadge = document.getElementById('cachedBadge');
+  cachedBadge.style.display = data.cached ? '' : 'none';
+  document.getElementById('exportBtn').style.display = '';
+  // Re-exec any Plotly scripts injected by Plotly.to_html
+  out.querySelectorAll('script').forEach(s => {
+    const sc = document.createElement('script');
+    sc.textContent = s.textContent;
+    document.body.appendChild(sc).parentNode.removeChild(sc);
+  });
+  _currentFigDiv = out.querySelector('.plotly-graph-div');
+}
+
+function showTaskStatus(taskId) {
+  _activeTaskId = taskId;
+  document.getElementById('taskStatus').style.display = '';
+  clearTask();
+  _taskPollInterval = setInterval(() => pollTask(taskId), 2000);
+}
+
+async function pollTask(taskId) {
+  try {
+    const resp = await fetch(`/admin/charts/task/${taskId}`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    const data = await resp.json();
+    document.getElementById('taskProgress').textContent = `${data.progress}%`;
+    if (data.status === 'SUCCESS' && data.result) {
+      clearTask();
+      document.getElementById('taskStatus').style.display = 'none';
+      injectChart(data.result);
+    } else if (data.status === 'FAILURE') {
+      clearTask();
+      showError(data.error || 'Background task failed');
+    }
+  } catch (e) {
+    clearTask();
+    showError('Failed to poll task status');
+  }
+}
+
+async function getSuggestions() {
+  const source = document.getElementById('sourceSelect').value;
+  const dateFrom = document.getElementById('dateFrom').value;
+  const dateTo = document.getElementById('dateTo').value;
+  const body = { source, max_suggestions: 3 };
+  if (dateFrom) body.date_from = dateFrom;
+  if (dateTo) body.date_to = dateTo;
+
+  const panel = document.getElementById('suggestionsPanel');
+  const list = document.getElementById('suggestionsList');
+  list.innerHTML = `<div class="text-center text-muted py-2"><div class="spinner-border spinner-border-sm text-success"></div></div>`;
+  panel.style.display = '';
+
+  try {
+    const resp = await fetch('/admin/charts/suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (!data.suggestions || !data.suggestions.length) {
+      list.innerHTML = `<p class="text-muted small mb-0">${LANG === 'en' ? 'No suggestions available.' : 'لا توجد اقتراحات.'}</p>`;
+      return;
+    }
+    list.innerHTML = data.suggestions.map(s => `
+      <div class="suggestion-card mb-2 d-flex align-items-start gap-2" role="button"
+           onclick="applySuggestion('${s.chart_type}')">
+        <div>
+          <div class="fw-semibold" style="font-size:.85rem;">
+            ${s.chart_type.charAt(0).toUpperCase() + s.chart_type.slice(1)}
+            <span class="confidence-badge ms-1">${Math.round(s.confidence * 100)}%</span>
+          </div>
+          <div class="text-muted" style="font-size:.78rem;">${s.rationale}</div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = `<p class="text-danger small mb-0">${e.message}</p>`;
+  }
+}
+
+function applySuggestion(chartType) {
+  document.getElementById('chartTypeSelect').value = chartType;
+  renderChart();
+}
+
+function exportChart() {
+  if (_currentFigDiv && typeof Plotly !== 'undefined') {
+    Plotly.downloadImage(_currentFigDiv, {
+      format: 'png', width: 1200, height: 700,
+      filename: `kinjo-chart-${Date.now()}`
+    });
+  }
+}
+
+function setLoading(on) {
+  document.getElementById('chartSpinner').classList.toggle('active', on);
+  document.getElementById('renderBtn').disabled = on;
+}
+
+function clearChart() {
+  document.getElementById('chartOutput').innerHTML = '';
+  document.getElementById('rowCountBadge').style.display = 'none';
+  document.getElementById('cachedBadge').style.display = 'none';
+  document.getElementById('exportBtn').style.display = 'none';
+  _currentFigDiv = null;
+}
+
+function clearTask() {
+  if (_taskPollInterval) { clearInterval(_taskPollInterval); _taskPollInterval = null; }
+  _activeTaskId = null;
+}
+
+function showError(msg) {
+  const out = document.getElementById('chartOutput');
+  out.innerHTML = `<div class="alert alert-danger mt-2"><i class="bi bi-exclamation-triangle me-1"></i>${msg}</div>`;
+}
+
+// Set default date range: last 12 months
+(function() {
+  const today = new Date();
+  const y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,'0'), d = String(today.getDate()).padStart(2,'0');
+  const yearAgo = new Date(today); yearAgo.setFullYear(yearAgo.getFullYear()-1);
+  const ya = yearAgo.getFullYear(), ym = String(yearAgo.getMonth()+1).padStart(2,'0'), yd = String(yearAgo.getDate()).padStart(2,'0');
+  document.getElementById('dateTo').value = `${y}-${m}-${d}`;
+  document.getElementById('dateFrom').value = `${ya}-${ym}-${yd}`;
+})();
+</script>
+{% endblock %}

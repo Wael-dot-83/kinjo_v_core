@@ -9,6 +9,7 @@ Verifies:
 - Search filter works
 - Resolve marks message as resolved (idempotent)
 """
+import secrets
 import pytest
 from datetime import datetime, timezone
 from auth import get_password_hash
@@ -48,6 +49,17 @@ def _get_admin_token(client):
     r = client.post("/token", data={"username": "contactadmin", "password": "Admin123!"})
     assert r.status_code == 200
     return r.json()["access_token"]
+
+
+def _get_admin_csrf_headers(client):
+    r = client.post("/token", data={"username": "contactadmin", "password": "Admin123!"})
+    assert r.status_code == 200
+    csrf = secrets.token_hex(32)
+    return {
+        "Authorization": f"Bearer {r.json()["access_token"]}",
+        "X-CSRF-Token": csrf,
+        "Cookie": f"kinjo_csrf_token={csrf}",
+    }
 
 
 class TestContactMessagesAuth:
@@ -157,10 +169,10 @@ class TestContactMessagesResolve:
     def test_resolve_open_message(self, client, test_db):
         admin = _create_admin(test_db)
         msg = _create_message(test_db, name="Alice", is_resolved=False)
-        token = _get_admin_token(client)
+        headers = _get_admin_csrf_headers(client)
         r = client.post(
             f"/api/admin/contact-messages/{msg.id}/resolve",
-            headers={"Authorization": f"Bearer {token}"},
+            headers=headers,
         )
         assert r.status_code == 200
         # Verify DB state
@@ -170,10 +182,10 @@ class TestContactMessagesResolve:
     def test_resolve_already_resolved_is_idempotent(self, client, test_db):
         _create_admin(test_db)
         msg = _create_message(test_db, name="Bob", is_resolved=True)
-        token = _get_admin_token(client)
+        headers = _get_admin_csrf_headers(client)
         r = client.post(
             f"/api/admin/contact-messages/{msg.id}/resolve",
-            headers={"Authorization": f"Bearer {token}"},
+            headers=headers,
         )
         assert r.status_code == 200
 

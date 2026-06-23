@@ -221,13 +221,18 @@ class TestFrontendRoutes:
         assert "text/html" in response.headers.get("content-type", "")
         assert b"dashboard" in response.content.lower()
         page = response.text
-        assert 'id="validationStatusIndicator"' in page
-        assert 'role="button"' in page
-        assert 'aria-live="polite"' in page
-        assert 'data-chart-type="line"' in page
-        assert 'data-chart-type="bar"' in page
-        assert "window.dashboardDateRange" in page
-        assert "function setDateRange(range)" in page
+        # Admin dashboard theme indicators (extends admin_base.html)
+        assert 'id="admin-dashboard"' in page
+        assert 'data-ui-state="loading"' in page
+        assert 'id="dashboard-loading"' in page
+        assert 'aria-busy="true"' in page
+        assert 'id="kpi-cards"' in page
+        assert 'id="dashboard-content"' in page
+        assert 'id="refresh-dashboard"' in page
+        assert '/static/js/admin_dashboard.js' in page
+        # Admin profile display with full name and avatar
+        assert 'admin-sidebar-profile' in page
+        assert 'admin_avatar.png' in page
 
         app.dependency_overrides.clear()
 
@@ -615,11 +620,11 @@ class TestFrontendRoutes:
         app.dependency_overrides.clear()
 
     def test_attendance_history(self, client, admin_user, sample_kindergarten):
-        """Test attendance history page is blocked for admin"""
+        """Test attendance history page is accessible for admin"""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
 
         response = client.get("/attendance/history")
-        assert response.status_code == 403
+        assert response.status_code == 200
 
         app.dependency_overrides.clear()
 
@@ -1654,6 +1659,12 @@ class TestFrontendRoutes:
         response = client.get("/admin/classification")
         assert response.status_code == 200
         assert "text/html" in response.headers.get("content-type", "")
+        html = response.text
+        assert 'id="classificationSummaryCards"' in html
+        assert 'id="classificationBandChart"' in html
+        assert 'id="classificationScoreChart"' in html
+        assert 'id="classificationAspectChart"' in html
+        assert "/static/js/admin_classification.js?v=6" in html
 
         app.dependency_overrides.clear()
 
@@ -2614,10 +2625,13 @@ class TestFrontendRoutes:
         page = response.text
         sidebar = page[page.index('id="admin-sidebar"'):page.index("</aside>")]
         sidebar_no_comments = re.sub(r"<!--.*?-->", "", sidebar, flags=re.DOTALL)
-        assert "لوحة التحكم" in sidebar
+        assert "لوحة التحكم العامة" in sidebar
         assert "المستخدمون" in sidebar
         assert "إدارة البيانات" in sidebar
-        assert "انتحال الهوية" in sidebar
+        assert "التحليلات والتقارير" in sidebar
+        assert "الخريطة الحرارية" in sidebar
+        assert "النظام" in sidebar
+        assert "انتحال الهوية" not in sidebar
         # None of the old hardcoded English group headers should remain
         # (comments are stripped since the section dividers keep the English
         # name for readability — only visible text must follow ui_lang)
@@ -2634,10 +2648,14 @@ class TestFrontendRoutes:
         assert response.status_code == 200
         page = response.text
         sidebar = page[page.index('id="admin-sidebar"'):page.index("</aside>")]
+        assert "General Dashboard" in sidebar
         assert "Users" in sidebar
         assert "Data Management" in sidebar
-        assert "Impersonation" in sidebar
-        assert "Jordan Heat Map" in sidebar
+        assert "Analytics &amp; Reports" in sidebar
+        assert "Heat Map" in sidebar
+        assert "System" in sidebar
+        assert "Impersonation" not in sidebar
+        assert "Jordan Heat Map" not in sidebar
         # No leftover Arabic text should appear when English is selected
         assert "لوحة التحكم" not in sidebar
         app.dependency_overrides.clear()
