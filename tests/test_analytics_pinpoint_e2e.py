@@ -31,14 +31,15 @@ class TestAnalyticsDOMVisibility:
         app.dependency_overrides.clear()
 
     def test_pagehelpcontent_is_closed_before_analytics_dashboard(self):
-        help_pos = self.page.index('id="pageHelpContent"')
-        dash_pos = self.page.index('class="analytics-dashboard"')
-        assert help_pos < dash_pos
+        # Help panel was removed; assert it is absent from the page.
+        assert 'id="pageHelpContent"' not in self.page, (
+            "#pageHelpContent must not be present — help section was removed"
+        )
 
     def test_no_live_widget_inside_hidden_help_container(self):
-        help_start = self.page.index('id="pageHelpContent"')
+        # Help panel is gone; verify live widgets are in the visible dashboard instead.
         dash_start = self.page.index('class="analytics-dashboard"')
-        help_section = self.page[help_start:dash_start]
+        visible = self.page[dash_start:]
         live_ids = [
             "attendanceForecast", "incidentForecast", "enrollmentForecast",
             "attendanceForecastBand", "incidentForecastBand", "enrollmentForecastBand",
@@ -47,7 +48,7 @@ class TestAnalyticsDOMVisibility:
             "targetList", "benchmarkList", "recommendationList",
         ]
         for wid in live_ids:
-            assert wid not in help_section, f"#{wid} leaked into hidden #pageHelpContent"
+            assert wid in visible, f"#{wid} missing from visible .analytics-dashboard"
 
     def test_kpi_card_ids_in_visible_dashboard(self):
         visible = self.page[self.page.index('class="analytics-dashboard"'):]
@@ -329,8 +330,11 @@ class TestHelpModalIntegration:
         assert modal_pos < extra_scripts_pos
 
     def test_pagehelpcontent_has_data_help_title(self):
+        # Help panel was removed; assert the element is absent.
         resp = self.client.get("/admin/analytics")
-        assert 'data-help-title=' in resp.text
+        assert 'id="pageHelpContent"' not in resp.text, (
+            "#pageHelpContent must not be present — help section was removed"
+        )
 
     def test_dashboard_submenu_no_stale_system_health_link(self):
         resp = self.client.get("/admin/analytics")
