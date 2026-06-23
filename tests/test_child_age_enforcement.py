@@ -28,7 +28,7 @@ def _make_child(test_db, parent_profile, dob):
 def test_enrollment_rejects_out_of_range_dob(client, parent_user, sample_kindergarten):
     app.dependency_overrides[get_current_user] = lambda: parent_user
 
-    too_young = (date.today() - timedelta(days=10)).isoformat()
+    too_young = date.today().isoformat()  # 0 days old — still rejected under 1-day minimum
     payload = {
         "first_name": "Baby",
         "last_name": "Al-Rashid",  # Match parent's last name
