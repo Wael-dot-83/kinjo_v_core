@@ -1,5 +1,4 @@
 ﻿{% extends "admin_base.html" %}
-{% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}{% endblock %}
 
@@ -7,44 +6,52 @@
 <meta name="user-role" content="{{ current_user.role.value }}">
 {% endblock %}
 
-{% block page_header %}
-{% set toolbar_actions %}
-<div class="btn-group me-2" id="bulkActions" style="display: none;">
-  <button class="btn btn-outline-danger" onclick="AdminUsers.bulkDelete()" id="bulkDeleteBtn">
-    <i class="bi bi-trash"></i> <span id="bulkDeleteLabel">{% if ui_lang == 'en' %}Delete Selected{% else %}حذف المحدد{% endif %}</span>
-  </button>
-  <button class="btn btn-outline-warning" onclick="AdminUsers.bulkStatusUpdate('SUSPENDED')">
-    <i class="bi bi-pause-circle"></i> {% if ui_lang == 'en' %}Suspend{% else %}تعليق{% endif %}
-  </button>
-  <button class="btn btn-outline-success" onclick="AdminUsers.bulkStatusUpdate('ACTIVE')">
-    <i class="bi bi-play-circle"></i> {% if ui_lang == 'en' %}Activate{% else %}تفعيل{% endif %}
-  </button>
-  <button class="btn btn-outline-secondary" onclick="AdminUsers.clearSelection()">
-    <i class="bi bi-x-circle"></i> {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
-  </button>
-</div>
-<a href="/admin/users/create" class="btn btn-primary">
-  <i class="bi bi-person-plus me-2"></i>
-  {% if ui_lang == 'en' %}Add New User{% else %}إضافة مستخدم جديد{% endif %}
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item">
+  <i class="bi bi-house" aria-hidden="true"></i>
 </a>
-<button class="btn btn-outline-secondary ms-2" onclick="AdminUsers.showImportModal()">
-  <i class="bi bi-upload"></i> {% if ui_lang == 'en' %}Import from CSV{% else %}استيراد من CSV{% endif %}
-</button>
-{% endset %}
-{{ page_header(
-title="User Management" if ui_lang == 'en' else "إدارة المستخدمين",
-icon="bi-people",
-breadcrumbs=[
-{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
-{"label": "Users" if ui_lang == 'en' else "المستخدمين", "url": None}
-],
-actions=toolbar_actions
-) }}
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Users{% else %}المستخدمون{% endif %}</span>
 {% endblock %}
 
 {% block content %}
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
+<div class="admin-page-header">
+  <div>
+    <h1 class="admin-page-title">
+      <i class="bi bi-people" aria-hidden="true"></i>
+      {% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}
+    </h1>
+    <p class="admin-page-subtitle">
+      {% if ui_lang == 'en' %}Manage system users, roles, and permissions.{% else %}إدارة مستخدمي النظام والأدوار والصلاحيات.{% endif %}
+    </p>
+  </div>
+  <div class="admin-page-actions">
+    <div class="d-flex gap-2 flex-wrap" id="bulkActions" style="display: none !important;">
+      <button class="admin-btn admin-btn-error admin-btn-sm" onclick="AdminUsers.bulkDelete()" id="bulkDeleteBtn">
+        <i class="bi bi-trash"></i> <span id="bulkDeleteLabel">{% if ui_lang == 'en' %}Delete Selected{% else %}حذف المحدد{% endif %}</span>
+      </button>
+      <button class="admin-btn admin-btn-warning admin-btn-sm" onclick="AdminUsers.bulkStatusUpdate('SUSPENDED')">
+        <i class="bi bi-pause-circle"></i> {% if ui_lang == 'en' %}Suspend{% else %}تعليق{% endif %}
+      </button>
+      <button class="admin-btn admin-btn-success admin-btn-sm" onclick="AdminUsers.bulkStatusUpdate('ACTIVE')">
+        <i class="bi bi-play-circle"></i> {% if ui_lang == 'en' %}Activate{% else %}تفعيل{% endif %}
+      </button>
+      <button class="admin-btn admin-btn-ghost admin-btn-sm" onclick="AdminUsers.clearSelection()">
+        <i class="bi bi-x-circle"></i> {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+      </button>
+    </div>
+    <button class="admin-btn admin-btn-ghost" onclick="AdminUsers.showImportModal()">
+      <i class="bi bi-upload me-1"></i> {% if ui_lang == 'en' %}Import CSV{% else %}استيراد CSV{% endif %}
+    </button>
+    <a href="/admin/users/create" class="admin-btn admin-btn-primary">
+      <i class="bi bi-person-plus me-1"></i>
+      {% if ui_lang == 'en' %}Add User{% else %}إضافة مستخدم{% endif %}
+    </a>
+  </div>
+</div>
+
+<div class="admin-card mb-4">
+  <div class="admin-card-body">
     <!-- Filters -->
     <div class="row g-3 mb-4" role="search">
       <div class="col-md-4">

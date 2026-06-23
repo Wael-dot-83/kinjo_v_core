@@ -11,77 +11,24 @@
 <span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Reports Governance{% else %}حوكمة التقارير{% endif %}</span>
 {% endblock %}
 
-{% block extra_head %}
-<style>
-    .kpi-card {
-        border-radius: 12px;
-        transition: transform 0.2s;
-    }
-
-    .kpi-card:hover {
-        transform: translateY(-2px);
-    }
-
-    .kpi-value {
-        font-size: 2rem;
-        font-weight: 700;
-    }
-
-    .kpi-label {
-        font-size: 0.85rem;
-        color: #6c757d;
-    }
-
-    .low-performer-badge {
-        background-color: #fff3cd;
-        border: 1px solid #ffc107;
-        border-radius: 8px;
-    }
-
-    .rank-badge {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 0.85rem;
-    }
-
-    .rank-1 {
-        background-color: #ffd700;
-        color: #333;
-    }
-
-    .rank-2 {
-        background-color: #c0c0c0;
-        color: #333;
-    }
-
-    .rank-3 {
-        background-color: #cd7f32;
-        color: #fff;
-    }
-
-    .rank-default {
-        background-color: #e9ecef;
-        color: #333;
-    }
-</style>
-{% endblock %}
+{% block extra_head %}{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="admin-page-header">
     <div>
-        <h4 class="mb-1"><i class="bi bi-clipboard2-data me-2"></i>{% if ui_lang == 'en' %}Daily Reports Governance{% else %}حوكمة التقارير اليومية{% endif %}</h4>
+        <h1 class="admin-page-title">
+            <i class="bi bi-clipboard2-data" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %}Daily Reports Governance{% else %}حوكمة التقارير اليومية{% endif %}
+        </h1>
+        <p class="admin-page-subtitle">
+            {% if ui_lang == 'en' %}Monitor submission rates, delivery, and quality across all kindergartens.{% else %}مراقبة معدلات التقديم والتسليم والجودة عبر جميع الروضات.{% endif %}
+        </p>
     </div>
-    <div class="d-flex gap-2 align-items-center">
-        <input type="date" id="startDate" class="form-control form-control-sm w-auto">
-        <span class="text-muted">-</span>
-        <input type="date" id="endDate" class="form-control form-control-sm w-auto">
-        <button id="refreshBtn" class="btn btn-primary btn-sm" onclick="loadGovernanceData()">
+    <div class="admin-page-actions">
+        <input type="date" id="startDate" class="form-control form-control-sm" style="width:auto">
+        <span class="text-muted">—</span>
+        <input type="date" id="endDate" class="form-control form-control-sm" style="width:auto">
+        <button id="refreshBtn" class="admin-btn admin-btn-primary admin-btn-sm" onclick="loadGovernanceData()">
             <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
         </button>
     </div>

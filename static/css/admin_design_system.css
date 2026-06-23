@@ -422,6 +422,48 @@ html[dir="rtl"] .admin-nav-item.active::before {
   color: var(--admin-text-muted);
 }
 
+/* Page Header — standard section at the top of every admin page */
+.admin-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--admin-space-4);
+  margin-bottom: var(--admin-space-6);
+}
+
+.admin-page-title {
+  font: var(--type-page-title);
+  color: var(--admin-text-primary);
+  margin: 0 0 var(--admin-space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--admin-space-3);
+}
+
+.admin-page-subtitle {
+  font-size: var(--admin-font-size-sm);
+  color: var(--admin-text-muted);
+  margin: 0;
+  line-height: var(--admin-line-height-relaxed);
+}
+
+/* Page header actions area (buttons, filters on the right) */
+.admin-page-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--admin-space-3);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .admin-page-header { flex-direction: column; }
+  .admin-page-actions { width: 100%; }
+  .admin-page-actions .admin-btn,
+  .admin-page-actions .btn { width: 100%; justify-content: center; }
+}
+
 /* ============================================================================
    COMPONENT LIBRARY - BASE COMPONENTS
    ============================================================================ */
@@ -792,6 +834,40 @@ html[dir="rtl"] .admin-table td {
 .gap-card { gap: var(--space-16); }
 .mb-section { margin-bottom: var(--space-32); }
 .mb-card { margin-bottom: var(--space-16); }
+
+/* Governance page helpers — KPI cards and rank badges */
+.kpi-card {
+  border-radius: var(--admin-radius-lg);
+  transition: transform var(--admin-transition-fast);
+}
+.kpi-card:hover { transform: translateY(-2px); }
+.kpi-value {
+  font-size: 2rem;
+  font-weight: var(--admin-font-weight-bold);
+}
+.kpi-label {
+  font-size: 0.85rem;
+  color: var(--admin-text-muted);
+}
+.low-performer-badge {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: var(--admin-radius);
+}
+.rank-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--admin-font-weight-bold);
+  font-size: 0.85rem;
+}
+.rank-1 { background-color: #ffd700; color: #333; }
+.rank-2 { background-color: #c0c0c0; color: #333; }
+.rank-3 { background-color: #cd7f32; color: #fff; }
+.rank-default { background-color: #e9ecef; color: #333; }
 
 /* Analytics page helpers */
 .analytics-dashboard {
