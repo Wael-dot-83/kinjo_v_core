@@ -3580,6 +3580,7 @@ def get_enhanced_manager_kpi_dashboard(
 def get_kpi_network_summary(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
+    governorate: Optional[str] = Query(None, description="Filter by governorate"),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -3591,9 +3592,20 @@ def get_kpi_network_summary(
     if start_date is None:
         start_date = end_date - timedelta(days=30)
 
-    kindergartens = db.query(models.Kindergarten).filter(
+    kg_query = db.query(models.Kindergarten).filter(
         models.Kindergarten.status == models.KindergartenStatus.ACTIVE
-    ).all()
+    )
+    if governorate:
+        try:
+            normalized_gov = validators.validate_jordan_governorate(governorate)
+            gov_values = {normalized_gov}
+            if normalized_gov in settings.JORDAN_GOVERNORATES:
+                idx = settings.JORDAN_GOVERNORATES.index(normalized_gov)
+                gov_values.add(settings.JORDAN_GOVERNORATES_ENGLISH[idx])
+            kg_query = kg_query.filter(models.Kindergarten.governorate.in_(list(gov_values)))
+        except validators.ValidationError:
+            pass
+    kindergartens = kg_query.all()
 
     per_kg = []
     attendance_rates = []
@@ -3616,6 +3628,8 @@ def get_kpi_network_summary(
 
         per_kg.append({
             "kindergarten_id": kg.id,
+            "kindergarten_name": kg.name or f"KG-{kg.id}",
+            "governorate": kg.governorate or "",
             "attendance_rate": ar,
             "incident_rate": ir,
             "ratio_compliance": rc,

@@ -149,6 +149,9 @@
                 <li class="nav-item" role="listitem"><a href="/admin/analytics" class="nav-link {% if request.url.path == '/admin/analytics' %}active{% endif %}" role="listitem">
                   <i class="bi bi-graph-up" aria-hidden="true"></i> <span data-i18n="analytics.overview">{% if ui_lang == 'en' %}Analytics Overview{% else %}نظرة عامة التحليلات{% endif %}</span>
                 </a></li>
+                <li class="nav-item" role="listitem"><a href="/admin/kpi" class="nav-link {% if request.url.path == '/admin/kpi' %}active{% endif %}" role="listitem">
+                  <i class="bi bi-award-fill" aria-hidden="true"></i> <span data-i18n="sidebar.kpi_dashboard">{% if ui_lang == 'en' %}KPI Dashboard{% else %}مؤشرات الأداء{% endif %}</span>
+                </a></li>
                 <li class="nav-item" role="listitem"><a href="/admin/analytics/reports" class="nav-link {% if request.url.path == '/admin/analytics/reports' %}active{% endif %}" role="listitem">
                   <i class="bi bi-file-text" aria-hidden="true"></i> <span data-i18n="analytics.detailed_reports">{% if ui_lang == 'en' %}Detailed Reports{% else %}تقارير مفصلة{% endif %}</span>
                 </a></li>

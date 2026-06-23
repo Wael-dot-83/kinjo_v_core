@@ -39,7 +39,8 @@
     "import_logs": "Import Logs",
     "alerts": "Alerts",
     "safety_analytics": "Safety Analytics",
-    "impersonation": "Impersonation"
+    "impersonation": "Impersonation",
+    "kpi_dashboard": "KPI Dashboard"
   },
   "common": {
     "refresh": "Refresh",
@@ -444,6 +445,30 @@
     "sev_high": "High",
     "sev_critical": "Critical",
     "sev_unknown": "Unknown"
+  },
+  "kpi": {
+    "title": "KPI Network Dashboard",
+    "subtitle": "Monitor performance indicators across all kindergartens",
+    "network_kpis": "Network KPIs",
+    "per_kg_breakdown": "Per-Kindergarten KPI Breakdown",
+    "attendance_rate": "Attendance Rate",
+    "ratio_compliance": "Ratio Compliance",
+    "incident_rate": "Incident Rate",
+    "governance_score": "Governance Score",
+    "governance_band": "Band",
+    "avg_attendance": "Avg. Attendance",
+    "avg_governance": "Avg. Governance Score",
+    "avg_incidents": "Avg. Incident Rate",
+    "total_kg": "Kindergartens",
+    "band_green": "Green",
+    "band_amber": "Amber",
+    "band_red": "Red",
+    "search_kg": "Search kindergarten...",
+    "loading": "Loading network KPIs...",
+    "error": "Error loading data",
+    "retry": "Retry",
+    "attendance_chart": "Attendance Rate by Kindergarten",
+    "band_distribution": "Governance Band Distribution"
   },
   "components": {
     "connectivity_error": "Cannot connect to server. Retrying…",

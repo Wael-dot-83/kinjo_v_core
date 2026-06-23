@@ -39,7 +39,8 @@
     "import_logs": "سجلات الاستيراد",
     "alerts": "التنبيهات",
     "safety_analytics": "تحليلات السلامة",
-    "impersonation": "انتحال الهوية"
+    "impersonation": "انتحال الهوية",
+    "kpi_dashboard": "مؤشرات الأداء"
   },
   "common": {
     "refresh": "تحديث",
@@ -466,5 +467,29 @@
     "confirm_text": "تأكيد",
     "cancel_text": "إلغاء",
     "loading": "جارٍ التحميل..."
+  },
+  "kpi": {
+    "title": "لوحة مؤشرات الأداء الرئيسية",
+    "subtitle": "رصد مؤشرات الأداء عبر جميع روضات الشبكة",
+    "network_kpis": "مؤشرات الشبكة",
+    "per_kg_breakdown": "تفاصيل مؤشرات الأداء لكل روضة",
+    "attendance_rate": "معدل الحضور",
+    "ratio_compliance": "التزام النسبة",
+    "incident_rate": "معدل الحوادث",
+    "governance_score": "مؤشر الحوكمة",
+    "governance_band": "المستوى",
+    "avg_attendance": "متوسط الحضور",
+    "avg_governance": "متوسط مؤشر الحوكمة",
+    "avg_incidents": "متوسط معدل الحوادث",
+    "total_kg": "عدد الروضات",
+    "band_green": "ممتاز",
+    "band_amber": "متوسط",
+    "band_red": "يحتاج تحسين",
+    "search_kg": "بحث في الروضات...",
+    "loading": "جاري تحميل مؤشرات الأداء...",
+    "error": "خطأ في تحميل البيانات",
+    "retry": "إعادة المحاولة",
+    "attendance_chart": "معدل الحضور حسب الروضة",
+    "band_distribution": "توزيع مستوى الحوكمة"
   }
 }
