@@ -211,6 +211,14 @@ class HttpInterceptor {
         // Clear any local state and redirect to login.
         AuthStorage.clearAll();
         if (!window.location.pathname.startsWith("/login")) {
+          try {
+            sessionStorage.setItem(
+              "kinjo_last_identifier",
+              document.getElementById("username")?.value || "",
+            );
+          } catch {
+            // sessionStorage may be unavailable in some contexts
+          }
           window.location.href = "/login?expired=true";
         }
       }
@@ -333,7 +341,8 @@ function persistLanguage(userLang) {
     : "ar";
   localStorage.setItem("kinjo_lang", safeLang);
   localStorage.setItem("admin_language", safeLang);
-  document.cookie = `kinjo_lang=${safeLang}; path=/; max-age=31536000; SameSite=Lax`;
+  const isSecure = window.location.protocol === "https:";
+  document.cookie = `kinjo_lang=${safeLang}; path=/; max-age=31536000; SameSite=Lax${isSecure ? "; Secure" : ""}`;
 }
 
 function persistAuthenticatedSession(data, rememberMe = false) {
@@ -379,7 +388,7 @@ class AuthService {
       throw new Error(
         data.detail ||
           t(
-            "ØªØ¹Ø°Ø± ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø¯Ø®Ù„Ø©.",
+            "بيانات تسجيل الدخول غير صحيحة. يرجى التحقق من معلوماتك والمحاولة مرة أخرى.",
             "Unable to sign in with the provided credentials.",
           ),
       );
@@ -412,7 +421,7 @@ class AuthService {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(
-        data.detail || t("Ø±Ù…Ø² Ø§Ù„ØªØ­Ù‚Ù‚ ØºÙŠØ± ØµØ­ÙŠØ­.", "Invalid verification code."),
+        data.detail || t("رمز التحقق غير صحيح.", "Invalid verification code."),
       );
     }
     return data;
@@ -436,7 +445,7 @@ class AuthService {
     const response = await fetch(AUTH_CONFIG.meEndpoint);
     if (!response.ok) {
       throw new Error(
-        t("ØªØ¹Ø°Ø± Ø¬Ù„Ø¨ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù….", "Unable to fetch user profile."),
+        t("تعذر جلب بيانات المستخدم.", "Unable to fetch user profile."),
       );
     }
     return response.json();
@@ -497,6 +506,32 @@ async function handleLogin(event) {
   const errorAlert = document.getElementById("loginError");
   const errorMessage = document.getElementById("loginErrorMessage");
 
+  try {
+    const attempts = parseInt(sessionStorage.getItem("kinjo_login_attempts") || "0", 10);
+    if (attempts >= 5) {
+      const lastAttempt = parseInt(sessionStorage.getItem("kinjo_login_last_attempt") || "0", 10);
+      const now = Date.now();
+      if (now - lastAttempt < 30000) {
+        const waitSecs = Math.ceil((30000 - (now - lastAttempt)) / 1000);
+        if (errorMessage && errorAlert) {
+          errorMessage.textContent = t(
+            "Too many failed attempts. Please wait " + waitSecs + " seconds before trying again.",
+            "Too many failed attempts. Please wait " + waitSecs + " seconds before trying again.",
+          );
+          errorAlert.classList.remove("d-none");
+        }
+        if (loginBtn) {
+          loginBtn.disabled = false;
+          loginBtn.querySelector(".btn-text")?.classList.remove("d-none");
+          loginBtn.querySelector(".btn-loading")?.classList.add("d-none");
+        }
+        return;
+      }
+    }
+  } catch {
+    // ignore storage errors
+  }
+
   if (loginBtn) {
     loginBtn.disabled = true;
     loginBtn.querySelector(".btn-text")?.classList.add("d-none");
@@ -506,6 +541,11 @@ async function handleLogin(event) {
 
   try {
     const data = await AuthService.login(username, password, rememberMe);
+    try {
+      sessionStorage.removeItem("kinjo_login_attempts");
+    } catch {
+      // ignore
+    }
     persistLanguage(data.user_lang);
 
     if (data.mfa_required) {
@@ -530,6 +570,13 @@ async function handleLogin(event) {
       AuthGuard.redirectToDashboard(data.user);
     }
   } catch (error) {
+    try {
+      const attempts = parseInt(sessionStorage.getItem("kinjo_login_attempts") || "0", 10) + 1;
+      sessionStorage.setItem("kinjo_login_attempts", String(attempts));
+      sessionStorage.setItem("kinjo_login_last_attempt", String(Date.now()));
+    } catch {
+      // ignore storage errors
+    }
     if (errorAlert && errorMessage) {
       errorMessage.textContent = error.message;
       errorAlert.classList.remove("d-none");
@@ -683,11 +730,21 @@ async function initAuth() {
   const loginForm = document.getElementById("loginForm");
   if (loginForm) {
     loginForm.addEventListener("submit", handleLogin);
-    if (new URLSearchParams(window.location.search).get("expired") === "true") {
-      document
-        .getElementById("sessionExpiredAlert")
-        ?.classList.remove("d-none");
-    }
+      if (new URLSearchParams(window.location.search).get("expired") === "true") {
+        document
+          .getElementById("sessionExpiredAlert")
+          ?.classList.remove("d-none");
+        try {
+          const lastId = sessionStorage.getItem("kinjo_last_identifier");
+          const usernameInput = document.getElementById("username");
+          if (lastId && usernameInput) {
+            usernameInput.value = lastId;
+          }
+          sessionStorage.removeItem("kinjo_last_identifier");
+        } catch {
+          // ignore
+        }
+      }
   }
 
   await initMfaPage();
