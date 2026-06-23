@@ -110,7 +110,7 @@
 
     <!-- Network Summary Cards -->
     <div class="row g-3 mb-4">
-        <div class="col-6 col-xl-3">
+        <div class="col-6 col-xl-2">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
                     <div class="d-flex align-items-start justify-content-between mb-2">
@@ -127,7 +127,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-6 col-xl-3">
+        <div class="col-6 col-xl-2">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
                     <div class="d-flex align-items-start justify-content-between mb-2">
@@ -146,7 +146,26 @@
                 </div>
             </div>
         </div>
-        <div class="col-6 col-xl-3">
+        <div class="col-6 col-xl-2">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div class="text-muted small fw-semibold">
+                            {% if ui_lang == 'en' %}Avg. Ratio Compliance{% else %}متوسط التوافق النسبي{% endif %}
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:36px;height:36px;background:#8b5cf618;">
+                            <i class="bi bi-people-fill" style="color:#8b5cf6;" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                    <div class="display-6 fw-800" id="netRatioRate" style="color:#8b5cf6;">—</div>
+                    <div class="progress mt-2" style="height:4px;">
+                        <div class="progress-bar" id="netRatioBar" style="width:0%;background:#8b5cf6;transition:width 1s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-2">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
                     <div class="d-flex align-items-start justify-content-between mb-2">
@@ -165,7 +184,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-6 col-xl-3">
+        <div class="col-6 col-xl-2">
             <div class="card h-100 shadow-sm">
                 <div class="card-body">
                     <div class="d-flex align-items-start justify-content-between mb-2">
@@ -302,12 +321,21 @@
     let allRows         = [];
 
     /* ── init ──────────────────────────────────────────────────────── */
+    // Use local calendar date (not UTC) so Jordan users (UTC+3) get the correct
+    // "today" between midnight–03:00 when toISOString() would return yesterday.
+    function localDate(d) {
+        const y  = d.getFullYear();
+        const m  = String(d.getMonth() + 1).padStart(2, '0');
+        const dy = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dy}`;
+    }
+
     window.setRange = function(days) {
         const to   = new Date();
         const from = new Date();
         from.setDate(from.getDate() - (days - 1));
-        document.getElementById('filterStart').value = from.toISOString().slice(0, 10);
-        document.getElementById('filterEnd').value   = to.toISOString().slice(0, 10);
+        document.getElementById('filterStart').value = localDate(from);
+        document.getElementById('filterEnd').value   = localDate(to);
     };
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -352,12 +380,14 @@
 
     /* ── summary cards ─────────────────────────────────────────────── */
     function renderSummaryCards(d) {
-        document.getElementById('netKgCount').textContent    = d.kindergarten_count ?? '—';
-        document.getElementById('netAttRate').textContent    = fmt(d.avg_attendance_rate) + '%';
-        document.getElementById('netGqiScore').textContent   = fmt(d.avg_gqi_score) + '%';
-        document.getElementById('netIncidentRate').textContent = fmt(d.avg_incident_rate);
-        document.getElementById('netAttBar').style.width    = Math.min(d.avg_attendance_rate || 0, 100) + '%';
-        document.getElementById('netGqiBar').style.width    = Math.min(d.avg_gqi_score || 0, 100) + '%';
+        document.getElementById('netKgCount').textContent       = d.kindergarten_count ?? '—';
+        document.getElementById('netAttRate').textContent       = fmt(d.avg_attendance_rate) + '%';
+        document.getElementById('netRatioRate').textContent     = fmt(d.avg_ratio_compliance) + '%';
+        document.getElementById('netGqiScore').textContent      = fmt(d.avg_gqi_score) + '%';
+        document.getElementById('netIncidentRate').textContent  = fmt(d.avg_incident_rate);
+        document.getElementById('netAttBar').style.width   = Math.min(d.avg_attendance_rate || 0, 100) + '%';
+        document.getElementById('netRatioBar').style.width = Math.min(d.avg_ratio_compliance || 0, 100) + '%';
+        document.getElementById('netGqiBar').style.width   = Math.min(d.avg_gqi_score || 0, 100) + '%';
     }
 
     /* ── charts ────────────────────────────────────────────────────── */
@@ -460,7 +490,12 @@
             return;
         }
 
-        tbody.innerHTML = sorted.map((r, i) => `
+        tbody.innerHTML = sorted.map((r, i) => {
+            const att  = r.attendance_rate  ?? 0;
+            const rat  = r.ratio_compliance ?? 0;
+            const inc  = r.incident_rate    ?? 0;
+            const gov  = r.governance_score ?? 0;
+            return `
             <tr>
                 <td>
                     <a href="/admin/kg-overview?id=${r.kindergarten_id}" class="text-decoration-none fw-semibold small">
@@ -469,23 +504,23 @@
                 </td>
                 <td class="small text-muted">${esc(r.governorate)}</td>
                 <td class="text-center">
-                    <span class="small fw-600" style="color:${attColor(r.attendance_rate)};">
-                        ${r.attendance_rate.toFixed(1)}%
+                    <span class="small fw-600" style="color:${attColor(att)};">
+                        ${att.toFixed(1)}%
                     </span>
                 </td>
                 <td class="text-center">
-                    <span class="small fw-600" style="color:${ratioColor(r.ratio_compliance)};">
-                        ${r.ratio_compliance.toFixed(1)}%
+                    <span class="small fw-600" style="color:${ratioColor(rat)};">
+                        ${rat.toFixed(1)}%
                     </span>
                 </td>
                 <td class="text-center">
-                    <span class="small fw-600" style="color:${incidentColor(r.incident_rate)};">
-                        ${r.incident_rate.toFixed(2)}
+                    <span class="small fw-600" style="color:${incidentColor(inc)};">
+                        ${inc.toFixed(2)}
                     </span>
                 </td>
                 <td class="text-center">
                     <span class="small fw-600" style="color:${bandColor(r.governance_band)};">
-                        ${r.governance_score.toFixed(1)}%
+                        ${gov.toFixed(1)}%
                     </span>
                 </td>
                 <td class="text-center">
@@ -493,7 +528,8 @@
                         ${bandLabel(r.governance_band)}
                     </span>
                 </td>
-            </tr>`).join('');
+            </tr>`;
+        }).join('');
 
         document.getElementById('tableFooter').textContent =
             `${T('إجمالي الروضات:', 'Total kindergartens:')} ${sorted.length}`;

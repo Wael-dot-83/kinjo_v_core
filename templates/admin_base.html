@@ -89,10 +89,10 @@
                 <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
               </button>
               <ul id="dashboard-submenu" class="submenu" role="list">
-                <li class="nav-item" role="listitem"><a href="/admin/dashboard" class="nav-link {% if request.url.path == '/admin/dashboard' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/dashboard" class="nav-link {% if request.url.path == '/admin/dashboard' %}active{% endif %}">
                   <i class="bi bi-house" aria-hidden="true"></i> <span data-i18n="dashboard.overview">{% if ui_lang == 'en' %}Overview{% else %}نظرة عامة{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/kg-overview" class="nav-link {% if request.url.path == '/admin/kg-overview' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/kg-overview" class="nav-link {% if request.url.path == '/admin/kg-overview' %}active{% endif %}">
                   <i class="bi bi-building" aria-hidden="true"></i> <span data-i18n="nav.kindergarten_overview">{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}</span>
                 </a></li>
               </ul>
@@ -106,13 +106,13 @@
                 <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
               </button>
               <ul id="users-submenu" class="submenu" role="list">
-                <li class="nav-item" role="listitem"><a href="/admin/users" class="nav-link {% if request.url.path == '/admin/users' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/users" class="nav-link {% if request.url.path == '/admin/users' %}active{% endif %}">
                   <i class="bi bi-list-ul" aria-hidden="true"></i> <span data-i18n="users.user_list">{% if ui_lang == 'en' %}User List{% else %}قائمة المستخدمين{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/users/create" class="nav-link {% if request.url.path == '/admin/users/create' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/users/create" class="nav-link {% if request.url.path == '/admin/users/create' %}active{% endif %}">
                   <i class="bi bi-person-plus" aria-hidden="true"></i> <span data-i18n="users.add_user">{% if ui_lang == 'en' %}Add User{% else %}إضافة مستخدم{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/users/import" class="nav-link {% if request.url.path == '/admin/users/import' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/users/import" class="nav-link {% if request.url.path == '/admin/users/import' %}active{% endif %}">
                   <i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i> <span data-i18n="users.import_users">{% if ui_lang == 'en' %}Import Users{% else %}استيراد المستخدمين{% endif %}</span>
                 </a></li>
               </ul>
@@ -126,13 +126,13 @@
                 <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
               </button>
               <ul id="communication-submenu" class="submenu" role="list">
-                <li class="nav-item" role="listitem"><a href="/admin/messages" class="nav-link {% if request.url.path == '/admin/messages' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/messages" class="nav-link {% if request.url.path == '/admin/messages' %}active{% endif %}">
                   <i class="bi bi-inbox" aria-hidden="true"></i> <span data-i18n="sidebar.messages">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/messages/compose" class="nav-link {% if request.url.path == '/admin/messages/compose' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/messages/compose" class="nav-link {% if request.url.path == '/admin/messages/compose' %}active{% endif %}">
                   <i class="bi bi-pencil-square" aria-hidden="true"></i> <span data-i18n="communication.compose_message">{% if ui_lang == 'en' %}Compose Message{% else %}كتابة رسالة{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/contact-messages" class="nav-link {% if request.url.path == '/admin/contact-messages' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/contact-messages" class="nav-link {% if request.url.path == '/admin/contact-messages' %}active{% endif %}">
                   <i class="bi bi-chat-dots" aria-hidden="true"></i> <span data-i18n="sidebar.contact_messages">{% if ui_lang == 'en' %}Contact Messages{% else %}رسائل التواصل{% endif %}</span>
                 </a></li>
               </ul>
@@ -146,26 +146,26 @@
                 <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
               </button>
               <ul id="analytics-submenu" class="submenu" role="list">
-                <li class="nav-item" role="listitem"><a href="/admin/analytics" class="nav-link {% if request.url.path == '/admin/analytics' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/analytics" class="nav-link {% if request.url.path == '/admin/analytics' %}active{% endif %}">
                   <i class="bi bi-graph-up" aria-hidden="true"></i> <span data-i18n="analytics.overview">{% if ui_lang == 'en' %}Analytics Overview{% else %}نظرة عامة التحليلات{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/kpi" class="nav-link {% if request.url.path == '/admin/kpi' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/kpi" class="nav-link {% if request.url.path == '/admin/kpi' %}active{% endif %}">
                   <i class="bi bi-award-fill" aria-hidden="true"></i> <span data-i18n="sidebar.kpi_dashboard">{% if ui_lang == 'en' %}KPI Dashboard{% else %}مؤشرات الأداء{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/analytics/reports" class="nav-link {% if request.url.path == '/admin/analytics/reports' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/analytics/reports" class="nav-link {% if request.url.path == '/admin/analytics/reports' %}active{% endif %}">
                   <i class="bi bi-file-text" aria-hidden="true"></i> <span data-i18n="analytics.detailed_reports">{% if ui_lang == 'en' %}Detailed Reports{% else %}تقارير مفصلة{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/analytics/daily-reports" class="nav-link {% if request.url.path == '/admin/analytics/daily-reports' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/analytics/daily-reports" class="nav-link {% if request.url.path == '/admin/analytics/daily-reports' %}active{% endif %}">
                   <i class="bi bi-calendar-day" aria-hidden="true"></i> <span data-i18n="sidebar.daily_reports">{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/daily-reports-organization" class="nav-link {% if request.url.path == '/admin/daily-reports-organization' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/daily-reports-organization" class="nav-link {% if request.url.path == '/admin/daily-reports-organization' %}active{% endif %}">
                   <i class="bi bi-clipboard-check" aria-hidden="true"></i> <span data-i18n="sidebar.report_organization">{% if ui_lang == 'en' %}Report Organization{% else %}تنظيم التقارير{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/reports/incidents" class="nav-link {% if request.url.path == '/admin/reports/incidents' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/reports/incidents" class="nav-link {% if request.url.path == '/admin/reports/incidents' %}active{% endif %}">
                   <i class="bi bi-list-check" aria-hidden="true"></i>
                   <span data-i18n="sidebar.incident_list">{% if ui_lang == 'en' %}Incident List{% else %}قائمة الحوادث{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/reports/incidents/generate" class="nav-link {% if '/admin/reports/incidents' in request.url.path %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/reports/incidents/generate" class="nav-link {% if '/admin/reports/incidents' in request.url.path %}active{% endif %}">
                   <i class="bi bi-file-medical" aria-hidden="true"></i>
                   <span data-i18n="sidebar.incident_reports">{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}</span>
                 </a></li>
@@ -180,10 +180,10 @@
                 <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
               </button>
               <ul id="heatmap-submenu" class="submenu" role="list">
-                <li class="nav-item" role="listitem"><a href="/admin/heatmap" class="nav-link {% if request.url.path == '/admin/heatmap' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/heatmap" class="nav-link {% if request.url.path == '/admin/heatmap' %}active{% endif %}">
                   <i class="bi bi-globe" aria-hidden="true"></i> <span data-i18n="dashboard.overview">{% if ui_lang == 'en' %}Overview{% else %}نظرة عامة{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/heatmap#governorates" class="nav-link" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/heatmap#governorates" class="nav-link">
                   <i class="bi bi-geo-alt" aria-hidden="true"></i> <span data-i18n="sidebar.governorates">{% if ui_lang == 'en' %}Governorates{% else %}المحافظات{% endif %}</span>
                 </a></li>
               </ul>
@@ -197,13 +197,13 @@
                 <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
               </button>
               <ul id="governance-submenu" class="submenu" role="list">
-                <li class="nav-item" role="listitem"><a href="/admin/governance-reports" class="nav-link {% if request.url.path == '/admin/governance-reports' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/governance-reports" class="nav-link {% if request.url.path == '/admin/governance-reports' %}active{% endif %}">
                   <i class="bi bi-clipboard-data" aria-hidden="true"></i> <span data-i18n="sidebar.governance_reports">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/classification" class="nav-link {% if request.url.path == '/admin/classification' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/classification" class="nav-link {% if request.url.path == '/admin/classification' %}active{% endif %}">
                   <i class="bi bi-trophy" aria-hidden="true"></i> <span data-i18n="governance.leaderboard">{% if ui_lang == 'en' %}Leaderboard{% else %}لوحة الصدارة{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/governance/reminders" class="nav-link {% if '/admin/governance/reminders' in request.url.path %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/governance/reminders" class="nav-link {% if '/admin/governance/reminders' in request.url.path %}active{% endif %}">
                   <i class="bi bi-bell" aria-hidden="true"></i> <span data-i18n="governance.reminders">{% if ui_lang == 'en' %}Reminders{% else %}التذكيرات{% endif %}</span>
                 </a></li>
               </ul>
@@ -217,13 +217,13 @@
                 <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
               </button>
               <ul id="data-management-submenu" class="submenu" role="list">
-                <li class="nav-item" role="listitem"><a href="/admin/import-kindergartens" class="nav-link {% if request.url.path == '/admin/import-kindergartens' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/import-kindergartens" class="nav-link {% if request.url.path == '/admin/import-kindergartens' %}active{% endif %}">
                   <i class="bi bi-upload" aria-hidden="true"></i> <span data-i18n="sidebar.import_kindergartens">{% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الروضات{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/imported-kindergartens" class="nav-link {% if request.url.path == '/admin/imported-kindergartens' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/imported-kindergartens" class="nav-link {% if request.url.path == '/admin/imported-kindergartens' %}active{% endif %}">
                   <i class="bi bi-building" aria-hidden="true"></i> <span data-i18n="sidebar.imported_kindergartens">{% if ui_lang == 'en' %}Imported Kindergartens{% else %}الروضات المستوردة{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/import-logs" class="nav-link {% if request.url.path == '/admin/import-logs' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/import-logs" class="nav-link {% if request.url.path == '/admin/import-logs' %}active{% endif %}">
                   <i class="bi bi-clock-history" aria-hidden="true"></i> <span data-i18n="sidebar.import_logs">{% if ui_lang == 'en' %}Import Logs{% else %}سجلات الاستيراد{% endif %}</span>
                 </a></li>
               </ul>
@@ -237,16 +237,16 @@
                 <i class="bi bi-chevron-down nav-chevron" aria-hidden="true"></i>
               </button>
               <ul id="security-submenu" class="submenu" role="list">
-                <li class="nav-item" role="listitem"><a href="/admin/audit-logs" class="nav-link {% if request.url.path == '/admin/audit-logs' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/audit-logs" class="nav-link {% if request.url.path == '/admin/audit-logs' %}active{% endif %}">
                   <i class="bi bi-clock-history" aria-hidden="true"></i> <span data-i18n="security.audit_logs">{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/alerts" class="nav-link {% if request.url.path == '/admin/alerts' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/alerts" class="nav-link {% if request.url.path == '/admin/alerts' %}active{% endif %}">
                   <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> <span data-i18n="sidebar.alerts">{% if ui_lang == 'en' %}Alerts{% else %}التنبيهات{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/safety-analytics" class="nav-link {% if request.url.path == '/admin/safety-analytics' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/safety-analytics" class="nav-link {% if request.url.path == '/admin/safety-analytics' %}active{% endif %}">
                   <i class="bi bi-shield-check" aria-hidden="true"></i> <span data-i18n="sidebar.safety_analytics">{% if ui_lang == 'en' %}Safety Analytics{% else %}تحليلات السلامة{% endif %}</span>
                 </a></li>
-                <li class="nav-item" role="listitem"><a href="/admin/impersonate" class="nav-link {% if request.url.path == '/admin/impersonate' %}active{% endif %}" role="listitem">
+                <li class="nav-item" role="listitem"><a href="/admin/impersonate" class="nav-link {% if request.url.path == '/admin/impersonate' %}active{% endif %}">
                   <i class="bi bi-incognito" aria-hidden="true"></i> <span data-i18n="sidebar.impersonation">{% if ui_lang == 'en' %}Impersonation{% else %}انتحال الهوية{% endif %}</span>
                 </a></li>
               </ul>

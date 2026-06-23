@@ -5,6 +5,7 @@ Implements all KPIs from Section 5 of the SRS
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections import defaultdict
 from bisect import bisect_left, bisect_right
 from math import ceil
 from sqlalchemy.orm import Session
@@ -3690,6 +3691,169 @@ def get_manager_kpi_alias(
         )
 
 
+def _batch_compute_network_kpis(
+    db: Session,
+    kindergarten_ids: List[int],
+    period_start: date,
+    period_end: date,
+) -> Dict[int, Dict[str, Any]]:
+    """
+    Compute attendance_rate, incident_rate, ratio_compliance, governance_score/band
+    for a list of kindergartens in 5 SQL queries (O(1)) instead of 4N per-KG queries.
+
+    governance_score here is a network-summary proxy: 40% attendance + 40% ratio + 20%
+    incident-safety.  The full weighted GCEI score remains available on individual KG
+    pages via compute_governance_score / compute_kpi_bundle.
+    """
+    if not kindergarten_ids:
+        return {}
+
+    kg_ids = list(kindergarten_ids)
+
+    # ── 1. Batch: OperatingCalendar overrides ─────────────────────────────
+    cal_rows = db.query(
+        models.OperatingCalendar.kindergarten_id,
+        models.OperatingCalendar.date,
+        models.OperatingCalendar.is_open,
+    ).filter(
+        models.OperatingCalendar.kindergarten_id.in_(kg_ids),
+        models.OperatingCalendar.date >= period_start,
+        models.OperatingCalendar.date <= period_end,
+    ).all()
+    cal_map: Dict[int, Dict[date, bool]] = defaultdict(dict)
+    for kg_id, d, is_open in cal_rows:
+        cal_map[kg_id][d] = bool(is_open)
+
+    # Working-days list per KG (Jordan Sun–Thu default, overridden by explicit calendar)
+    kg_working: Dict[int, List[date]] = {}
+    for kg_id in kg_ids:
+        overrides = cal_map.get(kg_id, {})
+        wdays: List[date] = []
+        cur = period_start
+        while cur <= period_end:
+            if cur in overrides:
+                if overrides[cur]:
+                    wdays.append(cur)
+            elif cur.weekday() not in (4, 5):   # Friday=4, Saturday=5 are off in Jordan
+                wdays.append(cur)
+            cur += timedelta(days=1)
+        kg_working[kg_id] = wdays
+
+    # ── 2. Batch: Active enrollments overlapping the period ───────────────
+    enroll_rows = db.query(
+        models.EnrollmentApplication.child_id,
+        models.EnrollmentApplication.kindergarten_id,
+        models.EnrollmentApplication.enrollment_start_date,
+        models.EnrollmentApplication.enrollment_end_date,
+    ).filter(
+        models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        or_(
+            models.EnrollmentApplication.enrollment_end_date.is_(None),
+            models.EnrollmentApplication.enrollment_end_date >= period_start,
+        ),
+        or_(
+            models.EnrollmentApplication.enrollment_start_date.is_(None),
+            models.EnrollmentApplication.enrollment_start_date <= period_end,
+        ),
+    ).all()
+
+    kg_expected: Dict[int, int] = defaultdict(int)
+    child_to_kg: Dict[int, int] = {}
+    all_child_ids: List[int] = []
+
+    for child_id, kg_id, enroll_start, enroll_end in enroll_rows:
+        wdays = kg_working.get(int(kg_id), [])
+        if not wdays:
+            continue
+        ordinals = [d.toordinal() for d in wdays]
+        eff_start = max(period_start, enroll_start or period_start)
+        eff_end   = min(period_end,   enroll_end   or period_end)
+        if eff_start > eff_end:
+            continue
+        left  = bisect_left(ordinals, eff_start.toordinal())
+        right = bisect_right(ordinals, eff_end.toordinal())
+        exp   = max(0, right - left)
+        if exp > 0:
+            kg_expected[int(kg_id)] += exp
+            cid = int(child_id)
+            child_to_kg[cid] = int(kg_id)
+            all_child_ids.append(cid)
+
+    # ── 3. Batch: Attendance logs ─────────────────────────────────────────
+    kg_attended: Dict[int, int] = defaultdict(int)
+    if all_child_ids:
+        att_rows = db.query(
+            models.AttendanceLog.child_id,
+            func.count(models.AttendanceLog.id).label("cnt"),
+        ).filter(
+            models.AttendanceLog.child_id.in_(all_child_ids),
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status.in_([
+                models.AttendanceStatus.PRESENT,
+                models.AttendanceStatus.LATE,
+                models.AttendanceStatus.EXCUSED,
+            ]),
+        ).group_by(models.AttendanceLog.child_id).all()
+        for child_id, cnt in att_rows:
+            kg_id = child_to_kg.get(int(child_id))
+            if kg_id is not None:
+                kg_attended[kg_id] += int(cnt or 0)
+
+    # ── 4. Batch: Incidents ───────────────────────────────────────────────
+    inc_rows = db.query(
+        models.Incident.kindergarten_id,
+        func.count(models.Incident.id).label("cnt"),
+    ).filter(
+        models.Incident.kindergarten_id.in_(kg_ids),
+        func.date(models.Incident.occurred_at) >= period_start,
+        func.date(models.Incident.occurred_at) <= period_end,
+    ).group_by(models.Incident.kindergarten_id).all()
+    kg_incidents: Dict[int, int] = {int(kg_id): int(cnt or 0) for kg_id, cnt in inc_rows}
+
+    # ── 5. Batch: Ratio compliance ────────────────────────────────────────
+    rc_rows = db.query(
+        models.RatioCompliance.kindergarten_id,
+        func.sum(models.RatioCompliance.compliant_minutes).label("comp"),
+        func.sum(models.RatioCompliance.operating_minutes).label("oper"),
+    ).filter(
+        models.RatioCompliance.kindergarten_id.in_(kg_ids),
+        models.RatioCompliance.date >= period_start,
+        models.RatioCompliance.date <= period_end,
+    ).group_by(models.RatioCompliance.kindergarten_id).all()
+    kg_ratio: Dict[int, Tuple[float, float]] = {
+        int(kg_id): (float(comp or 0), float(oper or 0))
+        for kg_id, comp, oper in rc_rows
+    }
+
+    # ── 6. Derive per-KG metrics ──────────────────────────────────────────
+    results: Dict[int, Dict[str, Any]] = {}
+    for kg_id in kg_ids:
+        expected = kg_expected.get(kg_id, 0)
+        attended = kg_attended.get(kg_id, 0)
+        incidents = kg_incidents.get(kg_id, 0)
+        comp, oper = kg_ratio.get(kg_id, (0.0, 0.0))
+
+        att_rate   = round((attended / expected) * 100, 2) if expected > 0 else 0.0
+        inc_rate   = round((incidents / attended) * 100, 2) if attended > 0 else 0.0
+        ratio_rate = round((comp / oper) * 100, 2) if oper > 0 else 0.0
+
+        # Proxy governance: attendance(40%) + ratio(40%) + incident-safety(20%)
+        inc_safety = max(0.0, 100.0 - inc_rate * 20.0)
+        gov_score  = round(att_rate * 0.40 + ratio_rate * 0.40 + inc_safety * 0.20, 2)
+        gov_band   = "GREEN" if gov_score >= 80 else ("AMBER" if gov_score >= 60 else "RED")
+
+        results[kg_id] = {
+            "attendance_rate":  att_rate,
+            "incident_rate":    inc_rate,
+            "ratio_compliance": ratio_rate,
+            "governance_score": gov_score,
+            "governance_band":  gov_band,
+        }
+    return results
+
+
 @router.get("/kpi/network-summary", response_model=KPINetworkSummaryResponse)
 def get_kpi_network_summary(
     start_date: Optional[date] = Query(None),
@@ -3727,6 +3891,10 @@ def get_kpi_network_summary(
             except validators.ValidationError:
                 pass
         kindergartens = kg_query.all()
+        kg_ids = [kg.id for kg in kindergartens]
+
+        # Single-pass batch: 5 queries for all KGs instead of 4N per-KG queries
+        kpi_batch = _batch_compute_network_kpis(db, kg_ids, start_date, end_date)
 
         per_kg = []
         attendance_rates = []
@@ -3735,39 +3903,35 @@ def get_kpi_network_summary(
         gqi_scores = []
 
         for kg in kindergartens:
-            ar = KPIService.compute_attendance_rate(db, kg.id, start_date, end_date)
-            ir = KPIService.compute_incident_rate(db, kg.id, start_date, end_date)
-            rc = KPIService.compute_ratio_compliance(db, kg.id, start_date, end_date)
-            gs_tuple = KPIService.compute_governance_score(db, kg.id, start_date, end_date)
-            gs = gs_tuple[0] if isinstance(gs_tuple, tuple) else float(gs_tuple)
-            band = gs_tuple[1] if isinstance(gs_tuple, tuple) else ("GREEN" if gs >= 70 else ("AMBER" if gs >= 40 else "RED"))
-
-            attendance_rates.append(ar)
-            incident_rates.append(ir)
-            ratio_compliances.append(rc)
-            gqi_scores.append(gs)
-
+            m = kpi_batch.get(kg.id, {
+                "attendance_rate": 0.0, "incident_rate": 0.0,
+                "ratio_compliance": 0.0, "governance_score": 0.0, "governance_band": "RED",
+            })
+            attendance_rates.append(m["attendance_rate"])
+            incident_rates.append(m["incident_rate"])
+            ratio_compliances.append(m["ratio_compliance"])
+            gqi_scores.append(m["governance_score"])
             per_kg.append({
-                "kindergarten_id": kg.id,
+                "kindergarten_id":   kg.id,
                 "kindergarten_name": kg.name_ar or kg.name_en or f"KG-{kg.id}",
-                "governorate": kg.governorate or "",
-                "attendance_rate": ar,
-                "incident_rate": ir,
-                "ratio_compliance": rc,
-                "governance_score": gs,
-                "governance_band": band,
+                "governorate":       kg.governorate or "",
+                "attendance_rate":   m["attendance_rate"],
+                "incident_rate":     m["incident_rate"],
+                "ratio_compliance":  m["ratio_compliance"],
+                "governance_score":  m["governance_score"],
+                "governance_band":   m["governance_band"],
             })
 
         def _avg(lst: list) -> float:
             return round(sum(lst) / len(lst), 2) if lst else 0.0
 
         result = {
-            "kindergarten_count": len(kindergartens),
+            "kindergarten_count":  len(kindergartens),
             "avg_attendance_rate": _avg(attendance_rates),
-            "avg_incident_rate": _avg(incident_rates),
+            "avg_incident_rate":   _avg(incident_rates),
             "avg_ratio_compliance": _avg(ratio_compliances),
-            "avg_gqi_score": _avg(gqi_scores),
-            "per_kindergarten": per_kg,
+            "avg_gqi_score":       _avg(gqi_scores),
+            "per_kindergarten":    per_kg,
         }
         dashboard_cache.set(cache_key, result, ttl_seconds=300)
         return result
