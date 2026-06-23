@@ -4,6 +4,7 @@ Performance monitoring middleware and utilities
 import time
 import logging
 from typing import Callable, Dict, Any, List, Optional
+from collections import defaultdict
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -210,7 +211,7 @@ def start_system_monitoring():
 
 
 class RequestMetricsCollector:
-    """Utility class for collecting detailed request metrics"""
+    """Utility class for collecting detailed request metrics with percentile tracking."""
 
     def __init__(self):
         self.request_count = 0
@@ -218,6 +219,8 @@ class RequestMetricsCollector:
         self.response_times = []
         self.status_codes = {}
         self.endpoint_metrics = {}
+        self._endpoint_latencies: Dict[str, List[float]] = {}
+        self._max_latencies = 2000
 
     def record_request(self, method: str, path: str, status_code: int, response_time: float):
         """Record a request"""
@@ -230,10 +233,8 @@ class RequestMetricsCollector:
         if len(self.response_times) > 1000:
             self.response_times.pop(0)
 
-        # Track status codes
         self.status_codes[status_code] = self.status_codes.get(status_code, 0) + 1
 
-        # Track endpoint metrics
         endpoint_key = f"{method} {path}"
         if endpoint_key not in self.endpoint_metrics:
             self.endpoint_metrics[endpoint_key] = {
@@ -247,6 +248,33 @@ class RequestMetricsCollector:
         metrics['total_time'] += response_time
         if status_code >= 400:
             metrics['errors'] += 1
+
+        if path not in self._endpoint_latencies:
+            self._endpoint_latencies[path] = []
+        self._endpoint_latencies[path].append(response_time * 1000)
+        if len(self._endpoint_latencies[path]) > self._max_latencies:
+            self._endpoint_latencies[path] = self._endpoint_latencies[path][-self._max_latencies:]
+
+    def get_percentile(self, p: float, endpoint: Optional[str] = None) -> float:
+        if endpoint and endpoint in self._endpoint_latencies:
+            vals = sorted(self._endpoint_latencies[endpoint])
+        else:
+            vals = sorted(self.response_times)
+            vals = [v * 1000 for v in vals]
+        if not vals:
+            return 0.0
+        idx = min(int(len(vals) * p / 100.0), len(vals) - 1)
+        return round(vals[idx], 2)
+
+    def get_endpoint_p95(self) -> Dict[str, float]:
+        result = {}
+        for endpoint, vals in self._endpoint_latencies.items():
+            if not vals:
+                continue
+            sorted_vals = sorted(vals)
+            idx = min(int(len(sorted_vals) * 0.95), len(sorted_vals) - 1)
+            result[endpoint] = round(sorted_vals[idx], 2)
+        return result
 
     def get_summary(self) -> dict:
         """Get metrics summary"""

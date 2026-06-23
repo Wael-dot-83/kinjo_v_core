@@ -1820,3 +1820,12 @@ async def admin_settings_page(request: Request, current_user: User = Depends(get
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="admin/settings.html", context={"current_user": current_user})
 
+
+@router.get("/admin/observability", response_class=HTMLResponse)
+async def admin_observability_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin observability dashboard — system health, latency, data quality, alert quality."""
+    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if user_role not in ('ADMIN', 'MANAGER'):
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse(request=request, name="admin/observability_dashboard.html", context={"current_user": current_user})
+
