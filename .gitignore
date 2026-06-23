@@ -38,6 +38,8 @@ env/
 *.swo
 *~
 node_modules/
+.playwright-mcp/
+
 npm-debug.log*
 
 # AI tooling
