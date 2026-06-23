@@ -188,14 +188,14 @@ def create_enrollment_application(
                 detail=_api("Child is already enrolled at another kindergarten", _ulang(current_user))
             )
 
-    # Validate child age (70 days to 56 months)
+    # Validate child age (1 day to 56 months)
     dob = enrollment_data.date_of_birth
     today = date.today()
     age_days = (today - dob).days
     age_months = age_days / 30.44  # Average days per month
 
-    if age_days < 70:
-        raise HTTPException(status_code=400, detail=_api("Child must be at least 70 days old", _ulang(current_user)))
+    if age_days < 1:
+        raise HTTPException(status_code=400, detail=_api("Child must be at least 1 day old", _ulang(current_user)))
     if age_months > 56:
         raise HTTPException(status_code=400, detail=_api("Child must be under 56 months old", _ulang(current_user)))
 

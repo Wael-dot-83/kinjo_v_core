@@ -2,7 +2,7 @@
 Centralized child age policy utilities.
 
 Business rule:
-- Minimum child age = 70 days (inclusive)
+- Minimum child age = 1 day (inclusive)
 - Maximum child age = 4 years and 8 months (inclusive)
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ MAX_CHILD_AGE_MONTHS = settings.MAX_CHILD_AGE_MONTHS
 class ChildAgeBounds:
     """Inclusive DOB bounds for valid children."""
     min_date: date  # Oldest allowed (today minus 4y8m)
-    max_date: date  # Youngest allowed (today minus 70 days)
+    max_date: date  # Youngest allowed (today minus 1 day)
 
 
 def _subtract_months(base: date, months: int) -> date:

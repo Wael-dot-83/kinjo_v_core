@@ -715,7 +715,7 @@ class ChildCreateSchema(BaseModel):
     last_name: str = Field(..., min_length=1, max_length=100)
     date_of_birth: date = Field(
         ...,
-        description="YYYY-MM-DD. Must be between 70 days and 4 years 8 months (inclusive).",
+        description="YYYY-MM-DD. Must be between 1 day and 4 years 8 months (inclusive).",
     )
     gender: models.Gender
     father_name: str = Field(..., min_length=1, max_length=255)
@@ -737,7 +737,7 @@ class ChildCreateSchema(BaseModel):
     @field_validator('date_of_birth')
     @classmethod
     def validate_child_age(cls, v: date) -> date:
-        """Validate child age is within acceptable range (70 days to 56 months / 4y 8m)"""
+        """Validate child age is within acceptable range (1 day to 56 months / 4y 8m)"""
         try:
             validators.validate_child_age_strict(v)
         except validators.ValidationError as exc:

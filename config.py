@@ -194,7 +194,7 @@ class Settings(BaseSettings):
     CLAMAV_PORT: int = 3310
 
     # Business Rules
-    MIN_CHILD_AGE_DAYS: int = 70
+    MIN_CHILD_AGE_DAYS: int = 1
     MAX_CHILD_AGE_MONTHS: int = 56  # 4 years 8 months
     WAITLIST_OFFER_EXPIRY_HOURS: int = 48
     MANAGER_TO_MANAGER_ENABLED: bool = False

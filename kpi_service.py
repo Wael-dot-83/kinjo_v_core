@@ -3038,7 +3038,7 @@ def get_consolidated_kpi_dashboard_data(
         return points
 
     # Build student distribution by birth year (calendar year)
-    # Age constraints: 70 days (MIN_CHILD_AGE_DAYS) to 4 years 8 months (MAX_CHILD_AGE_MONTHS)
+    # Age constraints: 1 day (MIN_CHILD_AGE_DAYS) to 4 years 8 months (MAX_CHILD_AGE_MONTHS)
     today_date = date.today()
     bounds = get_child_age_bounds(today_date)
 

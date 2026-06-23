@@ -341,8 +341,8 @@ class TestAttendanceAudit:
 
 class TestChildAgeBoundary:
     def test_child_too_young_rejected(self):
-        """Child under 70 days old should be rejected."""
-        dob = date.today() - timedelta(days=50)
+        """Child under 1 day old (born today) should be rejected."""
+        dob = date.today()  # 0 days old — born today, not yet 1 day
         with pytest.raises(ValidationError):
             validate_child_age_strict(dob)
 
