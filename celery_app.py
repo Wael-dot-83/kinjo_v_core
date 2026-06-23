@@ -6,6 +6,7 @@ Tasks run eagerly in-process when TESTING=True so no Redis is required in CI.
 import logging
 
 from celery import Celery
+from celery.signals import task_prerun, task_postrun, task_failure
 
 from config import settings
 
@@ -27,8 +28,6 @@ celery_app.conf.update(
     task_always_eager=settings.TESTING,
     task_eager_propagates=settings.TESTING,
     beat_schedule={
-        # Production requirement: run exactly one Celery Beat scheduler instance
-        # per environment for this schedule to avoid duplicate dispatch triggers.
         "dispatch-scheduled-messages": {
             "task": "messaging_tasks.dispatch_scheduled_messages",
             "schedule": 60.0,
@@ -36,4 +35,54 @@ celery_app.conf.update(
     },
 )
 
-__all__ = ["celery_app"]
+
+_task_stats = {"completed": 0, "failed": 0, "durations": []}
+_task_start_times = {}
+
+
+@task_prerun.connect
+def _on_task_prerun(task_id, task, **kwargs):
+    import time
+    _task_start_times[task_id] = time.monotonic()
+
+
+@task_postrun.connect
+def _on_task_postrun(task_id, task, retval=None, state=None, **kwargs):
+    import time
+    start = _task_start_times.pop(task_id, None)
+    if start is not None:
+        duration_ms = (time.monotonic() - start) * 1000
+        _task_stats["durations"].append(duration_ms)
+        if len(_task_stats["durations"]) > 5000:
+            _task_stats["durations"] = _task_stats["durations"][-5000:]
+    _task_stats["completed"] += 1
+
+
+@task_failure.connect
+def _on_task_failure(task_id, exception, traceback, sender, **kwargs):
+    _task_stats["failed"] += 1
+    _task_start_times.pop(task_id, None)
+
+
+def get_task_stats():
+    durations = _task_stats["durations"]
+    if not durations:
+        return {
+            "completed": _task_stats["completed"],
+            "failed": _task_stats["failed"],
+            "avg_duration_ms": 0,
+            "p50_duration_ms": 0,
+            "p95_duration_ms": 0,
+        }
+    sorted_d = sorted(durations)
+    n = len(sorted_d)
+    return {
+        "completed": _task_stats["completed"],
+        "failed": _task_stats["failed"],
+        "avg_duration_ms": round(sum(sorted_d) / n, 1),
+        "p50_duration_ms": round(sorted_d[n // 2], 1),
+        "p95_duration_ms": round(sorted_d[min(int(n * 0.95), n - 1)], 1),
+    }
+
+
+__all__ = ["celery_app", "get_task_stats"]

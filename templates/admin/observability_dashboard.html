@@ -1,0 +1,153 @@
+{% extends "admin_base.html" %}
+{% block title %}{{ _('Observability Dashboard') if ui_lang == 'en' else 'لوحة المراقبة والمراقبة' }}{% endblock %}
+{% block content %}
+<div class="container-fluid px-4 py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>
+      <i class="bi bi-speedometer2 me-2"></i>
+      {{ _('Observability Dashboard') if ui_lang == 'en' else 'لوحة المراقبة' }}
+    </h2>
+    <span id="last-updated" class="text-muted small"></span>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted small">{{ _('API p95 Latency') if ui_lang == 'en' else 'زمن استجابة p95' }}</span>
+            <i class="bi bi-clock-history text-primary"></i>
+          </div>
+          <div class="h3 mb-0" id="latency-p95">--</div>
+          <small class="text-muted" id="latency-status"></small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted small">{{ _('Error Rate') if ui_lang == 'en' else 'معدل الخطأ' }}</span>
+            <i class="bi bi-exclamation-triangle text-warning"></i>
+          </div>
+          <div class="h3 mb-0" id="error-rate">--</div>
+          <small class="text-muted" id="error-rate-status"></small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted small">{{ _('Cache Hit Rate') if ui_lang == 'en' else 'معدل نجاح الكاش' }}</span>
+            <i class="bi bi-database text-success"></i>
+          </div>
+          <div class="h3 mb-0" id="cache-hit-rate">--</div>
+          <small class="text-muted" id="cache-status"></small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted small">{{ _('Alert Quality') if ui_lang == 'en' else 'جودة التنبيهات' }}</span>
+            <i class="bi bi-bell text-info"></i>
+          </div>
+          <div class="h3 mb-0" id="alert-health">--</div>
+          <small class="text-muted" id="alert-snr"></small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted small">{{ _('Data Freshness') if ui_lang == 'en' else 'حداثة البيانات' }}</span>
+            <i class="bi bi-clock text-success"></i>
+          </div>
+          <div class="h3 mb-0" id="data-freshness">--</div>
+          <small class="text-muted" id="freshness-status"></small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted small">{{ _('Data Quality') if ui_lang == 'en' else 'جودة البيانات' }}</span>
+            <i class="bi bi-shield-check text-primary"></i>
+          </div>
+          <div class="h3 mb-0" id="data-quality-score">--</div>
+          <small class="text-muted" id="data-quality-status"></small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted small">{{ _('Total Requests') if ui_lang == 'en' else 'إجمالي الطلبات' }}</span>
+            <i class="bi bi-graph-up text-info"></i>
+          </div>
+          <div class="h3 mb-0" id="total-requests">--</div>
+          <small class="text-muted" id="requests-status"></small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-muted small">{{ _('Web Vitals (LCP p95)') if ui_lang == 'en' else 'ويب فيتال (LCP)' }}</span>
+            <i class="bi bi-window text-secondary"></i>
+          </div>
+          <div class="h3 mb-0" id="web-vitals-lcp">--</div>
+          <small class="text-muted" id="vitals-status"></small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+          <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>{{ _('Endpoint Latency p95 (ms)') if ui_lang == 'en' else 'زمن استجابة p95 (ميلي ثانية)' }}</h6>
+        </div>
+        <div class="card-body">
+          <div id="endpoint-latency-chart" style="min-height: 300px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+          <h6 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>{{ _('Data Quality Audit') if ui_lang == 'en' else 'تدقيق جودة البيانات' }}</h6>
+        </div>
+        <div class="card-body table-responsive">
+          <table class="table table-sm table-hover mb-0">
+            <thead>
+              <tr>
+                <th>{{ _('Metric') if ui_lang == 'en' else 'المقياس' }}</th>
+                <th>{{ _('Score') if ui_lang == 'en' else 'النتيجة' }}</th>
+                <th>{{ _('Status') if ui_lang == 'en' else 'الحالة' }}</th>
+              </tr>
+            </thead>
+            <tbody id="quality-table-body">
+              <tr><td colspan="3" class="text-center text-muted">{{ _('Loading...') if ui_lang == 'en' else 'جاري التحميل...' }}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/admin_observability.js?v=1.0"></script>
+{% endblock %}

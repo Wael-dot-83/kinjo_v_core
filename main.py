@@ -216,6 +216,8 @@ from routers.messaging import router as messaging_router
 from government_api import router as government_api_router
 from api.public import router as public_router
 from charts_api import router as charts_router
+from telemetry_service import router as telemetry_router
+from observability_endpoints import router as observability_router
 
 # =============================================================================
 # Lifespan Event Handler
@@ -1166,6 +1168,8 @@ app.include_router(government_api_router, prefix="/api", tags=["Government API"]
 app.include_router(public_router, prefix="/api", tags=["Public"])
 app.include_router(api_router, prefix="/api", tags=["API"])
 app.include_router(charts_router, tags=["Charts"])
+app.include_router(telemetry_router)
+app.include_router(observability_router)
 
 # Heat map ETL/analytics router (legacy /api/heatmap/* path used by the
 # standalone React app).  Safe to fail if dependencies (pandas / scipy /
