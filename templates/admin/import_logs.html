@@ -107,7 +107,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title"><i class="bi bi-file-text me-2"></i>Import Detail</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
       </div>
       <div class="modal-body" id="logDetailBody">
         <div class="text-center py-4">
@@ -172,7 +172,7 @@
           <td>${log.error_count ? `<span class="text-danger fw-semibold">${Number(log.error_count)}</span>` : '<span class="text-muted">0</span>'}</td>
           <td>${statusBadge(log.status)}</td>
           <td class="small text-muted">${log.created_at ? new Date(log.created_at).toLocaleString() : '—'}</td>
-          <td><button class="btn btn-sm btn-link p-0" data-log-id="${Number(log.id)}"><i class="bi bi-eye"></i></button></td>
+          <td><button class="btn btn-sm btn-link p-0" data-log-id="${Number(log.id)}" aria-label="{% if ui_lang == 'en' %}View details{% else %}عرض التفاصيل{% endif %}"><i class="bi bi-eye" aria-hidden="true"></i></button></td>
         </tr>
       `).join('');
       document.getElementById('logsTableWrap').style.display = '';
