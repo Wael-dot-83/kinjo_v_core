@@ -934,7 +934,8 @@ class KPIService:
         value: float,
         unit: str = "%",
         last_updated: datetime = None,
-        period_days: int = 30
+        period_days: int = 30,
+        prev_value: Optional[float] = None,
     ) -> EnhancedKPICard:
         """Create an enhanced KPI card with all metadata"""
         if last_updated is None:
@@ -979,9 +980,18 @@ class KPIService:
             else:
                 status = "red"
 
-        # For now, set trend as stable (can be enhanced later with historical data)
-        trend = "stable"
-        trend_value = 0.0
+        if prev_value is None:
+            trend = "stable"
+            trend_value = 0.0
+        else:
+            delta = round(value - prev_value, 2)
+            if abs(delta) < 0.5:
+                trend = "stable"
+            elif delta > 0:
+                trend = "up"
+            else:
+                trend = "down"
+            trend_value = abs(delta)
 
         return EnhancedKPICard(
             kpi_key=kpi_key,
@@ -3434,6 +3444,13 @@ def get_enhanced_manager_kpi_dashboard(
         period_days = (period_end - period_start).days + 1
         last_updated = datetime.now(timezone.utc)
 
+        # Previous period for trend comparison (same length, immediately before current)
+        prev_period_end = period_start - timedelta(days=1)
+        prev_period_start = prev_period_end - timedelta(days=period_days - 1)
+        prev_bundle = KPIService.compute_kpi_bundle(
+            db, single_kindergarten_id, prev_period_start, prev_period_end
+        )
+
         # Calculate all KPIs
         gce_score, _ = KPIService.compute_governance_score(
             db, single_kindergarten_id, period_start, period_end
@@ -3475,45 +3492,55 @@ def get_enhanced_manager_kpi_dashboard(
             db, single_kindergarten_id, period_start, period_end
         )
 
-        # Create enhanced KPI cards
+        # Create enhanced KPI cards (with previous-period trend)
         overall_gcei_card = KPIService.create_enhanced_kpi_card(
-            "overall_gcei", gce_score, "%", last_updated, period_days
+            "overall_gcei", gce_score, "%", last_updated, period_days,
+            prev_value=prev_bundle.get("governance_score"),
         )
 
         attendance_rate_card = KPIService.create_enhanced_kpi_card(
-            "attendance_rate", attendance_rate, "%", last_updated, period_days
+            "attendance_rate", attendance_rate, "%", last_updated, period_days,
+            prev_value=prev_bundle.get("attendance_rate"),
         )
 
         ratio_compliance_card = KPIService.create_enhanced_kpi_card(
-            "ratio_compliance", ratio_compliance, "%", last_updated, period_days
+            "ratio_compliance", ratio_compliance, "%", last_updated, period_days,
+            prev_value=prev_bundle.get("ratio_compliance"),
         )
 
         incident_rate_card = KPIService.create_enhanced_kpi_card(
-            "incident_rate", incident_rate, translator("per 100 child-days"), last_updated, period_days
+            "incident_rate", incident_rate, translator("per 100 child-days"), last_updated, period_days,
+            prev_value=prev_bundle.get("incident_rate"),
         )
 
         serious_incident_rate_card = KPIService.create_enhanced_kpi_card(
-            "serious_incident_rate", serious_incident_rate, translator("per 100 child-days"), last_updated, period_days
+            "serious_incident_rate", serious_incident_rate, translator("per 100 child-days"), last_updated, period_days,
+            prev_value=prev_bundle.get("serious_incident_rate"),
         )
 
         incident_followup_sla_card = KPIService.create_enhanced_kpi_card(
-            "incident_followup_sla", incident_followup_sla, "%", last_updated, period_days
+            "incident_followup_sla", incident_followup_sla, "%", last_updated, period_days,
+            prev_value=prev_bundle.get("incident_followup_sla"),
         )
 
         chronic_absence_rate_card = KPIService.create_enhanced_kpi_card(
-            "chronic_absence_rate", chronic_absence_rate, "%", last_updated, period_days
+            "chronic_absence_rate", chronic_absence_rate, "%", last_updated, period_days,
+            prev_value=prev_bundle.get("chronic_absence_rate"),
         )
 
         capacity_utilization_rate_card = KPIService.create_enhanced_kpi_card(
-            "capacity_utilization_rate", capacity_utilization_rate, "%", last_updated, period_days
+            "capacity_utilization_rate", capacity_utilization_rate, "%", last_updated, period_days,
+            prev_value=prev_bundle.get("capacity_utilization_rate"),
         )
 
         training_completion_rate_card = KPIService.create_enhanced_kpi_card(
-            "training_completion_rate", training_completion_rate, "%", last_updated, period_days
+            "training_completion_rate", training_completion_rate, "%", last_updated, period_days,
+            prev_value=prev_bundle.get("training_completion_rate"),
         )
 
         report_submission_rate_card = KPIService.create_enhanced_kpi_card(
-            "report_submission_rate", report_submission_rate, "%", last_updated, period_days
+            "report_submission_rate", report_submission_rate, "%", last_updated, period_days,
+            prev_value=prev_bundle.get("report_submission_rate"),
         )
 
         # Build alerts
