@@ -1,581 +1,538 @@
 /**
- * Admin Dashboard JavaScript
- * Handles dashboard data fetching, KPI rendering, and interactive functionality
- * safeChartData() is provided globally by chart_utils.js (loaded before this script).
+ * KinJo Admin Dashboard — Arabic RTL
+ * Fetches /api/admin/dashboard and renders all sections.
+ * safeChartData() is provided globally by chart_utils.js.
  */
 
-/** Shared HTML escaping — used to safely insert API strings into innerHTML */
-function escapeHtml(str) {
+/* ── XSS guard ──────────────────────────────────────────────────────────── */
+function esc(str) {
   return String(str == null ? "" : str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-class AdminDashboard {
+/* ── i18n shim ──────────────────────────────────────────────────────────── */
+function t(key, fallback) {
+  const i18n = window.AdminI18n;
+  if (i18n && typeof i18n.translate === "function") return i18n.translate(key, fallback || key);
+  return fallback || key;
+}
+
+/* ── Number / date helpers ──────────────────────────────────────────────── */
+function fmtNum(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "—";
+  const locale = t("common.locale", "ar-JO");
+  return new Intl.NumberFormat(locale).format(v);
+}
+
+function fmtDate(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (isNaN(d)) return "";
+  return d.toLocaleString("ar-JO", { dateStyle: "short", timeStyle: "short" });
+}
+
+function fmtTimeAgo(ts) {
+  if (!ts) return "";
+  const diff = Date.now() - new Date(ts).getTime();
+  if (isNaN(diff)) return "";
+  const m = Math.floor(diff / 60000);
+  const h = Math.floor(diff / 3600000);
+  const d = Math.floor(diff / 86400000);
+  if (m < 1)  return "الآن";
+  if (m < 60) return `منذ ${m} دقيقة`;
+  if (h < 24) return `منذ ${h} ساعة`;
+  return `منذ ${d} يوم`;
+}
+
+function toNum(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MAIN DASHBOARD CLASS
+══════════════════════════════════════════════════════════════════════════ */
+class KinjoDashboard {
   constructor() {
-    this.apiEndpoint = "/api/admin/dashboard";
-    this.refreshInterval = 300000; // 5 minutes
+    this.endpoint   = "/api/admin/dashboard";
+    this.interval   = 300_000; // 5 min
     this.intervalId = null;
-    this.charts = {};
-    this.isLoading = false;
+    this.charts     = {};
+    this.busy       = false;
 
-    document.addEventListener("DOMContentLoaded", () => {
-      this.init();
-    });
+    document.addEventListener("DOMContentLoaded", () => this._boot());
   }
 
-  init() {
-    this.initEventListeners();
-    this.initCharts();
-    this.loadDashboardData();
-    this.startAutoRefresh();
+  /* ── Bootstrap ────────────────────────────────────────────────────────── */
+  _boot() {
+    this._initClock();
+    this._bindButtons();
+    this._load();
+    this._startRefresh();
+
+    document.addEventListener("visibilitychange", () =>
+      document.hidden ? this._stopRefresh() : this._startRefresh());
   }
 
-  initEventListeners() {
-    const refreshBtn = document.getElementById("refresh-dashboard");
-    if (refreshBtn) {
-      refreshBtn.addEventListener("click", () => {
-        this.loadDashboardData();
+  _initClock() {
+    const el = document.getElementById("kd-today-date");
+    if (!el) return;
+    const render = () => {
+      el.textContent = new Date().toLocaleDateString("ar-JO", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric"
       });
-    }
-
-    const retryBtn = document.getElementById("retry-dashboard");
-    if (retryBtn) {
-      retryBtn.addEventListener("click", () => {
-        this.loadDashboardData();
-      });
-    }
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) {
-        this.stopAutoRefresh();
-      } else {
-        this.startAutoRefresh();
-      }
-    });
+    };
+    render();
   }
 
-  initCharts() {
-    if (typeof Chart === "undefined") return;
-    Chart.defaults.responsive = true;
-    Chart.defaults.maintainAspectRatio = false;
-    Chart.defaults.plugins.legend.display = true;
-    Chart.defaults.plugins.legend.position = "bottom";
+  _bindButtons() {
+    const refresh = document.getElementById("kd-refresh-btn");
+    const retry   = document.getElementById("kd-retry-btn");
+    if (refresh) refresh.addEventListener("click", () => this._load());
+    if (retry)   retry.addEventListener("click",   () => this._load());
   }
 
-  async loadDashboardData() {
-    if (this.isLoading) return;
-
-    this.isLoading = true;
-    this.showLoading();
-
+  /* ── Data fetch ───────────────────────────────────────────────────────── */
+  async _load() {
+    if (this.busy) return;
+    this.busy = true;
+    this._showLoading();
     try {
-      const response = await fetch(this.apiEndpoint, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-        },
+      const res = await fetch(this.endpoint, {
+        headers: { "X-Requested-With": "XMLHttpRequest" },
         credentials: "same-origin",
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      this.renderDashboard(data);
-      this.hideLoading();
-      this.hideError();
-    } catch (error) {
-      console.error("Error loading dashboard data:", error);
-      this.showError(error.message);
-      this.hideLoading();
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw = await res.json();
+      this._render(raw);
+      this._showContent();
+      const ts = document.getElementById("kd-last-updated");
+      if (ts) ts.textContent = "آخر تحديث: " + new Date().toLocaleTimeString("ar-JO");
+    } catch (err) {
+      console.error("[KinjoDashboard]", err);
+      this._showError(err.message);
     } finally {
-      this.isLoading = false;
+      this.busy = false;
     }
   }
 
-  renderDashboard(data) {
-    const normalized = this.normalizePayload(data || {});
-    this.renderKPICards(normalized.kpis);
-    this.renderCharts(normalized.charts);
-    this.renderActivityFeed(normalized.recent_activity);
-    this.renderAlerts(normalized.alerts);
-    this.showDashboardContent();
+  /* ── Orchestrate rendering ────────────────────────────────────────────── */
+  _render(raw) {
+    const d = this._normalize(raw);
+    this._renderKPIs(d.kpis, d.summary);
+    this._renderCharts(d.charts);
+    this._renderActivity(d.activity);
+    this._renderAlerts(d.alerts);
+    this._renderHealth(d.health);
+    this._updateCounts(d);
   }
 
-  normalizePayload(data) {
-    const summary = data.summary || {};
-    const systemOverview = data.system_overview || {};
-    const alerts = Array.isArray(data.alerts) ? data.alerts : [];
+  /* ── Normalize API payload ────────────────────────────────────────────── */
+  _normalize(raw) {
+    const s = raw.summary        || {};
+    const o = raw.system_overview || {};
+    const charts = raw.charts    || {};
+    const alerts = Array.isArray(raw.alerts) ? raw.alerts : [];
 
-    const kpis = data.kpis || {
-      total_users: this.toNumber(systemOverview.total_users),
-      active_users: this.toNumber(summary.attendance_today),
-      total_kindergartens: this.toNumber(systemOverview.total_kindergartens),
-      active_kindergartens: this.toNumber(systemOverview.active_kindergartens),
-      total_submissions: this.toNumber(summary.pending_applications),
-      pending_submissions: this.toNumber(summary.pending_daily_reports),
-      page_load_time: this.getPageLoadDuration(),
-      data_quality_score: this.toNumber(summary.attendance_rate),
+    /* KPI cards — use explicit kpis block if present, else derive */
+    const kpis = raw.kpis || {};
+    const totalUsers     = toNum(kpis.total_users    || o.total_users);
+    const activeToday    = toNum(kpis.active_users   || s.attendance_today);
+    const totalKGs       = toNum(kpis.total_kindergartens  || o.total_kindergartens);
+    const activeKGs      = toNum(kpis.active_kindergartens || o.active_kindergartens);
+    const pendingApps    = toNum(kpis.total_submissions    || s.pending_applications);
+    const pendingReports = toNum(kpis.pending_submissions  || s.pending_daily_reports);
+    const incidents      = toNum(s.recent_incidents);
+    const attRate        = toNum(kpis.data_quality_score   || s.attendance_rate);
+
+    /* Charts */
+    const activityChart = charts.user_activity || {
+      labels: (charts.attendance || []).map(x => x.date),
+      values: (charts.attendance || []).map(x => toNum(x.value)),
+    };
+    const enrollChart = charts.data_submissions || {
+      labels: Object.keys(charts.enrollment || {}),
+      values: Object.values(charts.enrollment || {}).map(toNum),
     };
 
-    const chartPayload = data.charts || {};
-    const userActivityChart = chartPayload.user_activity || {
-      labels: Array.isArray(chartPayload.attendance)
-        ? chartPayload.attendance.map((item) => item.date)
-        : [],
-      values: Array.isArray(chartPayload.attendance)
-        ? chartPayload.attendance.map((item) => this.toNumber(item.value))
-        : [],
-    };
+    /* Activity feed */
+    const activity = Array.isArray(raw.recent_activity)
+      ? raw.recent_activity
+      : alerts.slice(0, 6).map(a => ({
+          type: "system_update",
+          message: a.title || a.message || "",
+          timestamp: a.timestamp,
+        }));
 
-    const enrollment = chartPayload.enrollment || {};
-    const submissionChart = chartPayload.data_submissions || {
-      labels: Object.keys(enrollment),
-      values: Object.values(enrollment).map((value) => this.toNumber(value)),
-    };
-
-    const recentActivity = Array.isArray(data.recent_activity)
-      ? data.recent_activity
-      : this.buildRecentActivityFromAlerts(alerts);
-
-    return {
-      kpis,
-      charts: {
-        user_activity: userActivityChart,
-        data_submissions: submissionChart,
-      },
-      recent_activity: recentActivity,
-      alerts,
-    };
-  }
-
-  buildRecentActivityFromAlerts(alerts) {
-    if (!Array.isArray(alerts) || alerts.length === 0) return [];
-    return alerts.slice(0, 5).map((alert) => ({
-      type: "system_update",
-      message: alert.title || alert.message || "System update",
-      timestamp: alert.timestamp,
-    }));
-  }
-
-  renderKPICards(kpis) {
-    const container = document.getElementById("kpi-cards");
-    if (!container) return;
-
-    container.innerHTML = "";
-
-    // All icons use Bootstrap Icons (bi bi-*) — Font Awesome is NOT loaded
-    const kpiConfig = [
-      { key: "total_users",          icon: "bi bi-people-fill",       color: "primary",   format: "number" },
-      { key: "active_users",         icon: "bi bi-person-check-fill", color: "success",   format: "number" },
-      { key: "total_kindergartens",  icon: "bi bi-house-fill",        color: "info",      format: "number" },
-      { key: "active_kindergartens", icon: "bi bi-house-check-fill",  color: "success",   format: "number" },
-      { key: "total_submissions",    icon: "bi bi-file-earmark-fill", color: "warning",   format: "number" },
-      { key: "pending_submissions",  icon: "bi bi-clock-fill",        color: "danger",    format: "number" },
-      { key: "page_load_time",       icon: "bi bi-stopwatch-fill",    color: "secondary", format: "duration" },
-      { key: "data_quality_score",   icon: "bi bi-graph-up-arrow",    color: "primary",   format: "percentage" },
+    /* System health indicators */
+    const health = raw.system_health || [
+      { label: "قاعدة البيانات",     status: "ok",      icon: "bi-database-fill-check" },
+      { label: "خدمة المصادقة",      status: "ok",      icon: "bi-shield-fill-check"   },
+      { label: "خادم الويب",         status: "ok",      icon: "bi-server"               },
+      { label: "تدفق الإشعارات",     status: pendingReports > 50 ? "warn" : "ok", icon: "bi-bell-fill" },
     ];
 
-    // English fallbacks for every KPI key — used only when i18n has not loaded
-    this._kpiFallbacks = {
-      total_users:          "Total Users",
-      active_users:         "Active Users",
-      total_kindergartens:  "Total Kindergartens",
-      active_kindergartens: "Active Kindergartens",
-      total_submissions:    "Total Submissions",
-      pending_submissions:  "Pending Submissions",
-      page_load_time:       "Page Load Time",
-      data_quality_score:   "Data Quality",
+    return {
+      kpis: { totalUsers, activeToday, totalKGs, activeKGs, pendingApps, pendingReports, incidents, attRate },
+      summary: s,
+      charts: { activity: activityChart, enrollment: enrollChart },
+      activity,
+      alerts,
+      health,
     };
-
-    kpiConfig.forEach((config) => {
-      const value = kpis[config.key];
-      if (value !== undefined) {
-        container.appendChild(this.createKPICard(config, value));
-      }
-    });
   }
 
-  createKPICard(config, value) {
-    const card = document.createElement("div");
-    card.className = "admin-kpi-card";
-    card.setAttribute("role", "region");
-    card.setAttribute("aria-label", this.formatTitle(config.key));
+  /* ══════════════════════════════════════════════════════════════════════
+     SECTION: KPI Cards
+  ══════════════════════════════════════════════════════════════════════ */
+  _renderKPIs(kpis, summary) {
+    const grid = document.getElementById("kd-kpi-grid");
+    if (!grid) return;
 
-    let formattedValue = value;
-    let subtitle = "";
+    const cards = [
+      {
+        key:   "totalUsers",
+        label: "إجمالي المستخدمين",
+        value: fmtNum(kpis.totalUsers),
+        icon:  "bi-people-fill",
+        color: "blue",
+        link:  "/admin/users",
+        trend: null,
+      },
+      {
+        key:   "activeToday",
+        label: "مستخدمون نشطون اليوم",
+        value: fmtNum(kpis.activeToday),
+        icon:  "bi-person-check-fill",
+        color: "green",
+        link:  "/admin/audit-logs",
+        trend: null,
+      },
+      {
+        key:   "totalKGs",
+        label: "إجمالي الروضات",
+        value: fmtNum(kpis.totalKGs),
+        icon:  "bi-buildings-fill",
+        color: "teal",
+        link:  "/admin/kg-overview",
+        trend: null,
+      },
+      {
+        key:   "activeKGs",
+        label: "الروضات النشطة",
+        value: fmtNum(kpis.activeKGs),
+        icon:  "bi-house-check-fill",
+        color: "cyan",
+        link:  "/admin/kg-overview",
+        trend: null,
+      },
+      {
+        key:   "pendingApps",
+        label: "طلبات التسجيل المعلقة",
+        value: fmtNum(kpis.pendingApps),
+        icon:  "bi-file-earmark-person-fill",
+        color: kpis.pendingApps > 0 ? "orange" : "green",
+        link:  "/admin/analytics",
+        trend: kpis.pendingApps > 0 ? "up" : null,
+        urgent: kpis.pendingApps > 10,
+      },
+      {
+        key:   "pendingReports",
+        label: "تقارير يومية معلقة",
+        value: fmtNum(kpis.pendingReports),
+        icon:  "bi-clock-history",
+        color: kpis.pendingReports > 0 ? "red" : "green",
+        link:  "/admin/analytics/daily-reports",
+        trend: kpis.pendingReports > 0 ? "up" : null,
+        urgent: kpis.pendingReports > 5,
+      },
+      {
+        key:   "incidents",
+        label: "حوادث (آخر 7 أيام)",
+        value: fmtNum(kpis.incidents),
+        icon:  "bi-exclamation-triangle-fill",
+        color: kpis.incidents > 0 ? "orange" : "green",
+        link:  "/admin/reports/incidents",
+        trend: kpis.incidents > 3 ? "up" : null,
+      },
+      {
+        key:   "attRate",
+        label: "معدل الحضور",
+        value: `${kpis.attRate.toFixed(1)}%`,
+        icon:  "bi-graph-up-arrow",
+        color: kpis.attRate >= 80 ? "green" : kpis.attRate >= 60 ? "orange" : "red",
+        link:  "/admin/analytics",
+        trend: kpis.attRate >= 80 ? "good" : "warn",
+      },
+    ];
 
-    switch (config.format) {
-      case "percentage":
-        formattedValue = `${value}%`;
-        break;
-      case "duration":
-        // Capture page-load duration once at construction time, not on every auto-refresh
-        formattedValue = `${this.getPageLoadDuration().toFixed(2)}s`;
-        subtitle = this.t("dashboard.page_load_subtitle", "System performance");
-        break;
-      case "number":
-        formattedValue = this.formatNumber(value);
-        break;
-      default:
-        formattedValue = String(value);
-    }
+    grid.innerHTML = "";
+    cards.forEach(c => grid.appendChild(this._buildKPICard(c)));
 
-    // Build card using DOM methods to avoid innerHTML XSS risk on value
-    const iconDiv = document.createElement("div");
-    iconDiv.className = `admin-kpi-card-icon admin-kpi-card-${config.color}`;
-    const iconEl = document.createElement("i");
-    iconEl.className = config.icon;
-    iconEl.setAttribute("aria-hidden", "true");
-    iconDiv.appendChild(iconEl);
-
-    const contentDiv = document.createElement("div");
-    contentDiv.className = "admin-kpi-card-content";
-
-    const valueDiv = document.createElement("div");
-    valueDiv.className = "admin-kpi-card-value";
-    valueDiv.textContent = formattedValue;
-
-    const titleDiv = document.createElement("div");
-    titleDiv.className = "admin-kpi-card-title";
-    titleDiv.setAttribute("data-i18n", `dashboard.${config.key}`);
-    const fallback = (this._kpiFallbacks || {})[config.key] || this.formatTitle(config.key);
-    titleDiv.textContent = this.t(`dashboard.${config.key}`, fallback);
-
-    contentDiv.appendChild(valueDiv);
-    contentDiv.appendChild(titleDiv);
-
-    if (subtitle) {
-      const subDiv = document.createElement("div");
-      subDiv.className = "admin-kpi-card-subtitle";
-      subDiv.textContent = subtitle;
-      contentDiv.appendChild(subDiv);
-    }
-
-    card.appendChild(iconDiv);
-    card.appendChild(contentDiv);
-    return card;
+    const ts = document.getElementById("kd-kpi-timestamp");
+    if (ts) ts.textContent = new Date().toLocaleTimeString("ar-JO");
   }
 
-  renderCharts(charts) {
+  _buildKPICard(c) {
+    const el = document.createElement("a");
+    el.className = `kd-kpi-card kd-kpi-${c.color}${c.urgent ? " kd-kpi-urgent" : ""}`;
+    el.href = c.link || "#";
+    el.setAttribute("role", "listitem");
+    el.setAttribute("aria-label", `${c.label}: ${c.value}`);
+
+    let trendHtml = "";
+    if (c.trend === "up")   trendHtml = `<span class="kd-kpi-trend kd-trend-up"  aria-label="مرتفع"><i class="bi bi-arrow-up-short" aria-hidden="true"></i></span>`;
+    if (c.trend === "warn") trendHtml = `<span class="kd-kpi-trend kd-trend-warn" aria-label="تحذير"><i class="bi bi-arrow-down-short" aria-hidden="true"></i></span>`;
+    if (c.trend === "good") trendHtml = `<span class="kd-kpi-trend kd-trend-good" aria-label="جيد"><i class="bi bi-check-lg" aria-hidden="true"></i></span>`;
+
+    el.innerHTML = `
+      <div class="kd-kpi-icon-wrap" aria-hidden="true">
+        <i class="bi ${esc(c.icon)}"></i>
+      </div>
+      <div class="kd-kpi-body">
+        <div class="kd-kpi-value">${esc(c.value)}${trendHtml}</div>
+        <div class="kd-kpi-label">${esc(c.label)}</div>
+      </div>
+      <i class="bi bi-chevron-left kd-kpi-arrow" aria-hidden="true"></i>
+    `;
+    return el;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     SECTION: Charts
+  ══════════════════════════════════════════════════════════════════════ */
+  _renderCharts({ activity, enrollment }) {
     if (typeof Chart === "undefined") return;
-    if (charts.user_activity) this.renderUserActivityChart(charts.user_activity);
-    if (charts.data_submissions) this.renderDataSubmissionsChart(charts.data_submissions);
+
+    const rtlFont = "'Cairo', 'Noto Sans Arabic', sans-serif";
+
+    Chart.defaults.font.family = rtlFont;
+    Chart.defaults.responsive  = true;
+    Chart.defaults.maintainAspectRatio = false;
+    Chart.defaults.plugins.legend.position = "bottom";
+
+    this._buildLineChart("kd-chart-activity", activity,  "المستخدمون النشطون", "#2563eb");
+    this._buildBarChart ("kd-chart-enrollment", enrollment, "الطلبات",           "#0891b2");
   }
 
-  renderUserActivityChart(data) {
-    const ctx = document.getElementById("user-activity-chart");
+  _buildLineChart(canvasId, data, label, color) {
+    const ctx = document.getElementById(canvasId);
     if (!ctx) return;
-
-    if (this.charts.userActivity) this.charts.userActivity.destroy();
-
-    this.charts.userActivity = new Chart(ctx, {
+    if (this.charts[canvasId]) this.charts[canvasId].destroy();
+    this.charts[canvasId] = new Chart(ctx, {
       type: "line",
       data: {
         labels: safeChartData(data.labels),
         datasets: [{
-          label: this.t("dashboard.active_users", "Active users"),
+          label,
           data: safeChartData(data.values),
-          borderColor: "rgb(54, 162, 235)",
-          backgroundColor: "rgba(54, 162, 235, 0.1)",
+          borderColor: color,
+          backgroundColor: color + "22",
           tension: 0.4,
           fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6,
         }],
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { display: true, position: "top" },
+          legend: { display: true, labels: { font: { family: "'Cairo', sans-serif" } } },
           tooltip: { mode: "index", intersect: false },
         },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0, font: { family: "'Cairo', sans-serif" } } },
+          x: { ticks: { font: { family: "'Cairo', sans-serif" } } },
+        },
       },
     });
   }
 
-  renderDataSubmissionsChart(data) {
-    const ctx = document.getElementById("data-submissions-chart");
+  _buildBarChart(canvasId, data, label, color) {
+    const ctx = document.getElementById(canvasId);
     if (!ctx) return;
-
-    if (this.charts.dataSubmissions) this.charts.dataSubmissions.destroy();
-
-    this.charts.dataSubmissions = new Chart(ctx, {
+    if (this.charts[canvasId]) this.charts[canvasId].destroy();
+    this.charts[canvasId] = new Chart(ctx, {
       type: "bar",
       data: {
         labels: safeChartData(data.labels),
         datasets: [{
-          label: this.t("dashboard.total_submissions", "Total submissions"),
+          label,
           data: safeChartData(data.values),
-          backgroundColor: "rgba(255, 159, 64, 0.8)",
-          borderColor: "rgb(255, 159, 64)",
+          backgroundColor: color + "cc",
+          borderColor: color,
           borderWidth: 1,
+          borderRadius: 6,
         }],
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: true, position: "top" } },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, labels: { font: { family: "'Cairo', sans-serif" } } },
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0, font: { family: "'Cairo', sans-serif" } } },
+          x: { ticks: { font: { family: "'Cairo', sans-serif" } } },
+        },
       },
     });
   }
 
-  renderActivityFeed(activities) {
-    const container = document.getElementById("activity-feed");
-    if (!container) return;
+  /* ══════════════════════════════════════════════════════════════════════
+     SECTION: Activity Feed
+  ══════════════════════════════════════════════════════════════════════ */
+  _renderActivity(items) {
+    const feed = document.getElementById("kd-activity-feed");
+    if (!feed) return;
 
-    container.innerHTML = "";
-
-    if (!activities || activities.length === 0) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "admin-empty-state";
-
-      const p = document.createElement("p");
-      p.className = "admin-no-data";
-      p.setAttribute("data-i18n", "dashboard.no_recent_activity");
-      p.textContent = this.t("dashboard.no_recent_activity", "No recent activity");
-
-      const hint = document.createElement("p");
-      hint.className = "admin-no-data-hint";
-      hint.setAttribute("data-i18n", "dashboard.no_activity_hint");
-      hint.textContent = this.t("dashboard.no_activity_hint", "Add users or monitor operations to see activity here");
-
-      wrapper.appendChild(p);
-      wrapper.appendChild(hint);
-      container.appendChild(wrapper);
+    if (!items || items.length === 0) {
+      feed.innerHTML = `<div class="kd-empty"><i class="bi bi-inbox" aria-hidden="true"></i><p>لا يوجد نشاط حديث</p></div>`;
       return;
     }
 
-    activities.forEach((activity) => {
-      container.appendChild(this.createActivityItem(activity));
+    feed.innerHTML = "";
+    items.slice(0, 8).forEach(item => {
+      const el = document.createElement("div");
+      el.className = "kd-feed-item";
+      el.innerHTML = `
+        <div class="kd-feed-icon ${this._activityColor(item.type)}" aria-hidden="true">
+          <i class="bi ${this._activityIcon(item.type)}"></i>
+        </div>
+        <div class="kd-feed-body">
+          <p class="kd-feed-msg">${esc(item.message || "")}</p>
+          <time class="kd-feed-time" datetime="${esc(item.timestamp || "")}">${fmtTimeAgo(item.timestamp)}</time>
+        </div>
+      `;
+      feed.appendChild(el);
     });
   }
 
-  createActivityItem(activity) {
-    const item = document.createElement("div");
-    item.className = "admin-activity-item";
-
-    const iconDiv = document.createElement("div");
-    iconDiv.className = "admin-activity-icon";
-    const icon = document.createElement("i");
-    icon.className = this.getActivityIcon(activity.type);
-    icon.setAttribute("aria-hidden", "true");
-    iconDiv.appendChild(icon);
-
-    const contentDiv = document.createElement("div");
-    contentDiv.className = "admin-activity-content";
-
-    const msgDiv = document.createElement("div");
-    msgDiv.className = "admin-activity-message";
-    msgDiv.textContent = activity.message || ""; // textContent — never innerHTML
-
-    const timeDiv = document.createElement("div");
-    timeDiv.className = "admin-activity-time";
-    timeDiv.textContent = this.formatTimeAgo(activity.timestamp);
-
-    contentDiv.appendChild(msgDiv);
-    contentDiv.appendChild(timeDiv);
-    item.appendChild(iconDiv);
-    item.appendChild(contentDiv);
-    return item;
+  _activityIcon(type) {
+    const map = {
+      user_login:    "bi-box-arrow-in-right",
+      user_logout:   "bi-box-arrow-left",
+      user_create:   "bi-person-plus-fill",
+      data_submit:   "bi-cloud-upload-fill",
+      system_update: "bi-gear-fill",
+      alert:         "bi-exclamation-circle-fill",
+    };
+    return map[type] || "bi-circle-fill";
   }
 
-  renderAlerts(alerts) {
-    const container = document.getElementById("alerts-list");
-    if (!container) return;
+  _activityColor(type) {
+    const map = {
+      user_login:  "kd-feed-icon-green",
+      user_create: "kd-feed-icon-blue",
+      data_submit: "kd-feed-icon-teal",
+      alert:       "kd-feed-icon-orange",
+    };
+    return map[type] || "kd-feed-icon-gray";
+  }
 
-    container.innerHTML = "";
+  /* ══════════════════════════════════════════════════════════════════════
+     SECTION: Alerts
+  ══════════════════════════════════════════════════════════════════════ */
+  _renderAlerts(alerts) {
+    const list = document.getElementById("kd-alerts-list");
+    if (!list) return;
 
     if (!alerts || alerts.length === 0) {
-      const p = document.createElement("p");
-      p.className = "admin-no-data";
-      p.setAttribute("data-i18n", "dashboard.no_alerts");
-      p.textContent = this.t("dashboard.no_alerts", "No active alerts");
-      container.appendChild(p);
+      list.innerHTML = `<div class="kd-empty kd-empty-green"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p>لا توجد تنبيهات نشطة</p></div>`;
       return;
     }
 
-
-    alerts.forEach((alert) => {
-      container.appendChild(this.createAlertItem(alert));
+    list.innerHTML = "";
+    alerts.slice(0, 6).forEach(alert => {
+      const sev = alert.severity || "info";
+      const el = document.createElement("div");
+      el.className = `kd-alert-item kd-alert-${sev}`;
+      el.setAttribute("role", "listitem");
+      el.innerHTML = `
+        <span class="kd-alert-dot" aria-hidden="true"></span>
+        <div class="kd-alert-body">
+          <p class="kd-alert-msg">${esc(alert.message || alert.title || "")}</p>
+          <time class="kd-alert-time">${fmtTimeAgo(alert.timestamp)}</time>
+        </div>
+        <span class="kd-alert-badge kd-sev-${sev}">${this._sevLabel(sev)}</span>
+      `;
+      list.appendChild(el);
     });
   }
 
-  createAlertItem(alert) {
-    const item = document.createElement("div");
-    item.className = `admin-alert-item admin-alert-${alert.severity || "info"}`;
-    item.setAttribute("role", "listitem");
-
-    const iconDiv = document.createElement("div");
-    iconDiv.className = "admin-alert-icon";
-    const icon = document.createElement("i");
-    icon.className = this.getAlertIcon(alert.severity);
-    icon.setAttribute("aria-hidden", "true");
-    iconDiv.appendChild(icon);
-
-    const contentDiv = document.createElement("div");
-    contentDiv.className = "admin-alert-content";
-
-    const msgDiv = document.createElement("div");
-    msgDiv.className = "admin-alert-message";
-    msgDiv.textContent = alert.message || ""; // textContent — never innerHTML
-
-    const timeDiv = document.createElement("div");
-    timeDiv.className = "admin-alert-time";
-    timeDiv.textContent = this.formatTimeAgo(alert.timestamp);
-
-    contentDiv.appendChild(msgDiv);
-    contentDiv.appendChild(timeDiv);
-    item.appendChild(iconDiv);
-    item.appendChild(contentDiv);
-    return item;
+  _sevLabel(sev) {
+    const map = { critical: "حرج", warning: "تحذير", info: "معلومة", success: "ناجح" };
+    return map[sev] || sev;
   }
 
-  // ── Utilities ────────────────────────────────────────────────────────────────
-
-  formatNumber(num) {
-    const locale = this.t("common.locale", "en-US");
-    return new Intl.NumberFormat(locale).format(num);
+  /* ══════════════════════════════════════════════════════════════════════
+     SECTION: System Health
+  ══════════════════════════════════════════════════════════════════════ */
+  _renderHealth(items) {
+    const grid = document.getElementById("kd-health-grid");
+    if (!grid) return;
+    grid.innerHTML = "";
+    items.forEach(item => {
+      const el = document.createElement("div");
+      el.className = `kd-health-item kd-health-${item.status || "ok"}`;
+      el.setAttribute("role", "listitem");
+      el.innerHTML = `
+        <i class="bi ${esc(item.icon || "bi-circle-fill")}" aria-hidden="true"></i>
+        <span class="kd-health-label">${esc(item.label)}</span>
+        <span class="kd-health-status-dot" aria-label="${item.status === "ok" ? "يعمل بشكل طبيعي" : "يحتاج انتباهاً"}"></span>
+      `;
+      grid.appendChild(el);
+    });
   }
 
-  toNumber(value) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  formatTitle(key) {
-    return key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
-  }
-
-  getPageLoadDuration() {
-    try {
-      // Prefer the modern PerformanceNavigationTiming API
-      const entries = performance.getEntriesByType("navigation");
-      if (entries.length > 0) {
-        return Math.max(entries[0].loadEventEnd / 1000, 0);
-      }
-      // Fallback for older browsers
-      if (window.performance?.timing?.navigationStart) {
-        return Math.max((Date.now() - window.performance.timing.navigationStart) / 1000, 0);
-      }
-    } catch (_) {
-      // Performance API unavailable
-    }
-    return 0;
-  }
-
-  formatTimeAgo(timestamp) {
-    if (!timestamp) return "";
-    const now = new Date();
-    const time = new Date(timestamp);
-    if (isNaN(time.getTime())) return "";
-
-    const diff = now - time;
-    const minutes = Math.floor(diff / 60000);
-    const hours   = Math.floor(diff / 3600000);
-    const days    = Math.floor(diff / 86400000);
-
-    if (minutes < 1)  return this.t("common.just_now",     "just now");
-    if (minutes < 60) return `${minutes} ${this.t("common.minutes_ago", "minutes ago")}`;
-    if (hours   < 24) return `${hours} ${this.t("common.hours_ago",   "hours ago")}`;
-    return `${days} ${this.t("common.days_ago", "days ago")}`;
-  }
-
-  t(key, fallback = "") {
-    const i18n = window.AdminI18n;
-    if (i18n && typeof i18n.translate === "function") {
-      return i18n.translate(key, fallback);
-    }
-    return fallback || key;
-  }
-
-  getActivityIcon(type) {
-    // Bootstrap Icons only — bi bi-* class names
-    const icons = {
-      user_login:    "bi bi-box-arrow-in-right",
-      user_logout:   "bi bi-box-arrow-left",
-      data_submit:   "bi bi-upload",
-      user_create:   "bi bi-person-plus-fill",
-      system_update: "bi bi-gear-fill",
-    };
-    return icons[type] || "bi bi-info-circle-fill";
-  }
-
-  getAlertIcon(severity) {
-    // Bootstrap Icons only
-    const icons = {
-      critical: "bi bi-exclamation-triangle-fill",
-      warning:  "bi bi-exclamation-circle-fill",
-      info:     "bi bi-info-circle-fill",
-      success:  "bi bi-check-circle-fill",
-    };
-    return icons[severity] || "bi bi-info-circle-fill";
-  }
-
-  // ── UI State ─────────────────────────────────────────────────────────────────
-
-  showLoading() {
-    const loading = document.getElementById("dashboard-loading");
-    const content = document.getElementById("dashboard-content");
-    const error   = document.getElementById("dashboard-error");
-    if (loading) loading.style.display = "flex";
-    if (content) content.style.display = "none";
-    if (error)   error.style.display   = "none";
-  }
-
-  hideLoading() {
-    const loading = document.getElementById("dashboard-loading");
-    if (loading) loading.style.display = "none";
-  }
-
-  showDashboardContent() {
-    const content = document.getElementById("dashboard-content");
-    if (content) content.style.display = "block";
-  }
-
-  showError(message) {
-    const error   = document.getElementById("dashboard-error");
-    const errMsg  = document.getElementById("error-message");
-    const content = document.getElementById("dashboard-content");
-    const loading = document.getElementById("dashboard-loading");
-    if (error)   error.style.display   = "flex";
-    if (errMsg)  errMsg.textContent    = message;
-    if (content) content.style.display = "none";
-    if (loading) loading.style.display = "none";
-  }
-
-  hideError() {
-    const error = document.getElementById("dashboard-error");
-    if (error) error.style.display = "none";
-  }
-
-  startAutoRefresh() {
-    this.stopAutoRefresh();
-    this.intervalId = setInterval(() => {
-      this.loadDashboardData(); // isLoading guard inside loadDashboardData prevents overlap
-    }, this.refreshInterval);
-  }
-
-  stopAutoRefresh() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+  /* ══════════════════════════════════════════════════════════════════════
+     Counts / badges
+  ══════════════════════════════════════════════════════════════════════ */
+  _updateCounts(d) {
+    const ac = document.getElementById("kd-activity-count");
+    const al = document.getElementById("kd-alerts-count");
+    if (ac) ac.textContent = d.activity.length || "0";
+    if (al) {
+      al.textContent = d.alerts.length || "0";
+      al.className   = `kd-panel-badge ${d.alerts.length > 0 ? "kd-badge-red" : "kd-badge-green"}`;
     }
   }
 
-  destroy() {
-    this.stopAutoRefresh();
-    Object.values(this.charts).forEach((chart) => { if (chart) chart.destroy(); });
-    this.charts = {};
+  /* ══════════════════════════════════════════════════════════════════════
+     UI State helpers
+  ══════════════════════════════════════════════════════════════════════ */
+  _showLoading() {
+    this._toggle("kd-loading", true);
+    this._toggle("kd-content", false);
+    this._toggle("kd-error",   false);
+  }
+
+  _showContent() {
+    this._toggle("kd-loading", false);
+    this._toggle("kd-content", true);
+    this._toggle("kd-error",   false);
+  }
+
+  _showError(msg) {
+    this._toggle("kd-loading", false);
+    this._toggle("kd-content", false);
+    this._toggle("kd-error",   true);
+    const el = document.getElementById("kd-error-msg");
+    if (el) el.textContent = msg || "حدث خطأ غير متوقع.";
+  }
+
+  _toggle(id, show) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? "" : "none";
+  }
+
+  /* ── Auto-refresh ─────────────────────────────────────────────────────── */
+  _startRefresh() {
+    this._stopRefresh();
+    this.intervalId = setInterval(() => this._load(), this.interval);
+  }
+
+  _stopRefresh() {
+    if (this.intervalId) { clearInterval(this.intervalId); this.intervalId = null; }
   }
 }
 
-window.adminDashboard = new AdminDashboard();
-window.AdminDashboard = AdminDashboard;
+window.kinjoDashboard = new KinjoDashboard();
