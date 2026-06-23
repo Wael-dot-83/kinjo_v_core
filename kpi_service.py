@@ -3576,6 +3576,24 @@ def get_enhanced_manager_kpi_dashboard(
     )
 
 
+@router.get("/manager/kpi", response_model=EnhancedKPIDashboardResponse)
+def get_manager_kpi_alias(
+    period_start: Optional[date] = Query(None),
+    period_end: Optional[date] = Query(None),
+    locale: str = Query("ar"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_manager)
+):
+    """Backward-compatible alias for /manager/dashboard/enhanced."""
+    return get_enhanced_manager_kpi_dashboard(
+        period_start=period_start,
+        period_end=period_end,
+        locale=locale,
+        db=db,
+        current_user=current_user,
+    )
+
+
 @router.get("/kpi/network-summary")
 def get_kpi_network_summary(
     start_date: Optional[date] = Query(None),

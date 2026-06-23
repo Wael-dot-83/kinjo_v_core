@@ -1445,6 +1445,18 @@ async def manager_kpi_page(request: Request, current_user: User = Depends(get_cu
     )
 
 
+@router.get("/supervisor/kpi", response_class=HTMLResponse)
+async def supervisor_kpi_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Supervisor personal KPI dashboard"""
+    if current_user.role != UserRole.SUPERVISOR:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="supervisor/kpi.html",
+        context={"current_user": current_user, "today": date.today()}
+    )
+
+
 @router.get("/supervisor/performance", response_class=HTMLResponse)
 async def supervisor_performance(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Supervisor self-performance page"""
