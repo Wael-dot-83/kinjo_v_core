@@ -511,29 +511,6 @@
     crossorigin="anonymous"></script>
 <script src="/static/js/chart_utils.js" charset="utf-8"></script>
 <script src="/static/js/admin_analytics.js" charset="utf-8"></script>
-<style>
-    .analytics-dashboard {
-      font-family: var(--admin-font-family-ar), var(--admin-font-family-en);
-    }
-    :root {
-      --type-page-title: 700 24px/32px;
-      --type-section-title: 600 18px/24px;
-      --type-card-title: 600 14px/20px;
-      --type-body: 400 13px/20px;
-      --type-label: 500 12px/16px;
-      --space-32: 32px;
-    }
-    .mb-section { margin-bottom: var(--space-32); }
-    .p-card { padding: 16px; }
-    .gap-card { gap: 16px; }
-    [dir="rtl"] .trend-chart-wrapper canvas { direction: rtl; }
-    .analytics-error-state { display: none; text-align: center; padding: 3rem 1rem; color: #6b7280; }
-    .analytics-error-state.show { display: block; }
-    .analytics-error-state .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .datetime-indicator { font-size: 0.75rem; color: #6b7280; display: flex; align-items: center; gap: 0.3rem; }
-    html[dir="rtl"] .btn-group .btn:first-child { border-radius: 0 0.25rem 0.25rem 0; }
-    html[dir="rtl"] .btn-group .btn:last-child { border-radius: 0.25rem 0 0 0.25rem; }
-</style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
