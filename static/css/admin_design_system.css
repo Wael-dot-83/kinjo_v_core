@@ -835,6 +835,77 @@ html[dir="rtl"] .admin-table td {
 .mb-section { margin-bottom: var(--space-32); }
 .mb-card { margin-bottom: var(--space-16); }
 
+/* Impersonation page — warning banner, manager list, audit log */
+.impersonate-warning {
+  display: flex;
+  padding: 1.1rem 1.25rem;
+  border-radius: var(--admin-radius-lg);
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border: 1.5px solid rgba(239, 68, 68, 0.3);
+  color: #b91c1c;
+}
+.impersonate-warning i { color: #dc2626; }
+.manager-list {
+  border: var(--admin-border-width-2) solid var(--admin-border-color);
+  border-radius: var(--admin-radius-lg);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.manager-item {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem 1rem;
+  border-bottom: var(--admin-border-width) solid var(--admin-border-color);
+  cursor: pointer;
+  transition: background var(--admin-transition-fast);
+  user-select: none;
+}
+.manager-item:last-child { border-bottom: none; }
+.manager-item:hover { background: var(--admin-bg-hover); }
+.manager-item.selected {
+  background: var(--admin-primary-light);
+  border-color: var(--admin-primary);
+}
+.manager-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--admin-primary-light);
+  color: var(--admin-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+.manager-item.selected .manager-avatar {
+  background: var(--admin-primary);
+  color: #fff;
+}
+.manager-name {
+  font-size: 0.875rem;
+  font-weight: var(--admin-font-weight-bold);
+  color: var(--admin-text-primary);
+}
+.manager-kg { font-size: 0.75rem; color: var(--admin-text-muted); }
+.audit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: var(--admin-border-width) solid var(--admin-border-color);
+}
+.audit-item:last-child { border-bottom: none; }
+.audit-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--admin-error);
+  margin-top: 0.45rem;
+  flex-shrink: 0;
+}
+
 /* Governance page helpers — KPI cards and rank badges */
 .kpi-card {
   border-radius: var(--admin-radius-lg);
