@@ -20,7 +20,7 @@ def _load_en():
 
 
 def _load_ar():
-    return json.loads((I18N_DIR / "admin_ar.json").read_text(encoding="utf-8"))
+    return json.loads((I18N_DIR / "admin_ar.json").read_text(encoding="utf-8-sig"))
 
 
 # ---------------------------------------------------------------------------

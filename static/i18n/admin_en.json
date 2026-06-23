@@ -22,7 +22,8 @@
     "toggle_menu": "Toggle navigation menu",
     "language_switch": "Switch language",
     "user_menu": "User menu",
-    "heatmap": "Risk Analysis Map"
+    "heatmap": "Risk Analysis Map",
+    "kindergarten_overview": "Kindergarten Overview"
   },
   "sidebar": {
     "messages": "Messages",
@@ -38,7 +39,8 @@
     "import_logs": "Import Logs",
     "alerts": "Alerts",
     "safety_analytics": "Safety Analytics",
-    "impersonation": "Impersonation"
+    "impersonation": "Impersonation",
+    "kpi_dashboard": "KPI Dashboard"
   },
   "common": {
     "refresh": "Refresh",
@@ -93,7 +95,14 @@
     "minutes_ago": "minutes ago",
     "hours_ago": "hours ago",
     "days_ago": "days ago",
-    "locale": "en-US"
+    "locale": "en-US",
+    "table": "Table",
+    "cards": "Cards"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "suspended": "Suspended"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -153,6 +162,10 @@
     "user_permissions": "User Permissions",
     "user_roles": "User Roles",
     "user_status": "User Status",
+    "admin": "System Admin",
+    "manager": "Kindergarten Manager",
+    "supervisor": "Supervisor",
+    "parent": "Parent",
     "full_name": "Full Name",
     "email": "Email",
     "phone": "Phone",
@@ -444,6 +457,36 @@
     "sev_high": "High",
     "sev_critical": "Critical",
     "sev_unknown": "Unknown"
+  },
+  "kpi": {
+    "title": "KPI Network Dashboard",
+    "subtitle": "Monitor performance indicators across all kindergartens",
+    "network_kpis": "Network KPIs",
+    "per_kg_breakdown": "Per-Kindergarten KPI Breakdown",
+    "attendance_rate": "Attendance Rate",
+    "ratio_compliance": "Ratio Compliance",
+    "incident_rate": "Incident Rate",
+    "governance_score": "Governance Score",
+    "governance_band": "Band",
+    "avg_attendance": "Avg. Attendance",
+    "avg_governance": "Avg. Governance Score",
+    "avg_incidents": "Avg. Incident Rate",
+    "total_kg": "Kindergartens",
+    "band_green": "Green",
+    "band_amber": "Amber",
+    "band_red": "Red",
+    "search_kg": "Search kindergarten...",
+    "loading": "Loading network KPIs...",
+    "error": "Error loading data",
+    "retry": "Retry",
+    "attendance_chart": "Attendance Rate by Kindergarten",
+    "band_distribution": "Governance Band Distribution",
+    "data_freshness_fresh": "Fresh data",
+    "data_freshness_stale": "Stale data",
+    "data_freshness_outdated": "Outdated data",
+    "trend_up": "Up",
+    "trend_down": "Down",
+    "trend_stable": "Stable"
   },
   "components": {
     "connectivity_error": "Cannot connect to server. Retrying…",

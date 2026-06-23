@@ -861,6 +861,7 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
         role="alert"
         aria-live="polite"
         aria-atomic="true"
+        style="border-inline-start: 4px solid #d97706;"
       >
         <i class="bi bi-clock-history" aria-hidden="true"></i>
         <span>
@@ -877,6 +878,7 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
         role="alert"
         aria-live="assertive"
         aria-atomic="true"
+        style="border-inline-start: 4px solid #dc2626;"
       >
         <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
         <span id="loginErrorMessage"></span>
@@ -922,7 +924,7 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
               required
               aria-required="true"
               aria-describedby="usernameHint usernameError"
-              dir="ltr"
+              dir="auto"
             />
             <i
               class="bi bi-check-circle-fill af-status"
@@ -960,6 +962,8 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
               name="password"
               placeholder="{% if ui_lang == 'en' %}Enter your password{% else %}أدخل كلمة المرور{% endif %}"
               autocomplete="current-password"
+              dir="ltr"
+              inputmode="text"
               required
               aria-required="true"
               aria-describedby="passwordError"
@@ -984,11 +988,15 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
             class="af-error"
             role="alert"
             aria-live="polite"
-            aria-atomic="true"
-          ></p>
-        </div>
+             aria-atomic="true"
+           ></p>
+           <p id="capsLockWarning" class="af-hint" style="display:none; color:#b45309;">
+             <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+             {% if ui_lang == 'en' %}Caps Lock is on{% else %}مفتع Caps Lock مفعل{% endif %}
+           </p>
+         </div>
 
-        {# ── Remember me + Forgot password ── #}
+         {# ── Remember me + Forgot password ── #}
         <div class="auth-options-row af-anim af-delay3">
           <label class="auth-check-label" for="rememberMe">
             <input type="checkbox" id="rememberMe" name="remember_me" />
@@ -1262,6 +1270,17 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
         const r = validatePassword(this.value);
         if (!r.ok) setInvalid(passwordInput, null, passwordError, r.msg);
       });
+
+      /* Caps-lock detection */
+      const capsLockWarning = document.getElementById("capsLockWarning");
+      function updateCapsLock(e) {
+        if (!capsLockWarning) return;
+        const isOn = e.getModifierState && e.getModifierState("CapsLock");
+        capsLockWarning.style.display = isOn ? "" : "none";
+      }
+      passwordInput?.addEventListener("keydown", updateCapsLock);
+      passwordInput?.addEventListener("keyup", updateCapsLock);
+      passwordInput?.addEventListener("click", updateCapsLock);
     }
 
     /* ─────────────────────────────────────────
@@ -1355,31 +1374,16 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
     if (new URLSearchParams(window.location.search).get("expired") === "true") {
       const banner = document.getElementById("sessionExpiredAlert");
       if (banner) banner.classList.remove("d-none");
-    }
-
-    /* ─────────────────────────────────────────
-     Sanitise generic server error messages
-     ───────────────────────────────────────── */
-    const errorBox = document.getElementById("loginError");
-    const errorMsg = document.getElementById("loginErrorMessage");
-    if (errorBox && errorMsg) {
-      new MutationObserver(function () {
-        if (!errorBox.classList.contains("d-none")) {
-          const txt = errorMsg.textContent || "";
-          const isGeneric =
-            txt.includes("Incorrect") ||
-            txt.includes("incorrect") ||
-            txt.includes("credentials") ||
-            txt.includes("Unable") ||
-            txt.includes("تعذر") ||
-            txt.includes("غير صحيح") ||
-            txt.includes("بيانات") ||
-            /40[01]/.test(txt);
-          if (!txt || isGeneric) {
-            errorMsg.textContent = MSG.loginFailed;
-          }
+      try {
+        const lastId = sessionStorage.getItem("kinjo_last_identifier");
+        const usernameInput = document.getElementById("username");
+        if (lastId && usernameInput) {
+          usernameInput.value = lastId;
         }
-      }).observe(errorBox, { attributes: true, attributeFilter: ["class"] });
+        sessionStorage.removeItem("kinjo_last_identifier");
+      } catch {
+        // ignore
+      }
     }
 
     /* ─────────────────────────────────────────
@@ -1392,8 +1396,12 @@ KinJo{% else %}تسجيل الدخول — كينجو{% endif %}{% endblock %} {
         if (!match) return;
         e.preventDefault();
         const lang = match[1];
+        const isSecure = window.location.protocol === "https:";
         document.cookie =
-          "kinjo_lang=" + lang + "; path=/; max-age=31536000; SameSite=Lax";
+          "kinjo_lang=" +
+          lang +
+          "; path=/; max-age=31536000; SameSite=Lax" +
+          (isSecure ? "; Secure" : "");
         localStorage.setItem("kinjo_lang", lang);
         localStorage.setItem("admin_language", lang);
         window.location.reload();

@@ -6,7 +6,7 @@ import models
 from i18n import gettext as _i18n_gettext
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime, timezone
 import typing
 from typing import Optional
 
@@ -1348,6 +1348,35 @@ async def admin_dashboard_page(request: Request, current_user: User = Depends(ge
         context={"current_user": current_user, "today": date.today()}
     )
 
+
+@router.get("/admin/kg-overview", response_class=HTMLResponse)
+async def admin_kg_overview(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Kindergarten overview dashboard"""
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/kg_overview.html",
+        context={"current_user": current_user, "today": date.today(), "now": datetime.now(timezone.utc).strftime("%d %B %Y, %I:%M %p")}
+    )
+
+
+@router.get("/admin/kpi", response_class=HTMLResponse)
+async def admin_kpi_dashboard(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin network-level KPI dashboard"""
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/kpi.html",
+        context={
+            "current_user": current_user,
+            "today": date.today(),
+            "jordan_governorates": settings.JORDAN_GOVERNORATES,
+        }
+    )
+
+
 @router.get("/admin/analytics", response_class=HTMLResponse)
 async def admin_analytics(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Admin analytics and reporting dashboard"""
@@ -1415,6 +1444,30 @@ async def manager_benchmarking(request: Request, current_user: User = Depends(ge
     return templates.TemplateResponse(
         request=request,
         name="manager/benchmarking.html",
+        context={"current_user": current_user, "today": date.today()}
+    )
+
+
+@router.get("/manager/kpi", response_class=HTMLResponse)
+async def manager_kpi_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Manager KPI dashboard page"""
+    if current_user.role != UserRole.MANAGER:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="manager/kpi.html",
+        context={"current_user": current_user, "today": date.today()}
+    )
+
+
+@router.get("/supervisor/kpi", response_class=HTMLResponse)
+async def supervisor_kpi_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Supervisor personal KPI dashboard"""
+    if current_user.role != UserRole.SUPERVISOR:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="supervisor/kpi.html",
         context={"current_user": current_user, "today": date.today()}
     )
 

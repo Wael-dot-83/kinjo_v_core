@@ -115,6 +115,16 @@
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
   }
 
+  function currentLang() {
+    return document.documentElement.lang === 'en' ? 'en' : 'ar';
+  }
+
+  const translations = {
+    imported: currentLang() === 'en' ? 'Imported' : 'مُستورد',
+    errors: currentLang() === 'en' ? 'Errors' : 'أخطاء',
+    total_rows: currentLang() === 'en' ? 'Total Rows' : 'إجمالي الصفوف'
+  };
+
   document.getElementById('downloadTemplateBtn').addEventListener('click', function () {
     const csv = 'username,email,password,role,kindergarten_id\nexample_user,user@example.com,Pass1234!,SUPERVISOR,1\n';
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -138,9 +148,9 @@
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
 
-try {
-       const res = await fetchWithAuth('/api/admin/users/import-csv', { method: 'POST', body: formData });
-       const data = await res.json();
+    try {
+      const res = await fetchWithAuth('/api/admin/users/import-csv', { method: 'POST', body: formData });
+      const data = await res.json();
       showResults(data);
     } catch (err) {
       alert('Upload failed: ' + err.message);
@@ -163,19 +173,19 @@ try {
         <div class="col-auto">
           <div class="p-3 rounded border text-center" style="min-width:100px;">
             <div class="fs-4 fw-bold text-success">${imported}</div>
-            <div class="small text-muted">Imported</div>
+            <div class="small text-muted">${translations.imported}</div>
           </div>
         </div>
         <div class="col-auto">
           <div class="p-3 rounded border text-center" style="min-width:100px;">
             <div class="fs-4 fw-bold text-danger">${errors.length}</div>
-            <div class="small text-muted">Errors</div>
+            <div class="small text-muted">${translations.errors}</div>
           </div>
         </div>
         <div class="col-auto">
           <div class="p-3 rounded border text-center" style="min-width:100px;">
             <div class="fs-4 fw-bold">${total}</div>
-            <div class="small text-muted">Total Rows</div>
+            <div class="small text-muted">${translations.total_rows}</div>
           </div>
         </div>
       </div>

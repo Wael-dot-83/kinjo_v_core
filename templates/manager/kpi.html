@@ -1,5 +1,5 @@
-﻿{% extends 'base.html' %}
-{% block title %}{{ _('لوحة مؤشرات الأداء') }} — KinJo{% endblock %}
+{% extends 'base.html' %}
+{% block title %}{{ _('مؤشرات الأداء الرئيسية') }} — KinJo{% endblock %}
 
 {% block page_header %}
 <div class="page-header-wrap">
@@ -8,7 +8,7 @@
             <i class="bi bi-graph-up-arrow"></i>
             {{ _('المدير') }}
         </div>
-        <h1 class="page-header-title">{{ _('لوحة مؤشرات الأداء') }}</h1>
+        <h1 class="page-header-title">{{ _('مؤشرات الأداء الرئيسية') }}</h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 breadcrumb-sm">
                 <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">{{ _('لوحة التحكم') }}</a></li>
@@ -48,7 +48,9 @@
 
 <!-- Loading -->
 <div id="kpiLoading" class="text-center py-5 text-muted">
-    <div class="spinner-border mb-3" role="status" aria-label="{{ _('جاري التحميل') }}"></div>
+    <div class="spinner-border mb-3" role="status">
+        <span class="visually-hidden">{{ _('جاري التحميل') }}</span>
+    </div>
     <div>{{ _('جاري تحميل المؤشرات...') }}</div>
 </div>
 
@@ -66,202 +68,99 @@
 <!-- Main Content -->
 <div id="kpiContent" class="d-none">
 
-    <!-- Section 1: Children -->
-    <div class="section-title mb-3">
-        <i class="bi bi-people-fill me-2 text-primary" aria-hidden="true"></i>
-        {{ _('الأطفال') }}
-    </div>
+    <!-- GCEI Hero -->
     <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
-            <div class="stat-card card">
-                <div class="card-body">
-                    <div class="stat-info">
-                        <div class="stat-label">{{ _('إجمالي الأطفال') }}</div>
-                        <div class="stat-value" id="kpiChildrenTotal">—</div>
-                    </div>
-                    <div class="stat-icon-wrap stat-icon-primary">
-                        <i class="bi bi-people-fill"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="stat-card success card">
-                <div class="card-body">
-                    <div class="stat-info">
-                        <div class="stat-label">{{ _('مُلتحقون') }}</div>
-                        <div class="stat-value" id="kpiChildrenEnrolled">—</div>
-                    </div>
-                    <div class="stat-icon-wrap stat-icon-success">
-                        <i class="bi bi-person-check-fill"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="stat-card card">
-                <div class="card-body">
-                    <div class="stat-info">
-                        <div class="stat-label">{{ _('نشطون') }}</div>
-                        <div class="stat-value" id="kpiChildrenActive">—</div>
-                    </div>
-                    <div class="stat-icon-wrap stat-icon-info">
-                        <i class="bi bi-activity"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card h-100">
-                <div class="card-body d-flex align-items-center justify-content-center p-2">
-                    <canvas id="childrenDoughnut" style="max-height:120px;" aria-label="{{ _('توزيع الأطفال') }}"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Section 2: Supervisors -->
-    <div class="section-title mb-3">
-        <i class="bi bi-person-badge-fill me-2 text-amber" aria-hidden="true"></i>
-        {{ _('المشرفون') }}
-    </div>
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="stat-card card">
-                <div class="card-body">
-                    <div class="stat-info">
-                        <div class="stat-label">{{ _('عدد المشرفين') }}</div>
-                        <div class="stat-value" id="kpiSupCount">—</div>
-                    </div>
-                    <div class="stat-icon-wrap stat-icon-warning">
-                        <i class="bi bi-person-badge-fill"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-8">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h6 class="card-title-sm mb-0">{{ _('معدل إكمال التقارير لكل مشرف') }}</h6>
-                </div>
-                <div class="card-body">
-                    <div id="supChartLoading" class="text-center py-3 text-muted">
-                        <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">Loading...</span></div>{{ _('جاري التحميل...') }}
-                    </div>
-                    <canvas id="supBarChart" style="max-height:180px;display:none;" aria-label="{{ _('معدل إكمال التقارير لكل مشرف') }}"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Section 3: Operational -->
-    <div class="section-title mb-3">
-        <i class="bi bi-gear-wide-connected me-2 text-success" aria-hidden="true"></i>
-        {{ _('التشغيل') }}
-    </div>
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-4">
-            <div class="stat-card success card">
-                <div class="card-body">
-                    <div class="stat-info">
-                        <div class="stat-label">{{ _('معدل الحضور') }}</div>
-                        <div class="stat-value" id="kpiAttRate">—%</div>
-                    </div>
-                    <div class="stat-icon-wrap stat-icon-success">
-                        <i class="bi bi-calendar-check-fill"></i>
-                    </div>
-                </div>
-                <div class="progress progress-sm mt-2">
-                    <div class="progress-bar bg-success" id="kpiAttBar" style="width:0%;transition:width 1s;"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-4">
-            <div class="stat-card card">
-                <div class="card-body">
-                    <div class="stat-info">
-                        <div class="stat-label">{{ _('معدل إكمال التقارير') }}</div>
-                        <div class="stat-value" id="kpiReportRate">—%</div>
-                    </div>
-                    <div class="stat-icon-wrap stat-icon-primary">
-                        <i class="bi bi-journal-check"></i>
-                    </div>
-                </div>
-                <div class="progress progress-sm mt-2">
-                    <div class="progress-bar bg-primary" id="kpiReportBar" style="width:0%;transition:width 1s;"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-4">
-            <div class="stat-card danger card">
-                <div class="card-body">
-                    <div class="stat-info">
-                        <div class="stat-label">{{ _('تكرار الحوادث') }}</div>
-                        <div class="stat-value" id="kpiIncidentRate">—</div>
-                    </div>
-                    <div class="stat-icon-wrap stat-icon-danger">
-                        <i class="bi bi-shield-exclamation"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="card-title-sm mb-0">{{ _('اتجاهات التشغيل') }}</h6>
-                </div>
-                <div class="card-body">
-                    <canvas id="opLineChart" style="max-height:220px;" aria-label="{{ _('مخطط الاتجاهات التشغيلية') }}"></canvas>
+            <div class="card border-0 shadow-sm kpi-hero-card" id="gceiHeroCard">
+                <div class="card-body p-4">
+                    <div class="row align-items-center g-3">
+                        <div class="col-sm-4 text-center">
+                            <div class="text-white-75 fw-semibold small mb-1">{{ _('مؤشر حوكمة الروضة الشامل') }}</div>
+                            <div class="kpi-hero-value" id="gceiValue">—</div>
+                            <div class="text-white-75 small">{{ _('من 100 نقطة') }}</div>
+                            <div class="mt-2">
+                                <span class="badge fs-6 px-3 py-2" id="gceiStatusBadge">—</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-4 text-center">
+                            <div class="text-white-75 fw-semibold small mb-1">{{ _('الاتجاه') }}</div>
+                            <div class="kpi-hero-trend-icon" id="gceiTrendIcon">—</div>
+                            <div class="text-white-75 small" id="gceiTrendValue">—</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="text-white-75 fw-semibold small mb-2">{{ _('ملاحظة المدير') }}</div>
+                            <div class="text-white-90 small lh-base" id="gceiNote"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Section 4: Messaging -->
-    <div class="section-title mb-3">
-        <i class="bi bi-chat-dots-fill me-2 text-info" aria-hidden="true"></i>
-        {{ _('التواصل') }}
-    </div>
-    <div class="row g-4 mb-4">
-        <div class="col-md-4">
-            <div class="stat-card card">
-                <div class="card-body">
-                    <div class="stat-info">
-                        <div class="stat-label">{{ _('رسائل مُرسَلة') }}</div>
-                        <div class="stat-value" id="kpiMsgSent">—</div>
-                    </div>
-                    <div class="stat-icon-wrap stat-icon-info">
-                        <i class="bi bi-send-fill"></i>
-                    </div>
-                </div>
+    <!-- Active Alerts -->
+    <div id="alertsSection" class="d-none mb-4">
+        <div class="card border-danger border-2">
+            <div class="card-header bg-danger text-white d-flex align-items-center gap-2 py-2">
+                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                <strong class="small">{{ _('التنبيهات النشطة') }}</strong>
+                <span class="badge bg-white text-danger ms-auto" id="alertsCount">0</span>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="stat-card success card">
-                <div class="card-body">
-                    <div class="stat-info">
-                        <div class="stat-label">{{ _('معدل القراءة') }}</div>
-                        <div class="stat-value" id="kpiMsgReadRate">—%</div>
-                    </div>
-                    <div class="stat-icon-wrap stat-icon-success">
-                        <i class="bi bi-envelope-open-fill"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body d-flex align-items-center justify-content-center p-2">
-                    <canvas id="msgPieChart" style="max-height:120px;" aria-label="{{ _('نسبة قراءة الرسائل') }}"></canvas>
-                </div>
-            </div>
+            <div class="card-body p-2" id="alertsList"></div>
         </div>
     </div>
+
+    <!-- KPI Cards Grid -->
+    <div class="row g-3 mb-4" id="kpiCardsGrid" role="list" aria-label="{{ _('مؤشرات الأداء الرئيسية') }}"></div>
+
+    <!-- Action Items -->
+    <div id="actionItemsSection" class="d-none mb-4">
+        <div class="card">
+            <div class="card-header py-2">
+                <h6 class="mb-0 fw-700 d-flex align-items-center gap-2">
+                    <i class="bi bi-clipboard-check text-primary" aria-hidden="true"></i>
+                    {{ _('بنود العمل المطلوبة') }}
+                </h6>
+            </div>
+            <div class="card-body p-0" id="actionItemsList"></div>
+        </div>
+    </div>
+
+    <!-- KPI Comparison Chart -->
+    <div class="card mb-4">
+        <div class="card-header py-2">
+            <h6 class="mb-0 fw-700 d-flex align-items-center gap-2">
+                <i class="bi bi-bar-chart-fill text-primary" aria-hidden="true"></i>
+                {{ _('مقارنة المؤشرات') }}
+            </h6>
+        </div>
+        <div class="card-body">
+            <canvas id="kpiComparisonChart" style="max-height:300px;"
+                    aria-label="{{ _('مخطط مقارنة مؤشرات الأداء') }}"></canvas>
+        </div>
+    </div>
+
+    <div class="text-muted text-center small pb-4" id="freshnessInfo"></div>
 
 </div><!-- /kpiContent -->
 
 <style>
-.section-title { font-size:0.88rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--kinjo-text-muted);display:flex;align-items:center; }
+.kpi-hero-card {
+    background: linear-gradient(135deg, #0A5C8E 0%, #0d7db5 100%);
+    color: #fff;
+}
+.text-white-75 { color: rgba(255,255,255,.75); }
+.text-white-90 { color: rgba(255,255,255,.9); }
+.kpi-hero-value { font-size: 3rem; font-weight: 800; line-height: 1; }
+.kpi-hero-trend-icon { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+.kpi-card { transition: transform .18s, box-shadow .18s; }
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.1) !important; }
+.kpi-status-bar-green { border-inline-start: 4px solid #10b981; }
+.kpi-status-bar-amber { border-inline-start: 4px solid #f59e0b; }
+.kpi-status-bar-red   { border-inline-start: 4px solid #ef4444; }
+.kpi-value-big { font-size: 2rem; font-weight: 800; line-height: 1; }
+.kpi-action-high   { border-inline-start: 3px solid #ef4444; }
+.kpi-action-medium { border-inline-start: 3px solid #f59e0b; }
+.kpi-action-low    { border-inline-start: 3px solid #10b981; }
 </style>
 {% endblock %}
 
@@ -270,17 +169,35 @@
 (function () {
     'use strict';
 
-    let childDoughnut = null;
-    let supBarInst    = null;
-    let opLineInst    = null;
-    let msgPieInst    = null;
+    const IS_AR = (document.documentElement.lang || 'ar') !== 'en';
+    const LOCALE = IS_AR ? 'ar' : 'en';
 
-    function getHeaders() {
-        const t = localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token');
-        return { 'Authorization': `Bearer ${t}` };
+    let comparisonChart = null;
+
+    const KPI_KEYS_ORDERED = [
+        'attendance_rate', 'ratio_compliance', 'report_submission_rate',
+        'training_completion_rate', 'incident_rate', 'serious_incident_rate',
+        'incident_followup_sla', 'chronic_absence_rate', 'capacity_utilization_rate',
+    ];
+
+    const KPI_ICONS = {
+        overall_gcei:              'bi-award-fill',
+        attendance_rate:           'bi-calendar-check-fill',
+        ratio_compliance:          'bi-people-fill',
+        incident_rate:             'bi-shield-exclamation',
+        serious_incident_rate:     'bi-shield-x',
+        incident_followup_sla:     'bi-clock-history',
+        chronic_absence_rate:      'bi-person-slash',
+        capacity_utilization_rate: 'bi-bar-chart-fill',
+        training_completion_rate:  'bi-mortarboard-fill',
+        report_submission_rate:    'bi-journal-check',
+    };
+
+    function getToken() {
+        return localStorage.getItem('kinjo_token') || sessionStorage.getItem('kinjo_token') || '';
     }
 
-    window.setRange = function (days) {
+    window.setRange = function(days) {
         const to   = new Date();
         const from = new Date();
         from.setDate(from.getDate() - (days - 1));
@@ -291,177 +208,246 @@
 
     document.addEventListener('DOMContentLoaded', () => setRange(30));
 
-    window.loadKPI = async function () {
-        const from = document.getElementById('dateFrom').value;
-        const to   = document.getElementById('dateTo').value;
+    window.loadKPI = async function() {
+        const from  = document.getElementById('dateFrom').value;
+        const to    = document.getElementById('dateTo').value;
+        const show  = id => document.getElementById(id).classList.remove('d-none');
+        const hide  = id => document.getElementById(id).classList.add('d-none');
 
-        document.getElementById('kpiLoading').classList.remove('d-none');
-        document.getElementById('kpiError').classList.add('d-none');
-        document.getElementById('kpiContent').classList.add('d-none');
+        show('kpiLoading'); hide('kpiError'); hide('kpiContent');
 
         try {
-            const r = await fetch(`/api/manager/kpi?from_date=${from}&to_date=${to}`, { headers: getHeaders() });
-            if (!r.ok) throw new Error();
-            const data = await r.json();
+            const url  = `/api/manager/dashboard/enhanced?period_start=${from}&period_end=${to}&locale=${LOCALE}`;
+            const resp = await fetch(url, { headers: { Authorization: `Bearer ${getToken()}` } });
+            if (!resp.ok) throw new Error(resp.statusText);
+            const data = await resp.json();
 
-            document.getElementById('kpiLoading').classList.add('d-none');
-
-            updateChildren(data.children || {});
-            updateSupervisors(data.supervisors || {});
-            updateOperational(data.operational || {});
-            updateMessaging(data.messaging || {});
-
-            document.getElementById('kpiContent').classList.remove('d-none');
-
-        } catch {
-            document.getElementById('kpiLoading').classList.add('d-none');
-            document.getElementById('kpiError').classList.remove('d-none');
+            hide('kpiLoading');
+            renderGCEI(data.overall_gcei);
+            renderAlerts(data.alerts || []);
+            renderKPICards(data);
+            renderActionItems(data);
+            renderComparisonChart(data);
+            renderFreshness(data);
+            show('kpiContent');
+        } catch (err) {
+            console.error('[KPI]', err);
+            hide('kpiLoading'); show('kpiError');
         }
     };
 
-    function updateChildren(c) {
-        document.getElementById('kpiChildrenTotal').textContent   = c.total    ?? '—';
-        document.getElementById('kpiChildrenEnrolled').textContent = c.enrolled ?? '—';
-        document.getElementById('kpiChildrenActive').textContent  = c.active   ?? '—';
+    /* ── helpers ─────────────────────────────────────────────────────── */
 
-        const ctx = document.getElementById('childrenDoughnut').getContext('2d');
-        if (childDoughnut) childDoughnut.destroy();
-        childDoughnut = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['{{ _("نشط") }}', '{{ _("غير نشط") }}'],
-                datasets: [{
-                    data: [c.active || 0, (c.total || 0) - (c.active || 0)],
-                    backgroundColor: ['#10b981', '#e2e8f0'],
-                    borderWidth: 0,
-                    hoverOffset: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                cutout: '65%',
-                plugins: {
-                    legend: { position: 'bottom', labels: { font: { family: 'Cairo', size: 11 }, padding: 8 } },
-                    tooltip: { rtl: true, titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
-                }
-            }
-        });
+    function statusColor(s) {
+        return { green: '#10b981', amber: '#f59e0b', red: '#ef4444' }[s] || '#6b7280';
+    }
+    function statusBadgeCls(s) {
+        return { green: 'bg-success', amber: 'bg-warning text-dark', red: 'bg-danger' }[s] || 'bg-secondary';
+    }
+    function statusLabel(s) {
+        if (IS_AR) return { green: 'جيد', amber: 'تحذير', red: 'تنبيه' }[s] || s;
+        return { green: 'Good', amber: 'Warning', red: 'Alert' }[s] || s;
+    }
+    function trendIcon(t) { return { up: '↑', down: '↓', stable: '→' }[t] || '—'; }
+    function trendCls(t, lowerIsBetter) {
+        const good = lowerIsBetter ? 'down' : 'up';
+        const bad  = lowerIsBetter ? 'up'   : 'down';
+        if (t === good) return 'text-success';
+        if (t === bad)  return 'text-danger';
+        return 'text-muted';
+    }
+    function esc(s) {
+        return String(s ?? '').replace(/[&<>"']/g,
+            c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
-    function updateSupervisors(s) {
-        document.getElementById('kpiSupCount').textContent = s.count ?? '—';
+    /* ── render functions ────────────────────────────────────────────── */
 
-        const supervisors = s.completion_rates || [];
-        const supCanvas = document.getElementById('supBarChart');
-        document.getElementById('supChartLoading').classList.add('d-none');
-        supCanvas.style.display = 'block';
+    function renderGCEI(c) {
+        document.getElementById('gceiValue').textContent = c.value.toFixed(1) + c.unit;
 
-        if (supBarInst) supBarInst.destroy();
-        supBarInst = new Chart(supCanvas, {
+        const badge = document.getElementById('gceiStatusBadge');
+        badge.textContent = statusLabel(c.status);
+        badge.className   = `badge fs-6 px-3 py-2 ${statusBadgeCls(c.status)}`;
+
+        const li   = c.threshold.lower_is_better;
+        const icon = document.getElementById('gceiTrendIcon');
+        icon.textContent = trendIcon(c.trend);
+        icon.className   = `kpi-hero-trend-icon ${trendCls(c.trend, li)}`;
+
+        const sign = c.trend === 'up' ? '+' : '';
+        document.getElementById('gceiTrendValue').textContent = `${sign}${c.trend_value.toFixed(1)}%`;
+        document.getElementById('gceiNote').textContent = IS_AR ? c.manager_note.ar : c.manager_note.en;
+    }
+
+    function renderAlerts(alerts) {
+        const section = document.getElementById('alertsSection');
+        const list    = document.getElementById('alertsList');
+        if (!alerts.length) { section.classList.add('d-none'); return; }
+        section.classList.remove('d-none');
+        document.getElementById('alertsCount').textContent = alerts.length;
+        const cls = { high: 'danger', medium: 'warning', low: 'info' };
+        list.innerHTML = alerts.map(a => `
+            <div class="alert alert-${cls[a.priority] || 'secondary'} mb-1 py-2 d-flex align-items-center gap-2">
+                <i class="bi bi-exclamation-triangle-fill flex-shrink-0" aria-hidden="true"></i>
+                <span>${esc(a.message)}</span>
+            </div>`).join('');
+    }
+
+    function renderKPICards(data) {
+        const grid = document.getElementById('kpiCardsGrid');
+        grid.innerHTML = KPI_KEYS_ORDERED.map(key => {
+            const c = data[key];
+            if (!c) return '';
+            const name  = IS_AR ? c.name_ar : c.name_en;
+            const expl  = IS_AR ? c.explanation.ar : c.explanation.en;
+            const icon  = KPI_ICONS[key] || 'bi-graph-up';
+            const li    = c.threshold.lower_is_better;
+            const tc    = trendCls(c.trend, li);
+            const sign  = c.trend === 'up' ? '+' : '';
+            const color = statusColor(c.status);
+
+            return `
+            <div class="col-12 col-md-6 col-xl-4" role="listitem">
+                <div class="kpi-card card h-100 shadow-sm kpi-status-bar-${c.status}">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                     style="width:40px;height:40px;background:${color}22;"
+                                     aria-hidden="true">
+                                    <i class="bi ${icon}" style="color:${color};font-size:1.2rem;"></i>
+                                </div>
+                                <div class="fw-600 small">${esc(name)}</div>
+                            </div>
+                            <span class="badge ${statusBadgeCls(c.status)}" aria-label="${statusLabel(c.status)}">${statusLabel(c.status)}</span>
+                        </div>
+                        <div class="d-flex align-items-end gap-2 mb-2">
+                            <div class="kpi-value-big" style="color:${color};">${c.value.toFixed(1)}</div>
+                            <div class="text-muted small mb-1">${esc(c.unit)}</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="${tc} fw-bold small" aria-label="${IS_AR ? 'الاتجاه' : 'Trend'}">
+                                ${trendIcon(c.trend)} ${sign}${c.trend_value.toFixed(1)}%
+                            </span>
+                            <span class="text-muted small">
+                                ${c.period_days} ${IS_AR ? 'يوم' : 'days'}
+                            </span>
+                        </div>
+                        <div class="text-muted" style="font-size:0.78rem;line-height:1.55;">${esc(expl)}</div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderActionItems(data) {
+        const section = document.getElementById('actionItemsSection');
+        const list    = document.getElementById('actionItemsList');
+        const items   = [];
+
+        for (const key of ['overall_gcei', ...KPI_KEYS_ORDERED]) {
+            const c = data[key];
+            if (!c || !c.action_items || c.status === 'green') continue;
+            for (const ai of c.action_items) {
+                items.push({
+                    text:     IS_AR ? ai.ar : ai.en,
+                    priority: ai.priority,
+                    card:     IS_AR ? c.name_ar : c.name_en,
+                    status:   c.status,
+                });
+            }
+        }
+
+        if (!items.length) { section.classList.add('d-none'); return; }
+        section.classList.remove('d-none');
+
+        const ORDER = { high: 0, medium: 1, low: 2 };
+        items.sort((a, b) => (ORDER[a.priority] ?? 9) - (ORDER[b.priority] ?? 9));
+
+        const PR_LABEL = IS_AR
+            ? { high: 'عالية', medium: 'متوسطة', low: 'منخفضة' }
+            : { high: 'High', medium: 'Medium', low: 'Low' };
+        const PR_COLOR = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' };
+
+        list.innerHTML = items.map(it => `
+            <div class="p-3 border-bottom kpi-action-${it.priority}">
+                <div class="d-flex align-items-start gap-2">
+                    <i class="bi bi-arrow-left-circle-fill flex-shrink-0 mt-1"
+                       style="color:${PR_COLOR[it.priority] || '#6b7280'}" aria-hidden="true"></i>
+                    <div>
+                        <div class="text-muted" style="font-size:0.75rem;">${esc(it.card)}</div>
+                        <div class="small mt-1">${esc(it.text)}</div>
+                        <span class="badge bg-secondary mt-1" style="font-size:0.7rem;">
+                            ${PR_LABEL[it.priority] || it.priority}
+                        </span>
+                    </div>
+                </div>
+            </div>`).join('');
+    }
+
+    function renderComparisonChart(data) {
+        const ctx = document.getElementById('kpiComparisonChart').getContext('2d');
+        if (comparisonChart) comparisonChart.destroy();
+
+        const labels = KPI_KEYS_ORDERED.map(k => {
+            const c = data[k];
+            if (!c) return k;
+            const name = IS_AR ? c.name_ar : c.name_en;
+            return name.length > 20 ? name.slice(0, 18) + '…' : name;
+        });
+        const values = KPI_KEYS_ORDERED.map(k => data[k]?.value ?? 0);
+        const colors = KPI_KEYS_ORDERED.map(k => statusColor(data[k]?.status || 'amber'));
+
+        comparisonChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: supervisors.map(x => x.name),
+                labels,
                 datasets: [{
-                    label: '{{ _("معدل الإكمال %") }}',
-                    data: supervisors.map(x => x.rate || 0),
-                    backgroundColor: 'rgba(10,92,142,0.75)',
-                    borderRadius: 4,
-                }]
+                    label: IS_AR ? 'القيمة' : 'Value',
+                    data: values,
+                    backgroundColor: colors.map(c => c + 'aa'),
+                    borderColor: colors,
+                    borderWidth: 2,
+                    borderRadius: 6,
+                }],
             },
             options: {
-                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: true,
                 plugins: {
                     legend: { display: false },
-                    tooltip: { rtl: true, titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
-                },
-                scales: {
-                    x: { beginAtZero: true, max: 100, ticks: { font: { family: 'Cairo' } } },
-                    y: { ticks: { font: { family: 'Cairo', size: 11 } } }
-                }
-            }
-        });
-    }
-
-    function updateOperational(op) {
-        const att    = Math.round(op.attendance_rate    || 0);
-        const report = Math.round(op.report_completion  || 0);
-        document.getElementById('kpiAttRate').textContent    = att + '%';
-        document.getElementById('kpiReportRate').textContent = report + '%';
-        document.getElementById('kpiIncidentRate').textContent = op.incident_frequency ?? '—';
-        document.getElementById('kpiAttBar').style.width    = att + '%';
-        document.getElementById('kpiReportBar').style.width = report + '%';
-
-        const trend = op.trend || [];
-        const opCtx = document.getElementById('opLineChart').getContext('2d');
-        if (opLineInst) opLineInst.destroy();
-        opLineInst = new Chart(opCtx, {
-            type: 'line',
-            data: {
-                labels: trend.map(d => new Date(d.date).toLocaleDateString('ar-SA', {month:'short',day:'numeric'})),
-                datasets: [
-                    {
-                        label: '{{ _("الحضور %") }}',
-                        data: trend.map(d => d.attendance_rate || 0),
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16,185,129,0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 3,
+                    tooltip: {
+                        rtl: IS_AR,
+                        titleFont: { family: 'Cairo' },
+                        bodyFont:  { family: 'Cairo' },
+                        callbacks: {
+                            label: ctx2 => {
+                                const c = data[KPI_KEYS_ORDERED[ctx2.dataIndex]];
+                                return `${ctx2.parsed.y.toFixed(1)}${c?.unit || '%'}`;
+                            },
+                        },
                     },
-                    {
-                        label: '{{ _("إكمال التقارير %") }}',
-                        data: trend.map(d => d.report_completion || 0),
-                        borderColor: '#0A5C8E',
-                        backgroundColor: 'rgba(10,92,142,0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 3,
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top', labels: { font: { family: 'Cairo' }, padding: 12 } },
-                    tooltip: { rtl: true, titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
                 },
                 scales: {
-                    y: { beginAtZero: true, max: 100, ticks: { font: { family: 'Cairo' } } },
-                    x: { ticks: { font: { family: 'Cairo', size: 11 } } }
-                }
-            }
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { font: { family: 'Cairo' }, callback: v => v + '%' },
+                    },
+                    x: { ticks: { font: { family: 'Cairo', size: 10 } } },
+                },
+            },
         });
     }
 
-    function updateMessaging(m) {
-        const sent     = m.sent       || 0;
-        const readRate = Math.round(m.read_rate || 0);
-        document.getElementById('kpiMsgSent').textContent    = sent;
-        document.getElementById('kpiMsgReadRate').textContent = readRate + '%';
-
-        const msgCtx = document.getElementById('msgPieChart').getContext('2d');
-        if (msgPieInst) msgPieInst.destroy();
-        msgPieInst = new Chart(msgCtx, {
-            type: 'pie',
-            data: {
-                labels: ['{{ _("مقروءة") }}', '{{ _("غير مقروءة") }}'],
-                datasets: [{
-                    data: [readRate, 100 - readRate],
-                    backgroundColor: ['#10b981', '#e2e8f0'],
-                    borderWidth: 0,
-                    hoverOffset: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'bottom', labels: { font: { family: 'Cairo', size: 11 }, padding: 8 } },
-                    tooltip: { rtl: true, titleFont: { family: 'Cairo' }, bodyFont: { family: 'Cairo' } }
-                }
-            }
-        });
+    function renderFreshness(data) {
+        const el   = document.getElementById('freshnessInfo');
+        const d    = new Date(data.last_updated).toLocaleString(IS_AR ? 'ar-JO' : 'en-US');
+        const MAP  = IS_AR
+            ? { fresh: 'حديثة', stale: 'قديمة', outdated: 'منتهية الصلاحية' }
+            : { fresh: 'Fresh', stale: 'Stale', outdated: 'Outdated' };
+        el.textContent = `${IS_AR ? 'آخر تحديث:' : 'Last updated:'} ${d}  ·  ${MAP[data.data_freshness] || data.data_freshness}`;
     }
 })();
 </script>

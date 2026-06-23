@@ -31,16 +31,18 @@ def upgrade() -> None:
     op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
 
     # Trigram index on users.username — powers admin user-search ILIKE queries.
-    op.execute(
-        "CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_users_username_trgm "
-        "ON users USING gin (username gin_trgm_ops)"
-    )
+    with op.get_context().autocommit_block():
+        op.execute(
+            "CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_users_username_trgm "
+            "ON users USING gin (username gin_trgm_ops)"
+        )
 
     # Trigram index on users.email — powers admin email-search ILIKE queries.
-    op.execute(
-        "CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_users_email_trgm "
-        "ON users USING gin (email gin_trgm_ops)"
-    )
+    with op.get_context().autocommit_block():
+        op.execute(
+            "CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_users_email_trgm "
+            "ON users USING gin (email gin_trgm_ops)"
+        )
 
     # Composite index: role + status — admin user-list filters on both columns simultaneously.
     op.create_index(
@@ -74,12 +76,14 @@ def downgrade() -> None:
 
     op.drop_index("ix_enrollment_applications_kg_status", table_name="enrollment_applications", if_exists=True)
 
-    op.execute(
-        "DROP INDEX CONCURRENTLY IF EXISTS ix_contact_messages_submitted_resolved"
-    )
+    with op.get_context().autocommit_block():
+        op.execute(
+            "DROP INDEX CONCURRENTLY IF EXISTS ix_contact_messages_submitted_resolved"
+        )
 
     op.drop_index("ix_users_role_status", table_name="users", if_exists=True)
 
-    op.execute("DROP INDEX CONCURRENTLY IF EXISTS ix_users_email_trgm")
-    op.execute("DROP INDEX CONCURRENTLY IF EXISTS ix_users_username_trgm")
+    with op.get_context().autocommit_block():
+        op.execute("DROP INDEX CONCURRENTLY IF EXISTS ix_users_email_trgm")
+        op.execute("DROP INDEX CONCURRENTLY IF EXISTS ix_users_username_trgm")
     # Note: do NOT drop pg_trgm extension here — other indexes may depend on it.

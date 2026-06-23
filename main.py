@@ -49,7 +49,10 @@ class UTF8StaticFiles(StaticFiles):
                     ".webp", ".ico", ".woff", ".woff2", ".ttf", ".eot", ".map"
                 )
                 if normalized_path.endswith(static_asset_suffixes):
-                    response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+                    if settings.ENVIRONMENT.lower() == "production":
+                        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+                    else:
+                        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
                 elif normalized_path.endswith(".html"):
                     response.headers["Cache-Control"] = "no-cache"
         return response

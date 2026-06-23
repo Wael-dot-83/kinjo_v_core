@@ -10,74 +10,24 @@
 <span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Impersonation{% else %}انتحال الهوية{% endif %}</span>
 {% endblock %}
 
-{% block extra_head %}
-<style>
-.fw-800 { font-weight:800; }
-
-.impersonate-warning {
-    display:flex;padding:1.1rem 1.25rem;
-    border-radius:var(--kinjo-radius-lg);
-    background:linear-gradient(135deg,#fef2f2,#fee2e2);
-    border:1.5px solid rgba(239,68,68,0.3);
-    color:#b91c1c;
-}
-.impersonate-warning i { color:#dc2626; }
-
-/* Manager list */
-.manager-list {
-    border:1.5px solid var(--kinjo-border);
-    border-radius:var(--kinjo-radius-lg);
-    max-height:320px;overflow-y:auto;
-}
-.manager-item {
-    display:flex;align-items:center;gap:0.875rem;
-    padding:0.75rem 1rem;
-    border-bottom:1px solid var(--kinjo-border);
-    cursor:pointer;transition:background 0.15s;
-    user-select:none;
-}
-.manager-item:last-child { border-bottom:none; }
-.manager-item:hover { background:var(--kinjo-surface); }
-.manager-item.selected {
-    background:var(--kinjo-primary-xlight);
-    border-color:var(--kinjo-primary-light);
-}
-.manager-avatar {
-    width:40px;height:40px;border-radius:50%;flex-shrink:0;
-    background:var(--kinjo-primary-xlight);color:var(--kinjo-primary);
-    display:flex;align-items:center;justify-content:center;font-size:1rem;
-}
-.manager-item.selected .manager-avatar { background:var(--kinjo-primary);color:#fff; }
-.manager-name { font-size:0.875rem;font-weight:700;color:var(--kinjo-text-primary); }
-.manager-kg   { font-size:0.75rem;color:var(--kinjo-text-muted); }
-
-/* Audit log */
-.audit-item {
-    display:flex;align-items:flex-start;gap:0.875rem;
-    padding:0.75rem 1.25rem;
-    border-bottom:1px solid var(--kinjo-border);
-}
-.audit-item:last-child { border-bottom:none; }
-.audit-dot {
-    width:8px;height:8px;border-radius:50%;
-    background:var(--kinjo-danger);margin-top:0.45rem;flex-shrink:0;
-}
-</style>
-{% endblock %}
+{% block extra_head %}{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="page-header-wrap mb-4">
+<div class="admin-page-header mb-4">
     <div>
-        <div class="page-header-eyebrow text-danger">
-            <i class="bi bi-person-fill-lock" aria-hidden="true"></i>
+        <p class="text-danger small mb-1">
+            <i class="bi bi-person-fill-lock me-1" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}System Administrator{% else %}المشرف العام{% endif %}
-        </div>
-        <h1 class="page-header-title">{% if ui_lang == 'en' %}Impersonate Manager{% else %}انتحال هوية مدير{% endif %}</h1>
+        </p>
+        <h1 class="admin-page-title">
+            {% if ui_lang == 'en' %}Impersonate Manager{% else %}انتحال هوية مدير{% endif %}
+        </h1>
     </div>
-    <a href="/dashboard" class="btn btn-ghost">
-        <i class="bi bi-arrow-right me-2"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
-    </a>
+    <div class="admin-page-actions">
+        <a href="/dashboard" class="admin-btn admin-btn-ghost">
+            <i class="bi bi-arrow-right me-2"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
+        </a>
+    </div>
 </div>
 
 <div class="row g-4 justify-content-center">

@@ -24,7 +24,7 @@ MAX_CHILD_AGE_MONTHS = settings.MAX_CHILD_AGE_MONTHS
 class ChildAgeBounds:
     """Inclusive DOB bounds for valid children."""
     min_date: date  # Oldest allowed (today minus 4y8m)
-    max_date: date  # Youngest allowed (today minus 70 days)
+    max_date: date  # Youngest allowed (today minus 1 day)
 
 
 def _subtract_months(base: date, months: int) -> date:

@@ -1,0 +1,557 @@
+{% extends "admin_base.html" %}
+
+{% block title %}{% if ui_lang == 'en' %}KPI Network Dashboard{% else %}لوحة مؤشرات الأداء{% endif %} — KinJo Admin{% endblock %}
+
+{% block breadcrumb %}
+<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard">
+    <i class="bi bi-house" aria-hidden="true"></i>
+</a>
+<span class="admin-breadcrumb-separator">/</span>
+<span class="admin-breadcrumb-item active">
+    {% if ui_lang == 'en' %}KPI Dashboard{% else %}مؤشرات الأداء{% endif %}
+</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="admin-page-header mb-4">
+    <div>
+        <p class="small fw-600 text-primary mb-1">
+            <i class="bi bi-graph-up-arrow me-1" aria-hidden="true"></i>
+            <span>{% if ui_lang == 'en' %}Network Analytics{% else %}تحليلات الشبكة{% endif %}</span>
+        </p>
+        <h1 class="admin-page-title">
+            {% if ui_lang == 'en' %}KPI Network Dashboard{% else %}لوحة مؤشرات الأداء الرئيسية{% endif %}
+        </h1>
+        <p class="admin-page-subtitle">
+            {% if ui_lang == 'en' %}Monitor performance indicators across all kindergartens in the network{% else %}رصد مؤشرات الأداء عبر جميع روضات الشبكة{% endif %}
+        </p>
+    </div>
+    <div class="admin-page-actions">
+        <button class="admin-btn admin-btn-secondary" onclick="loadKPIData()" id="refreshBtn">
+            <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+            {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body py-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label class="form-label small fw-semibold mb-1" for="filterStart">
+                    {% if ui_lang == 'en' %}From{% else %}من{% endif %}
+                </label>
+                <input type="date" id="filterStart" class="form-control form-control-sm"
+                       style="min-width:140px;">
+            </div>
+            <div class="col-auto">
+                <label class="form-label small fw-semibold mb-1" for="filterEnd">
+                    {% if ui_lang == 'en' %}To{% else %}إلى{% endif %}
+                </label>
+                <input type="date" id="filterEnd" class="form-control form-control-sm"
+                       style="min-width:140px;">
+            </div>
+            <div class="col-auto">
+                <label class="form-label small fw-semibold mb-1" for="filterGov">
+                    {% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
+                </label>
+                <select id="filterGov" class="form-select form-select-sm" style="min-width:160px;">
+                    <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
+                    {% for gov in jordan_governorates %}
+                    <option value="{{ gov }}">{{ gov }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <div class="d-flex gap-1">
+                    <button class="admin-btn admin-btn-secondary btn-sm" onclick="setRange(30)">
+                        30 {% if ui_lang == 'en' %}d{% else %}ي{% endif %}
+                    </button>
+                    <button class="admin-btn admin-btn-secondary btn-sm" onclick="setRange(90)">
+                        90 {% if ui_lang == 'en' %}d{% else %}ي{% endif %}
+                    </button>
+                    <button class="admin-btn admin-btn-primary btn-sm" onclick="loadKPIData()">
+                        <i class="bi bi-funnel" aria-hidden="true"></i>
+                        {% if ui_lang == 'en' %}Apply{% else %}تطبيق{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading -->
+<div id="kpiLoading" class="text-center py-5 text-muted">
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
+    </div>
+    <div class="mt-2 small">{% if ui_lang == 'en' %}Loading network KPIs...{% else %}جاري تحميل مؤشرات الأداء...{% endif %}</div>
+</div>
+
+<!-- Error -->
+<div id="kpiError" class="d-none mb-4">
+    <div class="alert alert-danger d-flex align-items-center gap-2">
+        <i class="bi bi-exclamation-triangle-fill flex-shrink-0" aria-hidden="true"></i>
+        <div>
+            <strong>{% if ui_lang == 'en' %}Error loading data{% else %}خطأ في تحميل البيانات{% endif %}</strong>
+            <div class="small" id="kpiErrorMsg"></div>
+        </div>
+        <button class="admin-btn admin-btn-secondary btn-sm ms-auto" onclick="loadKPIData()">
+            {% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}
+        </button>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div id="kpiContent" class="d-none">
+
+    <!-- Network Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-xl-2">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div class="text-muted small fw-semibold">
+                            {% if ui_lang == 'en' %}Kindergartens{% else %}عدد الروضات{% endif %}
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:36px;height:36px;background:#0A5C8E18;">
+                            <i class="bi bi-building text-primary" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                    <div class="display-6 fw-800 text-primary" id="netKgCount">—</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Active{% else %}نشطة{% endif %}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-2">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div class="text-muted small fw-semibold">
+                            {% if ui_lang == 'en' %}Avg. Attendance{% else %}متوسط الحضور{% endif %}
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:36px;height:36px;background:#10b98118;">
+                            <i class="bi bi-calendar-check-fill text-success" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                    <div class="display-6 fw-800" id="netAttRate" style="color:#10b981;">—</div>
+                    <div class="progress mt-2" style="height:4px;">
+                        <div class="progress-bar bg-success" id="netAttBar" style="width:0%;transition:width 1s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-2">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div class="text-muted small fw-semibold">
+                            {% if ui_lang == 'en' %}Avg. Ratio Compliance{% else %}متوسط التوافق النسبي{% endif %}
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:36px;height:36px;background:#8b5cf618;">
+                            <i class="bi bi-people-fill" style="color:#8b5cf6;" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                    <div class="display-6 fw-800" id="netRatioRate" style="color:#8b5cf6;">—</div>
+                    <div class="progress mt-2" style="height:4px;">
+                        <div class="progress-bar" id="netRatioBar" style="width:0%;background:#8b5cf6;transition:width 1s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-2">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div class="text-muted small fw-semibold">
+                            {% if ui_lang == 'en' %}Avg. Governance Score{% else %}متوسط مؤشر الحوكمة{% endif %}
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:36px;height:36px;background:#0A5C8E18;">
+                            <i class="bi bi-award-fill text-primary" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                    <div class="display-6 fw-800 text-primary" id="netGqiScore">—</div>
+                    <div class="progress mt-2" style="height:4px;">
+                        <div class="progress-bar bg-primary" id="netGqiBar" style="width:0%;transition:width 1s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-2">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div class="text-muted small fw-semibold">
+                            {% if ui_lang == 'en' %}Avg. Incident Rate{% else %}متوسط معدل الحوادث{% endif %}
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:36px;height:36px;background:#ef444418;">
+                            <i class="bi bi-shield-exclamation text-danger" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                    <div class="display-6 fw-800 text-danger" id="netIncidentRate">—</div>
+                    <div class="text-muted small">
+                        {% if ui_lang == 'en' %}incidents / 100 child-days{% else %}حادثة / 100 يوم-طفل{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header py-2">
+                    <h6 class="mb-0 fw-600">
+                        <i class="bi bi-bar-chart-fill me-2 text-primary" aria-hidden="true"></i>
+                        {% if ui_lang == 'en' %}Attendance Rate by Kindergarten{% else %}معدل الحضور حسب الروضة{% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="attendanceChart" style="max-height:280px;"
+                            aria-label="{% if ui_lang == 'en' %}Attendance chart{% else %}مخطط الحضور{% endif %}"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header py-2">
+                    <h6 class="mb-0 fw-600">
+                        <i class="bi bi-pie-chart-fill me-2 text-primary" aria-hidden="true"></i>
+                        {% if ui_lang == 'en' %}Governance Band Distribution{% else %}توزيع مستوى الحوكمة{% endif %}
+                    </h6>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <canvas id="bandChart" style="max-height:220px;max-width:220px;"
+                            aria-label="{% if ui_lang == 'en' %}Governance bands chart{% else %}مخطط مستويات الحوكمة{% endif %}"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Per-Kindergarten Table -->
+    <div class="card mb-4">
+        <div class="card-header py-2 d-flex align-items-center justify-content-between">
+            <h6 class="mb-0 fw-600">
+                <i class="bi bi-table me-2 text-primary" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}Per-Kindergarten KPI Breakdown{% else %}تفاصيل مؤشرات الأداء لكل روضة{% endif %}
+            </h6>
+            <div class="input-group input-group-sm" style="max-width:240px;">
+                <span class="input-group-text">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                </span>
+                <input type="text" class="form-control" id="tableSearch"
+                       placeholder="{% if ui_lang == 'en' %}Search kindergarten...{% else %}بحث في الروضات...{% endif %}"
+                       aria-label="{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}">
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="kpiTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                        <th class="text-center">
+                            {% if ui_lang == 'en' %}Attendance{% else %}الحضور{% endif %}
+                        </th>
+                        <th class="text-center">
+                            {% if ui_lang == 'en' %}Ratio{% else %}التناسب{% endif %}
+                        </th>
+                        <th class="text-center">
+                            {% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
+                        </th>
+                        <th class="text-center">
+                            {% if ui_lang == 'en' %}Gov. Score{% else %}الحوكمة{% endif %}
+                        </th>
+                        <th class="text-center">
+                            {% if ui_lang == 'en' %}Band{% else %}المستوى{% endif %}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="kpiTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer py-2 d-flex align-items-center justify-content-between">
+            <span class="text-muted small" id="tableFooter"></span>
+            <div class="d-flex gap-2">
+                <span class="badge" style="background:#10b98133;color:#10b981;">
+                    <i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>
+                    {% if ui_lang == 'en' %}Green{% else %}ممتاز{% endif %}
+                </span>
+                <span class="badge" style="background:#f59e0b33;color:#d97706;">
+                    <i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>
+                    {% if ui_lang == 'en' %}Amber{% else %}متوسط{% endif %}
+                </span>
+                <span class="badge" style="background:#ef444433;color:#ef4444;">
+                    <i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>
+                    {% if ui_lang == 'en' %}Red{% else %}يحتاج تحسين{% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /kpiContent -->
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+    'use strict';
+
+    const IS_EN   = document.documentElement.lang === 'en';
+    const T       = (ar, en) => IS_EN ? en : ar;
+
+    let attendanceChart = null;
+    let bandChart       = null;
+    let allRows         = [];
+
+    /* ── init ──────────────────────────────────────────────────────── */
+    // Use local calendar date (not UTC) so Jordan users (UTC+3) get the correct
+    // "today" between midnight–03:00 when toISOString() would return yesterday.
+    function localDate(d) {
+        const y  = d.getFullYear();
+        const m  = String(d.getMonth() + 1).padStart(2, '0');
+        const dy = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dy}`;
+    }
+
+    window.setRange = function(days) {
+        const to   = new Date();
+        const from = new Date();
+        from.setDate(from.getDate() - (days - 1));
+        document.getElementById('filterStart').value = localDate(from);
+        document.getElementById('filterEnd').value   = localDate(to);
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setRange(30);
+        loadKPIData();
+
+        document.getElementById('tableSearch').addEventListener('input', filterTable);
+    });
+
+    /* ── fetch ─────────────────────────────────────────────────────── */
+    window.loadKPIData = async function() {
+        const start = document.getElementById('filterStart').value;
+        const end   = document.getElementById('filterEnd').value;
+        const gov   = document.getElementById('filterGov').value;
+        const show  = id => document.getElementById(id).classList.remove('d-none');
+        const hide  = id => document.getElementById(id).classList.add('d-none');
+
+        show('kpiLoading'); hide('kpiError'); hide('kpiContent');
+
+        try {
+            let url = `/api/kpi/network-summary?start_date=${start}&end_date=${end}`;
+            if (gov) url += `&governorate=${encodeURIComponent(gov)}`;
+
+            const resp = await fetch(url, { credentials: 'include' });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.detail || resp.statusText);
+            }
+            const data = await resp.json();
+
+            hide('kpiLoading');
+            renderSummaryCards(data);
+            renderCharts(data.per_kindergarten || []);
+            renderTable(data.per_kindergarten || []);
+            show('kpiContent');
+        } catch (err) {
+            console.error('[Admin KPI]', err);
+            hide('kpiLoading'); show('kpiError');
+            document.getElementById('kpiErrorMsg').textContent = err.message;
+        }
+    };
+
+    /* ── summary cards ─────────────────────────────────────────────── */
+    function renderSummaryCards(d) {
+        document.getElementById('netKgCount').textContent       = d.kindergarten_count ?? '—';
+        document.getElementById('netAttRate').textContent       = fmt(d.avg_attendance_rate) + '%';
+        document.getElementById('netRatioRate').textContent     = fmt(d.avg_ratio_compliance) + '%';
+        document.getElementById('netGqiScore').textContent      = fmt(d.avg_gqi_score) + '%';
+        document.getElementById('netIncidentRate').textContent  = fmt(d.avg_incident_rate);
+        document.getElementById('netAttBar').style.width   = Math.min(d.avg_attendance_rate || 0, 100) + '%';
+        document.getElementById('netRatioBar').style.width = Math.min(d.avg_ratio_compliance || 0, 100) + '%';
+        document.getElementById('netGqiBar').style.width   = Math.min(d.avg_gqi_score || 0, 100) + '%';
+    }
+
+    /* ── charts ────────────────────────────────────────────────────── */
+    function renderCharts(rows) {
+        renderAttendanceChart(rows);
+        renderBandChart(rows);
+    }
+
+    function renderAttendanceChart(rows) {
+        const ctx = document.getElementById('attendanceChart').getContext('2d');
+        if (attendanceChart) attendanceChart.destroy();
+
+        const sorted = [...rows].sort((a, b) => b.attendance_rate - a.attendance_rate).slice(0, 15);
+        const labels = sorted.map(r => truncate(r.kindergarten_name, 18));
+        const values = sorted.map(r => r.attendance_rate);
+        const colors = sorted.map(r => bandColor(r.governance_band) + 'cc');
+
+        attendanceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: T('معدل الحضور %', 'Attendance Rate %'),
+                    data: values,
+                    backgroundColor: colors,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        rtl: !IS_EN,
+                        callbacks: { label: c => c.parsed.y.toFixed(1) + '%' },
+                    },
+                },
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+                    x: { ticks: { font: { size: 10 } } },
+                },
+            },
+        });
+    }
+
+    function renderBandChart(rows) {
+        const ctx = document.getElementById('bandChart').getContext('2d');
+        if (bandChart) bandChart.destroy();
+
+        const counts = { GREEN: 0, AMBER: 0, RED: 0 };
+        for (const r of rows) counts[r.governance_band] = (counts[r.governance_band] || 0) + 1;
+
+        bandChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    T('ممتاز', 'Green'),
+                    T('متوسط', 'Amber'),
+                    T('يحتاج تحسين', 'Red'),
+                ],
+                datasets: [{
+                    data: [counts.GREEN, counts.AMBER, counts.RED],
+                    backgroundColor: ['#10b981cc', '#f59e0bcc', '#ef4444cc'],
+                    borderWidth: 0,
+                    hoverOffset: 6,
+                }],
+            },
+            options: {
+                responsive: true,
+                cutout: '60%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 12 } },
+                    tooltip: { rtl: !IS_EN },
+                },
+            },
+        });
+    }
+
+    /* ── table ─────────────────────────────────────────────────────── */
+    function renderTable(rows) {
+        allRows = rows;
+        filterTable();
+    }
+
+    function filterTable() {
+        const q  = (document.getElementById('tableSearch').value || '').toLowerCase();
+        const filtered = q
+            ? allRows.filter(r => (r.kindergarten_name || '').toLowerCase().includes(q)
+                              || (r.governorate || '').toLowerCase().includes(q))
+            : allRows;
+
+        const sorted = [...filtered].sort((a, b) => b.governance_score - a.governance_score);
+        const tbody  = document.getElementById('kpiTableBody');
+
+        if (!sorted.length) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">
+                ${T('لا توجد نتائج', 'No results found')}</td></tr>`;
+            document.getElementById('tableFooter').textContent = '';
+            return;
+        }
+
+        tbody.innerHTML = sorted.map((r, i) => {
+            const att  = r.attendance_rate  ?? 0;
+            const rat  = r.ratio_compliance ?? 0;
+            const inc  = r.incident_rate    ?? 0;
+            const gov  = r.governance_score ?? 0;
+            return `
+            <tr>
+                <td>
+                    <a href="/admin/kg-overview?id=${r.kindergarten_id}" class="text-decoration-none fw-semibold small">
+                        ${esc(r.kindergarten_name)}
+                    </a>
+                </td>
+                <td class="small text-muted">${esc(r.governorate)}</td>
+                <td class="text-center">
+                    <span class="small fw-600" style="color:${attColor(att)};">
+                        ${att.toFixed(1)}%
+                    </span>
+                </td>
+                <td class="text-center">
+                    <span class="small fw-600" style="color:${ratioColor(rat)};">
+                        ${rat.toFixed(1)}%
+                    </span>
+                </td>
+                <td class="text-center">
+                    <span class="small fw-600" style="color:${incidentColor(inc)};">
+                        ${inc.toFixed(2)}
+                    </span>
+                </td>
+                <td class="text-center">
+                    <span class="small fw-600" style="color:${bandColor(r.governance_band)};">
+                        ${gov.toFixed(1)}%
+                    </span>
+                </td>
+                <td class="text-center">
+                    <span class="badge" style="background:${bandColor(r.governance_band)}22;color:${bandColor(r.governance_band)};font-size:0.72rem;">
+                        ${bandLabel(r.governance_band)}
+                    </span>
+                </td>
+            </tr>`;
+        }).join('');
+
+        document.getElementById('tableFooter').textContent =
+            `${T('إجمالي الروضات:', 'Total kindergartens:')} ${sorted.length}`;
+    }
+
+    /* ── helpers ────────────────────────────────────────────────────── */
+    function bandColor(b) {
+        return { GREEN: '#10b981', AMBER: '#f59e0b', RED: '#ef4444' }[b] || '#6b7280';
+    }
+    function bandLabel(b) {
+        if (IS_EN) return { GREEN: 'Green', AMBER: 'Amber', RED: 'Red' }[b] || b;
+        return { GREEN: 'ممتاز', AMBER: 'متوسط', RED: 'يحتاج تحسين' }[b] || b;
+    }
+    function attColor(v)    { return v >= 85 ? '#10b981' : v >= 70 ? '#f59e0b' : '#ef4444'; }
+    function ratioColor(v)  { return v >= 90 ? '#10b981' : v >= 70 ? '#f59e0b' : '#ef4444'; }
+    function incidentColor(v) { return v <= 2 ? '#10b981' : v <= 5 ? '#f59e0b' : '#ef4444'; }
+    function fmt(v) { return (v ?? 0).toFixed(1); }
+    function truncate(s, n) { s = s || ''; return s.length > n ? s.slice(0, n) + '…' : s; }
+    function esc(s) {
+        return String(s ?? '').replace(/[&<>"']/g,
+            c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+})();
+</script>
+{% endblock %}

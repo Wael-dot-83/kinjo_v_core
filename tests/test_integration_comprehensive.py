@@ -220,7 +220,7 @@ class TestEnrollmentWorkflowIntegration:
         self, client, auth_headers_parent, sample_kindergarten
     ):
         """Sad path: Children outside age range rejected"""
-        # Child too young (less than 70 days)
+        # Child too young (less than 1 day — born today)
         too_young_data = {
             "first_name": "طفل",
             "last_name": "صغير",

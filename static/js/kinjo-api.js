@@ -759,10 +759,10 @@ window.api = api;
 
 /**
  * Child Age Validation Utility
- * Age constraints: 70 days minimum to 56 months (4 years 8 months) maximum
+ * Age constraints: 1 day minimum to 56 months (4 years 8 months) maximum
  */
 const ChildAgeValidator = {
-  MIN_AGE_DAYS: 70,
+  MIN_AGE_DAYS: 1,
   MAX_AGE_MONTHS: 56,
 
   _toDateOnly(dateObj) {
