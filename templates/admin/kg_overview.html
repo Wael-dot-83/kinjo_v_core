@@ -5,22 +5,22 @@
 {% block extra_head %}{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="admin-page-header">
-    <div>
-        <h1 class="admin-page-title">{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}</h1>
-        <p class="admin-page-subtitle">{% if ui_lang == 'en' %}Monitor attendance, occupancy, alerts, and operational readiness of kindergartens{% else %}مراقبة الحضور، الإشغال، التنبيهات، والجاهزية التشغيلية للروضات{% endif %}</p>
-        <small class="text-muted">{% if ui_lang == 'en' %}Last updated: {{ now }}{% else %}آخر تحديث: {{ now }}{% endif %}</small>
+    <!-- Page Header -->
+    <div class="admin-page-header">
+        <div>
+            <h1 class="admin-page-title">{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}</h1>
+            <p class="admin-page-subtitle">{% if ui_lang == 'en' %}Monitor attendance, occupancy, alerts, and operational readiness of kindergartens{% else %}مراقبة الحضور، الإشغال، التنبيهات، والجاهزية التشغيلية للروضات{% endif %}</p>
+            <small class="text-muted">{% if ui_lang == 'en' %}Last updated: {{ now }}{% else %}آخر تحديث: {{ now }}{% endif %}</small>
+        </div>
+        <div class="admin-page-actions">
+            <button class="admin-btn admin-btn-secondary" id="refresh-kg-overview">
+                <i class="bi bi-arrow-repeat"></i> {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+            </button>
+            <a href="/admin/dashboard" class="admin-btn admin-btn-secondary">
+                <i class="bi bi-speedometer2"></i> {% if ui_lang == 'en' %}Admin Dashboard{% else %}لوحة التحكم{% endif %}
+            </a>
+        </div>
     </div>
-    <div class="admin-page-actions">
-        <button class="admin-btn admin-btn-secondary" id="refresh-kg-overview">
-            <i class="bi bi-arrow-repeat" aria-hidden="true"></i> {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
-        </button>
-        <a href="/admin/dashboard" class="admin-btn admin-btn-secondary">
-            <i class="bi bi-speedometer2" aria-hidden="true"></i> {% if ui_lang == 'en' %}Admin Dashboard{% else %}لوحة التحكم{% endif %}
-        </a>
-    </div>
-</div>
 
     <!-- Executive Health Banner -->
     <div class="row g-3 mb-4" id="executive-health-banner" style="display:none;">
@@ -231,8 +231,8 @@
 
     <!-- Alerts by Type -->
     <div class="row g-3 mb-4">
-        <div class="col-lg-6">
-            <div class="card h-100">
+        <div class="col-12">
+            <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Alerts by Type{% else %}التنبيهات حسب النوع{% endif %}</h5>
                 </div>

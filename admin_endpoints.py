@@ -3621,6 +3621,552 @@ def get_admin_dashboard(
 
 
 # =============================================================================
+# Kindergarten Overview Endpoint
+# =============================================================================
+
+class KgKpiDetail(BaseModel):
+    trend: Optional[str] = None
+    note_ar: Optional[str] = None
+    note_en: Optional[str] = None
+    active_kindergartens: Optional[int] = None
+    pending_placement: Optional[int] = None
+
+
+class KgKpiCard(BaseModel):
+    title_ar: str
+    title_en: str
+    value: Union[int, float]
+    unit: Optional[str] = None
+    trend: Optional[str] = None
+    target: Optional[Union[int, float]] = None
+    status: Optional[str] = None
+    details: Optional[KgKpiDetail] = None
+
+
+class KgKindergartenCard(BaseModel):
+    id: int
+    name_ar: str
+    name_en: Optional[str] = None
+    governorate: str
+    city: str
+    children_count: int
+    attendance_rate: float
+    attendance_status: str
+    occupancy_rate: float
+    occupancy_status: str
+    teachers_count: int
+    open_alerts: int
+    health_score: str
+    health_label_ar: str
+    health_label_en: str
+    recommended_action_ar: str
+    recommended_action_en: str
+    last_report_date: Optional[str] = None
+    teacher_data_status: Optional[str] = None
+
+
+class KgChartPoint(BaseModel):
+    name: str
+    name_ar: str
+    value: float
+    meta: Optional[Dict[str, Any]] = None
+
+
+class KgChartDataset(BaseModel):
+    label_ar: str
+    label_en: str
+    data: List[KgChartPoint]
+
+
+class KgAlertSummary(BaseModel):
+    id: int
+    severity: str
+    message: str
+    kindergarten_id: Optional[int] = None
+    kindergarten_name_ar: Optional[str] = None
+    governorate: Optional[str] = None
+    metric: str
+    current_value: float
+    triggered_at: str
+    status: str
+    age_hours: Optional[float] = None
+
+
+class KgExecutiveHealth(BaseModel):
+    critical_alerts: int
+    near_capacity_kgs: int
+    below_target_attendance: int
+    data_quality_issues: int
+
+
+class KgOverviewResponse(BaseModel):
+    generated_at: str
+    kpis: List[KgKpiCard]
+    kindergartens: List[KgKindergartenCard]
+    charts: Dict[str, Any]
+    alerts: List[KgAlertSummary]
+    executive_health: KgExecutiveHealth
+    filters: Dict[str, Any]
+
+
+def _compute_health_score(attendance_rate: float, occupancy_rate: float, open_alerts: int, data_ok: bool) -> str:
+    score = 0.0
+    score += min(attendance_rate / 100.0, 1.0) * 40
+    score += max(0.0, 1.0 - occupancy_rate / 100.0) * 20
+    score += max(0.0, 1.0 - min(open_alerts, 20) / 20.0) * 30
+    score += (1.0 if data_ok else 0.0) * 10
+    if score >= 85:
+        return "excellent"
+    if score >= 70:
+        return "good"
+    if score >= 55:
+        return "needs_attention"
+    if score >= 35:
+        return "at_risk"
+    return "critical"
+
+
+_HEALTH_LABELS = {
+    "excellent": ("ممتاز", "Excellent"),
+    "good": ("جيد", "Good"),
+    "needs_attention": ("يحتاج متابعة", "Needs Attention"),
+    "at_risk": ("معرّض للخطر", "At Risk"),
+    "critical": ("حرج", "Critical"),
+}
+
+_ATTENDANCE_TARGET = 70.0
+_OCCUPANCY_SAFE = 70.0
+_OCCUPANCY_MONITOR = 85.0
+_OCCUPANCY_NEAR = 95.0
+
+
+@router.get("/admin/kg-overview", response_model=KgOverviewResponse)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+def get_kg_overview(
+    request: Request,
+    period: str = Query("month", description="Filter period: today, week, month, custom"),
+    governorate: Optional[str] = Query(None, description="Filter by governorate"),
+    risk_level: Optional[str] = Query(None, description="Filter by risk level"),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive kindergarten overview with KPIs, health cards, charts, and alerts."""
+    now = datetime.now(timezone.utc)
+    today = date.today()
+
+    if period == "today":
+        date_start = today
+        date_end = today
+    elif period == "week":
+        date_start = today - timedelta(days=6)
+        date_end = today
+    elif period == "month":
+        date_start = today - timedelta(days=29)
+        date_end = today
+    else:
+        date_start = today - timedelta(days=29)
+        date_end = today
+
+    all_kgs = db.query(models.Kindergarten).order_by(models.Kindergarten.name_ar).all()
+    kg_ids = [kg.id for kg in all_kgs]
+    active_kgs = [kg for kg in all_kgs if kg.status == models.KindergartenStatus.ACTIVE]
+
+    if governorate:
+        all_kgs = [kg for kg in all_kgs if kg.governorate == governorate]
+        kg_ids = [kg.id for kg in all_kgs]
+        active_kgs = [kg for kg in active_kgs if kg.governorate == governorate]
+
+    # Batch queries
+    active_enrollments = db.query(
+        models.EnrollmentApplication.kindergarten_id,
+        func.count(models.EnrollmentApplication.id)
+    ).filter(
+        models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    ).group_by(models.EnrollmentApplication.kindergarten_id).all()
+    children_by_kg = {kid: cnt for kid, cnt in active_enrollments}
+
+    attendance_records = db.query(
+        models.AttendanceLog.class_id,
+        func.count(models.AttendanceLog.id)
+    ).join(models.Class, models.AttendanceLog.class_id == models.Class.id).filter(
+        models.Class.kindergarten_id.in_(kg_ids),
+        models.AttendanceLog.date >= date_start,
+        models.AttendanceLog.date <= date_end,
+        models.AttendanceLog.status == models.AttendanceStatus.PRESENT
+    ).group_by(models.AttendanceLog.class_id).all()
+    present_by_class = {cid: cnt for cid, cnt in attendance_records}
+
+    classes = db.query(models.Class).filter(models.Class.kindergarten_id.in_(kg_ids)).all()
+    capacity_by_kg: Dict[int, Dict[str, int]] = defaultdict(lambda: {"total_capacity": 0, "total_enrolled": 0})
+    class_to_kg: Dict[int, int] = {}
+    for cls in classes:
+        capacity_by_kg[cls.kindergarten_id]["total_capacity"] += cls.capacity_total or 0
+        capacity_by_kg[cls.kindergarten_id]["total_enrolled"] += cls.enrolled_children_count or 0
+        class_to_kg[cls.id] = cls.kindergarten_id
+
+    # Map attendance per kg by summing present counts across classes
+    att_by_kg: Dict[int, int] = defaultdict(int)
+    for class_id, present_count in present_by_class.items():
+        kg_id = class_to_kg.get(class_id)
+        if kg_id is not None:
+            att_by_kg[kg_id] += present_count
+
+    # Teachers: MANAGER + SUPERVISOR linked to kindergartens
+    teachers_by_kg: Dict[int, int] = defaultdict(int)
+    staff_users = db.query(models.User).filter(
+        models.User.kindergarten_id.in_(kg_ids),
+        models.User.role.in_([models.UserRole.MANAGER, models.UserRole.SUPERVISOR]),
+        models.User.status == models.UserStatus.ACTIVE
+    ).all()
+    for user in staff_users:
+        if user.kindergarten_id is not None:
+            teachers_by_kg[user.kindergarten_id] += 1
+
+    # Alerts per kg (scope is KG / GOVERNORATE / ALL)
+    alerts_base_query = db.query(models.ActiveAlert).filter(
+        models.ActiveAlert.status.in_([models.AlertStatus.ACTIVE, models.AlertStatus.ACKNOWLEDGED])
+    )
+    if governorate:
+        alerts_base_query = alerts_base_query.filter(
+            or_(
+                models.ActiveAlert.scope_type == "KINDERGARTEN",
+                models.ActiveAlert.scope_type == "GOVERNORATE",
+                models.ActiveAlert.scope_type == "ALL",
+            )
+        )
+    alerts_by_kg: Dict[int, List[models.ActiveAlert]] = defaultdict(list)
+    gov_alerts: List[models.ActiveAlert] = []
+    network_alerts: List[models.ActiveAlert] = []
+    for alert in alerts_base_query.limit(500).all():
+        if alert.scope_type == "KINDERGARTEN" and alert.scope_id:
+            try:
+                kid = int(alert.scope_id)
+                if kid in kg_ids:
+                    alerts_by_kg[kid].append(alert)
+            except (TypeError, ValueError):
+                pass
+        elif alert.scope_type == "GOVERNORATE":
+            gov_alerts.append(alert)
+        elif alert.scope_type == "ALL":
+            network_alerts.append(alert)
+
+    # Governorate mapping for network alerts
+    gov_to_kg: Dict[str, List[int]] = defaultdict(list)
+    for kg in all_kgs:
+        gov_to_kg[kg.governorate].append(kg.id)
+
+    for alert in gov_alerts:
+        for kid in gov_to_kg.get(alert.scope_id or "", []):
+            alerts_by_kg[kid].append(alert)
+
+    # Daily report status per kg (for last report date and data quality)
+    latest_reports = db.query(
+        models.DailyReport.kindergarten_id,
+        func.max(models.DailyReport.date)
+    ).filter(
+        models.DailyReport.kindergarten_id.in_(kg_ids)
+    ).group_by(models.DailyReport.kindergarten_id).all()
+    last_report_by_kg = {kid: dte.isoformat() for kid, dte in latest_reports}
+
+    # Build kindergarten cards
+    kg_cards: List[KgKindergartenCard] = []
+    for kg in all_kgs:
+        kids = children_by_kg.get(kg.id, 0)
+        present = att_by_kg.get(kg.id, 0)
+        att_rate = round((present / kids * 100.0), 1) if kids > 0 else 0.0
+        cap = capacity_by_kg.get(kg.id, {"total_capacity": 0, "total_enrolled": 0})
+        occ_rate = round((cap["total_enrolled"] / cap["total_capacity"] * 100.0), 1) if cap["total_capacity"] > 0 else 0.0
+        teachers = teachers_by_kg.get(kg.id, 0)
+        open_alerts = len(alerts_by_kg.get(kg.id, []))
+
+        if att_rate >= _ATTENDANCE_TARGET:
+            att_status = "on_target"
+        elif att_rate >= 55.0:
+            att_status = "below_target"
+        else:
+            att_status = "critical_low"
+
+        if occ_rate < _OCCUPANCY_SAFE:
+            occ_status = "safe"
+        elif occ_rate < _OCCUPANCY_MONITOR:
+            occ_status = "monitor"
+        elif occ_rate < _OCCUPANCY_NEAR:
+            occ_status = "near_capacity"
+        else:
+            occ_status = "full"
+
+        teacher_data_ok = teachers > 0
+        data_ok = teacher_data_ok
+
+        health = _compute_health_score(att_rate, occ_rate, open_alerts, data_ok)
+        health_ar, health_en = _HEALTH_LABELS.get(health, ("غير معروف", "Unknown"))
+
+        if health == "critical":
+            action_ar = "مراجعة مشكلة الحضور فوراً"
+            action_en = "Review attendance issue immediately"
+        elif health == "at_risk":
+            action_ar = "يحتاج متابعة عاجلة"
+            action_en = "Requires urgent follow-up"
+        elif health == "needs_attention":
+            action_ar = "مراقبة القسم"
+            action_en = "Monitor the department"
+        elif health == "good":
+            action_ar = "الحالة مستقرة"
+            action_en = "Status is stable"
+        else:
+            action_ar = "لا توجد إجراءات مطلوبة"
+            action_en = "No actions required"
+
+        teacher_data_status = "updated" if teacher_data_ok else "needs_update"
+
+        if risk_level and health != risk_level:
+            continue
+
+        kg_cards.append(KgKindergartenCard(
+            id=kg.id,
+            name_ar=kg.name_ar,
+            name_en=kg.name_en,
+            governorate=kg.governorate,
+            city=kg.city,
+            children_count=kids,
+            attendance_rate=att_rate,
+            attendance_status=att_status,
+            occupancy_rate=occ_rate,
+            occupancy_status=occ_status,
+            teachers_count=teachers,
+            open_alerts=open_alerts,
+            health_score=health,
+            health_label_ar=health_ar,
+            health_label_en=health_en,
+            recommended_action_ar=action_ar,
+            recommended_action_en=action_en,
+            last_report_date=last_report_by_kg.get(kg.id),
+            teacher_data_status=teacher_data_status,
+        ))
+
+    # Sort: critical first, then by open alerts desc, then by name
+    severity_order = {"critical": 0, "at_risk": 1, "needs_attention": 2, "good": 3, "excellent": 4}
+    kg_cards.sort(key=lambda x: (severity_order.get(x.health_score, 5), -x.open_alerts, x.name_ar))
+
+    # Aggregates (based on filtered kg_cards when governorate/risk_level is set)
+    total_children = sum(c.children_count for c in kg_cards)
+    kg_card_ids = [c.id for c in kg_cards]
+    total_present = sum(att_by_kg.get(kid, 0) for kid in kg_card_ids)
+    total_enrolled = sum(children_by_kg.get(kid, 0) for kid in kg_card_ids)
+    avg_attendance = round((total_present / total_enrolled * 100.0), 1) if total_enrolled > 0 else 0.0
+    total_teachers = sum(c.teachers_count for c in kg_cards)
+    total_alerts = sum(c.open_alerts for c in kg_cards)
+
+    # Alerts count by severity for KPIs — use only alerts that belong to the filtered set
+    filtered_alert_objs: List[models.ActiveAlert] = []
+    for kg in kg_cards:
+        filtered_alert_objs.extend(alerts_by_kg.get(kg.id, []))
+    for alert in gov_alerts:
+        if not governorate or alert.scope_id == governorate:
+            filtered_alert_objs.append(alert)
+    for alert in network_alerts:
+        filtered_alert_objs.append(alert)
+
+    alert_severity_counts = Counter()
+    alert_type_counts = Counter()
+    for a in filtered_alert_objs:
+        sev = a.severity.value if hasattr(a.severity, "value") else str(a.severity)
+        alert_severity_counts[sev] += 1
+        alert_type_counts[a.metric_type] += 1
+
+    # Governorate comparison — weighted attendance (total present / total enrolled * 100)
+    gov_data: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
+        "kindergartens": 0,
+        "children": 0,
+        "present_sum": 0,
+        "alerts": 0,
+        "occupancy_sum": 0.0,
+        "capacity_sum": 0,
+        "enrolled_sum": 0,
+    })
+    for kg in active_kgs:
+        gov_data[kg.governorate]["kindergartens"] += 1
+        gov_data[kg.governorate]["children"] += children_by_kg.get(kg.id, 0)
+        gov_data[kg.governorate]["present_sum"] += att_by_kg.get(kg.id, 0)
+        gov_data[kg.governorate]["alerts"] += len(alerts_by_kg.get(kg.id, []))
+        cap = capacity_by_kg.get(kg.id, {"total_capacity": 0, "total_enrolled": 0})
+        gov_data[kg.governorate]["occupancy_sum"] += cap["total_enrolled"]
+        gov_data[kg.governorate]["capacity_sum"] += cap["total_capacity"]
+        gov_data[kg.governorate]["enrolled_sum"] += cap["total_enrolled"]
+
+    governorate_chart = []
+    for gov_name, d in sorted(gov_data.items()):
+        att = round((d["present_sum"] / d["children"] * 100.0), 1) if d["children"] > 0 else 0.0
+        occ = round((d["enrolled_sum"] / d["capacity_sum"] * 100.0), 1) if d["capacity_sum"] > 0 else 0.0
+        governorate_chart.append({
+            "name": gov_name,
+            "name_ar": gov_name,
+            "kindergartens": d["kindergartens"],
+            "children": d["children"],
+            "attendance_rate": att,
+            "occupancy_rate": occ,
+            "alerts": d["alerts"],
+        })
+
+    # Charts
+    attendance_chart = [
+        {
+            "name": c.name_ar,
+            "name_ar": c.name_ar,
+            "value": c.attendance_rate,
+            "meta": {"status": c.attendance_status, "id": c.id}
+        }
+        for c in sorted(kg_cards, key=lambda x: x.attendance_rate)
+    ]
+
+    occupancy_chart = [
+        {
+            "name": c.name_ar,
+            "name_ar": c.name_ar,
+            "value": c.occupancy_rate,
+            "meta": {"status": c.occupancy_status, "id": c.id}
+        }
+        for c in sorted(kg_cards, key=lambda x: x.occupancy_rate, reverse=True)
+    ]
+
+    severity_chart = [
+        {"name": sev, "name_ar": {"CRITICAL": "حرج", "HIGH": "عالي", "MEDIUM": "متوسط", "LOW": "منخفض"}.get(sev, sev), "value": cnt}
+        for sev, cnt in sorted(alert_severity_counts.items())
+    ]
+
+    type_chart = [
+        {"name": k, "name_ar": k, "value": v}
+        for k, v in sorted(alert_type_counts.items(), key=lambda x: x[1], reverse=True)
+    ]
+
+    # Alert summaries for the alerts list
+    alert_summaries: List[KgAlertSummary] = []
+    for kg in kg_cards[:20]:
+        for a in alerts_by_kg.get(kg.id, [])[:5]:
+            sev = a.severity.value if hasattr(a.severity, "value") else str(a.severity)
+            age = None
+            if a.triggered_at:
+                age = (now - a.triggered_at.replace(tzinfo=timezone.utc)).total_seconds() / 3600.0
+            alert_summaries.append(KgAlertSummary(
+                id=a.id,
+                severity=sev,
+                message=a.message,
+                kindergarten_id=kg.id if a.scope_type == "KINDERGARTEN" else None,
+                kindergarten_name_ar=kg.name_ar if a.scope_type == "KINDERGARTEN" else None,
+                governorate=kg.governorate,
+                metric=a.metric_type,
+                current_value=float(a.current_value) if a.current_value is not None else 0.0,
+                triggered_at=a.triggered_at.isoformat() if a.triggered_at else "",
+                status=a.status.value if hasattr(a.status, "value") else str(a.status),
+                age_hours=round(age, 1) if age is not None else None,
+            ))
+
+    alert_summaries.sort(key=lambda x: {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}.get(x.severity, 4))
+
+    # Executive health counters
+    critical_alerts = sum(1 for c in kg_cards if c.health_score == "critical")
+    near_capacity_kgs = sum(1 for c in kg_cards if c.occupancy_status == "near_capacity")
+    below_target = sum(1 for c in kg_cards if c.attendance_status in ("below_target", "critical_low"))
+    data_quality_issues = sum(1 for c in kg_cards if c.teacher_data_status == "needs_update")
+
+    # KPI cards
+    kpis = [
+        KgKpiCard(
+            title_ar="إجمالي الأطفال",
+            title_en="Total Children",
+            value=total_children,
+            trend=_period_trend(period),
+            target=None,
+            status="good" if total_children > 0 else "warning",
+            details=KgKpiDetail(
+                active_kindergartens=len(active_kgs),
+                note_ar=f"{len(active_kgs)} روضات نشطة",
+                note_en=f"{len(active_kgs)} active kindergartens",
+            )
+        ),
+        KgKpiCard(
+            title_ar="نسبة الحضور",
+            title_en="Attendance Rate",
+            value=avg_attendance,
+            unit="%",
+            trend=None,
+            target=_ATTENDANCE_TARGET,
+            status="critical" if avg_attendance < _ATTENDANCE_TARGET else ("warning" if avg_attendance < 80 else "good"),
+            details=KgKpiDetail(
+                note_ar=f"{below_target} روضات أقل من الحد الأدنى {_ATTENDANCE_TARGET}%",
+                note_en=f"{below_target} kindergartens below target {_ATTENDANCE_TARGET}%",
+            )
+        ),
+        KgKpiCard(
+            title_ar="المعلمات",
+            title_en="Teachers",
+            value=total_teachers,
+            trend=None,
+            target=None,
+            status="good" if total_teachers > 0 else "warning",
+            details=KgKpiDetail(
+                note_ar="تحقق من نسبة الأطفال إلى المعلمات حسب الروضة",
+                note_en="Verify child-to-teacher ratio per kindergarten",
+            )
+        ),
+        KgKpiCard(
+            title_ar="التنبيهات",
+            title_en="Alerts",
+            value=total_alerts,
+            trend=_period_trend(period),
+            target=0,
+            status="critical" if total_alerts > 20 else ("warning" if total_alerts > 5 else "good"),
+            details=KgKpiDetail(
+                note_ar=f"{alert_severity_counts.get('CRITICAL', 0)} حرجة، {alert_severity_counts.get('HIGH', 0)} عالية، {alert_severity_counts.get('MEDIUM', 0)} متوسطة",
+                note_en=f"{alert_severity_counts.get('CRITICAL', 0)} critical, {alert_severity_counts.get('HIGH', 0)} high, {alert_severity_counts.get('MEDIUM', 0)} medium",
+            )
+        ),
+    ]
+
+    log_audit_event(
+        db=db,
+        action=AuditAction.ADMIN_DASHBOARD_VIEWED,
+        actor=current_user,
+        target_type="KindergartenOverview",
+        target_ids=None,
+        metadata={"kindergarten_count": len(kg_cards), "alert_count": total_alerts},
+        sensitivity_level=2,
+    )
+
+    return KgOverviewResponse(
+        generated_at=now.isoformat(),
+        kpis=kpis,
+        kindergartens=kg_cards,
+        charts={
+            "attendance_by_kg": attendance_chart,
+            "occupancy_pressure": occupancy_chart,
+            "alerts_by_severity": severity_chart,
+            "alerts_by_type": type_chart,
+            "governorate_comparison": governorate_chart,
+        },
+        alerts=alert_summaries[:50],
+        executive_health=KgExecutiveHealth(
+            critical_alerts=critical_alerts,
+            near_capacity_kgs=near_capacity_kgs,
+            below_target_attendance=below_target,
+            data_quality_issues=data_quality_issues,
+        ),
+        filters={"period": period, "governorate": governorate, "risk_level": risk_level},
+    )
+
+
+def _period_trend(period: str) -> str:
+    if period == "today":
+        return "مقارنة بالأمس"
+    if period == "week":
+        return "مقارنة بالأسبوع السابق"
+    if period == "month":
+        return "مقارنة بالشهر السابق"
+    return "مقارنة بالفترة السابقة"
+
+
+# =============================================================================
 # Backup Management Endpoints
 # =============================================================================
 
