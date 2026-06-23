@@ -329,9 +329,10 @@ class TestSupervisorSafetyAndObservations:
         supervisor_token,
     ):
         """Supervisor can mark attendance for a child in their assigned class."""
+        jordan_today = datetime.now(timezone(timedelta(hours=3))).date()
         payload = {
             "child_id": sample_child.id,
-            "date": date.today().isoformat(),
+            "date": jordan_today.isoformat(),
             "action": "check_in",
         }
         r = client.post("/api/supervisor/attendance", json=payload, headers=_hdr(supervisor_token))
