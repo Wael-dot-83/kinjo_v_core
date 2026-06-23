@@ -92,6 +92,9 @@
                 <li class="nav-item" role="listitem"><a href="/admin/dashboard" class="nav-link {% if request.url.path == '/admin/dashboard' %}active{% endif %}" role="listitem">
                   <i class="bi bi-house" aria-hidden="true"></i> <span data-i18n="dashboard.overview">{% if ui_lang == 'en' %}Overview{% else %}نظرة عامة{% endif %}</span>
                 </a></li>
+                <li class="nav-item" role="listitem"><a href="/admin/kg-overview" class="nav-link {% if request.url.path == '/admin/kg-overview' %}active{% endif %}" role="listitem">
+                  <i class="bi bi-building" aria-hidden="true"></i> <span data-i18n="nav.kindergarten_overview">{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}</span>
+                </a></li>
               </ul>
             </li>
 
@@ -365,6 +368,7 @@
     <script src="/static/js/auth.js?v=2.0"></script>
     <script src="/static/js/kinjo-api.js?v=2.0"></script>
     <script src="/static/js/analytics_filter_state.js?v=1.0"></script>
+    <script src="/static/js/kinjo-app.js?v=2.0"></script>
 
     <!-- Admin Components JavaScript -->
     <script src="/static/js/admin_components.js?v=2.1"></script>

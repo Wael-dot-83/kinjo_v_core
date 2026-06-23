@@ -22,7 +22,8 @@
     "toggle_menu": "Toggle navigation menu",
     "language_switch": "Switch language",
     "user_menu": "User menu",
-    "heatmap": "Risk Analysis Map"
+    "heatmap": "Risk Analysis Map",
+    "kindergarten_overview": "Kindergarten Overview"
   },
   "sidebar": {
     "messages": "Messages",
@@ -95,6 +96,11 @@
     "days_ago": "days ago",
     "locale": "en-US"
   },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "suspended": "Suspended"
+  },
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome to KinJo Admin",
@@ -142,6 +148,10 @@
     "user_permissions": "User Permissions",
     "user_roles": "User Roles",
     "user_status": "User Status",
+    "admin": "System Admin",
+    "manager": "Kindergarten Manager",
+    "supervisor": "Supervisor",
+    "parent": "Parent",
     "full_name": "Full Name",
     "email": "Email",
     "phone": "Phone",

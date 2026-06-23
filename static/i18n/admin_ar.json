@@ -1,4 +1,4 @@
-{
+﻿{
   "language": {
     "en": "English",
     "ar": "العربية"
@@ -94,6 +94,11 @@
     "hours_ago": "ساعات مضت",
     "days_ago": "أيام مضت",
     "locale": "ar-SA"
+  },
+    "status": {
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "suspended": "موقوف"
   },
   "dashboard": {
     "title": "لوحة التحكم",

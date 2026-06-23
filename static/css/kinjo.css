@@ -1,4 +1,4 @@
-/**
+﻿/**
  * KinJo - Kindergarten & Childcare Management Platform
  * Professional Design System v2.0
  */
@@ -817,7 +817,6 @@ body.sidebar-open .sidebar-backdrop {
 .table th.sortable::after {
   content: "\F282";
   font-family: "bootstrap-icons";
-  margin-right: 0.5rem;
   opacity: 0.3;
   font-size: 0.75rem;
 }

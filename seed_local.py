@@ -84,11 +84,12 @@ def run():
         def upsert_user(username, email, password, role, kg_id=None, first="", last=""):
             u = db.query(User).filter(User.username == username).first()
             if not u:
+                import uuid as _uuid
                 hashed = get_password_hash(password)
                 db.execute(text(
-                    "INSERT INTO users (username, email, hashed_password, role, status, kindergarten_id, must_change_password, failed_login_count, mfa_enabled) "
-                    "VALUES (:u, :e, :h, :r, 'ACTIVE', :kg, 0, 0, 0)"
-                ), {"u": username, "e": email, "h": hashed, "r": role.value, "kg": kg_id})
+                    "INSERT INTO users (username, email, hashed_password, role, status, kindergarten_id, must_change_password, failed_login_count, mfa_enabled, public_id) "
+                    "VALUES (:u, :e, :h, :r, 'ACTIVE', :kg, 0, 0, 0, :pid)"
+                ), {"u": username, "e": email, "h": hashed, "r": role.value, "kg": kg_id, "pid": str(_uuid.uuid4())})
                 db.commit()
                 u = db.query(User).filter(User.username == username).first()
                 print(f"  Created {role} : {username} / {password}")
@@ -139,13 +140,14 @@ def run():
         def upsert_parent_profile(user_id, phone, nationality, first, last, gender_val=Gender.MALE):
             pp = db.query(ParentProfile).filter(ParentProfile.user_id == user_id).first()
             if not pp:
+                import uuid as _uuid
                 db.execute(text(
                     "INSERT INTO parent_profiles "
                     "(user_id, first_name, last_name, phone_number, gender, nationality, "
                     "home_governorate, home_city, home_area, home_address_line, "
-                    "correspondence_preference, profile_complete) "
-                    "VALUES (:uid, :fn, :ln, :ph, :g, :nat, 'عمان', 'عمان', 'الجبيهة', 'شارع الجامعة', 1, 1)"
-                ), {"uid": user_id, "fn": first, "ln": last, "ph": phone, "g": gender_val.value, "nat": nationality})
+                    "correspondence_preference, profile_complete, public_id) "
+                    "VALUES (:uid, :fn, :ln, :ph, :g, :nat, 'عمان', 'عمان', 'الجبيهة', 'شارع الجامعة', 1, 1, :pid)"
+                ), {"uid": user_id, "fn": first, "ln": last, "ph": phone, "g": gender_val.value, "nat": nationality, "pid": str(_uuid.uuid4())})
                 db.commit()
                 pp = db.query(ParentProfile).filter(ParentProfile.user_id == user_id).first()
             return pp
@@ -163,12 +165,13 @@ def run():
                 Child.last_name  == last_ar,
             ).first()
             if not c:
+                import uuid as _uuid
                 db.execute(text(
                     "INSERT INTO children (parent_id, first_name, last_name, gender, date_of_birth, "
                     "father_name, mother_first_name, mother_last_name, mother_nationality, "
-                    "media_consent, correspondence_flag, profile_complete) "
-                    "VALUES (:pid, :fn, :ln, :g, :dob, :dad, 'أم', :ln, 'الأردن', 0, 1, 1)"
-                ), {"pid": parent_user_id, "fn": first_ar, "ln": last_ar, "g": gender.value, "dob": str(dob), "dad": father_name})
+                    "media_consent, correspondence_flag, profile_complete, public_id) "
+                    "VALUES (:pid, :fn, :ln, :g, :dob, :dad, 'أم', :ln, 'الأردن', 0, 1, 1, :cid)"
+                ), {"pid": parent_user_id, "fn": first_ar, "ln": last_ar, "g": gender.value, "dob": str(dob), "dad": father_name, "cid": str(_uuid.uuid4())})
                 db.commit()
                 c = db.query(Child).filter(Child.parent_id == parent_user_id, Child.first_name == first_ar).first()
             return c
@@ -278,8 +281,8 @@ def run():
                 if not exists and cls_id:
                     checkin = datetime.combine(d, datetime.min.time()).replace(hour=8)
                     db.execute(text(
-                        "INSERT INTO attendance_logs (child_id, class_id, date, status, check_in_at, check_out_at, recorded_by, picked_by_name, method) "
-                        "VALUES (:cid, :clsid, :d, :status, :cin, :cout, :recorded_by, :picked_by, :method)"
+                        "INSERT INTO attendance_logs (child_id, class_id, date, status, check_in_at, check_out_at, recorded_by, picked_by_name) "
+                        "VALUES (:cid, :clsid, :d, :status, :cin, :cout, :recorded_by, :picked_by)"
                     ), {
                         "cid": child.id,
                         "clsid": cls_id,
@@ -289,7 +292,6 @@ def run():
                         "cout": str(checkin.replace(hour=13)),
                         "recorded_by": sup.id,
                         "picked_by": "سامي الخالد",
-                        "method": "manual",
                     })
         db.commit()
         print("Attendance records created")

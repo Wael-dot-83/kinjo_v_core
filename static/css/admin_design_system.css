@@ -1,4 +1,4 @@
-/**
+﻿/**
  * KinJo Admin Interface - Elite Design System
  * Professional Admin Interface with Bilingual Support (Arabic RTL / English LTR)
  * Design equivalent to 20+ years of UX expertise
@@ -1691,6 +1691,47 @@ html[dir="rtl"] .submenu .nav-link {
 }
 
 /* ============================================================================
+   Table Skeleton Loader
+   ============================================================================ */
+
+  .table-skeleton-row td {
+    border: none;
+    padding: var(--admin-space-4) 0;
+  }
+
+  .table-skeleton-cell {
+    height: 16px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: table-skeleton-loading 1.5s infinite;
+    border-radius: var(--admin-radius-sm);
+    margin: 0 auto;
+  }
+
+  @keyframes table-skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Avatar Initials for User Table */
+  .avatar-initials {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  /* CSV Preview Container */
+  .csv-preview-container {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  /* ============================================================================
    PRINT STYLES
    ============================================================================ */
 
