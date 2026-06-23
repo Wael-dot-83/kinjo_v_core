@@ -835,6 +835,16 @@ html[dir="rtl"] .admin-table td {
 .mb-section { margin-bottom: var(--space-32); }
 .mb-card { margin-bottom: var(--space-16); }
 
+/* Font-weight helpers not in Bootstrap 5 */
+.fw-800 { font-weight: 800; }
+
+/* Small card title (used in admin modals and cards) */
+.card-title-sm {
+  font-size: 0.9rem;
+  font-weight: var(--admin-font-weight-bold);
+  color: var(--admin-text-primary);
+}
+
 /* Impersonation page — warning banner, manager list, audit log */
 .impersonate-warning {
   display: flex;
