@@ -1869,22 +1869,6 @@ body.sidebar-open .sidebar-backdrop {
   background-color: rgba(255, 193, 7, 0.1) !important;
 }
 
-/* ============================================================================
-   Page Guide Panel
-   ============================================================================ */
-#pageGuidePanel {
-  background: linear-gradient(135deg, #f8fbff 0%, #f2f6ff 100%);
-  border: 1px solid rgba(13, 110, 253, 0.12);
-}
-
-#pageGuidePanel .guide-steps {
-  padding-inline-start: 1.5rem;
-  margin-bottom: 0.75rem;
-}
-
-#pageGuidePanel .guide-steps li {
-  margin-bottom: 0.4rem;
-}
 
 .field-hint {
   font-size: 0.825rem;
@@ -3070,4 +3054,3 @@ body.kinjo-app {
   background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent);
   margin: 1.5rem 0;
 }
-
