@@ -490,6 +490,12 @@
     "error": "خطأ في تحميل البيانات",
     "retry": "إعادة المحاولة",
     "attendance_chart": "معدل الحضور حسب الروضة",
-    "band_distribution": "توزيع مستوى الحوكمة"
+    "band_distribution": "توزيع مستوى الحوكمة",
+    "data_freshness_fresh": "بيانات حديثة",
+    "data_freshness_stale": "بيانات قديمة",
+    "data_freshness_outdated": "بيانات منتهية الصلاحية",
+    "trend_up": "ارتفاع",
+    "trend_down": "انخفاض",
+    "trend_stable": "مستقر"
   }
 }

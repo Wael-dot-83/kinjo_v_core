@@ -468,7 +468,13 @@
     "error": "Error loading data",
     "retry": "Retry",
     "attendance_chart": "Attendance Rate by Kindergarten",
-    "band_distribution": "Governance Band Distribution"
+    "band_distribution": "Governance Band Distribution",
+    "data_freshness_fresh": "Fresh data",
+    "data_freshness_stale": "Stale data",
+    "data_freshness_outdated": "Outdated data",
+    "trend_up": "Up",
+    "trend_down": "Down",
+    "trend_stable": "Stable"
   },
   "components": {
     "connectivity_error": "Cannot connect to server. Retrying…",

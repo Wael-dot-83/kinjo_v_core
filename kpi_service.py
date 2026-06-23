@@ -905,6 +905,26 @@ class EnhancedKPIDashboardResponse(BaseModel):
     data_freshness: str  # "fresh", "stale", "outdated"
 
 
+class KGNetworkSummaryItem(BaseModel):
+    kindergarten_id: int
+    kindergarten_name: str
+    governorate: str
+    attendance_rate: float
+    incident_rate: float
+    ratio_compliance: float
+    governance_score: float
+    governance_band: str  # "GREEN", "AMBER", "RED"
+
+
+class KPINetworkSummaryResponse(BaseModel):
+    kindergarten_count: int
+    avg_attendance_rate: float
+    avg_incident_rate: float
+    avg_ratio_compliance: float
+    avg_gqi_score: float
+    per_kindergarten: List[KGNetworkSummaryItem]
+
+
 class MonthlySnapshotResponse(BaseModel):
     message: str
     snapshots_created: int
@@ -3670,7 +3690,7 @@ def get_manager_kpi_alias(
         )
 
 
-@router.get("/kpi/network-summary")
+@router.get("/kpi/network-summary", response_model=KPINetworkSummaryResponse)
 def get_kpi_network_summary(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
