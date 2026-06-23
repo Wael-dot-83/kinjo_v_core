@@ -87,7 +87,20 @@ class TestAnalyticsRTLStructure:
         app.dependency_overrides.clear()
 
     def test_rtl_css_rules_present(self):
-        assert 'html[dir="rtl"]' in self.page
+        # RTL rules live in the external design-system stylesheet, not inline.
+        # Verify (a) the stylesheet is linked in the page and (b) it contains the rule.
+        assert "admin_design_system.css" in self.page, (
+            "admin_design_system.css not linked in analytics page"
+        )
+        css_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "static", "css", "admin_design_system.css",
+        )
+        with open(css_path, encoding="utf-8") as f:
+            css = f.read()
+        assert 'html[dir="rtl"]' in css, (
+            "html[dir=\"rtl\"] selector missing from admin_design_system.css"
+        )
 
     def test_direction_aware_btn_group_rules(self):
         assert '.btn-group .btn:first-child' in self.page or 'btn-group' in self.page
