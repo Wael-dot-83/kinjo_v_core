@@ -836,6 +836,8 @@ html[dir="rtl"] .admin-table td {
 .mb-card { margin-bottom: var(--space-16); }
 
 /* Font-weight helpers not in Bootstrap 5 */
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
 .fw-800 { font-weight: 800; }
 
 /* Small card title (used in admin modals and cards) */
@@ -844,6 +846,22 @@ html[dir="rtl"] .admin-table td {
   font-weight: var(--admin-font-weight-bold);
   color: var(--admin-text-primary);
 }
+
+/* Safety analytics — mini bar chart and filter labels */
+.field-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--admin-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: block;
+}
+.mini-bar-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
+.mini-bar-row  { display: flex; align-items: center; gap: 0.75rem; }
+.mini-bar-label { min-width: 80px; font-size: 0.78rem; font-weight: 600; color: var(--admin-text-secondary); text-align: end; }
+.mini-bar-track { flex: 1; background: var(--admin-border-color); border-radius: 50px; height: 10px; overflow: hidden; }
+.mini-bar-fill  { height: 100%; border-radius: 50px; transition: width 0.4s ease; }
+.mini-bar-count { min-width: 24px; font-size: 0.78rem; font-weight: 700; color: var(--admin-text-primary); }
 
 /* Impersonation page — warning banner, manager list, audit log */
 .impersonate-warning {
