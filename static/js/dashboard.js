@@ -188,7 +188,7 @@ const KPI_DEFINITIONS = [
     key: "incident_rate",
     label: () =>
       dashboardText("dashboard.kpi.incident_rate", "معدل الحوادث", "Incident rate"),
-    unit: "",
+    unit: "/1,000",
   },
   {
     key: "serious_incident_rate",
@@ -198,7 +198,7 @@ const KPI_DEFINITIONS = [
         "معدل الحوادث الجسيمة",
         "Serious incident rate"
       ),
-    unit: "",
+    unit: "/1,000",
   },
   {
     key: "incident_followup_sla",
@@ -333,13 +333,13 @@ const KPI_EXPLAIN_META = {
     icon: "bi-shield-exclamation",
     iconBg: "rgba(255,193,7,.12)",
     iconColor: "#d97706",
-    meaning: "عدد الحوادث (من أي نوع) لكل 100 طفل-يوم حضور خلال الفترة. يُوحّد القياس بين الروضات بأحجام مختلفة.",
-    formula: "(عدد الحوادث الكلية ÷ أيام الحضور الفعلية للأطفال) × 100",
+    meaning: "عدد الحوادث (من أي نوع) لكل 1,000 طفل-يوم حضور خلال الفترة. يُوحّد القياس بين الروضات بأحجام مختلفة.",
+    formula: "(عدد الحوادث الكلية ÷ أيام الحضور الفعلية للأطفال) × 1,000",
     importance: "يُقيّم مستوى السلامة ويكشف الأنماط المتكررة التي تتطلب تدخلاً وقائياً.",
     thresholds: [
-      { cls: "tp-green", label: "آمن",               range: "≤ 0.5"      },
-      { cls: "tp-amber", label: "تحت المراقبة",      range: "0.51 – 1.0" },
-      { cls: "tp-red",   label: "خطر",               range: "> 1.0"      },
+      { cls: "tp-green", label: "آمن",               range: "≤ 2.0"      },
+      { cls: "tp-amber", label: "تحت المراقبة",      range: "2.01 – 5.0" },
+      { cls: "tp-red",   label: "خطر",               range: "> 5.0"      },
     ],
     criticalAction: "إجراء تدقيق أمني شامل، وتحليل جذور الحوادث، وتدريب شهري للموظفين على إجراءات السلامة والوقاية.",
     dataSource: "/api/kpi/dashboard-data → incident_rate",
@@ -348,13 +348,13 @@ const KPI_EXPLAIN_META = {
     icon: "bi-shield-fill-exclamation",
     iconBg: "rgba(220,53,69,.1)",
     iconColor: "#dc3545",
-    meaning: "الحوادث ذات الخطورة العالية (HIGH) أو الحرجة (CRITICAL) التي تتطلب تدخلاً طبياً أو إسعافاً، لكل 100 طفل-يوم.",
-    formula: "(الحوادث HIGH أو CRITICAL ÷ أيام الحضور الفعلية) × 100",
+    meaning: "الحوادث ذات الخطورة العالية (HIGH) أو الحرجة (CRITICAL) التي تتطلب تدخلاً طبياً أو إسعافاً، لكل 1,000 طفل-يوم.",
+    formula: "(الحوادث HIGH أو CRITICAL ÷ أيام الحضور الفعلية) × 1,000",
     importance: "الهدف الصفر المطلق. أي حادثة جسيمة تستوجب إبلاغاً فورياً وتحقيقاً منهجياً.",
     thresholds: [
-      { cls: "tp-green", label: "آمن",     range: "= 0"         },
-      { cls: "tp-amber", label: "تنبيه",   range: "0.01 – 0.1" },
-      { cls: "tp-red",   label: "طارئ",    range: "> 0.1"      },
+      { cls: "tp-green", label: "آمن",     range: "= 0.0"          },
+      { cls: "tp-amber", label: "تنبيه",   range: "0.001 – 0.5"   },
+      { cls: "tp-red",   label: "طارئ",    range: "> 0.5"          },
     ],
     criticalAction: "إطلاق بروتوكول الطوارئ فوراً، وإبلاغ الجهات الرسمية وأولياء الأمور، وإجراء تحقيق شامل في غضون 24 ساعة.",
     dataSource: "/api/kpi/dashboard-data → serious_incident_rate",
@@ -437,6 +437,7 @@ const BAND_BOOTSTRAP = {
   amber: "warning",
   red: "danger",
   neutral: "secondary",
+  insufficient: "secondary",
 };
 
 const BAND_LABEL = {
@@ -444,6 +445,7 @@ const BAND_LABEL = {
   amber: () => dashboardText("dashboard.band.amber", "متوسط", "Needs follow-up"),
   red: () => dashboardText("dashboard.band.red", "حرج", "Critical"),
   neutral: () => dashboardText("dashboard.band.neutral", "محايد", "Neutral"),
+  insufficient: () => dashboardText("dashboard.band.insufficient", "بيانات غير كافية", "Insufficient data"),
 };
 
 const DASHBOARD_STATE = {
@@ -816,6 +818,7 @@ function normalizeBand(raw) {
   if (["green", "excellent", "good", "success"].includes(value)) return "green";
   if (["amber", "yellow", "average", "warning", "caution"].includes(value)) return "amber";
   if (["red", "poor", "critical", "danger"].includes(value)) return "red";
+  if (value === "insufficient") return "insufficient";
   return "neutral";
 }
 
@@ -850,6 +853,16 @@ function inferBand(metricKey, value) {
     return "red";
   }
 
+  if (metricKey === "incident_rate") {
+    if (n <= 2.0) return "green";
+    if (n <= 5.0) return "amber";
+    return "red";
+  }
+  if (metricKey === "serious_incident_rate") {
+    if (n === 0) return "green";
+    if (n <= 0.5) return "amber";
+    return "red";
+  }
   if (lowerIsBetter.has(metricKey)) {
     if (n <= 5) return "green";
     if (n <= 10) return "amber";
@@ -2489,8 +2502,12 @@ function buildKpiRows(payload) {
 
     const value = safeNumber(card.value ?? card.current_value);
     const unit = card.unit != null ? String(card.unit) : definition.unit;
-    const band =
-      normalizeBand(card.band || card.rating || card.status) || inferBand(definition.key, value);
+    // quality.has_data === false means the backend cannot reliably compute this KPI
+    const qualityMeta = payload?.quality?.[definition.key];
+    const hasData = qualityMeta?.has_data !== false;
+    const band = hasData
+      ? normalizeBand(card.band || card.rating || card.status) || inferBand(definition.key, value)
+      : "insufficient";
     const trend = normalizeTrend(card.trend_indicator || card.trend);
     const explanation = card.explanation?.ar || card.explanation?.en || card.tooltip || "";
     const managerNote = card.manager_note?.ar || card.manager_note?.en || "";
@@ -2799,7 +2816,7 @@ function renderKpiSummaryRow(payload) {
 
   updateElementText("kpiAttendance", `${formatOneDecimal(attendanceValue)}%`);
   updateElementText("kpiRatioCompliance", `${formatOneDecimal(ratioValue)}%`);
-  updateElementText("kpiIncidentRate", formatOneDecimal(incidentValue));
+  updateElementText("kpiIncidentRate", `${formatOneDecimal(incidentValue)}/1K`);
 
   const band =
     normalizeBand(payload?.overall_gcei?.band) || inferBand("overall_gcei", governanceValue);

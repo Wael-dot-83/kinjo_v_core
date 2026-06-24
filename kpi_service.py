@@ -44,6 +44,14 @@ from models import TrainingStatus, TrainingModule, StaffTrainingCompletion, KPIT
 
 router = APIRouter()
 
+_JORDAN_TZ = timezone(timedelta(hours=3))
+
+
+def _today_jordan() -> date:
+    """Current date in Jordan UTC+3. Use everywhere instead of date.today()."""
+    return datetime.now(_JORDAN_TZ).date()
+
+
 KPI_SUPPORTED_DIMENSION_TYPES: Tuple[str, ...] = (
     models.AnalyticsDimensionType.NETWORK.value,
     models.AnalyticsDimensionType.GOVERNORATE.value,
@@ -1332,9 +1340,10 @@ class KPIService:
         period_end: date
     ) -> float:
         """
-        Incident rate per 100 child-days = (All incidents / total child-days) x 100
+        Incident rate per 1,000 attended child-days.
+        Expressed per 1,000 (not per 100) to match kpi_standards.py thresholds
+        and avoid misleadingly small decimal values for rare events.
         """
-        # Count incidents
         incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
             func.date(models.Incident.occurred_at) >= period_start,
@@ -1351,8 +1360,7 @@ class KPIService:
         if attended_days == 0:
             return 0.0
 
-        rate = (incident_count / attended_days) * 100
-        return round(rate, 2)
+        return round((incident_count / attended_days) * 1000, 3)
 
     @staticmethod
     def compute_serious_incident_rate(
@@ -1362,9 +1370,9 @@ class KPIService:
         period_end: date
     ) -> float:
         """
-        Serious incident rate per 100 child-days (HIGH/CRITICAL only)
+        Serious incident rate (HIGH/CRITICAL severity) per 1,000 attended child-days.
+        Expressed per 1,000 to match kpi_standards.py thresholds.
         """
-        # Count high/critical incidents
         serious_incident_count = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
             func.date(models.Incident.occurred_at) >= period_start,
@@ -1385,8 +1393,7 @@ class KPIService:
         if attended_days == 0:
             return 0.0
 
-        rate = (serious_incident_count / attended_days) * 100
-        return round(rate, 2)
+        return round((serious_incident_count / attended_days) * 1000, 3)
 
     @staticmethod
     def compute_ratio_compliance(
@@ -1514,7 +1521,7 @@ class KPIService:
         ).scalar() or 0
 
         if total_followup_required == 0:
-            return 100.0
+            return 0.0  # no incidents to follow up; caller checks quality.has_data
 
         # Count incidents closed within SLA
         closed_within_sla = db.query(func.count(models.Incident.id)).filter(
@@ -1818,12 +1825,14 @@ class KPIService:
         db: Session,
         kpi_name: str,
         kindergarten_id: Optional[int] = None,
-        target_date: date = date.today()
+        target_date: Optional[date] = None,
     ) -> Optional[models.KPITarget]:
         """
         Retrieves the most relevant KPI target for a given KPI name and kindergarten_id
         effective on the target_date. Prioritizes kindergarten-specific targets.
         """
+        if target_date is None:
+            target_date = _today_jordan()
         query = db.query(KPITarget).filter(
             KPITarget.kpi_name == kpi_name,
             KPITarget.effective_date <= target_date
@@ -1873,14 +1882,28 @@ class KPIService:
         if total_expected_completions == 0:
             return 0.0
             
-        actual_completions = db.query(func.count(StaffTrainingCompletion.id)).filter(
-            StaffTrainingCompletion.kindergarten_id == kindergarten_id,
-            StaffTrainingCompletion.completion_date >= period_start,
-            StaffTrainingCompletion.completion_date <= period_end,
-            StaffTrainingCompletion.user_id.in_([u.id for u in staff_users]),
-            StaffTrainingCompletion.status == TrainingStatus.COMPLETED
-        ).scalar() or 0
-        
+        # Cumulative distinct (staff, mandatory-module) pairs completed as of period_end.
+        # Only mandatory modules count — non-mandatory completions must not inflate
+        # the numerator against a denominator that only counts mandatory modules.
+        _completed_sq = (
+            db.query(
+                StaffTrainingCompletion.user_id,
+                StaffTrainingCompletion.training_module_id,
+            )
+            .join(TrainingModule,
+                  TrainingModule.id == StaffTrainingCompletion.training_module_id)
+            .filter(
+                StaffTrainingCompletion.kindergarten_id == kindergarten_id,
+                StaffTrainingCompletion.user_id.in_([u.id for u in staff_users]),
+                StaffTrainingCompletion.status == TrainingStatus.COMPLETED,
+                StaffTrainingCompletion.completion_date <= period_end,
+                TrainingModule.is_mandatory == True,
+            )
+            .distinct()
+            .subquery()
+        )
+        actual_completions = db.query(func.count()).select_from(_completed_sq).scalar() or 0
+
         rate = (actual_completions / total_expected_completions) * 100
         return round(rate, 2)
 
@@ -2019,7 +2042,7 @@ class KPIService:
         if not kg or not kg.license_valid_until:
             return 0.0
 
-        today = date.today()
+        today = _today_jordan()
         if kg.license_valid_until < today:
             return 0.0
         if kg.license_valid_until <= today + timedelta(days=30):
@@ -2198,13 +2221,24 @@ class KPIService:
         training_expected = len(staff_ids) * int(mandatory_modules)
         training_completed = 0
         if training_expected > 0:
-            training_completed = db.query(func.count(StaffTrainingCompletion.id)).filter(
-                StaffTrainingCompletion.kindergarten_id == kindergarten_id,
-                StaffTrainingCompletion.completion_date >= period_start,
-                StaffTrainingCompletion.completion_date <= period_end,
-                StaffTrainingCompletion.user_id.in_(staff_ids),
-                StaffTrainingCompletion.status == TrainingStatus.COMPLETED,
-            ).scalar() or 0
+            _t_sq = (
+                db.query(
+                    StaffTrainingCompletion.user_id,
+                    StaffTrainingCompletion.training_module_id,
+                )
+                .join(TrainingModule,
+                      TrainingModule.id == StaffTrainingCompletion.training_module_id)
+                .filter(
+                    StaffTrainingCompletion.kindergarten_id == kindergarten_id,
+                    StaffTrainingCompletion.user_id.in_(staff_ids),
+                    StaffTrainingCompletion.status == TrainingStatus.COMPLETED,
+                    StaffTrainingCompletion.completion_date <= period_end,
+                    TrainingModule.is_mandatory == True,
+                )
+                .distinct()
+                .subquery()
+            )
+            training_completed = db.query(func.count()).select_from(_t_sq).scalar() or 0
         training_rate = round((training_completed / training_expected) * 100, 2) if training_expected > 0 else 0.0
 
         submitted_statuses = [
@@ -2260,12 +2294,13 @@ class KPIService:
 
         attendance_rate = round((attended_child_days / expected_child_days) * 100, 2) if expected_child_days > 0 else 0.0
         excused_absence_rate = round((excused_child_days / expected_child_days) * 100, 2) if expected_child_days > 0 else 0.0
-        # Incident rates expressed per 1,000 child-days (not per 100) for rare events
-        incident_rate_per_1000 = round((incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
-        serious_incident_rate_per_1000 = round((serious_incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
-        # Keep per-100 as legacy aliases for backward compat with existing dashboard cards
-        incident_rate = round((incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
-        serious_incident_rate = round((serious_incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
+        # Incident rates expressed per 1,000 child-days to match kpi_standards.py thresholds.
+        # per-100 values were always < threshold (2.0/1000) → permanently GREEN — now fixed.
+        incident_rate = round((incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
+        serious_incident_rate = round((serious_incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
+        # Legacy per-100 aliases kept for any consumers that haven't migrated yet
+        incident_rate_per_100 = round((incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
+        serious_incident_rate_per_100 = round((serious_incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
         incident_followup_sla = round((followup_closed_within_sla / followup_required) * 100, 2) if followup_required > 0 else 0.0
 
         gqi_components = [
@@ -2309,8 +2344,6 @@ class KPIService:
             governance_band = "AMBER"
         else:
             governance_band = "RED"
-        if kg and kg.license_valid_until and kg.license_valid_until < date.today():
-            governance_band = "RED"
 
         total_capacity = db.query(func.sum(models.Class.capacity_total)).filter(
             models.Class.kindergarten_id == kindergarten_id,
@@ -2328,7 +2361,7 @@ class KPIService:
             models.EnrollmentApplication.created_at <= period_end,
         ).scalar() or 0
 
-        # --- hard override rules ---
+        # --- hard override rules (applied in priority order; all triggered rules recorded) ---
         open_critical_incidents = db.query(func.count(models.Incident.id)).filter(
             models.Incident.kindergarten_id == kindergarten_id,
             models.Incident.severity_level == models.SeverityLevel.CRITICAL,
@@ -2338,23 +2371,63 @@ class KPIService:
         ).scalar() or 0
 
         override_rules_triggered = []
-        if kg and kg.license_valid_until and kg.license_valid_until < date.today():
+
+        # Hard override rules — applied in deterministic priority order.
+        # INSUFFICIENT_DATA_COVERAGE is set first; subsequent rate-based rules
+        # (RATIO_BELOW_MINIMUM, OVERCAPACITY, UNRESOLVED_CRITICAL_INCIDENT) must not
+        # downgrade INSUFFICIENT to RED — the raw values are unreliable when data is
+        # missing. Only legal compliance violations (LICENSE_*) supersede INSUFFICIENT.
+
+        # 1. Insufficient data coverage — < 60% of GQI weight dimensions have data.
+        #    This is INSUFFICIENT, not RED — the system cannot rate what it cannot measure.
+        insufficient_data = gqi_weight_sum < 0.60
+        if insufficient_data:
+            governance_band = "INSUFFICIENT"
+            override_rules_triggered.append("INSUFFICIENT_DATA_COVERAGE")
+
+        # 2. License status — legal compliance supersedes data coverage state.
+        if kg is None or kg.license_valid_until is None:
+            governance_band = "RED"
+            override_rules_triggered.append("LICENSE_MISSING")
+        elif kg.license_valid_until < _today_jordan():
             governance_band = "RED"
             override_rules_triggered.append("LICENSE_EXPIRED")
-        if open_critical_incidents > 0 and governance_band == "GREEN":
-            governance_band = "AMBER"
-            override_rules_triggered.append("UNRESOLVED_CRITICAL_INCIDENT")
-        if ratio_rate < 60.0 and ratio_operating_minutes > 0:
+
+        # 3. Overcapacity — a hard physical safety fact, supersedes INSUFFICIENT.
+        #    A room with more children than licensed capacity is dangerous regardless
+        #    of KPI data quality.
+        if active_enrollments > total_capacity and total_capacity > 0:
             governance_band = "RED"
-            override_rules_triggered.append("RATIO_BELOW_MINIMUM")
+            override_rules_triggered.append("OVERCAPACITY")
+
+        # 4–5: Rate-based rules only apply when data coverage is sufficient.
+        #      When data is insufficient these metrics are unreliable, so they are
+        #      recorded for observability but must not override the INSUFFICIENT band.
+        if not insufficient_data:
+            # 4. Staff-to-child ratio below regulatory minimum
+            if ratio_rate < 60.0 and ratio_operating_minutes > 0:
+                governance_band = "RED"
+                override_rules_triggered.append("RATIO_BELOW_MINIMUM")
+
+            # 5. Unresolved critical incident — floor to AMBER regardless of current band
+            if open_critical_incidents > 0:
+                if governance_band == "GREEN":
+                    governance_band = "AMBER"
+                override_rules_triggered.append("UNRESOLVED_CRITICAL_INCIDENT")
+        else:
+            # Record triggered codes for observability even when data is insufficient
+            if ratio_rate < 60.0 and ratio_operating_minutes > 0:
+                override_rules_triggered.append("RATIO_BELOW_MINIMUM")
+            if open_critical_incidents > 0:
+                override_rules_triggered.append("UNRESOLVED_CRITICAL_INCIDENT")
 
         return {
             "attendance_rate": attendance_rate,
             "excused_absence_rate": excused_absence_rate,
             "incident_rate": incident_rate,
-            "incident_rate_per_1000": incident_rate_per_1000,
+            "incident_rate_per_100": incident_rate_per_100,
             "serious_incident_rate": serious_incident_rate,
-            "serious_incident_rate_per_1000": serious_incident_rate_per_1000,
+            "serious_incident_rate_per_100": serious_incident_rate_per_100,
             "incident_followup_sla": incident_followup_sla,
             "ratio_compliance": ratio_rate,
             "training_completion_rate": training_rate,
@@ -2497,7 +2570,7 @@ def populate_ratio_compliance_data(
         raise HTTPException(status_code=400, detail="Kindergarten ID required")
 
     # Populate data for the last N days
-    end_date = date.today()
+    end_date = _today_jordan()
     start_date = end_date - timedelta(days=days_back)
 
     KPIService.populate_ratio_compliance_for_period(db, kindergarten_id, start_date, end_date)
@@ -2619,7 +2692,7 @@ def get_kpi_summary(
     
     # Default to current month if not provided
     if not start_date or not end_date:
-        today = date.today()
+        today = _today_jordan()
         start_date = today.replace(day=1)
         if today.month == 12:
             end_date = date(today.year + 1, 1, 1) - timedelta(days=1)
@@ -2659,7 +2732,7 @@ def get_attendance_rate(
     """
     # Default to current month if dates not provided
     if not start_date or not end_date:
-        today = date.today()
+        today = _today_jordan()
         start_date = today.replace(day=1)
         if today.month == 12:
             end_date = date(today.year + 1, 1, 1) - timedelta(days=1)
@@ -2711,7 +2784,7 @@ def get_governance_score(
     """
     # Default to current month if dates not provided
     if not start_date or not end_date:
-        today = date.today()
+        today = _today_jordan()
         start_date = today.replace(day=1)
         if today.month == 12:
             end_date = date(today.year + 1, 1, 1) - timedelta(days=1)
@@ -2875,7 +2948,7 @@ def get_consolidated_kpi_dashboard_data(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid granularity")
 
     if not period_start or not period_end:
-        today = date.today()
+        today = _today_jordan()
         period_start = today.replace(day=1)
         period_end = (
             date(today.year + 1, 1, 1) - timedelta(days=1)
@@ -3075,7 +3148,7 @@ def get_consolidated_kpi_dashboard_data(
         Compute KPI bundles for ALL target KGs using ~20 bulk GROUP-BY queries
         instead of N × compute_kpi_bundle() calls (was 218 × 18 = 3,924 queries).
         """
-        today = date.today()
+        today = _today_jordan()
         required_checklist_types = ("opening", "safety", "closing")
 
         # ── Working days per KG ───────────────────────────────────────────────
@@ -3242,17 +3315,29 @@ def get_consolidated_kpi_dashboard_data(
             TrainingModule.is_mandatory == True
         ).scalar() or 0
 
-        training_comp_by_kg: Dict[int, int] = {}
-        for r in db.query(
-            StaffTrainingCompletion.kindergarten_id,
-            func.count(StaffTrainingCompletion.id),
-        ).filter(
-            StaffTrainingCompletion.kindergarten_id.in_(target_kindergarten_ids),
-            StaffTrainingCompletion.completion_date >= period_start,
-            StaffTrainingCompletion.completion_date <= period_end,
-            StaffTrainingCompletion.status == TrainingStatus.COMPLETED,
-        ).group_by(StaffTrainingCompletion.kindergarten_id).all():
-            training_comp_by_kg[int(r[0])] = int(r[1])
+        # Cumulative distinct (kg, user, mandatory-module) triples completed as of period_end.
+        # Only mandatory modules count — same constraint as the denominator.
+        _tc_sq = (
+            db.query(
+                StaffTrainingCompletion.kindergarten_id.label("kg_id"),
+                StaffTrainingCompletion.user_id,
+                StaffTrainingCompletion.training_module_id,
+            )
+            .join(TrainingModule,
+                  TrainingModule.id == StaffTrainingCompletion.training_module_id)
+            .filter(
+                StaffTrainingCompletion.kindergarten_id.in_(target_kindergarten_ids),
+                StaffTrainingCompletion.status == TrainingStatus.COMPLETED,
+                StaffTrainingCompletion.completion_date <= period_end,
+                TrainingModule.is_mandatory == True,
+            )
+            .distinct()
+            .subquery()
+        )
+        training_comp_by_kg: Dict[int, int] = {
+            int(r[0]): int(r[1])
+            for r in db.query(_tc_sq.c.kg_id, func.count()).group_by(_tc_sq.c.kg_id).all()
+        }
 
         # ── Daily reports ─────────────────────────────────────────────────────
         submitted_statuses_list = [
@@ -3422,8 +3507,8 @@ def get_consolidated_kpi_dashboard_data(
             chronic_absence_rate = round((chronic_absence_count / chronic_denominator) * 100, 2) if (chronic_denominator > 0 and has_attendance_data) else 0.0
 
             attendance_rate = round((attended_child_days / expected_child_days) * 100, 2) if expected_child_days > 0 else 0.0
-            incident_rate = round((incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
-            serious_incident_rate_val = round((serious_incident_count / attended_child_days) * 100, 2) if attended_child_days > 0 else 0.0
+            incident_rate = round((incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
+            serious_incident_rate_val = round((serious_incident_count / attended_child_days) * 1000, 3) if attended_child_days > 0 else 0.0
             incident_followup_sla = round((followup_closed_within_sla / followup_required) * 100, 2) if followup_required > 0 else 0.0
 
             gqi_components = [
@@ -3868,7 +3953,7 @@ def get_consolidated_kpi_dashboard_data(
 
     # Build student distribution by birth year (calendar year)
     # Age constraints: 70 days (MIN_CHILD_AGE_DAYS) to 4 years 8 months (MAX_CHILD_AGE_MONTHS)
-    today_date = date.today()
+    today_date = _today_jordan()
     bounds = get_child_age_bounds(today_date)
 
     # Calculate valid birth date range
@@ -3964,7 +4049,7 @@ def get_consolidated_kpi_dashboard_data(
         if fallback_kg and fallback_kg.governorate:
             selected_governorate_value = fallback_kg.governorate
     alerts: List[AlertsSummary] = []
-    today = date.today()
+    today = _today_jordan()
     for kg in kindergarten_records:
         if kg.license_valid_until:
             if kg.license_valid_until < today:
@@ -4196,7 +4281,7 @@ def get_manager_kpi_dashboard(
     Delegates to consolidated dashboard endpoint for consistent formulas and quality metadata.
     """
     if period_end is None:
-        period_end = date.today()
+        period_end = _today_jordan()
     if period_start is None:
         period_start = period_end - timedelta(days=30)
 
@@ -4241,7 +4326,7 @@ def get_enhanced_manager_kpi_dashboard(
     
     # Set default date range if not provided (last 30 days)
     if period_end is None:
-        period_end = date.today()
+        period_end = _today_jordan()
     if period_start is None:
         period_start = period_end - timedelta(days=30)
 
@@ -4375,7 +4460,7 @@ def get_enhanced_manager_kpi_dashboard(
 
     # Build alerts
     alerts = []
-    today = date.today()
+    today = _today_jordan()
     if kg.license_valid_until:
         if kg.license_valid_until < today:
             alerts.append(
@@ -4469,7 +4554,7 @@ def get_kpi_bundle(
         raise HTTPException(status_code=404, detail="Kindergarten not found")
 
     if period_end is None:
-        period_end = date.today()
+        period_end = _today_jordan()
     if period_start is None:
         period_start = period_end - timedelta(days=29)
 
@@ -4517,10 +4602,10 @@ def get_kpi_bundle(
         "attendance_rate": _enrich("attendance_rate", bundle.get("attendance_rate", 0.0)),
         "excused_absence_rate": _enrich("excused_absence_rate", bundle.get("excused_absence_rate", 0.0)),
         "chronic_absence_rate": _enrich("chronic_absence_rate", bundle.get("chronic_absence_rate", 0.0)),
-        "incident_rate": _enrich("incident_rate", bundle.get("incident_rate", 0.0), "per 100 child-days"),
-        "incident_rate_per_1000": _enrich("incident_rate", bundle.get("incident_rate_per_1000", 0.0), "per 1000 child-days"),
-        "serious_incident_rate": _enrich("serious_incident_rate", bundle.get("serious_incident_rate", 0.0), "per 100 child-days"),
-        "serious_incident_rate_per_1000": _enrich("serious_incident_rate", bundle.get("serious_incident_rate_per_1000", 0.0), "per 1000 child-days"),
+        "incident_rate": _enrich("incident_rate", bundle.get("incident_rate", 0.0), "per 1,000 child-days"),
+        "incident_rate_per_100": _enrich("incident_rate", bundle.get("incident_rate_per_100", 0.0), "per 100 child-days"),
+        "serious_incident_rate": _enrich("serious_incident_rate", bundle.get("serious_incident_rate", 0.0), "per 1,000 child-days"),
+        "serious_incident_rate_per_100": _enrich("serious_incident_rate", bundle.get("serious_incident_rate_per_100", 0.0), "per 100 child-days"),
         "incident_followup_sla": _enrich("incident_followup_sla", bundle.get("incident_followup_sla", 0.0)),
         "ratio_compliance": _enrich("ratio_compliance", bundle.get("ratio_compliance", 0.0)),
         "training_completion_rate": _enrich("training_completion_rate", bundle.get("training_completion_rate", 0.0)),
@@ -4621,7 +4706,7 @@ def get_kpi_country_level(
 ):
     """Country-wide KPI aggregation (Admin only)."""
     if period_end is None:
-        period_end = date.today()
+        period_end = _today_jordan()
     if period_start is None:
         period_start = period_end - timedelta(days=29)
 
@@ -4663,8 +4748,8 @@ def get_kpi_country_level(
             "attendance_rate": _avg("attendance_rate"),
             "excused_absence_rate": _avg("excused_absence_rate"),
             "chronic_absence_rate": _avg("chronic_absence_rate"),
-            "incident_rate_per_1000": _avg("incident_rate_per_1000"),
-            "serious_incident_rate_per_1000": _avg("serious_incident_rate_per_1000"),
+            "incident_rate": _avg("incident_rate"),
+            "serious_incident_rate": _avg("serious_incident_rate"),
             "incident_followup_sla": _avg("incident_followup_sla"),
             "ratio_compliance": _avg("ratio_compliance"),
             "training_completion_rate": _avg("training_completion_rate"),
@@ -4687,7 +4772,7 @@ def get_kpi_governorate_level(
 ):
     """KPI aggregation per governorate (Admin only)."""
     if period_end is None:
-        period_end = date.today()
+        period_end = _today_jordan()
     if period_start is None:
         period_start = period_end - timedelta(days=29)
 
@@ -4707,7 +4792,7 @@ def get_kpi_governorate_level(
     result = []
     kpi_keys = [
         "attendance_rate", "excused_absence_rate", "chronic_absence_rate",
-        "incident_rate_per_1000", "serious_incident_rate_per_1000",
+        "incident_rate", "serious_incident_rate",
         "incident_followup_sla", "ratio_compliance", "training_completion_rate",
         "report_submission_rate", "checklist_compliance", "capacity_utilization_rate",
         "gqi_score", "cei_score", "governance_score",
@@ -4754,7 +4839,7 @@ def get_kpi_alerts(
         raise HTTPException(status_code=403, detail="Access denied")
 
     if period_end is None:
-        period_end = date.today()
+        period_end = _today_jordan()
     if period_start is None:
         period_start = period_end - timedelta(days=29)
 
@@ -4774,7 +4859,7 @@ def get_kpi_alerts(
         kg_ids = []
 
     alerts = []
-    today = date.today()
+    today = _today_jordan()
 
     for kg_id in kg_ids:
         kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == kg_id).first()
@@ -4884,7 +4969,7 @@ def get_kpi_recommended_actions(
         raise HTTPException(status_code=403, detail="Access denied")
 
     if period_end is None:
-        period_end = date.today()
+        period_end = _today_jordan()
     if period_start is None:
         period_start = period_end - timedelta(days=29)
 
@@ -5009,7 +5094,7 @@ def get_kpi_network_summary(
     validators.validate_admin_role(current_user)
 
     if end_date is None:
-        end_date = date.today()
+        end_date = _today_jordan()
     if start_date is None:
         start_date = end_date - timedelta(days=30)
 

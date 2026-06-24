@@ -110,7 +110,7 @@ function populateSummaryCards(metrics, type) {
                 <h6 class="text-muted">${drilldownText("نسبة الحضور", "Attendance rate")}</h6><h3 class="fw-bold">${(metrics.attendance_rate ?? 0).toFixed(1)}%</h3>
             </div></div></div>
             <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("معدل الحوادث", "Incident rate")}</h6><h3 class="fw-bold">${(metrics.incident_rate ?? 0).toFixed(2)}</h3>
+                <h6 class="text-muted">${drilldownText("معدل الحوادث /1K", "Incident rate /1K")}</h6><h3 class="fw-bold">${(metrics.incident_rate ?? 0).toFixed(2)}</h3>
             </div></div></div>
             <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body">
                 <h6 class="text-muted">${drilldownText("الحوكمة", "Governance")}</h6><h3 class="fw-bold">${(metrics.governance_score ?? 0).toFixed(1)}</h3>
@@ -139,7 +139,7 @@ function populateTable(children, type) {
                 <th role="button">${drilldownText("الروضة", "Kindergarten")}</th>
                 <th class="text-center" role="button" data-sort-method="number">${drilldownText("الأطفال", "Children")}</th>
                 <th class="text-center" role="button" data-sort-method="number">${drilldownText("نسبة الحضور", "Attendance rate")}</th>
-                <th class="text-center" role="button" data-sort-method="number">${drilldownText("معدل الحوادث", "Incident rate")}</th>
+                <th class="text-center" role="button" data-sort-method="number">${drilldownText("معدل الحوادث /1K", "Incident rate /1K")}</th>
                 <th class="text-center" role="button" data-sort-method="number">${drilldownText("الحوكمة", "Governance")}</th>
             </tr>
         `;
@@ -150,10 +150,10 @@ function populateTable(children, type) {
                 <td class="fw-bold">${drilldownLiteral(kg.name)}</td>
                 <td class="text-center">${kg.children_count}</td>
                 <td class="text-center" data-sort="${kg.attendance_rate}"><span class="badge ${getScoreColor(kg.attendance_rate, true)}">${(kg.attendance_rate ?? 0).toFixed(1)}%</span></td>
-                <td class="text-center" data-sort="${kg.incident_rate}">${(kg.incident_rate ?? 0).toFixed(2)}</td>
+                <td class="text-center" data-sort="${kg.incident_rate}">${(kg.incident_rate ?? 0).toFixed(2)}/1K</td>
                 <td class="text-center" data-sort="${kg.governance_score}">
                     <span class="fw-bold me-2">${(kg.governance_score ?? 0).toFixed(1)}</span>
-                    <span class="badge ${getScoreColor(kg.governance_score)}">${drilldownLiteral(kg.governance_band)}</span>
+                    <span class="badge ${kg.governance_band === "INSUFFICIENT" ? "bg-secondary" : getScoreColor(kg.governance_score)}">${kg.governance_band === "INSUFFICIENT" ? drilldownText("بيانات غير كافية", "Insufficient data") : drilldownLiteral(kg.governance_band)}</span>
                 </td>
             </tr>
         `

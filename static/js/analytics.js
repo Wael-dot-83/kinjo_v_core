@@ -622,7 +622,9 @@ const Analytics = {
             ? "band-green"
             : kg.governance_band === "AMBER"
               ? "band-amber"
-              : "band-red";
+              : kg.governance_band === "INSUFFICIENT"
+                ? "band-insufficient"
+                : "band-red";
         html +=
           "<tr class=\"drilldown-btn\" onclick=\"Analytics.drilldown('KINDERGARTEN', '" +
           kg.id +
@@ -661,7 +663,9 @@ const Analytics = {
         ? "band-green"
         : metrics.governance_band === "AMBER"
           ? "band-amber"
-          : "band-red";
+          : metrics.governance_band === "INSUFFICIENT"
+            ? "band-insufficient"
+            : "band-red";
 
     var html =
       '<div class="row g-3 mb-4">' +

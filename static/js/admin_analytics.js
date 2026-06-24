@@ -535,7 +535,7 @@ function updateNetworkSummary(summary) {
   safeSetText("avgAttendance", attendanceRate.toFixed(1) + "%");
 
   const incidentRate = summary.incident_rate || 0;
-  safeSetText("incidentRate", incidentRate.toFixed(2));
+  safeSetText("incidentRate", incidentRate.toFixed(2) + "/1K");
 
   const enrollmentRate = summary.enrollment_rate || 0;
   safeSetText("enrollmentRate", enrollmentRate.toFixed(1) + "%");
@@ -1008,7 +1008,7 @@ function updateGovernorateBreakdown(breakdownData) {
                      ${(row.attendance_rate ?? 0).toFixed(1)}%
                  </span>
              </td>
-             <td class="text-center" data-sort="${row.incident_rate}">${(row.incident_rate ?? 0).toFixed(2)}</td>
+             <td class="text-center" data-sort="${row.incident_rate}">${(row.incident_rate ?? 0).toFixed(2)}/1K</td>
              <td class="text-center" data-sort="${govScore}">
                  <div class="d-flex align-items-center justify-content-center">
                      <span class="fw-bold me-2">${displayScore}</span>
