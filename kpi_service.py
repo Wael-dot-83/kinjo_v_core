@@ -380,25 +380,25 @@ Goal: 95% minimum for safe and effective care."""
         "explanation": KPIExplanation(
             ar="""يُقيم هذا المؤشر مستوى السلامة في الروضة من خلال تتبع الحوادث:
 • يشمل جميع الحوادث: صغيرة (كدمات، سقوط بسيط) وكبيرة
-• يُحسب لكل 100 طفل في اليوم للمقارنة العادلة
+• يُحسب لكل 1,000 يوم-طفل للمقارنة العادلة
 • يعكس فعالية إجراءات السلامة والوقاية
 • يساعد في تحديد المخاطر ومنع تكرارها
 الهدف: اقتراب من الصفر لضمان بيئة آمنة تماماً.""",
             en="""This indicator evaluates kindergarten safety level by tracking incidents:
 • Includes all incidents: minor (bruises, small falls) and major
-• Calculated per 100 children per day for fair comparison
+• Calculated per 1,000 attended child-days for fair comparison
 • Reflects effectiveness of safety procedures and prevention
 • Helps identify risks and prevent recurrence
-Goal: Approach zero for completely safe environment."""
+Goal: Approach zero for a completely safe environment."""
         ),
         "manager_note": KPIManagerNote(
             ar="""✅ بيئة آمنة جداً! هذا يعني أن إجراءات السلامة فعالة.
 🔍 راقب الحوادث اليومية وتعلم من كل واقعة للتحسين المستمر.
-🎯 الهدف: الحفاظ على معدلات منخفضة جداً (أقل من 0.5).
+🎯 الهدف: الحفاظ على معدلات منخفضة (أقل من 2.0 لكل 1,000 يوم-طفل).
 🛡️ نصيحة: ركز على الوقاية والتدريب المستمر للموظفين.""",
             en="""✅ Very safe environment! This means safety procedures are effective.
 🔍 Monitor daily incidents and learn from each case for continuous improvement.
-🎯 Goal: Maintain very low rates (less than 0.5).
+🎯 Goal: Maintain low rates (below 2.0 per 1,000 attended child-days).
 🛡️ Tip: Focus on prevention and continuous staff training."""
         ),
         "action_items": [
@@ -4405,14 +4405,14 @@ def get_enhanced_manager_kpi_dashboard(
     )
 
     incident_rate_card = KPIService.create_enhanced_kpi_card(
-        "incident_rate", incident_rate, translator("per 100 child-days"), last_updated, period_days,
+        "incident_rate", incident_rate, translator("per 1,000 child-days"), last_updated, period_days,
         numerator=nums.get("incident_rate"), denominator=dens.get("incident_rate"),
         has_data=bundle.get("quality", {}).get("incident_rate", {}).get("has_data", True),
         previous_value=_prev_rate("incident_rate"),
     )
 
     serious_incident_rate_card = KPIService.create_enhanced_kpi_card(
-        "serious_incident_rate", serious_incident_rate, translator("per 100 child-days"), last_updated, period_days,
+        "serious_incident_rate", serious_incident_rate, translator("per 1,000 child-days"), last_updated, period_days,
         numerator=nums.get("serious_incident_rate"), denominator=dens.get("serious_incident_rate"),
         has_data=bundle.get("quality", {}).get("incident_rate", {}).get("has_data", True),
         previous_value=_prev_rate("serious_incident_rate"),

@@ -4933,10 +4933,14 @@ class AnalyticsService:
             incident_q = incident_q.filter(models.Incident.kindergarten_id.in_(kg_ids))
         total_incidents = incident_q.scalar() or 0
 
-        # Count total child-days attended
+        # Count physically attended child-days (PRESENT + LATE only, excludes EXCUSED)
         child_days_q = db.query(func.count(models.AttendanceLog.id)).filter(
             models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status.in_([
+                models.AttendanceStatus.PRESENT,
+                models.AttendanceStatus.LATE,
+            ]),
         )
         if kg_ids:
             child_days_q = child_days_q.join(models.Child).join(
@@ -4957,10 +4961,14 @@ class AnalyticsService:
             models.Incident.severity_level.in_([models.SeverityLevel.HIGH, models.SeverityLevel.CRITICAL])
         ).scalar() or 0
 
-        # Count total child-days attended
+        # Count physically attended child-days (PRESENT + LATE only, excludes EXCUSED)
         total_child_days = db.query(func.count(models.AttendanceLog.id)).filter(
             models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status.in_([
+                models.AttendanceStatus.PRESENT,
+                models.AttendanceStatus.LATE,
+            ]),
         ).scalar() or 1
 
         return round((serious_incidents / total_child_days) * 1000, 3)
@@ -5063,10 +5071,14 @@ class AnalyticsService:
             func.date(models.Incident.occurred_at) <= period_end
         ).scalar() or 0
 
-        # Count child-days
+        # Count physically attended child-days (PRESENT + LATE only, excludes EXCUSED)
         child_days = db.query(func.count(models.AttendanceLog.id)).filter(
             models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status.in_([
+                models.AttendanceStatus.PRESENT,
+                models.AttendanceStatus.LATE,
+            ]),
         ).join(
             models.Child
         ).join(
