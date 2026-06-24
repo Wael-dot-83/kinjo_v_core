@@ -111,8 +111,8 @@ class TestIncidentRate:
         rate = KPIService.compute_incident_rate(
             test_db, sample_kindergarten.id, PERIOD_START, PERIOD_END
         )
-        # 3 attendance logs (May 1, 4, 5); 1 incident / 3 attended days * 100
-        expected = round(1 / 3 * 100, 2)
+        # 3 attendance logs (May 1, 4, 5); 1 incident / 3 attended days * 1000 (per-1,000 child-days)
+        expected = round(1 / 3 * 1000, 3)
         assert rate == expected
 
 
@@ -234,11 +234,13 @@ class TestRatioCompliance:
 
 
 class TestFollowupSLACompliance:
-    def test_no_followup_required_returns_100(self, test_db, sample_kindergarten):
+    def test_no_followup_required_returns_zero(self, test_db, sample_kindergarten):
+        # P0.4: when no follow-up-required incidents exist, return 0.0 (not 100.0)
+        # Callers must check has_data before rendering; 0.0 signals "no data", not "0% compliant"
         rate = KPIService.compute_incident_followup_sla_compliance(
             test_db, sample_kindergarten.id, PERIOD_START, PERIOD_END
         )
-        assert rate == 100.0
+        assert rate == 0.0
 
     def test_all_closed_within_sla_returns_100(
         self, test_db, sample_kindergarten, sample_child, supervisor_user, sample_enrollment

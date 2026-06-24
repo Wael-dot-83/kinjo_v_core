@@ -4525,6 +4525,18 @@ def get_enhanced_manager_kpi_dashboard(
     )
 
 
+@router.get("/manager/kpi", response_model=EnhancedKPIDashboardResponse)
+def get_manager_kpi_alias(
+    period_start: Optional[date] = Query(None),
+    period_end: Optional[date] = Query(None),
+    locale: str = Query("ar"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin_or_manager)
+):
+    """Alias for /manager/dashboard/enhanced — identical schema and auth."""
+    return get_enhanced_manager_kpi_dashboard(period_start, period_end, locale, db, current_user)
+
+
 @router.get("/kpi/bundle/{kindergarten_id}")
 def get_kpi_bundle(
     kindergarten_id: int,
