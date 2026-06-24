@@ -158,15 +158,6 @@ function getRoleBadge(role) {
     return badges[status] || '<span class="badge bg-light text-dark">' + escapeHtml(status) + '</span>';
   }
 
-  function getStatusBadge(status) {
-    const badges = {
-      ACTIVE: '<span class="badge badge-soft badge-soft-success"><i class="bi bi-check-circle me-1"></i>' + translate('نشط', 'Active') + '</span>',
-      INACTIVE: '<span class="badge badge-soft badge-soft-secondary"><i class="bi bi-dash-circle me-1"></i>' + translate('غير نشط', 'Inactive') + '</span>',
-      SUSPENDED: '<span class="badge badge-soft badge-soft-danger"><i class="bi bi-ban me-1"></i>' + translate('موقوف', 'Suspended') + '</span>'
-    };
-    return badges[status] || '<span class="badge bg-light text-dark">' + escapeHtml(status) + '</span>';
-  }
-
   // ============================================================================
   // Rendering
   // ============================================================================

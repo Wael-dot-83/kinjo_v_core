@@ -325,9 +325,16 @@
     }
 
     async function safeRequest(url, options = {}, retries = 2) {
+        const method = (options.method || 'GET').toString().toUpperCase();
+        const isStateChanging = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
         for (let attempt = 0; attempt <= retries; attempt++) {
             try {
                 const headers = { ...options.headers };
+                if (isStateChanging && csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
                 const response = await fetch(url, { ...options, headers });
                 const payload = await response.json().catch(() => null);
                 if (!response.ok) {
