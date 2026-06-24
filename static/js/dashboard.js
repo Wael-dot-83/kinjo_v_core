@@ -2502,9 +2502,8 @@ function buildKpiRows(payload) {
 
     const value = safeNumber(card.value ?? card.current_value);
     const unit = card.unit != null ? String(card.unit) : definition.unit;
-    // quality.has_data === false means the backend cannot reliably compute this KPI
-    const qualityMeta = payload?.quality?.[definition.key];
-    const hasData = qualityMeta?.has_data !== false;
+    // has_data is a direct field on each KPICardData card, not under a top-level quality key.
+    const hasData = card?.has_data !== false;
     const band = hasData
       ? normalizeBand(card.band || card.rating || card.status) || inferBand(definition.key, value)
       : "insufficient";

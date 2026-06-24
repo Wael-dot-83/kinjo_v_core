@@ -372,11 +372,11 @@ Goal: 95% minimum for safe and effective care."""
     "incident_rate": {
         "name_ar": "معدل الحوادث",
         "name_en": "Incident Rate",
-        "description_ar": "عدد الحوادث لكل 100 طفل-يوم",
-        "description_en": "Number of incidents per 100 child-days",
-        "formula_ar": "(عدد الحوادث ÷ عدد الأطفال الحاضرين) × 100",
-        "formula_en": "(Number of incidents ÷ Number of children present) × 100",
-        "threshold": KPIThreshold(green_min=0, amber_min=0.51, amber_max=1.0, red_max=1.0, lower_is_better=True),
+        "description_ar": "عدد الحوادث لكل 1,000 طفل-يوم",
+        "description_en": "Number of incidents per 1,000 attended child-days",
+        "formula_ar": "(عدد الحوادث ÷ أيام حضور الأطفال) × 1,000",
+        "formula_en": "(Number of incidents ÷ attended child-days) × 1,000",
+        "threshold": KPIThreshold(green_min=0, amber_min=2.01, amber_max=5.0, red_max=5.0, lower_is_better=True),
         "explanation": KPIExplanation(
             ar="""يُقيم هذا المؤشر مستوى السلامة في الروضة من خلال تتبع الحوادث:
 • يشمل جميع الحوادث: صغيرة (كدمات، سقوط بسيط) وكبيرة
@@ -449,11 +449,11 @@ Goal: Approach zero for completely safe environment."""
     "serious_incident_rate": {
         "name_ar": "الحوادث الخطرة",
         "name_en": "Serious Incident Rate",
-        "description_ar": "الحوادث التي تتطلب تدخلاً طبياً",
-        "description_en": "Incidents requiring medical intervention",
-        "formula_ar": "(الحوادث الخطرة ÷ عدد الأطفال الحاضرين) × 100",
-        "formula_en": "(Serious incidents ÷ Number of children present) × 100",
-        "threshold": KPIThreshold(green_min=0, amber_min=0.01, amber_max=0.1, red_max=0.1, lower_is_better=True),
+        "description_ar": "الحوادث التي تتطلب تدخلاً طبياً لكل 1,000 طفل-يوم",
+        "description_en": "Incidents requiring medical intervention per 1,000 attended child-days",
+        "formula_ar": "(الحوادث الخطرة ÷ أيام حضور الأطفال) × 1,000",
+        "formula_en": "(Serious incidents ÷ attended child-days) × 1,000",
+        "threshold": KPIThreshold(green_min=0, amber_min=0.001, amber_max=0.5, red_max=0.5, lower_is_better=True),
         "explanation": KPIExplanation(
             ar="""يُراقب هذا المؤشر الحوادث الخطيرة التي تهدد صحة الأطفال:
 • تشمل الحوادث التي تتطلب تدخلاً طبياً أو إسعافاً
@@ -2319,7 +2319,9 @@ class KPIService:
         cei_components = [
             ("attendance_rate", attendance_rate, 0.35, expected_child_days > 0),
             ("chronic_absence", 100 - chronic_absence_rate, 0.25, chronic_denominator > 0 and has_attendance_data),
-            ("serious_incident_rate", 100 - min(serious_incident_rate, 100), 0.20, attended_child_days > 0),
+            # serious_incident_rate is per-1,000 child-days; divide by 10 to restore
+            # per-100 equivalent so the ceiling of 100 remains correctly calibrated.
+            ("serious_incident_rate", 100 - min(serious_incident_rate / 10, 100), 0.20, attended_child_days > 0),
             ("parent_satisfaction", parent_satisfaction, 0.20, survey_responses > 0),
         ]
         cei_weight_sum = sum(weight for _, _, weight, has_data in cei_components if has_data)
@@ -3232,7 +3234,6 @@ def get_consolidated_kpi_dashboard_data(
                 models.AttendanceLog.status.in_([
                     models.AttendanceStatus.PRESENT,
                     models.AttendanceStatus.LATE,
-                    models.AttendanceStatus.EXCUSED,
                 ]),
             ).group_by(models.AttendanceLog.child_id).all():
                 att_by_child[int(row[0])] = int(row[1])
@@ -3524,7 +3525,8 @@ def get_consolidated_kpi_dashboard_data(
             cei_components = [
                 ("attendance_rate", attendance_rate, 0.35, expected_child_days > 0),
                 ("chronic_absence", 100 - chronic_absence_rate, 0.25, chronic_denominator > 0 and has_attendance_data),
-                ("serious_incident_rate", 100 - min(serious_incident_rate_val, 100), 0.20, attended_child_days > 0),
+                # serious_incident_rate_val is per-1,000 child-days; divide by 10 for per-100 equivalent.
+                ("serious_incident_rate", 100 - min(serious_incident_rate_val / 10, 100), 0.20, attended_child_days > 0),
                 ("parent_satisfaction", parent_satisfaction, 0.20, survey_responses > 0),
             ]
             cei_weight_sum = sum(w for _, _, w, hd in cei_components if hd)
@@ -4076,7 +4078,7 @@ def get_consolidated_kpi_dashboard_data(
         alerts.append(
             AlertsSummary(
                 type="KPI",
-                message=f"{translator('Average incident rate')} {avg_incident_rate}% {translator('exceeds threshold')}",
+                message=f"{translator('Average incident rate')} {avg_incident_rate}/1K {translator('exceeds threshold')}",
                 priority="medium",
             )
         )
@@ -4142,14 +4144,14 @@ def get_consolidated_kpi_dashboard_data(
         incident_rate=_create_card(
             avg_incident_rate,
             "incident_rate",
-            translator("per 100 child-days"),
+            translator("per 1,000 child-days"),
             False,
             "incident_rate",
         ),
         serious_incident_rate=_create_card(
             round(totals["serious_incident_rate"] / kindergarten_count, 2),
             "serious_incident_rate",
-            translator("per 100 child-days"),
+            translator("per 1,000 child-days"),
             False,
             "serious_incident_rate",
         ),

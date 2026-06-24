@@ -438,7 +438,7 @@
         const ctx = document.getElementById('bandChart').getContext('2d');
         if (bandChart) bandChart.destroy();
 
-        const counts = { GREEN: 0, AMBER: 0, RED: 0 };
+        const counts = { GREEN: 0, AMBER: 0, RED: 0, INSUFFICIENT: 0 };
         for (const r of rows) counts[r.governance_band] = (counts[r.governance_band] || 0) + 1;
 
         bandChart = new Chart(ctx, {
@@ -448,10 +448,11 @@
                     T('ممتاز', 'Green'),
                     T('متوسط', 'Amber'),
                     T('يحتاج تحسين', 'Red'),
+                    T('بيانات غير كافية', 'Insufficient data'),
                 ],
                 datasets: [{
-                    data: [counts.GREEN, counts.AMBER, counts.RED],
-                    backgroundColor: ['#10b981cc', '#f59e0bcc', '#ef4444cc'],
+                    data: [counts.GREEN, counts.AMBER, counts.RED, counts.INSUFFICIENT],
+                    backgroundColor: ['#10b981cc', '#f59e0bcc', '#ef4444cc', '#6b7280cc'],
                     borderWidth: 0,
                     hoverOffset: 6,
                 }],
@@ -537,11 +538,11 @@
 
     /* ── helpers ────────────────────────────────────────────────────── */
     function bandColor(b) {
-        return { GREEN: '#10b981', AMBER: '#f59e0b', RED: '#ef4444' }[b] || '#6b7280';
+        return { GREEN: '#10b981', AMBER: '#f59e0b', RED: '#ef4444', INSUFFICIENT: '#6b7280' }[b] || '#6b7280';
     }
     function bandLabel(b) {
-        if (IS_EN) return { GREEN: 'Green', AMBER: 'Amber', RED: 'Red' }[b] || b;
-        return { GREEN: 'ممتاز', AMBER: 'متوسط', RED: 'يحتاج تحسين' }[b] || b;
+        if (IS_EN) return { GREEN: 'Green', AMBER: 'Amber', RED: 'Red', INSUFFICIENT: 'Insufficient data' }[b] || b;
+        return { GREEN: 'ممتاز', AMBER: 'متوسط', RED: 'يحتاج تحسين', INSUFFICIENT: 'بيانات غير كافية' }[b] || b;
     }
     function attColor(v)    { return v >= 85 ? '#10b981' : v >= 70 ? '#f59e0b' : '#ef4444'; }
     function ratioColor(v)  { return v >= 90 ? '#10b981' : v >= 70 ? '#f59e0b' : '#ef4444'; }

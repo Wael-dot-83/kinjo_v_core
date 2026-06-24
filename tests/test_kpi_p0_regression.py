@@ -848,3 +848,147 @@ class TestBundleContract:
         assert bundle["governance_band"] in valid, (
             f"governance_band '{bundle['governance_band']}' is not a valid band."
         )
+
+
+# ===========================================================================
+# Code-review findings — post-P0 fixes (10 findings)
+# ===========================================================================
+
+class TestCEIFormulaScale:
+    """Finding 2: CEI formula min(serious_incident_rate, 100) ceiling must use /10 normalisation."""
+
+    def test_cei_normalises_per_1000_to_per_100_equivalent(self, test_db, sample_kindergarten):
+        """compute_kpi_bundle CEI must not collapse for a modest per-1000 rate."""
+        import kpi_service as svc
+        source = inspect.getsource(svc.KPIService.compute_kpi_bundle)
+        # The corrected formula must divide by 10 before applying the 100-ceiling.
+        assert "serious_incident_rate / 10" in source or "serious_incident_rate_val / 10" in source, (
+            "CEI formula must normalise serious_incident_rate from per-1,000 to per-100 "
+            "before applying the min(..., 100) ceiling."
+        )
+
+    def test_cei_ceiling_calibrated_for_per_100_equivalent(self, test_db, sample_kindergarten):
+        """Bundle gqi/cei scores must be > 0 even with a high (but realistic) incident rate."""
+        # Force a moderate serious_incident_rate by patching compute_serious_incident_rate.
+        from unittest.mock import patch
+        d = date(2026, 6, 1)
+        # 50/1000 serious incidents is high but should not zero-out the CEI component
+        # because 50 / 10 = 5.0 per-100, and 100 - min(5.0, 100) = 95 (well above 0).
+        with patch.object(
+            KPIService, "compute_serious_incident_rate", return_value=50.0
+        ), patch.object(
+            KPIService, "compute_attendance_rate", return_value=85.0
+        ), patch.object(
+            KPIService, "compute_chronic_absence_rate", return_value=5.0
+        ):
+            bundle = KPIService.compute_kpi_bundle(
+                test_db, sample_kindergarten.id, period_start=d, period_end=d
+            )
+        # CEI component for serious_incident_rate = 100 - min(50/10, 100) = 95.
+        # A governance_score > 0 confirms the formula did not collapse.
+        assert bundle.get("governance_score", 0) > 0, (
+            "governance_score collapsed to 0 for serious_incident_rate=50/1000. "
+            "CEI formula is still using uncalibrated ceiling."
+        )
+
+
+class TestBulkAttendanceExcludesExcused:
+    """Finding 5: bulk path must exclude EXCUSED from attended child-days."""
+
+    def test_bulk_path_excludes_excused_from_attended(self, test_db, sample_kindergarten):
+        """Inspect the consolidated dashboard source — the nested _build_base_bundles_bulk
+        closure must not include EXCUSED in the attended child-days status list."""
+        import kpi_service as svc
+        # _build_base_bundles_bulk is a closure inside get_consolidated_kpi_dashboard_data.
+        source = inspect.getsource(svc.get_consolidated_kpi_dashboard_data)
+        # Find the bulk attended-child-days status.in_ block and confirm EXCUSED is absent.
+        # The single-KG path excludes EXCUSED per policy; the bulk path must match.
+        import re
+        # Extract the status.in_ list inside _build_base_bundles_bulk context
+        # by checking that after "Attended child-days per child" the EXCUSED constant is absent
+        # from any status list within 60 lines.
+        attended_block_match = re.search(
+            r"Attended child-days.*?\.status\.in_\(\[(.*?)\]\)",
+            source, re.DOTALL
+        )
+        if attended_block_match:
+            block = attended_block_match.group(0)
+            assert "EXCUSED" not in block, (
+                "_build_base_bundles_bulk bulk attendance status list still includes "
+                "EXCUSED, inflating the denominator vs the single-KG path."
+            )
+        else:
+            # Fallback: confirm the entire source has no status list containing EXCUSED
+            # adjacent to the attended child-days comment.
+            assert "EXCUSED" not in source.split("Attended child-days per child")[1][:500] if "Attended child-days per child" in source else True
+
+
+class TestKPIDefinitionsScale:
+    """Finding 9: KPI_DEFINITIONS thresholds and descriptions must match per-1,000 scale."""
+
+    def test_incident_rate_description_says_per_1000(self):
+        from kpi_service import KPI_DEFINITIONS
+        defn = KPI_DEFINITIONS["incident_rate"]
+        assert "1,000" in defn["description_en"], (
+            "KPI_DEFINITIONS['incident_rate']['description_en'] still says per-100."
+        )
+        assert "1,000" in defn["formula_en"], (
+            "KPI_DEFINITIONS['incident_rate']['formula_en'] still references × 100."
+        )
+
+    def test_incident_rate_threshold_calibrated_for_per_1000(self):
+        from kpi_service import KPI_DEFINITIONS
+        threshold = KPI_DEFINITIONS["incident_rate"]["threshold"]
+        # Green/amber boundary in per-100 scale was 0.51; in per-1000 it must be > 1.
+        assert threshold.amber_min > 1.0, (
+            f"incident_rate amber_min={threshold.amber_min} — still calibrated for per-100 scale. "
+            "Expected > 1.0 for per-1,000 values (standard is ~2.0)."
+        )
+
+    def test_serious_incident_rate_description_says_per_1000(self):
+        from kpi_service import KPI_DEFINITIONS
+        defn = KPI_DEFINITIONS["serious_incident_rate"]
+        assert "1,000" in defn["description_en"], (
+            "KPI_DEFINITIONS['serious_incident_rate']['description_en'] still says per-100."
+        )
+
+    def test_serious_incident_rate_threshold_calibrated_for_per_1000(self):
+        from kpi_service import KPI_DEFINITIONS
+        threshold = KPI_DEFINITIONS["serious_incident_rate"]["threshold"]
+        # In per-100 scale amber_min was 0.01; in per-1000 amber_min should be near 0.
+        # Any value above 0.001 indicates a non-trivial per-1000 threshold.
+        assert threshold.amber_min >= 0.0, "amber_min must be non-negative"
+        # The red threshold in per-100 was 0.1; in per-1000 it must be > 0.1.
+        assert threshold.red_max > 0.1, (
+            f"serious_incident_rate red_max={threshold.red_max} — still calibrated for per-100."
+        )
+
+
+class TestAlertMessageUnit:
+    """Finding 7: alert message for incident rate must use /1K, not %."""
+
+    def test_alert_message_uses_per_1k_not_percent(self):
+        import kpi_service as svc
+        source = inspect.getsource(svc.get_consolidated_kpi_dashboard_data)
+        # The interpolated string must NOT contain avg_incident_rate% (% directly after the value).
+        import re
+        bad_pattern = r"avg_incident_rate\}%"
+        assert not re.search(bad_pattern, source), (
+            "Alert message still appends '%' directly after avg_incident_rate. "
+            "Use '/1K' since the value is per-1,000 child-days."
+        )
+        assert "/1K" in source, (
+            "Alert message must use '/1K' unit suffix for per-1,000 incident rate values."
+        )
+
+
+class TestConsolidatedDashboardUnitLabel:
+    """Finding 8: consolidated dashboard cards must label incident rates as per 1,000 child-days."""
+
+    def test_consolidated_dashboard_unit_label_says_per_1000(self):
+        import kpi_service as svc
+        source = inspect.getsource(svc.get_consolidated_kpi_dashboard_data)
+        assert "per 1,000 child-days" in source, (
+            "get_consolidated_kpi_dashboard_data still uses 'per 100 child-days' unit label. "
+            "Must be 'per 1,000 child-days'."
+        )

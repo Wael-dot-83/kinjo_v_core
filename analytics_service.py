@@ -2244,14 +2244,13 @@ def get_kpi_analytics(
             models.AttendanceLog.status.in_([
                 models.AttendanceStatus.PRESENT,
                 models.AttendanceStatus.LATE,
-                models.AttendanceStatus.EXCUSED,
             ])
         )
         if kg_id:
             attended_logs_q = attended_logs_q.filter(models.Class.kindergarten_id == kg_id)
         attended_child_days = attended_logs_q.count()
         if attended_child_days > 0:
-            incident_rate = round((incident_count / attended_child_days) * 100, 2)
+            incident_rate = round((incident_count / attended_child_days) * 1000, 3)
     except SQLAlchemyError as e:
         logger.error(
             "Failed to compute incident rate KPI for kg_id=%s period=[%s,%s]: %s",
@@ -2456,13 +2455,12 @@ def get_analytics_dashboard(
             models.AttendanceLog.status.in_([
                 models.AttendanceStatus.PRESENT,
                 models.AttendanceStatus.LATE,
-                models.AttendanceStatus.EXCUSED,
             ])
         )
         if kg_id:
             attended_q = attended_q.filter(models.Class.kindergarten_id == kg_id)
         attended_child_days_gov = attended_q.count()
-        kpis["incident_rate"] = round((incident_count / attended_child_days_gov * 100) if attended_child_days_gov > 0 else 0, 2)
+        kpis["incident_rate"] = round((incident_count / attended_child_days_gov * 1000) if attended_child_days_gov > 0 else 0, 3)
         
         # Report completion
         reports = db.query(models.DailyReport).filter(
@@ -4925,7 +4923,7 @@ class AnalyticsService:
 
     @staticmethod
     def _compute_network_incident_rate(db: Session, period_start: date, period_end: date, kg_ids: Optional[List[int]] = None) -> float:
-        """Compute network-wide incident rate per 100 child-days"""
+        """Compute network-wide incident rate per 1,000 attended child-days"""
         # Count total incidents
         incident_q = db.query(func.count(models.Incident.id)).filter(
             func.date(models.Incident.occurred_at) >= period_start,
@@ -4947,11 +4945,11 @@ class AnalyticsService:
             ).filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
         total_child_days = child_days_q.scalar() or 1
 
-        return round((total_incidents / total_child_days) * 100, 2)
+        return round((total_incidents / total_child_days) * 1000, 3)
 
     @staticmethod
     def _compute_network_serious_incident_rate(db: Session, period_start: date, period_end: date) -> float:
-        """Compute network-wide serious incident rate per 100 child-days"""
+        """Compute network-wide serious incident rate per 1,000 attended child-days"""
         # Count serious incidents
         serious_incidents = db.query(func.count(models.Incident.id)).filter(
             func.date(models.Incident.occurred_at) >= period_start,
@@ -4965,7 +4963,7 @@ class AnalyticsService:
             models.AttendanceLog.date <= period_end
         ).scalar() or 1
 
-        return round((serious_incidents / total_child_days) * 100, 2)
+        return round((serious_incidents / total_child_days) * 1000, 3)
 
     @staticmethod
     def _compute_network_governance_score(db: Session, period_start: date, period_end: date) -> float:
@@ -5078,7 +5076,7 @@ class AnalyticsService:
             models.EnrollmentApplication.kindergarten_id.in_(kg_ids)
         ).scalar() or 1
 
-        return round((incidents / child_days) * 100, 2)
+        return round((incidents / child_days) * 1000, 3)
 
     @staticmethod
     def _compute_governorate_governance_score(
@@ -5130,10 +5128,12 @@ class AnalyticsService:
             attendance_score = min(attendance_rate, 100) * 0.4
 
             # Lower incident rates = better score
-            incident_score = max(0, 100 - incident_rate * 10) * 0.3
+            # compute_incident_rate() returns per-1,000 child-days; divide by 10 to
+            # restore per-100 equivalent before applying the original multiplier.
+            incident_score = max(0, 100 - (incident_rate / 10) * 10) * 0.3
 
             # Lower serious incident rates = better score
-            serious_incident_score = max(0, 100 - serious_incident_rate * 20) * 0.2
+            serious_incident_score = max(0, 100 - (serious_incident_rate / 10) * 20) * 0.2
 
             # Higher ratio compliance = better score
             ratio_score = ratio_compliance * 0.1
@@ -5283,7 +5283,9 @@ class AnalyticsService:
             kg_id = int(dimension_id)
             attendance_rate = KPIService.compute_attendance_rate(db, kg_id, period_start, period_end)
             chronic_absence_rate = KPIService.compute_chronic_absence_rate(db, kg_id, period_start, period_end)
-            incident_rate_per_100 = KPIService.compute_incident_rate(db, kg_id, period_start, period_end)
+            # compute_incident_rate() now returns per-1,000; divide by 10 to store
+            # the correct per-100 value in the incident_rate_per_100 column.
+            incident_rate_per_100 = KPIService.compute_incident_rate(db, kg_id, period_start, period_end) / 10.0
             serious_incident_rate = KPIService.compute_serious_incident_rate(db, kg_id, period_start, period_end)
             ratio_compliance_rate = KPIService.compute_ratio_compliance(db, kg_id, period_start, period_end)
 
@@ -5444,9 +5446,11 @@ class AnalyticsService:
         enrollment_rate = (children_count / kg_capacity * 100) if kg_capacity > 0 else 0
 
         # Attendance / incident: use cache if present
+        # incident_rate_per_100 stores per-100; multiply by 10 to expose per-1,000
+        # so both cached and live paths return the same scale in KindergartenMetrics.
         if cached:
             attendance_rate = cached.attendance_rate or 0
-            incident_rate = cached.incident_rate_per_100 or 0
+            incident_rate = (cached.incident_rate_per_100 or 0) * 10.0
             report_submission_rate = cached.report_completion_rate or 0
             attendance_trend_slope = cached.attendance_trend_slope
             risk_score = cached.risk_score
