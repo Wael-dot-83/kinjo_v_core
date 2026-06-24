@@ -19,17 +19,29 @@ function escapeHtml(str) {
 
 // ── Enrollment enum → i18n key map ──────────────────────────────────────────
 const ENROLLMENT_I18N = {
-  ACTIVE:     "dashboard.enrollment_active",
-  PENDING:    "dashboard.enrollment_pending",
-  REJECTED:   "dashboard.enrollment_rejected",
-  WITHDRAWN:  "dashboard.enrollment_withdrawn",
-  WAITLISTED: "dashboard.enrollment_waitlisted",
+  ACTIVE:        "dashboard.enrollment_active",
+  PENDING:       "dashboard.enrollment_pending",
+  PENDING_REVIEW:"dashboard.enrollment_pending_review",
+  SUBMITTED:     "dashboard.enrollment_submitted",
+  ACCEPTED:      "dashboard.enrollment_accepted",
+  REJECTED:      "dashboard.enrollment_rejected",
+  WITHDRAWN:     "dashboard.enrollment_withdrawn",
+  WAITLISTED:    "dashboard.enrollment_waitlisted",
+  DRAFT:         "dashboard.enrollment_draft",
 };
 
 // Inline fallbacks — used only when JSON hasn't loaded yet
 const ENROLLMENT_FALLBACK = {
-  ar: { ACTIVE: "نشط", PENDING: "قيد الانتظار", REJECTED: "مرفوض", WITHDRAWN: "منسحب", WAITLISTED: "قائمة الانتظار" },
-  en: { ACTIVE: "Active", PENDING: "Pending", REJECTED: "Rejected", WITHDRAWN: "Withdrawn", WAITLISTED: "Waitlisted" },
+  ar: {
+    ACTIVE: "نشط", PENDING: "قيد الانتظار", PENDING_REVIEW: "قيد المراجعة",
+    SUBMITTED: "مُقدَّم", ACCEPTED: "مقبول", REJECTED: "مرفوض",
+    WITHDRAWN: "منسحب", WAITLISTED: "قائمة الانتظار", DRAFT: "مسودة",
+  },
+  en: {
+    ACTIVE: "Active", PENDING: "Pending", PENDING_REVIEW: "Under Review",
+    SUBMITTED: "Submitted", ACCEPTED: "Accepted", REJECTED: "Rejected",
+    WITHDRAWN: "Withdrawn", WAITLISTED: "Waitlisted", DRAFT: "Draft",
+  },
 };
 
 // KPI configuration — single source of truth, order determines render order
@@ -158,33 +170,23 @@ class AdminDashboard {
 
   /**
    * Map API response shape to internal normalized form.
-   * The API returns { summary, system_overview, charts, alerts, recent_activity }.
+   * The API returns { kpis, summary, system_overview, charts, alerts, recent_activity }.
    */
   normalizePayload(data) {
-    const summary        = data.summary        || {};
-    const systemOverview = data.system_overview || {};
-    const alerts         = Array.isArray(data.alerts) ? data.alerts : [];
+    const alerts = Array.isArray(data.alerts) ? data.alerts : [];
+    const lang   = window.KINJO_LANG === "en" ? "en" : "ar";
 
-    const kpis = data.kpis || {
-      total_users:          this.toNumber(systemOverview.total_users),
-      active_users:         this.toNumber(summary.attendance_today),
-      total_kindergartens:  this.toNumber(systemOverview.total_kindergartens),
-      active_kindergartens: this.toNumber(systemOverview.active_kindergartens),
-      total_submissions:    this.toNumber(summary.pending_applications),
-      pending_submissions:  this.toNumber(summary.pending_daily_reports),
-      data_quality_score:   this.toNumber(summary.attendance_rate),
-    };
+    // kpis is now a flat dict provided directly by the API
+    const kpis = data.kpis || {};
 
-    const chartPayload = data.charts || {};
-    const lang         = window.KINJO_LANG === "en" ? "en" : "ar";
-
-    const userActivityChart = chartPayload.user_activity || {
-      labels: Array.isArray(chartPayload.attendance) ? chartPayload.attendance.map((i) => i.date)  : [],
+    const chartPayload      = data.charts || {};
+    const userActivityChart = {
+      labels: Array.isArray(chartPayload.attendance) ? chartPayload.attendance.map((i) => i.date)              : [],
       values: Array.isArray(chartPayload.attendance) ? chartPayload.attendance.map((i) => this.toNumber(i.value)) : [],
     };
 
     const enrollment      = chartPayload.enrollment || {};
-    const submissionChart = chartPayload.data_submissions || {
+    const submissionChart = {
       labels: Object.keys(enrollment).map((k) => {
         const i18nKey  = ENROLLMENT_I18N[k];
         const fallback = (ENROLLMENT_FALLBACK[lang] || ENROLLMENT_FALLBACK.en)[k] || k;
@@ -193,9 +195,9 @@ class AdminDashboard {
       values: Object.values(enrollment).map((v) => this.toNumber(v)),
     };
 
-    const recentActivity = Array.isArray(data.recent_activity)
+    const recentActivity = Array.isArray(data.recent_activity) && data.recent_activity.length > 0
       ? data.recent_activity
-      : this.buildRecentActivityFromAlerts(alerts);
+      : [];
 
     return {
       kpis,
@@ -203,15 +205,6 @@ class AdminDashboard {
       recent_activity: recentActivity,
       alerts,
     };
-  }
-
-  buildRecentActivityFromAlerts(alerts) {
-    if (!Array.isArray(alerts) || alerts.length === 0) return [];
-    return alerts.slice(0, 5).map((a) => ({
-      type:      "system_update",
-      message:   a.title || a.message || "",
-      timestamp: a.timestamp,
-    }));
   }
 
   // ── KPI Cards ─────────────────────────────────────────────────────────────
@@ -239,7 +232,7 @@ class AdminDashboard {
     const card = document.createElement("div");
     card.className = "admin-kpi-card";
     card.setAttribute("role", "region");
-    card.setAttribute("aria-label", this.t(`dashboard.${config.key}`, KPI_LABEL_FALLBACK[config.key] || config.key));
+    card.setAttribute("aria-label", this.t(`dashboard.${config.key}`, KPI_LABEL_FALLBACK[config.key]));
 
     const { formattedValue, badgeHtml } = this.formatKPIValue(config, value);
 
@@ -362,7 +355,7 @@ class AdminDashboard {
   }
 
   renderSubmissionsChart(data) {
-    const ctx = document.getElementById("data-submissions-chart");
+    const ctx = document.getElementById("enrollment-status-chart");
     if (!ctx) return;
     this.charts.dataSubmissions?.destroy();
     const palette = ["#0d6efd", "#198754", "#ffc107", "#dc3545", "#6c757d", "#0dcaf0"];
@@ -414,7 +407,7 @@ class AdminDashboard {
         "dashboard.no_recent_activity", "No recent activity",
         "dashboard.no_activity_hint",   "Add users or monitor operations to see activity here",
         "bi-clock-history",
-        "dashboard.manage_users", "Manage Users", "/admin/users/create"
+        "dashboard.manage_users", "Manage Users", "/admin/users"
       ));
       return;
     }
@@ -422,6 +415,8 @@ class AdminDashboard {
   }
 
   createActivityItem(activity) {
+    const lang    = window.KINJO_LANG === "en" ? "en" : "ar";
+    const message = activity[`message_${lang}`] || activity.message || "";
     return this._createFeedItem({
       wrapperClass:  "admin-activity-item",
       iconWrapClass: "admin-activity-icon",
@@ -429,7 +424,7 @@ class AdminDashboard {
       contentClass:  "admin-activity-content",
       msgClass:      "admin-activity-message",
       timeClass:     "admin-activity-time",
-      message:       activity.message,
+      message,
       timestamp:     activity.timestamp,
     });
   }
@@ -453,6 +448,8 @@ class AdminDashboard {
   }
 
   createAlertItem(alert) {
+    const lang    = window.KINJO_LANG === "en" ? "en" : "ar";
+    const message = alert[`message_${lang}`] || alert.message || "";
     return this._createFeedItem({
       wrapperClass:  `admin-alert-item admin-alert-${alert.severity || "info"}`,
       iconWrapClass: "admin-alert-icon",
@@ -460,7 +457,7 @@ class AdminDashboard {
       contentClass:  "admin-alert-content",
       msgClass:      "admin-alert-message",
       timeClass:     "admin-alert-time",
-      message:       alert.message,
+      message,
       timestamp:     alert.timestamp,
       role:          "listitem",
     });
