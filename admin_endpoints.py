@@ -3123,36 +3123,10 @@ class DashboardKPICard(BaseModel):
     title: str
     value: Union[str, int, float]
     change: Optional[float] = None
-    change_type: Optional[str] = None  # 'positive', 'negative', 'neutral'
-    trend: Optional[str] = None  # 'up', 'down', 'stable'
-    status: Optional[str] = None  # 'good', 'warning', 'critical'
+    change_type: Optional[str] = None
+    trend: Optional[str] = None
+    status: Optional[str] = None
     icon: Optional[str] = None
-
-# class DashboardChartPoint(BaseModel):
-#     """Data point for dashboard charts"""
-#     date: str
-#     value: Union[int, float]
-#     label: Optional[str] = None
-
-# class DashboardActivityItem(BaseModel):
-#     """Recent activity item"""
-#     id: str
-#     type: str  # 'user_login', 'data_submission', 'alert', 'system_event'
-#     title: str
-#     description: str
-#     timestamp: str
-#     user: Optional[str] = None
-#     severity: Optional[str] = None  # 'info', 'warning', 'error', 'success'
-
-# class DashboardAlert(BaseModel):
-#     """System alert for dashboard"""
-#     id: str
-#     title: str
-#     message: str
-#     severity: str  # 'info', 'warning', 'error', 'critical'
-#     timestamp: str
-#     acknowledged: bool = False
-#     category: str  # 'system', 'security', 'performance', 'data_quality'
 
 class DashboardSummary(BaseModel):
     """Summary statistics for admin dashboard"""
@@ -3199,16 +3173,27 @@ class DashboardCharts(BaseModel):
     gcei: List[DashboardChartPoint] = []
 
 class DashboardAlert(BaseModel):
-    """System alert for dashboard"""
+    """System alert for dashboard — bilingual title/message fields are canonical; title/message are Arabic fallbacks."""
     id: str
     title: str
     message: str
-    severity: str  # 'info', 'warning', 'error', 'critical'
+    title_ar: str = ""
+    title_en: str = ""
+    message_ar: str = ""
+    message_en: str = ""
+    severity: str
     timestamp: str
     category: Optional[str] = None
     type: Optional[str] = None
     priority: Optional[str] = None
     kindergarten_id: Optional[int] = None
+
+class ActivityItem(BaseModel):
+    """Recent audit-log activity item — bilingual."""
+    type: str = "system_update"
+    message_ar: str = ""
+    message_en: str = ""
+    timestamp: str
 
 class AdminDashboardResponse(BaseModel):
     """Complete admin dashboard response"""
@@ -3218,6 +3203,8 @@ class AdminDashboardResponse(BaseModel):
     charts: DashboardCharts
     alerts: List[DashboardAlert]
     kpi_cards: List[DashboardKPICard]
+    kpis: Dict[str, Optional[float]]
+    recent_activity: List[ActivityItem]
     generated_at: str
 
 
@@ -3273,15 +3260,16 @@ def get_admin_dashboard(
     db: Session = Depends(get_db)
 ):
     """Get comprehensive admin dashboard data with system overview, KPIs, charts, and alerts."""
-    now = datetime.now(timezone.utc)
-    today = date.today()
+    _JORDAN_TZ = timezone(timedelta(hours=3))
+    now = datetime.now(_JORDAN_TZ)
+    today = now.date()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     cache_key = f"dashboard:admin:v2:period_{period_days}:date_{today.isoformat()}"
     cached_payload = _admin_dashboard_cache_get(cache_key)
     if isinstance(cached_payload, dict):
         return AdminDashboardResponse(**cached_payload)
 
     week_ago = today - timedelta(days=7)
-    today_start = datetime.combine(today, datetime.min.time())
 
     total_users = db.query(func.count(models.User.id)).scalar() or 0
     total_kindergartens = db.query(func.count(models.Kindergarten.id)).scalar() or 0
@@ -3313,6 +3301,27 @@ def get_admin_dashboard(
 
     attendance_rate = (attendance_today / active_enrollments * 100.0) if active_enrollments > 0 else 0.0
 
+    total_reports_in_period = db.query(func.count(models.DailyReport.id)).filter(
+        models.DailyReport.date >= today - timedelta(days=period_days),
+        models.DailyReport.date <= today,
+    ).scalar() or 0
+
+    # Data quality: % of active KGs that submitted any report in the last 7 days
+    active_kg_with_recent_report = 0
+    if active_kindergartens > 0:
+        active_kg_with_recent_report = db.query(
+            func.count(func.distinct(models.DailyReport.kindergarten_id))
+        ).join(
+            models.Kindergarten,
+            models.Kindergarten.id == models.DailyReport.kindergarten_id,
+        ).filter(
+            models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+            models.DailyReport.date >= today - timedelta(days=7),
+        ).scalar() or 0
+    data_quality_score = round(
+        (active_kg_with_recent_report / active_kindergartens * 100.0) if active_kindergartens > 0 else 0.0, 1
+    )
+
     kpi_cards = [
         DashboardKPICard(title="إجمالي المستخدمين", value=total_users, icon="users", status="good"),
         DashboardKPICard(title="المستخدمون النشطون اليوم", value=active_users_today, icon="user-check", status="good"),
@@ -3339,100 +3348,8 @@ def get_admin_dashboard(
         total_users=total_users,
     )
 
+    # Kindergarten detail table is served by a dedicated endpoint; not computed here.
     kindergartens_list: List[DashboardKindergarten] = []
-    all_kindergartens = db.query(models.Kindergarten).all()
-    kg_ids = [kg.id for kg in all_kindergartens]
-
-    # Batch-load all per-kindergarten stats to avoid N+1 queries
-    kg_enrollment_counts = dict(
-        db.query(
-            models.EnrollmentApplication.kindergarten_id,
-            func.count(models.EnrollmentApplication.id),
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-        ).group_by(models.EnrollmentApplication.kindergarten_id).all()
-    ) if kg_ids else {}
-
-    kg_attendance_counts = dict(
-        db.query(
-            models.EnrollmentApplication.kindergarten_id,
-            func.count(models.AttendanceLog.id),
-        ).join(
-            models.EnrollmentApplication,
-            models.EnrollmentApplication.child_id == models.AttendanceLog.child_id,
-        ).filter(
-            models.EnrollmentApplication.kindergarten_id.in_(kg_ids),
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-            models.AttendanceLog.date == today,
-            models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
-        ).group_by(models.EnrollmentApplication.kindergarten_id).all()
-    ) if kg_ids else {}
-
-    # Use kindergarten_id directly on DailyReport — avoids a child_id cross-join
-    # that would be enormous when many enrollments share a small set of child_ids.
-    kg_pending_report_counts = dict(
-        db.query(
-            models.DailyReport.kindergarten_id,
-            func.count(models.DailyReport.id),
-        ).filter(
-            models.DailyReport.kindergarten_id.in_(kg_ids),
-            models.DailyReport.status == models.DailyReportStatus.SUBMITTED,
-        ).group_by(models.DailyReport.kindergarten_id).all()
-    ) if kg_ids else {}
-
-    kg_capacities = dict(
-        db.query(
-            models.Class.kindergarten_id,
-            func.sum(models.Class.capacity_total),
-        ).filter(
-            models.Class.kindergarten_id.in_(kg_ids),
-            models.Class.is_active.is_(True),
-        ).group_by(models.Class.kindergarten_id).all()
-    ) if kg_ids else {}
-
-    kg_last_report_dates = dict(
-        db.query(
-            models.DailyReport.kindergarten_id,
-            func.max(models.DailyReport.date),
-        ).filter(
-            models.DailyReport.kindergarten_id.in_(kg_ids),
-        ).group_by(models.DailyReport.kindergarten_id).all()
-    ) if kg_ids else {}
-
-    for kg in all_kindergartens:
-        kg_enrollments = kg_enrollment_counts.get(kg.id, 0)
-        kg_attendance = kg_attendance_counts.get(kg.id, 0)
-        kg_pending_reports_count = kg_pending_report_counts.get(kg.id, 0)
-        kg_capacity = kg_capacities.get(kg.id, 0) or 0
-        last_report_date = kg_last_report_dates.get(kg.id)
-
-        license_status = "valid"
-        if kg.license_valid_until:
-            days_to_expiry = (kg.license_valid_until - today).days
-            if days_to_expiry < 0:
-                license_status = "expired"
-            elif days_to_expiry < 30:
-                license_status = "expiring_soon"
-
-        kindergartens_list.append(
-            DashboardKindergarten(
-                id=kg.id,
-                name_ar=kg.name_ar,
-                name_en=kg.name_en,
-                status=kg.status.value,
-                license_status=license_status,
-                governorate=kg.governorate,
-                city=kg.city,
-                enrollments=kg_enrollments,
-                attendance_today=kg_attendance,
-                pending_reports=kg_pending_reports_count,
-                capacity_utilization=round((kg_enrollments / kg_capacity) * 100.0, 1) if kg_capacity > 0 else 0.0,
-                total_children=kg_enrollments,
-                active_children=kg_enrollments,
-                last_report_date=last_report_date.isoformat() if last_report_date else None,
-            )
-        )
 
     chart_days = max(7, min(period_days, 90))
     chart_start_date = today - timedelta(days=chart_days - 1)
@@ -3458,7 +3375,7 @@ def get_admin_dashboard(
         func.count(models.EnrollmentApplication.id),
     ).group_by(models.EnrollmentApplication.status).all()
     enrollment_pie = {
-        (status.value if hasattr(status, "value") else str(status)): count
+        (status.value if hasattr(status, "value") else str(status)).upper(): count
         for status, count in enrollment_stats
     }
 
@@ -3478,36 +3395,19 @@ def get_admin_dashboard(
         day_count = daily_incident_counts.get(day_value, 0)
         incidents_trend.append(DashboardChartPoint(date=day_value.isoformat(), value=day_count))
 
-    # Build enrollment trend chart (new enrollments per day)
-    daily_enrollment_counts = dict(
-        db.query(
-            func.date(models.EnrollmentApplication.created_at),
-            func.count(models.EnrollmentApplication.id),
-        ).filter(
-            func.date(models.EnrollmentApplication.created_at) >= chart_start_date,
-            func.date(models.EnrollmentApplication.created_at) <= today,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-        ).group_by(func.date(models.EnrollmentApplication.created_at)).all()
-    )
-    enrollment_trend: List[DashboardChartPoint] = []
-    for i in range(chart_days):
-        day_value = today - timedelta(days=(chart_days - 1 - i))
-        day_count = daily_enrollment_counts.get(day_value, 0)
-        enrollment_trend.append(DashboardChartPoint(date=day_value.isoformat(), value=day_count))
-
-# Build GCEI (Governance Compliance & Excellence Index) trend chart
+    # GCEI: per-day governance score using total active enrollments as the stable denominator.
+    # Defaults to 0 (unknown) when denominator is zero, not 100 (artificially perfect).
+    gcei_denominator = active_enrollments if active_enrollments > 0 else 1
     gcei_chart: List[DashboardChartPoint] = []
     for i in range(chart_days):
         day_value = today - timedelta(days=(chart_days - 1 - i))
         day_incidents = daily_incident_counts.get(day_value, 0)
-        # Simplified GCEI calculation: based on active kindergartens and incident rate
-        day_enrollments = daily_attendance_counts.get(day_value, 0)
-        if day_enrollments > 0:
-            incident_rate = (day_incidents / day_enrollments) * 100
-            gcei_score = max(0, min(100, 100 - incident_rate * 10))  # Higher score with fewer incidents
+        if active_enrollments > 0:
+            incident_rate = (day_incidents / gcei_denominator) * 100
+            gcei_score = round(max(0.0, min(100.0, 100.0 - incident_rate * 10)), 1)
         else:
-            gcei_score = 100.0  # Default excellent score when no enrollment data
-        gcei_chart.append(DashboardChartPoint(date=day_value.isoformat(), value=round(gcei_score, 1)))
+            gcei_score = 0.0
+        gcei_chart.append(DashboardChartPoint(date=day_value.isoformat(), value=gcei_score))
 
     charts = DashboardCharts(
         attendance=attendance_chart,
@@ -3518,29 +3418,41 @@ def get_admin_dashboard(
 
     alerts: List[DashboardAlert] = []
     if pending_applications > 0:
+        _msg_ar = f"يوجد {pending_applications} طلب تسجيل يحتاج المراجعة."
+        _msg_en = f"{pending_applications} enrollment application(s) awaiting review."
         alerts.append(
             DashboardAlert(
                 id="pending_applications",
                 title="طلبات تسجيل بانتظار المراجعة",
-                message=f"يوجد {pending_applications} طلب تسجيل يحتاج المراجعة.",
+                message=_msg_ar,
+                title_ar="طلبات تسجيل بانتظار المراجعة",
+                title_en="Enrollment Applications Pending Review",
+                message_ar=_msg_ar,
+                message_en=_msg_en,
                 severity="warning",
                 timestamp=now.isoformat(),
                 category="applications",
-                type="طلبات التسجيل",
+                type="applications",
                 priority="high" if pending_applications > 10 else "medium",
             )
         )
 
     if recent_incidents > 0:
+        _msg_ar = f"تم تسجيل {recent_incidents} حوادث خلال آخر 7 أيام."
+        _msg_en = f"{recent_incidents} incident(s) recorded in the last 7 days."
         alerts.append(
             DashboardAlert(
                 id="recent_incidents",
                 title="حوادث مسجلة حديثاً",
-                message=f"تم تسجيل {recent_incidents} حوادث خلال آخر 7 أيام.",
+                message=_msg_ar,
+                title_ar="حوادث مسجلة حديثاً",
+                title_en="Recent Incidents",
+                message_ar=_msg_ar,
+                message_en=_msg_en,
                 severity="error" if recent_incidents > 5 else "warning",
                 timestamp=now.isoformat(),
                 category="safety",
-                type="السلامة",
+                type="safety",
                 priority="high" if recent_incidents > 5 else "medium",
             )
         )
@@ -3551,20 +3463,31 @@ def get_admin_dashboard(
     ).all()
     for kg in expiring_licenses:
         days_to_expiry = (kg.license_valid_until - today).days
+        expired = days_to_expiry < 0
+        _msg_ar = (
+            f"انتهت صلاحية ترخيص {kg.name_ar}."
+            if expired
+            else f"تنتهي صلاحية ترخيص {kg.name_ar} خلال {days_to_expiry} يوم."
+        )
+        _msg_en = (
+            f"License for {kg.name_en or kg.name_ar} has expired."
+            if expired
+            else f"License for {kg.name_en or kg.name_ar} expires in {days_to_expiry} day(s)."
+        )
         alerts.append(
             DashboardAlert(
                 id=f"license_expiry_{kg.id}",
                 title="تنبيه صلاحية الترخيص",
-                message=(
-                    f"انتهت صلاحية ترخيص {kg.name_ar}."
-                    if days_to_expiry < 0
-                    else f"تنتهي صلاحية ترخيص {kg.name_ar} خلال {days_to_expiry} يوم."
-                ),
-                severity="error" if days_to_expiry < 0 else "warning",
+                message=_msg_ar,
+                title_ar="تنبيه صلاحية الترخيص",
+                title_en="License Expiry Alert",
+                message_ar=_msg_ar,
+                message_en=_msg_en,
+                severity="error" if expired else "warning",
                 timestamp=now.isoformat(),
                 category="compliance",
-                type="الترخيص",
-                priority="critical" if days_to_expiry < 0 else "high",
+                type="compliance",
+                priority="critical" if expired else "high",
                 kindergarten_id=kg.id,
             )
         )
@@ -3573,6 +3496,45 @@ def get_admin_dashboard(
         alerts,
         key=lambda alert: {"critical": 0, "high": 1, "medium": 2, "low": 3}.get(alert.priority or "medium", 4),
     )
+
+    # Recent activity from audit log (logins and user-creation events, last 7 days)
+    _ACTIVITY_MAP: Dict[str, tuple] = {
+        "LOGIN_SUCCESS": ("تسجيل دخول مستخدم", "User logged in",   "user_login"),
+        "USER_CREATED":  ("تم إنشاء مستخدم",   "User created",    "user_create"),
+    }
+    recent_audit_logs = (
+        db.query(models.AuditLog)
+        .filter(
+            models.AuditLog.action.in_(list(_ACTIVITY_MAP.keys())),
+            models.AuditLog.created_at >= now - timedelta(days=7),
+        )
+        .order_by(models.AuditLog.created_at.desc())
+        .limit(10)
+        .all()
+    )
+    recent_activity: List[ActivityItem] = []
+    for log in recent_audit_logs:
+        action_str = str(log.action.value if hasattr(log.action, "value") else log.action)
+        mapping = _ACTIVITY_MAP.get(action_str)
+        if not mapping:
+            continue
+        msg_ar, msg_en, act_type = mapping
+        recent_activity.append(ActivityItem(
+            type=act_type,
+            message_ar=msg_ar,
+            message_en=msg_en,
+            timestamp=log.created_at.isoformat(),
+        ))
+
+    kpis: Dict[str, Optional[float]] = {
+        "total_users":          float(total_users),
+        "active_users":         float(active_users_today),
+        "total_kindergartens":  float(total_kindergartens),
+        "active_kindergartens": float(active_kindergartens),
+        "total_submissions":    float(total_reports_in_period),
+        "pending_submissions":  float(pending_reports),
+        "data_quality_score":   data_quality_score,
+    }
 
     # Log dashboard access
     log_audit_event(
@@ -3595,7 +3557,9 @@ def get_admin_dashboard(
         charts=charts,
         alerts=alerts,
         kpi_cards=kpi_cards,
-        generated_at=now.isoformat()
+        kpis=kpis,
+        recent_activity=recent_activity,
+        generated_at=now.isoformat(),
     )
     _admin_dashboard_cache_set(cache_key, response_payload.model_dump(mode="json"))
     return response_payload

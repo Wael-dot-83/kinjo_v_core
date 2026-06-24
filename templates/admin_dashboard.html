@@ -29,8 +29,9 @@
     <div class="admin-dashboard-skeleton" id="dashboard-loading" aria-busy="true" role="status">
       <span class="visually-hidden">{% if ui_lang == 'en' %}Loading dashboard data…{% else %}جارٍ تحميل البيانات…{% endif %}</span>
 
-      <!-- Skeleton KPI cards (4 placeholders) -->
+      <!-- Skeleton KPI cards (7 placeholders — matches actual KPI count) -->
       <div class="admin-skeleton-kpi-row">
+        {% for _ in range(7) %}
         <div class="admin-skeleton-kpi-card" aria-hidden="true">
           <div class="admin-skeleton-icon"></div>
           <div class="admin-skeleton-content">
@@ -38,27 +39,7 @@
             <div class="admin-skeleton-line admin-skeleton-line--label"></div>
           </div>
         </div>
-        <div class="admin-skeleton-kpi-card" aria-hidden="true">
-          <div class="admin-skeleton-icon"></div>
-          <div class="admin-skeleton-content">
-            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
-            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
-          </div>
-        </div>
-        <div class="admin-skeleton-kpi-card" aria-hidden="true">
-          <div class="admin-skeleton-icon"></div>
-          <div class="admin-skeleton-content">
-            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
-            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
-          </div>
-        </div>
-        <div class="admin-skeleton-kpi-card" aria-hidden="true">
-          <div class="admin-skeleton-icon"></div>
-          <div class="admin-skeleton-content">
-            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
-            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
-          </div>
-        </div>
+        {% endfor %}
       </div>
 
       <!-- Skeleton Charts -->
@@ -115,7 +96,7 @@
               </h3>
             </div>
             <div class="admin-card-body">
-              <canvas id="data-submissions-chart" width="400" height="200"></canvas>
+              <canvas id="enrollment-status-chart" width="400" height="200"></canvas>
             </div>
           </div>
         </div>
@@ -133,7 +114,7 @@
               </h3>
             </div>
             <div class="admin-card-body">
-              <div class="admin-activity-feed" id="activity-feed"></div>
+              <div class="admin-activity-feed" id="activity-feed" role="list"></div>
             </div>
           </div>
         </div>
@@ -147,7 +128,7 @@
               </h3>
             </div>
             <div class="admin-card-body">
-              <div class="admin-alerts-list" id="alerts-list"></div>
+              <div class="admin-alerts-list" id="alerts-list" role="list"></div>
             </div>
           </div>
 
@@ -161,7 +142,7 @@
             <div class="admin-card-body">
               <div class="admin-quick-actions">
 
-                <a href="/admin/users/create" class="admin-quick-action-card">
+                <a href="/admin/users" class="admin-quick-action-card">
                   <span class="admin-quick-action-card-icon admin-quick-action-card-icon--primary">
                     <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
                   </span>

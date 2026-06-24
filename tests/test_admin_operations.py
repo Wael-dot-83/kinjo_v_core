@@ -206,6 +206,16 @@ class TestDashboardCacheHit:
             "charts": {"attendance": [], "enrollment": {}},
             "alerts": [],
             "kpi_cards": [],
+            "kpis": {
+                "total_users": 5.0,
+                "active_users": 0.0,
+                "total_kindergartens": 1.0,
+                "active_kindergartens": 1.0,
+                "total_submissions": 0.0,
+                "pending_submissions": 0.0,
+                "data_quality_score": 0.0,
+            },
+            "recent_activity": [],
             "generated_at": "2026-06-01T00:00:00+00:00",
         }
 
