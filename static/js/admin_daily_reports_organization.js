@@ -112,7 +112,10 @@
   }
 
   function tokenValue() {
-    return localStorage.getItem("kinjo_token") || sessionStorage.getItem("kinjo_token") || "";
+    return document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("kinjo_session=") || row.startsWith("kinjo_token="))
+      ?.split("=")[1] || "";
   }
 
   function escapeHtml(value) {
@@ -125,12 +128,6 @@
   }
 
   async function apiGet(path, params = {}) {
-    const token = tokenValue();
-    if (!token) {
-      window.location.href = "/login";
-      return null;
-    }
-
     const search = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       if (value === undefined || value === null || value === "") {
@@ -145,7 +142,6 @@
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     });
