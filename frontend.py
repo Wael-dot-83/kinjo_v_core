@@ -1412,18 +1412,6 @@ async def admin_governance_reports(request: Request, current_user: User = Depend
     )
 
 
-@router.get("/admin/kg-overview", response_class=HTMLResponse)
-async def admin_kg_overview(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Interactive Kindergarten Overview dashboard"""
-    if current_user.role != UserRole.ADMIN:
-        return RedirectResponse("/dashboard")
-    return templates.TemplateResponse(
-        request=request,
-        name="admin/kg_overview.html",
-        context={"current_user": current_user, "today": date.today()}
-    )
-
-
 @router.get("/admin/classification", response_class=HTMLResponse)
 async def admin_classification(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Admin classification and benchmarking page"""

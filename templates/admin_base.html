@@ -14,6 +14,7 @@
     <meta name="author" content="KinJo Team" />
     <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
     <meta name="session-timeout-minutes" content="{{ session_timeout_minutes | default(30) }}" />
+    <meta name="user-role" content="{{ current_user.role.value if current_user and current_user.role and (current_user.role.value is defined) else (current_user.role if current_user and current_user.role else '') }}" />
 
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website" />

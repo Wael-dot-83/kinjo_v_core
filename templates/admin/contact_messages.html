@@ -150,10 +150,14 @@ document.querySelectorAll('[data-resolve-contact-message]').forEach((form) => {
     event.preventDefault();
     const button = form.querySelector('button[type="submit"]');
     if (button) button.disabled = true;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     try {
-      const response = await fetchWithAuth(form.action, { method: 'POST' });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
+      const response = await fetchWithAuth(form.action, {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken }
+      });
+      if (!response || !response.ok) {
+        const payload = await (response ? response.json().catch(() => ({})) : Promise.resolve({}));
         throw new Error(payload.detail || '{% if ui_lang == "en" %}Failed to resolve contact message.{% else %}فشل إغلاق الرسالة.{% endif %}');
       }
       window.location.reload();
