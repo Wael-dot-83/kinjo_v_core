@@ -80,6 +80,19 @@
     return "attendance";
   }
 
+  /**
+   * Debounce a function to delay execution until after `ms` milliseconds
+   * have elapsed since the last invocation. Used to prevent excessive
+   * updates during rapid user input (e.g., search filters).
+   */
+  function debounce(fn, ms = 250) {
+    let timer;
+    return function (...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), ms);
+    };
+  }
+
   const _AMMAN_TZ = "Asia/Amman";
   const _DATE_FMT_AR = new Intl.DateTimeFormat("ar-JO", { year: "numeric", month: "short", day: "numeric", timeZone: _AMMAN_TZ });
   const _DATETIME_FMT_AR = new Intl.DateTimeFormat("ar-JO", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: _AMMAN_TZ });

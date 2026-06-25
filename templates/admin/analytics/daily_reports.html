@@ -1,4 +1,4 @@
-﻿{% extends "admin_base.html" %}
+{% extends "admin_base.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %} — KinJo{% endblock %}
 
@@ -88,7 +88,7 @@
 </div>
 
 <!-- Report Detail Modal -->
-<div class="modal fade" id="reportModal" tabindex="-1">
+<div class="modal fade" id="reportModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
@@ -113,9 +113,41 @@
 <script>
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
+    const _AMMAN_TZ = 'Asia/Amman';
+
+    /* -----------------------------------------------------------------------
+     * Date/time formatting — always display in Asia/Amman timezone
+     * ----------------------------------------------------------------------- */
+    const _DATE_FMT = new Intl.DateTimeFormat(IS_EN ? 'en-JO' : 'ar-JO', {
+        year: 'numeric', month: 'short', day: 'numeric', timeZone: _AMMAN_TZ
+    });
+    const _DATETIME_FMT = new Intl.DateTimeFormat(IS_EN ? 'en-JO' : 'ar-JO', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', timeZone: _AMMAN_TZ
+    });
+
+    function formatDate(val) {
+        if (val == null || val === '') return '-';
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return '—';
+        return _DATE_FMT.format(d);
+    }
+
+    function formatDateTime(val) {
+        if (val == null || val === '') return '-';
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return '—';
+        return _DATETIME_FMT.format(d);
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
 
     let currentPage = 1;
     let currentFilters = {};
+    let _typeChartInstance = null;
+    let _severityChartInstance = null;
 
     async function loadReports(page = 1) {
         const container = document.getElementById('reportsContainer');
@@ -128,33 +160,34 @@
         try {
             const params = new URLSearchParams({ page: page, per_page: 20, ...currentFilters });
             const response = await fetch(`/api/admin/reports/incidents?${params}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
 
-            if (data.reports.length === 0) {
+            if (!data.reports || data.reports.length === 0) {
                 container.innerHTML = `
                 <div class="text-center py-5">
-                    <i class="bi bi-file-earmark-x text-muted fs-1"></i>
+                    <i class="bi bi-file-earmark-x text-muted fs-1" aria-hidden="true"></i>
                     <h5 class="mt-3 text-muted">${T('لا توجد تقارير', 'No Reports')}</h5>
                     <p class="text-muted">${T('لم يتم إنشاء أي تقارير بعد. يمكنك إنشاء تقرير جديد.', 'No reports have been created yet. You can create a new report.')}</p>
                     <a href="/admin/reports/incidents/generate" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-2"></i>${T('إنشاء تقرير جديد', 'Create New Report')}
+                        <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>${T('إنشاء تقرير جديد', 'Create New Report')}
                     </a>
-                </div>
-            `;
+                </div>`;
                 paginationContainer.classList.add('d-none');
             } else {
                 renderReports(data.reports);
-                renderPagination(data.pagination);
-                paginationContainer.classList.remove('d-none');
+                if (data.pagination) {
+                    renderPagination(data.pagination);
+                    paginationContainer.classList.remove('d-none');
+                }
             }
         } catch (error) {
             console.error('Failed to load reports:', error);
             container.innerHTML = `
-            <div class="alert alert-danger">
-                <i class="bi bi-exclamation-triangle me-2"></i>
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
                 ${T('فشل في تحميل التقارير. يرجى المحاولة مرة أخرى.', 'Failed to load reports. Please try again.')}
-            </div>
-        `;
+            </div>`;
         } finally {
             spinner.classList.add('d-none');
         }
@@ -174,22 +207,21 @@
                         <h6 class="card-title mb-1">${escHtml(report.title)}</h6>
                         <p class="card-text small text-muted mb-0">
                             ${T('النطاق:', 'Scope:')} ${escHtml(report.scope_name)} |
-                            ${T('الفترة:', 'Period:')} ${formatDate(report.start_date)} - ${formatDate(report.end_date)}
+                            ${T('الفترة:', 'Period:')} ${formatDate(report.start_date)} – ${formatDate(report.end_date)}
                         </p>
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted d-block">${T('أنشئ بواسطة:', 'Created By:')} ${escHtml(report.created_by)}</small>
                         <small class="text-muted d-block">${T('تاريخ الإنشاء:', 'Created Date:')} ${formatDateTime(report.created_at)}</small>
                     </div>
-                    <div class="col-md-3 text-end">
-                        <span class="badge badge-soft badge-soft-info me-2">${report.total_incidents} ${T('حادثة', 'incidents')}</span>
-                        <button class="btn btn-sm btn-outline-primary" onclick="viewReport(${report.id})">
-                            <i class="bi bi-eye me-1"></i>${T('عرض', 'View')}
+                    <div class="col-md-3 d-flex justify-content-end align-items-center gap-2">
+                        <span class="badge bg-info-subtle text-info-emphasis">${report.total_incidents ?? 0} ${T('حادثة', 'incidents')}</span>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewReport(${report.id})" aria-label="${T('عرض التقرير', 'View report')}: ${escHtml(report.title)}">
+                            <i class="bi bi-eye me-1" aria-hidden="true"></i>${T('عرض', 'View')}
                         </button>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
             container.appendChild(reportCard);
         });
     }
@@ -202,19 +234,20 @@
 
         const prevLi = document.createElement('li');
         prevLi.className = `page-item ${pagination.page === 1 ? 'disabled' : ''}`;
-        prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pagination.page - 1})">${T('السابق', 'Previous')}</a>`;
+        prevLi.innerHTML = `<a class="page-link" href="#" onclick="event.preventDefault(); changePage(${pagination.page - 1})">${T('السابق', 'Previous')}</a>`;
         paginationEl.appendChild(prevLi);
 
         for (let i = 1; i <= pagination.pages; i++) {
             const pageLi = document.createElement('li');
             pageLi.className = `page-item ${i === pagination.page ? 'active' : ''}`;
-            pageLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i})">${i}</a>`;
+            if (i === pagination.page) pageLi.setAttribute('aria-current', 'page');
+            pageLi.innerHTML = `<a class="page-link" href="#" onclick="event.preventDefault(); changePage(${i})">${i}</a>`;
             paginationEl.appendChild(pageLi);
         }
 
         const nextLi = document.createElement('li');
         nextLi.className = `page-item ${pagination.page === pagination.pages ? 'disabled' : ''}`;
-        nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${pagination.page + 1})">${T('التالي', 'Next')}</a>`;
+        nextLi.innerHTML = `<a class="page-link" href="#" onclick="event.preventDefault(); changePage(${pagination.page + 1})">${T('التالي', 'Next')}</a>`;
         paginationEl.appendChild(nextLi);
     }
 
@@ -249,6 +282,7 @@
     async function viewReport(reportId) {
         try {
             const response = await fetch(`/api/admin/reports/incidents/${reportId}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const report = await response.json();
 
             document.getElementById('reportModalTitle').textContent = report.title;
@@ -260,6 +294,9 @@
             modal.show();
 
             document.getElementById('exportBtn').setAttribute('data-report-id', reportId);
+
+            // Initialize charts after modal is fully shown and canvas is in DOM
+            requestAnimationFrame(() => initReportCharts(report.metrics));
         } catch (error) {
             console.error('Failed to load report details:', error);
             showAlert(T('فشل في تحميل تفاصيل التقرير', 'Failed to load report details'), 'danger');
@@ -267,12 +304,16 @@
     }
 
     function renderReportDetails(report) {
-        const metrics = report.metrics;
+        const metrics = report.metrics || {};
+        const totalInc = metrics.total_incidents ?? 0;
+        const openInc = metrics.open_incidents ?? 0;
+        const closedInc = metrics.closed_incidents ?? 0;
+
         return `
         <div class="row">
             <div class="col-md-6">
                 <h6>${T('معلومات التقرير', 'Report Information')}</h6>
-                <table class="table table-sm">
+                <table class="table table-sm" aria-label="${T('معلومات التقرير', 'Report information table')}">
                     <tr><td><strong>${T('النطاق:', 'Scope:')}</strong></td><td>${escHtml(report.scope_name)}</td></tr>
                     <tr><td><strong>${T('تاريخ البداية:', 'Start Date:')}</strong></td><td>${formatDate(report.start_date)}</td></tr>
                     <tr><td><strong>${T('تاريخ النهاية:', 'End Date:')}</strong></td><td>${formatDate(report.end_date)}</td></tr>
@@ -283,26 +324,26 @@
             <div class="col-md-6">
                 <h6>${T('الإحصائيات العامة', 'General Statistics')}</h6>
                 <div class="row g-3">
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="card text-center">
                             <div class="card-body py-2">
-                                <h4 class="text-primary">${metrics.total_incidents}</h4>
+                                <h4 class="text-primary mb-0">${totalInc}</h4>
                                 <small class="text-muted">${T('إجمالي الحوادث', 'Total Incidents')}</small>
                             </div>
                         </div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="card text-center">
                             <div class="card-body py-2">
-                                <h4 class="text-success">${metrics.open_incidents}</h4>
+                                <h4 class="text-success mb-0">${openInc}</h4>
                                 <small class="text-muted">${T('حوادث مفتوحة', 'Open Incidents')}</small>
                             </div>
                         </div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="card text-center">
                             <div class="card-body py-2">
-                                <h4 class="text-danger">${metrics.closed_incidents}</h4>
+                                <h4 class="text-danger mb-0">${closedInc}</h4>
                                 <small class="text-muted">${T('حوادث مغلقة', 'Closed Incidents')}</small>
                             </div>
                         </div>
@@ -314,11 +355,11 @@
         <div class="row mt-4">
             <div class="col-md-6">
                 <h6>${T('الحوادث حسب النوع', 'Incidents by Type')}</h6>
-                <canvas id="typeChart" width="300" height="200"></canvas>
+                <canvas id="typeChart" width="300" height="200" role="img" aria-label="${T('مخطط الحوادث حسب النوع', 'Chart of incidents by type')}"></canvas>
             </div>
             <div class="col-md-6">
                 <h6>${T('الحوادث حسب الخطورة', 'Incidents by Severity')}</h6>
-                <canvas id="severityChart" width="300" height="200"></canvas>
+                <canvas id="severityChart" width="300" height="200" role="img" aria-label="${T('مخطط الحوادث حسب الخطورة', 'Chart of incidents by severity')}"></canvas>
             </div>
         </div>
 
@@ -326,7 +367,7 @@
         <div class="mt-4">
             <h6>${T('الحوادث لكل روضة', 'Incidents per Kindergarten')}</h6>
             <div class="table-responsive">
-                <table class="table table-sm">
+                <table class="table table-sm" aria-label="${T('الحوادث لكل روضة', 'Incidents per kindergarten table')}">
                     <thead>
                         <tr>
                             <th>${T('الروضة', 'Kindergarten')}</th>
@@ -335,8 +376,8 @@
                     </thead>
                     <tbody>
                         ${Object.entries(metrics.per_kindergarten).map(([kg, count]) =>
-            `<tr><td>${escHtml(kg)}</td><td>${Number(count)}</td></tr>`
-        ).join('')}
+                            `<tr><td>${escHtml(kg)}</td><td>${Number(count)}</td></tr>`
+                        ).join('')}
                     </tbody>
                 </table>
             </div>
@@ -345,42 +386,105 @@
     `;
     }
 
+    /**
+     * Initialize the two Chart.js doughnut charts with report metrics.
+     * Called after the modal body is rendered and canva are in the DOM.
+     */
+    function initReportCharts(metrics) {
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js not loaded; skipping report charts');
+            return;
+        }
+
+        // Destroy previous chart instances to avoid reuse errors
+        if (_typeChartInstance) { _typeChartInstance.destroy(); _typeChartInstance = null; }
+        if (_severityChartInstance) { _severityChartInstance.destroy(); _severityChartInstance = null; }
+
+        const typeCanvas = document.getElementById('typeChart');
+        const severityCanvas = document.getElementById('severityChart');
+
+        // --- Incidents by type ---
+        const byType = metrics.by_type || {};
+        const typeLabels = Object.keys(byType);
+        const typeData = Object.values(byType).map(Number);
+        if (typeCanvas && typeLabels.length > 0) {
+            _typeChartInstance = new Chart(typeCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: typeLabels.map(l => T(l, l)),
+                    datasets: [{
+                        data: typeData,
+                        backgroundColor: ['#1f5e47', '#b49b3b', '#2f7d62', '#94a3b8', '#e11d48'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}` } },
+                    },
+                },
+            });
+        }
+
+        // --- Incidents by severity ---
+        const bySeverity = metrics.by_severity || {};
+        const sevLabels = Object.keys(bySeverity);
+        const sevData = Object.values(bySeverity).map(Number);
+        const severityColors = {
+            'critical': '#dc2626',
+            'high':      '#f97316',
+            'medium':    '#eab308',
+            'low':       '#22c55e',
+        };
+        if (severityCanvas && sevLabels.length > 0) {
+            _severityChartInstance = new Chart(severityCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: sevLabels.map(l => T(
+                        l === 'critical' ? 'حرج' : l === 'high' ? 'مرتفع' : l === 'medium' ? 'متوسط' : l === 'low' ? 'منخفض' : l,
+                        l.charAt(0).toUpperCase() + l.slice(1)
+                    )),
+                    datasets: [{
+                        data: sevData,
+                        backgroundColor: sevLabels.map(s => severityColors[s.toLowerCase()] || '#94a3b8'),
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}` } },
+                    },
+                },
+            });
+        }
+    }
+
     function exportReport() {
-        const reportId = document.getElementById('exportBtn').getAttribute('data-report-id');
+        const reportId = document.getElementById('exportBtn')?.getAttribute('data-report-id');
         if (reportId) {
             window.location.href = `/api/admin/reports/incidents/${reportId}/export`;
         }
     }
 
-    function formatDate(dateStr) {
-        return new Date(dateStr).toLocaleDateString(IS_EN ? 'en-US' : 'ar-EG');
-    }
-
-    function formatDateTime(dateStr) {
-        return new Date(dateStr).toLocaleString(IS_EN ? 'en-US' : 'ar-EG');
-    }
-
-    function showAlert(message, type) {
+    function showAlert(message, type = 'info') {
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alertDiv.setAttribute('role', 'alert');
+        alertDiv.style.cssText = 'top: 20px; inset-inline-end: 20px; z-index: 9999; min-width: 300px;';
         alertDiv.innerHTML = `
-        ${escHtml(message)}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ _('إغلاق') }}"></button>
-    `;
+            ${escHtml(message)}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="${T('إغلاق', 'Close')}"></button>
+        `;
         document.body.appendChild(alertDiv);
-
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 5000);
+        setTimeout(() => { alertDiv.remove(); }, 5000);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
         loadReports();
     });
-
-    function escHtml(s) {
-        return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    }
 </script>
 {% endblock %}

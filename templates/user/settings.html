@@ -40,7 +40,7 @@
                     <i class="bi bi-bell me-3 text-secondary"></i>
                     {% if ui_lang == 'en' %}Notifications{% else %}الإشعارات{% endif %}
                 </a>
-                {% if current_user.role == 'admin' %}
+                {% if current_user.role and current_user.role.value == 'ADMIN' %}
                 <a class="list-group-item list-group-item-action d-flex align-items-center" id="system-tab"
                     data-bs-toggle="list" href="#system" role="tab">
                     <i class="bi bi-sliders me-3 text-secondary"></i>
@@ -61,14 +61,14 @@
                         <form>
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label for="firstName" class="form-label">{% if ui_lang == 'en' %}First Name{% else %}الاسم الأول{% endif %}</label>
-                                    <input type="text" id="firstName" class="form-control"
-                                        value="{{ current_user.first_name }}">
+                                    <label for="username" class="form-label">{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</label>
+                                    <input type="text" id="username" class="form-control"
+                                        value="{{ current_user.username }}" readonly disabled>
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="lastName" class="form-label">{% if ui_lang == 'en' %}Last Name{% else %}اسم العائلة{% endif %}</label>
-                                    <input type="text" id="lastName" class="form-control"
-                                        value="{{ current_user.last_name }}">
+                                    <label for="fullName" class="form-label">{% if ui_lang == 'en' %}Full Name{% else %}الاسم الكامل{% endif %}</label>
+                                    <input type="text" id="fullName" class="form-control"
+                                        value="{{ current_user.full_name or '' }}">
                                 </div>
                                 <div class="col-md-12">
                                     <label for="email" class="form-label">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label>
@@ -145,7 +145,7 @@
                     </div>
 
                     <!-- System Settings (Admin Only) -->
-                    {% if current_user.role == 'admin' %}
+                    {% if current_user.role and current_user.role.value == 'ADMIN' %}
                     <div class="tab-pane fade" id="system" role="tabpanel">
                         <h5 class="mb-4 text-danger fw-bold">{% if ui_lang == 'en' %}General System Settings{% else %}إعدادات النظام العامة{% endif %}</h5>
                         <form>
