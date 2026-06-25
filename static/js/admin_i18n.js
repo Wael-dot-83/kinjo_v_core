@@ -795,11 +795,11 @@ class AdminI18n {
    * Setup language switcher component
    */
   setupLanguageSwitcher() {
-    const switcher = document.querySelector(".admin-language-switcher");
+    const switcher = document.querySelector(".language-switcher");
     if (!switcher) return;
 
-    // Options must go inside .admin-dropdown-menu so they stay hidden until opened
-    const menu = switcher.querySelector(".admin-dropdown-menu");
+    // Options must go inside .dropdown-menu so they stay hidden until opened
+    const menu = switcher.querySelector(".dropdown-menu");
     if (!menu) return;
 
     menu.innerHTML = ""; // clear before populating to prevent duplicates on re-init

@@ -3,15 +3,15 @@
 {% block title %}{% if ui_lang == 'en' %}Alert Management{% else %}إدارة التنبيهات{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item">
+<a href="/admin/dashboard" class="breadcrumb-item">
   <i class="bi bi-house"></i> {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/analytics" class="admin-breadcrumb-item">
+<span class="breadcrumb-separator">/</span>
+<a href="/admin/analytics" class="breadcrumb-item">
   {% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">
   {% if ui_lang == 'en' %}Alerts{% else %}التنبيهات{% endif %}
 </span>
 {% endblock %}
@@ -30,7 +30,7 @@
       {% if ui_lang == 'en' %}View and manage system alerts across all governorates.{% else %}عرض وإدارة تنبيهات النظام عبر جميع المحافظات.{% endif %}
     </p>
   </div>
-  <button id="refreshAlertsBtn" class="admin-btn admin-btn-ghost">
+  <button id="refreshAlertsBtn" class="btn btn-ghost">
     <i class="bi bi-arrow-clockwise me-1"></i>
     {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
   </button>
@@ -38,8 +38,8 @@
 
 <div id="alertsRoot">
   <!-- Filters -->
-  <div class="admin-card mb-3">
-    <div class="admin-card-body">
+  <div class="card mb-3">
+    <div class="card-body">
       <div class="row g-3 align-items-end">
         <div class="col-md-3">
           <label for="severityFilter" class="form-label small fw-semibold">
@@ -98,13 +98,13 @@
   </div>
 
   <!-- Alerts Table -->
-  <div class="admin-card">
-    <div class="admin-card-header">
-      <h2 class="admin-card-title mb-0">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title mb-0">
         {% if ui_lang == 'en' %}Alerts{% else %}التنبيهات{% endif %}
       </h2>
     </div>
-    <div class="admin-card-body p-0">
+    <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0" id="alertsTable">
           <thead class="table-light">

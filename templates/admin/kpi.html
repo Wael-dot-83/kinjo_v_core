@@ -3,11 +3,11 @@
 {% block title %}{% if ui_lang == 'en' %}KPI Network Dashboard{% else %}لوحة مؤشرات الأداء{% endif %} — KinJo Admin{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard">
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard">
     <i class="bi bi-house" aria-hidden="true"></i>
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">
     {% if ui_lang == 'en' %}KPI Dashboard{% else %}مؤشرات الأداء{% endif %}
 </span>
 {% endblock %}
@@ -15,21 +15,21 @@
 {% block content %}
 
 <!-- Page Header -->
-<div class="admin-page-header mb-4">
+<div class="page-header mb-4">
     <div>
         <p class="small fw-600 text-primary mb-1">
             <i class="bi bi-graph-up-arrow me-1" aria-hidden="true"></i>
             <span>{% if ui_lang == 'en' %}Network Analytics{% else %}تحليلات الشبكة{% endif %}</span>
         </p>
-        <h1 class="admin-page-title">
+        <h1 class="page-title">
             {% if ui_lang == 'en' %}KPI Network Dashboard{% else %}لوحة مؤشرات الأداء الرئيسية{% endif %}
         </h1>
-        <p class="admin-page-subtitle">
+        <p class="page-subtitle">
             {% if ui_lang == 'en' %}Monitor performance indicators across all kindergartens in the network{% else %}رصد مؤشرات الأداء عبر جميع روضات الشبكة{% endif %}
         </p>
     </div>
-    <div class="admin-page-actions">
-        <button class="admin-btn admin-btn-secondary" onclick="loadKPIData()" id="refreshBtn">
+    <div class="page-actions">
+        <button class="btn btn-secondary" onclick="loadKPIData()" id="refreshBtn">
             <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
         </button>
@@ -67,13 +67,13 @@
             </div>
             <div class="col-auto">
                 <div class="d-flex gap-1">
-                    <button class="admin-btn admin-btn-secondary btn-sm" onclick="setRange(30)">
+                    <button class="btn btn-secondary btn-sm" onclick="setRange(30)">
                         30 {% if ui_lang == 'en' %}d{% else %}ي{% endif %}
                     </button>
-                    <button class="admin-btn admin-btn-secondary btn-sm" onclick="setRange(90)">
+                    <button class="btn btn-secondary btn-sm" onclick="setRange(90)">
                         90 {% if ui_lang == 'en' %}d{% else %}ي{% endif %}
                     </button>
-                    <button class="admin-btn admin-btn-primary btn-sm" onclick="loadKPIData()">
+                    <button class="btn btn-primary btn-sm" onclick="loadKPIData()">
                         <i class="bi bi-funnel" aria-hidden="true"></i>
                         {% if ui_lang == 'en' %}Apply{% else %}تطبيق{% endif %}
                     </button>
@@ -99,7 +99,7 @@
             <strong>{% if ui_lang == 'en' %}Error loading data{% else %}خطأ في تحميل البيانات{% endif %}</strong>
             <div class="small" id="kpiErrorMsg"></div>
         </div>
-        <button class="admin-btn admin-btn-secondary btn-sm ms-auto" onclick="loadKPIData()">
+        <button class="btn btn-secondary btn-sm ms-auto" onclick="loadKPIData()">
             {% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}
         </button>
     </div>

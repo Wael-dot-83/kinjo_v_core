@@ -3,16 +3,16 @@
 {% block title %}{% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
-<span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/messages" class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Compose{% else %}إنشاء رسالة{% endif %}</span>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="breadcrumb-separator">/</span>
+<a href="/admin/messages" class="breadcrumb-item">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Compose{% else %}إنشاء رسالة{% endif %}</span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4">
-  <h1 class="admin-page-title">
+<div class="page-header mb-4">
+  <h1 class="page-title">
     <i class="bi bi-envelope-plus me-2" aria-hidden="true"></i>
     {% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %}
   </h1>

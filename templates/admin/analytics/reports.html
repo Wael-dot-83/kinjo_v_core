@@ -4,22 +4,22 @@
 {% block title %}{% if ui_lang == 'en' %}Reports Center{% else %}مركز التقارير{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
-<span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/analytics" class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</span>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="breadcrumb-separator">/</span>
+<a href="/admin/analytics" class="breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header reports-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
+<div class="page-header reports-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
   <div class="reports-page-titleblock">
-    <h1 class="admin-page-title mb-0" style="font: var(--type-page-title)">
+    <h1 class="page-title mb-0" style="font: var(--type-page-title)">
       <i class="bi bi-file-earmark-text me-2"></i>
       {% if ui_lang == 'en' %}Reports Center{% else %}مركز التقارير{% endif %}
     </h1>
-    <small class="text-muted mt-1" id="reportsLastUpdated">
-      <i class="bi bi-clock"></i>
+    <small class="text-muted mt-1" id="reportsLastUpdated" aria-live="polite" aria-atomic="true">
+      <i class="bi bi-clock" aria-hidden="true"></i>
       <span>{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
     </small>
   </div>
@@ -27,8 +27,7 @@
     {{ date_range_filter(
       start_id="periodStart",
       end_id="periodEnd",
-      governorate_id="governorateFilter",
-      show_governorate=(current_user.role in ["ADMIN","SUPERVISOR"]),
+      show_governorate=False,
       refresh_btn_id="refreshReportBtn",
       on_refresh="loadReportPreview",
       show_export=False,
@@ -123,28 +122,28 @@
 
           <!-- Dynamic Filters -->
           <div class="mb-3">
-            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+            <label class="form-label fw-bold" for="governorateFilter">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
             <select class="form-select" id="governorateFilter">
               <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}كل المحافظات{% endif %}</option>
             </select>
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+            <label class="form-label fw-bold" for="kindergartenFilter">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
             <select class="form-select" id="kindergartenFilter">
               <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}كل الروضات{% endif %}</option>
             </select>
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+            <label class="form-label fw-bold" for="statusFilter">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
             <select class="form-select" id="statusFilter">
               <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
             </select>
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</label>
+            <label class="form-label fw-bold" for="severityFilter">{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</label>
             <select class="form-select" id="severityFilter">
               <option value="">{% if ui_lang == 'en' %}All Severities{% else %}كل الدرجات{% endif %}</option>
               <option value="LOW">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</option>
@@ -155,7 +154,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</label>
+            <label class="form-label fw-bold" for="sourceFilter">{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</label>
             <select class="form-select" id="sourceFilter">
               <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
               <option value="WEB">Web</option>
@@ -165,7 +164,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-bold">{% if ui_lang == 'en' %}Reviewer{% else %}المراجع{% endif %}</label>
+            <label class="form-label fw-bold" for="reviewerFilter">{% if ui_lang == 'en' %}Reviewer{% else %}المراجع{% endif %}</label>
             <select class="form-select" id="reviewerFilter">
               <option value="">{% if ui_lang == 'en' %}All Reviewers{% else %}كل المُراجعين{% endif %}</option>
             </select>
@@ -173,7 +172,7 @@
 
           <div class="row g-2 mb-3">
             <div class="col-6">
-              <label class="form-label fw-bold">{% if ui_lang == 'en' %}Format{% else %}الصيغة{% endif %}</label>
+              <label class="form-label fw-bold" for="exportFormat">{% if ui_lang == 'en' %}Format{% else %}الصيغة{% endif %}</label>
               <select class="form-select" id="exportFormat">
                 <option value="CSV">CSV</option>
                 <option value="EXCEL">Excel</option>
@@ -182,7 +181,7 @@
               </select>
             </div>
             <div class="col-6">
-              <label class="form-label fw-bold">{% if ui_lang == 'en' %}Language{% else %}اللغة{% endif %}</label>
+              <label class="form-label fw-bold" for="reportLang">{% if ui_lang == 'en' %}Language{% else %}اللغة{% endif %}</label>
               <select class="form-select" id="reportLang">
                 <option value="ar">العربية</option>
                 <option value="en">English</option>
@@ -318,6 +317,26 @@
   </div>
 </div>
 
+<!-- Export Job Error Banner -->
+<div id="exportJobErrorBanner" class="alert alert-danger d-none mb-3" role="alert" aria-live="assertive" aria-atomic="true">
+  <div class="d-flex align-items-start gap-3">
+    <i class="bi bi-exclamation-triangle-fill fs-5 flex-shrink-0 mt-1" aria-hidden="true"></i>
+    <div class="flex-grow-1">
+      <strong>{% if ui_lang == 'en' %}Export Failed{% else %}فشل التصدير{% endif %}</strong>
+      <div id="exportJobErrorMsg" class="small mt-1"></div>
+      <div class="mt-2 d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-sm btn-outline-danger" id="retryExportBtn">
+          <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>{% if ui_lang == 'en' %}Retry{% else %}إعادة المحاولة{% endif %}
+        </button>
+        <a id="exportJobTraceLink" href="#" class="btn btn-sm btn-outline-secondary d-none">
+          <i class="bi bi-journal-text me-1" aria-hidden="true"></i>{% if ui_lang == 'en' %}View Logs{% else %}عرض السجلات{% endif %}
+        </a>
+      </div>
+    </div>
+    <button type="button" class="btn-close ms-auto" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}" onclick="document.getElementById('exportJobErrorBanner').classList.add('d-none')"></button>
+  </div>
+</div>
+
 <!-- Save Template Modal -->
 <div class="modal fade" id="saveTemplateModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
@@ -328,7 +347,7 @@
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <label class="form-label fw-bold">{% if ui_lang == 'en' %}Template Name{% else %}اسم القالب{% endif %}</label>
+          <label class="form-label fw-bold" for="templateName">{% if ui_lang == 'en' %}Template Name{% else %}اسم القالب{% endif %}</label>
           <input type="text" class="form-control" id="templateName" placeholder="{% if ui_lang == 'en' %}e.g., Monthly Attendance{% else %}مثال: ملخص الحضور الشهري{% endif %}">
         </div>
       </div>
@@ -350,11 +369,11 @@
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <label class="form-label fw-bold">{% if ui_lang == 'en' %}Schedule Name{% else %}اسم الجدولة{% endif %}</label>
+          <label class="form-label fw-bold" for="scheduleName">{% if ui_lang == 'en' %}Schedule Name{% else %}اسم الجدولة{% endif %}</label>
           <input type="text" class="form-control" id="scheduleName" placeholder="{% if ui_lang == 'en' %}e.g., Weekly Incident Summary{% else %}مثال: ملخص الحوادث الأسبوعي{% endif %}">
         </div>
         <div class="mb-3">
-          <label class="form-label fw-bold">{% if ui_lang == 'en' %}Frequency{% else %}التكرار{% endif %}</label>
+          <label class="form-label fw-bold" for="scheduleFrequency">{% if ui_lang == 'en' %}Frequency{% else %}التكرار{% endif %}</label>
           <select class="form-select" id="scheduleFrequency">
             <option value="daily">{% if ui_lang == 'en' %}Daily{% else %}يومي{% endif %}</option>
             <option value="weekly">{% if ui_lang == 'en' %}Weekly{% else %}أسبوعي{% endif %}</option>
@@ -364,7 +383,7 @@
           </select>
         </div>
         <div class="mb-3">
-          <label class="form-label fw-bold">{% if ui_lang == 'en' %}Recipients (comma-separated user IDs or emails){% else %}المستلمون (معرّفات المستخدمين أو البريد مفصولة بفاصلة){% endif %}</label>
+          <label class="form-label fw-bold" for="scheduleRecipients">{% if ui_lang == 'en' %}Recipients (comma-separated user IDs or emails){% else %}المستلمون (معرّفات المستخدمين أو البريد مفصولة بفاصلة){% endif %}</label>
           <input type="text" class="form-control" id="scheduleRecipients" placeholder="1, 2, admin@example.com">
         </div>
       </div>

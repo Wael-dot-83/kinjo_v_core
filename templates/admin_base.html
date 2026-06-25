@@ -1,11 +1,9 @@
-﻿<!doctype html>
-{% if ui_lang == 'en' %}
-<html lang="en" dir="{{ ui_dir | default('ltr') }}">
-  {% else %}
-  <html lang="ar-JO" dir="{{ ui_dir | default('rtl') }}">
-    {% endif %}
-  <head>
-    <meta charset="UTF-8" />
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-ui-lang="{{ ui_lang | default('ar') }}">
+<head>
+  <meta charset="utf-8" />
+  <!-- Patch lang/dir immediately so every script that reads documentElement.lang gets the right value. -->
+  <script>(function(){var h=document.documentElement,l=h.getAttribute('data-ui-lang')||'ar';h.lang=l;h.dir=l==='en'?'ltr':'rtl';}());</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
@@ -36,13 +34,7 @@
       rel="stylesheet"
     />
 
-    <!-- Admin Design System CSS -->
-    <link rel="stylesheet" href="/static/css/admin_design_system.css?v=2.9" />
-    <!-- Design token layer: dark mode, semantic aliases, a11y primitives, layout utils -->
-    <link rel="stylesheet" href="/static/css/design-tokens.css?v=1.0" />
-    <script src="/static/js/sanitize.js"></script>
-
-    <!-- Bootstrap CSS (direction-aware on initial SSR) -->
+        <!-- Bootstrap CSS (direction-aware on initial SSR) -->
     <link
       id="bootstrapCss"
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/{% if ui_dir == 'ltr' %}bootstrap.min.css{% else %}bootstrap.rtl.min.css{% endif %}"
@@ -62,12 +54,14 @@
       crossorigin="anonymous"
     />
 
-    <title>
-      {% block title %}{% if ui_lang == 'en' %}KinJo Admin{% else %}إدارة
-      كينجو{% endif %}{% endblock %}
-    </title>
+    <!-- Admin Design System CSS -->
+    <link rel="stylesheet" href="/static/css/admin_design_system.css?v=2.9" />
+    <!-- Design token layer: dark mode, semantic aliases, a11y primitives, layout utils -->
+    <link rel="stylesheet" href="/static/css/design-tokens.css?v=1.0" />
+    <script src="/static/js/sanitize.js"></script>
 
-    <!-- Brand token override: loaded AFTER Bootstrap so our values win over --bs-primary: #0d6efd -->
+
+<!-- Brand token override: loaded AFTER Bootstrap so our values win over --bs-primary: #0d6efd -->
     <style>
       :root {
         --bs-primary:                #1F5E47;
@@ -87,66 +81,66 @@
         --bs-info-text-emphasis:     #163d2e;
       }
       /* Explicit admin-scoped overrides for elements that use Bootstrap link/primary colours */
-      .admin-container a:not(.admin-btn):not([class*="btn"]):not(.admin-sidebar a):not(.admin-dropdown-item) {
+      .app-container a:not(.btn):not([class*="btn"]):not(.sidebar a):not(.dropdown-item) {
         color: var(--admin-primary, #1F5E47);
       }
-      .admin-container a:not(.admin-btn):not([class*="btn"]):not(.admin-sidebar a):not(.admin-dropdown-item):hover {
+      .app-container a:not(.btn):not([class*="btn"]):not(.sidebar a):not(.dropdown-item):hover {
         color: var(--admin-primary-hover, #2F7D62);
       }
       /* Breadcrumbs are inside the dark-green header — use white */
-      .admin-container .admin-breadcrumb-item,
-      .admin-container .admin-breadcrumb-item span,
-      .admin-container .admin-breadcrumb-item a {
+      .app-container .breadcrumb-item,
+      .app-container .breadcrumb-item span,
+      .app-container .breadcrumb-item a {
         color: rgba(255, 255, 255, 0.85);
       }
-      .admin-container .admin-breadcrumb-item a:hover {
+      .app-container .breadcrumb-item a:hover {
         color: #ffffff;
       }
-      .admin-container .admin-breadcrumb-separator {
+      .app-container .breadcrumb-separator {
         color: rgba(255, 255, 255, 0.45);
       }
       /* Dropdowns have their own white background — keep dark text there */
-      .admin-container .admin-dropdown-item {
+      .app-container .dropdown-item {
         color: var(--admin-text-primary, #333333);
       }
-      .admin-container .admin-dropdown-item:hover {
+      .app-container .dropdown-item:hover {
         color: var(--admin-primary, #1F5E47);
       }
-      .admin-container .text-primary {
+      .app-container .text-primary {
         color: var(--admin-primary, #1F5E47) !important;
       }
-      .admin-container .bg-primary {
+      .app-container .bg-primary {
         background-color: var(--admin-primary, #1F5E47) !important;
       }
-      .admin-container .border-primary {
+      .app-container .border-primary {
         border-color: var(--admin-primary, #1F5E47) !important;
       }
-      .admin-container .btn-primary {
+      .app-container .btn-primary {
         background: linear-gradient(135deg, #1F5E47, #163d2e) !important;
         border-color: #1F5E47 !important;
         color: #ffffff !important;
       }
-      .admin-container .btn-primary:hover,
-      .admin-container .btn-primary:focus {
+      .app-container .btn-primary:hover,
+      .app-container .btn-primary:focus {
         background: linear-gradient(135deg, #2F7D62, #1F5E47) !important;
         border-color: #2F7D62 !important;
       }
-      .admin-container .spinner-border.text-primary {
+      .app-container .spinner-border.text-primary {
         color: var(--admin-primary, #1F5E47) !important;
       }
       /* Form check (checkbox/radio) checked state — overrides Bootstrap's #0d6efd fill */
-      .admin-container .form-check-input:checked {
+      .app-container .form-check-input:checked {
         background-color: var(--admin-primary, #1F5E47) !important;
         border-color: var(--admin-primary, #1F5E47) !important;
       }
-      .admin-container .form-check-input:focus {
+      .app-container .form-check-input:focus {
         border-color: var(--admin-primary, #1F5E47) !important;
         box-shadow: 0 0 0 0.25rem rgba(31, 94, 71, 0.25) !important;
       }
       /* Info utility class overrides — Bootstrap default is cyan; remap to brand green */
-      .admin-container .text-info  { color: #2F7D62 !important; }
-      .admin-container .bg-info    { background-color: #2F7D62 !important; }
-      .admin-container .border-info { border-color: #2F7D62 !important; }
+      .app-container .text-info  { color: #2F7D62 !important; }
+      .app-container .bg-info    { background-color: #2F7D62 !important; }
+      .app-container .border-info { border-color: #2F7D62 !important; }
       /* Bootstrap .btn-info / .btn-outline-info use component-scoped vars,
          not :root --bs-info, so must be overridden at the component level too */
       .btn-info {
@@ -176,18 +170,25 @@
       }
     </style>
 
-    {% block extra_head %}{% endblock %}
+
+<title>
+      {% block title %}{% if ui_lang == 'en' %}KinJo Admin{% else %}إدارة
+      كينجو{% endif %}{% endblock %}
+    </title>
+
+        {% block extra_head %}{% endblock %}
   </head>
 
-  <body class="admin-container">
+  <body class="app-container">
     <!-- Skip navigation: keyboard users jump past sidebar directly to main content -->
     <a href="#main-content" class="skip-nav" data-i18n="a11y.skip_nav">تخطي إلى المحتوى الرئيسي</a>
     {% include 'components/impersonation_banner.html' %}
-    <div class="admin-layout" id="admin-layout">
+    <div class="layout" id="admin-layout">
       <!-- Sidebar -->
-      <aside class="admin-sidebar" id="admin-sidebar">
-        <div class="admin-sidebar-header">
-          <a href="/admin/dashboard" class="admin-sidebar-logo">
+      <aside class="sidebar" id="admin-sidebar">
+        <div class="sidebar-header">
+          <a href="/admin/dashboard" class="sidebar-logo">
+            <img src="/static/favicon.svg" width="32" height="32" alt="" class="sidebar-logo-icon" aria-hidden="true" loading="eager" />
             <span data-i18n="nav.brand">KinJo</span>
           </a>
         </div>
@@ -196,29 +197,38 @@
         {% if current_user %}
         {% set admin_display_name = current_user.full_name or current_user.username %}
         {% set admin_initials = (admin_display_name[0] | upper) if admin_display_name else 'A' %}
-        <div class="admin-sidebar-profile">
-          <div class="admin-sidebar-profile-avatar">
+        <div class="sidebar-profile">
+          <div class="sidebar-profile-avatar">
             <img
               src="/static/img/admin_avatar.png"
               alt="{% if ui_lang == 'en' %}Admin profile{% else %}صورة المدير{% endif %}"
               loading="eager"
               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
             />
-            <span class="admin-sidebar-profile-initials" style="display:none;">
+            <span class="sidebar-profile-initials" style="display:none;">
               {{ admin_initials }}
             </span>
           </div>
-          <div class="admin-sidebar-profile-info">
-            <div class="admin-sidebar-profile-org" style="font-size:0.82rem;font-weight:700;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          <div class="sidebar-profile-info">
+            <div class="sidebar-profile-org" style="font-size:0.82rem;font-weight:700;color:#ffffff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
               {{ admin_display_name }}
             </div>
-            <div class="admin-sidebar-profile-dept">
+            <div class="sidebar-profile-dept">
               {% if ui_lang == 'en' %}Family &amp; Childhood Directorate{% else %}مديرية الأسرة والطفولة{% endif %}
             </div>
-            <div class="admin-sidebar-profile-role">
-              <span class="admin-sidebar-profile-badge">
+            <div class="sidebar-profile-role">
+              <span class="sidebar-profile-badge">
                 {% if ui_lang == 'en' %}Administrator{% else %}مدير النظام{% endif %}
               </span>
+              <span class="ms-2 text-success" style="font-size:0.72rem;">
+                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                <small>{% if ui_lang == 'en' %}Logged in{% else %}مسجل الدخول{% endif %}</small>
+              </span>
+            </div>
+            <div class="mt-1">
+              <a href="/admin/profile" style="font-size:0.72rem;color:rgba(255,255,255,0.7);text-decoration:none;">
+                {% if ui_lang == 'en' %}View full profile &rarr;{% else %}عرض الملف الشخصي &larr;{% endif %}
+              </a>
             </div>
           </div>
         </div>
@@ -242,7 +252,7 @@
             "label_en": "Management",
             "items": [
               {"href": "/admin/users", "icon": "bi-people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users"], "active_prefixes": ["/admin/users/"]},
-              {"href": "/admin/messages", "icon": "bi-chat-square-text", "label_ar": "التواصل", "label_en": "Communication", "active_paths": ["/admin/messages", "/admin/contact-messages"], "active_prefixes": ["/admin/messages/"]},
+              {"href": "/admin/messages", "icon": "bi-send", "label_ar": "التواصل", "label_en": "Communication", "active_paths": ["/admin/messages", "/admin/contact-messages"], "active_prefixes": ["/admin/messages/"]},
               {"href": "/admin/imported-kindergartens", "icon": "bi-database", "label_ar": "إدارة البيانات", "label_en": "Data Management", "active_paths": ["/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs"]}
             ]
           },
@@ -252,7 +262,7 @@
             "label_ar": "التحليلات والتقارير",
             "label_en": "Analytics & Reports",
             "items": [
-              {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics"]},
+              {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics", "/admin/kpi", "/admin/kg-overview", "/admin/analytics/charts"]},
               {"href": "/admin/analytics/reports", "icon": "bi-file-earmark-text", "label_ar": "التقارير المفصلة", "label_en": "Detailed Reports", "active_paths": ["/admin/analytics/reports"]},
               {"href": "/admin/analytics/daily-reports", "icon": "bi-calendar-day", "label_ar": "التقارير اليومية", "label_en": "Daily Reports", "active_paths": ["/admin/analytics/daily-reports"]},
               {"href": "/admin/daily-reports-organization", "icon": "bi-calendar-check", "label_ar": "جدولة التقارير", "label_en": "Report Scheduling", "active_paths": ["/admin/daily-reports-organization"]}
@@ -275,7 +285,7 @@
             "label_en": "Heat Map",
             "items": [
               {"href": "/admin/heatmap", "icon": "bi-globe-asia-australia", "label_ar": "نظرة عامة على الخريطة", "label_en": "Map Overview", "active_paths": ["/admin/heatmap"]},
-              {"href": "/admin/heatmap#governorates", "icon": "bi-geo-alt", "label_ar": "تحليل المحافظات", "label_en": "Governorate Analysis", "active_paths": []}
+              {"href": "/admin/heatmap#governorates", "icon": "bi-pin-map", "label_ar": "تحليل المحافظات", "label_en": "Governorate Analysis", "active_paths": []}
             ]
           },
           {
@@ -284,8 +294,8 @@
             "label_ar": "الحوكمة",
             "label_en": "Governance",
             "items": [
-              {"href": "/admin/governance-reports", "icon": "bi-clipboard-data", "label_ar": "مؤشرات الحوكمة", "label_en": "Governance Indicators", "active_paths": ["/admin/governance-reports"]},
-              {"href": "/admin/classification", "icon": "bi-award", "label_ar": "التصنيف والمقارنات", "label_en": "Classification and Benchmarking", "active_paths": ["/admin/classification"]}
+              {"href": "/admin/governance-reports", "icon": "bi-clipboard-data", "label_ar": "مؤشرات الحوكمة", "label_en": "Governance Indicators", "active_paths": ["/admin/governance-reports", "/admin/governance/reminders"]},
+              {"href": "/admin/classification", "icon": "bi-award", "label_ar": "التصنيف والمقارنات", "label_en": "Classification & Benchmarking", "active_paths": ["/admin/classification"]}
             ]
           },
           {
@@ -294,15 +304,15 @@
             "label_ar": "النظام",
             "label_en": "System",
             "items": [
-              {"href": "/admin/audit-logs", "icon": "bi-shield-lock", "label_ar": "الأمان", "label_en": "Security", "active_paths": ["/admin/audit-logs", "/admin/alerts", "/admin/safety-analytics", "/admin/impersonate"]},
+              {"href": "/admin/audit-logs", "icon": "bi-shield-lock", "label_ar": "الأمان", "label_en": "Security & Audit", "active_paths": ["/admin/audit-logs", "/admin/alerts", "/admin/safety-analytics", "/admin/impersonate"]},
               {"href": "/admin/settings", "icon": "bi-gear", "label_ar": "الإعدادات", "label_en": "Settings", "active_paths": ["/admin/settings"]},
               {"href": "/admin/observability", "icon": "bi-speedometer", "label_ar": "المراقبة والأداء", "label_en": "Observability", "active_paths": ["/admin/observability"]}
             ]
           }
         ] %}
 
-        <nav class="admin-sidebar-nav" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
-          <ul class="sidebar-menu admin-sidebar-menu" role="list">
+        <nav class="sidebar-nav" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
+          <ul class="sidebar-menu sidebar-menu" role="list">
             {% for section in sidebar_sections %}
               {% set section_state = namespace(active=false) %}
               {% for item in section["items"] %}
@@ -359,13 +369,13 @@
       </aside>
 
       <!-- Main Content Area -->
-      <main class="admin-main" id="main-content">
+      <main class="main" id="main-content">
         <!-- Header -->
-        <header class="admin-header">
-          <div class="admin-header-left">
+        <header class="header">
+          <div class="header-left">
             <!-- Mobile menu toggle -->
             <button
-              class="admin-btn admin-btn-ghost admin-btn-icon d-lg-none"
+              class="btn btn-ghost btn-icon d-lg-none"
               id="sidebar-toggle"
               data-i18n-aria="nav.toggle_menu"
               aria-label="{% if ui_lang == 'en' %}Toggle sidebar menu{% else %}تبديل القائمة الجانبية{% endif %}"
@@ -375,9 +385,9 @@
             </button>
 
             <!-- Breadcrumb -->
-            <nav class="admin-breadcrumb" aria-label="breadcrumb">
+            <nav class="breadcrumb" aria-label="breadcrumb">
               {% block breadcrumb %}
-              <a href="/admin/dashboard" class="admin-breadcrumb-item">
+              <a href="/admin/dashboard" class="breadcrumb-item">
                 <i class="bi bi-house"></i>
                 <span data-i18n="nav.dashboard">Dashboard</span>
               </a>
@@ -385,10 +395,10 @@
             </nav>
           </div>
 
-          <div class="admin-header-right">
+          <div class="header-right">
             <!-- Help -->
             <button
-              class="admin-btn admin-btn-ghost admin-btn-icon"
+              class="btn btn-ghost btn-icon"
               data-bs-toggle="modal"
               data-bs-target="#helpExpressModal"
               aria-label="{% if ui_lang == 'en' %}Help{% else %}مساعدة{% endif %}"
@@ -398,60 +408,56 @@
             </button>
 
             <!-- Language Switcher -->
-            <div class="admin-language-switcher admin-dropdown">
+            <div class="language-switcher dropdown">
               <button
-                class="admin-btn admin-btn-ghost admin-dropdown-trigger"
+                class="btn btn-ghost dropdown-trigger"
                 aria-label="{% if ui_lang == 'en' %}Switch language{% else %}تبديل اللغة{% endif %}"
               >
                 <i class="bi bi-globe" aria-hidden="true"></i>
-                <span class="admin-language-current">
+                <span class="language-current">
                   {% if ui_lang == 'en' %}
-                  <span class="admin-language-flag" aria-hidden="true">🇬🇧</span>
+                  <span class="language-flag" aria-hidden="true">🇬🇧</span>
                   <span>English</span>
                   {% else %}
-                  <span class="admin-language-flag" aria-hidden="true">🇯🇴</span>
+                  <span class="language-flag" aria-hidden="true">🇯🇴</span>
                   <span>العربية</span>
                   {% endif %}
                 </span>
                 <i class="bi bi-chevron-down" aria-hidden="true"></i>
               </button>
-              <div class="admin-dropdown-menu">
+              <div class="dropdown-menu">
                 <!-- Language options will be populated by JavaScript -->
               </div>
             </div>
 
             <!-- User Menu -->
-            <div class="admin-user-menu admin-dropdown">
+            <div class="user-menu dropdown">
               <button
-                class="admin-btn admin-btn-ghost admin-dropdown-trigger"
+                class="btn btn-ghost dropdown-trigger"
                 data-i18n-aria="nav.user_menu"
               >
-                <div class="admin-user-avatar">
+                <div class="user-avatar">
                   <img
                     src="/static/img/admin_avatar.png"
                     alt=""
-                    class="admin-user-avatar-img"
+                    class="user-avatar-img"
                     onerror="this.style.display='none';this.nextElementSibling.style.display='inline';"
                   /><i class="bi bi-person-circle" style="display:none;"></i>
                 </div>
-                <span class="admin-user-name">
+                <span class="user-name">
                   {%- if current_user -%}
                     {{ current_user.full_name or current_user.username }}
                   {%- else -%}Admin{%- endif -%}
                 </span>
                 <i class="bi bi-chevron-down"></i>
               </button>
-              <div class="admin-dropdown-menu">
-                <a href="/admin/profile" class="admin-dropdown-item">
+              <div class="dropdown-menu">
+                <a href="/admin/profile" class="dropdown-item">
                   <i class="bi bi-person"></i>
                   <span data-i18n="nav.profile">Profile</span>
                 </a>
-                <a href="/admin/settings" class="admin-dropdown-item">
-                  <i class="bi bi-gear"></i>
-                  <span data-i18n="nav.settings">Settings</span>
-                </a>
-                <div class="admin-dropdown-divider"></div>
-                <a href="#" class="admin-dropdown-item" data-action="logout">
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item" data-action="logout">
                   <i class="bi bi-box-arrow-right"></i>
                   <span data-i18n="nav.logout">Logout</span>
                 </a>
@@ -472,7 +478,7 @@
         </div>
 
         <!-- Page Content -->
-        <div class="admin-content">
+        <div class="content">
           {% block page_header %}{% endblock %}
           {% block content %}{% endblock %}
         </div>
@@ -655,14 +661,14 @@
           if (el) {
             var _i = window.AdminI18n;
             var loadingText = text || (_i ? _i.translate("components.loading", "Loading...") : "Loading...");
-            el.innerHTML = '<div class="admin-loading"><div class="admin-spinner"></div><span>' + loadingText + '</span></div>';
+            el.innerHTML = '<div class="loading"><div class="spinner"></div><span>' + loadingText + '</span></div>';
           }
         },
 
         hideLoading: function (element) {
           var el = typeof element === "string" ? document.querySelector(element) : element;
           if (el) {
-            var loading = el.querySelector(".admin-loading");
+            var loading = el.querySelector(".loading");
             if (loading) loading.remove();
           }
         },

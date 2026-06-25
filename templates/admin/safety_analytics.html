@@ -2,12 +2,12 @@
 {% block title %}{% if ui_lang == 'en' %}Incident Analytics — KinJo{% else %}تحليلات الحوادث — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item">
+<a href="/admin/dashboard" class="breadcrumb-item">
     <i class="bi bi-house"></i>
     <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Incident Analytics{% else %}تحليلات الحوادث{% endif %}</span>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Incident Analytics{% else %}تحليلات الحوادث{% endif %}</span>
 {% endblock %}
 
 {% block extra_head %}

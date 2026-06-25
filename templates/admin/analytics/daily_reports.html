@@ -3,14 +3,14 @@
 {% block title %}{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}</span>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}</span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4">
-  <h1 class="admin-page-title">
+<div class="page-header mb-4">
+  <h1 class="page-title">
     <i class="bi bi-file-earmark-text me-2"></i>
     {% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}
   </h1>

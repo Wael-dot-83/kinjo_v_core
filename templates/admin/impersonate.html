@@ -2,29 +2,29 @@
 {% block title %}{% if ui_lang == 'en' %}Impersonation — KinJo{% else %}انتحال الهوية — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item">
+<a href="/admin/dashboard" class="breadcrumb-item">
     <i class="bi bi-house"></i>
     <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Impersonation{% else %}انتحال الهوية{% endif %}</span>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Impersonation{% else %}انتحال الهوية{% endif %}</span>
 {% endblock %}
 
 {% block extra_head %}{% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4">
+<div class="page-header mb-4">
     <div>
         <p class="text-danger small mb-1">
             <i class="bi bi-person-fill-lock me-1" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}System Administrator{% else %}المشرف العام{% endif %}
         </p>
-        <h1 class="admin-page-title">
+        <h1 class="page-title">
             {% if ui_lang == 'en' %}Impersonate Manager{% else %}انتحال هوية مدير{% endif %}
         </h1>
     </div>
-    <div class="admin-page-actions">
-        <a href="/dashboard" class="admin-btn admin-btn-ghost">
+    <div class="page-actions">
+        <a href="/dashboard" class="btn btn-ghost">
             <i class="bi bi-arrow-right me-2"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
         </a>
     </div>

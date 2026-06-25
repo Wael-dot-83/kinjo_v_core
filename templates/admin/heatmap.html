@@ -5,11 +5,11 @@
 {% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
   <i class="bi bi-house" aria-hidden="true"></i>
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">
   {% if ui_lang == 'en' %}3D Geographic Heatmaps{% else %}الخرائط الجغرافية ثلاثية الأبعاد{% endif %}
 </span>
 {% endblock %}

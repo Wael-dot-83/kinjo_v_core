@@ -3,12 +3,12 @@
 {% block title %}{% if ui_lang == 'en' %}Classification & Benchmarks{% else %}التصنيف والمقارنات{% endif %}{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item">
+<a href="/admin/dashboard" class="breadcrumb-item">
     <i class="bi bi-house"></i>
     <span data-i18n="nav.dashboard">Dashboard</span>
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Classification & Benchmarks{% else %}التصنيف والمقارنات{% endif %}</span>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Classification & Benchmarks{% else %}التصنيف والمقارنات{% endif %}</span>
 {% endblock %}
 
 {% block content %}

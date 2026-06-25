@@ -3,15 +3,15 @@
 {% block title %}{% if ui_lang == 'en' %}Imported Kindergartens — KinJo{% else %}الروضات المستوردة — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item">
+<a href="/admin/dashboard" class="breadcrumb-item">
     <i class="bi bi-house"></i> {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/import-kindergartens" class="admin-breadcrumb-item">
+<span class="breadcrumb-separator">/</span>
+<a href="/admin/import-kindergartens" class="breadcrumb-item">
     {% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الروضات{% endif %}
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Imported Kindergartens{% else %}الروضات المستوردة{% endif %}</span>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Imported Kindergartens{% else %}الروضات المستوردة{% endif %}</span>
 {% endblock %}
 
 {% block content %}

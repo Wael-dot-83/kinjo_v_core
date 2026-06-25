@@ -4,17 +4,25 @@
 
 {% block extra_head %}
 <style>
+:root {
+  --color-primary: #1F5E47;
+  --color-primary-600: #2F7D62;
+  --color-primary-50: rgba(31,94,71,0.07);
+}
+
+/* ── Hero ── */
 .profile-hero {
-  background: linear-gradient(135deg, var(--admin-primary, #1F5E47) 0%, var(--admin-primary-hover, #2F7D62) 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-600) 100%);
   border-radius: 16px;
-  padding: 2.5rem 2rem;
+  padding: 2.25rem 2rem;
   color: #fff;
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.75rem;
   margin-bottom: 2rem;
   position: relative;
   overflow: hidden;
+  flex-wrap: wrap;
 }
 .profile-hero::before {
   content: '';
@@ -24,10 +32,10 @@
   pointer-events: none;
 }
 .profile-hero-avatar {
-  width: 100px;
-  height: 100px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
-  border: 4px solid rgba(255,255,255,0.4);
+  border: 3px solid rgba(255,255,255,0.45);
   overflow: hidden;
   flex-shrink: 0;
   background: rgba(255,255,255,0.15);
@@ -37,93 +45,297 @@
   position: relative;
   z-index: 1;
 }
-.profile-hero-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+.profile-hero-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .profile-hero-avatar .avatar-fallback {
   font-size: 2.5rem;
-  color: rgba(255,255,255,0.8);
-  display: none;
+  color: rgba(255,255,255,0.85);
 }
-.profile-hero-info {
-  position: relative;
-  z-index: 1;
-}
-.profile-hero-name {
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
-  line-height: 1.3;
-}
-.profile-hero-dept {
-  font-size: 0.9rem;
-  opacity: 0.85;
-  margin-bottom: 0.6rem;
-}
+.profile-hero-info { position: relative; z-index: 1; flex: 1 1 200px; }
+.profile-hero-name { font-size: 1.35rem; font-weight: 700; margin-bottom: .2rem; }
+.profile-hero-dept { font-size: .85rem; opacity: .82; margin-bottom: .55rem; }
 .profile-hero-badge {
   display: inline-block;
   background: rgba(255,255,255,0.2);
   border: 1px solid rgba(255,255,255,0.4);
   border-radius: 20px;
-  padding: 0.2rem 0.75rem;
-  font-size: 0.8rem;
+  padding: .2rem .75rem;
+  font-size: .78rem;
   font-weight: 600;
-  letter-spacing: 0.03em;
+  letter-spacing: .03em;
+  margin-inline-end: .4rem;
 }
 .profile-hero-meta {
-  margin-top: 0.5rem;
-  font-size: 0.82rem;
-  opacity: 0.75;
+  margin-top: .45rem;
+  font-size: .8rem;
+  opacity: .76;
   display: flex;
-  gap: 1.25rem;
+  gap: 1rem;
   flex-wrap: wrap;
 }
-.profile-hero-meta i { margin-inline-end: 0.3rem; }
+.profile-hero-meta i { margin-inline-end: .25rem; }
+
+/* ── Stat widgets ── */
+.profile-stat-card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 100%;
+}
+.profile-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--color-primary-50);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.profile-stat-value { font-size: 1.4rem; font-weight: 700; line-height: 1.1; color: #111; }
+.profile-stat-label { font-size: .75rem; color: #6b7280; }
+
+/* ── Section cards ── */
+.profile-section-card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 14px;
+  overflow: hidden;
+  height: 100%;
+}
+.profile-section-header {
+  padding: 1rem 1.25rem .8rem;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.profile-section-header h2 {
+  font-size: .95rem;
+  font-weight: 700;
+  margin: 0;
+  color: #111;
+}
+.profile-section-header .section-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--color-primary-50);
+  color: var(--color-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem;
+  flex-shrink: 0;
+}
+.profile-section-body { padding: 1.25rem; }
+
+/* ── Form controls ── */
+.profile-field-label {
+  font-size: .78rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: .35rem;
+  display: block;
+}
+.profile-field-value {
+  font-size: .9rem;
+  color: #111;
+  font-weight: 500;
+}
+.profile-form-control {
+  width: 100%;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  padding: .5rem .75rem;
+  font-size: .88rem;
+  outline: none;
+  transition: border-color .15s;
+  background: #fff;
+  color: #111;
+}
+.profile-form-control:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(31,94,71,.12); }
+.profile-form-control[readonly] { background: #f9fafb; color: #6b7280; cursor: default; }
+
+/* ── Buttons ── */
+.btn-profile-primary {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: .5rem 1.25rem;
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, opacity .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  text-decoration: none;
+}
+.btn-profile-primary:hover { background: var(--color-primary-600); }
+.btn-profile-primary:disabled { opacity: .55; cursor: not-allowed; }
+.btn-profile-secondary {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
+  border-radius: 8px;
+  padding: .5rem 1.25rem;
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  text-decoration: none;
+}
+.btn-profile-secondary:hover { background: var(--color-primary-50); }
+
+/* ── Permission badges ── */
+.perm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  background: var(--color-primary-50);
+  color: var(--color-primary);
+  border: 1px solid rgba(31,94,71,.2);
+  border-radius: 20px;
+  padding: .22rem .75rem;
+  font-size: .76rem;
+  font-weight: 600;
+  margin: .2rem .2rem 0 0;
+}
+
+/* ── Audit log ── */
+.audit-row td { font-size: .82rem; vertical-align: middle; padding: .55rem .75rem; }
+.audit-action-pill {
+  display: inline-block;
+  padding: .15rem .55rem;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #374151;
+  font-family: monospace;
+}
+.audit-action-pill.level-3 { background: #fee2e2; color: #991b1b; }
+.audit-action-pill.level-2 { background: #fef3c7; color: #92400e; }
+.audit-action-pill.level-1 { background: #d1fae5; color: #065f46; }
+
+/* ── Toggle switch ── */
+.toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: #d1d5db;
+  border-radius: 22px;
+  transition: .2s;
+  cursor: pointer;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 16px; width: 16px;
+  top: 3px; left: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: .2s;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--color-primary); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before { transform: translateX(-18px); }
+
+/* ── Toast ── */
+#profile-toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  pointer-events: none;
+}
+[dir="rtl"] #profile-toast-container { right: auto; left: 1.5rem; }
+.profile-toast {
+  background: #1F5E47;
+  color: #fff;
+  border-radius: 10px;
+  padding: .75rem 1.25rem;
+  font-size: .88rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  animation: toast-in .2s ease;
+  min-width: 240px;
+  max-width: 360px;
+  pointer-events: auto;
+}
+.profile-toast.error { background: #dc2626; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 </style>
 {% endblock extra_head %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard">
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard">
   <i class="bi bi-house" aria-hidden="true"></i>
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">
   {% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %}
 </span>
 {% endblock %}
 
 {% block content %}
 
-<!-- Profile Hero -->
-<div class="profile-hero">
-  <div class="profile-hero-avatar">
+<!-- ── Profile Hero ── -->
+<div class="profile-hero" role="banner">
+  <div class="profile-hero-avatar" aria-hidden="true">
     <img
       src="/static/img/admin_avatar.png"
-      alt="{% if ui_lang == 'en' %}Admin profile photo{% else %}صورة الملف الشخصي{% endif %}"
+      alt="{% if ui_lang == 'en' %}Profile photo{% else %}صورة الملف الشخصي{% endif %}"
       onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
     />
     <span class="avatar-fallback" style="display:none;">
       <i class="bi bi-person-fill"></i>
     </span>
   </div>
+
   <div class="profile-hero-info">
-    <div class="profile-hero-name">
+    <div class="profile-hero-name" id="hero-display-name">
       {{ current_user.full_name or current_user.username }}
     </div>
     <div class="profile-hero-dept">
       {% if ui_lang == 'en' %}Family &amp; Childhood Directorate{% else %}مديرية الأسرة والطفولة{% endif %}
     </div>
-    <div class="profile-hero-badge">
-      {% if ui_lang == 'en' %}Administrator{% else %}مدير النظام{% endif %}
+    <div>
+      <span class="profile-hero-badge">
+        {% if ui_lang == 'en' %}Administrator{% else %}مدير النظام{% endif %}
+      </span>
+      {% if current_user.mfa_enabled %}
+      <span class="profile-hero-badge" style="background:rgba(34,197,94,.25);border-color:rgba(34,197,94,.5);">
+        <i class="bi bi-shield-check" aria-hidden="true"></i>
+        2FA
+      </span>
+      {% endif %}
     </div>
     <div class="profile-hero-meta">
-      <span><i class="bi bi-person"></i>{{ current_user.username }}</span>
-      <span><i class="bi bi-envelope"></i>{{ current_user.email or '—' }}</span>
+      <span><i class="bi bi-person" aria-hidden="true"></i>{{ current_user.username }}</span>
+      {% if current_user.email %}
+      <span><i class="bi bi-envelope" aria-hidden="true"></i>{{ current_user.email }}</span>
+      {% endif %}
       {% if current_user.created_at %}
-      <span><i class="bi bi-calendar3"></i>
-        {% if ui_lang == 'en' %}Since{% else %}عضو منذ{% endif %}
+      <span>
+        <i class="bi bi-calendar3" aria-hidden="true"></i>
+        {% if ui_lang == 'en' %}Since{% else %}منذ{% endif %}
         {{ current_user.created_at.strftime('%Y-%m-%d') }}
       </span>
       {% endif %}
@@ -131,86 +343,644 @@
   </div>
 </div>
 
-<div class="row g-4">
-  <div class="col-lg-6">
-    <div class="admin-card">
-      <div class="admin-card-header">
-        <h2 class="admin-card-title">
-          <i class="bi bi-person-vcard me-2"></i>
-          {% if ui_lang == 'en' %}Account Information{% else %}معلومات الحساب{% endif %}
-        </h2>
-      </div>
-      <div class="admin-card-body">
-        <dl class="row mb-0">
-          <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
-              {% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}
-            </dt>
-            <dd class="col-sm-8">{{ current_user.username }}</dd>
-          </div>
-          <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
-              {% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}
-            </dt>
-            <dd class="col-sm-8">{{ current_user.email or '—' }}</dd>
-          </div>
-          <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
-              {% if ui_lang == 'en' %}Full Name{% else %}الاسم الكامل{% endif %}
-            </dt>
-            <dd class="col-sm-8">{{ current_user.full_name or '—' }}</dd>
-          </div>
-          <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
-              {% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}
-            </dt>
-            <dd class="col-sm-8">
-              <span class="badge bg-primary">{{ current_user.role.value if current_user.role else '—' }}</span>
-            </dd>
-          </div>
-          <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
-              {% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}
-            </dt>
-            <dd class="col-sm-8">
-              <span class="badge bg-success">{{ current_user.status.value if current_user.status else '—' }}</span>
-            </dd>
-          </div>
-          {% if current_user.created_at %}
-          <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
-              {% if ui_lang == 'en' %}Member Since{% else %}عضو منذ{% endif %}
-            </dt>
-            <dd class="col-sm-8">{{ current_user.created_at.strftime('%Y-%m-%d') }}</dd>
-          </div>
-          {% endif %}
-        </dl>
+<!-- ── Stat Widgets Row ── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="profile-stat-card">
+      <div class="profile-stat-icon"><i class="bi bi-activity" aria-hidden="true"></i></div>
+      <div>
+        <div class="profile-stat-value">{{ total_actions }}</div>
+        <div class="profile-stat-label">
+          {% if ui_lang == 'en' %}Total Actions{% else %}مجموع الإجراءات{% endif %}
+        </div>
       </div>
     </div>
   </div>
-
-  <div class="col-lg-6">
-    <div class="admin-card">
-      <div class="admin-card-header">
-        <h2 class="admin-card-title">
-          <i class="bi bi-shield-lock me-2"></i>
-          {% if ui_lang == 'en' %}Security{% else %}الأمان{% endif %}
-        </h2>
+  <div class="col-6 col-md-3">
+    <div class="profile-stat-card">
+      <div class="profile-stat-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></div>
+      <div>
+        <div class="profile-stat-value">{{ days_active }}</div>
+        <div class="profile-stat-label">
+          {% if ui_lang == 'en' %}Days Active{% else %}أيام النشاط{% endif %}
+        </div>
       </div>
-      <div class="admin-card-body">
-        <p class="text-muted small mb-3">
-          {% if ui_lang == 'en' %}
-            Use the button below to change your login password.
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="profile-stat-card">
+      <div class="profile-stat-icon"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i></div>
+      <div>
+        <div class="profile-stat-value" style="font-size:1rem;">
+          {% if current_user.last_login_at %}
+            {{ current_user.last_login_at.strftime('%m/%d') }}
+          {% else %}—{% endif %}
+        </div>
+        <div class="profile-stat-label">
+          {% if ui_lang == 'en' %}Last Login{% else %}آخر دخول{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="profile-stat-card">
+      <div class="profile-stat-icon"
+           style="background:{% if current_user.mfa_enabled %}rgba(34,197,94,.12){% else %}rgba(239,68,68,.08){% endif %};
+                  color:{% if current_user.mfa_enabled %}#15803d{% else %}#dc2626{% endif %};">
+        <i class="bi bi-{% if current_user.mfa_enabled %}shield-check{% else %}shield-x{% endif %}" aria-hidden="true"></i>
+      </div>
+      <div>
+        <div class="profile-stat-value"
+             style="font-size:.9rem;color:{% if current_user.mfa_enabled %}#15803d{% else %}#dc2626{% endif %};">
+          {% if current_user.mfa_enabled %}
+            {% if ui_lang == 'en' %}Enabled{% else %}مفعّلة{% endif %}
           {% else %}
-            استخدم الزر أدناه لتغيير كلمة مرور تسجيل الدخول.
+            {% if ui_lang == 'en' %}Disabled{% else %}غير مفعّلة{% endif %}
           {% endif %}
-        </p>
-        <a href="/change-password" class="admin-btn admin-btn-primary">
-          <i class="bi bi-shield-lock me-2"></i>
-          {% if ui_lang == 'en' %}Change Password{% else %}تغيير كلمة المرور{% endif %}
-        </a>
+        </div>
+        <div class="profile-stat-label">
+          {% if ui_lang == 'en' %}Two-Factor Auth{% else %}المصادقة الثنائية{% endif %}
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- ── Main Two-Column Layout ── -->
+<div class="row g-4 mb-4">
+
+  <!-- Left: Edit Profile + Permissions -->
+  <div class="col-lg-6 d-flex flex-column gap-4">
+
+    <!-- Edit Profile Card -->
+    <div class="profile-section-card">
+      <div class="profile-section-header">
+        <div class="section-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></div>
+        <h2>{% if ui_lang == 'en' %}Edit Profile{% else %}تعديل الملف الشخصي{% endif %}</h2>
+      </div>
+      <div class="profile-section-body">
+        <form id="profile-form" novalidate>
+          <div class="row g-3">
+
+            <!-- Username readonly -->
+            <div class="col-12">
+              <label class="profile-field-label" for="field-username">
+                {% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}
+              </label>
+              <input
+                type="text" id="field-username"
+                class="profile-form-control"
+                value="{{ current_user.username }}"
+                readonly aria-readonly="true"
+              />
+            </div>
+
+            <!-- Full Name -->
+            <div class="col-12">
+              <label class="profile-field-label" for="field-full-name">
+                {% if ui_lang == 'en' %}Full Name{% else %}الاسم الكامل{% endif %}
+              </label>
+              <input
+                type="text" id="field-full-name" name="full_name"
+                class="profile-form-control"
+                value="{{ current_user.full_name or '' }}"
+                maxlength="255"
+                placeholder="{% if ui_lang == 'en' %}Enter full name{% else %}أدخل الاسم الكامل{% endif %}"
+              />
+            </div>
+
+            <!-- Email -->
+            <div class="col-12">
+              <label class="profile-field-label" for="field-email">
+                {% if ui_lang == 'en' %}Email Address{% else %}البريد الإلكتروني{% endif %}
+              </label>
+              <input
+                type="email" id="field-email" name="email"
+                class="profile-form-control"
+                value="{{ current_user.email or '' }}"
+                maxlength="255"
+                placeholder="{% if ui_lang == 'en' %}Enter email{% else %}أدخل البريد الإلكتروني{% endif %}"
+              />
+            </div>
+
+            <!-- Phone -->
+            <div class="col-12">
+              <label class="profile-field-label" for="field-phone">
+                {% if ui_lang == 'en' %}Phone Number{% else %}رقم الهاتف{% endif %}
+              </label>
+              <input
+                type="tel" id="field-phone" name="phone_number"
+                class="profile-form-control"
+                value="{{ current_user.phone_number or '' }}"
+                maxlength="20"
+                placeholder="{% if ui_lang == 'en' %}e.g. +962 79 000 0000{% else %}مثال: 07900000000{% endif %}"
+              />
+            </div>
+
+            <!-- Role + Status -->
+            <div class="col-6">
+              <label class="profile-field-label">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</label>
+              <div>
+                <span class="badge" style="background:var(--color-primary);font-size:.78rem;">
+                  {{ current_user.role.value if current_user.role else '—' }}
+                </span>
+              </div>
+            </div>
+            <div class="col-6">
+              <label class="profile-field-label">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+              <div>
+                <span class="badge bg-success" style="font-size:.78rem;">
+                  {{ current_user.status.value if current_user.status else '—' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="col-12 d-flex gap-2 flex-wrap">
+              <button type="submit" class="btn-profile-primary" id="save-profile-btn">
+                <i class="bi bi-check2" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}Save Changes{% else %}حفظ التغييرات{% endif %}
+              </button>
+              <button type="reset" class="btn-profile-secondary">
+                <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}Reset{% else %}إعادة ضبط{% endif %}
+              </button>
+            </div>
+
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Permissions Card -->
+    <div class="profile-section-card">
+      <div class="profile-section-header">
+        <div class="section-icon"><i class="bi bi-key" aria-hidden="true"></i></div>
+        <h2>{% if ui_lang == 'en' %}Permissions{% else %}الصلاحيات{% endif %}</h2>
+      </div>
+      <div class="profile-section-body">
+        <p class="text-muted mb-3" style="font-size:.82rem;">
+          {% if ui_lang == 'en' %}
+            This account holds full system administrator privileges.
+          {% else %}
+            يتمتع هذا الحساب بكامل صلاحيات مدير النظام.
+          {% endif %}
+        </p>
+        <span class="perm-badge"><i class="bi bi-shield-fill-check" aria-hidden="true"></i>{% if ui_lang == 'en' %}System Administrator{% else %}مدير النظام{% endif %}</span>
+        <span class="perm-badge"><i class="bi bi-database-fill" aria-hidden="true"></i>{% if ui_lang == 'en' %}Full Data Access{% else %}وصول كامل للبيانات{% endif %}</span>
+        <span class="perm-badge"><i class="bi bi-journal-text" aria-hidden="true"></i>{% if ui_lang == 'en' %}Audit Log Access{% else %}الوصول لسجل التدقيق{% endif %}</span>
+        <span class="perm-badge"><i class="bi bi-people" aria-hidden="true"></i>{% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}</span>
+      </div>
+    </div>
+
+  </div><!-- /left -->
+
+  <!-- Right: Change Password + Quick Settings + Security Info -->
+  <div class="col-lg-6 d-flex flex-column gap-4">
+
+    <!-- Change Password Card -->
+    <div class="profile-section-card">
+      <div class="profile-section-header">
+        <div class="section-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></div>
+        <h2>{% if ui_lang == 'en' %}Change Password{% else %}تغيير كلمة المرور{% endif %}</h2>
+      </div>
+      <div class="profile-section-body">
+        <form id="password-form" novalidate>
+          <div class="row g-3">
+
+            <!-- Current password -->
+            <div class="col-12">
+              <label class="profile-field-label" for="field-current-pw">
+                {% if ui_lang == 'en' %}Current Password{% else %}كلمة المرور الحالية{% endif %}
+              </label>
+              <div style="position:relative;">
+                <input
+                  type="password" id="field-current-pw" name="current_password"
+                  class="profile-form-control" required
+                  autocomplete="current-password"
+                  style="padding-inline-end:2.25rem;"
+                />
+                <button type="button" class="pw-toggle" data-target="field-current-pw"
+                        aria-label="{% if ui_lang == 'en' %}Show/hide password{% else %}إظهار/إخفاء{% endif %}"
+                        style="position:absolute;top:50%;right:.6rem;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;padding:.2rem;">
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- New password -->
+            <div class="col-12">
+              <label class="profile-field-label" for="field-new-pw">
+                {% if ui_lang == 'en' %}New Password{% else %}كلمة المرور الجديدة{% endif %}
+              </label>
+              <div style="position:relative;">
+                <input
+                  type="password" id="field-new-pw" name="new_password"
+                  class="profile-form-control" required minlength="8"
+                  autocomplete="new-password"
+                  aria-describedby="pw-hint"
+                  style="padding-inline-end:2.25rem;"
+                />
+                <button type="button" class="pw-toggle" data-target="field-new-pw"
+                        aria-label="{% if ui_lang == 'en' %}Show/hide password{% else %}إظهار/إخفاء{% endif %}"
+                        style="position:absolute;top:50%;right:.6rem;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;padding:.2rem;">
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div id="pw-hint" style="font-size:.74rem;color:#6b7280;margin-top:.25rem;">
+                {% if ui_lang == 'en' %}Minimum 8 characters{% else %}8 أحرف على الأقل{% endif %}
+              </div>
+              <div id="pw-strength-bar" style="height:4px;border-radius:4px;background:#e5e7eb;margin-top:.35rem;">
+                <div id="pw-strength-fill" style="height:100%;width:0;border-radius:4px;transition:width .25s,background .25s;"></div>
+              </div>
+            </div>
+
+            <!-- Confirm password -->
+            <div class="col-12">
+              <label class="profile-field-label" for="field-confirm-pw">
+                {% if ui_lang == 'en' %}Confirm New Password{% else %}تأكيد كلمة المرور الجديدة{% endif %}
+              </label>
+              <div style="position:relative;">
+                <input
+                  type="password" id="field-confirm-pw" name="confirm_password"
+                  class="profile-form-control" required
+                  autocomplete="new-password"
+                  style="padding-inline-end:2.25rem;"
+                />
+                <button type="button" class="pw-toggle" data-target="field-confirm-pw"
+                        aria-label="{% if ui_lang == 'en' %}Show/hide password{% else %}إظهار/إخفاء{% endif %}"
+                        style="position:absolute;top:50%;right:.6rem;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;padding:.2rem;">
+                  <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div id="pw-match-hint" style="font-size:.74rem;margin-top:.25rem;min-height:1.1em;"></div>
+            </div>
+
+            <div class="col-12">
+              <button type="submit" class="btn-profile-primary" id="save-pw-btn">
+                <i class="bi bi-lock" aria-hidden="true"></i>
+                {% if ui_lang == 'en' %}Change Password{% else %}تغيير كلمة المرور{% endif %}
+              </button>
+            </div>
+
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Quick Settings Card -->
+    <div class="profile-section-card">
+      <div class="profile-section-header">
+        <div class="section-icon"><i class="bi bi-sliders" aria-hidden="true"></i></div>
+        <h2>{% if ui_lang == 'en' %}Quick Settings{% else %}الإعدادات السريعة{% endif %}</h2>
+      </div>
+      <div class="profile-section-body">
+        <div class="d-flex flex-column gap-3">
+
+          <div class="d-flex align-items-center justify-content-between gap-3">
+            <div>
+              <div style="font-size:.88rem;font-weight:600;">{% if ui_lang == 'en' %}Bilingual Mode{% else %}الوضع الثنائي اللغة{% endif %}</div>
+              <div style="font-size:.75rem;color:#6b7280;">{% if ui_lang == 'en' %}Show Arabic and English side by side{% else %}عرض العربية والإنجليزية جنباً إلى جنب{% endif %}</div>
+            </div>
+            <label class="toggle-switch" aria-label="{% if ui_lang == 'en' %}Bilingual mode{% else %}الوضع الثنائي{% endif %}">
+              <input type="checkbox" id="qs-bilingual">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <hr class="my-0" style="opacity:.1;">
+
+          <div class="d-flex align-items-center justify-content-between gap-3">
+            <div>
+              <div style="font-size:.88rem;font-weight:600;">{% if ui_lang == 'en' %}Verbose Audit Log{% else %}سجل التدقيق التفصيلي{% endif %}</div>
+              <div style="font-size:.75rem;color:#6b7280;">{% if ui_lang == 'en' %}Include low-sensitivity events{% else %}تضمين الأحداث ذات الحساسية المنخفضة{% endif %}</div>
+            </div>
+            <label class="toggle-switch" aria-label="{% if ui_lang == 'en' %}Verbose audit{% else %}سجل تفصيلي{% endif %}">
+              <input type="checkbox" id="qs-verbose-audit" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <hr class="my-0" style="opacity:.1;">
+
+          <div class="d-flex align-items-center justify-content-between gap-3">
+            <div>
+              <div style="font-size:.88rem;font-weight:600;">{% if ui_lang == 'en' %}Allow Impersonation{% else %}السماح بانتحال الهوية{% endif %}</div>
+              <div style="font-size:.75rem;color:#6b7280;">{% if ui_lang == 'en' %}Allow support staff to access this account{% else %}السماح لطاقم الدعم بالوصول لهذا الحساب{% endif %}</div>
+            </div>
+            <label class="toggle-switch" aria-label="{% if ui_lang == 'en' %}Allow impersonation{% else %}السماح بانتحال الهوية{% endif %}">
+              <input type="checkbox" id="qs-impersonation">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Security Info Card -->
+    <div class="profile-section-card">
+      <div class="profile-section-header">
+        <div class="section-icon"><i class="bi bi-info-circle" aria-hidden="true"></i></div>
+        <h2>{% if ui_lang == 'en' %}Account Security{% else %}أمان الحساب{% endif %}</h2>
+      </div>
+      <div class="profile-section-body">
+        <dl class="row g-2 mb-0" style="font-size:.85rem;">
+          <dt class="col-6 text-muted fw-normal">
+            {% if ui_lang == 'en' %}Password Changed{% else %}آخر تغيير للكلمة{% endif %}
+          </dt>
+          <dd class="col-6 fw-semibold">
+            {% if current_user.password_changed_at %}{{ current_user.password_changed_at.strftime('%Y-%m-%d') }}{% else %}—{% endif %}
+          </dd>
+
+          <dt class="col-6 text-muted fw-normal">
+            {% if ui_lang == 'en' %}Last Login{% else %}آخر تسجيل دخول{% endif %}
+          </dt>
+          <dd class="col-6 fw-semibold">
+            {% if current_user.last_login_at %}{{ current_user.last_login_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}
+          </dd>
+
+          <dt class="col-6 text-muted fw-normal">
+            {% if ui_lang == 'en' %}Failed Logins{% else %}محاولات فاشلة{% endif %}
+          </dt>
+          <dd class="col-6 fw-semibold">
+            <span class="{% if current_user.failed_login_count > 0 %}text-danger{% else %}text-success{% endif %}">
+              {{ current_user.failed_login_count }}
+            </span>
+          </dd>
+
+          <dt class="col-6 text-muted fw-normal">
+            {% if ui_lang == 'en' %}Two-Factor Auth{% else %}المصادقة الثنائية{% endif %}
+          </dt>
+          <dd class="col-6 fw-semibold">
+            {% if current_user.mfa_enabled %}
+              <span class="text-success"><i class="bi bi-shield-check" aria-hidden="true"></i> {% if ui_lang == 'en' %}Enabled{% else %}مفعّلة{% endif %}</span>
+            {% else %}
+              <span class="text-danger"><i class="bi bi-shield-x" aria-hidden="true"></i> {% if ui_lang == 'en' %}Disabled{% else %}غير مفعّلة{% endif %}</span>
+            {% endif %}
+          </dd>
+
+          {% if current_user.locked_until %}
+          <dt class="col-6 text-muted fw-normal">{% if ui_lang == 'en' %}Locked Until{% else %}مقفل حتى{% endif %}</dt>
+          <dd class="col-6 fw-semibold text-danger">{{ current_user.locked_until.strftime('%Y-%m-%d %H:%M') }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+  </div><!-- /right -->
+</div>
+
+<!-- ── Recent Activity / Audit Log ── -->
+<div class="profile-section-card mb-5">
+  <div class="profile-section-header" style="justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+    <div class="d-flex align-items-center gap-2">
+      <div class="section-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></div>
+      <div>
+        <h2 class="mb-0">{% if ui_lang == 'en' %}Recent Activity{% else %}النشاط الأخير{% endif %}</h2>
+        <div style="font-size:.74rem;color:#6b7280;">
+          {% if ui_lang == 'en' %}Last 10 admin actions{% else %}آخر 10 إجراءات مسجّلة{% endif %}
+        </div>
+      </div>
+    </div>
+    <a href="/admin/audit-logs" class="btn-profile-secondary" style="font-size:.8rem;padding:.35rem .9rem;">
+      <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+      {% if ui_lang == 'en' %}Full Log{% else %}السجل الكامل{% endif %}
+    </a>
+  </div>
+  <div class="p-0">
+    {% if recent_events %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" aria-label="{% if ui_lang == 'en' %}Recent activity{% else %}النشاط الأخير{% endif %}">
+        <thead>
+          <tr style="font-size:.76rem;color:#6b7280;background:#f9fafb;">
+            <th class="ps-3 py-2 fw-semibold">{% if ui_lang == 'en' %}Action{% else %}الإجراء{% endif %}</th>
+            <th class="py-2 fw-semibold">{% if ui_lang == 'en' %}Entity{% else %}الكيان{% endif %}</th>
+            <th class="py-2 fw-semibold">{% if ui_lang == 'en' %}IP Address{% else %}عنوان IP{% endif %}</th>
+            <th class="pe-3 py-2 fw-semibold">{% if ui_lang == 'en' %}Time{% else %}الوقت{% endif %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for event in recent_events %}
+          <tr class="audit-row">
+            <td class="ps-3">
+              <span class="audit-action-pill level-{{ event.sensitivity_level or 1 }}">
+                {{ event.action }}
+              </span>
+            </td>
+            <td>{{ event.entity_type }}</td>
+            <td style="font-family:monospace;font-size:.78rem;">{{ event.ip_address or '—' }}</td>
+            <td class="pe-3 text-muted" style="white-space:nowrap;font-size:.8rem;">
+              {% if event.created_at %}{{ event.created_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-clock" style="font-size:2rem;opacity:.3;" aria-hidden="true"></i>
+      <p class="mt-2 mb-0" style="font-size:.88rem;">
+        {% if ui_lang == 'en' %}No activity recorded yet{% else %}لا يوجد نشاط مسجّل بعد{% endif %}
+      </p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Toast container ── -->
+<div id="profile-toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  'use strict';
+
+  const LANG = window.KINJO_LANG || 'ar';
+
+  const MSGS = {
+    en: {
+      saving: 'Saving…',
+      profileOk: 'Profile updated successfully',
+      pwOk: 'Password changed successfully',
+      pwMismatch: 'New passwords do not match',
+      pwWeak: 'Password must be at least 8 characters',
+      pwWrong: 'Current password is incorrect',
+      err: 'Something went wrong. Please try again.',
+      settingSaved: 'Setting saved',
+      matchOk: '✓ Passwords match',
+    },
+    ar: {
+      saving: 'جارٍ الحفظ…',
+      profileOk: 'تم تحديث الملف الشخصي بنجاح',
+      pwOk: 'تم تغيير كلمة المرور بنجاح',
+      pwMismatch: 'كلمتا المرور الجديدتان غير متطابقتين',
+      pwWeak: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
+      pwWrong: 'كلمة المرور الحالية غير صحيحة',
+      err: 'حدث خطأ. يُرجى المحاولة مجدداً.',
+      settingSaved: 'تم حفظ الإعداد',
+      matchOk: '✓ كلمتا المرور متطابقتان',
+    }
+  };
+  const t = (k) => (MSGS[LANG] || MSGS.ar)[k] || k;
+
+  // ── CSRF helper ────────────────────────────────────────────────────────────
+  function getCsrfToken() {
+    const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  function showToast(msg, isError) {
+    const container = document.getElementById('profile-toast-container');
+    const el = document.createElement('div');
+    el.className = 'profile-toast' + (isError ? ' error' : '');
+    el.setAttribute('role', 'alert');
+    el.innerHTML = `<i class="bi bi-${isError ? 'x-circle' : 'check-circle-fill'}" aria-hidden="true"></i><span>${msg}</span>`;
+    container.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 4000);
+  }
+
+  // ── Edit Profile ───────────────────────────────────────────────────────────
+  const profileForm = document.getElementById('profile-form');
+  const saveProfileBtn = document.getElementById('save-profile-btn');
+  const originalBtnHtml = saveProfileBtn.innerHTML;
+
+  profileForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    saveProfileBtn.disabled = true;
+    saveProfileBtn.innerHTML = `<i class="bi bi-hourglass-split" aria-hidden="true"></i> ${t('saving')}`;
+
+    const payload = {
+      full_name: document.getElementById('field-full-name').value.trim() || null,
+      email: document.getElementById('field-email').value.trim() || null,
+      phone_number: document.getElementById('field-phone').value.trim() || null,
+    };
+
+    try {
+      const res = await fetch('/api/admin/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        showToast(t('profileOk'));
+        const heroName = document.getElementById('hero-display-name');
+        if (heroName && data.full_name) heroName.textContent = data.full_name;
+      } else {
+        showToast(data.detail || t('err'), true);
+      }
+    } catch {
+      showToast(t('err'), true);
+    } finally {
+      saveProfileBtn.disabled = false;
+      saveProfileBtn.innerHTML = originalBtnHtml;
+    }
+  });
+
+  // ── Change Password ────────────────────────────────────────────────────────
+  const passwordForm = document.getElementById('password-form');
+  const savePwBtn = document.getElementById('save-pw-btn');
+  const originalPwBtnHtml = savePwBtn.innerHTML;
+  const newPwField = document.getElementById('field-new-pw');
+  const confirmPwField = document.getElementById('field-confirm-pw');
+  const pwMatchHint = document.getElementById('pw-match-hint');
+  const pwStrengthFill = document.getElementById('pw-strength-fill');
+
+  newPwField.addEventListener('input', () => {
+    const v = newPwField.value;
+    let score = 0;
+    if (v.length >= 8) score++;
+    if (/[A-Z]/.test(v)) score++;
+    if (/[0-9]/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+    const pct = Math.max(score * 25, v.length > 0 ? 5 : 0);
+    const colors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e'];
+    pwStrengthFill.style.width = pct + '%';
+    pwStrengthFill.style.background = colors[score] || '#ef4444';
+  });
+
+  confirmPwField.addEventListener('input', () => {
+    if (!confirmPwField.value) { pwMatchHint.textContent = ''; return; }
+    if (confirmPwField.value === newPwField.value) {
+      pwMatchHint.style.color = '#15803d';
+      pwMatchHint.textContent = t('matchOk');
+    } else {
+      pwMatchHint.style.color = '#dc2626';
+      pwMatchHint.textContent = t('pwMismatch');
+    }
+  });
+
+  passwordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPw = document.getElementById('field-current-pw').value;
+    const newPw = newPwField.value;
+    const confirmPw = confirmPwField.value;
+
+    if (newPw !== confirmPw) { showToast(t('pwMismatch'), true); return; }
+    if (newPw.length < 8)    { showToast(t('pwWeak'), true); return; }
+
+    savePwBtn.disabled = true;
+    savePwBtn.innerHTML = `<i class="bi bi-hourglass-split" aria-hidden="true"></i> ${t('saving')}`;
+
+    try {
+      const res = await fetch('/api/admin/profile/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+        body: JSON.stringify({ current_password: currentPw, new_password: newPw, confirm_password: confirmPw }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        showToast(t('pwOk'));
+        passwordForm.reset();
+        pwStrengthFill.style.width = '0';
+        pwMatchHint.textContent = '';
+      } else {
+        const msg = res.status === 401 ? t('pwWrong') : (data.detail || t('err'));
+        showToast(msg, true);
+      }
+    } catch {
+      showToast(t('err'), true);
+    } finally {
+      savePwBtn.disabled = false;
+      savePwBtn.innerHTML = originalPwBtnHtml;
+    }
+  });
+
+  // ── Password visibility toggles ────────────────────────────────────────────
+  document.querySelectorAll('.pw-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      if (!input) return;
+      const icon = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+        btn.setAttribute('aria-label', LANG === 'en' ? 'Hide password' : 'إخفاء كلمة المرور');
+      } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+        btn.setAttribute('aria-label', LANG === 'en' ? 'Show password' : 'إظهار كلمة المرور');
+      }
+    });
+  });
+
+  // ── Quick Settings (localStorage) ─────────────────────────────────────────
+  ['qs-bilingual', 'qs-verbose-audit', 'qs-impersonation'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = localStorage.getItem('kinjo_' + id);
+    if (saved !== null) el.checked = (saved === '1');
+    el.addEventListener('change', () => {
+      localStorage.setItem('kinjo_' + id, el.checked ? '1' : '0');
+      showToast(t('settingSaved'));
+    });
+  });
+
+})();
+</script>
 {% endblock %}

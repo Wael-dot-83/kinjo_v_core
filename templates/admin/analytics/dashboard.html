@@ -5,15 +5,15 @@
 {% block title %}{% if ui_lang == 'en' %}Central Analytics Dashboard{% else %}لوحة التحليلات المركزية{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</span>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header analytics-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
+<div class="page-header analytics-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
   <div class="analytics-page-titleblock">
-    <h1 class="admin-page-title mb-0" style="font: var(--type-page-title)">
+    <h1 class="page-title mb-0" style="font: var(--type-page-title)">
       <i class="bi bi-bar-chart-line-fill me-2"></i>
       {% if ui_lang == 'en' %}Central Analytics{% else %}التحليلات المركزية{% endif %}
     </h1>
@@ -525,10 +525,13 @@
           <!-- User role distribution (new) -->
           <div class="col-lg-4">
             <div class="rounded-3 p-3 h-100" style="background:var(--bs-gray-100,#f8f9fa);">
-              <h6 class="fw-semibold mb-3" style="font: var(--type-label);">
+              <h6 class="fw-semibold mb-1" style="font: var(--type-label);">
                 <i class="bi bi-people me-1 text-info" aria-hidden="true"></i>
                 {% if ui_lang == 'en' %}User Role Distribution{% else %}توزيع أدوار المستخدمين{% endif %}
               </h6>
+              <p class="text-muted mb-3" style="font-size:0.78rem;">
+                {% if ui_lang == 'en' %}All users across the system{% else %}جميع المستخدمين في النظام{% endif %}
+              </p>
               <div id="regRoleBreakdown" aria-live="polite">
                 <div class="text-center text-muted py-3 small">
                   {% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
@@ -1035,7 +1038,7 @@
 <script src="/static/js/kpi-validation.js?v=2.1" charset="utf-8"></script>
 <script src="/static/js/admin_analytics.js?v=2.1" charset="utf-8"></script>
 <style>
-    .admin-content:has(.analytics-dashboard) {
+    .content:has(.analytics-dashboard) {
       background: var(--admin-bg-gray-100, #F5F5F5);
     }
     .analytics-dashboard {

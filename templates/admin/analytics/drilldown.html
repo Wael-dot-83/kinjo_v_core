@@ -4,16 +4,16 @@
 {% block title %}{% if ui_lang == 'en' %}Detailed Analysis: {{ dimension_id }}{% else %}تحليل تفصيلي: {{ dimension_id }}{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
-<span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/analytics" class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active" id="breadcrumbDimension">{% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}</span>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="breadcrumb-separator">/</span>
+<a href="/admin/analytics" class="breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active" id="breadcrumbDimension">{% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}</span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
-  <h1 class="admin-page-title mb-0" id="drilldownTitle">
+<div class="page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="page-title mb-0" id="drilldownTitle">
     <i class="bi bi-graph-up me-2"></i>
     {% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}
   </h1>

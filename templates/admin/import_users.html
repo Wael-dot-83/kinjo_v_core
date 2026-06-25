@@ -3,31 +3,31 @@
 {% block title %}Import Users — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item">
+<a href="/admin/dashboard" class="breadcrumb-item">
   <i class="bi bi-house"></i> Dashboard
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/users" class="admin-breadcrumb-item">User Management</a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">Import Users</span>
+<span class="breadcrumb-separator">/</span>
+<a href="/admin/users" class="breadcrumb-item">User Management</a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">Import Users</span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4">
-  <h1 class="admin-page-title">
+<div class="page-header mb-4">
+  <h1 class="page-title">
     <i class="bi bi-file-earmark-arrow-down me-2"></i>Import Users
   </h1>
-  <p class="admin-page-subtitle text-muted">Bulk-create user accounts by uploading a CSV file</p>
+  <p class="page-subtitle text-muted">Bulk-create user accounts by uploading a CSV file</p>
 </div>
 
 <div class="row g-4">
   <!-- Upload Card -->
   <div class="col-lg-7">
-    <div class="admin-card">
-      <div class="admin-card-header">
-        <h2 class="admin-card-title mb-0">Upload CSV</h2>
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title mb-0">Upload CSV</h2>
       </div>
-      <div class="admin-card-body">
+      <div class="card-body">
         <div class="alert alert-info d-flex gap-3 mb-4">
           <i class="bi bi-info-circle fs-4 mt-1 flex-shrink-0"></i>
           <div>
@@ -48,10 +48,10 @@
             <input type="file" class="form-control" id="csvFile" name="file" accept=".csv" required>
             <div class="form-text">Maximum file size: 20 MB · Encoding: UTF-8</div>
           </div>
-          <button type="submit" class="admin-btn admin-btn-primary" id="importBtn">
+          <button type="submit" class="btn btn-primary" id="importBtn">
             <i class="bi bi-upload me-1"></i> Import Users
           </button>
-          <a href="/admin/import-logs" class="admin-btn admin-btn-ghost ms-2">
+          <a href="/admin/import-logs" class="btn btn-ghost ms-2">
             <i class="bi bi-clock-history me-1"></i> View Import Logs
           </a>
         </form>
@@ -61,13 +61,13 @@
 
   <!-- Info / Template Card -->
   <div class="col-lg-5">
-    <div class="admin-card h-100">
-      <div class="admin-card-header">
-        <h2 class="admin-card-title mb-0">CSV Template</h2>
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title mb-0">CSV Template</h2>
       </div>
-      <div class="admin-card-body">
+      <div class="card-body">
         <p class="small text-muted mb-3">Download and fill in the template, then upload it above.</p>
-        <button id="downloadTemplateBtn" class="admin-btn admin-btn-ghost admin-btn-sm mb-4">
+        <button id="downloadTemplateBtn" class="btn btn-ghost btn-sm mb-4">
           <i class="bi bi-download me-1"></i> Download Template
         </button>
         <h6 class="fw-semibold small text-uppercase text-muted mb-2">Example Row</h6>
@@ -85,11 +85,11 @@
 
 <!-- Results -->
 <div id="resultsSection" class="mt-4" style="display:none;">
-  <div class="admin-card">
-    <div class="admin-card-header">
-      <h2 class="admin-card-title mb-0">Import Results</h2>
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title mb-0">Import Results</h2>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
       <div id="resultsSummary" class="mb-3"></div>
       <div id="errorsWrap" style="display:none;">
         <h6 class="fw-semibold text-danger mb-2">Rows with errors</h6>

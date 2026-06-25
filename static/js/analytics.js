@@ -311,16 +311,12 @@ const Analytics = {
         '<span class="fw-medium">' +
         gov.governorate +
         "</span>" +
-        '<span class="badge ' +
-        bandClass +
-        '">' +
+        '<span class="badge ' + bandClass + '">' +
         (gov.governance_score ?? 0).toFixed(1) +
         "</span>" +
         "</div>" +
         '<div class="progress" style="height: 6px;">' +
-        '<div class="progress-bar ' +
-        bandClass +
-        '" style="width: ' +
+        '<div class="progress-bar ' + bandClass + '" style="width: ' +
         percentage +
         '%"></div>' +
         "</div>" +
@@ -523,9 +519,7 @@ const Analytics = {
         "onclick=\"Analytics.drilldown('KINDERGARTEN', '" +
         item.kindergarten_id +
         "')\">" +
-        '<span class="ranking-badge ' +
-        badgeClass +
-        ' me-3">' +
+        '<span class="ranking-badge ' + badgeClass + ' me-3">' +
         item.rank +
         "</span>" +
         '<div class="flex-grow-1">' +
@@ -536,9 +530,7 @@ const Analytics = {
         analyticsLiteral(item.governorate) +
         "</small>" +
         "</div>" +
-        '<span class="badge ' +
-        bandClass +
-        '">' +
+        '<span class="badge ' + bandClass + '">' +
         (item.value ?? 0).toFixed(1) +
         "</span>" +
         "</div>";
@@ -640,9 +632,7 @@ const Analytics = {
           "<td>" +
           kg.attendance_rate +
           "%</td>" +
-          '<td><span class="badge ' +
-          bandClass +
-          '">' +
+          '<td><span class="badge ' + bandClass + '">' +
           kg.governance_score +
           "</span></td>" +
           "</tr>";
@@ -690,9 +680,7 @@ const Analytics = {
       `<small class="text-muted">${analyticsText("نسبة الموظفين", "Staff ratio")}</small>` +
       "</div>" +
       '<div class="col-md-3 text-center">' +
-      '<div class="h4 mb-0"><span class="badge ' +
-      bandClass +
-      '">' +
+      '<div class="h4 mb-0"><span class="badge ' + bandClass + '">' +
       (metrics.governance_score || 0) +
       "</span></div>" +
       `<small class="text-muted">${analyticsText("الحوكمة", "Governance")}</small>` +
