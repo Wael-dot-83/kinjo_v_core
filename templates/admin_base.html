@@ -581,6 +581,10 @@
 
       function initializeAdminInterface() {
         window.addEventListener("error", function (e) {
+          // Ignore resource-loading errors (no e.error, only e.message),
+          // such as failed Cesium worker blob imports. These are non-fatal
+          // and already logged by the browser.
+          if (!e.error) return;
           console.error("Admin interface error:", e.error);
           if (window.AdminComponents) {
             var _i = window.AdminI18n;

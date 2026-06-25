@@ -1062,7 +1062,13 @@ function updateKpiStrip(data) {
   _setEl('kpiHighRisk',     highRisk);
   _setEl('kpiCritical',     critical);
   _setEl('kpiInstitutions', totalKg || '--');
-  _setEl('kpiStudents',     totalSt || '--');
+  // Only display student count if data is present and plausible;
+  // if we have facilities but almost no student data, show "غير متوفر".
+  const hasStudentData = govs.some(g => g.student_count != null && g.student_count > 0);
+  const studentDisplay = (hasStudentData && totalSt > 0)
+    ? (totalSt < totalKg ? '—' : totalSt.toLocaleString('ar-JO'))
+    : '—';
+  _setEl('kpiStudents', studentDisplay);
   _setEl('alertCountStatus',
     `<i class="bi bi-shield-exclamation" aria-hidden="true"></i> ${highRisk} محافظة مرتفعة أو حرجة الخطر`);
 }

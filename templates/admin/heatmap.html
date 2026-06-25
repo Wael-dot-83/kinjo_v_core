@@ -279,7 +279,7 @@
   <header class="cc-header">
     <div class="cc-identity">
       <div class="hkj-emblem" aria-label="المملكة الأردنية الهاشمية" role="img">
-        <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="40" height="40" aria-hidden="true">
+        <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
           <rect width="40" height="13.3" fill="#000"/>
           <rect y="13.3" width="40" height="13.3" fill="#FFF"/>
           <rect y="26.6" width="40" height="13.4" fill="#007A3D"/>
@@ -621,6 +621,10 @@
 
 {% block extra_scripts %}
 {# ── Cesium JS ──────────────────────────────────────────────────────── #}
+{# CRITICAL: CESIUM_BASE_URL must be set BEFORE Cesium.js loads so that
+   Cesium's web workers resolve to the CDN paths instead of blob: URLs.
+   Without this, workers fail with "Failed to execute 'importScripts'" errors. #}
+<script>window.CESIUM_BASE_URL = 'https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/';</script>
 <script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"
         crossorigin="anonymous"></script>
 

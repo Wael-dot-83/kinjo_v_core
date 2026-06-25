@@ -165,6 +165,11 @@
 
   function init() {
     window.addEventListener("error", function (event) {
+      // Filter out Cesium web-worker importScripts failures and other
+      // resource-loading errors that have no JS Error object (e.error === null).
+      // These are non-fatal and already logged by the browser console.
+      if (!event.error) return;
+      if (event.message && /importScripts|blob:/i.test(event.message)) return;
       report("uncaught", event);
     });
 
