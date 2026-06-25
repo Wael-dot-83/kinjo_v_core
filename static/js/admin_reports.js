@@ -80,6 +80,30 @@
     return "attendance";
   }
 
+  const _AMMAN_TZ = "Asia/Amman";
+  const _DATE_FMT_AR = new Intl.DateTimeFormat("ar-JO", { year: "numeric", month: "short", day: "numeric", timeZone: _AMMAN_TZ });
+  const _DATETIME_FMT_AR = new Intl.DateTimeFormat("ar-JO", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: _AMMAN_TZ });
+  const _DATE_FMT_EN = new Intl.DateTimeFormat("en-JO", { year: "numeric", month: "short", day: "numeric", timeZone: _AMMAN_TZ });
+  const _DATETIME_FMT_EN = new Intl.DateTimeFormat("en-JO", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: _AMMAN_TZ });
+
+  /**
+   * Safely format a date/datetime value for display in Asia/Amman timezone.
+   * Returns "-" for null/undefined/empty. For unparseable values returns an
+   * Invalid Date badge showing the raw string so the user can investigate.
+   */
+  function formatDateSafe(val, { time = false } = {}) {
+    if (val == null || val === "") return "-";
+    const d = new Date(val);
+    if (isNaN(d.getTime())) {
+      return `<span class="badge bg-warning text-dark" title="${escapeHtml(String(val))}">Invalid Date</span>`;
+    }
+    const lang = document.documentElement.getAttribute("lang") === "en" ? "en" : "ar";
+    if (lang === "en") {
+      return time ? _DATETIME_FMT_EN.format(d) : _DATE_FMT_EN.format(d);
+    }
+    return time ? _DATETIME_FMT_AR.format(d) : _DATE_FMT_AR.format(d);
+  }
+
   async function fetchWithAuth(url, options) {
     const method = (options?.method || "GET").toUpperCase();
     const opts = Object.assign({ credentials: "same-origin" }, options || {});
@@ -209,10 +233,10 @@
   // ===========================================================================
   // Preview
   // ===========================================================================
-  async function loadReportPreview() {
+  async function loadReportPreview({ silent = false } = {}) {
     const period = getPeriod();
     if (!period.start || !period.end) {
-      alert(reportsText("يرجى تحديد نطاق التاريخ", "Please select a date range"));
+      if (!silent) alert(reportsText("يرجى تحديد نطاق التاريخ", "Please select a date range"));
       return;
     }
 
@@ -244,7 +268,8 @@
     } catch (e) {
       console.error("Preview failed", e);
       setText("reportsLastUpdated", reportsText("فشل تحميل المعاينة", "Preview failed"));
-      getEl("previewTableBody").innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${reportsText("تعذر تحميل المعاينة.", "Failed to load preview.")}</td></tr>`;
+      const tb = getEl("previewTableBody");
+      if (tb) tb.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${reportsText("تعذر تحميل المعاينة.", "Failed to load preview.")}</td></tr>`;
     }
   }
 
@@ -379,8 +404,10 @@
         <tr>${columns
           .map((c) => {
             const val = row[c];
-            if (c.toLowerCase().includes("date") || c.toLowerCase().includes("at")) {
-              return `<td>${val ? new Date(val).toLocaleDateString() : "-"}</td>`;
+            // Any column whose name contains "date" or ends with "_at" / "timestamp" is a date field.
+            // Use formatDateSafe so "Invalid Date" never reaches the DOM.
+            if (c.toLowerCase().includes("date") || c.toLowerCase().includes("_at") || c.toLowerCase() === "timestamp") {
+              return `<td>${formatDateSafe(val, { time: c.toLowerCase().includes("_at") || c.toLowerCase() === "timestamp" })}</td>`;
             }
             return `<td>${escapeHtml(String(val ?? "-"))}</td>`;
           })
@@ -471,15 +498,43 @@
         if (status.status === "COMPLETED") {
           clearInterval(interval);
           window.location.href = `${API_BASE}/export/${jobId}/file`;
-        } else if (status.status === "FAILED" || attempts >= maxAttempts) {
+        } else if (status.status === "FAILED") {
           clearInterval(interval);
-          alert(reportsText("فشل التصدير أو تجاوز الوقت", "Export failed or timed out"));
+          showExportJobError(status, jobId);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          showExportJobError({ error: reportsText("تجاوز الوقت المسموح", "Export timed out after maximum wait") }, jobId);
         }
       } catch (e) {
         clearInterval(interval);
         console.error("Polling failed", e);
       }
     }, 1500);
+  }
+
+  function showExportJobError(status, jobId) {
+    const banner = getEl("exportJobErrorBanner");
+    const msgEl = getEl("exportJobErrorMsg");
+    const traceLink = getEl("exportJobTraceLink");
+    const retryBtn = getEl("retryExportBtn");
+    if (!banner) return;
+
+    if (msgEl) {
+      const ts = status.created_at ? ` (${formatDateSafe(status.created_at, { time: true })})` : "";
+      msgEl.textContent = (status.error || reportsText("فشلت عملية التصدير", "The export operation failed")) + ts;
+    }
+    if (traceLink && status.trace_url) {
+      traceLink.href = status.trace_url;
+      traceLink.classList.remove("d-none");
+    }
+    if (retryBtn) {
+      retryBtn.onclick = () => {
+        banner.classList.add("d-none");
+        exportCurrentReport();
+      };
+    }
+    banner.classList.remove("d-none");
+    loadRecentHistory();
   }
 
   // ===========================================================================
@@ -593,18 +648,31 @@
 
       tbody.innerHTML = items
         .map(
-          (item) => `
+          (item) => {
+            const isFailed = item.status === "FAILED";
+            const errorDetail = isFailed && item.error
+              ? `<div class="small text-danger mt-1"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>${escapeHtml(item.error)}</div>`
+              : "";
+            const traceLink = isFailed && item.trace_url
+              ? `<a href="${escapeHtml(item.trace_url)}" class="btn btn-sm btn-outline-secondary ms-1" title="${reportsText("عرض السجلات","View Logs")}"><i class="bi bi-journal-text"></i></a>`
+              : "";
+            return `
         <tr>
           <td class="fw-medium">${escapeHtml(item.report_name || item.report_type)}</td>
           <td>${escapeHtml(item.format)}</td>
-          <td>${item.generated_at ? new Date(item.generated_at).toLocaleString() : "-"}</td>
-          <td><span class="badge ${statusBadge(item.status)}">${escapeHtml(item.status)}</span></td>
+          <td>${formatDateSafe(item.generated_at, { time: true })}</td>
+          <td>
+            <span class="badge ${statusBadge(item.status)}">${escapeHtml(item.status)}</span>
+            ${errorDetail}
+          </td>
           <td class="text-center">
-            ${item.status === "COMPLETED" && item.id ? `<a href="/api/analytics/export/${item.id}/file" class="btn btn-sm btn-outline-primary" title="{% if ui_lang == 'en' %}Download{% else %}تنزيل{% endif %}"><i class="bi bi-download"></i></a>` : ""}
-            <button class="btn btn-sm btn-outline-secondary" data-action="rerun" data-id="${item.id}" title="{% if ui_lang == 'en' %}Regenerate{% else %}إعادة إنشاء{% endif %}"><i class="bi bi-arrow-clockwise"></i></button>
+            ${item.status === "COMPLETED" && item.id ? `<a href="/api/analytics/export/${item.id}/file" class="btn btn-sm btn-outline-primary" title="${reportsText("تنزيل","Download")}"><i class="bi bi-download"></i></a>` : ""}
+            <button class="btn btn-sm btn-outline-secondary" data-action="rerun" data-id="${item.id}" title="${reportsText("إعادة إنشاء","Regenerate")}"><i class="bi bi-arrow-clockwise"></i></button>
+            ${traceLink}
           </td>
         </tr>
-      `
+      `;
+          }
         )
         .join("");
 
@@ -639,15 +707,20 @@
       const now = new Date();
       const thisMonth = items.filter((it) => {
         const d = new Date(it.generated_at);
+        // Skip entries whose generated_at cannot be parsed (avoids NaN comparisons)
+        if (isNaN(d.getTime())) return false;
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       });
       const failed = items.filter((it) => it.status === "FAILED");
 
       setText("statReportsGenerated", String(thisMonth.length));
       setText("statFailedExports", String(failed.length));
-      if (items.length) {
-        setText("statLastGenerated", new Date(items[0].generated_at).toLocaleDateString());
-        setText("statLastGeneratedTime", new Date(items[0].generated_at).toLocaleTimeString());
+
+      // Guard: only update last-generated stats when there is at least one item
+      if (items.length > 0) {
+        const latest = items[0];
+        setText("statLastGenerated", formatDateSafe(latest.generated_at));
+        setText("statLastGeneratedTime", formatDateSafe(latest.generated_at, { time: true }).split(",")[1]?.trim() || formatDateSafe(latest.generated_at, { time: true }));
       }
     } catch (e) {
       console.error("Stats load failed", e);
@@ -709,22 +782,21 @@
     // Governorate -> kindergarten cascade
     getEl("governorateFilter")?.addEventListener("change", loadKindergartens);
 
-    // Tab change -> update hidden reportType and refresh preview
+    // Tab change -> update hidden reportType and refresh preview (silent — no alert if dates not set yet)
     document.querySelectorAll("#reportCategoryTabs .nav-link").forEach((tab) => {
       tab.addEventListener("shown.bs.tab", () => {
         getEl("reportType").value = getReportType();
-        // Update visible filters based on report type
         updateFilterVisibility();
-        loadReportPreview();
+        loadReportPreview({ silent: true });
       });
     });
 
-    // Period change
+    // Period change — user explicitly set dates, show alert if still incomplete
     getEl("periodStart")?.addEventListener("change", loadReportPreview);
     getEl("periodEnd")?.addEventListener("change", loadReportPreview);
 
-    // Auto-load initial preview
-    loadReportPreview();
+    // Auto-load initial preview silently (no alert if dates not pre-filled)
+    loadReportPreview({ silent: true });
   }
 
   function updateFilterVisibility() {
@@ -750,4 +822,10 @@
   }
 
   document.addEventListener("DOMContentLoaded", init);
+
+  // Expose helpers for tests and external callers
+  window.AdminReports = window.AdminReports || {};
+  window.AdminReports.formatDateSafe = formatDateSafe;
+  window.AdminReports.formatToAmman   = formatDateSafe;
+  window.AdminReports.debounce        = debounce;
 })();
