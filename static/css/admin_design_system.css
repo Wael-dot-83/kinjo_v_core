@@ -1006,7 +1006,7 @@ html[dir="rtl"] .table td {
   border-bottom: var(--border-width) solid var(--color-gray-200);
   cursor: pointer;
   transition: background var(--transition-fast);
-  user-select: none;
+  -webkit-user-select: none; user-select: none;
 }
 .manager-item:last-child { border-bottom: none; }
 .manager-item:hover { background: var(--color-gray-100); }
@@ -3163,7 +3163,7 @@ html[dir="rtl"] .sidebar .submenu .nav-link {
 /* Sortable Table Headers */
 .sortable {
     cursor: pointer;
-    user-select: none;
+    -webkit-user-select: none; user-select: none;
     position: relative;
     padding-inline-start: var(--space-4) !important;
 }
@@ -4127,7 +4127,7 @@ html[dir="rtl"] .sidebar .submenu .nav-link {
   top: 0;
   background: rgba(6,14,28,0.98);
   cursor: pointer;
-  user-select: none;
+  -webkit-user-select: none; user-select: none;
   white-space: nowrap;
 }
 #rankingsTable th:hover { color: rgba(255,255,255,0.55); }

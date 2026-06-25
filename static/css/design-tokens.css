@@ -723,14 +723,20 @@ html[dir="rtl"] {
   }
 }
 
-/* ── Progress bar fill on data arrival ────────────────────────────────────── */
+/* ── Progress bar fill on data arrival (transform-based, no layout) ─────── */
 @keyframes progress-fill {
-  from { width: 0%; }
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
 
 .kpi-card__progress-bar.is-loaded,
 #enrollmentRateBar.is-loaded {
   animation: progress-fill 720ms var(--ease-out) both;
+  transform-origin: var(--progress-origin, left center);
+}
+html[dir="rtl"] .kpi-card__progress-bar,
+html[dir="rtl"] #enrollmentRateBar {
+  --progress-origin: right center;
 }
 
 /* ── Safety net: enrollment progress bar semantic colors ──────────────────

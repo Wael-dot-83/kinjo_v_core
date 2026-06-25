@@ -291,8 +291,9 @@
         <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
           <i class="bi bi-clock-history me-2 text-info"></i>{% if ui_lang == 'en' %}Recent Reports{% else %}التقارير الأخيرة{% endif %}
         </h5>
-        <button class="btn btn-sm btn-outline-primary" id="refreshHistoryBtn">
-          <i class="bi bi-arrow-clockwise"></i>
+        <button class="btn btn-sm btn-outline-primary" id="refreshHistoryBtn"
+                aria-label="{% if ui_lang == 'en' %}Refresh history{% else %}تحديث السجل{% endif %}">
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
         </button>
       </div>
       <div class="card-body p-0">

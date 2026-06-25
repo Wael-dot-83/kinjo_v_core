@@ -27,8 +27,8 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
-                        <select class="form-select" id="scopeFilter">
+                        <label for="scopeFilter" class="form-label">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
+                        <select class="form-select" id="scopeFilter" aria-label="{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}">
                             <option value="">{% if ui_lang == 'en' %}All Scopes{% else %}جميع النطاقات{% endif %}</option>
                             <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة معينة{% endif %}</option>
                             <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
@@ -36,14 +36,14 @@
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
-                        <select class="form-select" id="kindergartenFilter" disabled>
+                        <label for="kindergartenFilter" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                        <select class="form-select" id="kindergartenFilter" disabled aria-label="{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}">
                             <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-                        <select class="form-select" id="governorateFilter" disabled>
+                        <label for="governorateFilter" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                        <select class="form-select" id="governorateFilter" disabled aria-label="{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}">
                             <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
                         </select>
                     </div>

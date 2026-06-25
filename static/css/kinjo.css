@@ -804,7 +804,7 @@ body.sidebar-open .sidebar-backdrop {
 /* Sortable Table Headers */
 .table th.sortable {
   cursor: pointer;
-  user-select: none;
+  -webkit-user-select: none; user-select: none;
   position: relative;
   transition: background-color 0.15s ease;
 }

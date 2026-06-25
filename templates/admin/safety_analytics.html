@@ -501,7 +501,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
                     const label = LABEL[key] || escapeHtml(key);
                     return `<div class="mini-bar-row">
                         <span class="mini-bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
-                        <div class="mini-bar-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="mini-bar-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${escapeHtml(label)}">
                             <div class="mini-bar-fill" style="width:${pct}%;background:${color};"></div>
                         </div>
                         <span class="mini-bar-count">${val}</span>

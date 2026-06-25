@@ -161,7 +161,7 @@
   overflow: hidden;
   transition: box-shadow var(--ko-transition), transform var(--ko-transition);
   border: 1.5px solid var(--ko-border);
-  user-select: none;
+  -webkit-user-select: none; user-select: none;
 }
 .ko-kpi-card::before {
   content: '';

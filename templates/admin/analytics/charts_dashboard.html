@@ -58,7 +58,7 @@
       <h6 class="fw-semibold mb-3 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
         {% if ui_lang == 'en' %}Data Source{% else %}مصدر البيانات{% endif %}
       </h6>
-      <select id="sourceSelect" class="form-select form-select-sm mb-3">
+      <select id="sourceSelect" class="form-select form-select-sm mb-3" aria-label="{% if ui_lang == 'en' %}Data Source{% else %}مصدر البيانات{% endif %}">
         {% for src in sources %}
         <option value="{{ src }}">{{ src | replace('_', ' ') | title }}</option>
         {% endfor %}
@@ -75,7 +75,7 @@
       <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
         {% if ui_lang == 'en' %}Chart Type{% else %}نوع الرسم{% endif %}
       </h6>
-      <select id="chartTypeSelect" class="form-select form-select-sm mb-3">
+      <select id="chartTypeSelect" class="form-select form-select-sm mb-3" aria-label="{% if ui_lang == 'en' %}Chart Type{% else %}نوع الرسم{% endif %}">
         <option value="">{% if ui_lang == 'en' %}Auto (Recommended){% else %}تلقائي (موصى به){% endif %}</option>
         {% for ct in chart_types %}
         <option value="{{ ct }}">{{ ct | title }}</option>

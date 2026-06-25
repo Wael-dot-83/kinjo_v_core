@@ -35,7 +35,7 @@
       user_role=current_user.role
     ) }}
     <div class="d-flex gap-2 flex-wrap mt-2 mt-md-0">
-        <select class="form-select form-select-sm" id="regStatusFilter" style="min-width: 150px;">
+        <select class="form-select form-select-sm" id="regStatusFilter" style="min-width: 150px;" aria-label="{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}">
             <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
             <option value="DRAFT">{% if ui_lang == 'en' %}Incomplete{% else %}غير مكتمل{% endif %}</option>
             <option value="SUBMITTED">{% if ui_lang == 'en' %}Under Verification{% else %}قيد التحقق{% endif %}</option>
@@ -46,13 +46,13 @@
             <option value="WAITLISTED">{% if ui_lang == 'en' %}Waitlisted{% else %}قائمة انتظار{% endif %}</option>
             <option value="WITHDRAWN">{% if ui_lang == 'en' %}Withdrawn{% else %}منسحب{% endif %}</option>
         </select>
-        <select class="form-select form-select-sm" id="regSourceFilter" style="min-width: 130px;">
+        <select class="form-select form-select-sm" id="regSourceFilter" style="min-width: 130px;" aria-label="{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}">
             <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
             <option value="WEB">Web</option>
             <option value="MOBILE">{% if ui_lang == 'en' %}Mobile{% else %}موبايل{% endif %}</option>
             <option value="OFFICE">{% if ui_lang == 'en' %}Office{% else %}مكتب{% endif %}</option>
         </select>
-        <select class="form-select form-select-sm" id="regReviewerFilter" style="min-width: 160px;">
+        <select class="form-select form-select-sm" id="regReviewerFilter" style="min-width: 160px;" aria-label="{% if ui_lang == 'en' %}Reviewer{% else %}المراجع{% endif %}">
             <option value="">{% if ui_lang == 'en' %}All Reviewers{% else %}كل المُراجعين{% endif %}</option>
         </select>
     </div>
@@ -640,8 +640,9 @@
                     </h5>
                     <div class="d-flex gap-2 flex-wrap">
                         <input type="text" class="form-control form-control-sm" id="regSearchInput" placeholder="{% if ui_lang == 'en' %}Search...{% else %}بحث...{% endif %}" style="min-width: 200px;">
-                        <button class="btn btn-sm btn-outline-primary" id="regRefreshTable">
-                            <i class="bi bi-arrow-clockwise"></i>
+                        <button class="btn btn-sm btn-outline-primary" id="regRefreshTable"
+                                aria-label="{% if ui_lang == 'en' %}Refresh table{% else %}تحديث الجدول{% endif %}">
+                            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
