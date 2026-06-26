@@ -60,10 +60,17 @@
                         </div>
                     </div>
                     
-                    <div class="text-center mb-4">
-                        <button class="btn btn-primary px-5 fw-bold rounded-pill shadow-sm" onclick="runComparison()">
-                            <i class="bi bi-play-fill"></i> {% if ui_lang == 'ar' %}تشغيل التحليل{% else %}Run Analysis{% endif %}
-                        </button>
+                    <div class="row mb-4">
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-primary w-100 fw-bold shadow-sm" onclick="runComparison()">
+                                <i class="bi bi-play-fill"></i> {% if ui_lang == 'ar' %}تحديث التحليل{% else %}Run Analysis{% endif %}
+                            </button>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-dark w-100 fw-bold shadow-sm" onclick="generateGovReport()">
+                                <i class="bi bi-file-earmark-pdf-fill"></i> {% if ui_lang == 'ar' %}التقرير الحكومي{% else %}Official Report{% endif %}
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Z-Scores Display -->
@@ -179,6 +186,64 @@
         </div>
     </div>
 
+</div>
+
+<!-- Government Report Modal -->
+<div class="modal fade" id="govReportModal" tabindex="-1" aria-labelledby="govReportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header bg-dark text-white border-0">
+        <h5 class="modal-title fw-bold" id="govReportModalLabel">
+            <i class="bi bi-shield-check text-warning"></i> تقرير دعم القرار الحكومي
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-5" id="printableReportArea" style="direction: rtl; text-align: right;">
+        <!-- Header -->
+        <div class="text-center mb-4 border-bottom pb-3">
+            <h2 class="fw-bold">المملكة الأردنية الهاشمية</h2>
+            <h4 class="text-muted">التقرير التشغيلي والاستراتيجي لقطاع الحضانات</h4>
+            <p class="mb-0 text-dark fw-bold">النطاق: <span id="rep-domain" class="text-primary"></span></p>
+        </div>
+        
+        <!-- Summary -->
+        <div class="mb-4">
+            <h5 class="fw-bold text-dark border-bottom border-2 border-dark d-inline-block pb-1">1. الملخص التنفيذي</h5>
+            <p id="rep-summary" class="mt-2 text-dark" style="font-size: 1.1rem; line-height: 1.8;"></p>
+        </div>
+
+        <!-- Correlations -->
+        <div class="mb-4">
+            <h5 class="fw-bold text-dark border-bottom border-2 border-dark d-inline-block pb-1">2. الارتباطات الإحصائية (تحليل المخاطر)</h5>
+            <p id="rep-correlations" class="mt-2 text-dark" style="font-size: 1.1rem; line-height: 1.8;"></p>
+        </div>
+
+        <!-- Judgement -->
+        <div class="mb-4 bg-light p-3 border-start border-4 border-warning rounded">
+            <h5 class="fw-bold text-dark mb-2"><i class="bi bi-balance-scale"></i> 3. التقييم والحكم المؤسسي</h5>
+            <p id="rep-judgement" class="mb-0 text-dark fw-bold" style="font-size: 1.2rem;"></p>
+        </div>
+
+        <!-- Suggestions -->
+        <div class="mb-4">
+            <h5 class="fw-bold text-dark border-bottom border-2 border-dark d-inline-block pb-1">4. التوصيات الاستراتيجية لاتخاذ القرار</h5>
+            <ul id="rep-suggestions" class="mt-2 text-dark" style="font-size: 1.1rem; line-height: 1.8;">
+                <!-- Filled dynamically -->
+            </ul>
+        </div>
+        
+        <div class="text-center mt-5 pt-3 border-top text-muted small">
+            تم إنشاء هذا التقرير تلقائياً بواسطة محرك الذكاء الاصطناعي (Kinjo Core)
+        </div>
+      </div>
+      <div class="modal-footer bg-light border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+        <button type="button" class="btn btn-primary fw-bold" onclick="printReport()">
+            <i class="bi bi-printer-fill"></i> طباعة / حفظ كـ PDF
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Load Chart.js -->

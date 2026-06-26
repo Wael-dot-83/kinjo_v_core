@@ -309,7 +309,7 @@ function renderRadarChart(dim1, dim2) {
             datasets: [
                 {
                     label: dim1.name,
-                    data: [dim1.attendance, dim1.governance, dim1.enrollment, dim1.safety, dim1.capacity],
+                    data: [dim1.attendance_rate || 0, dim1.final_governance_score || 0, dim1.enrollment_rate || 0, 100 - (dim1.incident_rate_per_100 || 0), dim1.ratio_compliance_rate || 0],
                     backgroundColor: 'rgba(79, 70, 229, 0.2)', // Indigo
                     borderColor: 'rgba(79, 70, 229, 1)',
                     pointBackgroundColor: 'rgba(79, 70, 229, 1)',
@@ -317,7 +317,7 @@ function renderRadarChart(dim1, dim2) {
                 },
                 {
                     label: dim2.name,
-                    data: [dim2.attendance, dim2.governance, dim2.enrollment, dim2.safety, dim2.capacity],
+                    data: [dim2.attendance_rate || 0, dim2.final_governance_score || 0, dim2.enrollment_rate || 0, 100 - (dim2.incident_rate_per_100 || 0), dim2.ratio_compliance_rate || 0],
                     backgroundColor: 'rgba(14, 165, 233, 0.2)', // Sky blue
                     borderColor: 'rgba(14, 165, 233, 1)',
                     pointBackgroundColor: 'rgba(14, 165, 233, 1)',
@@ -355,3 +355,61 @@ document.addEventListener("DOMContentLoaded", () => {
     loadDimensionIds('dim1');
     loadDimensionIds('dim2');
 });
+}
+
+// Government Report Logic
+async function generateGovReport() {
+    const dimType = document.getElementById('dim1-type').value;
+    let dimId = document.getElementById('dim1-id').value;
+    
+    // For network level, we use JORDAN as dimId
+    if (dimType === 'NETWORK') {
+        dimId = 'JORDAN';
+    }
+
+    if (!dimId) {
+        alert('Please select a target level first.');
+        return;
+    }
+
+    try {
+        const res = await fetch(/api/analytics/government-report?dim_type=&dim_id=);
+        if (!res.ok) throw new Error('Failed to generate report');
+        
+        const report = await res.json();
+        
+        document.getElementById('rep-domain').innerText = dimId === 'JORDAN' ? 'الأردن (الشبكة الوطنية)' : dimId.replace('_', ' ');
+        document.getElementById('rep-summary').innerText = report.summary;
+        document.getElementById('rep-correlations').innerText = report.correlations || 'لا توجد ارتباطات حرجة مسجلة.';
+        document.getElementById('rep-judgement').innerText = report.judgement;
+        
+        const suggUl = document.getElementById('rep-suggestions');
+        suggUl.innerHTML = '';
+        if (report.suggestions && report.suggestions.length > 0) {
+            report.suggestions.forEach(s => {
+                const li = document.createElement('li');
+                li.innerText = s;
+                li.className = 'mb-2';
+                suggUl.appendChild(li);
+            });
+        }
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('govReportModal'));
+        modal.show();
+        
+    } catch (e) {
+        console.error(e);
+        alert('Error generating report');
+    }
+}
+
+function printReport() {
+    const printContent = document.getElementById('printableReportArea').innerHTML;
+    const originalContent = document.body.innerHTML;
+    
+    document.body.innerHTML = printContent;
+    window.print();
+    document.body.innerHTML = originalContent;
+    window.location.reload(); // Reload to restore JS events
+}

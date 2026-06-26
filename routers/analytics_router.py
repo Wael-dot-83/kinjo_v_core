@@ -7,6 +7,7 @@ import models
 import math
 from admin_security import require_admin
 import json
+from data_science.report_generator import generate_government_report
 
 router = APIRouter(prefix="/api/analytics", tags=["Advanced Analytics"])
 
@@ -251,3 +252,66 @@ def get_demographics(
         "total_children": len(results),
         "total_kgs": len(kg_density)
     }
+
+@router.get("/government-report")
+def get_government_report(
+    dim_type: str = Query(...),
+    dim_id: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin)
+):
+    """Generates the official Government Decision Support Report."""
+    
+    # 1. Fetch Demographics
+    demo_data = get_demographics(dim_type, dim_id, db, current_user)
+    
+    # 2. Fetch Z-Scores
+    # To get Z-scores, we just use the existing logic (simplified)
+    dim_enum = getattr(AnalyticsDimensionType, dim_type, AnalyticsDimensionType.NETWORK)
+    target = db.query(models.AnalyticsDimensionCache).filter(
+        models.AnalyticsDimensionCache.dimension_type == dim_enum,
+        models.AnalyticsDimensionCache.dimension_id == dim_id
+    ).order_by(models.AnalyticsDimensionCache.period_date.desc()).first()
+    
+    network_targets = db.query(models.AnalyticsDimensionCache).filter(
+        models.AnalyticsDimensionCache.dimension_type == AnalyticsDimensionType.NETWORK,
+        models.AnalyticsDimensionCache.dimension_id == "JORDAN"
+    ).order_by(models.AnalyticsDimensionCache.period_date.desc()).all()
+    
+    gov_mean, att_mean, gov_std, att_std = 0.0, 0.0, 1.0, 1.0
+    if network_targets:
+        n_govs = [t.final_governance_score for t in network_targets if t.final_governance_score]
+        n_atts = [t.attendance_rate for t in network_targets if t.attendance_rate]
+        if n_govs: gov_mean = sum(n_govs) / len(n_govs)
+        if n_atts: att_mean = sum(n_atts) / len(n_atts)
+        
+        gov_var = sum((x - gov_mean)**2 for x in n_govs) / len(n_govs) if n_govs else 1.0
+        att_var = sum((x - att_mean)**2 for x in n_atts) / len(n_atts) if n_atts else 1.0
+        gov_std = math.sqrt(gov_var) if gov_var > 0 else 1.0
+        att_std = math.sqrt(att_var) if att_var > 0 else 1.0
+
+    target_gov = target.final_governance_score if target and target.final_governance_score else gov_mean
+    target_att = target.attendance_rate if target and target.attendance_rate else att_mean
+    
+    z_scores = {
+        "governance": (target_gov - gov_mean) / gov_std,
+        "attendance": (target_att - att_mean) / att_std
+    }
+    
+    # 3. Fetch Predictive Insights
+    adv = db.query(models.AdvancedAnalyticsCache).filter(
+        models.AdvancedAnalyticsCache.dimension_type == dim_enum,
+        models.AdvancedAnalyticsCache.dimension_id == dim_id
+    ).order_by(models.AdvancedAnalyticsCache.period_date.desc()).first()
+    
+    adv_data = {
+        "staffing_quality_correlation": adv.staffing_quality_correlation if adv else 0.0,
+        "attendance_trend_slope": adv.attendance_trend_slope if adv else 0.0,
+        "predictive_risk_index": adv.predictive_risk_index if adv else 50.0
+    }
+    
+    # Generate human-readable report via Heuristics Engine
+    dim_name_display = "الأردن (الشبكة الوطنية)" if dim_id == "JORDAN" else dim_id.replace("_", " ")
+    
+    report = generate_government_report(dim_name_display, z_scores, adv_data, demo_data)
+    return report
