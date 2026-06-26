@@ -238,60 +238,44 @@
             "label_ar": "الرئيسية",
             "label_en": "Home",
             "items": [
-              {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم العامة", "label_en": "General Dashboard", "active_paths": ["/admin/dashboard"]}
+              {"href": "/admin/dashboard", "icon": "bi-speedometer2", "label_ar": "لوحة التحكم العامة", "label_en": "General Dashboard", "active_paths": ["/admin/dashboard"]},
+              {"href": "/admin/heatmap", "icon": "bi-globe-asia-australia", "label_ar": "الخريطة الحرارية", "label_en": "Heat Map", "active_paths": ["/admin/heatmap"]}
             ]
           },
           {
-            "id": "management",
-            "icon": "bi-grid-1x2",
-            "label_ar": "الإدارة",
-            "label_en": "Management",
+            "id": "directory",
+            "icon": "bi-journal-bookmark",
+            "label_ar": "سجل الكيانات",
+            "label_en": "Directory",
             "items": [
+              {"href": "/admin/kindergartens", "icon": "bi-buildings", "label_ar": "رياض الأطفال", "label_en": "Kindergartens", "active_paths": ["/admin/kindergartens"]},
+              {"href": "/admin/classes", "icon": "bi-easel", "label_ar": "الصفوف", "label_en": "Classes", "active_paths": ["/admin/classes"]},
               {"href": "/admin/users", "icon": "bi-people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users"], "active_prefixes": ["/admin/users/"]},
-              {"href": "/admin/messages", "icon": "bi-chat-square-text", "label_ar": "التواصل", "label_en": "Communication", "active_paths": ["/admin/messages", "/admin/contact-messages"], "active_prefixes": ["/admin/messages/"]},
-              {"href": "/admin/imported-kindergartens", "icon": "bi-database", "label_ar": "إدارة البيانات", "label_en": "Data Management", "active_paths": ["/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs"]}
+              {"href": "/admin/supervisor", "icon": "bi-person-badge", "label_ar": "الكادر والمشرفين", "label_en": "Staff & Supervisors", "active_paths": ["/admin/supervisor"]},
+              {"href": "/admin/parent", "icon": "bi-person-hearts", "label_ar": "أولياء الأمور", "label_en": "Parents", "active_paths": ["/admin/parent"]}
             ]
           },
           {
-            "id": "analytics-reports",
+            "id": "insights",
             "icon": "bi-bar-chart-line",
-            "label_ar": "التحليلات والتقارير",
-            "label_en": "Analytics & Reports",
+            "label_ar": "التحليلات والمؤشرات",
+            "label_en": "Insights & Analytics",
             "items": [
               {"href": "/admin/analytics", "icon": "bi-graph-up-arrow", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics"]},
-              {"href": "/admin/analytics/reports", "icon": "bi-file-earmark-text", "label_ar": "التقارير المفصلة", "label_en": "Detailed Reports", "active_paths": ["/admin/analytics/reports"]},
-              {"href": "/admin/analytics/daily-reports", "icon": "bi-calendar-day", "label_ar": "التقارير اليومية", "label_en": "Daily Reports", "active_paths": ["/admin/analytics/daily-reports"]},
-              {"href": "/admin/daily-reports-organization", "icon": "bi-calendar-check", "label_ar": "جدولة التقارير", "label_en": "Report Scheduling", "active_paths": ["/admin/daily-reports-organization"]}
+              {"href": "/admin/analytics/reports", "icon": "bi-file-earmark-text", "label_ar": "التقارير المفصلة", "label_en": "Detailed Reports", "active_paths": ["/admin/analytics/reports", "/admin/analytics/daily-reports"]},
+              {"href": "/admin/daily-reports-organization", "icon": "bi-calendar-check", "label_ar": "جدولة التقارير", "label_en": "Report Scheduling", "active_paths": ["/admin/daily-reports-organization"]},
+              {"href": "/admin/governance-reports", "icon": "bi-clipboard-data", "label_ar": "مؤشرات الحوكمة", "label_en": "Governance Indicators", "active_paths": ["/admin/governance-reports", "/admin/classification"]}
             ]
           },
           {
-            "id": "incidents",
-            "icon": "bi-exclamation-triangle",
-            "label_ar": "الحوادث",
-            "label_en": "Incidents",
+            "id": "operations",
+            "icon": "bi-cpu",
+            "label_ar": "العمليات",
+            "label_en": "Operations",
             "items": [
-              {"href": "/admin/reports/incidents", "icon": "bi-list-check", "label_ar": "سجل الحوادث", "label_en": "Incident Log", "active_paths": ["/admin/reports/incidents"]},
-              {"href": "/admin/reports/incidents/generate", "icon": "bi-file-medical", "label_ar": "تقارير الحوادث", "label_en": "Incident Reports", "active_paths": ["/admin/reports/incidents/generate"]}
-            ]
-          },
-          {
-            "id": "heatmap",
-            "icon": "bi-map",
-            "label_ar": "الخريطة الحرارية",
-            "label_en": "Heat Map",
-            "items": [
-              {"href": "/admin/heatmap", "icon": "bi-globe-asia-australia", "label_ar": "نظرة عامة على الخريطة", "label_en": "Map Overview", "active_paths": ["/admin/heatmap"]},
-              {"href": "/admin/heatmap#governorates", "icon": "bi-geo-alt", "label_ar": "تحليل المحافظات", "label_en": "Governorate Analysis", "active_paths": []}
-            ]
-          },
-          {
-            "id": "governance",
-            "icon": "bi-bank",
-            "label_ar": "الحوكمة",
-            "label_en": "Governance",
-            "items": [
-              {"href": "/admin/governance-reports", "icon": "bi-clipboard-data", "label_ar": "مؤشرات الحوكمة", "label_en": "Governance Indicators", "active_paths": ["/admin/governance-reports"]},
-              {"href": "/admin/classification", "icon": "bi-award", "label_ar": "التصنيف والمقارنات", "label_en": "Classification and Benchmarking", "active_paths": ["/admin/classification"]}
+              {"href": "/admin/messages", "icon": "bi-chat-square-text", "label_ar": "التواصل", "label_en": "Communication", "active_paths": ["/admin/messages", "/admin/contact-messages"], "active_prefixes": ["/admin/messages/"]},
+              {"href": "/admin/reports/incidents", "icon": "bi-exclamation-triangle", "label_ar": "سجل الحوادث", "label_en": "Incidents", "active_paths": ["/admin/reports/incidents", "/admin/reports/incidents/generate"]},
+              {"href": "/admin/imported-kindergartens", "icon": "bi-database", "label_ar": "إدارة البيانات", "label_en": "Data Management", "active_paths": ["/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs"]}
             ]
           },
           {
