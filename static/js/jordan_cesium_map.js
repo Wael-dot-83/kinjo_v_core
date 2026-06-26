@@ -415,7 +415,7 @@ function addKgPins(kgs) {
     const entity = viewer.entities.add({
       position: Cesium.Cartesian3.fromDegrees(kg.longitude, kg.latitude, 0),
             billboard: {
-        image: '/static/img/real_school_pin.png',
+        image: pinImageUrl,
         color: pinColor, // Tint the real image with the risk color
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
