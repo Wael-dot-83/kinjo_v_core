@@ -1,13 +1,13 @@
-{% extends "admin_base.html" %}
+{% extends "admin_base.html"%}
 
 {% block title %}{% if ui_lang == 'en' %}Compliance Reminders — KinJo{% else %}تذكيرات الامتثال — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item">
+<a href="/admin/dashboard"class="admin-breadcrumb-item">
   <i class="bi bi-house"></i> {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
 </a>
 <span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/governance-reports" class="admin-breadcrumb-item">
+<a href="/admin/governance-reports"class="admin-breadcrumb-item">
   {% if ui_lang == 'en' %}Governance &amp; Compliance{% else %}الحوكمة والامتثال{% endif %}
 </a>
 <span class="admin-breadcrumb-separator">/</span>
@@ -24,14 +24,14 @@
       {% if ui_lang == 'en' %}Send and track daily-report reminders to non-compliant supervisors{% else %}إرسال ومتابعة تذكيرات التقارير اليومية للمشرفين غير الملتزمين{% endif %}
     </p>
   </div>
-  <button type="button" class="admin-btn admin-btn-ghost" id="refreshBtn">
+  <button type="button"class="admin-btn admin-btn-ghost"id="refreshBtn">
     <i class="bi bi-arrow-clockwise me-1"></i>
     {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
   </button>
 </div>
 
 <!-- Summary Stats -->
-<div class="row g-3 mb-4" id="statsRow">
+<div class="row g-3 mb-4"id="statsRow">
   <div class="col-sm-6 col-xl-3">
     <div class="admin-card h-100">
       <div class="admin-card-body d-flex align-items-center gap-3">
@@ -39,7 +39,7 @@
           <i class="bi bi-clock admin-text-warning fs-4"></i>
         </div>
         <div>
-          <div class="fs-4 fw-bold" id="statPending">—</div>
+          <div class="fs-4 fw-bold"id="statPending">—</div>
           <div class="small admin-text-muted">{% if ui_lang == 'en' %}Pending{% else %}معلّقة{% endif %}</div>
         </div>
       </div>
@@ -52,7 +52,7 @@
           <i class="bi bi-check-circle admin-text-success fs-4"></i>
         </div>
         <div>
-          <div class="fs-4 fw-bold" id="statSent">—</div>
+          <div class="fs-4 fw-bold"id="statSent">—</div>
           <div class="small admin-text-muted">{% if ui_lang == 'en' %}Sent Today{% else %}مُرسَلة اليوم{% endif %}</div>
         </div>
       </div>
@@ -65,7 +65,7 @@
           <i class="bi bi-exclamation-triangle admin-text-danger fs-4"></i>
         </div>
         <div>
-          <div class="fs-4 fw-bold" id="statNonCompliant">—</div>
+          <div class="fs-4 fw-bold"id="statNonCompliant">—</div>
           <div class="small admin-text-muted">{% if ui_lang == 'en' %}Non-Compliant{% else %}غير ملتزمة{% endif %}</div>
         </div>
       </div>
@@ -78,7 +78,7 @@
           <i class="bi bi-envelope-paper admin-text-primary fs-4"></i>
         </div>
         <div>
-          <div class="fs-4 fw-bold" id="statTotal">—</div>
+          <div class="fs-4 fw-bold"id="statTotal">—</div>
           <div class="small admin-text-muted">{% if ui_lang == 'en' %}Total Sent{% else %}إجمالي المُرسَل{% endif %}</div>
         </div>
       </div>
@@ -92,15 +92,15 @@
     <h2 class="admin-card-title mb-0">{% if ui_lang == 'en' %}Reminder Log{% else %}سجل التذكيرات{% endif %}</h2>
   </div>
   <div class="admin-card-body p-0">
-    <div class="text-center py-5 admin-text-muted" id="logsLoading">
-      <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+    <div class="text-center py-5 admin-text-muted"id="logsLoading">
+      <div class="spinner-border spinner-border-sm me-2"role="status"></div>
       {% if ui_lang == 'en' %}Loading reminder history…{% else %}جاري تحميل سجل التذكيرات…{% endif %}
     </div>
-    <div class="text-center py-5 admin-text-muted" id="logsEmpty" style="display:none;">
+    <div class="text-center py-5 admin-text-muted"id="logsEmpty"style="display:none;">
       <i class="bi bi-inbox fs-1 mb-3 d-block opacity-50"></i>
       {% if ui_lang == 'en' %}No reminders sent yet.{% else %}لم يتم إرسال أي تذكيرات بعد.{% endif %}
     </div>
-    <div class="table-responsive" id="logsTableWrap" style="display:none;">
+    <div class="table-responsive"id="logsTableWrap"style="display:none;">
       <table class="table table-hover mb-0">
         <thead class="table-light">
           <tr>

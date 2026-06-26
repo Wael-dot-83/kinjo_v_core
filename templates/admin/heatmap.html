@@ -1,12 +1,12 @@
-{% extends "admin_base.html" %}
+{% extends "admin_base.html"%}
 
 {% block title %}
   الخريطة الحرارية للحوادث والطلبات — كينجو
 {% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="لوحة التحكم">
-  <i class="bi bi-house" aria-hidden="true"></i>
+<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="لوحة التحكم">
+  <i class="bi bi-house"aria-hidden="true"></i>
 </a>
 <span class="admin-breadcrumb-separator">/</span>
 <span class="admin-breadcrumb-item active">الخريطة الحرارية للحوادث والطلبات</span>
@@ -14,10 +14,10 @@
 
 {% block extra_head %}
 {# ── Cesium CSS ──────────────────────────────────────────────────────────── #}
-<link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet" crossorigin="anonymous">
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css"rel="stylesheet"crossorigin="anonymous">
 {# ── Chart.js ────────────────────────────────────────────────────────────── #}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" crossorigin="anonymous" defer></script>
-<link href="/static/css/admin_design_system.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"crossorigin="anonymous"defer></script>
+<link href="/static/css/admin_design_system.css"rel="stylesheet">
 
 <style>
 /* ── BASE THEME ─────────────────────────────────────────────────── */
@@ -328,14 +328,14 @@
      ═══════════════════════════════════════════════════════════ #}
   <header class="cc-header glass-panel">
     <div class="cc-identity">
-      <div class="hkj-emblem" aria-label="المملكة الأردنية الهاشمية" role="img">
-        <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="40" height="40" aria-hidden="true">
-          <rect width="40" height="13.3" fill="#000"/>
-          <rect y="13.3" width="40" height="13.3" fill="#FFF"/>
-          <rect y="26.6" width="40" height="13.4" fill="#007A3D"/>
-          <polygon points="0,0 20,20 0,40" fill="#CE1126"/>
+      <div class="hkj-emblem"aria-label="المملكة الأردنية الهاشمية"role="img">
+        <svg viewBox="0 0 40 40"xmlns="http://www.w3.org/2000/svg"width="40"height="40"aria-hidden="true">
+          <rect width="40"height="13.3"fill="#000"/>
+          <rect y="13.3"width="40"height="13.3"fill="#FFF"/>
+          <rect y="26.6"width="40"height="13.4"fill="#007A3D"/>
+          <polygon points="0,0 20,20 0,40"fill="#CE1126"/>
           <g transform="translate(7.5,20)">
-            <polygon points="0,-6 1.1,-2 5.7,-2 2,0.6 3.1,4.9 0,2.4 -3.1,4.9 -2,0.6 -5.7,-2 -1.1,-2" fill="#FFF"/>
+            <polygon points="0,-6 1.1,-2 5.7,-2 2,0.6 3.1,4.9 0,2.4 -3.1,4.9 -2,0.6 -5.7,-2 -1.1,-2"fill="#FFF"/>
           </g>
         </svg>
       </div>
@@ -344,36 +344,36 @@
         <div class="cc-subtitle">وزارة التنمية الاجتماعية — نظام كينجو لإدارة الحضانات • تحديث مباشر</div>
       </div>
     </div>
-    <div class="cc-status-strip" role="status" aria-live="polite">
-      <div class="status-chip live" id="dataStatus">
-        <div class="live-dot" aria-hidden="true"></div>
+    <div class="cc-status-strip"role="status"aria-live="polite">
+      <div class="status-chip live"id="dataStatus">
+        <div class="live-dot"aria-hidden="true"></div>
         بيانات مباشرة
       </div>
-      <div class="status-chip info" id="lastUpdateStatus">
-        <i class="bi bi-clock" aria-hidden="true"></i>
+      <div class="status-chip info"id="lastUpdateStatus">
+        <i class="bi bi-clock"aria-hidden="true"></i>
         جاري التحميل…
       </div>
-      <div class="status-chip info" id="alertCountStatus">
-        <i class="bi bi-shield-exclamation" aria-hidden="true"></i> --
+      <div class="status-chip info"id="alertCountStatus">
+        <i class="bi bi-shield-exclamation"aria-hidden="true"></i> --
       </div>
-      <span class="freshness-badge" id="freshnessBadge" aria-label="وقت عرض الصفحة">
+      <span class="freshness-badge"id="freshnessBadge"aria-label="وقت عرض الصفحة">
         وقت التحميل: <span id="pageLoadTime">--</span>
       </span>
     </div>
   </header>
 
   {# ── PAGE DESCRIPTION ──────────────────────────────────────── #}
-  <div class="page-desc" role="note" aria-label="وصف الصفحة">
+  <div class="page-desc"role="note"aria-label="وصف الصفحة">
     تُعرض هنا خريطة حرارية تفاعلية لتوزيع الحوادث وطلبات التسجيل على مستوى محافظات المملكة الأردنية الهاشمية، مع تحليل تفصيلي لكل محافظة ومقارنة المؤشرات الرئيسية لدعم اتخاذ القرار الإداري.
   </div>
 
   {# ═══════════════════════════════════════════════════════════
      FILTER BAR — 7 filter types
      ═══════════════════════════════════════════════════════════ #}
-  <div class="cc-filters glass-panel" role="toolbar" aria-label="فلاتر الخريطة والتصدير">
+  <div class="cc-filters glass-panel"role="toolbar"aria-label="فلاتر الخريطة والتصدير">
 
     <span class="filter-label">الفترة:</span>
-    <select id="periodSelect" class="cc-select" aria-label="اختر الفترة الزمنية">
+    <select id="periodSelect"class="cc-select"aria-label="اختر الفترة الزمنية">
       <option value="30">آخر 30 يوماً</option>
       <option value="90">آخر 3 أشهر</option>
       <option value="180">آخر 6 أشهر</option>
@@ -381,7 +381,7 @@
     </select>
 
     <span class="filter-label">المؤشر:</span>
-    <select id="indicatorViewSelect" class="cc-select" aria-label="اختر المؤشر">
+    <select id="indicatorViewSelect"class="cc-select"aria-label="اختر المؤشر">
       <option value="overall_risk">مؤشر الخطر العام</option>
       <option value="safety_incidents">السلامة والحوادث</option>
       <option value="reports_attendance">التقارير والحضور</option>
@@ -391,7 +391,7 @@
     </select>
 
     <span class="filter-label">نوع الحادثة:</span>
-    <select id="incidentTypeSelect" class="cc-select" aria-label="نوع الحادثة">
+    <select id="incidentTypeSelect"class="cc-select"aria-label="نوع الحادثة">
       <option value="">الكل</option>
       <option value="safety">السلامة العامة</option>
       <option value="docs">نقص الوثائق</option>
@@ -401,37 +401,37 @@
     </select>
 
     <span class="filter-label">المحافظة:</span>
-    <select id="govSelect" class="cc-select" aria-label="اختر محافظة">
+    <select id="govSelect"class="cc-select"aria-label="اختر محافظة">
       <option value="">الكل</option>
     </select>
 
     <span class="filter-label">الحالة:</span>
-    <select id="statusSelect" class="cc-select" aria-label="حالة الطلب">
+    <select id="statusSelect"class="cc-select"aria-label="حالة الطلب">
       <option value="">الكل</option>
       <option value="active">نشط</option>
       <option value="pending">معلق</option>
       <option value="closed">مغلق</option>
     </select>
 
-    <button type="button" id="refreshBtn" class="cc-btn" aria-label="تحديث البيانات">
-      <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+    <button type="button"id="refreshBtn"class="cc-btn"aria-label="تحديث البيانات">
+      <i class="bi bi-arrow-clockwise"aria-hidden="true"></i>
       تحديث
     </button>
 
     <div style="flex:1"></div>
 
-    <button type="button" id="exportCsvBtn" class="cc-btn cc-btn-export"
-            aria-label="تصدير Excel" title="تصدير جدول البيانات">
-      <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
+    <button type="button"id="exportCsvBtn"class="cc-btn cc-btn-export"
+            aria-label="تصدير Excel"title="تصدير جدول البيانات">
+      <i class="bi bi-file-earmark-spreadsheet"aria-hidden="true"></i>
       Excel
     </button>
-    <button type="button" id="exportPdfBtn" class="cc-btn cc-btn-export"
-            aria-label="تصدير PDF" title="طباعة التقرير">
-      <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+    <button type="button"id="exportPdfBtn"class="cc-btn cc-btn-export"
+            aria-label="تصدير PDF"title="طباعة التقرير">
+      <i class="bi bi-file-earmark-pdf"aria-hidden="true"></i>
       PDF
     </button>
-    <button type="button" id="printPageBtn" class="cc-btn" aria-label="طباعة الصفحة">
-      <i class="bi bi-printer" aria-hidden="true"></i>
+    <button type="button"id="printPageBtn"class="cc-btn"aria-label="طباعة الصفحة">
+      <i class="bi bi-printer"aria-hidden="true"></i>
     </button>
   </div>
 
@@ -443,61 +443,61 @@
        aria-label="مؤشرات الخريطة الحرارية الرئيسية">
 
     <div class="kpi-card glass-panel hover-elevate"
-         role="button" tabindex="0"
+         role="button"tabindex="0"
          title="انقر للانتقال إلى مخطط الحوادث"
          onclick="window.handleKpiClick && handleKpiClick('incidents')"
          onkeydown="if(event.key==='Enter'||event.key===' ')handleKpiClick && handleKpiClick('incidents')">
       <div class="kpi-label">إجمالي الحوادث</div>
-      <div class="kpi-value" id="kpiTotalIncidents">--</div>
-      <div class="kpi-sub" id="kpiTotalIncidentsSub">جاري التحميل…</div>
+      <div class="kpi-value"id="kpiTotalIncidents">--</div>
+      <div class="kpi-sub"id="kpiTotalIncidentsSub">جاري التحميل…</div>
     </div>
 
     <div class="kpi-card kpi-card-crit glass-panel hover-elevate"
-         role="button" tabindex="0"
+         role="button"tabindex="0"
          title="انقر لعرض المحافظة الأعلى خطورة على الخريطة"
          onclick="window.handleKpiClick && handleKpiClick('topgov')"
          onkeydown="if(event.key==='Enter'||event.key===' ')handleKpiClick && handleKpiClick('topgov')">
       <div class="kpi-label">أعلى محافظة خطورة</div>
-      <div class="kpi-value kpi-gov-name" id="kpiTopGov">--</div>
-      <div class="kpi-sub" id="kpiTopGovScore">--</div>
+      <div class="kpi-value kpi-gov-name"id="kpiTopGov">--</div>
+      <div class="kpi-sub"id="kpiTopGovScore">--</div>
     </div>
 
     <div class="kpi-card kpi-card-warn glass-panel hover-elevate"
-         role="button" tabindex="0"
+         role="button"tabindex="0"
          title="انقر لتصفية المحافظات ذات الخطورة المرتفعة"
          onclick="window.handleKpiClick && handleKpiClick('followup')"
          onkeydown="if(event.key==='Enter'||event.key===' ')handleKpiClick && handleKpiClick('followup')">
       <div class="kpi-label">مناطق تحتاج متابعة</div>
-      <div class="kpi-value" id="kpiNeedFollowup">--</div>
+      <div class="kpi-value"id="kpiNeedFollowup">--</div>
       <div class="kpi-sub">محافظة · خطر ≥ 50</div>
     </div>
 
-    <div class="kpi-card glass-panel hover-elevate" title="المتوسط الوطني لمؤشر الخطر">
+    <div class="kpi-card glass-panel hover-elevate"title="المتوسط الوطني لمؤشر الخطر">
       <div class="kpi-label">مؤشر الخطورة العام</div>
-      <div class="kpi-value" id="kpiOverallRisk">--</div>
+      <div class="kpi-value"id="kpiOverallRisk">--</div>
       <div class="kpi-sub">متوسط وطني</div>
     </div>
 
     <div class="kpi-card glass-panel hover-elevate"
-         role="button" tabindex="0"
+         role="button"tabindex="0"
          title="انقر للانتقال إلى جدول التفاصيل"
          onclick="window.handleKpiClick && handleKpiClick('apps')"
          onkeydown="if(event.key==='Enter'||event.key===' ')handleKpiClick && handleKpiClick('apps')">
       <div class="kpi-label">الطلبات النشطة</div>
-      <div class="kpi-value" id="kpiPendingApps">--</div>
+      <div class="kpi-value"id="kpiPendingApps">--</div>
       <div class="kpi-sub">طفل مسجل</div>
     </div>
 
-    <div class="kpi-card glass-panel hover-elevate" title="نسبة المحافظات التي تتوفر لها بيانات">
+    <div class="kpi-card glass-panel hover-elevate"title="نسبة المحافظات التي تتوفر لها بيانات">
       <div class="kpi-label">جودة البيانات</div>
-      <div class="kpi-value" id="kpiDataQuality">--%</div>
-      <div class="kpi-sub" id="kpiDataQualitySub">من 12 محافظة</div>
+      <div class="kpi-value"id="kpiDataQuality">--%</div>
+      <div class="kpi-sub"id="kpiDataQualitySub">من 12 محافظة</div>
     </div>
 
   </div>
 
   {# ── DATA QUALITY WARNINGS ───────────────────────────────────── #}
-  <div id="dataQualityStrip" role="alert" aria-live="assertive" style="display:none"></div>
+  <div id="dataQualityStrip"role="alert"aria-live="assertive"style="display:none"></div>
 
   {# ═══════════════════════════════════════════════════════════
      3-PANEL CESIUM SCENE
@@ -509,79 +509,79 @@
            role="complementary"
            aria-label="قائمة المحافظات">
       <div class="cs-left-head">
-        <input type="search" id="govSearch" class="cs-search"
+        <input type="search"id="govSearch"class="cs-search"
                placeholder="ابحث عن محافظة…"
                aria-label="البحث في المحافظات">
         <div class="cs-left-actions">
-          <button type="button" id="csHomeBtn" class="cc-btn" style="flex:1;justify-content:center"
-                  title="العودة إلى الأردن" aria-label="العودة إلى الأردن">
-            <i class="bi bi-house" aria-hidden="true"></i>
+          <button type="button"id="csHomeBtn"class="cc-btn"style="flex:1;justify-content:center"
+                  title="العودة إلى الأردن"aria-label="العودة إلى الأردن">
+            <i class="bi bi-house"aria-hidden="true"></i>
             عودة
           </button>
-          <button type="button" id="csPlayBtn" class="cc-btn" style="flex:1;justify-content:center"
+          <button type="button"id="csPlayBtn"class="cc-btn"style="flex:1;justify-content:center"
                   title="تشغيل / إيقاف الجدول الزمني"
                   aria-label="تشغيل الجدول الزمني">
-            <i class="bi bi-play-fill" aria-hidden="true"></i>
+            <i class="bi bi-play-fill"aria-hidden="true"></i>
           </button>
         </div>
       </div>
 
       {# Risk-level filter pills #}
-      <div class="cs-risk-filter" role="group" aria-label="تصفية حسب مستوى الخطر">
-        <button type="button" class="risk-filter-btn active" data-risk="all" aria-pressed="true">الكل</button>
-        <button type="button" class="risk-filter-btn risk-btn-low"      data-risk="low"      aria-pressed="false">منخفض</button>
-        <button type="button" class="risk-filter-btn risk-btn-medium"   data-risk="medium"   aria-pressed="false">متوسط</button>
-        <button type="button" class="risk-filter-btn risk-btn-high"     data-risk="high"     aria-pressed="false">مرتفع</button>
-        <button type="button" class="risk-filter-btn risk-btn-critical" data-risk="critical" aria-pressed="false">حرج</button>
+      <div class="cs-risk-filter"role="group"aria-label="تصفية حسب مستوى الخطر">
+        <button type="button"class="risk-filter-btn active"data-risk="all"aria-pressed="true">الكل</button>
+        <button type="button"class="risk-filter-btn risk-btn-low"     data-risk="low"     aria-pressed="false">منخفض</button>
+        <button type="button"class="risk-filter-btn risk-btn-medium"  data-risk="medium"  aria-pressed="false">متوسط</button>
+        <button type="button"class="risk-filter-btn risk-btn-high"    data-risk="high"    aria-pressed="false">مرتفع</button>
+        <button type="button"class="risk-filter-btn risk-btn-critical"data-risk="critical"aria-pressed="false">حرج</button>
       </div>
 
-      <div class="cs-left-body" id="govListBody" role="list" aria-label="المحافظات">
+      <div class="cs-left-body"id="govListBody"role="list"aria-label="المحافظات">
         {% for i in range(12) %}
-        <div class="cs-gov-item" style="opacity:0.35" aria-hidden="true">
-          <div class="skeleton" style="height:11px;width:{{ [55,75,60,80,65,70,50,85,60,72,55,68][i] }}%;"></div>
-          <div class="skeleton" style="height:16px;width:32px;border-radius:9999px"></div>
+        <div class="cs-gov-item"style="opacity:0.35"aria-hidden="true">
+          <div class="skeleton"style="height:11px;width:{{ [55,75,60,80,65,70,50,85,60,72,55,68][i] }}%;"></div>
+          <div class="skeleton"style="height:16px;width:32px;border-radius:9999px"></div>
         </div>
         {% endfor %}
       </div>
 
       {# ── Layer toggles: 6 types ─────────────────────────────── #}
-      <div class="cs-layer-toggles" role="group" aria-label="طبقات الخريطة">
+      <div class="cs-layer-toggles"role="group"aria-label="طبقات الخريطة">
         <label class="cs-toggle-label">
-          <input type="checkbox" id="incidentToggle" checked
+          <input type="checkbox"id="incidentToggle"checked
                  aria-label="إظهار طبقة الحوادث">
-          <i class="bi bi-exclamation-triangle-fill" style="color:#ef4444" aria-hidden="true"></i>
+          <i class="bi bi-exclamation-triangle-fill"style="color:#ef4444"aria-hidden="true"></i>
           الحوادث
         </label>
         <label class="cs-toggle-label">
-          <input type="checkbox" id="applicationToggle" checked
+          <input type="checkbox"id="applicationToggle"checked
                  aria-label="إظهار طبقة الطلبات">
-          <i class="bi bi-file-earmark-check-fill" style="color:#22c55e" aria-hidden="true"></i>
+          <i class="bi bi-file-earmark-check-fill"style="color:#22c55e"aria-hidden="true"></i>
           الطلبات
         </label>
         <label class="cs-toggle-label">
-          <input type="checkbox" id="kgToggle" checked
+          <input type="checkbox"id="kgToggle"checked
                  aria-label="إظهار الحضانات">
-          <i class="bi bi-pin-map-fill" style="color:#f59e0b" aria-hidden="true"></i>
+          <i class="bi bi-pin-map-fill"style="color:#f59e0b"aria-hidden="true"></i>
           الرياض
           <span id="kgCountBadge"
                 style="background:#1F5E47;color:#fff;border-radius:9999px;padding:0.1rem 0.4rem;font-size:0.7rem;font-weight:700">0</span>
         </label>
         <label class="cs-toggle-label">
-          <input type="checkbox" id="govOverlayToggle" checked
+          <input type="checkbox"id="govOverlayToggle"checked
                  aria-label="إظهار طبقة مستوى الخطورة">
-          <i class="bi bi-thermometer-half" style="color:#f97316" aria-hidden="true"></i>
+          <i class="bi bi-thermometer-half"style="color:#f97316"aria-hidden="true"></i>
           الخطورة
         </label>
         <label class="cs-toggle-label">
-          <input type="checkbox" id="govBadgeToggle" checked
+          <input type="checkbox"id="govBadgeToggle"checked
                  aria-label="إظهار تسميات المحافظات">
-          <i class="bi bi-geo-alt-fill" style="color:#818cf8" aria-hidden="true"></i>
+          <i class="bi bi-geo-alt-fill"style="color:#818cf8"aria-hidden="true"></i>
           التسميات
         </label>
         <label class="cs-toggle-label">
-          <input type="checkbox" id="visitToggle"
+          <input type="checkbox"id="visitToggle"
                  aria-label="إظهار طبقة الزيارات">
-          <i class="bi bi-calendar-check-fill" style="color:#06b6d4" aria-hidden="true"></i>
+          <i class="bi bi-calendar-check-fill"style="color:#06b6d4"aria-hidden="true"></i>
           الزيارات
         </label>
       </div>
@@ -594,13 +594,13 @@
     </div>
 
     {# ── RIGHT: INTELLIGENCE PANEL ──────────────────────────── #}
-    <div class="intel-panel glass-panel" id="intelPanel"
+    <div class="intel-panel glass-panel"id="intelPanel"
          role="complementary"
          aria-label="لوحة تحليل المخاطر والحوادث"
          aria-live="polite">
       <div class="intel-placeholder">
         <div class="intel-placeholder-icon">
-          <i class="bi bi-map" style="font-size:3rem;opacity:0.18" aria-hidden="true"></i>
+          <i class="bi bi-map"style="font-size:3rem;opacity:0.18"aria-hidden="true"></i>
         </div>
         <div class="intel-placeholder-title">اختر محافظة</div>
         <div class="intel-placeholder-sub">
@@ -612,37 +612,37 @@
   </div>{# /cs-scene #}
 
   {# ── RISK LEGEND ─────────────────────────────────────────── #}
-  <div class="risk-legend" role="region" aria-label="مفتاح مستويات الخطر">
+  <div class="risk-legend"role="region"aria-label="مفتاح مستويات الخطر">
     <span class="legend-label">مستوى الخطر:</span>
     <div class="legend-item">
-      <span class="legend-dot" style="background:#22c55e" aria-hidden="true"></span>
+      <span class="legend-dot"style="background:#22c55e"aria-hidden="true"></span>
       <span>منخفض (أقل من 25)</span>
     </div>
     <div class="legend-item">
-      <span class="legend-dot" style="background:#f59e0b" aria-hidden="true"></span>
+      <span class="legend-dot"style="background:#f59e0b"aria-hidden="true"></span>
       <span>متوسط (25 – 49)</span>
     </div>
     <div class="legend-item">
-      <span class="legend-dot" style="background:#f97316" aria-hidden="true"></span>
+      <span class="legend-dot"style="background:#f97316"aria-hidden="true"></span>
       <span>مرتفع (50 – 74)</span>
     </div>
     <div class="legend-item">
-      <span class="legend-dot" style="background:#ef4444" aria-hidden="true"></span>
+      <span class="legend-dot"style="background:#ef4444"aria-hidden="true"></span>
       <span>حرج (75 فأكثر)</span>
     </div>
     <div style="flex:1"></div>
-    <span style="font-size:0.75rem;color:#475569" id="lastMapUpdate"></span>
+    <span style="font-size:0.75rem;color:#475569"id="lastMapUpdate"></span>
   </div>
 
   {# ═══════════════════════════════════════════════════════════
      CHARTS SECTION
      ═══════════════════════════════════════════════════════════ #}
-  <section class="hm-section" id="chartsSection"
+  <section class="hm-section"id="chartsSection"
            role="region"
            aria-label="المخططات التحليلية">
     <div class="hm-section-head">
       <div class="hm-section-title">
-        <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
+        <i class="bi bi-bar-chart-line"aria-hidden="true"></i>
         المخططات التحليلية
         <span class="hm-section-sub">— مقارنة الأداء والمؤشرات عبر المحافظات</span>
       </div>
@@ -650,19 +650,19 @@
     <div class="hm-charts-grid">
       <div class="hm-chart-card glass-panel hover-elevate">
         <div class="hm-chart-title">
-          <i class="bi bi-graph-up-arrow" style="color:#2F7D62" aria-hidden="true"></i>
+          <i class="bi bi-graph-up-arrow"style="color:#2F7D62"aria-hidden="true"></i>
           مقارنة الفترات — مؤشر الخطر لأعلى 10 محافظات
         </div>
-        <canvas id="hmPeriodChart" class="hm-chart-canvas"
-                role="img" aria-label="مخطط أعمدة: مقارنة مؤشر الخطر بين الفترة الحالية والسابقة"></canvas>
+        <canvas id="hmPeriodChart"class="hm-chart-canvas"
+                role="img"aria-label="مخطط أعمدة: مقارنة مؤشر الخطر بين الفترة الحالية والسابقة"></canvas>
       </div>
       <div class="hm-chart-card glass-panel hover-elevate">
         <div class="hm-chart-title">
-          <i class="bi bi-diagram-3" style="color:#818cf8" aria-hidden="true"></i>
+          <i class="bi bi-diagram-3"style="color:#818cf8"aria-hidden="true"></i>
           المؤشرات المتعددة — الحوادث · الحضور · الحوكمة
         </div>
-        <canvas id="hmMultiChart" class="hm-chart-canvas"
-                role="img" aria-label="مخطط خطي: ثلاثة مؤشرات رئيسية عبر جميع المحافظات"></canvas>
+        <canvas id="hmMultiChart"class="hm-chart-canvas"
+                role="img"aria-label="مخطط خطي: ثلاثة مؤشرات رئيسية عبر جميع المحافظات"></canvas>
       </div>
     </div>
   </section>
@@ -675,22 +675,22 @@
            aria-label="توزيع الحوادث حسب النوع">
     <div class="hm-section-head">
       <div class="hm-section-title">
-        <i class="bi bi-pie-chart-fill" aria-hidden="true"></i>
+        <i class="bi bi-pie-chart-fill"aria-hidden="true"></i>
         توزيع الحوادث حسب النوع
         <span class="hm-section-sub">— نسبة كل فئة من إجمالي الحوادث المسجلة</span>
       </div>
     </div>
-    <div class="hm-breakdown-grid" id="incidentBreakdownGrid" role="list">
+    <div class="hm-breakdown-grid"id="incidentBreakdownGrid"role="list">
       {% for _ in range(5) %}
-      <div class="hm-type-card" aria-hidden="true">
+      <div class="hm-type-card"aria-hidden="true">
         <div class="hm-type-name">
-          <div class="skeleton" style="height:11px;width:75%;margin-bottom:0.375rem"></div>
+          <div class="skeleton"style="height:11px;width:75%;margin-bottom:0.375rem"></div>
         </div>
         <div class="hm-type-count">
-          <div class="skeleton" style="height:22px;width:45%"></div>
+          <div class="skeleton"style="height:22px;width:45%"></div>
         </div>
         <div class="hm-type-bar">
-          <div class="skeleton" style="height:4px;width:60%;border-radius:9999px"></div>
+          <div class="skeleton"style="height:4px;width:60%;border-radius:9999px"></div>
         </div>
       </div>
       {% endfor %}
@@ -705,18 +705,18 @@
            aria-label="التنبيهات والتوصيات">
     <div class="hm-section-head">
       <div class="hm-section-title">
-        <i class="bi bi-bell-fill" style="color:#f59e0b" aria-hidden="true"></i>
+        <i class="bi bi-bell-fill"style="color:#f59e0b"aria-hidden="true"></i>
         التنبيهات والتوصيات
-        <span class="hm-section-sub" id="hmAlertsCount"></span>
+        <span class="hm-section-sub"id="hmAlertsCount"></span>
       </div>
-      <button type="button" id="refreshAlertsBtn" class="cc-btn" aria-label="تحديث التنبيهات">
-        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+      <button type="button"id="refreshAlertsBtn"class="cc-btn"aria-label="تحديث التنبيهات">
+        <i class="bi bi-arrow-clockwise"aria-hidden="true"></i>
         تحديث
       </button>
     </div>
-    <div class="hm-alerts-grid" id="hmAlertsBody" role="list" aria-live="polite">
-      <div class="hm-alert-card" aria-busy="true">
-        <div class="intel-loading-spinner" aria-hidden="true"
+    <div class="hm-alerts-grid"id="hmAlertsBody"role="list"aria-live="polite">
+      <div class="hm-alert-card"aria-busy="true">
+        <div class="intel-loading-spinner"aria-hidden="true"
              style="width:20px;height:20px;border:2px solid rgba(255,255,255,0.1);border-top-color:#2F7D62;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
         <span style="color:#64748b;font-size:0.875rem">جاري تحميل التنبيهات…</span>
       </div>
@@ -731,29 +731,29 @@
        aria-label="تصنيف المحافظات">
     <div class="rankings-head">
       <div class="rankings-title">
-        <i class="bi bi-list-ol" aria-hidden="true"></i>
+        <i class="bi bi-list-ol"aria-hidden="true"></i>
         تصنيف المحافظات الاثنتا عشرة حسب مستوى الخطر
         <span class="rankings-subtitle">— انقر للتفاصيل</span>
       </div>
     </div>
 
     <div class="rankings-controls">
-      <input type="search" id="rankSearch" class="rankings-search"
+      <input type="search"id="rankSearch"class="rankings-search"
              placeholder="ابحث في المحافظات…"
              aria-label="البحث في جدول المحافظات">
-      <button type="button" class="sort-btn active" id="sortByRisk"
+      <button type="button"class="sort-btn active"id="sortByRisk"
               aria-label="ترتيب حسب مؤشر الخطر">
-        <i class="bi bi-sort-numeric-down" aria-hidden="true"></i>
+        <i class="bi bi-sort-numeric-down"aria-hidden="true"></i>
         الخطر
       </button>
-      <button type="button" class="sort-btn" id="sortByName"
+      <button type="button"class="sort-btn"id="sortByName"
               aria-label="ترتيب حسب الاسم">
-        <i class="bi bi-sort-alpha-down" aria-hidden="true"></i>
+        <i class="bi bi-sort-alpha-down"aria-hidden="true"></i>
         الاسم
       </button>
-      <button type="button" class="sort-btn" id="sortByKgs"
+      <button type="button"class="sort-btn"id="sortByKgs"
               aria-label="ترتيب حسب عدد المنشآت">
-        <i class="bi bi-building" aria-hidden="true"></i>
+        <i class="bi bi-building"aria-hidden="true"></i>
         المنشآت
       </button>
     </div>
@@ -763,10 +763,10 @@
              aria-label="تصنيف المحافظات حسب مستوى الخطر">
         <thead>
           <tr>
-            <th scope="col" style="cursor:pointer" data-sort="rank">#</th>
-            <th scope="col" style="cursor:pointer" data-sort="slug">المحافظة</th>
-            <th scope="col" style="cursor:pointer" data-sort="risk_score">مؤشر الخطر</th>
-            <th scope="col" style="cursor:pointer" data-sort="risk_score">المستوى</th>
+            <th scope="col"style="cursor:pointer"data-sort="rank">#</th>
+            <th scope="col"style="cursor:pointer"data-sort="slug">المحافظة</th>
+            <th scope="col"style="cursor:pointer"data-sort="risk_score">مؤشر الخطر</th>
+            <th scope="col"style="cursor:pointer"data-sort="risk_score">المستوى</th>
             <th scope="col"><span class="visually-hidden">إجراءات</span></th>
           </tr>
         </thead>
@@ -774,7 +774,7 @@
           {% for i in range(12) %}
           <tr aria-hidden="true">
             <td colspan="5">
-              <div class="skeleton" style="height:11px;width:{{ [40,60,80,70,50,90,65,75,55,85,45,95][i] }}%;"></div>
+              <div class="skeleton"style="height:11px;width:{{ [40,60,80,70,50,90,65,75,55,85,45,95][i] }}%;"></div>
             </td>
           </tr>
           {% endfor %}
@@ -782,7 +782,7 @@
       </table>
     </div>
 
-    <details class="glass-panel hover-elevate" style="margin-top: 1.5rem; padding: 1rem; border-radius: 0.5rem; color: #cbd5e1; font-family: var(--admin-font-family-ar);">
+    <details class="glass-panel hover-elevate"style="margin-top: 1.5rem; padding: 1rem; border-radius: 0.5rem; color: #cbd5e1; font-family: var(--admin-font-family-ar);">
       <summary style="font-weight:600; color: #f1f5f9; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
         <i class="bi bi-info-circle"></i> كيف يُحسب المؤشر؟
       </summary>
@@ -804,7 +804,7 @@
 </div>{# /p-section #}
 
 {# Hover tooltip (shared) #}
-<div id="geoTooltip" role="tooltip" aria-hidden="true" style="display:none"></div>
+<div id="geoTooltip"role="tooltip"aria-hidden="true"style="display:none"></div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -813,8 +813,8 @@
         crossorigin="anonymous"></script>
 
 {# ── Cesium globe controller ───────────────────────────────────────────── #}
-<script src="/static/js/jordan_cesium_map.js?v=5" charset="utf-8"></script>
+<script src="/static/js/jordan_cesium_map.js?v=5"charset="utf-8"></script>
 
 {# ── Heatmap command center: charts, alerts, incident breakdown ───────── #}
-<script src="/static/js/heatmap_cc.js?v=1" charset="utf-8"></script>
+<script src="/static/js/heatmap_cc.js?v=1"charset="utf-8"></script>
 {% endblock %}

@@ -1,4 +1,4 @@
-{% extends "admin_base.html" %}
+{% extends "admin_base.html"%}
 {% from 'components/page-header.html' import page_header %}
 {% from 'components/filter-row.html' import filter_row %}
 {% from 'components/data-table.html' import pagination %}
@@ -7,34 +7,34 @@
 
 {% block page_header %}
 {% set toolbar_actions %}
-<div class="btn-group me-2" id="bulkActions" style="display: none;">
-    <button type="button" class="btn btn-outline-danger" onclick="bulkDelete()" id="bulkDeleteBtn">
+<div class="btn-group me-2"id="bulkActions"style="display: none;">
+    <button type="button"class="btn btn-outline-danger"onclick="bulkDelete()"id="bulkDeleteBtn">
         <i class="bi bi-trash"></i> <span id="bulkDeleteLabel">{% if ui_lang == 'en' %}Delete Selected{% else %}حذف المحدد{% endif %}</span>
     </button>
-    <button type="button" class="btn btn-outline-warning" onclick="bulkStatusUpdate('SUSPENDED')">
+    <button type="button"class="btn btn-outline-warning"onclick="bulkStatusUpdate('SUSPENDED')">
         <i class="bi bi-pause-circle"></i> {% if ui_lang == 'en' %}Suspend{% else %}تعليق{% endif %}
     </button>
-    <button type="button" class="btn btn-outline-success" onclick="bulkStatusUpdate('ACTIVE')">
+    <button type="button"class="btn btn-outline-success"onclick="bulkStatusUpdate('ACTIVE')">
         <i class="bi bi-play-circle"></i> {% if ui_lang == 'en' %}Activate{% else %}تفعيل{% endif %}
     </button>
-    <button type="button" class="btn btn-outline-secondary" onclick="clearSelection()">
+    <button type="button"class="btn btn-outline-secondary"onclick="clearSelection()">
         <i class="bi bi-x-circle"></i> {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
     </button>
 </div>
-<a href="/admin/users/create" class="btn btn-primary">
+<a href="/admin/users/create"class="btn btn-primary">
     <i class="bi bi-person-plus me-2"></i>
     {% if ui_lang == 'en' %}Add New User{% else %}إضافة مستخدم جديد{% endif %}
 </a>
-<button type="button" class="btn btn-outline-secondary ms-2" onclick="showImportModal()">
+<button type="button"class="btn btn-outline-secondary ms-2"onclick="showImportModal()">
     <i class="bi bi-upload"></i> {% if ui_lang == 'en' %}Import from CSV{% else %}استيراد من CSV{% endif %}
 </button>
 {% endset %}
 {{ page_header(
-title="User Management" if ui_lang == 'en' else "إدارة المستخدمين",
+title="User Management"if ui_lang == 'en' else "إدارة المستخدمين",
 icon="bi-people",
 breadcrumbs=[
-{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
-{"label": "Users" if ui_lang == 'en' else "المستخدمين", "url": None}
+{"label": "Dashboard"if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
+{"label": "Users"if ui_lang == 'en' else "المستخدمين", "url": None}
 ],
 actions=toolbar_actions
 ) }}
@@ -48,15 +48,15 @@ actions=toolbar_actions
         <div class="row g-3 mb-4">
             <div class="col-md-4">
                 <div class="input-group input-group-icon">
-                    <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
-                    <input type="text" class="form-control" id="searchUser"
+                    <span class="input-group-text"><i class="bi bi-search"aria-hidden="true"></i></span>
+                    <input type="text"class="form-control"id="searchUser"
                         placeholder="{% if ui_lang == 'en' %}Search by name or email...{% else %}بحث بالاسم أو البريد الإلكتروني...{% endif %}"
                         aria-label="{% if ui_lang == 'en' %}Search users{% else %}بحث عن مستخدمين{% endif %}">
                 </div>
             </div>
             <div class="col-md-3">
-                <label id="roleFilterLabel" class="form-label small fw-semibold mb-1" for="roleFilter">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</label>
-                <select name="roleFilter" class="form-select" id="roleFilter" title="{% if ui_lang == 'en' %}Filter by role{% else %}تصفية حسب الدور{% endif %}" aria-labelledby="roleFilterLabel">
+                <label id="roleFilterLabel"class="form-label small fw-semibold mb-1"for="roleFilter">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</label>
+                <select name="roleFilter"class="form-select"id="roleFilter"title="{% if ui_lang == 'en' %}Filter by role{% else %}تصفية حسب الدور{% endif %}"aria-labelledby="roleFilterLabel">
                     <option value="">{% if ui_lang == 'en' %}All Roles{% else %}كل الأدوار{% endif %}</option>
                     <option value="MANAGER">{% if ui_lang == 'en' %}Kindergarten Manager{% else %}مدير روضة{% endif %}</option>
                     <option value="SUPERVISOR">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
@@ -64,8 +64,8 @@ actions=toolbar_actions
                 </select>
             </div>
             <div class="col-md-3">
-                <label id="statusFilterLabel" class="form-label small fw-semibold mb-1" for="statusFilter">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
-                <select name="statusFilter" class="form-select" id="statusFilter" title="{% if ui_lang == 'en' %}Filter by status{% else %}تصفية حسب الحالة{% endif %}" aria-labelledby="statusFilterLabel">
+                <label id="statusFilterLabel"class="form-label small fw-semibold mb-1"for="statusFilter">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+                <select name="statusFilter"class="form-select"id="statusFilter"title="{% if ui_lang == 'en' %}Filter by status{% else %}تصفية حسب الحالة{% endif %}"aria-labelledby="statusFilterLabel">
                     <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
                     <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
                     <option value="SUSPENDED">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}</option>
@@ -73,7 +73,7 @@ actions=toolbar_actions
                 </select>
             </div>
             <div class="col-md-2">
-                <button type="button" class="btn btn-outline-secondary w-100" id="resetFilters">
+                <button type="button"class="btn btn-outline-secondary w-100"id="resetFilters">
                     <i class="bi bi-arrow-counterclockwise me-1"></i> {% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
                 </button>
             </div>
@@ -82,33 +82,33 @@ actions=toolbar_actions
         <!-- Users Table -->
         <!-- Results count (GWS U.2.3-068) -->
         <div class="d-flex align-items-center justify-content-between mb-2">
-            <small class="text-muted" id="resultCount" aria-live="polite" aria-atomic="true"></small>
+            <small class="text-muted"id="resultCount"aria-live="polite"aria-atomic="true"></small>
         </div>
 
         <div class="table-responsive">
-            <table class="table table-hover align-middle" id="usersTable" aria-label="{% if ui_lang == 'en' %}Users Table{% else %}جدول المستخدمين{% endif %}">
+            <table class="table table-hover align-middle"id="usersTable"aria-label="{% if ui_lang == 'en' %}Users Table{% else %}جدول المستخدمين{% endif %}">
                 <thead class="table-light">
                     <tr>
-                        <th scope="col" style="width: 50px;">
+                        <th scope="col"style="width: 50px;">
                             <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="selectAll"
-                                    onchange="toggleSelectAll()" aria-label="{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}">
+                                <input type="checkbox"class="form-check-input"id="selectAll"
+                                    onchange="toggleSelectAll()"aria-label="{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}">
                             </div>
                         </th>
-                        <th scope="col" class="sortable" data-sort="username" onclick="sortTable('username')">{% if ui_lang == 'en' %}User{% else %}المستخدم{% endif %}
+                        <th scope="col"class="sortable"data-sort="username"onclick="sortTable('username')">{% if ui_lang == 'en' %}User{% else %}المستخدم{% endif %}
                         </th>
-                        <th scope="col" class="sortable" data-sort="role" onclick="sortTable('role')">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</th>
+                        <th scope="col"class="sortable"data-sort="role"onclick="sortTable('role')">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</th>
                         <th scope="col">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
-                        <th scope="col" class="sortable" data-sort="status" onclick="sortTable('status')">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                        <th scope="col" class="sortable" data-sort="created_at" onclick="sortTable('created_at')">{% if ui_lang == 'en' %}Registration Date{% else %}تاريخ
+                        <th scope="col"class="sortable"data-sort="status"onclick="sortTable('status')">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+                        <th scope="col"class="sortable"data-sort="created_at"onclick="sortTable('created_at')">{% if ui_lang == 'en' %}Registration Date{% else %}تاريخ
                             التسجيل{% endif %}</th>
-                        <th scope="col" class="text-end" style="width: 150px;">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
+                        <th scope="col"class="text-end"style="width: 150px;">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="usersTableBody">
                     <tr>
-                        <td colspan="7" class="text-center py-5">
-                            <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                        <td colspan="7"class="text-center py-5">
+                            <div class="spinner-border text-primary"role="status"aria-hidden="true"></div>
                             <p class="mt-2 text-muted mb-0">{% if ui_lang == 'en' %}Loading user data...{% else %}جاري تحميل بيانات المستخدمين...{% endif %}</p>
                         </td>
                     </tr>
@@ -122,18 +122,18 @@ actions=toolbar_actions
 </div>
 
 <!-- CSV Import Modal -->
-<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+<div class="modal fade"id="importModal"tabindex="-1"aria-labelledby="importModalLabel"aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content glass-panel border-0 shadow">
             <div class="modal-header border-bottom border-light">
-                <h5 class="modal-title" id="importModalLabel">
+                <h5 class="modal-title"id="importModalLabel">
                     <i class="bi bi-upload me-2 text-primary"></i>
                     {% if ui_lang == 'en' %}Import Users from CSV{% else %}استيراد المستخدمين من CSV{% endif %}
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+                <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-info d-flex align-items-start" role="alert">
+                <div class="alert alert-info d-flex align-items-start"role="alert">
                     <i class="bi bi-info-circle-fill me-2 mt-1"></i>
                     <div>
                         <strong>{% if ui_lang == 'en' %}Required file format:{% else %}تنسيق الملف المطلوب:{% endif %}</strong>
@@ -145,12 +145,12 @@ actions=toolbar_actions
                 </div>
 
                 <div class="mb-4">
-                    <label for="csvFile" class="form-label fw-semibold">
+                    <label for="csvFile"class="form-label fw-semibold">
                         <i class="bi bi-file-earmark-spreadsheet me-1"></i>
                         {% if ui_lang == 'en' %}Choose CSV File{% else %}اختر ملف CSV{% endif %}
                     </label>
-                    <input type="file" class="form-control" id="csvFile" accept=".csv" aria-describedby="csvFileHelp">
-                    <div id="csvFileHelp" class="form-text">
+                    <input type="file"class="form-control"id="csvFile"accept=".csv"aria-describedby="csvFileHelp">
+                    <div id="csvFileHelp"class="form-text">
                         {% if ui_lang == 'en' %}Maximum file size: 5 MB{% else %}الحد الأقصى لحجم الملف: 5 ميجابايت{% endif %}
                     </div>
                 </div>
@@ -160,7 +160,7 @@ actions=toolbar_actions
                         <i class="bi bi-eye me-1"></i>
                         {% if ui_lang == 'en' %}Data Preview{% else %}معاينة البيانات{% endif %}
                     </label>
-                    <div id="csvPreview" class="border rounded p-3 bg-light csv-preview-container">
+                    <div id="csvPreview"class="border rounded p-3 bg-light csv-preview-container">
                         <p class="text-muted mb-0 text-center">
                             <i class="bi bi-cloud-upload fs-4 d-block mb-2"></i>
                             {% if ui_lang == 'en' %}Choose a CSV file to see the preview...{% else %}اختر ملف CSV لرؤية المعاينة...{% endif %}
@@ -168,27 +168,27 @@ actions=toolbar_actions
                     </div>
                 </div>
 
-                <div id="importResults" class="d-none">
+                <div id="importResults"class="d-none">
                     <h6 class="fw-semibold mb-3">
                         <i class="bi bi-clipboard-data me-1"></i>
                         {% if ui_lang == 'en' %}Import Results:{% else %}نتائج الاستيراد:{% endif %}
                     </h6>
-                    <div id="importSuccess" class="alert alert-success d-none" role="alert"></div>
-                    <div id="importErrors" class="alert alert-danger d-none" role="alert"></div>
+                    <div id="importSuccess"class="alert alert-success d-none"role="alert"></div>
+                    <div id="importErrors"class="alert alert-danger d-none"role="alert"></div>
                 </div>
             </div>
             <div class="modal-footer border-top">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <button type="button"class="btn btn-outline-secondary"data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>
                     {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
                 </button>
-                <button type="button" class="btn btn-primary" id="importBtn" disabled>
+                <button type="button"class="btn btn-primary"id="importBtn"disabled>
                     <span class="btn-text">
                         <i class="bi bi-upload me-2"></i>
                         {% if ui_lang == 'en' %}Import Users{% else %}استيراد المستخدمين{% endif %}
                     </span>
                     <span class="btn-loading d-none">
-                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span class="spinner-border spinner-border-sm me-2"role="status"aria-hidden="true"></span>
                         {% if ui_lang == 'en' %}Importing...{% else %}جاري الاستيراد...{% endif %}
                     </span>
                 </button>
@@ -303,8 +303,8 @@ actions=toolbar_actions
         const tbody = document.getElementById('usersTableBody');
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <td colspan="7"class="text-center py-5">
+                    <div class="spinner-border text-primary"role="status"aria-hidden="true"></div>
                     <p class="mt-2 text-muted mb-0">${T('جاري التحديث...', 'Updating...')}</p>
                 </td>
             </tr>
@@ -336,12 +336,12 @@ actions=toolbar_actions
             console.error('Error loading users:', error);
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center py-5">
+                    <td colspan="7"class="text-center py-5">
                         <div class="text-danger">
                             <i class="bi bi-exclamation-triangle fs-1 d-block mb-3 opacity-50"></i>
                             <p class="mb-1">${T('حدث خطأ أثناء تحميل البيانات', 'Error loading data')}</p>
                             <small class="text-muted">${escapeHtml(error.message)}</small>
-                            <button type="button" class="btn btn-outline-primary btn-sm mt-3" onclick="loadUsers()">
+                            <button type="button"class="btn btn-outline-primary btn-sm mt-3"onclick="loadUsers()">
                                 <i class="bi bi-arrow-clockwise me-1"></i>
                                 ${T('إعادة المحاولة', 'Retry')}
                             </button>
@@ -365,7 +365,7 @@ actions=toolbar_actions
         if (!users || users.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center py-5">
+                    <td colspan="7"class="text-center py-5">
                         <div class="empty-state">
                             <i class="bi bi-person-x"></i>
                             <h5>${T('لا توجد نتائج مطابقة', 'No matching results')}</h5>
@@ -396,12 +396,12 @@ actions=toolbar_actions
             <tr data-user-id="${user.id}">
                 <td>
                     <div class="form-check">
-                        <input type="checkbox" class="form-check-input user-checkbox" value="${user.id}" onchange="updateBulkActions()" aria-label="${T('تحديد', 'Select')} ${safeUsername}">
+                        <input type="checkbox"class="form-check-input user-checkbox"value="${user.id}"onchange="updateBulkActions()"aria-label="${T('تحديد', 'Select')} ${safeUsername}">
                     </div>
                 </td>
                 <td>
                     <div class="d-flex align-items-center">
-                        <div class="avatar-initials bg-soft-primary text-primary rounded-circle me-3" aria-hidden="true">
+                        <div class="avatar-initials bg-soft-primary text-primary rounded-circle me-3"aria-hidden="true">
                             ${initial}
                         </div>
                         <div>
@@ -412,27 +412,27 @@ actions=toolbar_actions
                 </td>
                 <td>${getRoleBadge(user.role)}</td>
                 <td>
-                    ${user.kindergarten_id ? `<span class="text-body"><i class="bi bi-building me-1 text-muted" aria-hidden="true"></i>${T('رقم', 'No.')} ${user.kindergarten_id}</span>` : '<span class="text-muted">-</span>'}
+                    ${user.kindergarten_id ? `<span class="text-body"><i class="bi bi-building me-1 text-muted"aria-hidden="true"></i>${T('رقم', 'No.')} ${user.kindergarten_id}</span>` : '<span class="text-muted">-</span>'}
                 </td>
                 <td>${getStatusBadge(user.status)}</td>
                 <td>
-                    <time class="small text-muted" datetime="${user.created_at}" title="${new Date(user.created_at).toLocaleString('ar-JO')}">
+                    <time class="small text-muted"datetime="${user.created_at}"title="${new Date(user.created_at).toLocaleString('ar-JO')}">
                         ${new Date(user.created_at).toLocaleDateString('ar-JO')}
                     </time>
                 </td>
                 <td class="text-end">
-                    <div class="btn-group" role="group" aria-label="${T('إجراءات المستخدم', 'User actions')}">
-                        <a href="/admin/users/${user.id}/edit" class="btn btn-sm btn-outline-secondary" title="${T('تعديل', 'Edit')}" aria-label="${T('تعديل', 'Edit')} ${safeUsername}">
-                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                    <div class="btn-group"role="group"aria-label="${T('إجراءات المستخدم', 'User actions')}">
+                        <a href="/admin/users/${user.id}/edit"class="btn btn-sm btn-outline-secondary"title="${T('تعديل', 'Edit')}"aria-label="${T('تعديل', 'Edit')} ${safeUsername}">
+                            <i class="bi bi-pencil"aria-hidden="true"></i>
                         </a>
                         ${currentUserRole === 'ADMIN' ? `
-                        <button type="button" data-action="reset-password" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-warning js-user-action" title="${T('إعادة تعيين كلمة المرور', 'Reset password')}" aria-label="${T('إعادة تعيين كلمة مرور', 'Reset password for')} ${safeUsername}">
-                            <i class="bi bi-key" aria-hidden="true"></i>
+                        <button type="button"data-action="reset-password"data-user-id="${user.id}"data-username="${safeUsername}"class="btn btn-sm btn-outline-warning js-user-action"title="${T('إعادة تعيين كلمة المرور', 'Reset password')}"aria-label="${T('إعادة تعيين كلمة مرور', 'Reset password for')} ${safeUsername}">
+                            <i class="bi bi-key"aria-hidden="true"></i>
                         </button>
                         ` : ''}
                         ${currentUserRole === 'ADMIN' && user.role !== 'ADMIN' ? `
-                        <button type="button" data-action="delete-user" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-danger js-user-action" title="${T('حذف', 'Delete')}" aria-label="${T('حذف', 'Delete')} ${safeUsername}">
-                            <i class="bi bi-trash" aria-hidden="true"></i>
+                        <button type="button"data-action="delete-user"data-user-id="${user.id}"data-username="${safeUsername}"class="btn btn-sm btn-outline-danger js-user-action"title="${T('حذف', 'Delete')}"aria-label="${T('حذف', 'Delete')} ${safeUsername}">
+                            <i class="bi bi-trash"aria-hidden="true"></i>
                         </button>
                         ` : ''}
                     </div>
@@ -633,7 +633,7 @@ actions=toolbar_actions
         });
 
         if (lines.length > 6) {
-            previewHTML += `<tr><td colspan="${headers.length}" class="text-muted">... ${T('و', 'and')} ${lines.length - 6} ${T('صفوف أخرى', 'more rows')}</td></tr>`;
+            previewHTML += `<tr><td colspan="${headers.length}"class="text-muted">... ${T('و', 'and')} ${lines.length - 6} ${T('صفوف أخرى', 'more rows')}</td></tr>`;
         }
 
         previewHTML += '</tbody></table>';

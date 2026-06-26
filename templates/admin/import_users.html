@@ -1,13 +1,13 @@
-﻿{% extends "admin_base.html" %}
+﻿{% extends "admin_base.html"%}
 
 {% block title %}Import Users — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item">
+<a href="/admin/dashboard"class="admin-breadcrumb-item">
   <i class="bi bi-house"></i> Dashboard
 </a>
 <span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/users" class="admin-breadcrumb-item">User Management</a>
+<a href="/admin/users"class="admin-breadcrumb-item">User Management</a>
 <span class="admin-breadcrumb-separator">/</span>
 <span class="admin-breadcrumb-item active">Import Users</span>
 {% endblock %}
@@ -42,16 +42,16 @@
           </div>
         </div>
 
-        <form id="importForm" enctype="multipart/form-data" novalidate>
+        <form id="importForm"enctype="multipart/form-data"novalidate>
           <div class="mb-3">
-            <label for="csvFile" class="form-label fw-semibold">Select CSV File <span class="admin-text-danger">*</span></label>
-            <input type="file" class="form-control" id="csvFile" name="file" accept=".csv" required>
+            <label for="csvFile"class="form-label fw-semibold">Select CSV File <span class="admin-text-danger">*</span></label>
+            <input type="file"class="form-control"id="csvFile"name="file"accept=".csv"required>
             <div class="form-text">Maximum file size: 20 MB · Encoding: UTF-8</div>
           </div>
-          <button type="submit" class="admin-btn admin-btn-primary" id="importBtn">
+          <button type="submit"class="admin-btn admin-btn-primary"id="importBtn">
             <i class="bi bi-upload me-1"></i> Import Users
           </button>
-          <a href="/admin/import-logs" class="admin-btn admin-btn-ghost ms-2">
+          <a href="/admin/import-logs"class="admin-btn admin-btn-ghost ms-2">
             <i class="bi bi-clock-history me-1"></i> View Import Logs
           </a>
         </form>
@@ -67,7 +67,7 @@
       </div>
       <div class="admin-card-body">
         <p class="small admin-text-muted mb-3">Download and fill in the template, then upload it above.</p>
-        <button type="button" id="downloadTemplateBtn" class="admin-btn admin-btn-ghost admin-admin-btn-sm mb-4">
+        <button type="button"id="downloadTemplateBtn"class="admin-btn admin-btn-ghost admin-admin-btn-sm mb-4">
           <i class="bi bi-download me-1"></i> Download Template
         </button>
         <h6 class="fw-semibold small text-uppercase admin-text-muted mb-2">Example Row</h6>
@@ -84,21 +84,21 @@
 </div>
 
 <!-- Results -->
-<div id="resultsSection" class="mt-4" style="display:none;">
+<div id="resultsSection"class="mt-4"style="display:none;">
   <div class="admin-card">
     <div class="admin-card-header">
       <h2 class="admin-card-title mb-0">Import Results</h2>
     </div>
     <div class="admin-card-body">
-      <div id="resultsSummary" class="mb-3"></div>
-      <div id="errorsWrap" style="display:none;">
-        <h6 class="fw-semibold admin-text-danger mb-2" data-i18n="import.errorsTitle">{{ _("Rows with errors") if _ else "Rows with errors" }}</h6>
+      <div id="resultsSummary"class="mb-3"></div>
+      <div id="errorsWrap"style="display:none;">
+        <h6 class="fw-semibold admin-text-danger mb-2"data-i18n="import.errorsTitle">{{ _("Rows with errors") if _ else "Rows with errors"}}</h6>
         <div class="table-responsive">
           <table class="table table-sm table-bordered">
             <thead class="table-light">
               <tr><th>Row</th><th>Field</th><th>Error</th></tr>
             </thead>
-            <tbody id="errorsTableBody"><tr><td colspan="3" class="text-center admin-text-muted py-4"><i class="bi bi-inbox fs-2 d-block mb-2"></i><span data-i18n="import.emptyErrors">{{ _("No errors detected") if _ else "No errors detected" }}</span></td></tr></tbody><!-- Empty State Handled in JS -->
+            <tbody id="errorsTableBody"><tr><td colspan="3"class="text-center admin-text-muted py-4"><i class="bi bi-inbox fs-2 d-block mb-2"></i><span data-i18n="import.emptyErrors">{{ _("No errors detected") if _ else "No errors detected"}}</span></td></tr></tbody><!-- Empty State Handled in JS -->
           </table>
         </div>
       </div>
@@ -171,19 +171,19 @@
     document.getElementById('resultsSummary').innerHTML = `
       <div class="row g-3">
         <div class="col-auto">
-          <div class="p-3 rounded border text-center" style="min-width:100px;">
+          <div class="p-3 rounded border text-center"style="min-width:100px;">
             <div class="fs-4 fw-bold admin-text-success">${imported}</div>
             <div class="small admin-text-muted">${translations.imported}</div>
           </div>
         </div>
         <div class="col-auto">
-          <div class="p-3 rounded border text-center" style="min-width:100px;">
+          <div class="p-3 rounded border text-center"style="min-width:100px;">
             <div class="fs-4 fw-bold admin-text-danger">${errors.length}</div>
             <div class="small admin-text-muted">${translations.errors}</div>
           </div>
         </div>
         <div class="col-auto">
-          <div class="p-3 rounded border text-center" style="min-width:100px;">
+          <div class="p-3 rounded border text-center"style="min-width:100px;">
             <div class="fs-4 fw-bold">${total}</div>
             <div class="small admin-text-muted">${translations.total_rows}</div>
           </div>

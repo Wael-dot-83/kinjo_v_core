@@ -1,11 +1,11 @@
-﻿{% extends "admin_base.html" %}
+﻿{% extends "admin_base.html"%}
 
 {% block title %}{% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="Dashboard"><i class="bi bi-house"aria-hidden="true"></i></a>
 <span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/messages" class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</a>
+<a href="/admin/messages"class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</a>
 <span class="admin-breadcrumb-separator">/</span>
 <span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Compose{% else %}إنشاء رسالة{% endif %}</span>
 {% endblock %}
@@ -13,7 +13,7 @@
 {% block content %}
 <div class="admin-page-header mb-4">
   <h1 class="admin-page-title">
-    <i class="bi bi-envelope-plus me-2" aria-hidden="true"></i>
+    <i class="bi bi-envelope-plus me-2"aria-hidden="true"></i>
     {% if ui_lang == 'en' %}Compose New Message{% else %}إنشاء رسالة جديدة{% endif %}
   </h1>
 </div>
@@ -27,28 +27,28 @@
             </div>
             <div class="card-body">
                 <form id="composeForm">
-                    <div id="composeStatus" class="visually-hidden text-danger small mb-2" role="status"
+                    <div id="composeStatus"class="visually-hidden text-danger small mb-2"role="status"
                         aria-live="polite"></div>
                     <!-- Subject -->
                     <div class="mb-3">
-                        <label for="subject" class="form-label">{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %} <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="subject" name="subject" required
+                        <label for="subject"class="form-label">{% if ui_lang == 'en' %}Subject{% else %}الموضوع{% endif %} <span class="text-danger">*</span></label>
+                        <input type="text"class="form-control"id="subject"name="subject"required
                             placeholder="{% if ui_lang == 'en' %}Enter message subject{% else %}أدخل عنوان الرسالة{% endif %}">
                     </div>
 
                     <!-- Message Body -->
                     <div class="mb-3">
-                        <label for="messageBody" class="form-label">{% if ui_lang == 'en' %}Message Body{% else %}نص الرسالة{% endif %} <span
+                        <label for="messageBody"class="form-label">{% if ui_lang == 'en' %}Message Body{% else %}نص الرسالة{% endif %} <span
                                 class="text-danger">*</span></label>
-                        <textarea class="form-control" id="messageBody" name="messageBody" rows="10" required
+                        <textarea class="form-control"id="messageBody"name="messageBody"rows="10"required
                             placeholder="{% if ui_lang == 'en' %}Write message content here...{% else %}اكتب محتوى الرسالة هنا...{% endif %}"></textarea>
                     </div>
 
                     <!-- Allow Replies -->
                     <div class="mb-3">
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="allowReplies" checked>
-                            <label class="form-check-label" for="allowReplies">{% if ui_lang == 'en' %}Allow Replies{% else %}السماح بالردود{% endif %}</label>
+                            <input class="form-check-input"type="checkbox"id="allowReplies"checked>
+                            <label class="form-check-label"for="allowReplies">{% if ui_lang == 'en' %}Allow Replies{% else %}السماح بالردود{% endif %}</label>
                         </div>
                         <div class="form-text">{% if ui_lang == 'en' %}When enabled, recipients can reply to this message.{% else %}عند التفعيل، سيتمكن المستلمون من الرد على هذه الرسالة.{% endif %}</div>
                     </div>
@@ -66,8 +66,8 @@
             <div class="card-body">
                 <!-- Target Mode -->
                 <div class="mb-3">
-                    <label for="targetMode" class="form-label">{% if ui_lang == 'en' %}Send To{% else %}توجيه إلى{% endif %} <span class="text-danger">*</span></label>
-                    <select class="form-select" id="targetMode" onchange="handleTargetModeChange()">
+                    <label for="targetMode"class="form-label">{% if ui_lang == 'en' %}Send To{% else %}توجيه إلى{% endif %} <span class="text-danger">*</span></label>
+                    <select class="form-select"id="targetMode"onchange="handleTargetModeChange()">
                         <option value="ALL_USERS">{% if ui_lang == 'en' %}All Users{% else %}جميع المستخدمين{% endif %}</option>
                         <option value="ALL_MANAGERS">{% if ui_lang == 'en' %}All Managers{% else %}جميع المدراء{% endif %}</option>
                         <option value="ALL_SUPERVISORS">{% if ui_lang == 'en' %}All Supervisors{% else %}جميع المشرفين{% endif %}</option>
@@ -78,62 +78,62 @@
                 </div>
 
                 <!-- Filters Container -->
-                <div id="filtersContainer" class="d-none border-top pt-3 mt-3">
+                <div id="filtersContainer"class="d-none border-top pt-3 mt-3">
                     <!-- Governorate Filter -->
-                    <div id="governorateFilter" class="mb-3 d-none">
+                    <div id="governorateFilter"class="mb-3 d-none">
                         <label class="form-label">{% if ui_lang == 'en' %}Governorates{% else %}المحافظات{% endif %}</label>
-                        <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                        <div class="border rounded p-2"style="max-height: 200px; overflow-y: auto;">
                             {% for gov in governorates %}
                             <div class="form-check">
-                                <input class="form-check-input gov-checkbox" type="checkbox" value="{{ gov }}" id="gov_{{ loop.index }}">
-                                <label class="form-check-label" for="gov_{{ loop.index }}">{{ gov }}</label>
+                                <input class="form-check-input gov-checkbox"type="checkbox"value="{{ gov }}"id="gov_{{ loop.index }}">
+                                <label class="form-check-label"for="gov_{{ loop.index }}">{{ gov }}</label>
                             </div>
                             {% endfor %}
                         </div>
                         <div class="mt-1">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=true)">{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=false)">{% if ui_lang == 'en' %}Deselect All{% else %}إلغاء الكل{% endif %}</button>
+                            <button type="button"class="btn btn-sm btn-outline-secondary"onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=true)">{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}</button>
+                            <button type="button"class="btn btn-sm btn-outline-secondary"onclick="document.querySelectorAll('.gov-checkbox').forEach(c=>c.checked=false)">{% if ui_lang == 'en' %}Deselect All{% else %}إلغاء الكل{% endif %}</button>
                         </div>
                     </div>
 
                     <!-- Kindergarten Filter -->
-                    <div id="kindergartenFilter" class="mb-3 d-none">
-                        <label for="kindergartenSelect" class="form-label">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</label>
+                    <div id="kindergartenFilter"class="mb-3 d-none">
+                        <label for="kindergartenSelect"class="form-label">{% if ui_lang == 'en' %}Kindergartens{% else %}الروضات{% endif %}</label>
                         <div class="input-group input-group-icon mb-2">
-                            <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
-                            <input type="text" class="form-control form-control-sm" id="kgSearch"
-                                placeholder="{% if ui_lang == 'en' %}Search kindergarten...{% else %}بحث عن روضة...{% endif %}" onkeyup="filterKgList()">
+                            <span class="input-group-text"><i class="bi bi-search"aria-hidden="true"></i></span>
+                            <input type="text"class="form-control form-control-sm"id="kgSearch"
+                                placeholder="{% if ui_lang == 'en' %}Search kindergarten...{% else %}بحث عن روضة...{% endif %}"onkeyup="filterKgList()">
                         </div>
-                        <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;"
+                        <div class="border rounded p-2"style="max-height: 200px; overflow-y: auto;"
                             id="kgListContainer">
                             <div class="text-center text-muted small py-2">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</div>
                         </div>
                     </div>
 
                     <!-- Additional Roles Filter (Optional) -->
-                    <div id="rolesFilter" class="mb-3">
+                    <div id="rolesFilter"class="mb-3">
                         <label class="form-label d-block">{% if ui_lang == 'en' %}Target Roles{% else %}الأدوار المستهدفة{% endif %}</label>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="roleManager" value="MANAGER" checked
+                            <input class="form-check-input"type="checkbox"id="roleManager"value="MANAGER"checked
                                 disabled>
-                            <label class="form-check-label" for="roleManager">{% if ui_lang == 'en' %}Managers{% else %}مدراء{% endif %}</label>
+                            <label class="form-check-label"for="roleManager">{% if ui_lang == 'en' %}Managers{% else %}مدراء{% endif %}</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="roleSupervisor" value="SUPERVISOR"
+                            <input class="form-check-input"type="checkbox"id="roleSupervisor"value="SUPERVISOR"
                                 checked disabled>
-                            <label class="form-check-label" for="roleSupervisor">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفين{% endif %}</label>
+                            <label class="form-check-label"for="roleSupervisor">{% if ui_lang == 'en' %}Supervisors{% else %}مشرفين{% endif %}</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="roleParent" value="PARENT" checked
+                            <input class="form-check-input"type="checkbox"id="roleParent"value="PARENT"checked
                                 disabled>
-                            <label class="form-check-label" for="roleParent">{% if ui_lang == 'en' %}Parents{% else %}أولياء أمور{% endif %}</label>
+                            <label class="form-check-label"for="roleParent">{% if ui_lang == 'en' %}Parents{% else %}أولياء أمور{% endif %}</label>
                         </div>
                     </div>
 
                     <!-- Search Filter -->
                     <div class="mb-3">
-                        <label for="userSearch" class="form-label">{% if ui_lang == 'en' %}Additional Search (optional){% else %}بحث إضافي (اختياري){% endif %}</label>
-                        <input type="text" class="form-control form-control-sm" id="userSearch"
+                        <label for="userSearch"class="form-label">{% if ui_lang == 'en' %}Additional Search (optional){% else %}بحث إضافي (اختياري){% endif %}</label>
+                        <input type="text"class="form-control form-control-sm"id="userSearch"
                             placeholder="{% if ui_lang == 'en' %}Name or email...{% else %}الاسم أو البريد الإلكتروني...{% endif %}">
                         <div class="form-text small">{% if ui_lang == 'en' %}To filter results more precisely.{% else %}لتصفية النتائج بشكل أدق.{% endif %}</div>
                     </div>
@@ -141,7 +141,7 @@
 
                 <!-- Preview Actions -->
                 <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-outline-primary" onclick="previewRecipients()">
+                    <button type="button"class="btn btn-outline-primary"onclick="previewRecipients()">
                         <i class="bi bi-eye me-2"></i> {% if ui_lang == 'en' %}Preview Recipients{% else %}معاينة المستلمين{% endif %}
                     </button>
                 </div>
@@ -149,23 +149,23 @@
         </div>
 
         <!-- Preview Results -->
-        <div class="card d-none" id="previewCard">
+        <div class="card d-none"id="previewCard">
             <div class="card-header bg-light">
                 <h6 class="card-title mb-0 small text-uppercase text-muted">{% if ui_lang == 'en' %}Preview Results{% else %}نتيجة المعاينة{% endif %}</h6>
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
-                    <h2 class="display-6 fw-bold mb-0 text-primary" id="recipientCount">0</h2>
+                    <h2 class="display-6 fw-bold mb-0 text-primary"id="recipientCount">0</h2>
                     <p class="text-muted small">{% if ui_lang == 'en' %}expected recipients{% else %}مستلم متوقع{% endif %}</p>
                 </div>
 
-                <div id="previewBreakdown" class="small mb-3">
+                <div id="previewBreakdown"class="small mb-3">
                     <!-- Breakdown injected via JS -->
                 </div>
 
                 <hr>
                 <h6 class="small fw-bold mb-2">{% if ui_lang == 'en' %}Sample Recipients:{% else %}عينة من المستلمين:{% endif %}</h6>
-                <ul class="list-unstyled small mb-0" id="sampleRecipientsList">
+                <ul class="list-unstyled small mb-0"id="sampleRecipientsList">
                     <!-- Sample list injected via JS -->
                 </ul>
             </div>
@@ -176,8 +176,8 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body d-flex justify-content-end gap-2">
-                <a href="/admin/messages" class="btn btn-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
-                <button type="button" class="btn btn-primary px-4" onclick="sendMessage()" id="sendBtn">
+                <a href="/admin/messages"class="btn btn-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
+                <button type="button"class="btn btn-primary px-4"onclick="sendMessage()"id="sendBtn">
                     <i class="bi bi-send me-2"></i> {% if ui_lang == 'en' %}Send Message{% else %}إرسال الرسالة{% endif %}
                 </button>
             </div>
@@ -282,8 +282,8 @@
 
         container.innerHTML = items.map(kg => `
         <div class="form-check">
-            <input class="form-check-input kg-checkbox" type="checkbox" value="${kg.id}" id="kg_${kg.id}">
-            <label class="form-check-label small" for="kg_${kg.id}">
+            <input class="form-check-input kg-checkbox"type="checkbox"value="${kg.id}"id="kg_${kg.id}">
+            <label class="form-check-label small"for="kg_${kg.id}">
                 ${escHtml(kg.name_ar || kg.name)} <span class="text-muted">(${escHtml(kg.city)})</span>
             </label>
         </div>
@@ -429,7 +429,7 @@
             return;
         }
         sampleList.innerHTML = samples.map(u => `
-        <li class="mb-1 text-truncate" title="${escHtml(u.display_name)}">
+        <li class="mb-1 text-truncate"title="${escHtml(u.display_name)}">
             <i class="bi bi-person text-secondary me-1"></i>
             ${escHtml(u.display_name)}
             <span class="text-muted opacity-75">(${escHtml(u.role)})</span>

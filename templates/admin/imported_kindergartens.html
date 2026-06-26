@@ -1,13 +1,13 @@
-{% extends "admin_base.html" %}
+{% extends "admin_base.html"%}
 
 {% block title %}{% if ui_lang == 'en' %}Imported Kindergartens — KinJo{% else %}الروضات المستوردة — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item">
+<a href="/admin/dashboard"class="admin-breadcrumb-item">
     <i class="bi bi-house"></i> {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
 </a>
 <span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/import-kindergartens" class="admin-breadcrumb-item">
+<a href="/admin/import-kindergartens"class="admin-breadcrumb-item">
     {% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الروضات{% endif %}
 </a>
 <span class="admin-breadcrumb-separator">/</span>
@@ -21,7 +21,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title mb-0">{% if ui_lang == 'en' %}Imported Kindergartens{% else %}الروضات المستوردة{% endif %}</h3>
-                    <a href="/admin/import-kindergartens" class="admin-btn admin-btn-primary">
+                    <a href="/admin/import-kindergartens"class="admin-btn admin-btn-primary">
                         <i class="bi bi-upload"></i> {% if ui_lang == 'en' %}Import More{% else %}استيراد المزيد{% endif %}
                     </a>
                 </div>
@@ -29,24 +29,24 @@
                     <!-- Filters -->
                     <div class="row mb-3">
                         <div class="col-md-3">
-                            <input type="text" class="form-control" id="searchInput"
+                            <input type="text"class="form-control"id="searchInput"
                                 placeholder="{% if ui_lang == 'en' %}Search by name or phone{% else %}بحث بالاسم أو الهاتف{% endif %}"
                                 aria-label="{% if ui_lang == 'en' %}Search by name or phone{% else %}بحث بالاسم أو الهاتف{% endif %}">
                         </div>
                         <div class="col-md-3">
-                            <select class="form-control" id="governorateFilter"
+                            <select class="form-control"id="governorateFilter"
                                     aria-label="{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}">
                                 <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <select class="form-control" id="cityFilter"
+                            <select class="form-control"id="cityFilter"
                                     aria-label="{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}">
                                 <option value="">{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <button type="button" class="admin-btn admin-btn-secondary" id="clearFilters">
+                            <button type="button"class="admin-btn admin-btn-secondary"id="clearFilters">
                                 {% if ui_lang == 'en' %}Clear Filters{% else %}مسح الفلاتر{% endif %}
                             </button>
                         </div>
@@ -54,12 +54,12 @@
 
                     <!-- Results info -->
                     <div class="mb-3">
-                        <small class="admin-text-muted" id="resultsInfo">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</small>
+                        <small class="admin-text-muted"id="resultsInfo">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</small>
                     </div>
 
                     <!-- Table -->
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover" id="kindergartensTable">
+                        <table class="table table-striped table-hover"id="kindergartensTable">
                             <thead>
                                 <tr>
                                     <th>{% if ui_lang == 'en' %}Name (AR){% else %}الاسم (عربي){% endif %}</th>
@@ -74,15 +74,15 @@
                             </thead>
                             <tbody id="tableBody">
                                 <tr>
-                                    <td colspan="8" class="text-center">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td>
+                                    <td colspan="8"class="text-center">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
                     <!-- Pagination -->
-                    <nav aria-label="{% if ui_lang == 'en' %}Pagination{% else %}التنقل بين الصفحات{% endif %}" id="paginationNav" style="display: none;">
-                        <ul class="pagination justify-content-center" id="pagination"></ul>
+                    <nav aria-label="{% if ui_lang == 'en' %}Pagination{% else %}التنقل بين الصفحات{% endif %}"id="paginationNav"style="display: none;">
+                        <ul class="pagination justify-content-center"id="pagination"></ul>
                     </nav>
                 </div>
             </div>
@@ -112,7 +112,7 @@
     async function loadKindergartens(page) {
         page = page || 1;
         const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center">${_loading}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8"class="text-center">${_loading}</td></tr>`;
 
         const params = new URLSearchParams({ page: page, per_page: 50, ...currentFilters });
 
@@ -121,7 +121,7 @@
             const data = await response.json();
 
             if (!response.ok) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center admin-text-danger">${_errLoad}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8"class="text-center admin-text-danger">${_errLoad}</td></tr>`;
                 return;
             }
 
@@ -129,7 +129,7 @@
                 `${_showing} ${data.kindergartens.length} ${_of} ${data.total} ${_kgs}`;
 
             if (data.kindergartens.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center">${_noData}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8"class="text-center">${_noData}</td></tr>`;
             } else {
                 tbody.innerHTML = data.kindergartens.map(kg => `
                     <tr>
@@ -148,7 +148,7 @@
             updatePagination(data.page, data.pages);
 
         } catch (error) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center admin-text-danger">${_errLoad}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8"class="text-center admin-text-danger">${_errLoad}</td></tr>`;
         }
     }
 
@@ -161,15 +161,15 @@
         pagination.innerHTML = '';
 
         if (currentPg > 1) {
-            pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadKindergartens(${currentPg - 1})">${_prev}</a></li>`;
+            pagination.innerHTML += `<li class="page-item"><a class="page-link"href="#"onclick="loadKindergartens(${currentPg - 1})">${_prev}</a></li>`;
         }
 
         for (let i = Math.max(1, currentPg - 2); i <= Math.min(totalPages, currentPg + 2); i++) {
-            pagination.innerHTML += `<li class="page-item ${i === currentPg ? 'active' : ''}"><a class="page-link" href="#" onclick="loadKindergartens(${i})">${i}</a></li>`;
+            pagination.innerHTML += `<li class="page-item ${i === currentPg ? 'active' : ''}"><a class="page-link"href="#"onclick="loadKindergartens(${i})">${i}</a></li>`;
         }
 
         if (currentPg < totalPages) {
-            pagination.innerHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadKindergartens(${currentPg + 1})">${_next}</a></li>`;
+            pagination.innerHTML += `<li class="page-item"><a class="page-link"href="#"onclick="loadKindergartens(${currentPg + 1})">${_next}</a></li>`;
         }
     }
 

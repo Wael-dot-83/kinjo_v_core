@@ -1,9 +1,9 @@
-﻿{% extends "admin_base.html" %}
+﻿{% extends "admin_base.html"%}
 
 {% block title %}{% if ui_lang == 'en' %}Message Management{% else %}إدارة الرسائل{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="Dashboard"><i class="bi bi-house"aria-hidden="true"></i></a>
 <span class="admin-breadcrumb-separator">/</span>
 <span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</span>
 {% endblock %}
@@ -14,7 +14,7 @@
     <i class="bi bi-inbox me-2"></i>
     {% if ui_lang == 'en' %}Message Management{% else %}إدارة الرسائل{% endif %}
   </h1>
-  <a href="/admin/messages/compose" class="admin-btn admin-btn-primary">
+  <a href="/admin/messages/compose"class="admin-btn admin-btn-primary">
     <i class="bi bi-plus-lg me-1"></i>{% if ui_lang == 'en' %}New Message{% else %}إنشاء رسالة جديدة{% endif %}
   </a>
 </div>
@@ -46,7 +46,7 @@
                                     <td>{{ message.recipient_count }}</td>
                                     <td><span class="badge badge-soft badge-soft-success">{% if ui_lang == 'en' %}Sent{% else %}مرسلة{% endif %}</span></td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-outline-primary">{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}</button>
+                                        <button type="button"class="btn btn-sm btn-outline-primary">{% if ui_lang == 'en' %}View{% else %}عرض{% endif %}</button>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -58,7 +58,7 @@
                         <i class="bi bi-envelope-x fs-1 text-muted mb-3"></i>
                         <h5 class="text-muted">{% if ui_lang == 'en' %}No sent messages{% else %}لا توجد رسائل مرسلة{% endif %}</h5>
                         <p class="text-muted">{% if ui_lang == 'en' %}Start by composing a new message to users.{% else %}ابدأ بإنشاء رسالة جديدة للمستخدمين.{% endif %}</p>
-                        <a href="/admin/messages/compose" class="btn btn-primary">
+                        <a href="/admin/messages/compose"class="btn btn-primary">
                             <i class="bi bi-plus me-1"></i>{% if ui_lang == 'en' %}Create First Message{% else %}إنشاء أول رسالة{% endif %}
                         </a>
                     </div>

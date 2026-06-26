@@ -1,11 +1,11 @@
-﻿{% extends "admin_base.html" %}
+﻿{% extends "admin_base.html"%}
 
 {% block title %}{% if ui_lang == 'en' %}Generate Incident Report{% else %}إنشاء تقرير الحوادث{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="admin-breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="Dashboard"><i class="bi bi-house"aria-hidden="true"></i></a>
 <span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/reports/incidents" class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</a>
+<a href="/admin/reports/incidents"class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</a>
 <span class="admin-breadcrumb-separator">/</span>
 <span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Generate Report{% else %}إنشاء تقرير{% endif %}</span>
 {% endblock %}
@@ -25,11 +25,11 @@
                 <h5 class="card-title mb-0">{% if ui_lang == 'en' %}Generate New Incident Report{% else %}إنشاء تقرير جديد للحوادث{% endif %}</h5>
             </div>
             <div class="card-body p-4">
-                <form id="generateReportForm" onsubmit="generateReport(event)">
+                <form id="generateReportForm"onsubmit="generateReport(event)">
                     <!-- Scope Selection -->
                     <div class="mb-4">
                         <label class="form-label fw-bold">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
-                        <div class="row g-3" id="scopeOptions">
+                        <div class="row g-3"id="scopeOptions">
                             <!-- Options will be loaded dynamically -->
                         </div>
                     </div>
@@ -40,9 +40,9 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="form-check custom-card-check">
-                                    <input class="form-check-input" type="radio" name="periodType" id="periodWeek"
-                                        value="week" checked>
-                                    <label class="form-check-label w-100" for="periodWeek">
+                                    <input class="form-check-input"type="radio"name="periodType"id="periodWeek"
+                                        value="week"checked>
+                                    <label class="form-check-label w-100"for="periodWeek">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-week text-primary fs-4 mb-2 d-block"></i>
                                             <strong>{% if ui_lang == 'en' %}Current Week{% else %}الأسبوع الحالي{% endif %}</strong>
@@ -53,9 +53,9 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-check custom-card-check">
-                                    <input class="form-check-input" type="radio" name="periodType" id="periodMonth"
+                                    <input class="form-check-input"type="radio"name="periodType"id="periodMonth"
                                         value="month">
-                                    <label class="form-check-label w-100" for="periodMonth">
+                                    <label class="form-check-label w-100"for="periodMonth">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-month text-success fs-4 mb-2 d-block"></i>
                                             <strong>{% if ui_lang == 'en' %}Current Month{% else %}الشهر الحالي{% endif %}</strong>
@@ -66,9 +66,9 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-check custom-card-check">
-                                    <input class="form-check-input" type="radio" name="periodType" id="period3Years"
+                                    <input class="form-check-input"type="radio"name="periodType"id="period3Years"
                                         value="3years">
-                                    <label class="form-check-label w-100" for="period3Years">
+                                    <label class="form-check-label w-100"for="period3Years">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-range text-warning fs-4 mb-2 d-block"></i>
                                             <strong>{% if ui_lang == 'en' %}Last 3 Years{% else %}آخر 3 سنوات{% endif %}</strong>
@@ -79,9 +79,9 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-check custom-card-check">
-                                    <input class="form-check-input" type="radio" name="periodType" id="periodAnnual"
+                                    <input class="form-check-input"type="radio"name="periodType"id="periodAnnual"
                                         value="annual">
-                                    <label class="form-check-label w-100" for="periodAnnual">
+                                    <label class="form-check-label w-100"for="periodAnnual">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-year text-info fs-4 mb-2 d-block"></i>
                                             <strong>{% if ui_lang == 'en' %}Current Year{% else %}السنة الحالية{% endif %}</strong>
@@ -95,7 +95,7 @@
 
                     <!-- Submit Button -->
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg" id="generateBtn">
+                        <button type="submit"class="btn btn-primary btn-lg"id="generateBtn">
                             <i class="bi bi-file-earmark-plus me-2"></i>
                             {% if ui_lang == 'en' %}Generate Report{% else %}إنشاء التقرير{% endif %}
                         </button>
@@ -107,19 +107,19 @@
 </div>
 
 <!-- Success Modal -->
-<div class="modal fade" id="successModal" tabindex="-1">
+<div class="modal fade"id="successModal"tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{% if ui_lang == 'en' %}Report Generated Successfully{% else %}تم إنشاء التقرير بنجاح{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>{% if ui_lang == 'en' %}The incident report has been generated successfully. You can now view the report or create another one.{% else %}تم إنشاء تقرير الحوادث بنجاح. يمكنك الآن عرض التقرير أو إنشاء تقرير آخر.{% endif %}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Generate Another Report{% else %}إنشاء تقرير آخر{% endif %}</button>
-                <a href="/admin/reports/incidents" class="btn btn-primary">{% if ui_lang == 'en' %}View Reports{% else %}عرض التقارير{% endif %}</a>
+                <button type="button"class="btn btn-secondary"data-bs-dismiss="modal">{% if ui_lang == 'en' %}Generate Another Report{% else %}إنشاء تقرير آخر{% endif %}</button>
+                <a href="/admin/reports/incidents"class="btn btn-primary">{% if ui_lang == 'en' %}View Reports{% else %}عرض التقارير{% endif %}</a>
             </div>
         </div>
     </div>
@@ -265,7 +265,7 @@
         alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
         alertDiv.innerHTML = `
         ${escHtml(message)}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ _('إغلاق') }}"></button>
+        <button type="button"class="btn-close"data-bs-dismiss="alert"aria-label="{{ _('إغلاق') }}"></button>
     `;
         document.body.appendChild(alertDiv);
 
