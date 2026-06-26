@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="{% if ui_lang == 'en' %}KinJo Admin - Professional Kindergarten Management System{% else %}KinJo - إدارة احترافية لرياض الأطفال{% endif %}"
+      content="{% if ui_lang == 'en' %}KinJo Admin - Professional Kindergarten Management System{% else %}KinJo - إدارة احترافية لالحضانات{% endif %}"
     />
     <meta name="author" content="KinJo Team" />
     <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
@@ -248,7 +248,7 @@
             "label_ar": "سجل الكيانات",
             "label_en": "Directory",
             "items": [
-              {"href": "/admin/kindergartens", "icon": "bi-buildings", "label_ar": "رياض الأطفال", "label_en": "Kindergartens", "active_paths": ["/admin/kindergartens"]},
+              {"href": "/admin/kindergartens", "icon": "bi-buildings", "label_ar": "الحضانات", "label_en": "Nurseries", "active_paths": ["/admin/kindergartens"]},
               {"href": "/admin/classes", "icon": "bi-easel", "label_ar": "الصفوف", "label_en": "Classes", "active_paths": ["/admin/classes"]},
               {"href": "/admin/users", "icon": "bi-people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users"], "active_prefixes": ["/admin/users/"]},
               {"href": "/admin/supervisor", "icon": "bi-person-badge", "label_ar": "الكادر والمشرفين", "label_en": "Staff & Supervisors", "active_paths": ["/admin/supervisor"]},
