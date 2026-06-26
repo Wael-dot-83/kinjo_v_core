@@ -166,5 +166,88 @@ def scatter_plot_data(
             "y": r.attendance_rate or 0,
             "name": r.dimension_id
         })
-    
     return points
+
+@router.get("/demographics")
+def get_demographics(
+    dim_type: str = Query(...),
+    dim_id: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin)
+):
+    """Fetches Demographic & Density Distributions (Age, Gender, KG Sizes)."""
+    from datetime import date
+    today = date.today()
+
+    # Join Child -> Enrollment -> Kindergarten
+    query = db.query(
+        models.Child.date_of_birth,
+        models.Child.gender,
+        models.Kindergarten.id.label("kg_id")
+    ).join(
+        models.EnrollmentApplication,
+        models.Child.id == models.EnrollmentApplication.child_id
+    ).join(
+        models.Kindergarten,
+        models.EnrollmentApplication.kindergarten_id == models.Kindergarten.id
+    ).filter(
+        models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+    )
+
+    if dim_type == "GOVERNORATE":
+        query = query.filter(models.Kindergarten.governorate == dim_id)
+    elif dim_type == "CITY":
+        # dim_id might be "Amman_Amman" or just "Amman". We'll use like or split.
+        city_name = dim_id.split("_")[-1] if "_" in dim_id else dim_id
+        query = query.filter(models.Kindergarten.city == city_name)
+    elif dim_type == "KINDERGARTEN":
+        query = query.filter(models.Kindergarten.id == dim_id)
+
+    results = query.all()
+
+    # Process distributions in memory (fast enough for 10-50k rows)
+    gender_counts = {"MALE": 0, "FEMALE": 0}
+    age_bands = {"<2 Years": 0, "2-3 Years": 0, "3-4 Years": 0, "4-5 Years": 0, "5+ Years": 0}
+    kg_density = {}
+
+    for dob, gender, kg_id in results:
+        # Gender
+        gender_counts[gender.value] += 1
+        
+        # Density
+        kg_density[kg_id] = kg_density.get(kg_id, 0) + 1
+        
+        # Age
+        if dob:
+            age_days = (today - dob).days
+            age_years = age_days / 365.25
+            if age_years < 2:
+                age_bands["<2 Years"] += 1
+            elif age_years < 3:
+                age_bands["2-3 Years"] += 1
+            elif age_years < 4:
+                age_bands["3-4 Years"] += 1
+            elif age_years < 5:
+                age_bands["4-5 Years"] += 1
+            else:
+                age_bands["5+ Years"] += 1
+
+    # Bucket KG densities (Histogram)
+    density_histogram = {"<20": 0, "20-50": 0, "50-100": 0, "100+": 0}
+    for count in kg_density.values():
+        if count < 20:
+            density_histogram["<20"] += 1
+        elif count < 50:
+            density_histogram["20-50"] += 1
+        elif count < 100:
+            density_histogram["50-100"] += 1
+        else:
+            density_histogram["100+"] += 1
+
+    return {
+        "gender": gender_counts,
+        "age_bands": age_bands,
+        "density_histogram": density_histogram,
+        "total_children": len(results),
+        "total_kgs": len(kg_density)
+    }

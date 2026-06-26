@@ -1,5 +1,8 @@
 let radarChartInstance = null;
 let scatterChartInstance = null;
+let genderChartInstance = null;
+let ageChartInstance = null;
+let densityChartInstance = null;
 
 async function loadDimensionIds(prefix) {
     const typeSelect = document.getElementById(`${prefix}-type`);
@@ -70,9 +73,10 @@ async function runComparison() {
         
         renderRadarChart(data.dim1, data.dim2);
         
-        // Fetch Predictive Data & Scatter Data for Dim1
+        // Fetch Predictive Data, Scatter Data, and Demographics for Dim1
         fetchPredictiveInsights(dim1Type, dim1Id);
         fetchScatterData(dim1Type, dim1Id);
+        fetchDemographics(dim1Type, dim1Id);
     } catch (e) {
         console.error(e);
         alert('Failed to run analysis. Check console.');
@@ -178,6 +182,110 @@ function renderScatterChart(points) {
                     }
                 }
             }
+        }
+    });
+}
+
+async function fetchDemographics(dimType, dimId) {
+    try {
+        const res = await fetch(`/api/analytics/demographics?dim_type=${dimType}&dim_id=${dimId}`);
+        if (!res.ok) throw new Error('Demographics not found');
+        const data = await res.json();
+        
+        document.getElementById('demo-total-children').innerText = data.total_children;
+        document.getElementById('demo-total-kgs').innerText = data.total_kgs;
+        
+        renderGenderChart(data.gender);
+        renderAgeChart(data.age_bands);
+        renderDensityChart(data.density_histogram);
+    } catch (e) {
+        console.error("Failed to load demographics", e);
+    }
+}
+
+function renderGenderChart(genderData) {
+    const ctx = document.getElementById('genderChart').getContext('2d');
+    if (genderChartInstance) genderChartInstance.destroy();
+    
+    const ar = window.KINJO_LANG === 'ar' || true;
+    
+    genderChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [ar ? 'ذكور' : 'Male', ar ? 'إناث' : 'Female'],
+            datasets: [{
+                data: [genderData.MALE || 0, genderData.FEMALE || 0],
+                backgroundColor: ['#3b82f6', '#ec4899'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+}
+
+function renderAgeChart(ageData) {
+    const ctx = document.getElementById('ageChart').getContext('2d');
+    if (ageChartInstance) ageChartInstance.destroy();
+    
+    const ar = window.KINJO_LANG === 'ar' || true;
+    
+    // Maintain strict ordering
+    const labels = ["<2 Years", "2-3 Years", "3-4 Years", "4-5 Years", "5+ Years"];
+    const arLabels = ["أقل من سنتين", "2-3 سنوات", "3-4 سنوات", "4-5 سنوات", "5+ سنوات"];
+    
+    const values = labels.map(l => ageData[l] || 0);
+
+    ageChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ar ? arLabels : labels,
+            datasets: [{
+                label: ar ? 'عدد الأطفال' : 'Children Count',
+                data: values,
+                backgroundColor: '#10b981',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+function renderDensityChart(densityData) {
+    const ctx = document.getElementById('densityChart').getContext('2d');
+    if (densityChartInstance) densityChartInstance.destroy();
+    
+    const ar = window.KINJO_LANG === 'ar' || true;
+    
+    const labels = ["<20", "20-50", "50-100", "100+"];
+    const values = labels.map(l => densityData[l] || 0);
+
+    densityChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: ar ? 'عدد الحضانات' : 'Kindergarten Count',
+                data: values,
+                backgroundColor: '#8b5cf6',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
         }
     });
 }

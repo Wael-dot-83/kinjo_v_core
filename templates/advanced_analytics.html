@@ -126,6 +126,59 @@
         </div>
     </div>
 
+    <!-- Demographic Distributions Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm rounded-4 border-0">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-people-fill text-success"></i> 
+                        {% if ui_lang == 'ar' %}التوزيع الديموغرافي وكثافة الأطفال{% else %}Demographics & Density{% endif %}
+                    </h5>
+                    <p class="text-muted small">{% if ui_lang == 'ar' %}توزيع الأطفال حسب العمر والجنس، وكثافتهم داخل الحضانات في المستوى المحدد الأول.{% else %}Distribution by age, gender, and density in Level 1.{% endif %}</p>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-4" id="demographic-totals">
+                        <div class="col-md-6 border-end">
+                            <h2 class="fw-bold text-success" id="demo-total-children">0</h2>
+                            <span class="text-muted">{% if ui_lang == 'ar' %}إجمالي الأطفال{% else %}Total Children{% endif %}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <h2 class="fw-bold text-info" id="demo-total-kgs">0</h2>
+                            <span class="text-muted">{% if ui_lang == 'ar' %}الحضانات النشطة{% else %}Active Kindergartens{% endif %}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Gender Donut -->
+                        <div class="col-md-4">
+                            <h6 class="text-center fw-bold text-muted mb-3">{% if ui_lang == 'ar' %}توزيع الجنس{% else %}Gender Distribution{% endif %}</h6>
+                            <div style="height: 250px;">
+                                <canvas id="genderChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Age Bar -->
+                        <div class="col-md-4 border-start border-end border-light">
+                            <h6 class="text-center fw-bold text-muted mb-3">{% if ui_lang == 'ar' %}الفئات العمرية{% else %}Age Groups{% endif %}</h6>
+                            <div style="height: 250px;">
+                                <canvas id="ageChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Density Histogram -->
+                        <div class="col-md-4">
+                            <h6 class="text-center fw-bold text-muted mb-3">{% if ui_lang == 'ar' %}كثافة الحضانات (عدد الأطفال){% else %}Kindergarten Size Density{% endif %}</h6>
+                            <div style="height: 250px;">
+                                <canvas id="densityChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Load Chart.js -->
