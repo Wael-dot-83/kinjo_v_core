@@ -8,16 +8,16 @@
 {% block page_header %}
 {% set toolbar_actions %}
 <div class="btn-group me-2" id="bulkActions" style="display: none;">
-    <button class="btn btn-outline-danger" onclick="bulkDelete()" id="bulkDeleteBtn">
+    <button type="button" class="btn btn-outline-danger" onclick="bulkDelete()" id="bulkDeleteBtn">
         <i class="bi bi-trash"></i> <span id="bulkDeleteLabel">{% if ui_lang == 'en' %}Delete Selected{% else %}حذف المحدد{% endif %}</span>
     </button>
-    <button class="btn btn-outline-warning" onclick="bulkStatusUpdate('SUSPENDED')">
+    <button type="button" class="btn btn-outline-warning" onclick="bulkStatusUpdate('SUSPENDED')">
         <i class="bi bi-pause-circle"></i> {% if ui_lang == 'en' %}Suspend{% else %}تعليق{% endif %}
     </button>
-    <button class="btn btn-outline-success" onclick="bulkStatusUpdate('ACTIVE')">
+    <button type="button" class="btn btn-outline-success" onclick="bulkStatusUpdate('ACTIVE')">
         <i class="bi bi-play-circle"></i> {% if ui_lang == 'en' %}Activate{% else %}تفعيل{% endif %}
     </button>
-    <button class="btn btn-outline-secondary" onclick="clearSelection()">
+    <button type="button" class="btn btn-outline-secondary" onclick="clearSelection()">
         <i class="bi bi-x-circle"></i> {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
     </button>
 </div>
@@ -25,7 +25,7 @@
     <i class="bi bi-person-plus me-2"></i>
     {% if ui_lang == 'en' %}Add New User{% else %}إضافة مستخدم جديد{% endif %}
 </a>
-<button class="btn btn-outline-secondary ms-2" onclick="showImportModal()">
+<button type="button" class="btn btn-outline-secondary ms-2" onclick="showImportModal()">
     <i class="bi bi-upload"></i> {% if ui_lang == 'en' %}Import from CSV{% else %}استيراد من CSV{% endif %}
 </button>
 {% endset %}
@@ -73,7 +73,7 @@ actions=toolbar_actions
                 </select>
             </div>
             <div class="col-md-2">
-                <button class="btn btn-outline-secondary w-100" id="resetFilters">
+                <button type="button" class="btn btn-outline-secondary w-100" id="resetFilters">
                     <i class="bi bi-arrow-counterclockwise me-1"></i> {% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
                 </button>
             </div>
@@ -341,7 +341,7 @@ actions=toolbar_actions
                             <i class="bi bi-exclamation-triangle fs-1 d-block mb-3 opacity-50"></i>
                             <p class="mb-1">${T('حدث خطأ أثناء تحميل البيانات', 'Error loading data')}</p>
                             <small class="text-muted">${escapeHtml(error.message)}</small>
-                            <button class="btn btn-outline-primary btn-sm mt-3" onclick="loadUsers()">
+                            <button type="button" class="btn btn-outline-primary btn-sm mt-3" onclick="loadUsers()">
                                 <i class="bi bi-arrow-clockwise me-1"></i>
                                 ${T('إعادة المحاولة', 'Retry')}
                             </button>
@@ -426,12 +426,12 @@ actions=toolbar_actions
                             <i class="bi bi-pencil" aria-hidden="true"></i>
                         </a>
                         ${currentUserRole === 'ADMIN' ? `
-                        <button data-action="reset-password" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-warning js-user-action" title="${T('إعادة تعيين كلمة المرور', 'Reset password')}" aria-label="${T('إعادة تعيين كلمة مرور', 'Reset password for')} ${safeUsername}">
+                        <button type="button" data-action="reset-password" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-warning js-user-action" title="${T('إعادة تعيين كلمة المرور', 'Reset password')}" aria-label="${T('إعادة تعيين كلمة مرور', 'Reset password for')} ${safeUsername}">
                             <i class="bi bi-key" aria-hidden="true"></i>
                         </button>
                         ` : ''}
                         ${currentUserRole === 'ADMIN' && user.role !== 'ADMIN' ? `
-                        <button data-action="delete-user" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-danger js-user-action" title="${T('حذف', 'Delete')}" aria-label="${T('حذف', 'Delete')} ${safeUsername}">
+                        <button type="button" data-action="delete-user" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-danger js-user-action" title="${T('حذف', 'Delete')}" aria-label="${T('حذف', 'Delete')} ${safeUsername}">
                             <i class="bi bi-trash" aria-hidden="true"></i>
                         </button>
                         ` : ''}

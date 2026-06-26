@@ -1109,7 +1109,7 @@ html[dir="rtl"] .admin-table td {
   border-bottom: var(--admin-border-width) solid var(--admin-border-color);
   cursor: pointer;
   transition: background var(--admin-transition-fast);
-  user-select: none;
+  -webkit-user-select: none; user-select: none;
 }
 .manager-item:last-child { border-bottom: none; }
 .manager-item:hover { background: var(--admin-bg-hover); }
@@ -3189,7 +3189,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
 
   .kd-tri-grid { grid-template-columns: 1fr; }
 
-  .kd-panel { min-height: auto; }
+  .kd-panel { min-height: 0; }
 
   .kd-actions-grid { grid-template-columns: repeat(4, 1fr); }
 
@@ -3266,7 +3266,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
 /* Sortable Table Headers */
 .sortable {
     cursor: pointer;
-    user-select: none;
+    -webkit-user-select: none; user-select: none;
     position: relative;
     padding-inline-start: var(--admin-space-4) !important;
 }
@@ -4230,7 +4230,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   top: 0;
   background: rgba(6,14,28,0.98);
   cursor: pointer;
-  user-select: none;
+  -webkit-user-select: none; user-select: none;
   white-space: nowrap;
 }
 #rankingsTable th:hover { color: rgba(255,255,255,0.55); }

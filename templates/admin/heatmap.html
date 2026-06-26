@@ -413,24 +413,24 @@
       <option value="closed">مغلق</option>
     </select>
 
-    <button id="refreshBtn" class="cc-btn" aria-label="تحديث البيانات">
+    <button type="button" id="refreshBtn" class="cc-btn" aria-label="تحديث البيانات">
       <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
       تحديث
     </button>
 
     <div style="flex:1"></div>
 
-    <button id="exportCsvBtn" class="cc-btn cc-btn-export"
+    <button type="button" id="exportCsvBtn" class="cc-btn cc-btn-export"
             aria-label="تصدير Excel" title="تصدير جدول البيانات">
       <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
       Excel
     </button>
-    <button id="exportPdfBtn" class="cc-btn cc-btn-export"
+    <button type="button" id="exportPdfBtn" class="cc-btn cc-btn-export"
             aria-label="تصدير PDF" title="طباعة التقرير">
       <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
       PDF
     </button>
-    <button id="printPageBtn" class="cc-btn" aria-label="طباعة الصفحة">
+    <button type="button" id="printPageBtn" class="cc-btn" aria-label="طباعة الصفحة">
       <i class="bi bi-printer" aria-hidden="true"></i>
     </button>
   </div>
@@ -513,12 +513,12 @@
                placeholder="ابحث عن محافظة…"
                aria-label="البحث في المحافظات">
         <div class="cs-left-actions">
-          <button id="csHomeBtn" class="cc-btn" style="flex:1;justify-content:center"
+          <button type="button" id="csHomeBtn" class="cc-btn" style="flex:1;justify-content:center"
                   title="العودة إلى الأردن" aria-label="العودة إلى الأردن">
             <i class="bi bi-house" aria-hidden="true"></i>
             عودة
           </button>
-          <button id="csPlayBtn" class="cc-btn" style="flex:1;justify-content:center"
+          <button type="button" id="csPlayBtn" class="cc-btn" style="flex:1;justify-content:center"
                   title="تشغيل / إيقاف الجدول الزمني"
                   aria-label="تشغيل الجدول الزمني">
             <i class="bi bi-play-fill" aria-hidden="true"></i>
@@ -528,11 +528,11 @@
 
       {# Risk-level filter pills #}
       <div class="cs-risk-filter" role="group" aria-label="تصفية حسب مستوى الخطر">
-        <button class="risk-filter-btn active" data-risk="all" aria-pressed="true">الكل</button>
-        <button class="risk-filter-btn risk-btn-low"      data-risk="low"      aria-pressed="false">منخفض</button>
-        <button class="risk-filter-btn risk-btn-medium"   data-risk="medium"   aria-pressed="false">متوسط</button>
-        <button class="risk-filter-btn risk-btn-high"     data-risk="high"     aria-pressed="false">مرتفع</button>
-        <button class="risk-filter-btn risk-btn-critical" data-risk="critical" aria-pressed="false">حرج</button>
+        <button type="button" class="risk-filter-btn active" data-risk="all" aria-pressed="true">الكل</button>
+        <button type="button" class="risk-filter-btn risk-btn-low"      data-risk="low"      aria-pressed="false">منخفض</button>
+        <button type="button" class="risk-filter-btn risk-btn-medium"   data-risk="medium"   aria-pressed="false">متوسط</button>
+        <button type="button" class="risk-filter-btn risk-btn-high"     data-risk="high"     aria-pressed="false">مرتفع</button>
+        <button type="button" class="risk-filter-btn risk-btn-critical" data-risk="critical" aria-pressed="false">حرج</button>
       </div>
 
       <div class="cs-left-body" id="govListBody" role="list" aria-label="المحافظات">
@@ -709,7 +709,7 @@
         التنبيهات والتوصيات
         <span class="hm-section-sub" id="hmAlertsCount"></span>
       </div>
-      <button id="refreshAlertsBtn" class="cc-btn" aria-label="تحديث التنبيهات">
+      <button type="button" id="refreshAlertsBtn" class="cc-btn" aria-label="تحديث التنبيهات">
         <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
         تحديث
       </button>
@@ -741,17 +741,17 @@
       <input type="search" id="rankSearch" class="rankings-search"
              placeholder="ابحث في المحافظات…"
              aria-label="البحث في جدول المحافظات">
-      <button class="sort-btn active" id="sortByRisk"
+      <button type="button" class="sort-btn active" id="sortByRisk"
               aria-label="ترتيب حسب مؤشر الخطر">
         <i class="bi bi-sort-numeric-down" aria-hidden="true"></i>
         الخطر
       </button>
-      <button class="sort-btn" id="sortByName"
+      <button type="button" class="sort-btn" id="sortByName"
               aria-label="ترتيب حسب الاسم">
         <i class="bi bi-sort-alpha-down" aria-hidden="true"></i>
         الاسم
       </button>
-      <button class="sort-btn" id="sortByKgs"
+      <button type="button" class="sort-btn" id="sortByKgs"
               aria-label="ترتيب حسب عدد المنشآت">
         <i class="bi bi-building" aria-hidden="true"></i>
         المنشآت

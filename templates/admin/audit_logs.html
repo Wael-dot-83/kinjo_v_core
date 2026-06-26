@@ -17,10 +17,10 @@
     {% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}
   </h1>
   <div class="d-flex gap-2">
-    <button class="admin-btn admin-btn-ghost" onclick="exportAuditLogs()">
+    <button type="button" class="admin-btn admin-btn-ghost" onclick="exportAuditLogs()">
       <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
     </button>
-    <button class="admin-btn admin-btn-ghost" onclick="refreshAuditLogs()">
+    <button type="button" class="admin-btn admin-btn-ghost" onclick="refreshAuditLogs()">
       <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
     </button>
   </div>
@@ -69,7 +69,7 @@
 
         <!-- Apply Filters Button -->
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <button class="admin-btn admin-btn-primary" onclick="applyFilters()" aria-label="{% if ui_lang == 'en' %}Apply selected filters{% else %}تطبيق الفلاتر المحددة{% endif %}">
+            <button type="button" class="admin-btn admin-btn-primary" onclick="applyFilters()" aria-label="{% if ui_lang == 'en' %}Apply selected filters{% else %}تطبيق الفلاتر المحددة{% endif %}">
                 <i class="bi bi-funnel me-2"></i>
                 {% if ui_lang == 'en' %}Apply Filter{% else %}تطبيق التصفية{% endif %}
             </button>

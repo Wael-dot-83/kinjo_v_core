@@ -30,7 +30,7 @@
       {% if ui_lang == 'en' %}View and manage system alerts across all governorates.{% else %}عرض وإدارة تنبيهات النظام عبر جميع المحافظات.{% endif %}
     </p>
   </div>
-  <button id="refreshAlertsBtn" class="admin-btn admin-btn-ghost">
+  <button type="button" id="refreshAlertsBtn" class="admin-btn admin-btn-ghost">
     <i class="bi bi-arrow-clockwise me-1"></i>
     {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
   </button>
@@ -144,10 +144,10 @@
           <div id="alertDetailContent"></div>
         </div>
         <div class="modal-footer">
-          <button class="admin-btn admin-btn-secondary" data-bs-dismiss="modal">
+          <button type="button" class="admin-btn admin-btn-secondary" data-bs-dismiss="modal">
             {% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}
           </button>
-          <button class="admin-btn admin-btn-warning" id="acknowledgeAlertBtn">
+          <button type="button" class="admin-btn admin-btn-warning" id="acknowledgeAlertBtn">
             <i class="bi bi-check-lg me-1"></i>
             {% if ui_lang == 'en' %}Acknowledge{% else %}اعتراف{% endif %}
           </button>

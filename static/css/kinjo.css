@@ -20,8 +20,8 @@
   vertical-align: middle;
 }
 @keyframes kj-stat-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 /* ============================================================================
@@ -811,7 +811,7 @@ body.sidebar-open .sidebar-backdrop {
 /* Sortable Table Headers */
 .table th.sortable {
   cursor: pointer;
-  user-select: none;
+  -webkit-user-select: none; user-select: none;
   position: relative;
   transition: background-color 0.15s ease;
 }
@@ -1011,12 +1011,8 @@ body.sidebar-open .sidebar-backdrop {
 }
 
 @keyframes skeleton-loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 /* ============================================================================
@@ -1972,12 +1968,8 @@ body.sidebar-open .sidebar-backdrop {
 }
 
 @keyframes skeleton-loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 /* Hide skeleton when content loads */

@@ -15,7 +15,7 @@
       </p>
     </div>
     <div class="admin-page-header-actions">
-      <button class="admin-btn admin-btn-secondary" id="refresh-dashboard">
+      <button type="button" class="admin-btn admin-btn-secondary" id="refresh-dashboard">
         <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
         {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
       </button>
@@ -57,7 +57,7 @@
         <p id="error-message">
           {% if ui_lang == 'en' %}Unable to load dashboard data. Please try again.{% else %}تعذّر تحميل البيانات. يرجى المحاولة مرة أخرى.{% endif %}
         </p>
-        <button class="admin-btn admin-btn-primary" id="retry-dashboard">
+        <button type="button" class="admin-btn admin-btn-primary" id="retry-dashboard">
           <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
           {% if ui_lang == 'en' %}Try Again{% else %}إعادة المحاولة{% endif %}
         </button>

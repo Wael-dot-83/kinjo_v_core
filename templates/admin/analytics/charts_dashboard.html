@@ -88,11 +88,11 @@
       <input type="number" id="topN" class="form-control form-control-sm mb-3" min="1" max="50" placeholder="All">
 
       <div class="d-grid gap-2">
-        <button class="btn btn-primary btn-sm" id="renderBtn" onclick="renderChart()">
+        <button type="button" class="btn btn-primary btn-sm" id="renderBtn" onclick="renderChart()">
           <i class="bi bi-play-fill me-1"></i>
           {% if ui_lang == 'en' %}Render Chart{% else %}رسم المخطط{% endif %}
         </button>
-        <button class="btn btn-outline-secondary btn-sm" id="suggestBtn" onclick="getSuggestions()">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="suggestBtn" onclick="getSuggestions()">
           <i class="bi bi-lightbulb me-1"></i>
           {% if ui_lang == 'en' %}Get Suggestions{% else %}اقتراحات ذكية{% endif %}
         </button>
@@ -124,7 +124,7 @@
             {% if ui_lang == 'en' %}cached{% else %}مخزن{% endif %}
           </span>
         </div>
-        <button class="btn btn-outline-secondary btn-sm" id="exportBtn" style="display:none;" onclick="exportChart()">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="exportBtn" style="display:none;" onclick="exportChart()">
           <i class="bi bi-download me-1"></i>
           {% if ui_lang == 'en' %}Export PNG{% else %}تصدير PNG{% endif %}
         </button>

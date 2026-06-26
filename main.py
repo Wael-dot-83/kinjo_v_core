@@ -329,6 +329,22 @@ app.add_middleware(
 
 # Compression middleware for faster API/template responses over network.
 app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Content-Security-Policy"] = "frame-ancestors 'none';"
+        response.headers["X-XSS-Protection"] = "0"
+        if "Expires" in response.headers:
+            del response.headers["Expires"]
+        if "X-Frame-Options" in response.headers:
+            del response.headers["X-Frame-Options"]
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
 
 # Request timeout middleware
 @app.middleware("http")

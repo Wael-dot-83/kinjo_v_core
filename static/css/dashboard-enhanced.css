@@ -644,7 +644,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   gap: .875rem;
   padding: .875rem 1.125rem;
   cursor: pointer;
-  user-select: none;
+  -webkit-user-select: none; user-select: none;
 }
 .kpi-explain-header:hover { background: #fafbfc; }
 

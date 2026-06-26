@@ -14,7 +14,7 @@
     <i class="bi bi-exclamation-triangle admin-text-warning me-2" aria-hidden="true"></i>
     {% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}
   </h1>
-  <button class="admin-btn admin-btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
+  <button type="button" class="admin-btn admin-btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
     <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
   </button>
 </div>
@@ -328,10 +328,10 @@
                 <td>${escHtml(report.created_by)}</td>
                 <td><span class="badge badge-soft badge-soft-warning">${report.total_incidents}</span></td>
                 <td>
-                    <button class="btn admin-btn-sm btn-outline-primary me-1" onclick="viewReport(${report.id})">
+                    <button type="button" class="btn admin-btn-sm btn-outline-primary me-1" onclick="viewReport(${report.id})">
                         <i class="bi bi-eye"></i> ${T('عرض', 'View')}
                     </button>
-                    <button class="btn admin-btn-sm btn-outline-success" onclick="exportReport(${report.id})">
+                    <button type="button" class="btn admin-btn-sm btn-outline-success" onclick="exportReport(${report.id})">
                         <i class="bi bi-download"></i> ${T('تصدير', 'Export')}
                     </button>
                 </td>
