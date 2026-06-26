@@ -161,7 +161,9 @@
   overflow: hidden;
   transition: box-shadow var(--ko-transition), transform var(--ko-transition);
   border: 1.5px solid var(--ko-border);
-  -webkit-user-select: none; user-select: none;
+  -webkit--webkit-user-select: none;
+user-select: none; -webkit-user-select: none;
+ user-select: none;
 }
 .ko-kpi-card::before {
   content: '';
@@ -534,7 +536,9 @@
 .ko-overlay {
   position: fixed; inset: 0;
   background: rgba(10,15,30,.45);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(3px);
+  -webkit--webkit-backdrop-filter: blur(10px);
+backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(3px);
+ backdrop-filter: blur(3px);
   z-index: var(--ko-z-overlay);
   opacity: 0;
   pointer-events: none;

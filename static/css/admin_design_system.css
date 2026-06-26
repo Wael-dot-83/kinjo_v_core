@@ -430,8 +430,10 @@ html[dir="ltr"] .admin-sidebar.collapsed + .admin-main {
   top: calc(100% + 6px);
   z-index: var(--admin-z-dropdown, 1000);
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  -webkit--webkit-backdrop-filter: blur(12px);
+backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: var(--admin-radius-lg);
   box-shadow: var(--admin-shadow-lg);
@@ -577,8 +579,10 @@ html[dir="rtl"] .admin-nav-item.active::before {
 /* Header */
 .admin-header {
   background: rgba(31, 94, 71, 0.85); /* kinjo-primary translucent */
-  backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  -webkit--webkit-backdrop-filter: blur(16px);
+backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding: var(--admin-space-4) var(--admin-space-8);
   display: flex;
@@ -889,6 +893,7 @@ html[dir="rtl"] .admin-nav-item.active::before {
 /* Cards */
 .admin-card {
   background-color: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   border: var(--admin-border-width) solid var(--admin-border-color);
   border-radius: var(--admin-radius-lg);
@@ -1109,7 +1114,9 @@ html[dir="rtl"] .admin-table td {
   border-bottom: var(--admin-border-width) solid var(--admin-border-color);
   cursor: pointer;
   transition: background var(--admin-transition-fast);
-  -webkit-user-select: none; user-select: none;
+  -webkit--webkit-user-select: none;
+user-select: none; -webkit-user-select: none;
+ user-select: none;
 }
 .manager-item:last-child { border-bottom: none; }
 .manager-item:hover { background: var(--admin-bg-hover); }
@@ -3266,7 +3273,9 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
 /* Sortable Table Headers */
 .sortable {
     cursor: pointer;
-    -webkit-user-select: none; user-select: none;
+    -webkit--webkit-user-select: none;
+user-select: none; -webkit-user-select: none;
+ user-select: none;
     position: relative;
     padding-inline-start: var(--admin-space-4) !important;
 }
@@ -3755,6 +3764,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   z-index: var(--admin-z-tooltip);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   pointer-events: none;
 }
@@ -3774,6 +3784,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   transition: border-color var(--admin-transition-fast);
 }
@@ -3805,6 +3816,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   align-items: center;
   justify-content: center;
   transition: all var(--admin-transition-fast);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 .map-ctrl-btn:hover { background: rgba(47,125,98,0.18); border-color: rgba(47,125,98,0.45); color: #0EA5E9; }
@@ -4230,7 +4242,9 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   top: 0;
   background: rgba(6,14,28,0.98);
   cursor: pointer;
-  -webkit-user-select: none; user-select: none;
+  -webkit--webkit-user-select: none;
+user-select: none; -webkit-user-select: none;
+ user-select: none;
   white-space: nowrap;
 }
 #rankingsTable th:hover { color: rgba(255,255,255,0.55); }
@@ -4304,6 +4318,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   pointer-events: none;
   display: none;
   min-width: 170px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   box-shadow: var(--admin-shadow-md);
 }
