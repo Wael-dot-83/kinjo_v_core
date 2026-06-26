@@ -133,13 +133,8 @@ async function initCesium() {
   const token = window.CESIUM_ION_TOKEN || '';
   if (token) Cesium.Ion.defaultAccessToken = token;
 
-  let imageryProvider;
-  if (token) {
-    try { imageryProvider = await Cesium.IonImageryProvider.fromAssetId(3); }
-    catch { imageryProvider = esriImagery(); }
-  } else {
-    imageryProvider = esriImagery();
-  }
+  // Force Google Earth Satellite Imagery as requested
+  const imageryProvider = googleSatelliteImagery();
 
   let terrainProvider;
   if (token) {
@@ -187,19 +182,26 @@ async function initCesium() {
   startWebSocket();
 }
 
-function esriImagery() {
+function googleSatelliteImagery() {
   return new Cesium.UrlTemplateImageryProvider({
-    url:          'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    maximumLevel: 19,
+    url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+    maximumLevel: 20,
+    credit: 'Imagery © Google'
   });
+}
+
+function createPinSvg(colorHex, isPulse) {
+  const encColor = encodeURIComponent(colorHex);
+  const pulseAnim = isPulse ? '<animate attributeName="r" values="4;8;4" dur="1s" repeatCount="indefinite"/>' : '';
+  return `data:image/svg+xml;charset=utf-8,%3Csvg width='32' height='40' viewBox='0 0 32 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M16 0C7.163 0 0 7.163 0 16c0 11.2 16 24 16 24s16-12.8 16-24C32 7.163 24.837 0 16 0zm0 24c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8z' fill='${encColor}' stroke='%23ffffff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ffffff'%3E${pulseAnim}%3C/circle%3E%3C/svg%3E`;
 }
 
 // ── Camera-height Clustering ──────────────────────────────────────────────────
 function setupClustering(viewer) {
   viewer.camera.changed.addEventListener(() => {
     const h     = viewer.camera.positionCartographic?.height ?? 0;
-    const inRng = h < CLUSTER_HEIGHT;
-    const lblRng = h < 80000;
+    const inRng = true; // Force pins to always be visible (no clustering)
+    const lblRng = h < 120000;
     const prev  = CsApp._clusterState;
     if (prev && prev.range === inRng && prev.label === lblRng) return;
     CsApp._clusterState = { range: inRng, label: lblRng };
@@ -219,6 +221,7 @@ function _applyKgVisibility() {
                    e._kgData.governorate === CsApp.selectedGov.slug;
     const vis = kgOn && inRng && cityOk && govOk;
     if (e.point) e.point.show = new Cesium.ConstantProperty(vis);
+    if (e.billboard) e.billboard.show = new Cesium.ConstantProperty(vis);
     if (e.label) e.label.show = new Cesium.ConstantProperty(vis && lblRng && !e._isPulseRing);
   });
 }
@@ -411,14 +414,13 @@ function addKgPins(kgs) {
 
     const entity = viewer.entities.add({
       position: Cesium.Cartesian3.fromDegrees(kg.longitude, kg.latitude, 0),
-      point: {
-        pixelSize:                pinSize,
-        color:                    pinColor,
-        outlineColor:             Cesium.Color.WHITE.withAlpha(isCrit ? 1.0 : 0.75),
-        outlineWidth:             isCrit ? 2 : 1.5,
-        heightReference:          Cesium.HeightReference.CLAMP_TO_GROUND,
+            billboard: {
+        image: createPinSvg(hexClr, isCrit),
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
         disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        scaleByDistance:          new Cesium.NearFarScalar(5e3, 1.8, 5e5, 0.5),
+        scale: isCrit ? 1.1 : isHigh ? 0.9 : 0.8,
+        scaleByDistance: new Cesium.NearFarScalar(5e3, 1.2, 8e6, 0.4),
       },
       label: {
         text:                     label,
@@ -504,8 +506,10 @@ function setupInteraction(viewer) {
         <div class="tt-divider"></div>
         <div class="tt-row"><span>المحافظة</span><b>${esc(govAr)}</b></div>
         ${cityTxt}
-        <div class="tt-row"><span>درجة الأداء</span><b style="color:${riskHex(riskSc)}">${score.toFixed(1)}</b></div>
-        <div class="tt-hint">انقر للتفاصيل</div>`;
+        <div class="tt-row"><span>مؤشر الخطر المباشر</span><b style="color:${riskHex(riskSc)}">${riskSc.toFixed(1)}/100</b></div>
+        <div class="tt-hint" style="color:#0ea5e9;font-weight:bold;margin-top:8px;">
+           <i class="bi bi-broadcast" style="animation: pulse 1.5s infinite"></i> عرض بيانات المراقبة الحية
+        </div>`;
     }
 
     if (html) {
@@ -959,7 +963,10 @@ function showKgDetail(kg) {
     </div>
 
     <div class="intel-section">
-      <div class="intel-section-title">مؤشرات الأداء</div>
+      <div class="intel-section-title" style="color:#0ea5e9;font-size:1rem;display:flex;align-items:center;gap:0.5rem;">
+          <div class="live-dot" aria-hidden="true" style="background:#0ea5e9;width:10px;height:10px;"></div> 
+          بيانات المراقبة الحية
+        </div>
       ${indHtml || '<div class="intel-no-alerts">لا توجد بيانات مؤشرات</div>'}
     </div>
 
