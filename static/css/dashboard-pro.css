@@ -167,7 +167,7 @@
 }
 
 .kpi-status-item.status-info .kpi-status-icon {
-    color: #1F5E47;
+    color: #4F46E5;
 }
 
 .kpi-status-icon {
@@ -316,15 +316,15 @@
 .manager-tabs .nav-link {
     border: 1px solid rgba(31, 94, 71, 0.16);
     border-radius: 999px;
-    color: #1F5E47;
+    color: #4F46E5;
     font-weight: 600;
     padding: 0.45rem 1rem;
 }
 
 .manager-tabs .nav-link.active {
-    background: #1F5E47;
+    background: #4F46E5;
     color: #ffffff;
-    border-color: #1F5E47;
+    border-color: #4F46E5;
 }
 
 .manager-table thead th {
@@ -357,7 +357,7 @@
     align-items: center;
     justify-content: center;
     background: rgba(31, 94, 71, 0.12);
-    color: #1F5E47;
+    color: #4F46E5;
     font-weight: 700;
     font-size: 0.8rem;
 }

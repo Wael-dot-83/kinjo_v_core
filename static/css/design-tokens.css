@@ -28,8 +28,8 @@
   --color-border-strong: var(--admin-border-color-dark, #94a3b8);
 
   /* Brand accent */
-  --color-accent-primary:       var(--admin-primary,       #1f5e47);
-  --color-accent-primary-hover: var(--admin-primary-hover, #2f7d62);
+  --color-accent-primary:       var(--admin-primary,       #4F46E5);
+  --color-accent-primary-hover: var(--admin-primary-hover, #0EA5E9);
   --color-accent-on:            #ffffff;
 
   /* Semantic feedback */
@@ -299,20 +299,20 @@ video {
 :root {
   /* ─ CTA accent — named separately so it can diverge from brand without a
        cascade refactor. Currently identical to brand green, easily changed. ─ */
-  --color-accent-cta:        #1f5e47; /* 7.10:1 vs white ✓ AAA */
-  --color-accent-cta-hover:  #163d2e;
+  --color-accent-cta:        #4F46E5; /* 7.10:1 vs white ✓ AAA */
+  --color-accent-cta-hover:  #0F172A;
   --color-accent-cta-on:     #ffffff;
 
   /* ─ KPI card per-metric accent tokens (border-inline-start + icon + value) ─
        All pass AA on --color-bg-surface (#fff).                               */
-  --kpi-accent-kg:           #1f5e47; /* Brand green   7.10:1 ✓ AAA */
+  --kpi-accent-kg:           #4F46E5; /* Brand green   7.10:1 ✓ AAA */
   --kpi-accent-children:     #0369a1; /* Sky-700       6.94:1 ✓ AAA */
   --kpi-accent-attendance:   #047857; /* Emerald-700   5.08:1 ✓ AA  */
   --kpi-accent-incident:     #b45309; /* Amber-700     4.90:1 ✓ AA
      NOTE: replaces Bootstrap text-warning (#f59e0b = 2.71:1 ✗ FAIL)         */
 
   /* ─ KPI icon circle fills (light tint of each accent) ─ */
-  --kpi-icon-bg-kg:          #e0f0eb;
+  --kpi-icon-bg-kg:          #EEF2FF;
   --kpi-icon-bg-children:    #e0f2fe;
   --kpi-icon-bg-attendance:  #d1fae5;
   --kpi-icon-bg-incident:    #fef3c7;
@@ -484,8 +484,8 @@ html[dir="rtl"] {
 /* Card shell */
 .kpi-card {
   /* Per-card accent — set via inline style="--kpi-accent:...; --kpi-icon-bg:..." */
-  --kpi-accent:   var(--color-accent-primary, #1f5e47);
-  --kpi-icon-bg:  var(--admin-primary-light,  #e0f0eb);
+  --kpi-accent:   var(--color-accent-primary, #4F46E5);
+  --kpi-icon-bg:  var(--admin-primary-light,  #EEF2FF);
 
   position: relative;
   display: flex;

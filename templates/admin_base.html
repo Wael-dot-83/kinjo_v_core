@@ -68,32 +68,33 @@
     </title>
 
     <!-- Brand token override: loaded AFTER Bootstrap so our values win over --bs-primary: #0d6efd -->
-    <style>
+        <style>
       :root {
+        /* Indigo Primary */
         --bs-primary:                #4F46E5;
         --bs-primary-rgb:            79, 70, 229;
-        --bs-primary-bg-subtle:      #e0f0eb;
-        --bs-primary-border-subtle:  #a8d4c4;
-        --bs-primary-text-emphasis:  #163d2e;
+        --bs-primary-bg-subtle:      #EEF2FF;
+        --bs-primary-border-subtle:  #C7D2FE;
+        --bs-primary-text-emphasis:  #312E81;
         --bs-link-color:             #4F46E5;
         --bs-link-color-rgb:         79, 70, 229;
         --bs-link-hover-color:       #4338CA;
-        --bs-link-hover-color-rgb:   47, 125, 98;
-        /* Remap Bootstrap info (default cyan #0dcaf0) to brand green */
-        --bs-info:                   #2F7D62;
-        --bs-info-rgb:               47, 125, 98;
-        --bs-info-bg-subtle:         #e0f0eb;
-        --bs-info-border-subtle:     #a8d4c4;
-        --bs-info-text-emphasis:     #163d2e;
+        --bs-link-hover-color-rgb:   67, 56, 202;
+        /* Sky Blue Info/Accent */
+        --bs-info:                   #0EA5E9;
+        --bs-info-rgb:               14, 165, 233;
+        --bs-info-bg-subtle:         #E0F2FE;
+        --bs-info-border-subtle:     #BAE6FD;
+        --bs-info-text-emphasis:     #0C4A6E;
       }
       /* Explicit admin-scoped overrides for elements that use Bootstrap link/primary colours */
       .admin-container a:not(.admin-btn):not([class*="btn"]):not(.admin-sidebar a):not(.admin-dropdown-item) {
-        color: var(--admin-primary, #1F5E47);
+        color: var(--bs-primary);
       }
       .admin-container a:not(.admin-btn):not([class*="btn"]):not(.admin-sidebar a):not(.admin-dropdown-item):hover {
-        color: var(--admin-primary-hover, #2F7D62);
+        color: var(--bs-link-hover-color);
       }
-      /* Breadcrumbs are inside the dark-green header — use white */
+      /* Breadcrumbs are inside the header — use white */
       .admin-container .admin-breadcrumb-item,
       .admin-container .admin-breadcrumb-item span,
       .admin-container .admin-breadcrumb-item a {
@@ -105,27 +106,28 @@
       .admin-container .admin-breadcrumb-separator {
         color: rgba(255, 255, 255, 0.45);
       }
-      /* Dropdowns have their own white background — keep dark text there */
+      /* Dropdowns */
       .admin-container .admin-dropdown-item {
-        color: var(--admin-text-primary, #333333);
+        color: #1E293B;
       }
       .admin-container .admin-dropdown-item:hover {
-        color: var(--admin-primary, #1F5E47);
+        color: var(--bs-primary);
+        background-color: #F8FAFC;
       }
       .admin-container .text-primary {
-        color: var(--admin-primary, #1F5E47) !important;
+        color: var(--bs-primary) !important;
       }
       .admin-container .bg-primary {
-        background-color: var(--admin-primary, #1F5E47) !important;
+        background-color: var(--bs-primary) !important;
       }
       .admin-container .border-primary {
-        border-color: var(--admin-primary, #1F5E47) !important;
+        border-color: var(--bs-primary) !important;
       }
       .admin-container .btn-primary {
-        background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%) !important;
+        background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%) !important;
         border: none !important;
         color: #ffffff !important;
-        box-shadow: 0 4px 10px rgba(31, 94, 71, 0.25) !important;
+        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -2px rgba(79, 70, 229, 0.2) !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
       }
       .admin-container .btn-primary:active {
@@ -133,52 +135,49 @@
       }
       .admin-container .btn-primary:hover,
       .admin-container .btn-primary:focus {
-        background: linear-gradient(135deg, #4338CA 0%, #312E81 100%) !important;
-        box-shadow: 0 6px 16px rgba(31, 94, 71, 0.4) !important;
+        background: linear-gradient(135deg, #4338CA 0%, #4F46E5 100%) !important;
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3), 0 4px 6px -4px rgba(79, 70, 229, 0.3) !important;
         transform: translateY(-1px);
       }
       .admin-container .spinner-border.text-primary {
-        color: var(--admin-primary, #1F5E47) !important;
+        color: var(--bs-primary) !important;
       }
-      /* Form check (checkbox/radio) checked state — overrides Bootstrap's #0d6efd fill */
       .admin-container .form-check-input:checked {
-        background-color: var(--admin-primary, #1F5E47) !important;
-        border-color: var(--admin-primary, #1F5E47) !important;
+        background-color: var(--bs-primary) !important;
+        border-color: var(--bs-primary) !important;
       }
       .admin-container .form-check-input:focus {
-        border-color: var(--admin-primary, #1F5E47) !important;
-        box-shadow: 0 0 0 0.25rem rgba(31, 94, 71, 0.25) !important;
+        border-color: var(--bs-primary) !important;
+        box-shadow: 0 0 0 0.25rem rgba(79, 70, 229, 0.25) !important;
       }
-      /* Info utility class overrides — Bootstrap default is cyan; remap to brand green */
-      .admin-container .text-info  { color: #2F7D62 !important; }
-      .admin-container .bg-info    { background-color: #2F7D62 !important; }
-      .admin-container .border-info { border-color: #2F7D62 !important; }
-      /* Bootstrap .btn-info / .btn-outline-info use component-scoped vars,
-         not :root --bs-info, so must be overridden at the component level too */
+      /* Info overrides */
+      .admin-container .text-info  { color: var(--bs-info) !important; }
+      .admin-container .bg-info    { background-color: var(--bs-info) !important; }
+      .admin-container .border-info { border-color: var(--bs-info) !important; }
       .btn-info {
         --bs-btn-color: #fff;
-        --bs-btn-bg: #2F7D62;
-        --bs-btn-border-color: #2F7D62;
+        --bs-btn-bg: #0EA5E9;
+        --bs-btn-border-color: #0EA5E9;
         --bs-btn-hover-color: #fff;
-        --bs-btn-hover-bg: #1F5E47;
-        --bs-btn-hover-border-color: #1F5E47;
-        --bs-btn-focus-shadow-rgb: 47, 125, 98;
+        --bs-btn-hover-bg: #0284C7;
+        --bs-btn-hover-border-color: #0284C7;
+        --bs-btn-focus-shadow-rgb: 14, 165, 233;
         --bs-btn-active-color: #fff;
-        --bs-btn-active-bg: #1F5E47;
-        --bs-btn-active-border-color: #1F5E47;
-        --bs-btn-disabled-bg: #2F7D62;
-        --bs-btn-disabled-border-color: #2F7D62;
+        --bs-btn-active-bg: #0284C7;
+        --bs-btn-active-border-color: #0284C7;
+        --bs-btn-disabled-bg: #38BDF8;
+        --bs-btn-disabled-border-color: #38BDF8;
       }
       .btn-outline-info {
-        --bs-btn-color: #2F7D62;
-        --bs-btn-border-color: #2F7D62;
+        --bs-btn-color: #0EA5E9;
+        --bs-btn-border-color: #0EA5E9;
         --bs-btn-hover-color: #fff;
-        --bs-btn-hover-bg: #2F7D62;
-        --bs-btn-hover-border-color: #2F7D62;
-        --bs-btn-focus-shadow-rgb: 47, 125, 98;
+        --bs-btn-hover-bg: #0EA5E9;
+        --bs-btn-hover-border-color: #0EA5E9;
+        --bs-btn-focus-shadow-rgb: 14, 165, 233;
         --bs-btn-active-color: #fff;
-        --bs-btn-active-bg: #2F7D62;
-        --bs-btn-active-border-color: #2F7D62;
+        --bs-btn-active-bg: #0EA5E9;
+        --bs-btn-active-border-color: #0EA5E9;
       }
     </style>
 

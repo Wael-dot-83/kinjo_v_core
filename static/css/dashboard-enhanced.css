@@ -335,13 +335,13 @@
    exact same brand palette from admin_design_system.css
    ════════════════════════════════════════════════════════════ */
 
-/* 1. Override --bs-info to brand teal (admin uses #2F7D62) */
+/* 1. Override --bs-info to brand teal (admin uses #0EA5E9) */
 :root {
-  --bs-info:            #2F7D62;
+  --bs-info:            #0EA5E9;
   --bs-info-rgb:        47, 125, 98;
-  --bs-info-bg-subtle:  #e0f0eb;
-  --bs-info-border-subtle: #a8d4c4;
-  --bs-info-text-emphasis: #163d2e;
+  --bs-info-bg-subtle:  #EEF2FF;
+  --bs-info-border-subtle: #C7D2FE;
+  --bs-info-text-emphasis: #0F172A;
 }
 
 /* 2. Card header: match admin #f8fafc background */
@@ -360,14 +360,14 @@
 }
 #attendanceCard      { border-inline-start-color: #198754 !important; }
 #pendingEnrollmentsCard { border-inline-start-color: #f59e0b !important; }
-#pendingReportsCard  { border-inline-start-color: #2F7D62 !important; }
+#pendingReportsCard  { border-inline-start-color: #0EA5E9 !important; }
 #incidentsCard       { border-inline-start-color: #ef4444 !important; }
 
 /* 4. Quick access pill buttons — brand-aware hover */
 .quick-actions-bar .btn-white:hover {
-  background: var(--bs-primary-bg-subtle, #e0f0eb) !important;
-  border-color: var(--bs-primary, #1F5E47) !important;
-  color: var(--bs-primary, #1F5E47) !important;
+  background: var(--bs-primary-bg-subtle, #EEF2FF) !important;
+  border-color: var(--bs-primary, #4F46E5) !important;
+  color: var(--bs-primary, #4F46E5) !important;
 }
 
 /* 5. Section zone dividers */
@@ -386,7 +386,7 @@
 }
 .kinjo-zone-header i {
   font-size: 1rem;
-  color: var(--bs-primary, #1F5E47);
+  color: var(--bs-primary, #4F46E5);
 }
 .kinjo-zone-header .zone-line {
   flex: 1;
@@ -404,9 +404,9 @@
   gap: 0.625rem;
   padding: 0.625rem 1rem;
   background: #f0f8f5;
-  border: 1px solid #a8d4c4;
+  border: 1px solid #C7D2FE;
   border-radius: 10px;
-  color: #1F5E47;
+  color: #4F46E5;
   font-size: 0.8125rem;
   font-weight: 600;
 }
@@ -446,7 +446,7 @@
 .kpi-status-item.status-green  { background: #d1fae5; border-color: #a7f3d0; color: #047857; }
 .kpi-status-item.status-amber  { background: #fef3c7; border-color: #fde68a; color: #b45309; }
 .kpi-status-item.status-red    { background: #fee2e2; border-color: #fecaca; color: #b91c1c; }
-.kpi-status-item.status-info   { background: #e0f0eb; border-color: #a8d4c4; color: #1F5E47; }
+.kpi-status-item.status-info   { background: #EEF2FF; border-color: #C7D2FE; color: #4F46E5; }
 .kpi-status-icon { font-size: 1.25rem; }
 .kpi-status-content .label { font-size: 0.75rem; font-weight: 600; }
 .kpi-status-content .count  { font-size: 1.375rem; font-weight: 800; line-height: 1; }
@@ -478,7 +478,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 
 /* 11. Decision Support section header override */
 #decisionSupportSection .card-header.bg-primary {
-  background: var(--bs-primary, #1F5E47) !important;
+  background: var(--bs-primary, #4F46E5) !important;
 }
 
 /* 12. Manager section card headers */
@@ -502,7 +502,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 .action-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(0,0,0,0.1) !important;
-  border-color: var(--bs-primary, #1F5E47) !important;
+  border-color: var(--bs-primary, #4F46E5) !important;
 }
 
 /* 14. System stat value consistency */
@@ -557,7 +557,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   border-radius: 8px;
 }
 #overviewTableSearch:focus, #overviewStatusFilter:focus {
-  border-color: var(--bs-primary, #1F5E47);
+  border-color: var(--bs-primary, #4F46E5);
   box-shadow: 0 0 0 0.2rem rgba(31,94,71,.15);
 }
 #overviewActionToggle.btn-warning {
@@ -623,7 +623,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
 }
 .kpi-explain-search:focus {
   outline: none;
-  border-color: #1F5E47;
+  border-color: #4F46E5;
   box-shadow: 0 0 0 3px rgba(31,94,71,.1);
 }
 
@@ -696,7 +696,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   border-radius: 8px;
   padding: .5rem .875rem;
   font-size: .83rem;
-  color: #1F5E47;
+  color: #4F46E5;
   direction: rtl;
   white-space: pre-wrap;
   word-break: break-all;
@@ -735,7 +735,7 @@ tr.row-risk-low   td { background-color: #f0fdf4 !important; }
   border-bottom: 1px dashed #f1f5f9;
 }
 .kpi-action-list li:last-child { border-bottom: none; }
-.kpi-action-list .ai-icon { color: #1F5E47; flex-shrink: 0; margin-top: 2px; }
+.kpi-action-list .ai-icon { color: #4F46E5; flex-shrink: 0; margin-top: 2px; }
 
 .kpi-source-badge {
   display: inline-flex;

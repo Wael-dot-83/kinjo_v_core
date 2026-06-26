@@ -63,7 +63,7 @@
 
   /* Background colors */
   --admin-bg-primary: #ffffff;
-  --admin-bg-sidebar: #1F5E47;
+  --admin-bg-sidebar: #4F46E5;
   --admin-bg-hover: #F5F5F5;
   --admin-bg-card-header: #f8fafc;
   --admin-bg-card-footer: #f8fafc;
@@ -90,12 +90,12 @@
   --admin-status-critical-light: #fecaca;
 
   /* ===== KINJO TOKEN OVERRIDES (admin pages load this after kinjo.css) ===== */
-  --kinjo-primary:           #1F5E47;
-  --kinjo-primary-dark:      #163d2e;
-  --kinjo-primary-light:     #e0f0eb;
+  --kinjo-primary:           #4F46E5;
+  --kinjo-primary-dark:      #0F172A;
+  --kinjo-primary-light:     #EEF2FF;
   --kinjo-primary-50:        #f0f8f5;
-  --kinjo-sidebar-bg:        #1F5E47;
-  --kinjo-sidebar-active-bg: #163d2e;
+  --kinjo-sidebar-bg:        #4F46E5;
+  --kinjo-sidebar-active-bg: #0F172A;
   --kinjo-sidebar-active-text: #D6C56B;
   --kinjo-sidebar-accent:    #B49B3B;
 
@@ -103,13 +103,13 @@
   /* Override Bootstrap's --bs-primary so text-primary, bg-primary, border-primary,
      spinner-border, and any other Bootstrap utility that reads --bs-primary
      all use the brand green instead of Bootstrap's default blue. */
-  --bs-primary:          #1F5E47;
+  --bs-primary:          #4F46E5;
   --bs-primary-rgb:      31, 94, 71;
-  --bs-primary-bg-subtle: #e0f0eb;
-  --bs-primary-border-subtle: #a8d4c4;
-  --bs-primary-text-emphasis: #163d2e;
-  --bs-link-color:       #1F5E47;
-  --bs-link-hover-color: #2F7D62;
+  --bs-primary-bg-subtle: #EEF2FF;
+  --bs-primary-border-subtle: #C7D2FE;
+  --bs-primary-text-emphasis: #0F172A;
+  --bs-link-color:       #4F46E5;
+  --bs-link-hover-color: #0EA5E9;
 
   /* ===== TYPOGRAPHY ===== */
   /* Font Families */
@@ -309,8 +309,8 @@ html[dir="ltr"] .admin-sidebar.collapsed + .admin-main {
   width: var(--admin-sidebar-width, 240px);
   min-width: var(--admin-sidebar-width, 240px);
   min-height: 100vh;
-  background-color: var(--admin-bg-sidebar, #1F5E47);
-  background-image: linear-gradient(180deg, #163d2e 0%, #1F5E47 56%, #163d2e 100%);
+  background-color: var(--admin-bg-sidebar, #4F46E5);
+  background-image: linear-gradient(180deg, #0F172A 0%, #4F46E5 56%, #0F172A 100%);
   border-right: 1px solid rgba(0, 0, 0, 0.18);
   padding: var(--admin-space-4, 1rem) var(--admin-space-3, 0.75rem);
   overflow-y: auto;
@@ -411,7 +411,7 @@ html[dir="ltr"] .admin-sidebar.collapsed + .admin-main {
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #163d2e;
+  color: #0F172A;
   background: #D6C56B;
   padding: 1px 6px;
   border-radius: 999px;
@@ -472,7 +472,7 @@ html[dir="ltr"] .admin-dropdown-menu {
 .admin-dropdown-item:hover,
 .admin-dropdown-item:focus {
   background: #f0f8f5;
-  color: var(--admin-primary, #1F5E47);
+  color: var(--admin-primary, #4F46E5);
   outline: none;
 }
 
@@ -3644,7 +3644,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   transition: all var(--admin-transition-fast);
   letter-spacing: 0.05em;
 }
-.view-btn.active { background: rgba(47,125,98,0.22); color: #2F7D62; }
+.view-btn.active { background: rgba(47,125,98,0.22); color: #0EA5E9; }
 .view-btn:hover:not(.active) { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); }
 
 .cc-btn {
@@ -3660,7 +3660,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   cursor: pointer;
   transition: all var(--admin-transition-fast);
 }
-.cc-btn:hover { background: rgba(47,125,98,0.12); border-color: rgba(47,125,98,0.4); color: #2F7D62; }
+.cc-btn:hover { background: rgba(47,125,98,0.12); border-color: rgba(47,125,98,0.4); color: #0EA5E9; }
 
 /* ——— MAIN LAYOUT ——— */
 .cc-main {
@@ -3699,7 +3699,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   height: 2px;
-  background: var(--kpi-color, #2F7D62);
+  background: var(--kpi-color, #0EA5E9);
   opacity: 0.6;
 }
 .kpi-label {
@@ -3807,7 +3807,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   transition: all var(--admin-transition-fast);
   backdrop-filter: blur(4px);
 }
-.map-ctrl-btn:hover { background: rgba(47,125,98,0.18); border-color: rgba(47,125,98,0.45); color: #2F7D62; }
+.map-ctrl-btn:hover { background: rgba(47,125,98,0.18); border-color: rgba(47,125,98,0.45); color: #0EA5E9; }
 .map-ctrl-divider { height: 4px; }
 
 /* Risk legend */
@@ -3847,7 +3847,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
 .load-spinner {
   width: 38px; height: 38px;
   border: 3px solid rgba(47,125,98,0.15);
-  border-top-color: #2F7D62;
+  border-top-color: #0EA5E9;
   border-radius: var(--admin-radius-full);
   animation: spin 0.75s linear infinite;
 }
@@ -3927,7 +3927,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
 .intel-loading-spinner {
   width: 28px; height: 28px;
   border: 2px solid rgba(47,125,98,0.15);
-  border-top-color: #2F7D62;
+  border-top-color: #0EA5E9;
   border-radius: var(--admin-radius-full);
   animation: spin 0.75s linear infinite;
 }
@@ -4024,7 +4024,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   color: rgba(255,255,255,0.65);
   line-height: var(--admin-line-height-normal);
 }
-.intel-action-box i { color: #2F7D62; flex-shrink: 0; margin-top: var(--admin-space-1); }
+.intel-action-box i { color: #0EA5E9; flex-shrink: 0; margin-top: var(--admin-space-1); }
 
 /* Intel sections */
 .intel-section {
@@ -4120,7 +4120,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   border: var(--admin-border-width) solid rgba(47,125,98,0.4);
   border-radius: var(--admin-radius);
   background: transparent;
-  color: #2F7D62;
+  color: #0EA5E9;
   font-size: var(--admin-font-size-sm);
   font-weight: var(--admin-font-weight-semibold);
   cursor: pointer;
@@ -4145,7 +4145,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   border: var(--admin-border-width) solid rgba(47,125,98,0.35);
   border-radius: var(--admin-radius-sm);
   background: rgba(47,125,98,0.1);
-  color: #2F7D62;
+  color: #0EA5E9;
   font-size: var(--admin-font-size-xs);
   font-weight: var(--admin-font-weight-semibold);
   cursor: pointer;
@@ -4153,7 +4153,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   width: 100%;
   text-decoration: none;
 }
-.intel-btn-primary:hover { background: rgba(47,125,98,0.2); border-color: rgba(47,125,98,0.55); color: #2F7D62; }
+.intel-btn-primary:hover { background: rgba(47,125,98,0.2); border-color: rgba(47,125,98,0.55); color: #0EA5E9; }
 .intel-btn-secondary {
   display: flex;
   align-items: center;
@@ -4291,7 +4291,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   font-size: var(--admin-font-size-sm);
   transition: all var(--admin-transition-fast);
 }
-.rank-drill:hover { background: rgba(47,125,98,0.15); border-color: rgba(47,125,98,0.4); color: #2F7D62; }
+.rank-drill:hover { background: rgba(47,125,98,0.15); border-color: rgba(47,125,98,0.4); color: #0EA5E9; }
 
 /* ——— TOOLTIP ——— */
 #geoTooltip {
@@ -4449,7 +4449,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
   color: #fff;
 }
 .daily-reports-org-page .accordion-button:not(.collapsed) {
-  color: #163d2e;
+  color: #0F172A;
   background: linear-gradient(135deg, #f0f7f4 0%, #f8fafc 100%);
 }
 .daily-reports-org-page .kg-meta {
@@ -4595,11 +4595,11 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
 
 /* ── Primary buttons ──────────────────────────────────────────────────── */
 .admin-container .btn-primary {
-  background: linear-gradient(135deg, #1F5E47, #163d2e) !important;
+  background: linear-gradient(135deg, #4F46E5, #0F172A) !important;
   box-shadow: 0 1px 3px rgba(31, 94, 71, 0.35) !important;
 }
 .admin-container .btn-primary:hover {
-  background: linear-gradient(135deg, #2F7D62, #1F5E47) !important;
+  background: linear-gradient(135deg, #0EA5E9, #4F46E5) !important;
   box-shadow: 0 4px 12px rgba(31, 94, 71, 0.4) !important;
 }
 .admin-container .btn-outline-primary {
@@ -4649,7 +4649,7 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
 
 /* ── Welcome banner ─────────────────────────────────────────────────── */
 .admin-container .welcome-banner {
-  background: linear-gradient(135deg, #163d2e 0%, #1F5E47 50%, #2F7D62 100%);
+  background: linear-gradient(135deg, #0F172A 0%, #4F46E5 50%, #0EA5E9 100%);
 }
 
 /* ── Progress bar kinjo tail (#3b82f6 remnant) ──────────────────────── */

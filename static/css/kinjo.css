@@ -29,16 +29,16 @@
    ============================================================================ */
 :root {
   /* Primary Brand Colors */
-  --kinjo-primary: #1F5E47;
-  --kinjo-primary-dark: #163d2e;
-  --kinjo-primary-light: #e0f0eb;
+  --kinjo-primary: #4F46E5;
+  --kinjo-primary-dark: #0F172A;
+  --kinjo-primary-light: #EEF2FF;
   --kinjo-primary-50: #f0f7f4;
   --kinjo-secondary: #64748b;
   --kinjo-secondary-dark: #475569;
   --kinjo-success: #059669;
   --kinjo-success-light: #d1fae5;
-  --kinjo-info: #2F7D62;
-  --kinjo-info-light: #e0f0eb;
+  --kinjo-info: #0EA5E9;
+  --kinjo-info-light: #EEF2FF;
   --kinjo-warning: #f59e0b;
   --kinjo-warning-light: #fef3c7;
   --kinjo-danger: #ef4444;
@@ -952,7 +952,7 @@ body.sidebar-open .sidebar-backdrop {
 
 .alert-info {
   background-color: var(--kinjo-info-light);
-  color: #163d2e;
+  color: #0F172A;
 }
 
 .alert-container {
@@ -2155,7 +2155,7 @@ body.sidebar-open .sidebar-backdrop {
 .badge-soft-success   { background: var(--kinjo-success-light);   color: #065f46; }
 .badge-soft-warning   { background: var(--kinjo-warning-light);   color: #92400e; }
 .badge-soft-danger    { background: var(--kinjo-danger-light);    color: #991b1b; }
-.badge-soft-info      { background: var(--kinjo-info-light);      color: #163d2e; }
+.badge-soft-info      { background: var(--kinjo-info-light);      color: #0F172A; }
 .badge-soft-secondary { background: #f1f5f9;                      color: var(--kinjo-text-secondary); }
 .badge-soft-purple    { background: rgba(124,58,237,0.12);        color: #6d28d9; }
 
@@ -2398,9 +2398,9 @@ body.sidebar-open .sidebar-backdrop {
   --kinjo-sidebar-muted:    #cbd5e1;
   --kinjo-sidebar-border:   rgba(255,255,255,0.06);
   --kinjo-sidebar-hover:    rgba(255,255,255,0.07);
-  --kinjo-sidebar-active-bg:#163d2e;
-  --kinjo-sidebar-active-text:#a8d4c4;
-  --kinjo-sidebar-accent:   #2F7D62;
+  --kinjo-sidebar-active-bg:#0F172A;
+  --kinjo-sidebar-active-text:#C7D2FE;
+  --kinjo-sidebar-accent:   #0EA5E9;
 }
 
 .sidebar {
@@ -2431,7 +2431,7 @@ html[dir="rtl"] .sidebar {
   border: 1px solid rgba(31,94,71,0.3);
 }
 .sidebar-user-card .avatar-md i {
-  color: #a8d4c4 !important;
+  color: #C7D2FE !important;
 }
 
 .sidebar-section-title {
@@ -2471,7 +2471,7 @@ html[dir="rtl"] .sidebar {
   color: #f9fafb !important;
 }
 .sidebar .nav-link:hover i {
-  color: #a8d4c4 !important;
+  color: #C7D2FE !important;
 }
 .sidebar .nav-link.active {
   background: var(--kinjo-sidebar-active-bg) !important;
@@ -2496,7 +2496,7 @@ html[dir="rtl"] .sidebar {
 }
 .sidebar-role-badge.role-admin    { background: rgba(239,68,68,0.15); color: #fca5a5; }
 .sidebar-role-badge.role-manager  { background: rgba(245,158,11,0.15); color: #fcd34d; }
-.sidebar-role-badge.role-supervisor { background: rgba(31,94,71,0.15); color: #a8d4c4; }
+.sidebar-role-badge.role-supervisor { background: rgba(31,94,71,0.15); color: #C7D2FE; }
 .sidebar-role-badge.role-parent   { background: rgba(16,185,129,0.15); color: #6ee7b7; }
 
 /* ── Navbar Refinements ──────────────────────────────────────────────────── */
@@ -2580,11 +2580,11 @@ html[dir="rtl"] .stat-card::before { border-radius: 0 4px 4px 0; }
 .stat-card-body-text { flex: 1; min-width: 0; }
 
 /* Icon color variants */
-.stat-card-icon.primary { background: #e0f0eb; color: #1F5E47; }
+.stat-card-icon.primary { background: #EEF2FF; color: #4F46E5; }
 .stat-card-icon.success { background: #d1fae5; color: #059669; }
 .stat-card-icon.warning { background: #fef3c7; color: #d97706; }
 .stat-card-icon.danger  { background: #fee2e2; color: #dc2626; }
-.stat-card-icon.info    { background: #e0f0eb; color: #2F7D62; }
+.stat-card-icon.info    { background: #EEF2FF; color: #0EA5E9; }
 .stat-card-icon.purple  { background: #ede9fe; color: #7c3aed; }
 
 /* ── Card Refinements ──────────────────────────────────────────────────── */
@@ -2744,13 +2744,13 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 .quick-action-btn.qa-success:hover { border-color: var(--kinjo-success); box-shadow: 0 2px 12px rgba(5,150,105,0.18); }
 .quick-action-btn.qa-success .qa-icon { background: #d1fae5; color: #059669; }
 
-.quick-action-btn.qa-primary { border-color: #e0f0eb; background: #f0f7f4; color: #163d2e; }
+.quick-action-btn.qa-primary { border-color: #EEF2FF; background: #f0f7f4; color: #0F172A; }
 .quick-action-btn.qa-primary:hover { border-color: var(--kinjo-primary); box-shadow: 0 2px 12px rgba(31,94,71,0.18); }
-.quick-action-btn.qa-primary .qa-icon { background: #e0f0eb; color: #1F5E47; }
+.quick-action-btn.qa-primary .qa-icon { background: #EEF2FF; color: #4F46E5; }
 
-.quick-action-btn.qa-info { border-color: #e0f0eb; background: #f0f7f4; color: #163d2e; }
+.quick-action-btn.qa-info { border-color: #EEF2FF; background: #f0f7f4; color: #0F172A; }
 .quick-action-btn.qa-info:hover { border-color: var(--kinjo-info); box-shadow: 0 2px 12px rgba(47,125,98,0.18); }
-.quick-action-btn.qa-info .qa-icon { background: #e0f0eb; color: #2F7D62; }
+.quick-action-btn.qa-info .qa-icon { background: #EEF2FF; color: #0EA5E9; }
 
 .quick-action-btn.qa-warning { border-color: #fef3c7; background: #fffbeb; color: #78350f; }
 .quick-action-btn.qa-warning:hover { border-color: var(--kinjo-warning); box-shadow: 0 2px 12px rgba(217,119,6,0.18); }
@@ -2806,8 +2806,8 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 /* ── Alert / Banner ─────────────────────────────────────────────────────── */
 .alert-primary {
   background: linear-gradient(135deg, #f0f7f4 0%, #daeee6 100%) !important;
-  border: 1px solid #a8d4c4 !important;
-  color: #163d2e !important;
+  border: 1px solid #C7D2FE !important;
+  color: #0F172A !important;
   border-radius: 0.875rem !important;
 }
 .alert-success {
@@ -2858,12 +2858,12 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
   transition: all 0.18s ease !important;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #1F5E47, #163d2e) !important;
+  background: linear-gradient(135deg, #4F46E5, #0F172A) !important;
   border: none !important;
   box-shadow: 0 1px 3px rgba(31,94,71,0.35) !important;
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, #2F7D62, #1F5E47) !important;
+  background: linear-gradient(135deg, #0EA5E9, #4F46E5) !important;
   box-shadow: 0 4px 12px rgba(31,94,71,0.4) !important;
   transform: translateY(-1px);
 }
@@ -2877,12 +2877,12 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
   transform: translateY(-1px);
 }
 .btn-outline-primary {
-  border-color: #e0f0eb !important;
-  color: #1F5E47 !important;
+  border-color: #EEF2FF !important;
+  color: #4F46E5 !important;
   background: #f0f7f4 !important;
 }
 .btn-outline-primary:hover {
-  background: #e0f0eb !important;
+  background: #EEF2FF !important;
   border-color: var(--kinjo-primary) !important;
   transform: translateY(-1px);
 }
@@ -2934,7 +2934,7 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
   transition: background 0.12s ease !important;
 }
 .dropdown-item:hover { background: #f0f7f4 !important; }
-.dropdown-item:active { background: #e0f0eb !important; color: #163d2e !important; }
+.dropdown-item:active { background: #EEF2FF !important; color: #0F172A !important; }
 .dropdown-divider { margin: 0.35rem 0 !important; border-color: #f1f5f9 !important; }
 
 /* ── Modal Refinements ──────────────────────────────────────────────────── */
@@ -2971,7 +2971,7 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 
 /* ── Welcome Banner ─────────────────────────────────────────────────────── */
 .welcome-banner {
-  background: linear-gradient(135deg, #163d2e 0%, #1F5E47 50%, #2F7D62 100%);
+  background: linear-gradient(135deg, #0F172A 0%, #4F46E5 50%, #0EA5E9 100%);
   border-radius: 1rem;
   padding: 1.5rem 2rem;
   color: #fff;
@@ -3011,7 +3011,7 @@ html[dir="rtl"] .quick-action-btn:hover { transform: translateX(-4px); }
 }
 .progress-bar {
   border-radius: 999px !important;
-  background: linear-gradient(90deg, var(--kinjo-primary), #2F7D62) !important;
+  background: linear-gradient(90deg, var(--kinjo-primary), #0EA5E9) !important;
 }
 
 /* ── Toast ───────────────────────────────────────────────────────────────── */
