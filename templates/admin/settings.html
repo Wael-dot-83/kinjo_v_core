@@ -30,7 +30,7 @@
       </div>
       <div class="admin-card-body">
         <dl class="row mb-0">
-          <dt class="col-sm-6 fw-semibold text-muted">
+          <dt class="col-sm-6 fw-semibold admin-text-muted">
             {% if ui_lang == 'en' %}Session Timeout{% else %}مهلة انتهاء الجلسة{% endif %}
           </dt>
           <dd class="col-sm-6">{{ session_timeout_minutes | default(30) }} {% if ui_lang == 'en' %}minutes{% else %}دقيقة{% endif %}</dd>
@@ -47,7 +47,7 @@
         </h2>
       </div>
       <div class="admin-card-body">
-        <p class="text-muted small mb-0">
+        <p class="admin-text-muted small mb-0">
           {% if ui_lang == 'en' %}
             Server-level configuration is managed via environment variables and the
             <code>.env</code> file. Contact your system administrator to change these values.

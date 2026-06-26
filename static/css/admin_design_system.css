@@ -4673,3 +4673,19 @@ html[dir="rtl"] .admin-sidebar .submenu .nav-link {
 }
 
 
+
+/* Auto-generated Utility Classes for Refactor */
+.admin-bg-primary { background-color: var(--admin-primary) !important; }
+.admin-bg-secondary { background-color: var(--admin-secondary) !important; }
+.admin-bg-success { background-color: var(--admin-success) !important; }
+.admin-bg-warning { background-color: var(--admin-warning) !important; }
+.admin-bg-danger { background-color: var(--admin-error) !important; }
+.admin-bg-info { background-color: var(--admin-info) !important; }
+
+.admin-text-primary { color: var(--admin-primary) !important; }
+.admin-text-secondary { color: var(--admin-secondary) !important; }
+.admin-text-success { color: var(--admin-success) !important; }
+.admin-text-warning { color: var(--admin-warning) !important; }
+.admin-text-danger { color: var(--admin-error) !important; }
+.admin-text-info { color: var(--admin-info) !important; }
+.admin-text-muted { color: var(--admin-secondary) !important; }

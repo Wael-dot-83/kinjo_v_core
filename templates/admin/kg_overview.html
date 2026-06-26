@@ -40,12 +40,12 @@
         </span>
         {% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}
       </h1>
-      <p style="font-size:.8rem;color:var(--ko-text-muted);margin:.25rem 0 0;display:flex;align-items:center;gap:.5rem;">
+      <p style="font-size:.8rem;color:var(--ko-admin-text-muted);margin:.25rem 0 0;display:flex;align-items:center;gap:.5rem;">
         <span class="ko-rt-dot"></span>
         <span id="ko-last-updated">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
       </p>
     </div>
-    <small style="color:var(--ko-text-muted);font-size:.78rem;">
+    <small style="color:var(--ko-admin-text-muted);font-size:.78rem;">
       <i class="bi bi-calendar3 me-1"></i>
       {{ today.strftime('%d %B %Y') if today else '21 June 2026' }}
     </small>
@@ -83,7 +83,7 @@
   <section class="ko-section" aria-live="polite">
     <div id="ko-data-section">
       <!-- populated by JS -->
-      <div style="padding:2rem;text-align:center;color:var(--ko-text-muted);">
+      <div style="padding:2rem;text-align:center;color:var(--ko-admin-text-muted);">
         <div class="ko-skeleton" style="height:320px;border-radius:14px"></div>
       </div>
     </div>
@@ -111,7 +111,7 @@
   <aside class="ko-side-panel" id="ko-side-panel" role="complementary"
          aria-label="{% if ui_lang == 'en' %}Detail panel{% else %}لوحة التفاصيل{% endif %}">
     <div class="ko-panel-header">
-      <i class="bi bi-info-circle text-primary fs-5"></i>
+      <i class="bi bi-info-circle admin-text-primary fs-5"></i>
       <span class="ko-panel-title" id="ko-panel-title">التفاصيل</span>
       <button class="ko-panel-close" id="ko-panel-close"
               aria-label="{% if ui_lang == 'en' %}Close panel{% else %}إغلاق اللوحة{% endif %}">

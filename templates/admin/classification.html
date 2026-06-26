@@ -16,11 +16,11 @@
 <div class="row pt-2 pb-2 mb-3 border-bottom align-items-center">
     <div class="col-md-8">
         <h1 class="h3 fw-bold mb-1">{% if ui_lang == 'en' %}Classification & Benchmarks{% else %}التصنيف والمقارنات المعيارية{% endif %}</h1>
-        <p class="text-muted small mb-0">{% if ui_lang == 'en' %}Fair comparison between kindergartens, managers, and supervisors within the same segment and geographic scope.{% else %}مقارنة عادلة بين الروضات والمديرين والمشرفين ضمن نفس الشريحة والنطاق الجغرافي.{% endif %}
+        <p class="admin-text-muted small mb-0">{% if ui_lang == 'en' %}Fair comparison between kindergartens, managers, and supervisors within the same segment and geographic scope.{% else %}مقارنة عادلة بين الروضات والمديرين والمشرفين ضمن نفس الشريحة والنطاق الجغرافي.{% endif %}
         </p>
     </div>
     <div class="col-md-4 text-md-end mt-2 mt-md-0 d-flex justify-content-md-end align-items-center gap-2">
-        <button id="exportClassificationBtn" class="btn btn-sm btn-outline-secondary"
+        <button id="exportClassificationBtn" class="btn admin-btn-sm btn-outline-secondary"
             aria-label="{% if ui_lang == 'en' %}Export data as CSV{% else %}تصدير البيانات كملف CSV{% endif %}"
             data-bs-toggle="tooltip"
             title="{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}">
@@ -33,7 +33,7 @@
                 {% if ui_lang == 'en' %}Auto{% else %}تلقائي{% endif %}
             </label>
         </div>
-        <button id="refreshClassificationBtn" class="btn btn-outline-primary">
+        <button id="refreshClassificationBtn" class="admin-btn admin-btn-ghost">
             <i class="bi bi-arrow-clockwise ms-1"></i>
             {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
         </button>
@@ -93,14 +93,14 @@
                     <input id="minSampleDays" type="number" min="1" max="365" class="form-control" value="30">
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <button id="applyClassificationFiltersBtn" class="btn btn-primary w-100" aria-label="{% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}">
+                    <button id="applyClassificationFiltersBtn" class="admin-btn admin-btn-primary w-100" aria-label="{% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}">
                         <i class="bi bi-funnel ms-1"></i>
                         {% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}
                         <span id="activeFilterCount" class="badge bg-light text-dark ms-1 d-none">0</span>
                     </button>
                 </div>
                 <div class="col-auto d-flex align-items-end mb-0">
-                    <button type="button" class="btn btn-sm btn-link text-muted p-1"
+                    <button type="button" class="btn admin-btn-sm btn-link admin-text-muted p-1"
                         data-bs-toggle="tooltip"
                         data-bs-placement="top"
                         title="{% if ui_lang == 'en' %}Shortcuts: Ctrl+Enter = Apply, R = Refresh{% else %}اختصارات: Ctrl+Enter = تطبيق، R = تحديث{% endif %}">
@@ -129,7 +129,7 @@
     <div class="row g-3 mb-3" id="classificationSummaryCards" aria-live="polite">
         <div class="col-xl-3 col-md-6">
             <div class="classification-kpi">
-                <div class="classification-kpi-icon bg-success-subtle text-success"><i class="bi bi-trophy"></i></div>
+                <div class="classification-kpi-icon admin-bg-success-subtle admin-text-success"><i class="bi bi-trophy"></i></div>
                 <div>
                     <div class="classification-kpi-label">{% if ui_lang == 'en' %}Ranked Entities{% else %}الكيانات المصنفة{% endif %}</div>
                     <div class="classification-kpi-value" id="classificationRankedCount">--</div>
@@ -139,7 +139,7 @@
         </div>
         <div class="col-xl-3 col-md-6">
             <div class="classification-kpi">
-                <div class="classification-kpi-icon bg-primary-subtle text-primary"><i class="bi bi-speedometer2"></i></div>
+                <div class="classification-kpi-icon admin-bg-primary-subtle admin-text-primary"><i class="bi bi-speedometer2"></i></div>
                 <div>
                     <div class="classification-kpi-label">{% if ui_lang == 'en' %}Average Score{% else %}متوسط الدرجة{% endif %}</div>
                     <div class="classification-kpi-value" id="classificationAverageScore">--</div>
@@ -149,7 +149,7 @@
         </div>
         <div class="col-xl-3 col-md-6">
             <div class="classification-kpi">
-                <div class="classification-kpi-icon bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="classification-kpi-icon admin-bg-danger-subtle admin-text-danger"><i class="bi bi-exclamation-triangle"></i></div>
                 <div>
                     <div class="classification-kpi-label">{% if ui_lang == 'en' %}Intervention Needed{% else %}تحتاج تدخلا{% endif %}</div>
                     <div class="classification-kpi-value" id="classificationRedCount">--</div>
@@ -159,7 +159,7 @@
         </div>
         <div class="col-xl-3 col-md-6">
             <div class="classification-kpi">
-                <div class="classification-kpi-icon bg-warning-subtle text-warning"><i class="bi bi-database-check"></i></div>
+                <div class="classification-kpi-icon admin-bg-warning-subtle admin-text-warning"><i class="bi bi-database-check"></i></div>
                 <div>
                     <div class="classification-kpi-label">{% if ui_lang == 'en' %}Data Coverage{% else %}تغطية البيانات{% endif %}</div>
                     <div class="classification-kpi-value" id="classificationAverageCoverage">--</div>
@@ -220,7 +220,7 @@
             </ul>
         </div>
         <div class="card-body">
-            <div id="classificationLoading" class="d-none text-muted py-2" role="status" aria-live="polite" aria-atomic="true" data-i18n-container="classification.loading">
+            <div id="classificationLoading" class="d-none admin-text-muted py-2" role="status" aria-live="polite" aria-atomic="true" data-i18n-container="classification.loading">
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <div class="spinner-border spinner-border-sm" role="status">
                         <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جار التحميل...{% endif %}</span>
@@ -283,13 +283,13 @@
                         <div class="card-body">
                             <h6 class="fw-bold">{% if ui_lang == 'en' %}Score Trend Across Periods{% else %}اتجاه الدرجة عبر الفترات{% endif %}</h6>
                             <canvas id="classificationTrendChart" height="100"></canvas>
-                            <p class="text-muted small mt-2 mb-0">{% if ui_lang == 'en' %}The chart shows the final score evolution across consecutive periods of the same duration.{% else %}يوضح الرسم تطور الدرجة النهائية خلال فترات متتالية
+                            <p class="admin-text-muted small mt-2 mb-0">{% if ui_lang == 'en' %}The chart shows the final score evolution across consecutive periods of the same duration.{% else %}يوضح الرسم تطور الدرجة النهائية خلال فترات متتالية
                                 بنفس الطول الزمني.{% endif %}</p>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                    <button class="admin-btn admin-btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
                 </div>
             </div>
         </div>

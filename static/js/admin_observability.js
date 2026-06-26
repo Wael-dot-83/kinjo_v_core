@@ -50,7 +50,7 @@
         var dq = data.data_quality || {};
 
         var p95 = backend.p95_ms || 0;
-        el("latency-p95").textContent = p95.toFixed(0) + "ms";
+        el("latency-p95").textContent = `${p95.toFixed(0)} ms`;
         setStatus("latency-status",
           p95 < 300 ? t("ضمن الهدف", "Within target") :
           p95 < 1000 ? t("مرتفع", "Elevated") : t("حرج", "Critical"),
@@ -58,7 +58,7 @@
         );
 
         var errRate = backend.error_rate || 0;
-        el("error-rate").textContent = errRate.toFixed(1) + "%";
+        el("error-rate").textContent = `${errRate.toFixed(1)}%`;
         setStatus("error-rate-status",
           errRate < 1 ? t("طبيعي", "Normal") :
           errRate < 5 ? t("مرتفع", "Elevated") : t("حرج", "Critical"),
@@ -66,7 +66,7 @@
         );
 
         var hitRate = cache.hit_rate || 0;
-        el("cache-hit-rate").textContent = hitRate.toFixed(1) + "%";
+        el("cache-hit-rate").textContent = `${hitRate.toFixed(1)}%`;
         setStatus("cache-status",
           hitRate >= 90 ? t("ممتاز", "Excellent") :
           hitRate >= 75 ? t("مقبول", "Acceptable") : t("ضعيف", "Poor"),
@@ -84,14 +84,14 @@
         var snrVal = alerts.signal_to_noise;
         if (snrVal !== null && snrVal !== undefined) {
           setStatus("alert-snr",
-            t("نسبة الإشارة: ", "Signal-to-noise: ") + (snrVal * 100).toFixed(0) + "%",
+            `${t("نسبة الإشارة: ", "Signal-to-noise: ")} ${(snrVal * 100).toFixed(0)}%`,
             snrVal >= 0.6 ? "good" : snrVal >= 0.4 ? "warn" : "bad"
           );
         }
 
         var dqScore = dq.overall_score;
         if (dqScore !== null && dqScore !== undefined) {
-          el("data-quality-score").textContent = dqScore.toFixed(1) + "%";
+          el("data-quality-score").textContent = `${dqScore.toFixed(1)}%`;
           setStatus("data-quality-status",
             dqScore >= 90 ? t("ممتاز", "Excellent") :
             dqScore >= 75 ? t("جيد", "Good") :
@@ -122,7 +122,7 @@
           setStatus("freshness-status", t("لا توجد بيانات", "No data"), "warn");
           return;
         }
-        el("data-freshness").textContent = hours.toFixed(1) + "h";
+        el("data-freshness").textContent = `${hours.toFixed(1)} h`;
         setStatus("freshness-status",
           hours <= 2 ? t("حديث", "Fresh") :
           hours <= 6 ? t("قديم قليلاً", "Stale") : t("قديم", "Old"),
@@ -140,7 +140,7 @@
         var lcpP95 = (data.web_vitals || {}).lcp || {};
         if (lcpP95.p95) {
           var val = lcpP95.p95;
-          el("web-vitals-lcp").textContent = (val / 1000).toFixed(1) + "s";
+          el("web-vitals-lcp").textContent = `${(val / 1000).toFixed(1)} s`;
           setStatus("vitals-status",
             val <= 2500 ? t("سريع", "Fast") :
             val <= 4000 ? t("متوسط", "Medium") : t("بطيء", "Slow"),

@@ -17,7 +17,7 @@
   <h1 class="admin-page-title">
     <i class="bi bi-clock-history me-2"></i>Import Logs
   </h1>
-  <p class="admin-page-subtitle text-muted">History of all CSV and Excel import jobs</p>
+  <p class="admin-page-subtitle admin-text-muted">History of all CSV and Excel import jobs</p>
 </div>
 
 <!-- Filters -->
@@ -51,10 +51,10 @@
       </div>
     </div>
     <div class="mt-3 d-flex gap-2">
-      <button id="applyFiltersBtn" class="admin-btn admin-btn-primary admin-btn-sm">
+      <button id="applyFiltersBtn" class="admin-btn admin-btn-primary admin-admin-btn-sm">
         <i class="bi bi-funnel"></i> Apply Filters
       </button>
-      <button id="resetFiltersBtn" class="admin-btn admin-btn-ghost admin-btn-sm">
+      <button id="resetFiltersBtn" class="admin-btn admin-btn-ghost admin-admin-btn-sm">
         <i class="bi bi-x-lg"></i> Reset
       </button>
     </div>
@@ -65,17 +65,17 @@
 <div class="admin-card">
   <div class="admin-card-header d-flex align-items-center justify-content-between">
     <h2 class="admin-card-title mb-0">Import History</h2>
-    <button id="refreshBtn" class="admin-btn admin-btn-ghost admin-btn-sm">
+    <button id="refreshBtn" class="admin-btn admin-btn-ghost admin-admin-btn-sm">
       <i class="bi bi-arrow-clockwise"></i> Refresh
     </button>
   </div>
   <div class="admin-card-body p-0">
     <div id="logsContainer">
-      <div class="text-center py-5 text-muted" id="logsLoading">
+      <div class="text-center py-5 admin-text-muted" id="logsLoading">
         <div class="spinner-border spinner-border-sm me-2" role="status"></div>
         Loading import logs…
       </div>
-      <div class="text-center py-5 text-muted" id="logsEmpty" style="display:none;">
+      <div class="text-center py-5 admin-text-muted" id="logsEmpty" style="display:none;">
         <i class="bi bi-inbox fs-1 mb-3 d-block opacity-50"></i>
         No import logs found.
       </div>
@@ -164,21 +164,21 @@
       const tbody = document.getElementById('logsTableBody');
       tbody.innerHTML = logs.map(log => `
         <tr>
-          <td class="ps-4 text-muted small">#${escHtml(log.id)}</td>
+          <td class="ps-4 admin-text-muted small">#${escHtml(log.id)}</td>
           <td><span class="badge bg-light text-dark border">${escHtml(log.import_type || '—')}</span></td>
           <td class="small text-truncate" style="max-width:160px;" title="${escHtml(log.filename || '')}">${escHtml(log.filename || '—')}</td>
           <td class="small">${escHtml(log.imported_by || '—')}</td>
           <td>${log.total_rows ?? '—'}</td>
-          <td>${log.error_count ? `<span class="text-danger fw-semibold">${Number(log.error_count)}</span>` : '<span class="text-muted">0</span>'}</td>
+          <td>${log.error_count ? `<span class="admin-text-danger fw-semibold">${Number(log.error_count)}</span>` : '<span class="admin-text-muted">0</span>'}</td>
           <td>${statusBadge(log.status)}</td>
-          <td class="small text-muted">${log.created_at ? new Date(log.created_at).toLocaleString() : '—'}</td>
-          <td><button class="btn btn-sm btn-link p-0" data-log-id="${Number(log.id)}" aria-label="{% if ui_lang == 'en' %}View details{% else %}عرض التفاصيل{% endif %}"><i class="bi bi-eye" aria-hidden="true"></i></button></td>
+          <td class="small admin-text-muted">${log.created_at ? new Date(log.created_at).toLocaleString() : '—'}</td>
+          <td><button class="btn admin-btn-sm btn-link p-0" data-log-id="${Number(log.id)}" aria-label="{% if ui_lang == 'en' %}View details{% else %}عرض التفاصيل{% endif %}"><i class="bi bi-eye" aria-hidden="true"></i></button></td>
         </tr>
       `).join('');
       document.getElementById('logsTableWrap').style.display = '';
     } catch (err) {
       document.getElementById('logsLoading').style.display = 'none';
-      document.getElementById('logsEmpty').innerHTML = `<i class="bi bi-exclamation-circle fs-1 mb-3 d-block text-danger opacity-75"></i>Failed to load logs: ${escHtml(err.message)}`;
+      document.getElementById('logsEmpty').innerHTML = `<i class="bi bi-exclamation-circle fs-1 mb-3 d-block admin-text-danger opacity-75"></i>Failed to load logs: ${escHtml(err.message)}`;
       document.getElementById('logsEmpty').style.display = '';
     }
   }
@@ -191,7 +191,7 @@
       const res = await fetch(`/api/admin/imports/logs/${Number(id)}`);
       const data = await res.json();
       const errRows = (data.errors || []).map(e =>
-        `<tr><td>${e.row ?? '—'}</td><td>${escHtml(e.field || '—')}</td><td class="text-danger small">${escHtml(e.error || '—')}</td></tr>`
+        `<tr><td>${e.row ?? '—'}</td><td>${escHtml(e.field || '—')}</td><td class="admin-text-danger small">${escHtml(e.error || '—')}</td></tr>`
       ).join('');
       document.getElementById('logDetailBody').innerHTML = `
         <dl class="row mb-0">
@@ -199,8 +199,8 @@
           <dt class="col-sm-3">File</dt><dd class="col-sm-9">${escHtml(data.filename || '—')}</dd>
           <dt class="col-sm-3">Imported By</dt><dd class="col-sm-9">${escHtml(data.imported_by || '—')}</dd>
           <dt class="col-sm-3">Total Rows</dt><dd class="col-sm-9">${data.total_rows ?? '—'}</dd>
-          <dt class="col-sm-3">Imported</dt><dd class="col-sm-9 text-success fw-semibold">${data.success_count ?? '—'}</dd>
-          <dt class="col-sm-3">Errors</dt><dd class="col-sm-9 text-danger fw-semibold">${data.error_count ?? '—'}</dd>
+          <dt class="col-sm-3">Imported</dt><dd class="col-sm-9 admin-text-success fw-semibold">${data.success_count ?? '—'}</dd>
+          <dt class="col-sm-3">Errors</dt><dd class="col-sm-9 admin-text-danger fw-semibold">${data.error_count ?? '—'}</dd>
           <dt class="col-sm-3">Status</dt><dd class="col-sm-9">${escHtml(data.status || '—')}</dd>
           <dt class="col-sm-3">Date</dt><dd class="col-sm-9">${data.created_at ? new Date(data.created_at).toLocaleString() : '—'}</dd>
         </dl>
@@ -211,7 +211,7 @@
           </table></div>` : ''}
       `;
     } catch {
-      document.getElementById('logDetailBody').innerHTML = '<p class="text-danger">Failed to load detail.</p>';
+      document.getElementById('logDetailBody').innerHTML = '<p class="admin-text-danger">Failed to load detail.</p>';
     }
   }
 

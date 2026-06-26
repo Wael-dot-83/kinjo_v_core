@@ -40,22 +40,22 @@
             <div>
                 <strong>{% if ui_lang == 'en' %}Required columns (exact Arabic headers):{% else %}الأعمدة المطلوبة (بالعناوين العربية الدقيقة):{% endif %}</strong>
                 <ul class="mb-1 mt-1">
-                    <li>اسم الروضة (عربي) — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
+                    <li>اسم الروضة (عربي) — <span class="admin-text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
                     <li>اسم الروضة (إنجليزي) — {% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %}</li>
-                    <li>المحافظة — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
-                    <li>المدينة — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
+                    <li>المحافظة — <span class="admin-text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
+                    <li>المدينة — <span class="admin-text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
                     <li>المنطقة — {% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %}</li>
                     <li>العنوان التفصيلي — {% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %}</li>
-                    <li>رقم الهاتف — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
+                    <li>رقم الهاتف — <span class="admin-text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
                 </ul>
-                <small class="text-muted">{% if ui_lang == 'en' %}Data will be validated and imported with duplicate protection.{% else %}سيتم التحقق من البيانات واستيرادها مع الحماية من التكرار.{% endif %}</small>
+                <small class="admin-text-muted">{% if ui_lang == 'en' %}Data will be validated and imported with duplicate protection.{% else %}سيتم التحقق من البيانات واستيرادها مع الحماية من التكرار.{% endif %}</small>
             </div>
         </div>
 
         <form id="importForm" enctype="multipart/form-data">
             <div class="mb-3">
                 <label for="excelFile" class="form-label fw-semibold">
-                    <i class="bi bi-file-earmark-excel me-1 text-success"></i>
+                    <i class="bi bi-file-earmark-excel me-1 admin-text-success"></i>
                     {% if ui_lang == 'en' %}Select Excel File (.xlsx){% else %}اختر ملف Excel (.xlsx){% endif %}
                 </label>
                 <input type="file" class="form-control" id="excelFile" name="file" accept=".xlsx,.xls" required
@@ -72,10 +72,10 @@
 
         <div id="progress" class="mt-4" style="display: none;">
             <div class="progress">
-                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 100%"
+                <div class="progress-bar progress-bar-striped progress-bar-animated admin-bg-primary" role="progressbar" style="width: 100%"
                      aria-label="{% if ui_lang == 'en' %}Import in progress{% else %}جاري الاستيراد{% endif %}"></div>
             </div>
-            <p class="text-center text-muted mt-2 small">{% if ui_lang == 'en' %}Processing import…{% else %}جاري معالجة الاستيراد…{% endif %}</p>
+            <p class="text-center admin-text-muted mt-2 small">{% if ui_lang == 'en' %}Processing import…{% else %}جاري معالجة الاستيراد…{% endif %}</p>
         </div>
     </div>
 </div>
@@ -89,16 +89,16 @@
         <div class="col-6 col-md-3">
             <div class="admin-card text-center">
                 <div class="admin-card-body">
-                    <div class="fs-2 fw-bold text-success" id="importedCount">0</div>
-                    <div class="text-muted small">{% if ui_lang == 'en' %}Imported{% else %}مستورد{% endif %}</div>
+                    <div class="fs-2 fw-bold admin-text-success" id="importedCount">0</div>
+                    <div class="admin-text-muted small">{% if ui_lang == 'en' %}Imported{% else %}مستورد{% endif %}</div>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="admin-card text-center">
                 <div class="admin-card-body">
-                    <div class="fs-2 fw-bold text-warning" id="updatedCount">0</div>
-                    <div class="text-muted small">{% if ui_lang == 'en' %}Updated{% else %}مُحدَّث{% endif %}</div>
+                    <div class="fs-2 fw-bold admin-text-warning" id="updatedCount">0</div>
+                    <div class="admin-text-muted small">{% if ui_lang == 'en' %}Updated{% else %}مُحدَّث{% endif %}</div>
                 </div>
             </div>
         </div>
@@ -106,15 +106,15 @@
             <div class="admin-card text-center">
                 <div class="admin-card-body">
                     <div class="fs-2 fw-bold text-secondary" id="skippedCount">0</div>
-                    <div class="text-muted small">{% if ui_lang == 'en' %}Skipped{% else %}تم تخطيه{% endif %}</div>
+                    <div class="admin-text-muted small">{% if ui_lang == 'en' %}Skipped{% else %}تم تخطيه{% endif %}</div>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="admin-card text-center">
                 <div class="admin-card-body">
-                    <div class="fs-2 fw-bold text-danger" id="errorCount">0</div>
-                    <div class="text-muted small">{% if ui_lang == 'en' %}Errors{% else %}أخطاء{% endif %}</div>
+                    <div class="fs-2 fw-bold admin-text-danger" id="errorCount">0</div>
+                    <div class="admin-text-muted small">{% if ui_lang == 'en' %}Errors{% else %}أخطاء{% endif %}</div>
                 </div>
             </div>
         </div>
@@ -220,7 +220,7 @@
                             <td>${escHtml(kg.city)}</td>
                             <td>${escHtml(kg.area || '')}</td>
                             <td>${escHtml(kg.phone)}</td>
-                            <td><span class="badge bg-success text-white">${_isEn ? 'Imported' : 'مستورد'}</span></td>
+                            <td><span class="badge admin-bg-success text-white">${_isEn ? 'Imported' : 'مستورد'}</span></td>
                         `;
                         tbody.appendChild(row);
                     });

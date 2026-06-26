@@ -21,7 +21,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title mb-0">{% if ui_lang == 'en' %}Imported Kindergartens{% else %}الروضات المستوردة{% endif %}</h3>
-                    <a href="/admin/import-kindergartens" class="btn btn-primary">
+                    <a href="/admin/import-kindergartens" class="admin-btn admin-btn-primary">
                         <i class="bi bi-upload"></i> {% if ui_lang == 'en' %}Import More{% else %}استيراد المزيد{% endif %}
                     </a>
                 </div>
@@ -46,7 +46,7 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <button class="btn btn-secondary" id="clearFilters">
+                            <button class="admin-btn admin-btn-secondary" id="clearFilters">
                                 {% if ui_lang == 'en' %}Clear Filters{% else %}مسح الفلاتر{% endif %}
                             </button>
                         </div>
@@ -54,7 +54,7 @@
 
                     <!-- Results info -->
                     <div class="mb-3">
-                        <small class="text-muted" id="resultsInfo">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</small>
+                        <small class="admin-text-muted" id="resultsInfo">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</small>
                     </div>
 
                     <!-- Table -->
@@ -121,7 +121,7 @@
             const data = await response.json();
 
             if (!response.ok) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${_errLoad}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center admin-text-danger">${_errLoad}</td></tr>`;
                 return;
             }
 
@@ -148,7 +148,7 @@
             updatePagination(data.page, data.pages);
 
         } catch (error) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${_errLoad}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center admin-text-danger">${_errLoad}</td></tr>`;
         }
     }
 

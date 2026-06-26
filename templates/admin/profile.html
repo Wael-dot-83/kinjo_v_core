@@ -143,42 +143,42 @@
       <div class="admin-card-body">
         <dl class="row mb-0">
           <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
+            <dt class="col-sm-4 fw-semibold admin-text-muted">
               {% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}
             </dt>
             <dd class="col-sm-8">{{ current_user.username }}</dd>
           </div>
           <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
+            <dt class="col-sm-4 fw-semibold admin-text-muted">
               {% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}
             </dt>
             <dd class="col-sm-8">{{ current_user.email or '—' }}</dd>
           </div>
           <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
+            <dt class="col-sm-4 fw-semibold admin-text-muted">
               {% if ui_lang == 'en' %}Full Name{% else %}الاسم الكامل{% endif %}
             </dt>
             <dd class="col-sm-8">{{ current_user.full_name or '—' }}</dd>
           </div>
           <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
+            <dt class="col-sm-4 fw-semibold admin-text-muted">
               {% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}
             </dt>
             <dd class="col-sm-8">
-              <span class="badge bg-primary">{{ current_user.role.value if current_user.role else '—' }}</span>
+              <span class="badge admin-bg-primary">{{ current_user.role.value if current_user.role else '—' }}</span>
             </dd>
           </div>
           <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
+            <dt class="col-sm-4 fw-semibold admin-text-muted">
               {% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}
             </dt>
             <dd class="col-sm-8">
-              <span class="badge bg-success">{{ current_user.status.value if current_user.status else '—' }}</span>
+              <span class="badge admin-bg-success">{{ current_user.status.value if current_user.status else '—' }}</span>
             </dd>
           </div>
           {% if current_user.created_at %}
           <div class="col-12 row mb-0">
-            <dt class="col-sm-4 fw-semibold text-muted">
+            <dt class="col-sm-4 fw-semibold admin-text-muted">
               {% if ui_lang == 'en' %}Member Since{% else %}عضو منذ{% endif %}
             </dt>
             <dd class="col-sm-8">{{ current_user.created_at.strftime('%Y-%m-%d') }}</dd>
@@ -198,7 +198,7 @@
         </h2>
       </div>
       <div class="admin-card-body">
-        <p class="text-muted small mb-3">
+        <p class="admin-text-muted small mb-3">
           {% if ui_lang == 'en' %}
             Use the button below to change your login password.
           {% else %}

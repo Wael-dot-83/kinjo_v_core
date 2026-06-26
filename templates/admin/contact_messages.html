@@ -28,14 +28,14 @@
             <option value="open" {% if filters.status_filter == 'open' %}selected{% endif %}>{% if ui_lang == 'en' %}Open{% else %}مفتوحة{% endif %}</option>
             <option value="resolved" {% if filters.status_filter == 'resolved' %}selected{% endif %}>{% if ui_lang == 'en' %}Resolved{% else %}مُغلقة{% endif %}</option>
         </select>
-        <button type="submit" class="btn btn-primary btn-sm">{% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}</button>
+        <button type="submit" class="admin-btn admin-btn-primary admin-btn-sm">{% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}</button>
     </div>
 </form>
 
 <!-- Stats -->
 <div class="d-flex gap-3 mb-3">
     <span class="badge badge-soft badge-soft-secondary fs-6">{% if ui_lang == 'en' %}Total:{% else %}الإجمالي:{% endif %} {{ pagination.total }}</span>
-    <span class="text-muted small">{% if ui_lang == 'en' %}Page{% else %}الصفحة{% endif %} {{ pagination.page }} {% if ui_lang == 'en' %}of{% else %}من{% endif %} {{ pagination.total_pages }}</span>
+    <span class="admin-text-muted small">{% if ui_lang == 'en' %}Page{% else %}الصفحة{% endif %} {{ pagination.page }} {% if ui_lang == 'en' %}of{% else %}من{% endif %} {{ pagination.total_pages }}</span>
 </div>
 
 <!-- Table -->
@@ -57,11 +57,11 @@
             <tbody>
                 {% for msg in contact_messages %}
                 <tr>
-                    <td class="text-muted small">{{ msg.id }}</td>
+                    <td class="admin-text-muted small">{{ msg.id }}</td>
                     <td class="fw-600">{{ msg.name }}</td>
-                    <td class="text-muted small">{{ msg.email }}</td>
+                    <td class="admin-text-muted small">{{ msg.email }}</td>
                     <td>{{ msg.subject }}</td>
-                    <td class="text-muted small text-nowrap">
+                    <td class="admin-text-muted small text-nowrap">
                         {{ msg.submitted_at.strftime('%Y-%m-%d') if msg.submitted_at else '—' }}
                     </td>
                     <td>
@@ -74,14 +74,14 @@
                     <td>
                         {% if not msg.is_resolved %}
                         <button type="button"
-                                class="btn btn-ghost btn-sm text-success"
+                                class="btn btn-ghost admin-btn-sm admin-text-success"
                                 data-resolve-contact-message
                                 data-resolve-url="/api/admin/contact-messages/{{ msg.id }}/resolve"
                                 title="{% if ui_lang == 'en' %}Close message{% else %}إغلاق الرسالة{% endif %}">
                             <i class="bi bi-check-circle"></i>
                         </button>
                         {% endif %}
-                        <button class="btn btn-ghost btn-sm" data-bs-toggle="modal"
+                        <button class="btn btn-ghost admin-btn-sm" data-bs-toggle="modal"
                                 data-bs-target="#msgModal{{ msg.id }}"
                                 title="{% if ui_lang == 'en' %}View message{% else %}عرض الرسالة{% endif %}">
                             <i class="bi bi-eye"></i>
@@ -95,7 +95,7 @@
     {% else %}
     <div class="card-body text-center py-5">
         <i class="bi bi-inbox d-block fs-1 mb-3 opacity-25"></i>
-        <p class="text-muted mb-0">{% if ui_lang == 'en' %}No messages found{% else %}لا توجد رسائل{% endif %}</p>
+        <p class="admin-text-muted mb-0">{% if ui_lang == 'en' %}No messages found{% else %}لا توجد رسائل{% endif %}</p>
     </div>
     {% endif %}
 </div>
@@ -132,7 +132,7 @@
                 <p style="white-space:pre-line;">{{ msg.message }}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                <button type="button" class="admin-btn admin-btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
             </div>
         </div>
     </div>

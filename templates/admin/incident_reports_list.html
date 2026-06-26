@@ -11,7 +11,7 @@
 {% block content %}
 <div class="admin-page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
   <h1 class="admin-page-title mb-0">
-    <i class="bi bi-exclamation-triangle text-warning me-2" aria-hidden="true"></i>
+    <i class="bi bi-exclamation-triangle admin-text-warning me-2" aria-hidden="true"></i>
     {% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}
   </h1>
   <button class="admin-btn admin-btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
@@ -50,7 +50,7 @@
                         </select>
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
-                        <button type="button" class="btn btn-outline-primary me-2" onclick="loadReports()">
+                        <button type="button" class="admin-btn admin-btn-ghost me-2" onclick="loadReports()">
                             <i class="bi bi-search me-1"></i>{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
                         </button>
                         <button type="button" class="btn btn-outline-secondary" onclick="resetFilters()">
@@ -67,7 +67,7 @@
         <div class="card shadow-sm">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">{% if ui_lang == 'en' %}Reports List{% else %}قائمة التقارير{% endif %}</h5>
-                <div id="loadingSpinner" class="spinner-border spinner-border-sm text-primary d-none" role="status">
+                <div id="loadingSpinner" class="spinner-border spinner-border-sm admin-text-primary d-none" role="status">
                     <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                 </div>
             </div>
@@ -76,9 +76,9 @@
                     <!-- Reports will be loaded here -->
                 </div>
                 <div id="emptyState" class="text-center py-5 d-none">
-                    <i class="bi bi-file-earmark-x display-4 text-muted mb-3"></i>
-                    <h5 class="text-muted">{% if ui_lang == 'en' %}No reports{% else %}لا توجد تقارير{% endif %}</h5>
-                    <p class="text-muted">{% if ui_lang == 'en' %}No reports found matching the search criteria.{% else %}لم يتم العثور على أي تقارير تطابق معايير البحث.{% endif %}</p>
+                    <i class="bi bi-file-earmark-x display-4 admin-text-muted mb-3"></i>
+                    <h5 class="admin-text-muted">{% if ui_lang == 'en' %}No reports{% else %}لا توجد تقارير{% endif %}</h5>
+                    <p class="admin-text-muted">{% if ui_lang == 'en' %}No reports found matching the search criteria.{% else %}لم يتم العثور على أي تقارير تطابق معايير البحث.{% endif %}</p>
                 </div>
             </div>
         </div>
@@ -135,8 +135,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button" class="btn btn-primary" onclick="generateReport()">
+                <button type="button" class="admin-btn admin-btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="admin-btn admin-btn-primary" onclick="generateReport()">
                     <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Generate Report{% else %}إنشاء التقرير{% endif %}
                 </button>
             </div>
@@ -158,8 +158,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
-                <button type="button" class="btn btn-success" onclick="exportReport()">
+                <button type="button" class="admin-btn admin-btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                <button type="button" class="admin-btn admin-btn-success" onclick="exportReport()">
                     <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
                 </button>
             </div>
@@ -328,10 +328,10 @@
                 <td>${escHtml(report.created_by)}</td>
                 <td><span class="badge badge-soft badge-soft-warning">${report.total_incidents}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary me-1" onclick="viewReport(${report.id})">
+                    <button class="btn admin-btn-sm btn-outline-primary me-1" onclick="viewReport(${report.id})">
                         <i class="bi bi-eye"></i> ${T('عرض', 'View')}
                     </button>
-                    <button class="btn btn-sm btn-outline-success" onclick="exportReport(${report.id})">
+                    <button class="btn admin-btn-sm btn-outline-success" onclick="exportReport(${report.id})">
                         <i class="bi bi-download"></i> ${T('تصدير', 'Export')}
                     </button>
                 </td>
@@ -452,14 +452,14 @@
                 <div class="row text-center">
                     <div class="col-6">
                         <div class="border rounded p-2">
-                            <div class="h4 text-warning mb-0">${metrics.total_incidents || 0}</div>
-                            <small class="text-muted">${T('إجمالي الحوادث', 'Total Incidents')}</small>
+                            <div class="h4 admin-text-warning mb-0">${metrics.total_incidents || 0}</div>
+                            <small class="admin-text-muted">${T('إجمالي الحوادث', 'Total Incidents')}</small>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="border rounded p-2">
-                            <div class="h4 text-success mb-0">${metrics.open_incidents || 0}</div>
-                            <small class="text-muted">${T('حوادث مفتوحة', 'Open Incidents')}</small>
+                            <div class="h4 admin-text-success mb-0">${metrics.open_incidents || 0}</div>
+                            <small class="admin-text-muted">${T('حوادث مفتوحة', 'Open Incidents')}</small>
                         </div>
                     </div>
                 </div>
