@@ -1,0 +1,108 @@
+{% extends "admin_base.html" %}
+
+{% block title %}
+    {% if ui_lang == 'ar' %}التحليلات المتقدمة وعلوم البيانات{% else %}Advanced Analytics & Data Science{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">
+            <i class="bi bi-graph-up-arrow text-primary"></i> 
+            {% if ui_lang == 'ar' %}التحليلات المتقدمة وعلوم البيانات{% else %}Advanced Analytics & Data Science{% endif %}
+        </h2>
+    </div>
+
+    <!-- Comparative Analytics Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm rounded-4 border-0">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-intersect"></i> 
+                        {% if ui_lang == 'ar' %}مقارنة الأداء المعياري{% else %}Standardized Performance Comparison{% endif %}
+                    </h5>
+                    <p class="text-muted small">{% if ui_lang == 'ar' %}مقارنة بين مستويين مختلفين (مثال: محافظة مقابل المتوسط الوطني){% else %}Compare two levels (e.g., Governorate vs National Average){% endif %}</p>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-end mb-4 bg-light p-3 rounded">
+                        <!-- Dimension 1 -->
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold">{% if ui_lang == 'ar' %}المستوى الأول{% else %}Level 1{% endif %}</label>
+                            <div class="input-group">
+                                <select id="dim1-type" class="form-select" onchange="loadDimensionIds('dim1')">
+                                    <option value="GOVERNORATE" selected>{% if ui_lang == 'ar' %}المحافظة{% else %}Governorate{% endif %}</option>
+                                    <option value="NETWORK">{% if ui_lang == 'ar' %}الشبكة الوطنية{% else %}National Network{% endif %}</option>
+                                    <option value="CITY">{% if ui_lang == 'ar' %}المدينة{% else %}City{% endif %}</option>
+                                    <option value="KINDERGARTEN">{% if ui_lang == 'ar' %}حضانة محددة{% else %}Specific Kindergarten{% endif %}</option>
+                                </select>
+                                <select id="dim1-id" class="form-select"></select>
+                            </div>
+                        </div>
+                        
+                        <!-- VS Badge -->
+                        <div class="col-md-2 text-center">
+                            <span class="badge bg-secondary rounded-pill fs-6 px-3 py-2">VS</span>
+                        </div>
+
+                        <!-- Dimension 2 -->
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold">{% if ui_lang == 'ar' %}المستوى الثاني{% else %}Level 2{% endif %}</label>
+                            <div class="input-group">
+                                <select id="dim2-type" class="form-select" onchange="loadDimensionIds('dim2')">
+                                    <option value="NETWORK" selected>{% if ui_lang == 'ar' %}الشبكة الوطنية{% else %}National Network{% endif %}</option>
+                                    <option value="GOVERNORATE">{% if ui_lang == 'ar' %}المحافظة{% else %}Governorate{% endif %}</option>
+                                    <option value="CITY">{% if ui_lang == 'ar' %}المدينة{% else %}City{% endif %}</option>
+                                    <option value="KINDERGARTEN">{% if ui_lang == 'ar' %}حضانة محددة{% else %}Specific Kindergarten{% endif %}</option>
+                                </select>
+                                <select id="dim2-id" class="form-select"></select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <button class="btn btn-primary px-5 fw-bold rounded-pill shadow-sm" onclick="runComparison()">
+                            <i class="bi bi-play-fill"></i> {% if ui_lang == 'ar' %}تشغيل التحليل{% else %}Run Analysis{% endif %}
+                        </button>
+                    </div>
+
+                    <!-- Chart Container -->
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div style="height: 400px;">
+                                <canvas id="radarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Predictive Insights Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm rounded-4 border-0 bg-primary text-white">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3">
+                        <i class="bi bi-magic text-warning"></i> 
+                        {% if ui_lang == 'ar' %}الاكتشافات التنبؤية (الذكاء الاصطناعي){% else %}Predictive Discoveries (AI){% endif %}
+                    </h5>
+                    <div class="row text-center" id="predictive-metrics">
+                        <!-- Filled dynamically via JS -->
+                        <div class="col-12 text-center py-4">
+                            <div class="spinner-border text-light" role="status"></div>
+                            <p class="mt-2">{% if ui_lang == 'ar' %}جاري تحليل البيانات...{% else %}Analyzing data...{% endif %}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Load Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/static/js/advanced_analytics.js?v=1.0"></script>
+{% endblock %}
