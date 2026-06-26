@@ -4149,7 +4149,7 @@ def preview_report(
             trend_data = trend_q.group_by(models.AttendanceLog.date).order_by(models.AttendanceLog.date).all()
             charts[0]["data"] = {
                 "labels": [str(row[0]) for row in trend_data],
-                "datasets": [{"label": "Present", "data": [row[1] for row in trend_data], "borderColor": "#0d6efd", "backgroundColor": "rgba(13, 110, 253, 0.1)", "fill": True}]
+                "datasets": [{"label": {"ar": "حاضر", "en": "Present"}, "data": [row[1] for row in trend_data], "borderColor": "#0d6efd", "backgroundColor": "rgba(13, 110, 253, 0.1)", "fill": True}]
             }
             
             gov_q = db.query(models.Kindergarten.governorate, func.count(models.AttendanceLog.id)).join(
@@ -4161,9 +4161,16 @@ def preview_report(
             if kg_filter: gov_q = gov_q.filter(models.Kindergarten.id.in_(kg_filter))
             gov_data = gov_q.group_by(models.Kindergarten.governorate).all()
             from config import settings
+            def get_gov_bilingual(val):
+                if not val: return {"ar": "غير معروف", "en": "Unknown"}
+                ar_val = settings.JORDAN_GOVERNORATE_ALIASES.get(val.lower(), val)
+                idx = settings.JORDAN_GOVERNORATES.index(ar_val) if ar_val in settings.JORDAN_GOVERNORATES else -1
+                en_val = settings.JORDAN_GOVERNORATES_ENGLISH[idx] if idx >= 0 else ar_val
+                return {"ar": ar_val, "en": en_val}
+
             charts[1]["data"] = {
-                "labels": [settings.JORDAN_GOVERNORATE_ALIASES.get(row[0].lower(), row[0]) if row[0] else "Unknown" for row in gov_data],
-                "datasets": [{"label": "Absences", "data": [row[1] for row in gov_data], "backgroundColor": "#dc3545"}]
+                "labels": [get_gov_bilingual(row[0]) for row in gov_data],
+                "datasets": [{"label": {"ar": "الغياب", "en": "Absences"}, "data": [row[1] for row in gov_data], "backgroundColor": "#dc3545"}]
             }
         except Exception as e:
             logger.error(f"Failed to load attendance data: {e}", exc_info=True)
@@ -4201,13 +4208,13 @@ def preview_report(
             trend_data = trend_data.group_by("d").order_by("d").all()
             charts[0]["data"] = {
                 "labels": [str(row[0]) for row in trend_data],
-                "datasets": [{"label": "Incidents", "data": [row[1] for row in trend_data], "borderColor": "#dc3545", "backgroundColor": "rgba(220, 53, 69, 0.1)", "fill": True}]
+                "datasets": [{"label": {"ar": "الحوادث", "en": "Incidents"}, "data": [row[1] for row in trend_data], "borderColor": "#dc3545", "backgroundColor": "rgba(220, 53, 69, 0.1)", "fill": True}]
             }
 
             sev_data = inc_base.with_entities(models.Incident.severity_level, func.count(models.Incident.id)).group_by(models.Incident.severity_level).all()
             charts[1]["data"] = {
-                "labels": [row[0].value if hasattr(row[0], 'value') else str(row[0]) for row in sev_data],
-                "datasets": [{"label": "Severity", "data": [row[1] for row in sev_data], "backgroundColor": ["#0d6efd", "#ffc107", "#fd7e14", "#dc3545"]}]
+                "labels": [{"ar": row[0].value if hasattr(row[0], 'value') else str(row[0]), "en": row[0].value if hasattr(row[0], 'value') else str(row[0])} for row in sev_data],
+                "datasets": [{"label": {"ar": "الخطورة", "en": "Severity"}, "data": [row[1] for row in sev_data], "backgroundColor": ["#0d6efd", "#ffc107", "#fd7e14", "#dc3545"]}]
             }
         except Exception:
             warnings.append({"ar": "تعذر تحميل بيانات الحوادث", "en": "Failed to load incident data"})
@@ -4250,8 +4257,8 @@ def preview_report(
             total_records = total
             
             charts[0]["data"] = {
-                "labels": ["Green", "Amber", "Red"],
-                "datasets": [{"data": [dist.green, dist.amber, dist.red], "backgroundColor": ["#198754", "#ffc107", "#dc3545"]}]
+                "labels": [{"ar": "أخضر", "en": "Green"}, {"ar": "أصفر", "en": "Amber"}, {"ar": "أحمر", "en": "Red"}],
+                "datasets": [{"label": {"ar": "الحوكمة", "en": "Governance"}, "data": [dist.green, dist.amber, dist.red], "backgroundColor": ["#198754", "#ffc107", "#dc3545"]}]
             }
             
             # Use dynamic quality evaluation
@@ -4284,8 +4291,8 @@ def preview_report(
             total_records = analytics.get("total_applications", 0)
             
             charts[0]["data"] = {
-                "labels": ["Total", "Approved", "Rejected"],
-                "datasets": [{"label": "Applications", "data": [total_records, kpis[1]["value"], kpis[2]["value"]], "backgroundColor": ["#0d6efd", "#198754", "#dc3545"]}]
+                "labels": [{"ar": "الإجمالي", "en": "Total"}, {"ar": "موافق عليه", "en": "Approved"}, {"ar": "مرفوض", "en": "Rejected"}],
+                "datasets": [{"label": {"ar": "الطلبات", "en": "Applications"}, "data": [total_records, kpis[1]["value"], kpis[2]["value"]], "backgroundColor": ["#0d6efd", "#198754", "#dc3545"]}]
             }
             
             from sqlalchemy import func
@@ -4296,8 +4303,8 @@ def preview_report(
             if kg_filter: source_q = source_q.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
             source_data = source_q.group_by(models.EnrollmentApplication.source).all()
             charts[1]["data"] = {
-                "labels": [row[0].value if hasattr(row[0], 'value') else str(row[0]) for row in source_data],
-                "datasets": [{"data": [row[1] for row in source_data], "backgroundColor": ["#6610f2", "#0dcaf0", "#ffc107", "#20c997"]}]
+                "labels": [{"ar": row[0].value if hasattr(row[0], 'value') else str(row[0]), "en": row[0].value if hasattr(row[0], 'value') else str(row[0])} for row in source_data],
+                "datasets": [{"label": {"ar": "المصدر", "en": "Source"}, "data": [row[1] for row in source_data], "backgroundColor": ["#6610f2", "#0dcaf0", "#ffc107", "#20c997"]}]
             }
         except Exception:
             warnings.append({"ar": "تعذر تحميل بيانات التسجيل", "en": "Failed to load enrollment data"})

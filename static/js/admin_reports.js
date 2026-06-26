@@ -290,6 +290,19 @@
         const canvas = document.getElementById(`chart-${chart.id}`);
         if (!canvas) return;
         const chartData = chart.data || { labels: [], datasets: [] };
+        
+        // Handle bilingual labels
+        if (chartData.labels) {
+            chartData.labels = chartData.labels.map(l => typeof l === 'object' && l !== null ? reportsText(l.ar || l.en, l.en || l.ar) : l);
+        }
+        if (chartData.datasets) {
+            chartData.datasets.forEach(ds => {
+                if (typeof ds.label === 'object' && ds.label !== null) {
+                    ds.label = reportsText(ds.label.ar || ds.label.en, ds.label.en || ds.label.ar);
+                }
+            });
+        }
+        
         new window.Chart(canvas, {
           type: chart.type || 'bar',
           data: chartData,
