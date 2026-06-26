@@ -45,6 +45,29 @@ async function runComparison() {
         const res = await fetch(`/api/analytics/compare?dim1_type=${dim1Type}&dim1_id=${dim1Id}&dim2_type=${dim2Type}&dim2_id=${dim2Id}`);
         const data = await res.json();
         
+        // Render Z-Scores
+        const zCont = document.getElementById('zscore-container');
+        const zTbody = document.getElementById('zscore-tbody');
+        
+        function formatZ(z) {
+            return z > 0 ? `<span class="text-success fw-bold">+${z}</span>` : 
+                   (z < 0 ? `<span class="text-danger fw-bold">${z}</span>` : `<span>0</span>`);
+        }
+        
+        zTbody.innerHTML = `
+            <tr>
+                <td class="fw-bold">${data.dim1.name}</td>
+                <td>${formatZ(data.dim1.z_scores.governance)}</td>
+                <td>${formatZ(data.dim1.z_scores.attendance)}</td>
+            </tr>
+            <tr>
+                <td class="fw-bold">${data.dim2.name}</td>
+                <td>${formatZ(data.dim2.z_scores.governance)}</td>
+                <td>${formatZ(data.dim2.z_scores.attendance)}</td>
+            </tr>
+        `;
+        zCont.classList.remove('d-none');
+        
         renderRadarChart(data.dim1, data.dim2);
         
         // Fetch Predictive Data & Scatter Data for Dim1

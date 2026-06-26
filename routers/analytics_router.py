@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Dict, Any, Optional
 from database import get_db
 import models
+import math
 from admin_security import require_admin
 import json
 
@@ -53,6 +55,38 @@ def compare_dimensions(
 
     if not d1 or not d2:
         raise HTTPException(status_code=404, detail="Missing data for one or both dimensions.")
+        
+    # Calculate Network-wide Mean and Standard Deviation for Z-Score Standardization
+    # This enables true statistical comparison "standardized for all aspects"
+    network_stats = db.query(
+        func.avg(models.AnalyticsDimensionCache.final_governance_score).label("gov_mean"),
+        func.stddev(models.AnalyticsDimensionCache.final_governance_score).label("gov_std"),
+        func.avg(models.AnalyticsDimensionCache.attendance_rate).label("att_mean"),
+        func.stddev(models.AnalyticsDimensionCache.attendance_rate).label("att_std")
+    ).filter(
+        models.AnalyticsDimensionCache.dimension_type == models.AnalyticsDimensionType.KINDERGARTEN
+    ).first()
+    
+    # Fallback to math if SQLite doesn't support stddev
+    if network_stats.gov_std is None:
+        all_kgs = db.query(models.AnalyticsDimensionCache).filter(models.AnalyticsDimensionCache.dimension_type == models.AnalyticsDimensionType.KINDERGARTEN).all()
+        n = len(all_kgs)
+        if n > 1:
+            gov_mean = sum((k.final_governance_score or 0) for k in all_kgs) / n
+            gov_std = math.sqrt(sum(((k.final_governance_score or 0) - gov_mean)**2 for k in all_kgs) / (n - 1))
+            att_mean = sum((k.attendance_rate or 0) for k in all_kgs) / n
+            att_std = math.sqrt(sum(((k.attendance_rate or 0) - att_mean)**2 for k in all_kgs) / (n - 1))
+        else:
+            gov_mean, gov_std, att_mean, att_std = 0, 1, 0, 1
+    else:
+        gov_mean = network_stats.gov_mean or 0
+        gov_std = network_stats.gov_std or 1
+        att_mean = network_stats.att_mean or 0
+        att_std = network_stats.att_std or 1
+        
+    def z_score(val, mean, std):
+        if not std or std == 0: return 0.0
+        return round((val - mean) / std, 2)
 
     return {
         "dim1": {
@@ -61,7 +95,11 @@ def compare_dimensions(
             "governance": d1.final_governance_score or 0,
             "enrollment": d1.enrollment_rate or 0,
             "safety": 100 - (d1.incident_rate_per_100 or 0)*5, 
-            "capacity": min(100, (d1.total_capacity or 100))
+            "capacity": min(100, (d1.total_capacity or 100)),
+            "z_scores": {
+                "governance": z_score((d1.final_governance_score or 0), gov_mean, gov_std),
+                "attendance": z_score((d1.attendance_rate or 0), att_mean, att_std)
+            }
         },
         "dim2": {
             "name": dim2_id,
@@ -69,7 +107,11 @@ def compare_dimensions(
             "governance": d2.final_governance_score or 0,
             "enrollment": d2.enrollment_rate or 0,
             "safety": 100 - (d2.incident_rate_per_100 or 0)*5,
-            "capacity": min(100, (d2.total_capacity or 100))
+            "capacity": min(100, (d2.total_capacity or 100)),
+            "z_scores": {
+                "governance": z_score((d2.final_governance_score or 0), gov_mean, gov_std),
+                "attendance": z_score((d2.attendance_rate or 0), att_mean, att_std)
+            }
         }
     }
 

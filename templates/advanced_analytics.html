@@ -65,6 +65,25 @@
                             <i class="bi bi-play-fill"></i> {% if ui_lang == 'ar' %}تشغيل التحليل{% else %}Run Analysis{% endif %}
                         </button>
                     </div>
+                    
+                    <!-- Z-Scores Display -->
+                    <div id="zscore-container" class="mb-4 d-none">
+                        <div class="alert alert-info border-0 shadow-sm rounded-4">
+                            <h6 class="fw-bold"><i class="bi bi-rulers"></i> {% if ui_lang == 'ar' %}المعيارية الإحصائية (Z-Scores){% else %}Statistical Standardization (Z-Scores){% endif %}</h6>
+                            <p class="small mb-2">{% if ui_lang == 'ar' %}تُظهر قيم Z مدى انحراف هذا المستوى عن المتوسط الوطني. (القيم الإيجابية تعني أداءً أعلى من المتوسط).{% else %}Z-scores show how far this level deviates from the national average. (Positive = Above Average).{% endif %}</p>
+                            <table class="table table-sm table-borderless text-center mt-2 mb-0">
+                                <thead>
+                                    <tr class="text-muted border-bottom">
+                                        <th>{% if ui_lang == 'ar' %}المستوى{% else %}Dimension{% endif %}</th>
+                                        <th>{% if ui_lang == 'ar' %}معيار الحوكمة{% else %}Governance Z-Score{% endif %}</th>
+                                        <th>{% if ui_lang == 'ar' %}معيار الحضور{% else %}Attendance Z-Score{% endif %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="zscore-tbody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
                     <!-- Chart Container -->
                     <div class="row justify-content-center">
