@@ -2,6 +2,21 @@
    NEW DESIGN TOKENS (v3.0)
    ============================================================================ */
 :root {
+  /* Chart / data-vis palette — WCAG AA contrast ≥ 4.5:1 on white */
+  --chart-color-1: #2B3A67;  /* deep navy     */
+  --chart-color-2: #0D7377;  /* teal          */
+  --chart-color-3: #F59E0B;  /* amber warning */
+  --chart-color-4: #DC2626;  /* red error     */
+  --chart-color-5: #7C3AED;  /* violet        */
+  --chart-color-6: #065F46;  /* emerald dark  */
+
+  /* Arabic/RTL typography stack */
+  --font-arabic: "Cairo", "Noto Sans Arabic", "Segoe UI", sans-serif;
+  --font-latin:  "Inter", "Segoe UI", sans-serif;
+
+  /* Focus ring — visible keyboard navigation */
+  --focus-ring: 0 0 0 3px rgba(43, 58, 103, 0.45);
+
   /* Primary Palette */
   --color-primary: #0B1E33;
   --color-primary-hover: #142e4a;
@@ -4568,5 +4583,69 @@ html[dir="rtl"] .sidebar .submenu .nav-link {
   background: rgba(31, 94, 71, 0.15);
   color: #6ee7b7;
 }
+
+/* ============================================================================
+   Accessibility — keyboard focus ring
+   ============================================================================ */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+/* Remove outline only for mouse/touch (pointer-coarse or explicit :focus:not(:focus-visible)) */
+:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Icon-only buttons must have a visible focus indicator */
+.btn-icon-only:focus-visible,
+[aria-label]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================================================
+   Performance — replace positional animations with transform-based
+   ============================================================================ */
+@keyframes slideInStart {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes slideInEnd {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+/* Use logical inline direction for RTL/LTR safe slide-in */
+[dir="rtl"] .animate-slide-in { animation: slideInStart 0.25s ease-out; }
+[dir="ltr"] .animate-slide-in { animation: slideInEnd  0.25s ease-out; }
+
+/* ============================================================================
+   Typography — Arabic/Latin font stack
+   ============================================================================ */
+[lang="ar"], [dir="rtl"] {
+  font-family: var(--font-arabic);
+}
+
+[lang="en"], [dir="ltr"] {
+  font-family: var(--font-latin);
+}
+
+/* ============================================================================
+   Logical properties — RTL/LTR safe spacing
+   ============================================================================ */
+.ms-auto-logical  { margin-inline-start: auto; }
+.me-auto-logical  { margin-inline-end:   auto; }
+.ps-1-logical     { padding-inline-start: var(--space-1); }
+.ps-2-logical     { padding-inline-start: var(--space-2); }
+.ps-3-logical     { padding-inline-start: var(--space-3); }
+.ps-4-logical     { padding-inline-start: var(--space-4); }
+.pe-1-logical     { padding-inline-end: var(--space-1); }
+.pe-2-logical     { padding-inline-end: var(--space-2); }
+.pe-3-logical     { padding-inline-end: var(--space-3); }
+.pe-4-logical     { padding-inline-end: var(--space-4); }
 
 

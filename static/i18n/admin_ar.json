@@ -1,4 +1,4 @@
-﻿{
+{
   "language": {
     "en": "English",
     "ar": "العربية"
@@ -22,7 +22,8 @@
     "toggle_menu": "تبديل قائمة التنقل",
     "language_switch": "تبديل اللغة",
     "user_menu": "قائمة المستخدم",
-    "heatmap": "خريطة المخاطر"
+    "heatmap": "خريطة المخاطر",
+    "kindergarten_overview": "نظرة عامة على الروضة"
   },
   "sidebar": {
     "messages": "الرسائل",
@@ -38,7 +39,8 @@
     "import_logs": "سجلات الاستيراد",
     "alerts": "التنبيهات",
     "safety_analytics": "تحليلات السلامة",
-    "impersonation": "انتحال الهوية"
+    "impersonation": "انتحال الهوية",
+    "kpi_dashboard": "لوحة مؤشرات الأداء"
   },
   "common": {
     "refresh": "تحديث",
@@ -93,7 +95,9 @@
     "minutes_ago": "دقائق مضت",
     "hours_ago": "ساعات مضت",
     "days_ago": "أيام مضت",
-    "locale": "ar-SA"
+    "locale": "ar-SA",
+    "table": "جدول",
+    "cards": "بطاقات"
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -187,7 +191,11 @@
     "users_deactivated": "تم إلغاء تفعيل المستخدمين بنجاح",
     "confirm_delete": "هل أنت متأكد من حذف هذا المستخدم؟",
     "confirm_bulk_delete": "هل أنت متأكد من حذف {{count}} مستخدمين؟",
-    "no_users_found": "لم يتم العثور على مستخدمين يطابقون معايير البحث"
+    "no_users_found": "لم يتم العثور على مستخدمين يطابقون معايير البحث",
+    "admin": "مدير النظام",
+    "manager": "مدير الروضة",
+    "supervisor": "مشرف",
+    "parent": "ولي الأمر"
   },
   "communication": {
     "title": "التواصل والرسائل",
@@ -499,6 +507,61 @@
       "occupancy": "يوضح مستوى الخطر المرتبط بالطاقة الاستيعابية ونسبة الإشغال."
     }
   },
+  "profile": {
+    "title": "ملفي الشخصي",
+    "subtitle": "إدارة معلومات حسابك وإعدادات الأمان",
+    "account_info": "معلومات الحساب",
+    "security": "الأمان",
+    "edit_profile": "تعديل الملف الشخصي",
+    "change_password": "تغيير كلمة المرور",
+    "save_changes": "حفظ التغييرات",
+    "saving": "جارٍ الحفظ…",
+    "full_name": "الاسم الكامل",
+    "email": "البريد الإلكتروني",
+    "phone": "رقم الهاتف",
+    "username": "اسم المستخدم",
+    "role": "الدور",
+    "status": "حالة الحساب",
+    "member_since": "عضو منذ",
+    "last_login": "آخر تسجيل دخول",
+    "never": "لم يسجّل بعد",
+    "mfa_status": "المصادقة الثنائية",
+    "mfa_enabled": "مفعّلة",
+    "mfa_disabled": "غير مفعّلة",
+    "current_password": "كلمة المرور الحالية",
+    "new_password": "كلمة المرور الجديدة",
+    "confirm_password": "تأكيد كلمة المرور الجديدة",
+    "password_requirements": "8 أحرف على الأقل",
+    "department": "مديرية الأسرة والطفولة",
+    "audit_log": "النشاط الأخير",
+    "audit_log_subtitle": "آخر 20 إجراء لك",
+    "audit_no_events": "لا يوجد نشاط مسجّل بعد",
+    "audit_action": "الإجراء",
+    "audit_entity": "الكيان",
+    "audit_time": "الوقت",
+    "audit_ip": "عنوان IP",
+    "stat_total_actions": "مجموع الإجراءات",
+    "stat_days_active": "أيام النشاط",
+    "stat_last_login": "آخر دخول",
+    "stat_mfa": "حالة المصادقة الثنائية",
+    "success_profile": "تم تحديث الملف الشخصي بنجاح",
+    "success_password": "تم تغيير كلمة المرور بنجاح",
+    "error_current_password": "كلمة المرور الحالية غير صحيحة",
+    "error_password_mismatch": "كلمتا المرور الجديدتان غير متطابقتين",
+    "permissions": "الصلاحيات",
+    "perm_admin": "مدير النظام",
+    "perm_all_data": "وصول كامل للبيانات",
+    "perm_audit": "الوصول لسجل التدقيق",
+    "perm_user_mgmt": "إدارة المستخدمين",
+    "quick_settings": "الإعدادات السريعة",
+    "qs_language": "لغة الواجهة",
+    "qs_bilingual": "الوضع الثنائي اللغة",
+    "qs_bilingual_hint": "عرض العربية والإنجليزية جنباً إلى جنب",
+    "qs_audit_verbose": "سجل التدقيق التفصيلي",
+    "qs_audit_verbose_hint": "تضمين الأحداث ذات الحساسية المنخفضة",
+    "qs_impersonation": "السماح بانتحال الهوية",
+    "qs_impersonation_hint": "السماح لطاقم الدعم بانتحال هوية هذا الحساب"
+  },
   "kpi": {
     "title": "لوحة مؤشرات الأداء الرئيسية",
     "subtitle": "رصد مؤشرات الأداء عبر جميع روضات الشبكة",
@@ -533,5 +596,28 @@
     "active": "نشط",
     "inactive": "غير نشط",
     "suspended": "موقوف"
+  },
+  "a11y": {
+    "skip_nav": "تخطي إلى المحتوى الرئيسي"
+  },
+  "classification": {
+    "chart": {
+      "band_note": "--",
+      "score_note": "--",
+      "aspect_note": "--"
+    },
+    "loading": {
+      "text": "جار تحميل بيانات التصنيف..."
+    },
+    "table": {
+      "name": "الاسم",
+      "rank": "الترتيب",
+      "classification": "التصنيف",
+      "final_score": "الدرجة النهائية",
+      "percentile": "النسبة المئوية",
+      "trend": "الاتجاه",
+      "data_coverage": "تغطية البيانات",
+      "actions": "إجراءات"
+    }
   }
 }

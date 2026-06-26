@@ -217,6 +217,30 @@ async def notify_kpi_change(role: str = None):
     await manager.broadcast_kpi_update(role)
 
 
+def _get_redis():
+    from config import settings
+    import redis
+    return redis.from_url(settings.CELERY_BROKER_URL)
+
+
+_NOTIFY_CHANNEL_PREFIX = "kinjo:notify:user:"
+
+
+def publish_notification(user_id: int, payload: dict) -> None:
+    """
+    Publish a notification payload to the user-specific Redis pub/sub channel.
+    Called from Celery tasks after creating Notification records.
+    Safe to call from sync contexts; does not require the event loop.
+    """
+    import json
+    try:
+        rc = _get_redis()
+        channel = f"{_NOTIFY_CHANNEL_PREFIX}{user_id}"
+        rc.publish(channel, json.dumps(payload, default=str))
+    except Exception:
+        logger.exception("Failed to publish notification for user %d", user_id)
+
+
 async def notify_system_alert(alert_type: str, title: str, message: str, priority: str = "warning", roles: List[str] = None):
     """Send system-wide alerts"""
     await manager.broadcast_alert(alert_type, title, message, priority, roles)

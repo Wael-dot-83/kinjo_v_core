@@ -23,19 +23,26 @@ router = APIRouter(tags=["Analytics WebSocket"])
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        # Scope-aware connection registry: websocket → (role, kindergarten_id | None)
+        self._connections: dict[WebSocket, tuple[str, int | None]] = {}
 
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
+    @property
+    def active_connections(self) -> List[WebSocket]:
+        return list(self._connections.keys())
+
+    async def connect(self, websocket: WebSocket, role: str, kindergarten_id: int | None = None):
+        # websocket is already accepted before auth; just register the scope.
+        self._connections[websocket] = (role, kindergarten_id)
 
     def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
+        self._connections.pop(websocket, None)
 
-    async def broadcast(self, message: str):
+    async def broadcast(self, message: str, admin_only: bool = True):
+        """Broadcast to connections.  Defaults to admin-only to prevent cross-scope leakage."""
         disconnected_connections = []
-        for connection in self.active_connections:
+        for connection, (role, _kg_id) in list(self._connections.items()):
+            if admin_only and role != "ADMIN":
+                continue
             try:
                 await connection.send_text(message)
             except WebSocketDisconnect:
@@ -44,8 +51,7 @@ class ConnectionManager:
             except (RuntimeError, TypeError, BuiltinException) as e:
                 logger.warning("Failed to send broadcast message to WebSocket client: %s", str(e), exc_info=False)
                 disconnected_connections.append(connection)
-        
-        # Clean up disconnected clients
+
         for conn in disconnected_connections:
             self.disconnect(conn)
 
@@ -114,14 +120,25 @@ async def websocket_dashboard(websocket: WebSocket):
     finally:
         db.close()
 
-    # Add to active connections
-    manager.active_connections.append(websocket)
+    # Add to active connections with scope metadata
+    await manager.connect(websocket, user_role_str, kindergarten_id)
 
     try:
         while True:
             try:
                 # Get fresh database session for each update
                 db = SessionLocal()
+
+                # Re-validate scope on each cycle to catch mid-session role/kg changes.
+                if user_role_str in ("MANAGER", "SUPERVISOR"):
+                    scope_user = db.query(models.User).filter(models.User.id == user.id).first()
+                    if (
+                        scope_user is None
+                        or scope_user.status != models.UserStatus.ACTIVE
+                        or scope_user.kindergarten_id != kindergarten_id
+                    ):
+                        await websocket.close(code=4003, reason="scope_changed")
+                        return
 
                 # Get real-time validated dashboard data
                 if user_role_str == "ADMIN":

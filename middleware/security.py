@@ -123,7 +123,7 @@ async def security_headers_middleware(request: Request, call_next: Callable):
 
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["X-XSS-Protection"] = "0"
     # The password-reset page carries a single-use token in its URL query string;
     # use the strictest Referrer-Policy there so the token can never leak to a
     # third-party resource via the Referer header.

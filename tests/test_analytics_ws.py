@@ -30,14 +30,13 @@ class TestConnectionManager:
     async def test_connect(self):
         """Test connecting a websocket"""
         mock_ws = AsyncMock()
-        await self.manager.connect(mock_ws)
+        await self.manager.connect(mock_ws, "ADMIN")
         assert mock_ws in self.manager.active_connections
-        mock_ws.accept.assert_called_once()
 
     def test_disconnect(self):
         """Test disconnecting a websocket"""
         mock_ws = Mock()
-        self.manager.active_connections.append(mock_ws)
+        self.manager._connections[mock_ws] = ("ADMIN", None)
         self.manager.disconnect(mock_ws)
         assert mock_ws not in self.manager.active_connections
 
@@ -51,9 +50,10 @@ class TestConnectionManager:
         """Test broadcasting to all connections"""
         mock_ws1 = AsyncMock()
         mock_ws2 = AsyncMock()
-        self.manager.active_connections = [mock_ws1, mock_ws2]
+        self.manager._connections[mock_ws1] = ("ADMIN", None)
+        self.manager._connections[mock_ws2] = ("ADMIN", None)
 
-        await self.manager.broadcast("test message")
+        await self.manager.broadcast("test message", admin_only=False)
 
         mock_ws1.send_text.assert_called_once_with("test message")
         mock_ws2.send_text.assert_called_once_with("test message")
@@ -62,10 +62,12 @@ class TestConnectionManager:
     async def test_broadcast_with_exception(self):
         """Test broadcasting when a connection raises exception"""
         mock_ws1 = AsyncMock()
-        mock_ws2 = AsyncMock(side_effect=Exception("Connection error"))
-        self.manager.active_connections = [mock_ws1, mock_ws2]
+        mock_ws2 = AsyncMock()
+        mock_ws2.send_text.side_effect = Exception("Connection error")
+        self.manager._connections[mock_ws1] = ("ADMIN", None)
+        self.manager._connections[mock_ws2] = ("ADMIN", None)
 
-        await self.manager.broadcast("test message")
+        await self.manager.broadcast("test message", admin_only=False)
 
         mock_ws1.send_text.assert_called_once_with("test message")
         mock_ws2.send_text.assert_called_once_with("test message")
@@ -218,7 +220,6 @@ class TestWebSocketDashboard:
     @pytest.mark.asyncio
     async def test_websocket_successful_connection_admin(self):
         """Test successful WebSocket connection for admin user"""
-        # Create a valid token
         token_data = {"sub": "admin_user", "exp": datetime.now().timestamp() + 3600}
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -230,10 +231,10 @@ class TestWebSocketDashboard:
              patch('analytics_ws.manager') as mock_manager, \
              patch('asyncio.sleep', side_effect=Exception("Stop loop")):
 
+            mock_manager.connect = AsyncMock()
             mock_db = Mock()
             mock_session.return_value = mock_db
 
-            # Mock admin user
             mock_user = Mock()
             mock_user.role.value = "ADMIN"
             mock_user.status.value = "ACTIVE"
@@ -241,29 +242,17 @@ class TestWebSocketDashboard:
 
             mock_get_data.return_value = {"test": "data"}
 
-            # Note: We can't easily test the full websocket loop due to exception handling
-            # But we can verify that authentication and connection setup works
-            # The websocket will run indefinitely, so we don't assert on exceptions
-
-            # For testing purposes, we'll just verify the websocket gets accepted
-            # and the connection is established properly
             try:
-                # This will run the websocket but we can't stop it cleanly
-                # The test will timeout, but we've verified the setup works
                 await asyncio.wait_for(websocket_dashboard(mock_ws), timeout=0.1)
             except asyncio.TimeoutError:
-                pass  # Expected - websocket runs indefinitely
+                pass
 
-            # Verify websocket was accepted
             mock_ws.accept.assert_called_once()
-
-            # Verify user was added to active connections
-            mock_manager.active_connections.append.assert_called_once_with(mock_ws)
+            mock_manager.connect.assert_called_once_with(mock_ws, "ADMIN", None)
 
     @pytest.mark.asyncio
     async def test_websocket_successful_connection_manager(self):
         """Test successful WebSocket connection for manager user"""
-        # Create a valid token
         token_data = {"sub": "manager_user", "exp": datetime.now().timestamp() + 3600}
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -275,35 +264,29 @@ class TestWebSocketDashboard:
              patch('analytics_ws.manager') as mock_manager, \
              patch('asyncio.sleep', side_effect=Exception("Stop loop")):
 
+            mock_manager.connect = AsyncMock()
             mock_db = Mock()
             mock_session.return_value = mock_db
 
-            # Mock manager user
             mock_user = Mock()
             mock_user.role.value = "MANAGER"
             mock_user.status.value = "ACTIVE"
             mock_user.kindergarten_id = 1
             mock_db.query.return_value.filter.return_value.first.return_value = mock_user
 
-            # Mock the get_realtime_dashboard_data method
             mock_dqs.get_realtime_dashboard_data = AsyncMock(return_value={"test": "data"})
 
-            # Note: We can't easily test the full websocket loop due to exception handling
             try:
                 await asyncio.wait_for(websocket_dashboard(mock_ws), timeout=0.1)
             except asyncio.TimeoutError:
-                pass  # Expected - websocket runs indefinitely
+                pass
 
-            # Verify websocket was accepted
             mock_ws.accept.assert_called_once()
-
-            # Verify user was added to active connections
-            mock_manager.active_connections.append.assert_called_once_with(mock_ws)
+            mock_manager.connect.assert_called_once_with(mock_ws, "MANAGER", 1)
 
     @pytest.mark.asyncio
     async def test_websocket_data_sending(self):
         """Test that dashboard data is sent to websocket"""
-        # Create a valid token
         token_data = {"sub": "admin_user", "exp": datetime.now().timestamp() + 3600}
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -317,38 +300,30 @@ class TestWebSocketDashboard:
              patch('analytics_ws.health_checker') as mock_health, \
              patch('asyncio.sleep', side_effect=Exception("Stop loop")):
 
+            mock_manager.connect = AsyncMock()
             mock_db = Mock()
             mock_session.return_value = mock_db
 
-            # Mock admin user
             mock_user = Mock()
             mock_user.role.value = "ADMIN"
             mock_user.status.value = "ACTIVE"
             mock_db.query.return_value.filter.return_value.first.return_value = mock_user
 
-            test_data = {"test": "dashboard_data"}
-            mock_get_data.return_value = test_data
-
+            mock_get_data.return_value = {"test": "dashboard_data"}
             mock_monitor.get_system_health_score.return_value = 85.5
             mock_health.get_overall_health_status.return_value = "healthy"
 
-            # Note: We can't easily test the data sending due to the infinite loop
-            # But we can verify that the websocket gets accepted and the data function is called
             try:
                 await asyncio.wait_for(websocket_dashboard(mock_ws), timeout=0.1)
             except asyncio.TimeoutError:
-                pass  # Expected - websocket runs indefinitely
+                pass
 
-            # Verify websocket was accepted
             mock_ws.accept.assert_called_once()
-
-            # Verify get_admin_dashboard_data was called (it would be called in the loop)
             mock_get_data.assert_called()
 
     @pytest.mark.asyncio
     async def test_websocket_error_handling(self):
         """Test error handling in websocket data retrieval"""
-        # Create a valid token
         token_data = {"sub": "admin_user", "exp": datetime.now().timestamp() + 3600}
         token = jwt.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -360,23 +335,20 @@ class TestWebSocketDashboard:
              patch('analytics_ws.manager') as mock_manager, \
              patch('asyncio.sleep', side_effect=Exception("Stop loop")):
 
+            mock_manager.connect = AsyncMock()
             mock_db = Mock()
             mock_session.return_value = mock_db
 
-            # Mock admin user
             mock_user = Mock()
             mock_user.role.value = "ADMIN"
             mock_user.status.value = "ACTIVE"
             mock_db.query.return_value.filter.return_value.first.return_value = mock_user
 
-            # Note: We can't easily test error handling in the loop due to exception catching
-            # But we can verify that the websocket gets accepted
             try:
                 await asyncio.wait_for(websocket_dashboard(mock_ws), timeout=0.1)
             except asyncio.TimeoutError:
-                pass  # Expected - websocket runs indefinitely
+                pass
 
-            # Verify websocket was accepted
             mock_ws.accept.assert_called_once()
 
 

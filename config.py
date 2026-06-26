@@ -438,6 +438,23 @@ def validate_production_settings():
         if not settings.CLAMAV_HOST:
             raise RuntimeError("VIRUS_SCAN_ENABLED=true but CLAMAV_HOST is not set.")
 
+    # Rate-limit storage: in production the rate limiter must use Redis, not the
+    # in-process memory backend.  The memory backend resets on every worker restart
+    # and is not shared across multiple Uvicorn workers, so limits are trivially
+    # bypassed under load.
+    if not settings.RATE_LIMIT_STORAGE_URI or settings.RATE_LIMIT_STORAGE_URI.startswith("memory://"):
+        raise RuntimeError(
+            "CRITICAL: RATE_LIMIT_STORAGE_URI must be a Redis URI in production "
+            "(e.g. redis://localhost:6379/1). The in-process 'memory://' backend is "
+            "not shared across workers and can be bypassed. "
+            "Set RATE_LIMIT_STORAGE_URI in .env."
+        )
+    if not settings.RATE_LIMIT_STORAGE_URI.startswith(("redis://", "rediss://", "redis+sentinel://")):
+        raise RuntimeError(
+            f"CRITICAL: RATE_LIMIT_STORAGE_URI={settings.RATE_LIMIT_STORAGE_URI!r} is not a "
+            "recognised Redis URI scheme. Expected 'redis://', 'rediss://', or 'redis+sentinel://'."
+        )
+
     logger.info("✓ Production configuration validation passed")
 
 

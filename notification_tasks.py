@@ -16,6 +16,24 @@ from sqlalchemy import or_
 
 logger = logging.getLogger(__name__)
 
+
+def _push_to_ws(notification: models.Notification) -> None:
+    """Fire-and-forget: publish the in-app notification to the user's WS channel."""
+    try:
+        from realtime_service import publish_notification
+        publish_notification(
+            notification.user_id,
+            {
+                "type": "notification",
+                "notification_id": notification.id,
+                "notification_type": notification.notification_type.value,
+                "payload": notification.payload,
+            },
+        )
+    except Exception:
+        logger.warning("Failed to push WS notification for user %d", notification.user_id)
+
+
 def get_supervisor_classes(db: SessionLocal, supervisor_id: int) -> list[int]:
     """Get class IDs assigned to supervisor for current date"""
     from datetime import date
@@ -217,6 +235,8 @@ def check_daily_report_compliance() -> None:
             )
             db.add(notification)
             db.commit()
+            db.refresh(notification)
+            _push_to_ws(notification)
 
             # Queue delivery tasks
             if settings.NOTIFICATIONS_EMAIL_ENABLED:
@@ -251,6 +271,8 @@ def check_daily_report_compliance() -> None:
                     )
                     db.add(mgr_notification)
                     db.commit()
+                    db.refresh(mgr_notification)
+                    _push_to_ws(mgr_notification)
 
     except (RuntimeError, TypeError, ValueError, AttributeError, OSError) as exc:
         logger.error("Error in daily report compliance check: %s", exc)
@@ -315,6 +337,8 @@ def send_daily_report_reminder() -> None:
             )
             db.add(notification)
             db.commit()
+            db.refresh(notification)
+            _push_to_ws(notification)
 
             if settings.NOTIFICATIONS_PUSH_ENABLED:
                 send_push_notification.delay(notification.id)

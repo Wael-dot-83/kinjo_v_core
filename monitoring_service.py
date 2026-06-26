@@ -326,6 +326,9 @@ class HealthChecker:
         # External services check
         checks["external_services"] = await self._check_external_services()
 
+        # Notification delivery health check
+        checks["notifications"] = await self._check_notification_failures()
+
         # Cache/store results
         self.last_checks.update(checks)
 
@@ -484,6 +487,71 @@ class HealthChecker:
                 message=f"External services check partially failed: {str(e)}",
                 details={"error": str(e)}
             )
+
+    async def _check_notification_failures(self) -> HealthCheckResult:
+        """
+        Health check: notification delivery failure rate in the last hour.
+        Warning if failure rate > 20 %; unhealthy if > 50 % or absolute failures > 50.
+        """
+        start_time = time.time()
+        db_gen = get_db()
+        db = None
+        try:
+            import models as _models
+            from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+            db = next(db_gen)
+            cutoff = _dt.now(_tz.utc) - _td(hours=1)
+            total = (
+                db.query(_models.Notification)
+                .filter(_models.Notification.created_at >= cutoff)
+                .count()
+            )
+            failed = (
+                db.query(_models.Notification)
+                .filter(
+                    _models.Notification.created_at >= cutoff,
+                    _models.Notification.status == _models.NotificationStatus.FAILED,
+                )
+                .count()
+            )
+            response_time = time.time() - start_time
+            failure_rate = (failed / total) if total > 0 else 0.0
+
+            if failed > 50 or failure_rate > 0.5:
+                return HealthCheckResult(
+                    status="unhealthy",
+                    response_time=response_time,
+                    message=f"High notification failure rate: {failed}/{total} in last hour",
+                    details={"total": total, "failed": failed, "failure_rate": round(failure_rate, 3)},
+                )
+            if failure_rate > 0.2:
+                return HealthCheckResult(
+                    status="warning",
+                    response_time=response_time,
+                    message=f"Elevated notification failure rate: {failed}/{total}",
+                    details={"total": total, "failed": failed, "failure_rate": round(failure_rate, 3)},
+                )
+            return HealthCheckResult(
+                status="healthy",
+                response_time=response_time,
+                message=f"Notification delivery OK: {failed}/{total} failures in last hour",
+                details={"total": total, "failed": failed, "failure_rate": round(failure_rate, 3)},
+            )
+        except Exception as exc:
+            response_time = time.time() - start_time
+            return HealthCheckResult(
+                status="warning",
+                response_time=response_time,
+                message=f"Notification health check failed: {exc}",
+                details={"error": str(exc)},
+            )
+        finally:
+            try:
+                if db is not None:
+                    db.close()
+                db_gen.close()
+            except RuntimeError:
+                pass
 
     def get_overall_health_status(self) -> str:
         """Get overall health status"""

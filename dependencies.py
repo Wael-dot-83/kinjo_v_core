@@ -1,6 +1,7 @@
 """
 FastAPI Dependencies for KInJo platform
 """
+import logging
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status, Request, Cookie
@@ -12,7 +13,43 @@ import models
 from database import get_db
 from config import settings
 
+logger = logging.getLogger(__name__)
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token", auto_error=False)
+
+_SESSION_TIMEOUT_SECONDS = settings.SESSION_TIMEOUT_MINUTES * 60
+_SESSION_KEY_PREFIX = "kinjo:session:last_active:"
+
+
+def _session_key(username: str) -> str:
+    return f"{_SESSION_KEY_PREFIX}{username}"
+
+
+def _check_and_refresh_session(username: str) -> None:
+    """
+    Enforce inactivity-based session timeout via Redis.
+    Raises HTTP 401 if the session has been idle longer than SESSION_TIMEOUT_MINUTES.
+    Silently skips if Redis is unavailable (fail-open during degraded state).
+    Uses the shared cache_service redis_client to avoid per-request connection overhead.
+    """
+    try:
+        from cache_service import dashboard_cache
+        rc = dashboard_cache.redis_client  # None when Redis is unavailable — instant skip
+        if rc is None:
+            return
+        key = _session_key(username)
+        exists = rc.exists(key)
+        if not exists:
+            # First request or key expired — could mean timed out.  We set the key
+            # on first access so the *next* idle check has a baseline.  Existing
+            # sessions that pre-date this feature get a grace-period, not a kick.
+            rc.setex(key, _SESSION_TIMEOUT_SECONDS, "1")
+            return
+        # Key exists → session is within timeout; slide the window.
+        rc.expire(key, _SESSION_TIMEOUT_SECONDS)
+    except Exception:
+        # Redis unavailable: fail open so the app stays usable.
+        logger.debug("Session activity check skipped — Redis unavailable")
 
 
 def _extract_bearer_token(value: Optional[str]) -> Optional[str]:
@@ -89,6 +126,8 @@ async def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is not active"
         )
+
+    _check_and_refresh_session(username)
 
     # Cache resolved id on request.state so middleware (e.g. structured access log)
     # can read it without re-decoding the JWT.

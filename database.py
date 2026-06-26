@@ -6,7 +6,7 @@ import sqlite3
 import uuid
 from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import sessionmaker, declarative_base, with_loader_criteria, Session
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import StaticPool, NullPool
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,13 @@ if settings.DATABASE_URL.startswith("sqlite"):
         # StaticPool ensures all connections share the single in-memory DB
         # (required for tests and CI that use DATABASE_URL=sqlite:///:memory:)
         _engine_kwargs["poolclass"] = StaticPool
+        _engine_kwargs.pop("pool_pre_ping", None)
+    else:
+        # NullPool for file-based SQLite: each db.close() destroys the underlying
+        # connection immediately. This prevents FastAPI's request-scoped session
+        # from holding a write lock while BackgroundTasks try to open a second
+        # writer (which would deadlock at the busy_timeout boundary).
+        _engine_kwargs["poolclass"] = NullPool
         _engine_kwargs.pop("pool_pre_ping", None)
     engine = create_engine(settings.DATABASE_URL, **_engine_kwargs)
 

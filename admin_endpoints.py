@@ -23,6 +23,8 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone, date
 from typing import List, Optional, Dict, Any, Set, Tuple, Union
 
+_JORDAN_TZ = timezone(timedelta(hours=3))
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, UploadFile, File, Form
 from fastapi.responses import Response, JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
@@ -3260,11 +3262,10 @@ def get_admin_dashboard(
     db: Session = Depends(get_db)
 ):
     """Get comprehensive admin dashboard data with system overview, KPIs, charts, and alerts."""
-    _JORDAN_TZ = timezone(timedelta(hours=3))
     now = datetime.now(_JORDAN_TZ)
     today = now.date()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    cache_key = f"dashboard:admin:v2:period_{period_days}:date_{today.isoformat()}"
+    cache_key = f"dashboard:admin:v3:period_{period_days}:date_{today.isoformat()}"
     cached_payload = _admin_dashboard_cache_get(cache_key)
     if isinstance(cached_payload, dict):
         return AdminDashboardResponse(**cached_payload)
@@ -4125,40 +4126,32 @@ def create_backup(
     current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """Create a new backup (Admin only)"""
-    from backup_manager import backup_manager
+    """Enqueue a backup job and return immediately (Admin only)."""
+    from backup_tasks import run_backup
 
     try:
-        # Create database backup
-        db_backup = backup_manager.create_database_backup(backup_type)
-
-        results = {"database": db_backup}
-
-        if include_uploads:
-            uploads_backup = backup_manager.create_uploads_backup(backup_type)
-            results["uploads"] = uploads_backup
-
-        if include_config:
-            config_backup = backup_manager.create_config_backup(backup_type)
-            results["config"] = config_backup
-
-        # Log the backup creation
-        log_audit_event(
-            db, "BACKUP_CREATED", current_user, "Backup",
-            metadata={"backup_type": backup_type, "components": list(results.keys())},
-            sensitivity_level=2
+        task = run_backup.delay(
+            backup_type=backup_type,
+            include_uploads=include_uploads,
+            include_config=include_config,
+            triggered_by_user_id=current_user.id,
         )
-
+        log_audit_event(
+            db, AuditAction.BACKUP_ENQUEUED, current_user, "Backup",
+            metadata={"backup_type": backup_type, "task_id": task.id},
+            sensitivity_level=2,
+        )
         return {
-            "message": f"{backup_type.title()} backup created successfully",
-            "backups": results
+            "message": f"{backup_type.title()} backup enqueued",
+            "task_id": task.id,
+            "status": "pending",
         }
 
     except HTTPException:
         raise
-    except (OSError, IOError, SQLAlchemyError, ValueError) as e:
-        logger.error(f"Backup creation failed: {e}")
-        raise HTTPException(status_code=500, detail="Backup creation failed")
+    except Exception as e:
+        logger.error("Failed to enqueue backup task: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to enqueue backup")
 
 
 @router.get("/admin/backup/list")
@@ -5695,3 +5688,143 @@ def calculate_governorate_risk_score(governance_score: float, incident_count: in
     if incident_count > 10:
         score += 20
     return min(max(int(score), 0), 100)
+
+
+# =============================================================================
+# Admin self-service profile endpoints
+# =============================================================================
+
+class AdminProfileUpdateSchema(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    full_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    email: Optional[str] = Field(None, min_length=1, max_length=255)
+    phone_number: Optional[str] = Field(None, min_length=1, max_length=20)
+
+
+class AdminPasswordChangeSchema(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8)
+    confirm_password: str = Field(..., min_length=8)
+
+
+@router.put("/admin/profile")
+@limiter.limit("10/minute")
+def update_admin_profile(
+    request: Request,
+    payload: AdminProfileUpdateSchema,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Update the logged-in admin's own profile fields."""
+    before = {
+        "full_name": current_user.full_name,
+        "email": current_user.email,
+        "phone_number": current_user.phone_number,
+    }
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name
+    if payload.email is not None:
+        current_user.email = payload.email
+    if payload.phone_number is not None:
+        current_user.phone_number = payload.phone_number
+
+    db.commit()
+    db.refresh(current_user)
+
+    after = {
+        "full_name": current_user.full_name,
+        "email": current_user.email,
+        "phone_number": current_user.phone_number,
+    }
+    log_audit_event(
+        db, AuditAction.ADMIN_PROFILE_UPDATED, current_user, "User",
+        target_ids=current_user.id,
+        before_state=before,
+        after_state=after,
+        sensitivity_level=2,
+    )
+    return {
+        "message": "Profile updated",
+        "full_name": current_user.full_name,
+        "email": current_user.email,
+        "phone_number": current_user.phone_number,
+        "correlation_id": get_correlation_id(),
+    }
+
+
+@router.post("/admin/profile/password")
+@limiter.limit("5/minute")
+def change_admin_password(
+    request: Request,
+    payload: AdminPasswordChangeSchema,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Allow the logged-in admin to change their own password."""
+    if payload.new_password != payload.confirm_password:
+        raise validation_error("New passwords do not match")
+
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        log_audit_event(
+            db, AuditAction.ADMIN_PASSWORD_CHANGE_FAILED, current_user, "User",
+            target_ids=current_user.id,
+            metadata={"reason": "Current password incorrect"},
+            sensitivity_level=3,
+        )
+        raise unauthenticated_error("Current password is incorrect")
+
+    current_user.hashed_password = get_password_hash(payload.new_password)
+    current_user.password_changed_at = datetime.now(_JORDAN_TZ)
+    current_user.must_change_password = False
+    db.commit()
+
+    log_audit_event(
+        db, AuditAction.ADMIN_PASSWORD_CHANGED, current_user, "User",
+        target_ids=current_user.id,
+        sensitivity_level=3,
+    )
+    return {"message": "Password changed successfully", "correlation_id": get_correlation_id()}
+
+
+@router.get("/admin/profile/audit-log")
+@limiter.limit("30/minute")
+def get_admin_own_audit_log(
+    request: Request,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Return audit log entries for the current admin user."""
+    total = db.query(func.count(models.AuditLog.id)).filter(
+        models.AuditLog.user_id == current_user.id
+    ).scalar() or 0
+
+    rows = (
+        db.query(models.AuditLog)
+        .filter(models.AuditLog.user_id == current_user.id)
+        .order_by(models.AuditLog.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    events = []
+    for row in rows:
+        ts = row.created_at
+        if ts and ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc).astimezone(_JORDAN_TZ)
+        elif ts:
+            ts = ts.astimezone(_JORDAN_TZ)
+        events.append({
+            "id": row.id,
+            "action": row.action,
+            "entity_type": row.entity_type,
+            "entity_id": row.entity_id,
+            "ip_address": row.ip_address,
+            "sensitivity_level": row.sensitivity_level,
+            "created_at": ts.isoformat() if ts else None,
+        })
+
+    return {"total": total, "events": events}

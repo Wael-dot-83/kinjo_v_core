@@ -507,6 +507,61 @@
     "cancel_text": "Cancel",
     "loading": "Loading..."
   },
+  "profile": {
+    "title": "My Profile",
+    "subtitle": "Manage your account information and security settings",
+    "account_info": "Account Information",
+    "security": "Security",
+    "edit_profile": "Edit Profile",
+    "change_password": "Change Password",
+    "save_changes": "Save Changes",
+    "saving": "Saving…",
+    "full_name": "Full Name",
+    "email": "Email Address",
+    "phone": "Phone Number",
+    "username": "Username",
+    "role": "Role",
+    "status": "Account Status",
+    "member_since": "Member Since",
+    "last_login": "Last Login",
+    "never": "Never",
+    "mfa_status": "Two-Factor Auth",
+    "mfa_enabled": "Enabled",
+    "mfa_disabled": "Disabled",
+    "current_password": "Current Password",
+    "new_password": "New Password",
+    "confirm_password": "Confirm New Password",
+    "password_requirements": "At least 8 characters",
+    "department": "Family & Childhood Directorate",
+    "audit_log": "Recent Activity",
+    "audit_log_subtitle": "Your last 20 admin actions",
+    "audit_no_events": "No activity recorded yet",
+    "audit_action": "Action",
+    "audit_entity": "Entity",
+    "audit_time": "Time",
+    "audit_ip": "IP Address",
+    "stat_total_actions": "Total Actions",
+    "stat_days_active": "Days Active",
+    "stat_last_login": "Last Login",
+    "stat_mfa": "2FA Status",
+    "success_profile": "Profile updated successfully",
+    "success_password": "Password changed successfully",
+    "error_current_password": "Current password is incorrect",
+    "error_password_mismatch": "New passwords do not match",
+    "permissions": "Permissions",
+    "perm_admin": "System Administrator",
+    "perm_all_data": "Full Data Access",
+    "perm_audit": "Audit Log Access",
+    "perm_user_mgmt": "User Management",
+    "quick_settings": "Quick Settings",
+    "qs_language": "Interface Language",
+    "qs_bilingual": "Bilingual Mode",
+    "qs_bilingual_hint": "Show Arabic and English side by side",
+    "qs_audit_verbose": "Verbose Audit Log",
+    "qs_audit_verbose_hint": "Include low-sensitivity events in audit feed",
+    "qs_impersonation": "Allow Impersonation",
+    "qs_impersonation_hint": "Allow support staff to impersonate this account"
+  },
   "heatmap": {
     "multi_indicator_title": "Geographic Indicator Heatmaps",
     "multi_indicator_description": "Six separate heatmaps by indicator across Jordan's 12 governorates.",
@@ -540,6 +595,29 @@
       "governance": "Shows risk associated with low governance scores.",
       "data_quality": "Shows risk associated with data quality and completeness.",
       "occupancy": "Shows risk associated with capacity and occupancy rates."
+    }
+  },
+  "a11y": {
+    "skip_nav": "Skip to main content"
+  },
+  "classification": {
+    "chart": {
+      "band_note": "--",
+      "score_note": "--",
+      "aspect_note": "--"
+    },
+    "loading": {
+      "text": "Loading classification data..."
+    },
+    "table": {
+      "name": "Name",
+      "rank": "Rank",
+      "classification": "Classification",
+      "final_score": "Final Score",
+      "percentile": "Percentile",
+      "trend": "Trend",
+      "data_coverage": "Data Coverage",
+      "actions": "Actions"
     }
   }
 }
