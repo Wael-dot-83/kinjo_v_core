@@ -2569,6 +2569,25 @@ def backfill_governance_kpis(
         "updated_rows": updated,
     }
 
+
+@router.post("/admin/kpi/backfill-governance")
+def backfill_admin_governance_kpis(
+    period_start: date = Query(..., description="Start date (inclusive)"),
+    period_end: date = Query(..., description="End date (inclusive)"),
+    kindergarten_ids: Optional[List[int]] = Query(None, description="Optional kindergarten ids; defaults to all active"),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Canonical admin namespace for governance KPI backfill."""
+    return backfill_governance_kpis(
+        period_start=period_start,
+        period_end=period_end,
+        kindergarten_ids=kindergarten_ids,
+        current_user=current_user,
+        db=db,
+    )
+
+
 @router.get("/kpi/student-distribution")
 def get_student_distribution(
     current_user: models.User = Depends(get_current_user),

@@ -48,7 +48,8 @@ def check_in_child(
     validators.validate_kindergarten_scope(current_user, active_enrollment.kindergarten_id)
 
     # Check if already checked in today (any record, even if checked out)
-    today = date.today()
+    from utils.time_utils import today_amman
+    today = today_amman()
     existing_checkin = db.query(models.AttendanceLog).filter(
         models.AttendanceLog.child_id == child_id,
         models.AttendanceLog.date == today
@@ -104,7 +105,8 @@ def check_out_child(
     validators.validate_supervisor_role(current_user)
     
     # Find today's check-in without check-out
-    today = date.today()
+    from utils.time_utils import today_amman
+    today = today_amman()
     attendance = db.query(models.AttendanceLog).filter(
         models.AttendanceLog.child_id == child_id,
         models.AttendanceLog.date == today,
@@ -469,7 +471,8 @@ def get_attendance_summary(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return _attendance_summary(db, date.today(), current_user)
+    from utils.time_utils import today_amman
+    return _attendance_summary(db, today_amman(), current_user)
 
 
 @router.get("/attendance/today")
@@ -477,7 +480,8 @@ def get_attendance_today(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return _attendance_summary(db, date.today(), current_user)
+    from utils.time_utils import today_amman
+    return _attendance_summary(db, today_amman(), current_user)
 
 
 @router.get("/attendance/history-summary")

@@ -90,30 +90,30 @@ function populateSummaryCards(metrics, type) {
   let cardsHtml = "";
   if (type.toUpperCase() === "GOVERNORATE") {
     cardsHtml = `
-            <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("عدد الروضات", "Number of kindergartens")}</h6><h3 class="fw-bold">${metrics.kindergarten_count}</h3>
+            <div class="col-md-4"><div class="card glass-panel border-0 shadow-sm hover-elevate h-100"><div class="card-body p-card text-center">
+                <h6 class="text-muted fw-semibold" style="font: var(--type-label)">${drilldownText("عدد الروضات", "Number of kindergartens")}</h6><h3 class="fw-bold text-primary mb-0">${metrics.kindergarten_count}</h3>
             </div></div></div>
-            <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("إجمالي الأطفال", "Total children")}</h6><h3 class="fw-bold">${metrics.children_count || "N/A"}</h3>
+            <div class="col-md-4"><div class="card glass-panel border-0 shadow-sm hover-elevate h-100"><div class="card-body p-card text-center">
+                <h6 class="text-muted fw-semibold" style="font: var(--type-label)">${drilldownText("إجمالي الأطفال", "Total children")}</h6><h3 class="fw-bold text-success mb-0">${metrics.children_count || "N/A"}</h3>
             </div></div></div>
-            <div class="col-md-4"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("متوسط الحوكمة", "Average governance")}</h6><h3 class="fw-bold">${metrics.governance_score ? metrics.governance_score.toFixed(1) : "N/A"}</h3>
+            <div class="col-md-4"><div class="card glass-panel border-0 shadow-sm hover-elevate h-100"><div class="card-body p-card text-center">
+                <h6 class="text-muted fw-semibold" style="font: var(--type-label)">${drilldownText("متوسط الحوكمة", "Average governance")}</h6><h3 class="fw-bold text-info mb-0">${metrics.governance_score ? metrics.governance_score.toFixed(1) : "N/A"}</h3>
             </div></div></div>
         `;
   } else {
     // KINDERGARTEN
     cardsHtml = `
-            <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("الأطفال", "Children")}</h6><h3 class="fw-bold">${metrics.children_count}</h3>
+            <div class="col-xl-3 col-md-6"><div class="card glass-panel border-0 shadow-sm hover-elevate h-100"><div class="card-body p-card text-center">
+                <h6 class="text-muted fw-semibold" style="font: var(--type-label)">${drilldownText("الأطفال", "Children")}</h6><h3 class="fw-bold text-primary mb-0">${metrics.children_count}</h3>
             </div></div></div>
-            <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("نسبة الحضور", "Attendance rate")}</h6><h3 class="fw-bold">${(metrics.attendance_rate ?? 0).toFixed(1)}%</h3>
+            <div class="col-xl-3 col-md-6"><div class="card glass-panel border-0 shadow-sm hover-elevate h-100"><div class="card-body p-card text-center">
+                <h6 class="text-muted fw-semibold" style="font: var(--type-label)">${drilldownText("نسبة الحضور", "Attendance rate")}</h6><h3 class="fw-bold text-success mb-0">${(metrics.attendance_rate ?? 0).toFixed(1)}%</h3>
             </div></div></div>
-            <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("معدل الحوادث", "Incident rate")}</h6><h3 class="fw-bold">${(metrics.incident_rate ?? 0).toFixed(2)}</h3>
+            <div class="col-xl-3 col-md-6"><div class="card glass-panel border-0 shadow-sm hover-elevate h-100"><div class="card-body p-card text-center">
+                <h6 class="text-muted fw-semibold" style="font: var(--type-label)">${drilldownText("معدل الحوادث", "Incident rate")}</h6><h3 class="fw-bold text-warning mb-0">${(metrics.incident_rate ?? 0).toFixed(2)}</h3>
             </div></div></div>
-            <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body">
-                <h6 class="text-muted">${drilldownText("الحوكمة", "Governance")}</h6><h3 class="fw-bold">${(metrics.governance_score ?? 0).toFixed(1)}</h3>
+            <div class="col-xl-3 col-md-6"><div class="card glass-panel border-0 shadow-sm hover-elevate h-100"><div class="card-body p-card text-center">
+                <h6 class="text-muted fw-semibold" style="font: var(--type-label)">${drilldownText("الحوكمة", "Governance")}</h6><h3 class="fw-bold text-info mb-0">${(metrics.governance_score ?? 0).toFixed(1)}</h3>
             </div></div></div>
         `;
   }

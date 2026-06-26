@@ -1362,7 +1362,8 @@ def mark_attendance(
         raise HTTPException(status_code=400, detail="Child does not have active enrollment")
     validators.validate_kindergarten_scope(current_user, enrollment.kindergarten_id)
 
-    today = date.today()
+    from utils.time_utils import today_amman
+    today = today_amman()
     existing = db.execute(
         text(
             "SELECT id FROM absence_requests "

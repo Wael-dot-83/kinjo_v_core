@@ -307,117 +307,6 @@ def get_anomalies(
     return {"anomalies": [item.model_dump() for item in response_items]}
 
 
-@router.get("/drilldown/governorate/{gov_id}")
-def drilldown_governorate(
-    gov_id: str,
-    start_date: date = Query(...),
-    end_date: date = Query(...),
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    _ensure_admin_only(current_user)
-    if start_date > end_date:
-        raise HTTPException(status_code=422, detail="start_date must be before or equal to end_date")
-    results = AnalyticsService.get_governorate_breakdown(db, start_date, end_date, governorate=gov_id)
-    kgs = [r.model_dump() for r in results]
-    kpis = {
-        "kindergarten_count": len(kgs),
-        "children_count": sum(r["children_count"] for r in kgs),
-        "attendance_rate": round(sum(r["attendance_rate"] for r in kgs) / max(len(kgs), 1), 2),
-        "incident_rate": round(sum(r["incident_rate"] for r in kgs) / max(len(kgs), 1), 2),
-        "governance_score": round(sum(r["governance_score"] for r in kgs) / max(len(kgs), 1), 2),
-    }
-    response = DrilldownResponse(
-        scope={"type": "GOVERNORATE", "id": gov_id, "label": gov_id},
-        kpis=kpis,
-        charts={"attendance_trend": [], "incident_trend": []},
-        breakdowns={"kindergartens": kgs},
-        top_bottom_lists={"top": kgs[:5], "bottom": kgs[-5:] if len(kgs) > 5 else []},
-        risk={"anomalies": []},
-        metadata={"period_start": start_date.isoformat(), "period_end": end_date.isoformat()},
-    )
-    db.add(models.DrilldownPath(user_id=current_user.id, scope_type="GOVERNORATE", scope_id=gov_id))
-    db.commit()
-    return response.model_dump()
-
-
-@router.get("/drilldown/kindergarten/{kg_id}")
-def drilldown_kindergarten(
-    kg_id: int,
-    start_date: date = Query(...),
-    end_date: date = Query(...),
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    _ensure_admin_only(current_user)
-    if start_date > end_date:
-        raise HTTPException(status_code=422, detail="start_date must be before or equal to end_date")
-    metrics = AnalyticsService.get_kindergarten_metrics(db, kg_id, start_date, end_date)
-    response = DrilldownResponse(
-        scope={"type": "KINDERGARTEN", "id": kg_id, "label": _scope_label(db, "KINDERGARTEN", str(kg_id))},
-        kpis=metrics,
-        charts={"attendance_trend": AnalyticsService.get_kindergarten_trend(db, kg_id, start_date, end_date, "attendance")},
-        breakdowns={},
-        top_bottom_lists={},
-        risk={"high_risk_children": AnalyticsService.get_high_risk_children(db, [kg_id])},
-        metadata={"period_start": start_date.isoformat(), "period_end": end_date.isoformat()},
-    )
-    db.add(models.DrilldownPath(user_id=current_user.id, scope_type="KINDERGARTEN", scope_id=str(kg_id)))
-    db.commit()
-    return response.model_dump()
-
-
-@router.get("/drilldown/class/{class_id}")
-def drilldown_class(
-    class_id: int,
-    start_date: date = Query(...),
-    end_date: date = Query(...),
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    _ensure_admin_only(current_user)
-    if start_date > end_date:
-        raise HTTPException(status_code=422, detail="start_date must be before or equal to end_date")
-    metrics = AnalyticsService.get_class_metrics(db, class_id, start_date, end_date)
-    response = DrilldownResponse(
-        scope={"type": "CLASS", "id": class_id, "label": _scope_label(db, "CLASS", str(class_id))},
-        kpis=metrics,
-        charts={"attendance_trend": AnalyticsService.get_class_trend(db, class_id, start_date, end_date)},
-        breakdowns={},
-        top_bottom_lists={},
-        risk={},
-        metadata={"period_start": start_date.isoformat(), "period_end": end_date.isoformat()},
-    )
-    db.add(models.DrilldownPath(user_id=current_user.id, scope_type="CLASS", scope_id=str(class_id)))
-    db.commit()
-    return response.model_dump()
-
-
-@router.get("/drilldown/child/{child_id}")
-def drilldown_child(
-    child_id: int,
-    start_date: date = Query(...),
-    end_date: date = Query(...),
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    _ensure_admin_only(current_user)
-    if start_date > end_date:
-        raise HTTPException(status_code=422, detail="start_date must be before or equal to end_date")
-    metrics = AnalyticsService.get_child_metrics(db, child_id, start_date, end_date)
-    response = DrilldownResponse(
-        scope={"type": "CHILD", "id": child_id, "label": _scope_label(db, "CHILD", str(child_id))},
-        kpis=metrics,
-        charts={"attendance_trend": AnalyticsService.get_child_trend(db, child_id, start_date, end_date)},
-        breakdowns={},
-        top_bottom_lists={},
-        risk={},
-        metadata={"period_start": start_date.isoformat(), "period_end": end_date.isoformat()},
-    )
-    db.add(models.DrilldownPath(user_id=current_user.id, scope_type="CHILD", scope_id=str(child_id)))
-    db.commit()
-    return response.model_dump()
-
 
 @router.get("/alerts")
 def list_alerts(
@@ -2169,8 +2058,8 @@ def get_kpi_analytics(
         total_logs = db.query(models.AttendanceLog).join(
             models.Class, models.AttendanceLog.class_id == models.Class.id
         ).filter(
-            func.date(models.AttendanceLog.check_in_at) >= period_start,
-            func.date(models.AttendanceLog.check_in_at) <= period_end
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end
         )
         if kg_id:
             total_logs = total_logs.filter(models.Class.kindergarten_id == kg_id)
@@ -2239,8 +2128,8 @@ def get_kpi_analytics(
         attended_logs_q = db.query(models.AttendanceLog).join(
             models.Class, models.AttendanceLog.class_id == models.Class.id
         ).filter(
-            func.date(models.AttendanceLog.check_in_at) >= period_start,
-            func.date(models.AttendanceLog.check_in_at) <= period_end,
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
             models.AttendanceLog.status.in_([
                 models.AttendanceStatus.PRESENT,
                 models.AttendanceStatus.LATE,
@@ -2340,7 +2229,7 @@ def get_analytics_attendance(
     present_today = db.query(models.AttendanceLog).join(
         models.Class, models.AttendanceLog.class_id == models.Class.id
     ).filter(
-        func.date(models.AttendanceLog.check_in_at) == today,
+        models.AttendanceLog.date == today,
         models.AttendanceLog.check_out_at.is_(None)  # Still present
     )
     if kg_id:
@@ -2351,8 +2240,8 @@ def get_analytics_attendance(
     attendance_logs = db.query(models.AttendanceLog).join(
         models.Class, models.AttendanceLog.class_id == models.Class.id
     ).filter(
-        func.date(models.AttendanceLog.check_in_at) >= period_start,
-        func.date(models.AttendanceLog.check_in_at) <= period_end
+        models.AttendanceLog.date >= period_start,
+        models.AttendanceLog.date <= period_end
     )
     if kg_id:
         attendance_logs = attendance_logs.filter(models.Class.kindergarten_id == kg_id)
@@ -2419,8 +2308,8 @@ def get_analytics_dashboard(
         attendance_logs = db.query(models.AttendanceLog).join(
             models.Class, models.AttendanceLog.class_id == models.Class.id
         ).filter(
-            func.date(models.AttendanceLog.check_in_at) >= period_start,
-            func.date(models.AttendanceLog.check_in_at) <= period_end
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end
         )
         if kg_id:
             attendance_logs = attendance_logs.filter(models.Class.kindergarten_id == kg_id)
@@ -2451,8 +2340,8 @@ def get_analytics_dashboard(
         attended_q = db.query(models.AttendanceLog).join(
             models.Class, models.AttendanceLog.class_id == models.Class.id
         ).filter(
-            func.date(models.AttendanceLog.check_in_at) >= period_start,
-            func.date(models.AttendanceLog.check_in_at) <= period_end,
+            models.AttendanceLog.date >= period_start,
+            models.AttendanceLog.date <= period_end,
             models.AttendanceLog.status.in_([
                 models.AttendanceStatus.PRESENT,
                 models.AttendanceStatus.LATE,
@@ -3236,6 +3125,20 @@ def get_export_status(
 
     if not job:
         raise HTTPException(status_code=404, detail="Export job not found")
+
+    # Mitigation: Fail orphaned pending jobs
+    if job.status == models.ExportStatus.PENDING:
+        from datetime import datetime, timezone, timedelta
+        now_utc = datetime.now(timezone.utc)
+        # Ensure job.created_at is offset-aware before subtracting
+        job_time = job.created_at
+        if job_time.tzinfo is None:
+            job_time = job_time.replace(tzinfo=timezone.utc)
+        age = now_utc - job_time
+        if age > timedelta(hours=1):
+            job.status = models.ExportStatus.FAILED
+            db.commit()
+            db.refresh(job)
 
     return ExportJobResponse(
         job_id=job.id,
@@ -4151,6 +4054,27 @@ def preview_report(
     if not report_type or not period_start or not period_end:
         raise HTTPException(status_code=400, detail="report_type, period_start, and period_end are required")
 
+    from datetime import datetime, timezone
+    import zoneinfo
+    
+    if isinstance(period_start, str):
+        try:
+            period_start = datetime.strptime(period_start, "%Y-%m-%d").date()
+        except ValueError:
+            period_start = datetime.strptime(period_start[:10], "%Y-%m-%d").date()
+            
+    if isinstance(period_end, str):
+        try:
+            period_end = datetime.strptime(period_end, "%Y-%m-%d").date()
+        except ValueError:
+            period_end = datetime.strptime(period_end[:10], "%Y-%m-%d").date()
+
+    from utils.time_utils import get_amman_tz
+    amman_tz = get_amman_tz()
+
+    utc_start = datetime.combine(period_start, datetime.min.time()).replace(tzinfo=amman_tz).astimezone(timezone.utc)
+    utc_end = datetime.combine(period_end, datetime.max.time()).replace(tzinfo=amman_tz).astimezone(timezone.utc)
+
     # Resolve scope
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
     kg_filter = None
@@ -4181,36 +4105,52 @@ def preview_report(
 
     if report_type == "attendance":
         kpis = [
-            {"id": "total_present", "label": "إجمالي الحضور", "value": 0, "unit": ""},
-            {"id": "total_absent", "label": "إجمالي الغياب", "value": 0, "unit": ""},
-            {"id": "attendance_rate", "label": "معدل الحضور", "value": 0, "unit": "%"},
-            {"id": "absence_rate", "label": "معدل الغياب", "value": 0, "unit": "%"},
+            {"id": "total_present", "label_ar": "إجمالي الحضور", "label_en": "Total Present", "value": 0, "unit": ""},
+            {"id": "total_absent", "label_ar": "إجمالي الغياب", "label_en": "Total Absent", "value": 0, "unit": ""},
+            {"id": "attendance_rate", "label_ar": "معدل الحضور", "label_en": "Attendance Rate", "value": 0, "unit": "%"},
+            {"id": "absence_rate", "label_ar": "معدل الغياب", "label_en": "Absence Rate", "value": 0, "unit": "%"},
         ]
         charts = [
-            {"id": "attendance_trend", "type": "line", "label": "اتجاه الحضور"},
-            {"id": "absence_by_governorate", "type": "bar", "label": "الغياب حسب المحافظة"},
+            {"id": "attendance_trend", "type": "line", "label_ar": "اتجاه الحضور", "label_en": "Attendance Trend"},
+            {"id": "absence_by_governorate", "type": "bar", "label_ar": "الغياب حسب المحافظة", "label_en": "Absence by Governorate"},
         ]
         # Use existing analytics functions for preview data
         try:
             summary = AnalyticsService.get_network_summary(db, period_start, period_end, kg_filter)
-            kpis[0]["value"] = summary.total_children
-            kpis[1]["value"] = 0
+            
+            # Query true attendance counts
+            base_query = db.query(models.AttendanceLog.id).filter(
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end
+            )
+            if kg_filter:
+                base_query = base_query.join(models.Child).join(models.EnrollmentApplication).filter(
+                    models.EnrollmentApplication.kindergarten_id.in_(kg_filter),
+                    models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
+                )
+                
+            total_present = base_query.filter(models.AttendanceLog.status == models.AttendanceStatus.PRESENT).count()
+            total_absent = base_query.filter(models.AttendanceLog.status == models.AttendanceStatus.ABSENT).count()
+            
+            kpis[0]["value"] = total_present
+            kpis[1]["value"] = total_absent
             kpis[2]["value"] = summary.attendance_rate
             kpis[3]["value"] = round(100 - summary.attendance_rate, 2)
-            total_records = summary.total_children
-        except Exception:
-            warnings.append("تعذر تحميل بيانات الحضور")
-            insights.append("لا توجد بيانات كافية للحضور في الفترة المحددة")
+            total_records = total_present + total_absent
+        except Exception as e:
+            logger.error(f"Failed to load attendance data: {e}", exc_info=True)
+            warnings.append({"ar": "تعذر تحميل بيانات الحضور", "en": "Failed to load attendance data"})
+            insights.append({"ar": "لا توجد بيانات كافية للحضور في الفترة المحددة", "en": "Insufficient attendance data for the selected period"})
 
     elif report_type == "incidents":
         kpis = [
-            {"id": "total_incidents", "label": "إجمالي الحوادث", "value": 0, "unit": ""},
-            {"id": "open_incidents", "label": "الحوادث المفتوحة", "value": 0, "unit": ""},
-            {"id": "critical_incidents", "label": "حوادث حرجة", "value": 0, "unit": ""},
+            {"id": "total_incidents", "label_ar": "إجمالي الحوادث", "label_en": "Total Incidents", "value": 0, "unit": ""},
+            {"id": "open_incidents", "label_ar": "الحوادث المفتوحة", "label_en": "Open Incidents", "value": 0, "unit": ""},
+            {"id": "critical_incidents", "label_ar": "حوادث حرجة", "label_en": "Critical Incidents", "value": 0, "unit": ""},
         ]
         charts = [
-            {"id": "incidents_over_time", "type": "line", "label": "الحوادث عبر الزمن"},
-            {"id": "incidents_by_severity", "type": "doughnut", "label": "حسب الخطورة"},
+            {"id": "incidents_over_time", "type": "line", "label_ar": "الحوادث عبر الزمن", "label_en": "Incidents Over Time"},
+            {"id": "incidents_by_severity", "type": "doughnut", "label_ar": "حسب الخطورة", "label_en": "By Severity"},
         ]
         try:
             breakdown = AnalyticsService.get_governorate_breakdown(db, period_start, period_end, gov_filter, kg_filter, None)
@@ -4218,35 +4158,60 @@ def preview_report(
             kpis[0]["value"] = int(total_inc)
             total_records = int(total_inc)
         except Exception:
-            warnings.append("تعذر تحميل بيانات الحوادث")
+            warnings.append({"ar": "تعذر تحميل بيانات الحوادث", "en": "Failed to load incident data"})
 
     elif report_type == "compliance":
         kpis = [
-            {"id": "compliance_score", "label": "درجة الامتثال", "value": 0, "unit": "/ 100"},
-            {"id": "governance_score", "label": "درجة الحوكمة", "value": 0, "unit": "/ 100"},
+            {"id": "compliance_score", "label_ar": "درجة الامتثال", "label_en": "Compliance Score", "value": 0, "unit": "%"},
+            {"id": "governance_score", "label_ar": "درجة الحوكمة", "label_en": "Governance Score", "value": 0, "unit": "/ 100"},
         ]
         charts = [
-            {"id": "governance_distribution", "type": "pie", "label": "توزيع الحوكمة"},
+            {"id": "governance_distribution", "type": "pie", "label_ar": "توزيع الحوكمة", "label_en": "Governance Distribution"},
         ]
         try:
+            from kpi_service import KPIService
+            
+            # Genuine Governance Distribution
             dist = AnalyticsService.get_governance_distribution(db, period_start, period_end, kg_filter)
+            
+            # Genuine Network Governance Score
+            gov_score = AnalyticsService._compute_network_governance_score(db, period_start, period_end)
+            kpis[1]["value"] = gov_score
+            
+            # Genuine Ratio Compliance Score
+            kindergartens = db.query(models.Kindergarten.id).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+            if kg_filter:
+                kindergartens = kindergartens.filter(models.Kindergarten.id.in_(kg_filter))
+            kg_ids = [k[0] for k in kindergartens.all()]
+            
+            total_ratio = 0
+            count = 0
+            for k_id in kg_ids:
+                rc = KPIService.compute_ratio_compliance(db, k_id, period_start, period_end)
+                if rc > 0:
+                    total_ratio += rc
+                    count += 1
+            
+            kpis[0]["value"] = round(total_ratio / count, 1) if count > 0 else 0.0
+            
             total = max(dist.green + dist.amber + dist.red, 1)
-            kpis[0]["value"] = round((dist.green / total) * 100, 1)
-            kpis[1]["value"] = round(((dist.green * 100 + dist.amber * 50) / total) / 100, 1)
             total_records = total
-            data_quality["completeness_percent"] = 95.0
-        except Exception:
-            warnings.append("تعذر تحميل بيانات الحوكمة")
+            
+            # Use dynamic quality evaluation
+            data_quality["completeness_percent"] = 100.0 if count > 0 else 0.0
+        except Exception as e:
+            logging.getLogger(__name__).error("Failed to load governance data in preview_report", exc_info=True)
+            warnings.append({"ar": "تعذر تحميل بيانات الحوكمة", "en": "Failed to load governance data"})
 
     elif report_type == "enrollment":
         kpis = [
-            {"id": "total_applications", "label": "إجمالي الطلبات", "value": 0, "unit": ""},
-            {"id": "approved", "label": "موافق عليه", "value": 0, "unit": ""},
-            {"id": "rejected", "label": "مرفوض", "value": 0, "unit": ""},
+            {"id": "total_applications", "label_ar": "إجمالي الطلبات", "label_en": "Total Applications", "value": 0, "unit": ""},
+            {"id": "approved", "label_ar": "موافق عليه", "label_en": "Approved", "value": 0, "unit": ""},
+            {"id": "rejected", "label_ar": "مرفوض", "label_en": "Rejected", "value": 0, "unit": ""},
         ]
         charts = [
-            {"id": "enrollment_funnel", "type": "bar", "label": "قمع التسجيل"},
-            {"id": "source_breakdown", "type": "doughnut", "label": "توزيع المصادر"},
+            {"id": "enrollment_funnel", "type": "bar", "label_ar": "قمع التسجيل", "label_en": "Enrollment Funnel"},
+            {"id": "source_breakdown", "type": "doughnut", "label_ar": "توزيع المصادر", "label_en": "Source Breakdown"},
         ]
         try:
             analytics = get_enrollment_analytics(
@@ -4261,20 +4226,20 @@ def preview_report(
             kpis[2]["value"] = analytics.get("status_breakdown", {}).get("REJECTED", 0)
             total_records = analytics.get("total_applications", 0)
         except Exception:
-            warnings.append("تعذر تحميل بيانات التسجيل")
+            warnings.append({"ar": "تعذر تحميل بيانات التسجيل", "en": "Failed to load enrollment data"})
 
     elif report_type == "full_audit":
         kpis = [
-            {"id": "total_actions", "label": "إجمالي الإجراءات", "value": 0, "unit": ""},
-            {"id": "failed_actions", "label": "إجراءات فاشلة", "value": 0, "unit": ""},
+            {"id": "total_actions", "label_ar": "إجمالي الإجراءات", "label_en": "Total Actions", "value": 0, "unit": ""},
+            {"id": "failed_actions", "label_ar": "إجراءات فاشلة", "label_en": "Failed Actions", "value": 0, "unit": ""},
         ]
         charts = [
-            {"id": "actions_by_module", "type": "bar", "label": "حسب الوحدة"},
+            {"id": "actions_by_module", "type": "bar", "label_ar": "حسب الوحدة", "label_en": "By Module"},
         ]
         try:
             query = db.query(models.AuditLog).filter(
-                func.date(models.AuditLog.created_at) >= period_start,
-                func.date(models.AuditLog.created_at) <= period_end,
+                models.AuditLog.created_at >= utc_start,
+                models.AuditLog.created_at <= utc_end,
             )
             if kg_filter:
                 # AuditLog doesn't have direct kindergarten_id; skip kindergarten filtering for audit preview
@@ -4285,7 +4250,7 @@ def preview_report(
             high_risk = query.filter(models.AuditLog.sensitivity_level >= 3).count()
             kpis[1]["value"] = high_risk
         except Exception:
-            warnings.append("تعذر تحميل سجل التدقيق")
+            warnings.append({"ar": "تعذر تحميل سجل التدقيق", "en": "Failed to load audit log data"})
     else:
         raise HTTPException(status_code=400, detail=f"Unsupported report type: {report_type}")
 
@@ -4374,11 +4339,14 @@ def preview_report(
             pass
 
     if total_records == 0:
-        warnings.append("لا توجد سجلات مطابقة للفلاتر المحددة")
+        warnings.append({"ar": "لا توجد سجلات مطابقة للفلاتر المحددة", "en": "No records match the selected filters"})
 
     data_quality["total_records"] = total_records
-    if sample_data:
-        data_quality["completeness_percent"] = 98.5
+    if total_records > 0:
+        missing_rate = (data_quality.get("missing_fields", 0) / (total_records * 5)) * 100
+        data_quality["completeness_percent"] = max(0.0, min(100.0, round(100.0 - missing_rate, 2)))
+    else:
+        data_quality["completeness_percent"] = 0.0
 
     return ReportPreviewResponse(
         report_type=report_type,

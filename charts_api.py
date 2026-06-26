@@ -223,3 +223,102 @@ def charts_dashboard(
             "ui_dir": request.cookies.get("ui_dir", "rtl"),
         },
     )
+
+
+# Canonical admin API namespace. The legacy `/admin/charts/*` paths above are
+# retained for compatibility with existing pages.
+@router.get(
+    "/api/admin/charts/data",
+    summary="Raw chart data as JSON",
+    dependencies=[Depends(require_admin_or_manager)],
+)
+def get_admin_chart_data(
+    source: str = Query(..., description="One of: incidents, attendance, daily_reports, enrollments, kindergartens"),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    governorate: Optional[str] = Query(None),
+    granularity: str = Query("month"),
+    group_by: Optional[str] = Query(None),
+    top_n: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    return get_chart_data(
+        source=source,
+        date_from=date_from,
+        date_to=date_to,
+        kindergarten_id=kindergarten_id,
+        governorate=governorate,
+        granularity=granularity,
+        group_by=group_by,
+        top_n=top_n,
+        db=db,
+    )
+
+
+@router.get(
+    "/api/admin/charts/render",
+    response_model=ChartResponse,
+    summary="Render a Plotly chart as HTML",
+    dependencies=[Depends(require_admin_or_manager)],
+)
+def render_admin_chart(
+    source: str = Query(...),
+    chart_type: Optional[str] = Query(None, description="Override auto-selection"),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    kindergarten_id: Optional[int] = Query(None),
+    governorate: Optional[str] = Query(None),
+    granularity: str = Query("month"),
+    group_by: Optional[str] = Query(None),
+    top_n: Optional[int] = Query(None),
+    title: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+) -> ChartResponse:
+    return render_chart(
+        source=source,
+        chart_type=chart_type,
+        date_from=date_from,
+        date_to=date_to,
+        kindergarten_id=kindergarten_id,
+        governorate=governorate,
+        granularity=granularity,
+        group_by=group_by,
+        top_n=top_n,
+        title=title,
+        db=db,
+    )
+
+
+@router.post(
+    "/api/admin/charts/suggest",
+    response_model=SuggestResponse,
+    summary="Auto-suggest chart types for a data source",
+    dependencies=[Depends(require_admin_or_manager)],
+)
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
+def suggest_admin_charts(request: Request, req: SuggestRequest, db: Session = Depends(get_db)) -> SuggestResponse:
+    return suggest_charts(request=request, req=req, db=db)
+
+
+@router.get(
+    "/api/admin/charts/task/{task_id}",
+    response_model=TaskStatus,
+    summary="Poll Celery task status for a heavy chart render",
+    dependencies=[Depends(require_admin_or_manager)],
+)
+def get_admin_chart_task_status(task_id: str) -> TaskStatus:
+    return get_task_status(task_id)
+
+
+@router.get(
+    "/api/admin/charts/dashboard",
+    response_class=HTMLResponse,
+    summary="Charts explorer dashboard",
+    dependencies=[Depends(require_admin_or_manager)],
+)
+def admin_charts_dashboard(
+    request: Request,
+    _: Any = Depends(require_admin_or_manager),
+) -> HTMLResponse:
+    return charts_dashboard(request=request, _=_)

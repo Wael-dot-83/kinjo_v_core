@@ -73,15 +73,13 @@
                     </td>
                     <td>
                         {% if not msg.is_resolved %}
-                        <form method="post"
-                              action="/api/admin/contact-messages/{{ msg.id }}/resolve"
-                              data-resolve-contact-message
-                              class="d-inline">
-                            <button type="submit" class="btn btn-ghost btn-sm text-success"
-                                    title="{% if ui_lang == 'en' %}Close message{% else %}إغلاق الرسالة{% endif %}">
-                                <i class="bi bi-check-circle"></i>
-                            </button>
-                        </form>
+                        <button type="button"
+                                class="btn btn-ghost btn-sm text-success"
+                                data-resolve-contact-message
+                                data-resolve-url="/api/admin/contact-messages/{{ msg.id }}/resolve"
+                                title="{% if ui_lang == 'en' %}Close message{% else %}إغلاق الرسالة{% endif %}">
+                            <i class="bi bi-check-circle"></i>
+                        </button>
                         {% endif %}
                         <button class="btn btn-ghost btn-sm" data-bs-toggle="modal"
                                 data-bs-target="#msgModal{{ msg.id }}"
@@ -145,14 +143,13 @@
 
 {% block extra_scripts %}
 <script>
-document.querySelectorAll('[data-resolve-contact-message]').forEach((form) => {
-  form.addEventListener('submit', async (event) => {
+document.querySelectorAll('[data-resolve-contact-message]').forEach((button) => {
+  button.addEventListener('click', async (event) => {
     event.preventDefault();
-    const button = form.querySelector('button[type="submit"]');
     if (button) button.disabled = true;
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     try {
-      const response = await fetchWithAuth(form.action, {
+      const response = await fetchWithAuth(button.dataset.resolveUrl, {
         method: 'POST',
         headers: { 'X-CSRF-Token': csrfToken }
       });

@@ -633,11 +633,30 @@
     var tbody = document.querySelector("#rankingsTable tbody");
     if (!tbody) return;
 
-    var sorted = govs.slice().sort(function(a, b) {
+    var filterText = "";
+    var searchInput = document.getElementById("rankSearch");
+    if (searchInput) filterText = searchInput.value.trim().toLowerCase();
+
+    var filtered = govs.filter(function(g) {
+      if (!filterText) return true;
+      var n = govName(g) || "";
+      return n.toLowerCase().indexOf(filterText) > -1 || (g.slug && g.slug.toLowerCase().indexOf(filterText) > -1);
+    });
+
+    var sorted = filtered.sort(function(a, b) {
       var av = a[_rankSortKey] != null ? a[_rankSortKey] : 0;
       var bv = b[_rankSortKey] != null ? b[_rankSortKey] : 0;
       return (typeof av === "string" ? av.localeCompare(bv) : av - bv) * _rankSortDir;
     });
+
+    var ths = document.querySelectorAll("#rankingsTable th[data-sort]");
+    for (var ti = 0; ti < ths.length; ti++) {
+      var th = ths[ti];
+      th.textContent = th.textContent.replace(/ [↑↓]$/, "");
+      if (th.dataset.sort === _rankSortKey) {
+        th.textContent += _rankSortDir === 1 ? " ↑" : " ↓";
+      }
+    }
 
     var rows = "";
     for (var i = 0; i < sorted.length; i++) {
@@ -654,7 +673,6 @@
           '<td><span class="rank-num' + rnkCls + '">' + rank + "</span></td>" +
           "<td>" +
             '<div class="rank-name">' + esc(name) + "</div>" +
-            (sub ? '<div class="rank-code">' + esc(sub) + "</div>" : "") +
           "</td>" +
           "<td>" +
             '<div style="display:flex;align-items:center;gap:0.375rem">' +
@@ -805,6 +823,13 @@
     if (retrySingle) {
       retrySingle.addEventListener("click", function() {
         if (state.selectedIndicator) showSingleMap(state.selectedIndicator);
+      });
+    }
+
+    var rankSearch = document.getElementById("rankSearch");
+    if (rankSearch) {
+      rankSearch.addEventListener("input", function() {
+        renderRankings(state.governorates);
       });
     }
 

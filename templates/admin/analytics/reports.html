@@ -1,4 +1,4 @@
-﻿{% extends "admin_base.html" %}
+{% extends "admin_base.html" %}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 
 {% block title %}{% if ui_lang == 'en' %}Reports Center{% else %}مركز التقارير{% endif %} — KinJo{% endblock %}
@@ -40,7 +40,7 @@
 <!-- Quick Summary Cards -->
 <div class="row g-4 mb-section gap-card" id="reportsSummaryCards">
   <div class="col-md-6 col-xl-3">
-    <div class="card h-100 border-start border-4 border-primary shadow-sm" role="region">
+    <div class="card h-100 glass-panel hover-elevate border-start border-4 border-primary shadow-sm" role="region">
       <div class="card-body p-card">
         <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Reports Generated{% else %}التقارير المنشأة{% endif %}</h6>
         <h3 class="mb-0 fw-bold text-primary" id="statReportsGenerated">--</h3>
@@ -49,7 +49,7 @@
     </div>
   </div>
   <div class="col-md-6 col-xl-3">
-    <div class="card h-100 border-start border-4 border-success shadow-sm" role="region">
+    <div class="card h-100 glass-panel hover-elevate border-start border-4 border-success shadow-sm" role="region">
       <div class="card-body p-card">
         <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Scheduled Reports{% else %}تقارير مجدولة{% endif %}</h6>
         <h3 class="mb-0 fw-bold text-success" id="statScheduledReports">--</h3>
@@ -58,7 +58,7 @@
     </div>
   </div>
   <div class="col-md-6 col-xl-3">
-    <div class="card h-100 border-start border-4 border-warning shadow-sm" role="region">
+    <div class="card h-100 glass-panel hover-elevate border-start border-4 border-warning shadow-sm" role="region">
       <div class="card-body p-card">
         <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Failed Exports{% else %}تصديرات فاشلة{% endif %}</h6>
         <h3 class="mb-0 fw-bold text-warning" id="statFailedExports">--</h3>
@@ -67,7 +67,7 @@
     </div>
   </div>
   <div class="col-md-6 col-xl-3">
-    <div class="card h-100 border-start border-4 border-info shadow-sm" role="region">
+    <div class="card h-100 glass-panel hover-elevate border-start border-4 border-info shadow-sm" role="region">
       <div class="card-body p-card">
         <h6 class="text-muted mb-0 fw-semibold" style="font: var(--type-label)">{% if ui_lang == 'en' %}Last Generated{% else %}آخر تقرير{% endif %}</h6>
         <h3 class="mb-0 fw-bold text-info" id="statLastGenerated">--</h3>
@@ -111,7 +111,7 @@
 <div class="row g-4 mb-section gap-card">
   <!-- Report Builder Panel -->
   <div class="col-lg-4">
-    <div class="card h-100 shadow-sm border-0 sticky-top" style="top: 80px; z-index: 10;">
+    <div class="card h-100 glass-panel shadow-sm border-0 sticky-top" style="top: 80px; z-index: 10;">
       <div class="card-header bg-transparent border-bottom">
         <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
           <i class="bi bi-sliders me-2 text-primary"></i>{% if ui_lang == 'en' %}Report Builder{% else %}إعداد التقرير{% endif %}
@@ -236,12 +236,12 @@
     </div>
 
     <!-- Preview Content -->
-    <div class="card shadow-sm border-0 mb-4" id="previewCard">
-      <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+    <div class="card glass-panel shadow-sm border-0 mb-4 hover-elevate" id="previewCard">
+      <div class="card-header bg-transparent border-bottom border-light d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
           <i class="bi bi-eye me-2 text-primary"></i>{% if ui_lang == 'en' %}Report Preview{% else %}معاينة التقرير{% endif %}
         </h5>
-        <span class="badge bg-light text-dark" id="previewRecordCount">0 {% if ui_lang == 'en' %}records{% else %}سجل{% endif %}</span>
+        <span class="badge bg-primary text-white shadow-sm" id="previewRecordCount">0 {% if ui_lang == 'en' %}records{% else %}سجل{% endif %}</span>
       </div>
       <div class="card-body p-card">
         <!-- KPI Summary Row -->
@@ -287,8 +287,8 @@
     </div>
 
     <!-- Recent Reports History -->
-    <div class="card shadow-sm border-0">
-      <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+    <div class="card glass-panel shadow-sm border-0 hover-elevate">
+      <div class="card-header bg-transparent border-bottom border-light d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0 fw-bold" style="font: var(--type-section-title)">
           <i class="bi bi-clock-history me-2 text-info"></i>{% if ui_lang == 'en' %}Recent Reports{% else %}التقارير الأخيرة{% endif %}
         </h5>
@@ -321,7 +321,7 @@
 <!-- Save Template Modal -->
 <div class="modal fade" id="saveTemplateModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
-    <div class="modal-content">
+    <div class="modal-content glass-panel border-0 shadow">
       <div class="modal-header">
         <h5 class="modal-title">{% if ui_lang == 'en' %}Save as Template{% else %}حفظ كقالب{% endif %}</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -343,7 +343,7 @@
 <!-- Schedule Modal -->
 <div class="modal fade" id="scheduleModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
-    <div class="modal-content">
+    <div class="modal-content glass-panel border-0 shadow">
       <div class="modal-header">
         <h5 class="modal-title">{% if ui_lang == 'en' %}Schedule Report{% else %}جدولة التقرير{% endif %}</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -376,6 +376,10 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/admin_design_system.css?v=2.1">
 {% endblock %}
 
 {% block extra_scripts %}

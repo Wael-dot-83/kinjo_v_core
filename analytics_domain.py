@@ -153,11 +153,11 @@ def build_forecast(series: List[SeriesPoint], horizon_days: int) -> Tuple[List[S
 
     for idx in range(1, horizon_days + 1):
         x = len(series) - 1 + idx
-        value = regression.slope * x + regression.intercept
+        value = max(0.0, regression.slope * x + regression.intercept)
         forecast_date = last_date + timedelta(days=idx)
         margin = regression.stddev * 1.96
         forecast_points.append(SeriesPoint(date=forecast_date, value=round(value, 2)))
-        lower_band.append(SeriesPoint(date=forecast_date, value=round(value - margin, 2)))
+        lower_band.append(SeriesPoint(date=forecast_date, value=round(max(0.0, value - margin), 2)))
         upper_band.append(SeriesPoint(date=forecast_date, value=round(value + margin, 2)))
 
     meta = {

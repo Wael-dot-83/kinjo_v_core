@@ -836,8 +836,8 @@ class AdminPasswordReset(BaseModel):
     new_password: str = Field(..., min_length=8)
     admin_password: str = Field(..., min_length=8)
 
-@router.post("/users/{user_id}/admin-reset-password")
-@limiter.limit("5/minute")
+@router.post("/users/{user_id}/admin-reset-password", include_in_schema=False)
+@limiter.limit(settings.RATE_LIMIT_PASSWORD_RESET)
 def admin_reset_password(
     request: Request,
     user_id: int,
@@ -845,50 +845,16 @@ def admin_reset_password(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Admin forces password reset for a user"""
-    if current_user.role != models.UserRole.ADMIN:
-        _log_access_denied(db, current_user, "admin_reset_password", "Not authorized", request)
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Compatibility alias for the canonical admin password reset endpoint."""
+    from admin_endpoints import admin_reset_password as canonical_admin_reset_password
 
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Admin cannot reset other admin users' passwords
-    if user.role == models.UserRole.ADMIN:
-        _log_access_denied(db, current_user, "admin_reset_password", "Cannot reset admin passwords", request)
-        raise HTTPException(status_code=403, detail="Cannot reset admin passwords")
-
-    from auth import verify_password, change_user_password
-    ip_address = request.client.host if request.client else None
-    if not verify_password(reset_data.admin_password, current_user.hashed_password):
-        validators.log_audit_action(
-            db=db,
-            user_id=current_user.id,
-            action="ADMIN_PASSWORD_RESET_FAILED",
-            entity_type="User",
-            entity_id=user.id,
-            details="Admin password verification failed",
-            ip_address=ip_address,
-            sensitivity_level=3
-        )
-        raise HTTPException(status_code=401, detail="Admin password verification failed")
-
-    from auth import change_user_password
-    change_user_password(db, user, reset_data.new_password)
-
-    validators.log_audit_action(
+    return canonical_admin_reset_password(
+        request=request,
+        user_id=user_id,
+        reset_data=reset_data,
+        current_user=current_user,
         db=db,
-        user_id=current_user.id,
-        action="ADMIN_PASSWORD_RESET",
-        entity_type="User",
-        entity_id=user.id,
-        details="Admin password reset",
-        ip_address=ip_address,
-        sensitivity_level=3
     )
-
-    return {"message": "Password reset successfully"}
 
 @router.post("/users/request-password-reset")
 @limiter.limit("5/hour")

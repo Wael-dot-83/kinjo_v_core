@@ -257,114 +257,45 @@
       kpiContainer.innerHTML = data.kpis
         .map(
           (kpi) => `
-        <div class="col-md-4">
-          <div class="card border-0 bg-light h-100">
-            <div class="card-body py-3">
-              <div class="small text-muted">${escapeHtml(kpi.label)}</div>
-              <div class="fs-4 fw-bold">${escapeHtml(String(kpi.value ?? "--"))}${kpi.unit ? ` <small class="text-muted">${escapeHtml(kpi.unit)}</small>` : ""}</div>
+            <div class="col-md-3 col-sm-6">
+              <div class="p-3 bg-light rounded text-center border">
+                <div class="fs-4 fw-bold text-primary mb-1">${escapeHtml(kpi.value.toString())} <small class="text-muted fs-6">${escapeHtml(kpi.unit)}</small></div>
+                <div class="small text-muted">${escapeHtml(reportsText(kpi.label_ar || kpi.label, kpi.label_en || kpi.label))}</div>
+              </div>
             </div>
-          </div>
-        </div>
-      `
+            `
         )
         .join("");
     }
 
-    // Charts
+    // Charts (Structural Placeholder instead of misleading Dummy Data)
     const chartsContainer = getEl("previewCharts");
     if (chartsContainer && data.charts && data.charts.length) {
       chartsContainer.innerHTML = data.charts
         .map((chart) => {
-          const canvasId = `chart_${chart.id}`;
+          const isLarge = chart.type === 'line';
+          let icon = "bi-bar-chart";
+          if (chart.type === "line") icon = "bi-graph-up";
+          if (chart.type === "pie" || chart.type === "doughnut") icon = "bi-pie-chart";
+          
           return `
-        <div class="col-md-6">
-          <div class="card border-0 bg-light h-100">
-            <div class="card-body">
-              <div class="small text-muted mb-2">${escapeHtml(chart.label)}</div>
-              <div style="height: 220px; position: relative;">
-                <canvas id="${canvasId}"></canvas>
+            <div class="${isLarge ? 'col-lg-12' : 'col-lg-6'}">
+              <div class="border rounded p-4 text-center bg-light">
+                <i class="bi ${icon} fs-1 text-muted opacity-50 mb-2 d-block"></i>
+                <div class="fw-bold mb-1">${escapeHtml(reportsText(chart.label_ar || chart.label, chart.label_en || chart.label))}</div>
+                <div class="small text-muted">${reportsText("الرسم البياني متاح في التصدير", "Chart available in export")}</div>
               </div>
             </div>
-          </div>
-        </div>
-      `;
+            `;
         })
         .join("");
-
-      // Render charts with dummy data for preview
-      data.charts.forEach((chart) => {
-        const canvas = getEl(`chart_${chart.id}`);
-        if (!canvas || !window.Chart) return;
-        let config;
-        if (chart.type === "line") {
-          config = {
-            type: "line",
-            data: {
-              labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-              datasets: [
-                {
-                  label: chart.label,
-                  data: [12, 19, 3, 5, 2, 3],
-                  borderColor: "#3b82f6",
-                  tension: 0.3,
-                  fill: false,
-                },
-              ],
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
-          };
-        } else if (chart.type === "bar") {
-          config = {
-            type: "bar",
-            data: {
-              labels: ["A", "B", "C", "D"],
-              datasets: [
-                {
-                  label: chart.label,
-                  data: [10, 20, 30, 40],
-                  backgroundColor: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"],
-                },
-              ],
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
-          };
-        } else if (chart.type === "doughnut") {
-          config = {
-            type: "doughnut",
-            data: {
-              labels: ["Low", "Medium", "High", "Critical"],
-              datasets: [
-                {
-                  data: [15, 30, 35, 20],
-                  backgroundColor: ["#10b981", "#f59e0b", "#f97316", "#ef4444"],
-                },
-              ],
-            },
-            options: { responsive: true, maintainAspectRatio: false },
-          };
-        } else if (chart.type === "pie") {
-          config = {
-            type: "pie",
-            data: {
-              labels: ["Excellent", "Average", "Needs Improvement"],
-              datasets: [
-                {
-                  data: [60, 25, 15],
-                  backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
-                },
-              ],
-            },
-            options: { responsive: true, maintainAspectRatio: false },
-          };
-        } else {
-          config = {
-            type: "bar",
-            data: { labels: [], datasets: [] },
-            options: { responsive: true, maintainAspectRatio: false },
-          };
-        }
-        new window.Chart(canvas, config);
-      });
+    } else if (chartsContainer) {
+      chartsContainer.innerHTML = `
+        <div class="col-12 text-center text-muted py-4">
+          <i class="bi bi-bar-chart fs-1"></i>
+          <div class="small mt-2">${reportsText("ستظهر الرسوم البيانية هنا", "Charts will appear here")}</div>
+        </div>
+      `;
     }
 
     // Sample data table
@@ -396,7 +327,10 @@
     if (data.insights && data.insights.length) {
       showEl("previewInsights");
       getEl("insightsList").innerHTML = data.insights
-        .map((ins) => `<li class="list-group-item">${escapeHtml(ins)}</li>`)
+        .map((i) => {
+          const text = typeof i === 'object' ? reportsText(i.ar || i, i.en || i) : i;
+          return `<li class="list-group-item text-success border-success-subtle bg-success-subtle bg-opacity-10">${escapeHtml(text)}</li>`;
+        })
         .join("");
     } else {
       hideEl("previewInsights");
@@ -406,7 +340,10 @@
     if (data.warnings && data.warnings.length) {
       showEl("previewWarnings");
       getEl("warningsList").innerHTML = data.warnings
-        .map((w) => `<li class="list-group-item text-warning">${escapeHtml(w)}</li>`)
+        .map((w) => {
+          const text = typeof w === 'object' ? reportsText(w.ar || w, w.en || w) : w;
+          return `<li class="list-group-item text-warning border-warning-subtle bg-warning-subtle bg-opacity-10">${escapeHtml(text)}</li>`;
+        })
         .join("");
     } else {
       hideEl("previewWarnings");

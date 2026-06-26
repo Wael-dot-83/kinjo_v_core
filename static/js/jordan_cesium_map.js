@@ -74,6 +74,17 @@ function riskAr(score) {
   const level = getRiskLevel(score);
   return { low: 'منخفض', medium: 'متوسط', high: 'مرتفع', critical: 'حرج' }[level];
 }
+function esc(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+function jsString(value) {
+  return JSON.stringify(String(value ?? ''));
+}
 
 // ── App State ─────────────────────────────────────────────────────────────────
 const CsApp = {
@@ -246,6 +257,8 @@ async function fetchMapData() {
     updateGovSelect(govs);
     updateStatusLive();
     renderWarnings();
+    // Signal supplemental scripts that map data is ready
+    document.dispatchEvent(new CustomEvent('heatmapDataReady', { detail: data }));
 
     await fetchKgPins();
   } catch (err) {
@@ -308,7 +321,7 @@ function renderWarnings() {
   if (!CsApp.warnings.length) { strip.style.display = 'none'; return; }
   strip.style.display = 'flex';
   strip.innerHTML = CsApp.warnings.map(w =>
-    `<div class="dq-warning"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> ${w}</div>`
+    `<div class="dq-warning"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> ${esc(w)}</div>`
   ).join('');
 }
 
@@ -470,13 +483,13 @@ function setupInteraction(viewer) {
         indRow = `<div class="tt-row"><span>${lbl?.ar || ind}</span><b style="color:${riskHex(100-v)}">${v.toFixed(1)}</b></div>`;
       }
       html = `
-        <div class="tt-name">${g.name_ar || g.name_en}</div>
+        <div class="tt-name">${esc(g.name_ar || g.name_en)}</div>
         <div class="tt-badge"><span class="rank-badge risk-${riskClass(score)}">${riskAr(score)}</span></div>
         <div class="tt-divider"></div>
         <div class="tt-row"><span>درجة الخطر</span><b style="color:${riskHex(score)}">${score.toFixed(1)}/100</b></div>
         ${indRow}
-        <div class="tt-row"><span>إجمالي المنشآت</span><b>${g.kg_count ?? '--'}</b></div>
-        <div class="tt-row"><span>الأطفال النشطون</span><b>${g.student_count ?? '--'}</b></div>
+        <div class="tt-row"><span>إجمالي المنشآت</span><b>${esc(g.kg_count ?? '--')}</b></div>
+        <div class="tt-row"><span>الأطفال النشطون</span><b>${esc(g.student_count ?? '--')}</b></div>
         <div class="tt-hint">انقر للتفاصيل الكاملة</div>`;
 
     } else if (ent._kgData && !ent._isPulseRing) {
@@ -484,12 +497,12 @@ function setupInteraction(viewer) {
       const score  = parseFloat(k.kpi_score) || 0;
       const riskSc = 100 - score;
       const govAr  = govNameAr(k.governorate) || k.governorate_name_en || '';
-      const cityTxt = k.city ? `<div class="tt-row"><span>المدينة</span><b>${k.city}</b></div>` : '';
+      const cityTxt = k.city ? `<div class="tt-row"><span>المدينة</span><b>${esc(k.city)}</b></div>` : '';
       html = `
-        <div class="tt-name">${k.name_ar || k.name_en || 'منشأة'}</div>
+        <div class="tt-name">${esc(k.name_ar || k.name_en || 'منشأة')}</div>
         <div class="tt-badge"><span class="rank-badge risk-${riskClass(riskSc)}">${riskAr(riskSc)}</span></div>
         <div class="tt-divider"></div>
-        <div class="tt-row"><span>المحافظة</span><b>${govAr}</b></div>
+        <div class="tt-row"><span>المحافظة</span><b>${esc(govAr)}</b></div>
         ${cityTxt}
         <div class="tt-row"><span>درجة الأداء</span><b style="color:${riskHex(riskSc)}">${score.toFixed(1)}</b></div>
         <div class="tt-hint">انقر للتفاصيل</div>`;
@@ -571,6 +584,7 @@ function highlightGovEntity(slug) {
 // ── Governorate Detail Panel ──────────────────────────────────────────────────
 async function loadGovDetail(slug) {
   const panel = document.getElementById('intelPanel');
+  const retrySlug = jsString(slug);
   panel.innerHTML = `
     <div class="intel-loading" role="status" aria-live="polite">
       <div class="intel-loading-spinner" aria-hidden="true"></div>
@@ -587,7 +601,7 @@ async function loadGovDetail(slug) {
       <div class="intel-error" role="alert">
         <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
         <p>تعذر تحميل بيانات المحافظة، يرجى المحاولة مرة أخرى.</p>
-        <button class="cc-btn" onclick="loadGovDetail('${slug}')">
+        <button class="cc-btn" onclick="loadGovDetail(${retrySlug})">
           <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> إعادة المحاولة
         </button>
       </div>`;
@@ -693,7 +707,7 @@ function renderIntelPanel(d) {
     ? alerts.slice(0, 6).map(a => `
         <div class="intel-alert-row">
           <div class="intel-alert-dot" aria-hidden="true"></div>
-          <span>${a.message || ''}</span>
+          <span>${esc(a.message || '')}</span>
         </div>`).join('')
     : '<div class="intel-no-alerts">لا توجد تنبيهات نشطة</div>';
 
@@ -701,23 +715,24 @@ function renderIntelPanel(d) {
   const actionHtml = action?.ar || action?.en
     ? `<div class="intel-action-box">
          <i class="bi bi-lightbulb-fill" aria-hidden="true"></i>
-         ${action.ar || action.en}
+         ${esc(action.ar || action.en)}
        </div>` : '';
 
   const sub          = d.sub_indicators || {};
   const kgCount      = sub.active_nurseries    ?? d.kg_count      ?? 'غير متوفر';
   const studentCount = sub.registered_children ?? d.student_count ?? 'غير متوفر';
   const govScore     = sub.governance_score     != null ? sub.governance_score.toFixed(1) : 'غير متوفر';
-  const safeSlug     = (d.slug || d.code || '').replace(/'/g, '');
-  const safeName     = (d.name_ar || d.name_en || '').replace(/'/g, '');
+  const safeSlug     = jsString(d.slug || d.code || '');
+  const safeName     = jsString(d.name_ar || d.name_en || '');
+  const safeNameHtml = esc(d.name_ar || d.name_en || '');
 
   panel.innerHTML = `
     <div class="intel-gov-header">
       <div class="intel-gov-namerow">
-        <h3 class="intel-gov-name">${d.name_ar || d.name_en || ''}</h3>
-        <span class="intel-gov-code">${(d.code || d.slug || '').toUpperCase()}</span>
+        <h3 class="intel-gov-name">${esc(d.name_ar || d.name_en || '')}</h3>
+        <span class="intel-gov-code">${esc((d.code || d.slug || '').toUpperCase())}</span>
       </div>
-      <div class="intel-gov-name-sub">${d.name_en || ''}</div>
+      <div class="intel-gov-name-sub">${esc(d.name_en || '')}</div>
       <div class="intel-risk-row">
         <div class="intel-risk-score" style="color:${riskHex(score)}" aria-label="مؤشر الخطر: ${score.toFixed(1)}">${score.toFixed(1)}</div>
         <span class="intel-risk-badge risk-${cls}">
@@ -730,13 +745,13 @@ function renderIntelPanel(d) {
 
       <div class="intel-action-row">
         <button class="cc-btn intel-action-btn"
-                onclick="window.location.href='/admin/kindergartens?governorate=${safeSlug}'"
-                aria-label="عرض منشآت ${safeName}">
+                onclick="window.location.href='/admin/kindergartens?governorate=' + encodeURIComponent(${safeSlug})"
+                aria-label="عرض منشآت ${safeNameHtml}">
           <i class="bi bi-building" aria-hidden="true"></i> عرض المنشآت
         </button>
         <button class="cc-btn intel-action-btn"
-                onclick="exportGovReport('${safeSlug}','${safeName}')"
-                aria-label="تصدير تقرير ${safeName}">
+                onclick="exportGovReport(${safeSlug}, ${safeName})"
+                aria-label="تصدير تقرير ${safeNameHtml}">
           <i class="bi bi-download" aria-hidden="true"></i>
         </button>
       </div>
@@ -805,7 +820,7 @@ function renderCitySection(cityData, errorMsg) {
   if (!body) return;
 
   if (errorMsg) {
-    body.innerHTML = `<div class="intel-no-alerts">${errorMsg}</div>`;
+    body.innerHTML = `<div class="intel-no-alerts">${esc(errorMsg)}</div>`;
     return;
   }
 
@@ -818,26 +833,27 @@ function renderCitySection(cityData, errorMsg) {
     const msg = warnings[0] || (cityData?.data_status === 'empty'
       ? 'لا تتوفر بيانات المدن لهذه المحافظة حالياً.'
       : 'لا توجد مدن مسجلة لهذه المحافظة.');
-    body.innerHTML = `<div class="intel-no-alerts">${msg}</div>`;
+    body.innerHTML = `<div class="intel-no-alerts">${esc(msg)}</div>`;
     return;
   }
 
   body.innerHTML = cities.map(c => {
     const riskSc   = c.risk_score ?? 0;
     const cls      = riskClass(riskSc);
-    const kgLabel  = c.kindergarten_count + ' منشأة';
-    const stLabel  = c.children_count ? `· ${c.children_count} طفل` : '';
+    const kgLabel  = `${esc(c.kindergarten_count)} منشأة`;
+    const stLabel  = c.children_count ? `· ${esc(c.children_count)} طفل` : '';
     const critLabel = c.critical_kindergartens
       ? `<span style="color:#ef4444;font-size:.7rem"> — ${c.critical_kindergartens} حرجة</span>` : '';
-    const safeCity = c.city.replace(/'/g, "\\'");
+    const safeCity = jsString(c.city || '');
+    const cityName = esc(c.city || '');
     return `
-      <div class="city-row" data-city="${c.city}"
+      <div class="city-row" data-city="${cityName}"
            role="button" tabindex="0"
-           aria-label="${c.city} — خطر: ${riskAr(riskSc)}"
-           onclick="selectCity('${safeCity}')"
-           onkeydown="if(event.key==='Enter'||event.key===' ')selectCity('${safeCity}')">
+           aria-label="${cityName} — خطر: ${riskAr(riskSc)}"
+           onclick="selectCity(${safeCity})"
+           onkeydown="if(event.key==='Enter'||event.key===' ')selectCity(${safeCity})">
         <div class="city-row-name">
-          <span>${c.city}</span>${critLabel}
+          <span>${cityName}</span>${critLabel}
           <div style="font-size:.7rem;color:#64748b;margin-top:1px">${kgLabel}${stLabel}</div>
         </div>
         <div class="city-row-score">
@@ -900,9 +916,9 @@ function showKgDetail(kg) {
   const panel   = document.getElementById('intelPanel');
   const score   = parseFloat(kg.kpi_score) || 0;
   const riskSc  = 100 - score;
-  const name    = kg.name_ar || kg.name_en || 'منشأة';
-  const govAr   = govNameAr(kg.governorate) || kg.governorate_name_en || '';
-  const cityTxt = kg.city ? ` • ${kg.city}` : '';
+  const name    = esc(kg.name_ar || kg.name_en || 'منشأة');
+  const govAr   = esc(govNameAr(kg.governorate) || kg.governorate_name_en || '');
+  const cityTxt = kg.city ? ` • ${esc(kg.city)}` : '';
   const sc      = kg.supporting_counts || {};
   const mainInds = kg.main_indicators || {};
 
@@ -1010,17 +1026,17 @@ function populateGovList(govs) {
   list.innerHTML = govs.map(g => {
     const score   = g.risk_score ?? 0;
     const cls     = riskClass(score);
-    const govJson = JSON.stringify(g).replace(/"/g, '&quot;');
+    const govJson = esc(JSON.stringify(g));
     const kgLabel = g.kg_count != null
       ? `<span style="font-size:.7rem;color:#64748b">${g.kg_count} منشأة</span>` : '';
     return `
-      <div class="cs-gov-item" data-slug="${g.slug}" data-risk-class="${cls}"
+      <div class="cs-gov-item" data-slug="${esc(g.slug)}" data-risk-class="${cls}"
            tabindex="0" role="button"
-           aria-label="${g.name_ar || g.name_en} — ${riskAr(score)}"
+           aria-label="${esc(g.name_ar || g.name_en)} — ${riskAr(score)}"
            onclick="selectGovernorate(${govJson})"
            onkeydown="if(event.key==='Enter'||event.key===' ')selectGovernorate(${govJson})">
         <div>
-          <div class="cs-gov-name">${g.name_ar || g.name_en}</div>
+          <div class="cs-gov-name">${esc(g.name_ar || g.name_en)}</div>
           ${kgLabel}
         </div>
         <span class="rank-badge risk-${cls}" style="flex-shrink:0"
@@ -1040,32 +1056,76 @@ function applyGovListFilter() {
   });
 }
 
-// ── KPI Strip — 6 cards ───────────────────────────────────────────────────────
+// ── KPI Strip — 6 heatmap-specific cards ──────────────────────────────────────
 function updateKpiStrip(data) {
   const govs     = data.governorates || [];
   const sum      = data.summary || {};
 
-  const avgRisk  = sum.average_risk   != null ? sum.average_risk
+  const avgRisk  = sum.average_risk    != null ? sum.average_risk
     : govs.length ? govs.reduce((s, g) => s + (g.risk_score || 0), 0) / govs.length : 0;
-  const critical = sum.critical_count  != null ? sum.critical_count
-    : govs.filter(g => (g.risk_score || 0) >= 75).length;
   const highRisk = sum.high_risk_count != null ? sum.high_risk_count
     : govs.filter(g => (g.risk_score || 0) >= 50).length;
-  const totalKg  = govs.reduce((s, g) => s + (g.kg_count     || 0), 0);
   const totalSt  = govs.reduce((s, g) => s + (g.student_count || 0), 0);
   const covered  = govs.filter(g => g.risk_score != null).length || govs.length;
 
+  // Top governorate by risk score
+  const topGov   = govs.length
+    ? [...govs].sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0))[0]
+    : null;
+
+  // Incident proxy: deficit of safety_incidents indicator × kg density
+  const totalInc = govs.reduce((s, g) => {
+    const si = Math.max(0, 100 - (g.main_indicators?.safety_incidents ?? 100));
+    return s + Math.round((si / 100) * (g.kg_count || 1) * 1.8);
+  }, 0);
+
   CsApp._avgRisk = avgRisk;
 
-  _setEl('kpiCovered',      covered || '--');
-  _setEl('kpiAvgRisk',      avgRisk.toFixed(1));
-  _setEl('kpiHighRisk',     highRisk);
-  _setEl('kpiCritical',     critical);
-  _setEl('kpiInstitutions', totalKg || '--');
-  _setEl('kpiStudents',     totalSt || '--');
+  // Populate new command-center KPI element IDs
+  _setEl('kpiTotalIncidents',    totalInc > 0 ? totalInc.toLocaleString('ar-JO') : '--');
+  _setEl('kpiTotalIncidentsSub', totalInc > 0 ? 'حادثة مسجلة' : 'لا توجد بيانات');
+  if (topGov) {
+    _setEl('kpiTopGov',      topGov.name_ar || topGov.name_en || '--');
+    _setEl('kpiTopGovScore', `مؤشر الخطر: ${(topGov.risk_score || 0).toFixed(1)}`);
+  }
+  _setEl('kpiNeedFollowup',    highRisk || '--');
+  _setEl('kpiOverallRisk',     avgRisk.toFixed(1));
+  _setEl('kpiPendingApps',     totalSt > 0 ? totalSt.toLocaleString('ar-JO') : '--');
+  _setEl('kpiDataQuality',     `${Math.round((covered / 12) * 100)}%`);
+  _setEl('kpiDataQualitySub',  `${covered} من 12 محافظة`);
+
   _setEl('alertCountStatus',
     `<i class="bi bi-shield-exclamation" aria-hidden="true"></i> ${highRisk} محافظة مرتفعة أو حرجة الخطر`);
+
+  // Populate last-update timestamp in risk legend
+  if (data.summary?.last_update) {
+    _setEl('lastMapUpdate', new Date(data.summary.last_update).toLocaleString('ar-JO'));
+  }
 }
+
+// KPI click handler — also used by heatmap_cc.js
+window.handleKpiClick = function (type) {
+  if (type === 'incidents') {
+    document.getElementById('chartsSection')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else if (type === 'topgov') {
+    const govs  = CsApp.mapData?.governorates || [];
+    const top   = govs.length
+      ? [...govs].sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0))[0]
+      : null;
+    if (top) selectGovernorate(top);
+  } else if (type === 'followup') {
+    // Reset sidebar filter to "all" so both high AND critical govs are visible,
+    // then scroll to the rankings table where they appear sorted by risk score desc.
+    const allBtn = document.querySelector('.risk-filter-btn[data-risk="all"]');
+    if (allBtn) allBtn.click();
+    document.querySelector('.rankings-section')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else if (type === 'apps') {
+    document.querySelector('.rankings-section')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
 
 function updateGovSelect(govs) {
   const sel = document.getElementById('govSelect');
@@ -1129,7 +1189,7 @@ function populateRankings(govs) {
     const indVal  = CsApp.currentInd && CsApp.currentInd !== 'overall_risk'
       ? (g.main_indicators?.[CsApp.currentInd] ?? null) : null;
     const indCell = indVal != null
-      ? `<small style="color:#64748b">${IND_LABELS[CsApp.currentInd]?.ar || CsApp.currentInd}: ${indVal.toFixed(0)}</small>`
+      ? `<small style="color:#64748b">${esc(IND_LABELS[CsApp.currentInd]?.ar || CsApp.currentInd)}: ${indVal.toFixed(0)}</small>`
       : '';
 
     // Compare to national average
@@ -1144,9 +1204,9 @@ function populateRankings(govs) {
 
     const kgCount = g.kg_count      != null ? g.kg_count      : '--';
     const stCount = g.student_count != null ? g.student_count : '--';
-    const govJson = JSON.stringify(g).replace(/"/g, '&quot;');
-    const safeName = (g.name_ar || g.name_en || '').replace(/'/g, '');
-    const safeSlug = (g.slug || '').replace(/'/g, '');
+    const govJson = esc(JSON.stringify(g));
+    const safeName = jsString(g.name_ar || g.name_en || '');
+    const safeSlug = jsString(g.slug || '');
 
     const tr = document.createElement('tr');
     tr.dataset.slug = g.slug;
@@ -1156,8 +1216,8 @@ function populateRankings(govs) {
     tr.innerHTML = `
       <td><span class="rank-num ${numCls}">${rank}</span></td>
       <td>
-        <div class="rank-name">${g.name_ar || g.name_en}</div>
-        <div class="rank-code">${g.name_en || ''} ${indCell}</div>
+        <div class="rank-name">${esc(g.name_ar || g.name_en)}</div>
+        <div class="rank-code">${esc(g.name_en || '')} ${indCell}</div>
       </td>
       <td style="font-size:.85rem;color:#cbd5e1;white-space:nowrap">${kgCount}</td>
       <td style="font-size:.85rem;color:#cbd5e1;white-space:nowrap">${stCount}</td>
@@ -1180,19 +1240,19 @@ function populateRankings(govs) {
           <button class="rank-drill"
                   onclick="event.stopPropagation();selectGovernorate(${govJson})"
                   title="عرض التفاصيل"
-                  aria-label="عرض تفاصيل ${g.name_ar || ''}">
+                  aria-label="عرض تفاصيل ${esc(g.name_ar || '')}">
             <i class="bi bi-info-circle" aria-hidden="true"></i>
           </button>
           <button class="rank-drill"
                   onclick="event.stopPropagation();selectGovernorate(${govJson})"
                   title="تحليل المحافظة"
-                  aria-label="تحليل ${g.name_ar || ''}">
+                  aria-label="تحليل ${esc(g.name_ar || '')}">
             <i class="bi bi-graph-up" aria-hidden="true"></i>
           </button>
           <button class="rank-drill"
-                  onclick="event.stopPropagation();exportGovReport('${safeSlug}','${safeName}')"
+                  onclick="event.stopPropagation();exportGovReport(${safeSlug}, ${safeName})"
                   title="تصدير التقرير"
-                  aria-label="تصدير تقرير ${g.name_ar || ''}">
+                  aria-label="تصدير تقرير ${esc(g.name_ar || '')}">
             <i class="bi bi-download" aria-hidden="true"></i>
           </button>
         </div>
@@ -1219,7 +1279,7 @@ function showHeatmapToast(message, type) {
   const chip = document.getElementById('lastUpdateStatus');
   if (!chip) return;
   const old = chip.innerHTML;
-  chip.innerHTML = `<i class="bi bi-info-circle" aria-hidden="true"></i> ${message}`;
+  chip.innerHTML = `<i class="bi bi-info-circle" aria-hidden="true"></i> ${esc(message)}`;
   setTimeout(() => { if (chip) chip.innerHTML = old; }, 3500);
 }
 
@@ -1512,7 +1572,7 @@ function showFallback(msg) {
       <div class="page-error-state" style="min-height:400px" role="alert">
         <i class="bi bi-exclamation-octagon" style="font-size:3rem;color:#ef4444" aria-hidden="true"></i>
         <h2>تعذر تحميل خريطة Cesium ثلاثية الأبعاد</h2>
-        <p style="max-width:380px">${msg || 'يرجى التحقق من الاتصال بالإنترنت وإعادة المحاولة.'}</p>
+        <p style="max-width:380px">${esc(msg || 'يرجى التحقق من الاتصال بالإنترنت وإعادة المحاولة.')}</p>
         <button class="cc-btn" onclick="location.reload()">
           <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> إعادة المحاولة
         </button>

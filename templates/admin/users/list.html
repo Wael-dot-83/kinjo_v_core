@@ -1,4 +1,4 @@
-﻿{% extends "admin_base.html" %}
+{% extends "admin_base.html" %}
 {% from 'components/page-header.html' import page_header %}
 {% from 'components/filter-row.html' import filter_row %}
 {% from 'components/data-table.html' import pagination %}
@@ -42,7 +42,7 @@ actions=toolbar_actions
 {% endblock %}
 
 {% block content %}
-<div class="card shadow-sm mb-4">
+<div class="card glass-panel hover-elevate mb-4 border-0">
     <div class="card-body">
         <!-- Filters -->
         <div class="row g-3 mb-4">
@@ -124,8 +124,8 @@ actions=toolbar_actions
 <!-- CSV Import Modal -->
 <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-bottom">
+        <div class="modal-content glass-panel border-0 shadow">
+            <div class="modal-header border-bottom border-light">
                 <h5 class="modal-title" id="importModalLabel">
                     <i class="bi bi-upload me-2 text-primary"></i>
                     {% if ui_lang == 'en' %}Import Users from CSV{% else %}استيراد المستخدمين من CSV{% endif %}

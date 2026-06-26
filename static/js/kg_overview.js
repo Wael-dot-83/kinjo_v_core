@@ -41,46 +41,80 @@ class KoStore {
   }
 }
 
-/* ════════════════════════════════════════════════════════════
-   2. MOCK DATA ENGINE (real-time simulation)
-   ════════════════════════════════════════════════════════════ */
-const MOCK_KGS = [
-  { id:1, name:'روضة النجوم',     gov:'عمان',    children:38, teachers:4, attendance:87, alerts:1, capacity:45 },
-  { id:2, name:'روضة الأمل',      gov:'إربد',    children:29, teachers:3, attendance:71, alerts:3, capacity:35 },
-  { id:3, name:'روضة الروابي',    gov:'الزرقاء', children:45, teachers:5, attendance:93, alerts:0, capacity:50 },
-  { id:4, name:'روضة الربيع',     gov:'العقبة',  children:22, teachers:2, attendance:64, alerts:2, capacity:30 },
-  { id:5, name:'روضة البراعم',    gov:'مادبا',   children:33, teachers:3, attendance:81, alerts:1, capacity:40 },
-  { id:6, name:'روضة الفجر',      gov:'جرش',     children:18, teachers:2, attendance:55, alerts:4, capacity:25 },
-  { id:7, name:'روضة الياسمين',   gov:'عجلون',   children:41, teachers:4, attendance:90, alerts:0, capacity:48 },
-  { id:8, name:'روضة الوفاء',     gov:'الكرك',   children:26, teachers:3, attendance:76, alerts:2, capacity:32 },
-];
-
-const MOCK_ALERTS = [
-  { id:'a1', sev:'high',   icon:'bi-exclamation-triangle-fill', title:'انخفاض حاد في الحضور', desc:'روضة الفجر — 55% فقط هذا الأسبوع، الحد الأدنى المقبول 70%.', kg:'روضة الفجر', ts: Date.now()-3600000 },
-  { id:'a2', sev:'high',   icon:'bi-person-x-fill',             title:'تجاوز نسبة الغياب',    desc:'روضة الأمل — 29% غياب خلال الأسبوع الماضي.', kg:'روضة الأمل',    ts: Date.now()-7200000 },
-  { id:'a3', sev:'medium', icon:'bi-people-fill',               title:'تسجيل مرتفع',           desc:'روضة الروابي — الطاقة الاستيعابية ممتلئة 90%. طلبات جديدة معلقة.', kg:'روضة الروابي', ts: Date.now()-10800000 },
-  { id:'a4', sev:'medium', icon:'bi-clipboard-x-fill',          title:'تقارير متأخرة',         desc:'روضة الربيع — لم يُرسل التقرير اليومي منذ 3 أيام.', kg:'روضة الربيع', ts: Date.now()-14400000 },
-  { id:'a5', sev:'low',    icon:'bi-info-circle-fill',          title:'تحديث بيانات مطلوب',   desc:'روضة الوفاء — بيانات المعلمات لم تُحدَّث منذ شهر.', kg:'روضة الوفاء', ts: Date.now()-86400000 },
-];
-
-function buildTrendData(days = 14) {
-  const labels = [], attendance = [], enrollment = [];
-  const now = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now); d.setDate(d.getDate() - i);
-    labels.push(d.toLocaleDateString('ar-JO', { month: 'short', day: 'numeric' }));
-    attendance.push(Math.round(68 + Math.random() * 22));
-    enrollment.push(Math.round(240 + Math.random() * 20));
-  }
-  return { labels, attendance, enrollment };
-}
-
 function computeKPIs(kgs) {
   const totalChildren = kgs.reduce((s, k) => s + k.children, 0);
   const totalTeachers = kgs.reduce((s, k) => s + k.teachers, 0);
-  const avgAttendance = Math.round(kgs.reduce((s, k) => s + k.attendance, 0) / kgs.length);
+  const avgAttendance = kgs.length ? Math.round(kgs.reduce((s, k) => s + k.attendance, 0) / kgs.length) : 0;
   const totalAlerts   = kgs.reduce((s, k) => s + k.alerts, 0);
   return { totalChildren, totalTeachers, avgAttendance, totalAlerts };
+}
+
+function koEscape(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function koCssEscape(value) {
+  const text = String(value ?? '');
+  if (window.CSS?.escape) return window.CSS.escape(text);
+  return text.replace(/["\\]/g, '\\$&');
+}
+
+function normalizeSeverity(severity) {
+  const value = String(severity || '').toUpperCase();
+  if (value === 'CRITICAL' || value === 'HIGH') return 'high';
+  if (value === 'MEDIUM') return 'medium';
+  return 'low';
+}
+
+function mapOverviewPayload(payload) {
+  const kindergartens = Array.isArray(payload?.kindergartens) ? payload.kindergartens : [];
+  const kgs = kindergartens.map((kg) => {
+    const children = Number(kg.children_count ?? kg.active_children ?? kg.children ?? 0);
+    const occupancy = Number(kg.occupancy_rate ?? 0);
+    const capacity = Number(kg.capacity ?? kg.total_capacity ?? (occupancy > 0 ? Math.ceil(children / (occupancy / 100)) : children));
+    const name = window.KINJO_LANG === 'en'
+      ? (kg.name_en || kg.name_ar || kg.name || `KG ${kg.id}`)
+      : (kg.name_ar || kg.name_en || kg.name || `KG ${kg.id}`);
+    return {
+      id: kg.id,
+      name,
+      gov: kg.governorate || kg.governorate_name_ar || kg.governorate_name_en || '',
+      children,
+      teachers: Number(kg.teachers_count ?? kg.teachers ?? 0),
+      attendance: Number(kg.attendance_rate ?? kg.attendance ?? 0),
+      alerts: Number(kg.open_alerts ?? kg.alerts ?? 0),
+      capacity: Math.max(capacity || children || 1, 1),
+    };
+  });
+
+  const alerts = (Array.isArray(payload?.alerts) ? payload.alerts : []).map((alert, index) => {
+    const ageHours = Number(alert.age_hours ?? 0);
+    const title = alert.title || alert.message || alert.metric || '';
+    return {
+      id: String(alert.id ?? `alert-${index}`),
+      sev: normalizeSeverity(alert.severity),
+      icon: normalizeSeverity(alert.severity) === 'high' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill',
+      title,
+      desc: alert.message || title,
+      kg: alert.kindergarten_name_ar || alert.kindergarten_name_en || alert.kindergarten_name || '',
+      ts: Date.now() - Math.max(ageHours, 0) * 3600000,
+    };
+  });
+
+  return {
+    kgs,
+    alerts,
+    trend: {
+      labels: kgs.map((kg) => kg.name),
+      attendance: kgs.map((kg) => kg.attendance),
+      enrollment: kgs.map((kg) => kg.children),
+    },
+  };
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -323,16 +357,15 @@ class KgOverview {
 
   constructor() {
     const saved = KoPersist.load() || {};
-    const trend = buildTrendData(14);
 
     this.#store = new KoStore({
       period:     saved.period     || 'month',
       govFilter:  saved.govFilter  || 'all',
       kgFilter:   saved.kgFilter   || 'all',
-      kgs:        MOCK_KGS,
-      kpis:       computeKPIs(MOCK_KGS),
-      alerts:     MOCK_ALERTS,
-      trend,
+      kgs:        [],
+      kpis:       computeKPIs([]),
+      alerts:     [],
+      trend:      { labels: [], attendance: [], enrollment: [] },
       theme:      saved.theme      || 'light',
       hiddenKPIs: saved.hiddenKPIs || [],
       kpiOrder:   saved.kpiOrder   || ['children','attendance','teachers','alerts'],
@@ -343,8 +376,11 @@ class KgOverview {
   }
 
   /* ── Init ─────────────────────────────────────────────── */
-  init() {
+  async init() {
     this.#applyTheme(this.#store.get('theme'));
+    await this.#loadOverviewData().catch(error => {
+      console.error('[KgOverview] initial data load failed', error);
+    });
     this.#buildControlBar();
     this.#renderKPIs();
     this.#renderDataSection();
@@ -358,6 +394,22 @@ class KgOverview {
     console.log('[KgOverview] initialised ✓');
   }
 
+  async #loadOverviewData() {
+    const params = new URLSearchParams();
+    const period = this.#store.get('period');
+    if (period && period !== 'all') params.set('period', period);
+    const response = await fetchWithAuth(`/api/admin/kg-overview?${params.toString()}`);
+    if (!response) return;
+    const payload = await response.json();
+    const mapped = mapOverviewPayload(payload);
+    this.#store.set({
+      kgs: mapped.kgs,
+      kpis: computeKPIs(mapped.kgs),
+      alerts: mapped.alerts,
+      trend: mapped.trend,
+    });
+  }
+
   /* ── Control Bar ──────────────────────────────────────── */
   #buildControlBar() {
     const bar = document.getElementById('ko-control-bar');
@@ -369,8 +421,9 @@ class KgOverview {
       { key:'month', ar:'الشهر',   en:'Month' },
     ];
 
-    const govs = ['all', ...new Set(MOCK_KGS.map(k => k.gov))];
-    const kgNames = ['all', ...MOCK_KGS.map(k => k.name)];
+    const currentKgs = this.#store.get('kgs');
+    const govs = ['all', ...new Set(currentKgs.map(k => k.gov).filter(Boolean))];
+    const kgNames = ['all', ...currentKgs.map(k => k.name)];
     const lang = window.KINJO_LANG || 'ar';
     const isAr = lang !== 'en';
     const cur  = this.#store.get('period');
@@ -687,14 +740,15 @@ class KgOverview {
     if (!kgs.length) { wrap.innerHTML = `<div class="ko-empty"><i class="bi bi-search"></i><p>${isAr ? 'لا توجد نتائج' : 'No results'}</p></div>`; return; }
 
     wrap.innerHTML = kgs.map(kg => {
-      const pct     = kg.attendance;
+      const pct     = Math.max(0, Math.min(100, Number(kg.attendance) || 0));
       const cls     = pct >= 80 ? '' : pct >= 65 ? 'warn' : 'alert';
       const badge   = pct >= 80 ? 'green' : pct >= 65 ? 'amber' : 'red';
-      const cap     = Math.round((kg.children / kg.capacity) * 100);
+      const cap     = Math.max(0, Math.min(100, Math.round((kg.children / kg.capacity) * 100)));
+      const safeId  = koEscape(kg.id);
       return `
-        <div class="ko-kg-card" data-kg-id="${kg.id}">
-          <div class="ko-kg-card-name">${kg.name}</div>
-          <div class="ko-kg-card-meta">${kg.gov} · ${kg.children} ${isAr ? 'طفل' : 'children'}</div>
+        <div class="ko-kg-card" data-kg-id="${safeId}">
+          <div class="ko-kg-card-name">${koEscape(kg.name)}</div>
+          <div class="ko-kg-card-meta">${koEscape(kg.gov)} · ${kg.children} ${isAr ? 'طفل' : 'children'}</div>
           <div class="ko-kg-bar-wrap">
             <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--ko-text-muted);margin-bottom:.25rem;">
               <span>${isAr ? 'الحضور' : 'Attendance'}</span>
@@ -717,7 +771,7 @@ class KgOverview {
 
     wrap.querySelectorAll('.ko-kg-card').forEach(card => {
       card.addEventListener('click', () => {
-        const kg = kgs.find(k => k.id === Number(card.dataset.kgId));
+        const kg = kgs.find(k => String(k.id) === card.dataset.kgId);
         if (kg) this.#openKGPanel(kg);
       });
     });
@@ -745,10 +799,11 @@ class KgOverview {
     tbody.innerHTML = kgs.map(kg => {
       const attCls = kg.attendance >= 80 ? 'green' : kg.attendance >= 65 ? 'amber' : 'red';
       const alCls  = kg.alerts === 0 ? 'green' : kg.alerts <= 2 ? 'amber' : 'red';
+      const safeId = koEscape(kg.id);
       return `
-        <tr style="cursor:pointer" data-kg-id="${kg.id}">
-          <td><strong>${kg.name}</strong></td>
-          <td>${kg.gov}</td>
+        <tr style="cursor:pointer" data-kg-id="${safeId}">
+          <td><strong>${koEscape(kg.name)}</strong></td>
+          <td>${koEscape(kg.gov)}</td>
           <td>${kg.children}</td>
           <td>${kg.teachers}</td>
           <td><span class="ko-badge ko-badge-${attCls}">${kg.attendance}%</span></td>
@@ -759,7 +814,7 @@ class KgOverview {
 
     tbody.querySelectorAll('tr[data-kg-id]').forEach(row => {
       row.addEventListener('click', () => {
-        const kg = kgs.find(k => k.id === Number(row.dataset.kgId));
+        const kg = kgs.find(k => String(k.id) === row.dataset.kgId);
         if (kg) this.#openKGPanel(kg);
       });
     });
@@ -841,21 +896,21 @@ class KgOverview {
     }
 
     list.innerHTML = filtered.map(a => `
-      <div class="ko-alert-item" data-alert-id="${a.id}" style="--sev-color:${sevColors[a.sev]}">
+      <div class="ko-alert-item" data-alert-id="${koEscape(a.id)}" style="--sev-color:${sevColors[a.sev]}">
         <div class="ko-alert-icon"><i class="bi ${a.icon}"></i></div>
         <div class="ko-alert-body">
-          <div class="ko-alert-title">${a.title}</div>
-          <div class="ko-alert-desc">${a.desc}</div>
+          <div class="ko-alert-title">${koEscape(a.title)}</div>
+          <div class="ko-alert-desc">${koEscape(a.desc)}</div>
           <div class="ko-alert-meta">
-            <i class="bi bi-building me-1"></i>${a.kg}
+            <i class="bi bi-building me-1"></i>${koEscape(a.kg)}
             · ${this.#timeAgo(a.ts, isAr)}
           </div>
         </div>
         <div class="ko-alert-actions">
-          <button class="ko-alert-btn view" data-action="view-alert" data-id="${a.id}">
+          <button class="ko-alert-btn view" data-action="view-alert" data-id="${koEscape(a.id)}">
             <i class="bi bi-eye me-1"></i>${isAr ? 'عرض' : 'View'}
           </button>
-          <button class="ko-alert-btn dismiss" data-action="dismiss-alert" data-id="${a.id}">
+          <button class="ko-alert-btn dismiss" data-action="dismiss-alert" data-id="${koEscape(a.id)}">
             <i class="bi bi-x me-1"></i>${isAr ? 'تجاهل' : 'Dismiss'}
           </button>
         </div>
@@ -864,7 +919,7 @@ class KgOverview {
     list.querySelectorAll('[data-action="dismiss-alert"]').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.id;
-        const el = list.querySelector(`[data-alert-id="${id}"]`);
+        const el = list.querySelector(`[data-alert-id="${koCssEscape(id)}"]`);
         el?.classList.add('dismissed');
         setTimeout(() => { this.#dismissedAlerts.add(id); this.#renderAlertItems(); }, 400);
       });
@@ -872,8 +927,8 @@ class KgOverview {
 
     list.querySelectorAll('[data-action="view-alert"]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const a = this.#store.get('alerts').find(x => x.id === btn.dataset.id);
-        if (a) alert(`${a.title}\n\n${a.desc}`); // Replace with modal in prod
+        const a = this.#store.get('alerts').find(x => String(x.id) === btn.dataset.id);
+        if (a) alert(`${a.title}\n\n${a.desc}`);
       });
     });
   }
@@ -911,7 +966,7 @@ class KgOverview {
         return `
           <div style="margin-bottom:.875rem;">
             <div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:.25rem;">
-              <span style="color:var(--ko-text)">${kg.name}</span>
+              <span style="color:var(--ko-text)">${koEscape(kg.name)}</span>
               <strong style="color:${meta.accent}">${v}${meta.unit}</strong>
             </div>
             <div class="ko-kg-bar"><div class="ko-kg-bar-fill" style="width:${pct}%;background:${meta.accent}"></div></div>
@@ -964,7 +1019,7 @@ class KgOverview {
       </div>
       <div class="ko-panel-stat">
         <div class="ko-panel-stat-label">${isAr ? 'المحافظة' : 'Governorate'}</div>
-        <div style="font-size:1rem;font-weight:600;color:var(--ko-text)">${kg.gov}</div>
+        <div style="font-size:1rem;font-weight:600;color:var(--ko-text)">${koEscape(kg.gov)}</div>
       </div>
       <div class="ko-panel-stat">
         <div class="ko-panel-stat-label">${isAr ? 'الطاقة الاستيعابية' : 'Capacity'}</div>
@@ -979,10 +1034,10 @@ class KgOverview {
         </div>
       </div>
       <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:.625rem;">
-        <a href="/kindergartens/${kg.id}" class="ko-action-btn" style="justify-content:center">
+        <a href="/kindergartens/${encodeURIComponent(kg.id)}" class="ko-action-btn" style="justify-content:center">
           <i class="bi bi-building-fill"></i> ${isAr ? 'عرض الروضة' : 'View Kindergarten'}
         </a>
-        <a href="/attendance/daily?kg=${kg.id}" class="ko-action-btn" style="justify-content:center">
+        <a href="/attendance/daily?kg=${encodeURIComponent(kg.id)}" class="ko-action-btn" style="justify-content:center">
           <i class="bi bi-calendar-check-fill"></i> ${isAr ? 'سجل الحضور' : 'Attendance Log'}
         </a>
       </div>`;
@@ -1077,18 +1132,10 @@ class KgOverview {
   /* ── Realtime Simulation ──────────────────────────────── */
   #startRealtime() {
     this.#rtTimer = setInterval(() => {
-      const kgs = this.#store.get('kgs').map(kg => ({
-        ...kg,
-        attendance: Math.min(100, Math.max(40, kg.attendance + (Math.random() > .5 ? 1 : -1) * Math.round(Math.random() * 3))),
-        alerts: Math.max(0, kg.alerts + (Math.random() > .7 ? 1 : 0) - (Math.random() > .8 ? 1 : 0)),
-      }));
-      const trend = buildTrendData(14);
-      this.#store.set({ kgs, kpis: computeKPIs(kgs), trend });
-      this.#updateKPIValues();
-      this.#renderLastUpdated();
-      if (this.#currentView === 'cards') this.#renderKGCards(this.#filteredKGs());
-      if (this.#currentView === 'table') this.#renderTable(this.#filteredKGs());
-    }, 8000);
+      this.#refresh({ silent: true }).catch(error => {
+        console.error('[KgOverview] refresh failed', error);
+      });
+    }, 60000);
   }
 
   #renderLastUpdated() {
@@ -1114,18 +1161,24 @@ class KgOverview {
     this.#savePrefs();
   }
 
-  #refresh() {
+  async #refresh({ silent = false } = {}) {
     const btn = document.getElementById('ko-refresh-btn');
     const icon = btn?.querySelector('i');
     if (icon) icon.style.animation = 'koShimmer .6s linear infinite';
-    const trend = buildTrendData(14);
-    const kgs   = MOCK_KGS.map(kg => ({ ...kg, attendance: Math.round(55 + Math.random() * 40) }));
-    this.#store.set({ kgs, kpis: computeKPIs(kgs), trend });
-    this.#updateKPIValues();
-    this.#renderActiveView();
-    this.#renderAlertItems();
-    this.#renderLastUpdated();
-    setTimeout(() => { if (icon) icon.style.animation = ''; }, 700);
+    try {
+      await this.#loadOverviewData();
+      this.#updateKPIValues();
+      this.#renderActiveView();
+      this.#renderAlertItems();
+      this.#renderLastUpdated();
+    } catch (error) {
+      console.error('[KgOverview] refresh failed', error);
+      if (!silent) {
+        alert(window.KINJO_LANG === 'en' ? 'Failed to refresh kindergarten overview.' : 'تعذر تحديث نظرة الروضات.');
+      }
+    } finally {
+      setTimeout(() => { if (icon) icon.style.animation = ''; }, 700);
+    }
   }
 
   #today(offsetDays = 0) {
@@ -1181,5 +1234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
   window._kgOverview = new KgOverview();
-  window._kgOverview.init();
+  window._kgOverview.init().catch(error => {
+    console.error('[KgOverview] initialisation failed', error);
+  });
 });

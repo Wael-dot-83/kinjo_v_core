@@ -1,4 +1,4 @@
-﻿/**
+/**
  * KinJo Admin Interface - Elite Design System
  * Professional Admin Interface with Bilingual Support (Arabic RTL / English LTR)
  * Design equivalent to 20+ years of UX expertise
@@ -198,14 +198,14 @@
   --admin-radius-full: 9999px; /* Fully rounded */
 
   /* ===== SHADOWS ===== */
-  --admin-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --admin-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --admin-shadow-sm: 0 2px 4px rgb(15 23 42 / 0.03);
+  --admin-shadow: 0 4px 8px rgb(15 23 42 / 0.05), 0 2px 4px rgb(15 23 42 / 0.04);
   --admin-shadow-md:
-    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    0 10px 15px -3px rgb(15 23 42 / 0.08), 0 4px 6px -2px rgb(15 23 42 / 0.04);
   --admin-shadow-lg:
-    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    0 16px 24px -4px rgb(15 23 42 / 0.1), 0 8px 12px -4px rgb(15 23 42 / 0.06);
   --admin-shadow-xl:
-    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    0 24px 32px -4px rgb(15 23 42 / 0.12), 0 12px 16px -6px rgb(15 23 42 / 0.08);
 
   /* ===== BORDERS ===== */
   --admin-border-width: 1px;
@@ -429,10 +429,12 @@ html[dir="ltr"] .admin-sidebar.collapsed + .admin-main {
   position: absolute;
   top: calc(100% + 6px);
   z-index: var(--admin-z-dropdown, 1000);
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  border-radius: 0.5rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--admin-radius-lg);
+  box-shadow: var(--admin-shadow-lg);
   min-width: 180px;
   padding: 0.375rem 0;
   overflow: hidden;
@@ -574,9 +576,10 @@ html[dir="rtl"] .admin-nav-item.active::before {
 
 /* Header */
 .admin-header {
-  background-color: #1F5E47;
-  background-image: linear-gradient(90deg, #163d2e 0%, #1F5E47 60%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  background: rgba(31, 94, 71, 0.85); /* kinjo-primary translucent */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding: var(--admin-space-4) var(--admin-space-8);
   display: flex;
   align-items: center;
@@ -584,7 +587,7 @@ html[dir="rtl"] .admin-nav-item.active::before {
   position: sticky;
   top: 0;
   z-index: var(--admin-z-sticky);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
 /* Header elements need white text on dark green background */
@@ -694,8 +697,14 @@ html[dir="rtl"] .admin-nav-item.active::before {
   font-weight: var(--admin-font-weight-medium);
   text-decoration: none;
   cursor: pointer;
-  transition: all var(--admin-transition-fast);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-btn:active {
+  transform: scale(0.96);
 }
 
 .admin-btn:disabled {
@@ -704,16 +713,16 @@ html[dir="rtl"] .admin-nav-item.active::before {
 }
 
 .admin-btn-primary {
-  background-color: var(--admin-primary);
+  background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-dark) 100%);
   color: white;
-  border-color: var(--admin-primary);
+  border: none;
+  box-shadow: 0 4px 10px rgba(31, 94, 71, 0.25);
 }
 
 .admin-btn-primary:hover:not(:disabled) {
-  background-color: var(--admin-primary-hover);
-  border-color: var(--admin-primary-hover);
+  background: linear-gradient(135deg, #1a4f3b 0%, #112e23 100%);
+  box-shadow: 0 6px 16px rgba(31, 94, 71, 0.4);
   transform: translateY(-1px);
-  box-shadow: var(--admin-shadow);
 }
 
 .admin-btn-secondary {
@@ -879,16 +888,17 @@ html[dir="rtl"] .admin-nav-item.active::before {
 
 /* Cards */
 .admin-card {
-  background-color: white;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
   border: var(--admin-border-width) solid var(--admin-border-color);
   border-radius: var(--admin-radius-lg);
   box-shadow: var(--admin-shadow-sm);
   overflow: hidden;
-  transition: all var(--admin-transition-normal);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .admin-card:hover {
-  box-shadow: var(--admin-shadow);
+  box-shadow: var(--admin-shadow-md);
   transform: translateY(-2px);
 }
 

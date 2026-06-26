@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 {% if ui_lang == 'en' %}
 <html lang="en" dir="{{ ui_dir | default('ltr') }}">
   {% else %}
@@ -122,14 +122,20 @@
         border-color: var(--admin-primary, #1F5E47) !important;
       }
       .admin-container .btn-primary {
-        background: linear-gradient(135deg, #1F5E47, #163d2e) !important;
-        border-color: #1F5E47 !important;
+        background: linear-gradient(135deg, #1F5E47 0%, #163d2e 100%) !important;
+        border: none !important;
         color: #ffffff !important;
+        box-shadow: 0 4px 10px rgba(31, 94, 71, 0.25) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      }
+      .admin-container .btn-primary:active {
+        transform: scale(0.96) !important;
       }
       .admin-container .btn-primary:hover,
       .admin-container .btn-primary:focus {
-        background: linear-gradient(135deg, #2F7D62, #1F5E47) !important;
-        border-color: #2F7D62 !important;
+        background: linear-gradient(135deg, #1a4f3b 0%, #112e23 100%) !important;
+        box-shadow: 0 6px 16px rgba(31, 94, 71, 0.4) !important;
+        transform: translateY(-1px);
       }
       .admin-container .spinner-border.text-primary {
         color: var(--admin-primary, #1F5E47) !important;
