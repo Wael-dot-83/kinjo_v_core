@@ -32,7 +32,7 @@
       <!-- Skeleton KPI cards (7 placeholders — matches actual KPI count) -->
       <div class="admin-skeleton-kpi-row">
         {% for _ in range(7) %}
-        <div class="admin-skeleton-kpi-card" aria-hidden="true">
+        <div class="admin-skeleton-kpi-card shadow-sm border-0" style="padding: var(--space-4); border-radius: var(--radius-lg);" aria-hidden="true">
           <div class="admin-skeleton-icon"></div>
           <div class="admin-skeleton-content">
             <div class="admin-skeleton-line admin-skeleton-line--value"></div>
@@ -75,7 +75,7 @@
       <!-- Charts -->
       <div class="admin-dashboard-charts">
 
-        <div class="admin-dashboard-chart-container">
+        
           <div class="admin-card">
             <div class="admin-card-header">
               <h3 class="admin-card-title">
@@ -86,9 +86,8 @@
               <canvas id="user-activity-chart" width="400" height="200"></canvas>
             </div>
           </div>
-        </div>
 
-        <div class="admin-dashboard-chart-container">
+        
           <div class="admin-card">
             <div class="admin-card-header">
               <h3 class="admin-card-title">
@@ -99,7 +98,6 @@
               <canvas id="enrollment-status-chart" width="400" height="200"></canvas>
             </div>
           </div>
-        </div>
 
       </div>
 

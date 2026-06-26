@@ -14,10 +14,10 @@
 :root {
   /* ===== COLOR PALETTE ===== */
   /* Primary — Brand Dark Green */
-  --admin-primary: #1F5E47;
-  --admin-primary-hover: #2F7D62;
-  --admin-primary-light: #e0f0eb;
-  --admin-primary-dark: #163d2e;
+  --admin-primary: #4F46E5;
+  --admin-primary-hover: #4338CA;
+  --admin-primary-light: #EEF2FF;
+  --admin-primary-dark: #3730A3;
 
   /* Secondary — Neutral Slate (UI utility) */
   --admin-secondary: #64748b;
@@ -26,10 +26,10 @@
   --admin-secondary-dark: #334155;
 
   /* Accent — Brand Gold */
-  --admin-accent: #B49B3B;
-  --admin-accent-hover: #967f2e;
-  --admin-accent-light: #D6C56B;
-  --admin-accent-lighter: #faf6e4;
+  --admin-accent: #10B981;
+  --admin-accent-hover: #059669;
+  --admin-accent-light: #D1FAE5;
+  --admin-accent-lighter: #ECFDF5;
 
   /* Semantic Colors */
   --admin-success: #10b981;
@@ -47,10 +47,10 @@
   --admin-error-light: #fee2e2;
   --admin-error-dark: #b91c1c;
 
-  --admin-info: #2F7D62;
-  --admin-info-hover: #1F5E47;
-  --admin-info-light: #e0f0eb;
-  --admin-info-dark: #163d2e;
+  --admin-info: #0EA5E9;
+  --admin-info-hover: #0284C7;
+  --admin-info-light: #E0F2FE;
+  --admin-info-dark: #075985;
 
   /* Sidebar dimensions */
   --admin-sidebar-width: 280px;
