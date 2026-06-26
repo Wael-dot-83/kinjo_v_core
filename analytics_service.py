@@ -3356,8 +3356,8 @@ class ReportPreviewResponse(BaseModel):
     charts: List[Dict[str, Any]] = []
     sample_data: List[Dict[str, Any]] = []
     data_quality: Dict[str, Any]
-    warnings: List[str] = []
-    insights: List[str] = []
+    warnings: List[Any] = []
+    insights: List[Any] = []
 
 
 class ReportHistoryItem(BaseModel):
@@ -4156,7 +4156,7 @@ def preview_report(
                 models.Class, models.AttendanceLog.class_id == models.Class.id
             ).join(models.Kindergarten, models.Class.kindergarten_id == models.Kindergarten.id).filter(
                 models.AttendanceLog.date >= period_start, models.AttendanceLog.date <= period_end,
-                models.AttendanceLog.status.in_([models.AttendanceStatus.ABSENT, models.AttendanceStatus.EXCUSED_ABSENCE])
+                models.AttendanceLog.status == models.AttendanceStatus.ABSENT
             )
             if kg_filter: gov_q = gov_q.filter(models.Kindergarten.id.in_(kg_filter))
             gov_data = gov_q.group_by(models.Kindergarten.governorate).all()
