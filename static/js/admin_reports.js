@@ -107,12 +107,11 @@
   }
 
   function destroyChartInstances() {
-    const ids = ["funnelChart", "sourceChart", "trendChart", "governancePieChart"];
-    ids.forEach((id) => {
-      const canvas = document.getElementById(id);
-      if (!canvas) return;
-      const chart = window.Chart.getChart(canvas);
-      if (chart) chart.destroy();
+    if (!window.Chart) return;
+    Object.values(window.Chart.instances).forEach(chart => {
+      if (chart.canvas && chart.canvas.id.startsWith("chart-")) {
+        chart.destroy();
+      }
     });
   }
 
@@ -268,27 +267,39 @@
         .join("");
     }
 
-    // Charts (Structural Placeholder instead of misleading Dummy Data)
+    // Charts 
     const chartsContainer = getEl("previewCharts");
     if (chartsContainer && data.charts && data.charts.length) {
       chartsContainer.innerHTML = data.charts
         .map((chart) => {
-          const isLarge = chart.type === 'line';
-          let icon = "bi-bar-chart";
-          if (chart.type === "line") icon = "bi-graph-up";
-          if (chart.type === "pie" || chart.type === "doughnut") icon = "bi-pie-chart";
-          
+          const isLarge = chart.type === 'line' || chart.type === 'bar';
           return `
-            <div class="${isLarge ? 'col-lg-12' : 'col-lg-6'}">
-              <div class="border rounded p-4 text-center bg-light">
-                <i class="bi ${icon} fs-1 text-muted opacity-50 mb-2 d-block"></i>
-                <div class="fw-bold mb-1">${escapeHtml(reportsText(chart.label_ar || chart.label, chart.label_en || chart.label))}</div>
-                <div class="small text-muted">${reportsText("الرسم البياني متاح في التصدير", "Chart available in export")}</div>
+            <div class="${isLarge ? 'col-lg-12' : 'col-lg-6'} mb-4">
+              <div class="border rounded p-3 bg-white shadow-sm h-100">
+                <div class="fw-bold mb-3 text-center">${escapeHtml(reportsText(chart.label_ar || chart.label, chart.label_en || chart.label))}</div>
+                <div style="position: relative; height: 300px; width: 100%;">
+                  <canvas id="chart-${chart.id}"></canvas>
+                </div>
               </div>
             </div>
             `;
         })
         .join("");
+        
+      data.charts.forEach(chart => {
+        const canvas = document.getElementById(`chart-${chart.id}`);
+        if (!canvas) return;
+        const chartData = chart.data || { labels: [], datasets: [] };
+        new window.Chart(canvas, {
+          type: chart.type || 'bar',
+          data: chartData,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+          }
+        });
+      });
     } else if (chartsContainer) {
       chartsContainer.innerHTML = `
         <div class="col-12 text-center text-muted py-4">
