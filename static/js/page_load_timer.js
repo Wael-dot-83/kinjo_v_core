@@ -131,7 +131,7 @@
         background: rgba(31, 94, 71, 0.92);
       }
       .page-load-timer.is-loading .page-load-timer__bar-fill {
-        background: linear-gradient(90deg, #1F5E47 0%, #2F7D62 100%);
+        background: linear-gradient(90deg, #4F46E5 0%, #0EA5E9 100%);
       }
       .page-load-timer.is-done {
         background: rgba(22, 163, 74, 0.9);

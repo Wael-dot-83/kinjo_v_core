@@ -257,7 +257,7 @@ const KPI_EXPLAIN_META = {
   overall_gcei: {
     icon: "bi-speedometer2",
     iconBg: "rgba(31,94,71,.1)",
-    iconColor: "#1F5E47",
+    iconColor: "#4F46E5",
     meaning: "مؤشر شامل يقيّم أداء الروضة من خلال دمج عاملين رئيسيين: الحوكمة والإدارة (60%) وتجربة الطفل (40%). كلما ارتفعت الدرجة دلّت على تميّز في جميع الجوانب.",
     formula: "GCEI = (درجة الحوكمة × 60%) + (درجة تجربة الطفل × 40%)",
     importance: "هو المرجع الأول لتقييم أي روضة دفعةً واحدة ومقارنة الروضات وتحديد الأولويات الإشرافية.",
@@ -407,7 +407,7 @@ const KPI_EXPLAIN_META = {
   active_enrollments: {
     icon: "bi-person-check-fill",
     iconBg: "rgba(47,125,98,.1)",
-    iconColor: "#2F7D62",
+    iconColor: "#0EA5E9",
     meaning: "عدد الأطفال المسجّلين حالياً بحالة نشطة (ACTIVE) في الروضة أو مجموعة الروضات المُحدَّدة.",
     formula: "عدّ سجلات التسجيل ذات الحالة = ACTIVE",
     importance: "يُعطي صورة فورية عن الطلب الحالي ويُستخدم قاسماً في حساب معظم المؤشرات الأخرى.",
@@ -2135,7 +2135,7 @@ function renderAlerts(rawAlerts) {
   const severityColor = {
     critical: "#dc3545",
     high:     "#f59e0b",
-    medium:   "#2F7D62",
+    medium:   "#0EA5E9",
     low:      "#64748b",
   };
   const severityIcon = {
@@ -2276,13 +2276,13 @@ function renderAttendanceChart(series) {
           label: dashboardLiteral("الحضور"),
           data: values.length > 0 ? values : [0],
           fill: chartType === "line",
-          borderColor: "#1F5E47",
+          borderColor: "#4F46E5",
           backgroundColor: chartType === "line" ? areaGradient : "rgba(31, 94, 71, 0.45)",
           borderWidth: chartType === "line" ? 2.5 : 1,
           tension: 0.35,
           pointRadius: chartType === "line" ? 3.5 : 0,
           pointHoverRadius: chartType === "line" ? 5 : 0,
-          pointBackgroundColor: "#1F5E47",
+          pointBackgroundColor: "#4F46E5",
           borderRadius: chartType === "bar" ? 8 : 0,
           maxBarThickness: chartType === "bar" ? 36 : undefined,
         },
@@ -2395,7 +2395,7 @@ function renderEnrollmentChart(enrollmentMap) {
         {
           data: hasData ? values : [0],
           backgroundColor: hasData
-            ? ["#1F5E47", "#10b981", "#f59e0b", "#ef4444", "#64748b", "#2F7D62"]
+            ? ["#4F46E5", "#10b981", "#f59e0b", "#ef4444", "#64748b", "#0EA5E9"]
             : ["#dee2e6"],
           borderWidth: 2,
           borderColor: "#ffffff",

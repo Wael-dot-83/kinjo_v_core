@@ -337,7 +337,7 @@ class AdminComponents {
       success: "#10b981",
       warning: "#f59e0b",
       error: "#ef4444",
-      info: "#2F7D62",
+      info: "#0EA5E9",
     };
     notification.style.borderLeftColor = colors[type] || colors.info;
 
@@ -720,7 +720,7 @@ window.showToast = function(message, type) {
     container.style.cssText = 'position:fixed;top:24px;' + (isRtl ? 'left' : 'right') + ':24px;z-index:1070;display:flex;flex-direction:column;gap:12px;max-width:400px;';
     document.body.appendChild(container);
   }
-  var colors = { success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#2F7D62' };
+  var colors = { success: '#10b981', warning: '#f59e0b', error: '#ef4444', info: '#0EA5E9' };
   var notification = document.createElement('div');
   notification.className = 'admin-notification admin-notification-' + type;
   var slideOut = isRtl ? 'translateX(-100%)' : 'translateX(100%)';
@@ -961,7 +961,7 @@ if (typeof module !== "undefined" && module.exports) {
       ? window.AdminI18n.translate("components.session_expired", "Your session expired due to inactivity. Please sign in again.")
       : "Your session expired due to inactivity. Please sign in again.";
     notice.style.cssText =
-      "position:fixed;top:0;left:0;right:0;z-index:99999;background:#1F5E47;" +
+      "position:fixed;top:0;left:0;right:0;z-index:99999;background:#4F46E5;" +
       "color:#fff;text-align:center;padding:10px;font-size:14px;font-weight:600;";
     document.body.prepend(notice);
     setTimeout(() => notice.remove(), 5000);

@@ -520,7 +520,7 @@
           {
             label: T.chartScore,
             data: entries.map(([, value]) => value),
-            backgroundColor: cssVar('--admin-primary', '#1F5E47'),
+            backgroundColor: cssVar('--admin-primary', '#4F46E5'),
             borderRadius: 6,
           },
         ],
@@ -573,7 +573,7 @@
           {
             label: T.chartScore,
             data: chartPoints.map((point) => point.final_score ?? null),
-            borderColor: cssVar('--admin-primary', '#1F5E47'),
+            borderColor: cssVar('--admin-primary', '#4F46E5'),
             backgroundColor: cssVar('--admin-primary-bg', 'rgba(31, 94, 71, 0.14)'),
             borderWidth: 2,
             pointRadius: 3,

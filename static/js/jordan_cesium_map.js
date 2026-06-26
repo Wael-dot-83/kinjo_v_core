@@ -229,7 +229,7 @@ async function loadGovPolygons(viewer) {
     const ds = await Cesium.GeoJsonDataSource.load(GOVS_GEOJSON, {
       stroke:        Cesium.Color.WHITE.withAlpha(0.5),
       strokeWidth:   2,
-      fill:          Cesium.Color.fromCssColorString('#2F7D62').withAlpha(0.40),
+      fill:          Cesium.Color.fromCssColorString('#0EA5E9').withAlpha(0.40),
       clampToGround: true,
     });
     viewer.dataSources.add(ds);

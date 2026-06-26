@@ -724,7 +724,7 @@ function buildTrendChartData(type) {
           data: new Array(dataSeries.length - 1)
             .fill(null)
             .concat(forecastPoints.map((d) => d.value)),
-          borderColor: "#2F7D62",
+          borderColor: "#0EA5E9",
           borderDash: [6, 4],
           fill: false,
           pointRadius: 2,
@@ -2119,7 +2119,7 @@ function _renderRoleBreakdown(byRole) {
   if (!container) return;
 
   const ROLES = [
-    { key: "ADMIN",      ar: "مدير النظام",    en: "Admin",      color: "#1F5E47", icon: "bi-shield-lock" },
+    { key: "ADMIN",      ar: "مدير النظام",    en: "Admin",      color: "#4F46E5", icon: "bi-shield-lock" },
     { key: "MANAGER",    ar: "مدير روضة",      en: "Manager",    color: "#2563EB", icon: "bi-person-workspace" },
     { key: "SUPERVISOR", ar: "مشرف تربوي",     en: "Supervisor", color: "#7C3AED", icon: "bi-binoculars" },
     { key: "PARENT",     ar: "ولي أمر",        en: "Parent",     color: "#0891B2", icon: "bi-people" },
@@ -2258,7 +2258,7 @@ function renderSourceChart(sources) {
   if (!adminAnalyticsHasChart()) return;
   if (sourceChartInstance) sourceChartInstance.destroy();
 
-  const colors = ["#1F5E47", "#2F7D62", "#10B981", "#F59E0B", "#EF4444", "#6366F1"];
+  const colors = ["#4F46E5", "#0EA5E9", "#10B981", "#F59E0B", "#EF4444", "#6366F1"];
   sourceChartInstance = new window.Chart(canvas, {
     type: "doughnut",
     data: {
@@ -2513,7 +2513,7 @@ function _renderCompletenessPanel(comp) {
   const ITEMS = [
     { key: "parent_profiles",   ar: "ملفات أولياء الأمور",      en: "Parent Profiles",   color: "#2563EB", icon: "bi-person-vcard" },
     { key: "children_profiles", ar: "ملفات الأطفال",            en: "Children Profiles", color: "#0891B2", icon: "bi-emoji-smile" },
-    { key: "kg_licensed",       ar: "الروضات المرخصة",          en: "Licensed KGs",      color: "#1F5E47", icon: "bi-patch-check" },
+    { key: "kg_licensed",       ar: "الروضات المرخصة",          en: "Licensed KGs",      color: "#4F46E5", icon: "bi-patch-check" },
     { key: "kg_geolocated",     ar: "الروضات محددة جغرافياً",   en: "Geolocated KGs",   color: "#7C3AED", icon: "bi-geo-alt" },
     { key: "staff_profiles",    ar: "ملفات الموظفين والمشرفين", en: "Staff Profiles",    color: "#D97706", icon: "bi-person-workspace" },
   ];
@@ -2614,7 +2614,7 @@ function _renderMonthlyTrendChart(trends) {
         {
           label: adminAnalyticsText("روضات جديدة", "New KGs"),
           data: trends.kindergartens || [],
-          borderColor: "#1F5E47",
+          borderColor: "#4F46E5",
           backgroundColor: "transparent",
           tension: 0.35,
           fill: false,

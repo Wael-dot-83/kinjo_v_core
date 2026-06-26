@@ -198,7 +198,7 @@ function renderFunnelChart(funnel) {
       datasets: [
         {
           data: [agg.required || 0, agg.submitted || 0, agg.delivered || 0, agg.viewed || 0],
-          backgroundColor: ["#6c757d", "#1F5E47", "#198754", "#B49B3B"],
+          backgroundColor: ["#6c757d", "#4F46E5", "#198754", "#B49B3B"],
           borderRadius: 6,
         },
       ],

@@ -101,7 +101,7 @@
               label: 'الفترة الحالية',
               data: [],
               backgroundColor: 'rgba(47,125,98,0.75)',
-              borderColor: '#2F7D62',
+              borderColor: '#0EA5E9',
               borderWidth: 1,
               borderRadius: 4,
             },
@@ -272,7 +272,7 @@
 
     body.innerHTML = `
       <div class="hm-alert-card" aria-busy="true">
-        <div style="width:18px;height:18px;border:2px solid rgba(255,255,255,0.1);border-top-color:#2F7D62;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+        <div style="width:18px;height:18px;border:2px solid rgba(255,255,255,0.1);border-top-color:#0EA5E9;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
         <span style="color:#64748b;font-size:0.875rem">جاري تحميل التنبيهات…</span>
       </div>`;
 
