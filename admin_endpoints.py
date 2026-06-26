@@ -5695,3 +5695,33 @@ def calculate_governorate_risk_score(governance_score: float, incident_count: in
     if incident_count > 10:
         score += 20
     return min(max(int(score), 0), 100)
+
+
+@router.get("/dashboard/critical-cases")
+def get_critical_cases(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin)
+):
+    """Fetch the top critical kindergartens requiring enforcement."""
+    critical_kgs = db.query(models.Kindergarten, models.KindergartenKPI).join(
+        models.KindergartenKPI, models.Kindergarten.id == models.KindergartenKPI.kindergarten_id
+    ).filter(
+        models.KindergartenKPI.kpi_score <= 25
+    ).order_by(models.KindergartenKPI.kpi_score.asc()).limit(10).all()
+    
+    results = []
+    for kg, kpi in critical_kgs:
+        results.append({
+            "id": kg.id,
+            "name_ar": kg.name_ar,
+            "name_en": kg.name_en,
+            "governorate": kg.governorate,
+            "risk_score": 100 - kpi.kpi_score if kpi.kpi_score is not None else 100,
+            "incident_count": kpi.incident_count or 0,
+            "unregistered_children": kpi.unregistered_children_count or 0,
+            "has_license": getattr(kg, 'has_license', False),
+            "principal_name": getattr(kg, 'principal_name', ''),
+            "phone_number": getattr(kg, 'phone_number', '')
+        })
+    return {"critical_cases": results}
+

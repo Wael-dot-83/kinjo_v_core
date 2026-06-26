@@ -101,6 +101,40 @@
 
       </div>
 
+      
+      <!-- Critical Cases Drill-Down -->
+      <div class="admin-card" style="margin-bottom: 2rem; border: 1px solid #fca5a5;">
+        <div class="admin-card-header" style="background-color: #fef2f2; border-bottom: 1px solid #fca5a5;">
+          <h3 class="admin-card-title" style="color: #991b1b; font-weight: 700;">
+            <i class="bi bi-shield-exclamation me-2"></i>
+            {% if ui_lang == 'en' %}Critical Cases Requiring Enforcement{% else %}الحالات الحرجة التي تتطلب إنفاذاً{% endif %}
+          </h3>
+        </div>
+        <div class="admin-card-body p-0">
+          <div class="table-responsive">
+            <table class="table admin-table m-0">
+              <thead style="background-color: #f8fafc;">
+                <tr>
+                  <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                  <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                  <th>{% if ui_lang == 'en' %}Risk Score{% else %}مؤشر الخطر{% endif %}</th>
+                  <th>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}</th>
+                  <th>{% if ui_lang == 'en' %}Action{% else %}إجراء الإنفاذ{% endif %}</th>
+                </tr>
+              </thead>
+              <tbody id="critical-cases-tbody">
+                <tr>
+                  <td colspan="5" class="text-center text-muted py-4">
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    {% if ui_lang == 'en' %}Loading critical cases...{% else %}جاري تحميل الحالات الحرجة...{% endif %}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Activity, Alerts & Quick Actions -->
       <div class="admin-dashboard-bottom">
 
@@ -187,8 +221,67 @@
 </div>
 {% endblock %}
 
+
+<!-- Enforcement Drill-Down Modal -->
+<div class="modal fade" id="enforcementModal" tabindex="-1" aria-labelledby="enforcementModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="enforcementModalLabel">
+          <i class="bi bi-shield-lock me-2"></i>
+          {% if ui_lang == 'en' %}Enforcement Drill-Down{% else %}إجراءات الإنفاذ العميقة{% endif %}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h4 id="enforcement-kg-name" class="mb-3 text-danger fw-bold"></h4>
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <ul class="list-group list-group-flush border">
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                {% if ui_lang == 'en' %}Risk Score{% else %}درجة الخطورة{% endif %}
+                <span class="badge bg-danger rounded-pill fs-6" id="enf-risk"></span>
+              </li>
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                {% if ui_lang == 'en' %}Incidents{% else %}عدد الحوادث المسجلة{% endif %}
+                <span class="badge bg-warning text-dark rounded-pill" id="enf-incidents"></span>
+              </li>
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                {% if ui_lang == 'en' %}Unregistered Children{% else %}أطفال غير مسجلين{% endif %}
+                <span class="badge bg-secondary rounded-pill" id="enf-unregistered"></span>
+              </li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <div class="alert alert-danger h-100 mb-0">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <strong>{% if ui_lang == 'en' %}Required Action{% else %}الإجراء المطلوب{% endif %}</strong>
+              <p class="mt-2 mb-0" style="font-size: 0.9rem;">
+                {% if ui_lang == 'en' %}This kindergarten has exceeded the maximum allowable risk thresholds. Immediate enforcement is required.{% else %}تجاوزت هذه الروضة الحد الأقصى المسموح به لمؤشرات الخطر. يتطلب اتخاذ إجراء إنفاذ فوري.{% endif %}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <h5 class="fw-bold mb-3">{% if ui_lang == 'en' %}Execute Penalty{% else %}تنفيذ العقوبة{% endif %}</h5>
+        <div class="d-grid gap-3 d-md-flex">
+          <button class="btn btn-outline-warning flex-grow-1" onclick="alert('{% if ui_lang == 'en' %}Official warning issued.{% else %}تم إصدار إنذار رسمي.{% endif %}');">
+            <i class="bi bi-envelope-exclamation me-2"></i> {% if ui_lang == 'en' %}Issue Official Warning{% else %}إصدار إنذار رسمي{% endif %}
+          </button>
+          <button class="btn btn-outline-danger flex-grow-1" onclick="alert('{% if ui_lang == 'en' %}Inspection dispatched.{% else %}تم توجيه فريق التفتيش.{% endif %}');">
+            <i class="bi bi-search me-2"></i> {% if ui_lang == 'en' %}Dispatch Inspection{% else %}توجيه تفتيش ميداني{% endif %}
+          </button>
+          <button class="btn btn-danger flex-grow-1" onclick="alert('{% if ui_lang == 'en' %}Operations suspended!{% else %}تم تعليق العمل بنجاح!{% endif %}');">
+            <i class="bi bi-slash-circle me-2"></i> {% if ui_lang == 'en' %}Suspend Operations{% else %}تعليق العمل وإغلاق{% endif %}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% block extra_scripts %}
 <script>window.KINJO_LANG = "{{ ui_lang }}";</script>
 <script src="/static/js/chart_utils.js?v=2.1"></script>
-<script src="/static/js/admin_dashboard.js?v=2.7"></script>
+<script src="/static/js/admin_dashboard.js?v=2.8"></script>
 {% endblock %}
