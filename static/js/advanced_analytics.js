@@ -1,4 +1,5 @@
 let radarChartInstance = null;
+let scatterChartInstance = null;
 
 async function loadDimensionIds(prefix) {
     const typeSelect = document.getElementById(`${prefix}-type`);
@@ -46,8 +47,9 @@ async function runComparison() {
         
         renderRadarChart(data.dim1, data.dim2);
         
-        // Fetch Predictive Data for Dim1
+        // Fetch Predictive Data & Scatter Data for Dim1
         fetchPredictiveInsights(dim1Type, dim1Id);
+        fetchScatterData(dim1Type, dim1Id);
     } catch (e) {
         console.error(e);
         alert('Failed to run analysis. Check console.');
@@ -95,6 +97,66 @@ async function fetchPredictiveInsights(dimType, dimId) {
     } catch (e) {
         container.innerHTML = `<div class="col-12"><p class="text-warning">No predictive data available for this dimension.</p></div>`;
     }
+}
+
+async function fetchScatterData(dimType, dimId) {
+    try {
+        const res = await fetch(`/api/analytics/scatter?dim_type=${dimType}&dim_id=${dimId}`);
+        if (!res.ok) throw new Error('Data not found');
+        const data = await res.json();
+        renderScatterChart(data);
+    } catch (e) {
+        console.error("Failed to load scatter data", e);
+    }
+}
+
+function renderScatterChart(points) {
+    const ctx = document.getElementById('scatterChart').getContext('2d');
+    
+    if (scatterChartInstance) {
+        scatterChartInstance.destroy();
+    }
+    
+    const ar = window.KINJO_LANG === 'ar' || true;
+    
+    scatterChartInstance = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: ar ? 'توزيع الأداء' : 'Performance Distribution',
+                data: points,
+                backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red for visibility
+                borderColor: 'rgba(239, 68, 68, 1)',
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: { display: true, text: ar ? 'علامة الحوكمة (%)' : 'Governance Score (%)' },
+                    min: 0,
+                    max: 100
+                },
+                y: {
+                    title: { display: true, text: ar ? 'نسبة الحضور (%)' : 'Attendance Rate (%)' },
+                    min: 0,
+                    max: 100
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return `${ctx.raw.name}: (${ctx.raw.x.toFixed(1)}%, ${ctx.raw.y.toFixed(1)}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 function renderRadarChart(dim1, dim2) {

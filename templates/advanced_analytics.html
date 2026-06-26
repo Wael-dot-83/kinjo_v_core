@@ -68,9 +68,16 @@
 
                     <!-- Chart Container -->
                     <div class="row justify-content-center">
-                        <div class="col-md-8">
-                            <div style="height: 400px;">
+                        <div class="col-md-6">
+                            <h6 class="text-center fw-bold text-muted mb-3">{% if ui_lang == 'ar' %}توازن الأداء المعياري{% else %}Standardized Performance Balance{% endif %}</h6>
+                            <div style="height: 350px;">
                                 <canvas id="radarChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6 border-start border-light">
+                            <h6 class="text-center fw-bold text-muted mb-3">{% if ui_lang == 'ar' %}الارتباط والتشتت (اكتشاف الشذوذ){% else %}Correlation & Dispersion (Anomaly Detection){% endif %}</h6>
+                            <div style="height: 350px;">
+                                <canvas id="scatterChart"></canvas>
                             </div>
                         </div>
                     </div>

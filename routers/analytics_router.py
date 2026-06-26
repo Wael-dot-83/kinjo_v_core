@@ -24,7 +24,6 @@ def get_predictive_insights(
     if not adv:
         raise HTTPException(status_code=404, detail="No advanced analytics found for this dimension.")
 
-    # Convert to standard dictionary
     return {
         "attendance_trend_slope": adv.attendance_trend_slope,
         "staffing_quality_correlation": adv.staffing_quality_correlation,
@@ -42,7 +41,7 @@ def compare_dimensions(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin)
 ):
-    """Compare two levels (e.g., Amman vs Jordan Overall). Returns radar chart data."""
+    """Compare two levels. Returns radar chart data."""
     def get_latest_cache(dtype, did):
         return db.query(models.AnalyticsDimensionCache).filter(
             models.AnalyticsDimensionCache.dimension_type == models.AnalyticsDimensionType(dtype),
@@ -61,8 +60,8 @@ def compare_dimensions(
             "attendance": d1.attendance_rate or 0,
             "governance": d1.final_governance_score or 0,
             "enrollment": d1.enrollment_rate or 0,
-            "safety": 100 - (d1.incident_rate_per_100 or 0)*5, # Normalized safety score
-            "capacity": min(100, (d1.total_capacity or 100)) # Placeholder
+            "safety": 100 - (d1.incident_rate_per_100 or 0)*5, 
+            "capacity": min(100, (d1.total_capacity or 100))
         },
         "dim2": {
             "name": dim2_id,
@@ -80,9 +79,50 @@ def list_dimensions(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin)
 ):
-    """List available IDs for a specific dimension type (e.g. all Governorates)."""
+    """List available IDs for a specific dimension type."""
     results = db.query(models.AnalyticsDimensionCache.dimension_id).filter(
         models.AnalyticsDimensionCache.dimension_type == models.AnalyticsDimensionType(dimension_type)
     ).distinct().all()
     
     return [r[0] for r in results]
+
+@router.get("/scatter")
+def scatter_plot_data(
+    dim_type: str = Query(...),
+    dim_id: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin)
+):
+    """Fetches scatter plot data (Governance vs Attendance) for anomaly detection.
+       If Network, plots all Govs. If Gov, plots all Cities. If City, plots all KGs."""
+    
+    target_type = models.AnalyticsDimensionType.KINDERGARTEN
+    if dim_type == "NETWORK":
+        target_type = models.AnalyticsDimensionType.GOVERNORATE
+    elif dim_type == "GOVERNORATE":
+        target_type = models.AnalyticsDimensionType.CITY
+    
+    # Query the target dimensions. For simplicity, we just query recent caches
+    # where the dimension ID starts with the dim_id (since we constructed City IDs as "Gov_City").
+    query = db.query(models.AnalyticsDimensionCache).filter(
+        models.AnalyticsDimensionCache.dimension_type == target_type
+    )
+    
+    if dim_type == "GOVERNORATE":
+        query = query.filter(models.AnalyticsDimensionCache.dimension_id.like(f"{dim_id}_%"))
+    elif dim_type == "CITY":
+        # For City -> KG, we need a join. But since we lack direct parent IDs in cache,
+        # we just plot all KGs for now as a statistical sample.
+        pass
+
+    results = query.order_by(models.AnalyticsDimensionCache.period_date.desc()).limit(100).all()
+
+    points = []
+    for r in results:
+        points.append({
+            "x": r.final_governance_score or 0,
+            "y": r.attendance_rate or 0,
+            "name": r.dimension_id
+        })
+    
+    return points
