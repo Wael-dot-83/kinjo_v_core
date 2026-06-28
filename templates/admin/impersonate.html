@@ -2,29 +2,29 @@
 {% block title %}{% if ui_lang == 'en' %}Impersonation — KinJo{% else %}انتحال الهوية — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard"class="admin-breadcrumb-item">
+<a href="/admin/dashboard" class="breadcrumb-item">
     <i class="bi bi-house"></i>
     <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Impersonation{% else %}انتحال الهوية{% endif %}</span>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Impersonation{% else %}انتحال الهوية{% endif %}</span>
 {% endblock %}
 
 {% block extra_head %}{% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4">
+<div class="page-header mb-4">
     <div>
-        <p class="admin-text-danger small mb-1">
-            <i class="bi bi-person-fill-lock me-1"aria-hidden="true"></i>
+        <p class="text-danger small mb-1">
+            <i class="bi bi-person-fill-lock me-1" aria-hidden="true"></i>
             {% if ui_lang == 'en' %}System Administrator{% else %}المشرف العام{% endif %}
         </p>
-        <h1 class="admin-page-title">
+        <h1 class="page-title">
             {% if ui_lang == 'en' %}Impersonate Manager{% else %}انتحال هوية مدير{% endif %}
         </h1>
     </div>
-    <div class="admin-page-actions">
-        <a href="/dashboard"class="admin-btn admin-btn-ghost">
+    <div class="page-actions">
+        <a href="/dashboard" class="btn btn-ghost">
             <i class="bi bi-arrow-right me-2"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
         </a>
     </div>
@@ -47,7 +47,7 @@
         </div>
 
         <!-- Validation -->
-        <div id="validationAlert"class="alert alert-danger d-none mb-4"role="alert">
+        <div id="validationAlert" class="alert alert-danger d-none mb-4" role="alert">
             <i class="bi bi-exclamation-circle-fill me-2"></i>
             <span id="validationMsg"></span>
         </div>
@@ -56,45 +56,45 @@
         <div class="card mb-4">
             <div class="card-header">
                 <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-person-fill-gear me-2 admin-text-primary"></i>
+                    <i class="bi bi-person-fill-gear me-2 text-primary"></i>
                     {% if ui_lang == 'en' %}Select Manager{% else %}اختر المدير{% endif %}
                 </h6>
             </div>
             <div class="card-body">
-                <form id="impersonateForm"novalidate autocomplete="off">
+                <form id="impersonateForm" novalidate autocomplete="off">
 
                     <div class="mb-3">
-                        <label class="field-label"for="managerSearch">{% if ui_lang == 'en' %}Search & Filter Managers{% else %}بحث وتصفية المديرين{% endif %}</label>
-                        <input type="search"class="form-control"id="managerSearch"
+                        <label class="field-label" for="managerSearch">{% if ui_lang == 'en' %}Search & Filter Managers{% else %}بحث وتصفية المديرين{% endif %}</label>
+                        <input type="search" class="form-control" id="managerSearch"
                                placeholder="{% if ui_lang == 'en' %}Search by manager name or kindergarten...{% else %}ابحث باسم المدير أو الروضة...{% endif %}"
                                aria-label="{% if ui_lang == 'en' %}Search manager list{% else %}بحث في قائمة المديرين{% endif %}"
                                oninput="filterManagers(this.value)">
                     </div>
 
                     <div class="mb-4">
-                        <label class="field-label mb-2"for="managerSelect">{% if ui_lang == 'en' %}Manager{% else %}المدير{% endif %} <span class="admin-text-danger">*</span></label>
-                        <div id="managerListLoading"class="text-center py-3 admin-text-muted">
-                            <div class="spinner-border spinner-border-sm me-2"role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span></div>
+                        <label class="field-label mb-2" for="managerSelect">{% if ui_lang == 'en' %}Manager{% else %}المدير{% endif %} <span class="text-danger">*</span></label>
+                        <div id="managerListLoading" class="text-center py-3 text-muted">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span></div>
                             {% if ui_lang == 'en' %}Loading managers...{% else %}جاري تحميل المديرين...{% endif %}
                         </div>
-                        <div id="managerListWrap"class="manager-list d-none"role="listbox"
+                        <div id="managerListWrap" class="manager-list d-none" role="listbox"
                              aria-label="{% if ui_lang == 'en' %}Manager list{% else %}قائمة المديرين{% endif %}">
                             <!-- Items rendered by JS -->
                         </div>
-                        <div id="managerListEmpty"class="admin-text-muted small text-center py-3 d-none">
+                        <div id="managerListEmpty" class="text-muted small text-center py-3 d-none">
                             {% if ui_lang == 'en' %}No managers match the search{% else %}لا يوجد مديرون يطابقون البحث{% endif %}
                         </div>
                     </div>
 
                     <div class="mb-4">
-                        <label class="field-label"for="impersonateReason">{% if ui_lang == 'en' %}Reason for Impersonation{% else %}سبب انتحال الهوية{% endif %}</label>
-                        <textarea class="form-control"id="impersonateReason"rows="3"maxlength="500"
+                        <label class="field-label" for="impersonateReason">{% if ui_lang == 'en' %}Reason for Impersonation{% else %}سبب انتحال الهوية{% endif %}</label>
+                        <textarea class="form-control" id="impersonateReason" rows="3" maxlength="500"
                                   placeholder="{% if ui_lang == 'en' %}e.g. Reviewing a technical issue reported by the manager...{% else %}مثال: مراجعة مشكلة تقنية بلّغ عنها المدير...{% endif %}"
                                   aria-label="{% if ui_lang == 'en' %}Reason for impersonation{% else %}سبب انتحال الهوية{% endif %}"></textarea>
                         <div class="form-text">{% if ui_lang == 'en' %}Providing a reason is recommended to facilitate future review{% else %}يُوصى بذكر السبب لتسهيل المراجعة لاحقاً{% endif %}</div>
                     </div>
 
-                    <button type="submit"class="admin-btn admin-btn-error w-100 py-2"id="startImpersonateBtn">
+                    <button type="submit" class="btn btn-danger w-100 py-2" id="startImpersonateBtn">
                         <span class="btn-text">
                             <i class="bi bi-person-fill-lock me-2"></i>{% if ui_lang == 'en' %}Start Impersonation{% else %}بدء انتحال الهوية{% endif %}
                         </span>
@@ -111,22 +111,22 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-clock-history me-2 admin-text-muted"></i>
+                    <i class="bi bi-clock-history me-2 text-muted"></i>
                     {% if ui_lang == 'en' %}Recent Impersonation Events{% else %}آخر عمليات انتحال الهوية{% endif %}
                 </h6>
-                <span class="badge bg-light admin-text-muted border small"id="auditCount"></span>
+                <span class="badge bg-light text-muted border small" id="auditCount"></span>
             </div>
 
-            <div id="auditLoading"class="card-body text-center py-4 admin-text-muted">
-                <div class="spinner-border spinner-border-sm me-2"role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري...{% endif %}</span></div>{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
+            <div id="auditLoading" class="card-body text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري...{% endif %}</span></div>{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
             </div>
 
-            <div id="auditEmpty"class="card-body text-center py-4 admin-text-muted d-none">
+            <div id="auditEmpty" class="card-body text-center py-4 text-muted d-none">
                 <i class="bi bi-shield-check d-block fs-2 mb-2 opacity-25"></i>
                 <small>{% if ui_lang == 'en' %}No previous events{% else %}لا توجد عمليات سابقة{% endif %}</small>
             </div>
 
-            <div id="auditList"class="d-none">
+            <div id="auditList" class="d-none">
                 <!-- Rendered by JS -->
             </div>
         </div>
@@ -135,22 +135,22 @@
 </div>
 
 <!-- Confirm Modal -->
-<div class="modal fade"id="confirmModal"tabindex="-1"aria-labelledby="confirmModalLabel"aria-modal="true"role="dialog">
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-modal="true" role="dialog">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header border-0">
-                <h5 class="modal-title fw-700 admin-text-danger"id="confirmModalLabel">
+                <h5 class="modal-title fw-700 text-danger" id="confirmModalLabel">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
                     {% if ui_lang == 'en' %}Confirm Impersonation{% else %}تأكيد انتحال الهوية{% endif %}
                 </h5>
-                <button type="button"class="btn-close"data-bs-dismiss="modal"
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
                         aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <p>{% if ui_lang == 'en' %}You are about to impersonate:{% else %}أنت على وشك انتحال هوية:{% endif %}</p>
                 <div class="p-3 bg-light rounded mb-3">
-                    <div class="fw-700"id="confirmManagerName"></div>
-                    <div class="small admin-text-muted"id="confirmManagerKG"></div>
+                    <div class="fw-700" id="confirmManagerName"></div>
+                    <div class="small text-muted" id="confirmManagerKG"></div>
                 </div>
                 <div class="alert alert-warning py-2 small mb-0">
                     <i class="bi bi-shield-exclamation me-2"></i>
@@ -158,8 +158,8 @@
                 </div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button"class="btn btn-ghost"data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button"class="admin-btn admin-btn-error"id="confirmImpBtn"onclick="executeImpersonation()">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-danger" id="confirmImpBtn" onclick="executeImpersonation()">
                     <span class="btn-text"><i class="bi bi-person-fill-lock me-2"></i>{% if ui_lang == 'en' %}Confirm &amp; Start{% else %}تأكيد وبدء{% endif %}</span>
                     <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{% if ui_lang == 'en' %}Processing...{% else %}جاري...{% endif %}</span>
                 </button>
@@ -223,7 +223,7 @@
         empty.classList.add('d-none');
         wrap.innerHTML = managers.map(m => `
             <div class="manager-item ${selectedMgrId === m.id ? 'selected' : ''}"
-                 role="option"aria-selected="${selectedMgrId === m.id}"
+                 role="option" aria-selected="${selectedMgrId === m.id}"
                  onclick="selectManager(${m.id})"
                  id="mgr-${m.id}">
                 <div class="manager-avatar"><i class="bi bi-person-badge-fill"></i></div>
@@ -233,7 +233,7 @@
                         <i class="bi bi-building me-1"></i>${escHtml(m.kindergarten_name || _noKg)}
                     </div>
                 </div>
-                ${selectedMgrId === m.id ? '<i class="bi bi-check-circle-fill admin-text-primary ms-auto"></i>' : ''}
+                ${selectedMgrId === m.id ? '<i class="bi bi-check-circle-fill text-primary ms-auto"></i>' : ''}
             </div>`).join('');
         wrap.classList.remove('d-none');
     }
@@ -336,10 +336,10 @@
                         <div style="font-size:0.875rem;font-weight:700;">
                             ${_eventLabel}${escHtml(ev.target_name || ev.target_user_id)}
                         </div>
-                        <div class="small admin-text-muted">
+                        <div class="small text-muted">
                             ${escHtml(ev.reason || _noReason)}
                         </div>
-                        <div class="small admin-text-muted mt-1">
+                        <div class="small text-muted mt-1">
                             <i class="bi bi-clock me-1"></i>${date}
                         </div>
                     </div>

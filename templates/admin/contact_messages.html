@@ -1,41 +1,41 @@
-{% extends "admin_base.html"%}
+{% extends "admin_base.html" %}
 {% block title %}{% if ui_lang == 'en' %}Contact Messages — KinJo{% else %}رسائل التواصل — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house"aria-hidden="true"></i></a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Contact Messages{% else %}رسائل التواصل{% endif %}</span>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Contact Messages{% else %}رسائل التواصل{% endif %}</span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4">
-  <h1 class="admin-page-title">
+<div class="page-header mb-4">
+  <h1 class="page-title">
     <i class="bi bi-chat-dots me-2"></i>{% if ui_lang == 'en' %}Contact Messages{% else %}رسائل التواصل{% endif %}
   </h1>
 </div>
 <!-- Filters -->
-<form method="get"action="/admin/contact-messages"class="card mb-4">
+<form method="get" action="/admin/contact-messages" class="card mb-4">
     <div class="card-body py-3 d-flex align-items-center gap-3 flex-wrap">
-        <div class="input-group input-group-sm input-group-icon"style="max-width:280px;">
-            <span class="input-group-text"><i class="bi bi-search"aria-hidden="true"></i></span>
-            <input type="text"name="q"value="{{ filters.q or '' }}"
+        <div class="input-group input-group-sm input-group-icon" style="max-width:280px;">
+            <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+            <input type="text" name="q" value="{{ filters.q or '' }}"
                    class="form-control"
                    aria-label="{% if ui_lang == 'en' %}Search by name or subject{% else %}بحث بالاسم أو الموضوع{% endif %}"
                    placeholder="{% if ui_lang == 'en' %}Search by name or subject...{% else %}بحث بالاسم أو الموضوع...{% endif %}">
         </div>
-        <select name="status_filter"class="form-select form-select-sm w-auto">
+        <select name="status_filter" class="form-select form-select-sm w-auto">
             <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
-            <option value="open"{% if filters.status_filter == 'open' %}selected{% endif %}>{% if ui_lang == 'en' %}Open{% else %}مفتوحة{% endif %}</option>
-            <option value="resolved"{% if filters.status_filter == 'resolved' %}selected{% endif %}>{% if ui_lang == 'en' %}Resolved{% else %}مُغلقة{% endif %}</option>
+            <option value="open" {% if filters.status_filter == 'open' %}selected{% endif %}>{% if ui_lang == 'en' %}Open{% else %}مفتوحة{% endif %}</option>
+            <option value="resolved" {% if filters.status_filter == 'resolved' %}selected{% endif %}>{% if ui_lang == 'en' %}Resolved{% else %}مُغلقة{% endif %}</option>
         </select>
-        <button type="submit"class="admin-btn admin-btn-primary admin-btn-sm">{% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}</button>
+        <button type="submit" class="btn btn-primary btn-sm">{% if ui_lang == 'en' %}Filter{% else %}تصفية{% endif %}</button>
     </div>
 </form>
 
 <!-- Stats -->
 <div class="d-flex gap-3 mb-3">
     <span class="badge badge-soft badge-soft-secondary fs-6">{% if ui_lang == 'en' %}Total:{% else %}الإجمالي:{% endif %} {{ pagination.total }}</span>
-    <span class="admin-text-muted small">{% if ui_lang == 'en' %}Page{% else %}الصفحة{% endif %} {{ pagination.page }} {% if ui_lang == 'en' %}of{% else %}من{% endif %} {{ pagination.total_pages }}</span>
+    <span class="text-muted small">{% if ui_lang == 'en' %}Page{% else %}الصفحة{% endif %} {{ pagination.page }} {% if ui_lang == 'en' %}of{% else %}من{% endif %} {{ pagination.total_pages }}</span>
 </div>
 
 <!-- Table -->
@@ -57,11 +57,11 @@
             <tbody>
                 {% for msg in contact_messages %}
                 <tr>
-                    <td class="admin-text-muted small">{{ msg.id }}</td>
+                    <td class="text-muted small">{{ msg.id }}</td>
                     <td class="fw-600">{{ msg.name }}</td>
-                    <td class="admin-text-muted small">{{ msg.email }}</td>
+                    <td class="text-muted small">{{ msg.email }}</td>
                     <td>{{ msg.subject }}</td>
-                    <td class="admin-text-muted small text-nowrap">
+                    <td class="text-muted small text-nowrap">
                         {{ msg.submitted_at.strftime('%Y-%m-%d') if msg.submitted_at else '—' }}
                     </td>
                     <td>
@@ -73,17 +73,21 @@
                     </td>
                     <td>
                         {% if not msg.is_resolved %}
-                        <button type="button"
-                                class="btn btn-ghost admin-btn-sm admin-text-success"
-                                data-resolve-contact-message
-                                data-resolve-url="/api/admin/contact-messages/{{ msg.id }}/resolve"
-                                title="{% if ui_lang == 'en' %}Close message{% else %}إغلاق الرسالة{% endif %}">
-                            <i class="bi bi-check-circle"></i>
-                        </button>
+                        <form method="post"
+                              action="/api/admin/contact-messages/{{ msg.id }}/resolve"
+                              data-resolve-contact-message
+                              class="d-inline">
+                            <button type="submit" class="btn btn-ghost btn-sm text-success"
+                                    title="{% if ui_lang == 'en' %}Close message{% else %}إغلاق الرسالة{% endif %}">
+                                <i class="bi bi-check-circle"></i>
+                            </button>
+                        </form>
                         {% endif %}
-                        <button aria-label="عرض" title="عرض" type="button"class="btn btn-ghost admin-btn-sm"data-bs-toggle="modal"
+                        <button class="btn btn-ghost btn-sm" data-bs-toggle="modal"
                                 data-bs-target="#msgModal{{ msg.id }}"
-                                title="{% if ui_lang == 'en' %}View message{% else %}عرض الرسالة{% endif %}"><i class="bi bi-eye"></i></button>
+                                title="{% if ui_lang == 'en' %}View message{% else %}عرض الرسالة{% endif %}">
+                            <i class="bi bi-eye"></i>
+                        </button>
                     </td>
                 </tr>
                 {% endfor %}
@@ -93,18 +97,18 @@
     {% else %}
     <div class="card-body text-center py-5">
         <i class="bi bi-inbox d-block fs-1 mb-3 opacity-25"></i>
-        <p class="admin-text-muted mb-0">{% if ui_lang == 'en' %}No messages found{% else %}لا توجد رسائل{% endif %}</p>
+        <p class="text-muted mb-0">{% if ui_lang == 'en' %}No messages found{% else %}لا توجد رسائل{% endif %}</p>
     </div>
     {% endif %}
 </div>
 
 <!-- Pagination -->
 {% if pagination.total_pages > 1 %}
-<nav class="mt-3"aria-label="{% if ui_lang == 'en' %}Page navigation{% else %}التنقل بين الصفحات{% endif %}">
+<nav class="mt-3" aria-label="{% if ui_lang == 'en' %}Page navigation{% else %}التنقل بين الصفحات{% endif %}">
     <ul class="pagination justify-content-center">
         {% for p in range(1, pagination.total_pages + 1) %}
         <li class="page-item {% if p == pagination.page %}active{% endif %}">
-            <a class="page-link"href="?q={{ filters.q or '' }}&status_filter={{ filters.status_filter or '' }}&page={{ p }}">{{ p }}</a>
+            <a class="page-link" href="?q={{ filters.q or '' }}&status_filter={{ filters.status_filter or '' }}&page={{ p }}">{{ p }}</a>
         </li>
         {% endfor %}
     </ul>
@@ -113,12 +117,12 @@
 
 <!-- View modals -->
 {% for msg in contact_messages %}
-<div class="modal fade"id="msgModal{{ msg.id }}"tabindex="-1"aria-hidden="true">
+<div class="modal fade" id="msgModal{{ msg.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{{ msg.subject }}</h5>
-                <button type="button"class="btn-close"data-bs-dismiss="modal"
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
                         aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
@@ -130,7 +134,7 @@
                 <p style="white-space:pre-line;">{{ msg.message }}</p>
             </div>
             <div class="modal-footer">
-                <button type="button"class="admin-btn admin-btn-secondary"data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
             </div>
         </div>
     </div>
@@ -141,23 +145,24 @@
 
 {% block extra_scripts %}
 <script>
-document.querySelectorAll('[data-resolve-contact-message]').forEach((button) => {
-  button.addEventListener('click', async (event) => {
+document.querySelectorAll('[data-resolve-contact-message]').forEach((form) => {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const button = form.querySelector('button[type="submit"]');
     if (button) button.disabled = true;
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     try {
-      const response = await fetchWithAuth(button.dataset.resolveUrl, {
+      const response = await fetchWithAuth(form.action, {
         method: 'POST',
         headers: { 'X-CSRF-Token': csrfToken }
       });
       if (!response || !response.ok) {
         const payload = await (response ? response.json().catch(() => ({})) : Promise.resolve({}));
-        throw new Error(payload.detail || '{% if ui_lang == "en"%}Failed to resolve contact message.{% else %}فشل إغلاق الرسالة.{% endif %}');
+        throw new Error(payload.detail || '{% if ui_lang == "en" %}Failed to resolve contact message.{% else %}فشل إغلاق الرسالة.{% endif %}');
       }
       window.location.reload();
     } catch (error) {
-      alert(error.message || '{% if ui_lang == "en"%}Failed to resolve contact message.{% else %}فشل إغلاق الرسالة.{% endif %}');
+      alert(error.message || '{% if ui_lang == "en" %}Failed to resolve contact message.{% else %}فشل إغلاق الرسالة.{% endif %}');
       if (button) button.disabled = false;
     }
   });

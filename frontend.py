@@ -11,7 +11,7 @@ import typing
 from typing import Optional
 
 from database import get_db
-from dependencies import get_current_user_optional, get_current_user_or_redirect
+from dependencies import get_current_user_optional, get_current_user_or_redirect, require_admin
 from models import User, UserRole, Kindergarten, EnrollmentApplication
 from config import settings
 from validators import validate_jordan_governorate
@@ -1052,10 +1052,12 @@ async def new_message(request: Request, current_user: User = Depends(get_current
 
 @router.get("/profile", response_class=HTMLResponse)
 async def user_profile(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """User profile page - redirect parents to their dedicated profile"""
+    """Canonical profile redirect — sends each role to its dedicated profile page."""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role == 'PARENT':
         return RedirectResponse(url="/parent/profile")
+    if user_role == 'ADMIN':
+        return RedirectResponse(url="/admin/profile")
     return templates.TemplateResponse(request=request, name="user/settings.html", context={"current_user": current_user})
 
 
@@ -1518,6 +1520,18 @@ async def admin_messages_list(
     )
 
 
+@router.get("/admin/analytics/charts", response_class=HTMLResponse)
+async def admin_charts_explorer(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+    """Admin AI-assisted chart explorer page"""
+    if current_user.role != UserRole.ADMIN:
+        return RedirectResponse("/dashboard")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/analytics/charts_dashboard.html",
+        context={"current_user": current_user, "today": date.today()}
+    )
+
+
 @router.get("/admin/analytics/drilldown/{dimension_type}/{dimension_id}", response_class=HTMLResponse)
 async def admin_analytics_drilldown(
     request: Request,
@@ -1744,7 +1758,7 @@ async def admin_heatmap_page(request: Request, current_user: User = Depends(get_
     return templates.TemplateResponse(request=request, name="admin/heatmap.html", context={
         "current_user": current_user,
         "today": date.today(),
-        "cesium_token": settings.CESIUM_ION_TOKEN,
+        "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
     })
 
 
@@ -1792,12 +1806,53 @@ async def admin_governance_reminders_page(request: Request, current_user: User =
 # -----------------------------------------------------------------------------
 
 @router.get("/admin/profile", response_class=HTMLResponse)
-async def admin_profile_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+async def admin_profile_page(
+    request: Request,
+    current_user: User = Depends(get_current_user_or_redirect),
+    db: Session = Depends(get_db),
+):
     """Admin profile page — view account details and change password"""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="admin/profile.html", context={"current_user": current_user})
+
+    _JORDAN_TZ = timezone(timedelta(hours=3))
+    now_jordan = datetime.now(_JORDAN_TZ)
+
+    # Total audit events for stats widget
+    from sqlalchemy import func as _func
+    total_actions = db.query(_func.count(models.AuditLog.id)).filter(
+        models.AuditLog.user_id == current_user.id
+    ).scalar() or 0
+
+    # Days active since account creation
+    days_active = 0
+    if current_user.created_at:
+        created = current_user.created_at
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=_JORDAN_TZ)
+        days_active = max(0, (now_jordan - created).days)
+
+    # Recent audit events (last 10) for the activity feed
+    recent_events = (
+        db.query(models.AuditLog)
+        .filter(models.AuditLog.user_id == current_user.id)
+        .order_by(models.AuditLog.created_at.desc())
+        .limit(10)
+        .all()
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/profile.html",
+        context={
+            "current_user": current_user,
+            "total_actions": total_actions,
+            "days_active": days_active,
+            "recent_events": recent_events,
+            "now_jordan": now_jordan,
+        },
+    )
 
 
 @router.get("/admin/settings", response_class=HTMLResponse)
@@ -1810,10 +1865,7 @@ async def admin_settings_page(request: Request, current_user: User = Depends(get
 
 
 @router.get("/admin/observability", response_class=HTMLResponse)
-async def admin_observability_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
+async def admin_observability_page(request: Request, current_user: User = Depends(require_admin)):
     """Admin observability dashboard — system health, latency, data quality, alert quality."""
-    user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
-    if user_role not in ('ADMIN', 'MANAGER'):
-        return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="admin/observability_dashboard.html", context={"current_user": current_user})
 

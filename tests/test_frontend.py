@@ -231,7 +231,7 @@ class TestFrontendRoutes:
         assert 'id="refresh-dashboard"' in page
         assert '/static/js/admin_dashboard.js' in page
         # Admin profile display with full name and avatar
-        assert 'admin-sidebar-profile' in page
+        assert 'sidebar-profile' in page
         assert 'admin_avatar.png' in page
 
         app.dependency_overrides.clear()

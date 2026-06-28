@@ -648,7 +648,7 @@ class TestKPIGovernanceIntegration:
         score = response.json()
         assert "governance_score" in score
         assert "governance_band" in score
-        assert score["governance_band"] in ["RED", "AMBER", "GREEN"]
+        assert score["governance_band"] in ["RED", "AMBER", "GREEN", "INSUFFICIENT"]
 
 
 # ============================================================================

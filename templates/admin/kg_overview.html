@@ -1,33 +1,33 @@
-{% extends "admin_base.html"%}
+{% extends "admin_base.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="Dashboard">
-  <i class="bi bi-house"aria-hidden="true"></i>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard">
+  <i class="bi bi-house" aria-hidden="true"></i>
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">
   {% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}
 </span>
 {% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet"href="/static/css/kg_overview.css">
+<link rel="stylesheet" href="/static/css/kg_overview.css">
 {% endblock %}
 
 {% block content %}
-<div class="ko-root"id="ko-root"dir="{{ 'rtl' if ui_lang != 'en' else 'ltr' }}">
+<div class="ko-root" id="ko-root" dir="{{ 'rtl' if ui_lang != 'en' else 'ltr' }}">
 
   <!-- ══ TOP CONTROL BAR ══════════════════════════════════ -->
-  <div class="ko-control-bar"id="ko-control-bar"role="toolbar"
+  <div class="ko-control-bar" id="ko-control-bar" role="toolbar"
        aria-label="{% if ui_lang == 'en' %}Dashboard controls{% else %}أدوات لوحة التحكم{% endif %}">
     <!-- populated by JS -->
     <div style="height:36px;display:flex;gap:.75rem;width:100%">
-      <div class="ko-skeleton"style="width:260px;height:36px"></div>
-      <div class="ko-skeleton"style="width:150px;height:36px"></div>
-      <div class="ko-skeleton"style="width:150px;height:36px"></div>
-      <div class="ko-skeleton"style="width:100px;height:36px;margin-inline-start:auto"></div>
+      <div class="ko-skeleton" style="width:260px;height:36px"></div>
+      <div class="ko-skeleton" style="width:150px;height:36px"></div>
+      <div class="ko-skeleton" style="width:150px;height:36px"></div>
+      <div class="ko-skeleton" style="width:100px;height:36px;margin-inline-start:auto"></div>
     </div>
   </div>
 
@@ -40,12 +40,12 @@
         </span>
         {% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}
       </h1>
-      <p style="font-size:.8rem;color:var(--ko-admin-text-muted);margin:.25rem 0 0;display:flex;align-items:center;gap:.5rem;">
+      <p style="font-size:.8rem;color:var(--ko-text-muted);margin:.25rem 0 0;display:flex;align-items:center;gap:.5rem;">
         <span class="ko-rt-dot"></span>
         <span id="ko-last-updated">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
       </p>
     </div>
-    <small style="color:var(--ko-admin-text-muted);font-size:.78rem;">
+    <small style="color:var(--ko-text-muted);font-size:.78rem;">
       <i class="bi bi-calendar3 me-1"></i>
       {{ today.strftime('%d %B %Y') if today else '21 June 2026' }}
     </small>
@@ -55,21 +55,21 @@
   <div id="ko-customise-wrap"></div>
 
   <!-- ══ QUICK ACTIONS ════════════════════════════════════ -->
-  <div class="ko-actions-bar"id="ko-quick-actions"
+  <div class="ko-actions-bar" id="ko-quick-actions"
        role="navigation"
        aria-label="{% if ui_lang == 'en' %}Quick actions{% else %}إجراءات سريعة{% endif %}">
     <!-- populated by JS -->
-    <div class="ko-skeleton"style="width:130px;height:38px;border-radius:8px"></div>
-    <div class="ko-skeleton"style="width:150px;height:38px;border-radius:8px"></div>
-    <div class="ko-skeleton"style="width:120px;height:38px;border-radius:8px"></div>
-    <div class="ko-skeleton"style="width:160px;height:38px;border-radius:8px"></div>
+    <div class="ko-skeleton" style="width:130px;height:38px;border-radius:8px"></div>
+    <div class="ko-skeleton" style="width:150px;height:38px;border-radius:8px"></div>
+    <div class="ko-skeleton" style="width:120px;height:38px;border-radius:8px"></div>
+    <div class="ko-skeleton" style="width:160px;height:38px;border-radius:8px"></div>
   </div>
 
   <div class="ko-divider"></div>
 
   <!-- ══ KPI CARDS ════════════════════════════════════════ -->
   <section aria-label="{% if ui_lang == 'en' %}Key performance indicators{% else %}مؤشرات الأداء{% endif %}">
-    <div class="ko-kpi-grid"id="ko-kpi-grid">
+    <div class="ko-kpi-grid" id="ko-kpi-grid">
       <!-- Skeleton placeholders -->
       {% for _ in range(4) %}
       <div class="ko-skeleton ko-skeleton-kpi"></div>
@@ -80,11 +80,11 @@
   <div class="ko-divider"></div>
 
   <!-- ══ DATA EXPLORATION SECTION ══════════════════════════ -->
-  <section class="ko-section"aria-live="polite">
+  <section class="ko-section" aria-live="polite">
     <div id="ko-data-section">
       <!-- populated by JS -->
-      <div style="padding:2rem;text-align:center;color:var(--ko-admin-text-muted);">
-        <div class="ko-skeleton"style="height:320px;border-radius:14px"></div>
+      <div style="padding:2rem;text-align:center;color:var(--ko-text-muted);">
+        <div class="ko-skeleton" style="height:320px;border-radius:14px"></div>
       </div>
     </div>
   </section>
@@ -92,7 +92,7 @@
   <div class="ko-divider"></div>
 
   <!-- ══ SMART ALERTS ══════════════════════════════════════ -->
-  <section class="ko-alerts-wrap"aria-label="{% if ui_lang == 'en' %}Smart alerts{% else %}التنبيهات الذكية{% endif %}">
+  <section class="ko-alerts-wrap" aria-label="{% if ui_lang == 'en' %}Smart alerts{% else %}التنبيهات الذكية{% endif %}">
     <div class="ko-section-header">
       <h2 class="ko-section-title">
         <i class="bi bi-bell-fill"></i>
@@ -101,24 +101,24 @@
     </div>
     <div id="ko-alerts-section">
       {% for _ in range(3) %}
-      <div class="ko-skeleton"style="height:80px;border-radius:10px;margin-bottom:.75rem"></div>
+      <div class="ko-skeleton" style="height:80px;border-radius:10px;margin-bottom:.75rem"></div>
       {% endfor %}
     </div>
   </section>
 
   <!-- ══ SIDE PANEL OVERLAY ════════════════════════════════ -->
-  <div class="ko-overlay"id="ko-overlay"aria-hidden="true"></div>
-  <aside class="ko-side-panel"id="ko-side-panel"role="complementary"
+  <div class="ko-overlay" id="ko-overlay" aria-hidden="true"></div>
+  <aside class="ko-side-panel" id="ko-side-panel" role="complementary"
          aria-label="{% if ui_lang == 'en' %}Detail panel{% else %}لوحة التفاصيل{% endif %}">
     <div class="ko-panel-header">
-      <i class="bi bi-info-circle admin-text-primary fs-5"></i>
-      <span class="ko-panel-title"id="ko-panel-title">التفاصيل</span>
-      <button type="button"class="ko-panel-close"id="ko-panel-close"
+      <i class="bi bi-info-circle text-primary fs-5"></i>
+      <span class="ko-panel-title" id="ko-panel-title">التفاصيل</span>
+      <button class="ko-panel-close" id="ko-panel-close"
               aria-label="{% if ui_lang == 'en' %}Close panel{% else %}إغلاق اللوحة{% endif %}">
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
-    <div class="ko-panel-body"id="ko-panel-body"></div>
+    <div class="ko-panel-body" id="ko-panel-body"></div>
   </aside>
 
 </div><!-- /ko-root -->

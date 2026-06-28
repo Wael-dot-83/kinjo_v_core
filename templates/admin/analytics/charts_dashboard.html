@@ -1,13 +1,13 @@
-{% extends "admin_base.html"%}
+{% extends "admin_base.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="Dashboard"><i class="bi bi-house"aria-hidden="true"></i></a>
-<span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/analytics"class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Charts{% else %}الرسوم البيانية{% endif %}</span>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="breadcrumb-separator">/</span>
+<a href="/admin/analytics" class="breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Charts{% else %}الرسوم البيانية{% endif %}</span>
 {% endblock %}
 
 {% block extra_head %}
@@ -16,7 +16,7 @@
   crossorigin="anonymous"></script>
 <script>
   if (typeof Plotly === 'undefined') {
-    document.write('<script src="/static/vendor/plotly-2.35.2.min.js"integrity="sha384-ymzmAVk+3V1std11H4NbH/o85BHnBJTNzz3SjtDbixaVMkt2qOIcV3dzOUSuONeA"crossorigin="anonymous"><\/script>');
+    document.write('<script src="/static/vendor/plotly-2.35.2.min.js" integrity="sha384-ymzmAVk+3V1std11H4NbH/o85BHnBJTNzz3SjtDbixaVMkt2qOIcV3dzOUSuONeA" crossorigin="anonymous"><\/script>');
   }
 </script>
 <style>
@@ -33,9 +33,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
+<div class="page-header mb-4 d-flex align-items-start justify-content-between flex-wrap gap-3">
   <div>
-    <h1 class="admin-page-title mb-0">
+    <h1 class="page-title mb-0">
       <i class="bi bi-graph-up-arrow me-2"></i>
       {% if ui_lang == 'en' %}Charts Explorer{% else %}مستكشف الرسوم البيانية{% endif %}
     </h1>
@@ -55,44 +55,44 @@
   <aside class="charts-sidebar">
 
     <div class="charts-panel mb-3">
-      <h6 class="fw-semibold mb-3 text-muted text-uppercase"style="font-size:.7rem;letter-spacing:.08em;">
+      <h6 class="fw-semibold mb-3 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
         {% if ui_lang == 'en' %}Data Source{% else %}مصدر البيانات{% endif %}
       </h6>
-      <select id="sourceSelect"class="form-select form-select-sm mb-3">
+      <select id="sourceSelect" class="form-select form-select-sm mb-3" aria-label="{% if ui_lang == 'en' %}Data Source{% else %}مصدر البيانات{% endif %}">
         {% for src in sources %}
         <option value="{{ src }}">{{ src | replace('_', ' ') | title }}</option>
         {% endfor %}
       </select>
 
-      <h6 class="fw-semibold mb-2 text-muted text-uppercase"style="font-size:.7rem;letter-spacing:.08em;">
+      <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
         {% if ui_lang == 'en' %}Date Range{% else %}نطاق التاريخ{% endif %}
       </h6>
       <div class="d-flex gap-2 mb-3 flex-column">
-        <input type="date"id="dateFrom"class="form-control form-control-sm"placeholder="From">
-        <input type="date"id="dateTo"class="form-control form-control-sm"placeholder="To">
+        <input type="date" id="dateFrom" class="form-control form-control-sm" placeholder="From">
+        <input type="date" id="dateTo" class="form-control form-control-sm" placeholder="To">
       </div>
 
-      <h6 class="fw-semibold mb-2 text-muted text-uppercase"style="font-size:.7rem;letter-spacing:.08em;">
+      <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
         {% if ui_lang == 'en' %}Chart Type{% else %}نوع الرسم{% endif %}
       </h6>
-      <select id="chartTypeSelect"class="form-select form-select-sm mb-3">
+      <select id="chartTypeSelect" class="form-select form-select-sm mb-3" aria-label="{% if ui_lang == 'en' %}Chart Type{% else %}نوع الرسم{% endif %}">
         <option value="">{% if ui_lang == 'en' %}Auto (Recommended){% else %}تلقائي (موصى به){% endif %}</option>
         {% for ct in chart_types %}
         <option value="{{ ct }}">{{ ct | title }}</option>
         {% endfor %}
       </select>
 
-      <h6 class="fw-semibold mb-2 text-muted text-uppercase"style="font-size:.7rem;letter-spacing:.08em;">
+      <h6 class="fw-semibold mb-2 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
         {% if ui_lang == 'en' %}Top N{% else %}أعلى N{% endif %}
       </h6>
-      <input type="number"id="topN"class="form-control form-control-sm mb-3"min="1"max="50"placeholder="All">
+      <input type="number" id="topN" class="form-control form-control-sm mb-3" min="1" max="50" placeholder="All">
 
       <div class="d-grid gap-2">
-        <button type="button"class="btn btn-primary btn-sm"id="renderBtn"onclick="renderChart()">
+        <button class="btn btn-primary btn-sm" id="renderBtn" onclick="renderChart()">
           <i class="bi bi-play-fill me-1"></i>
           {% if ui_lang == 'en' %}Render Chart{% else %}رسم المخطط{% endif %}
         </button>
-        <button type="button"class="btn btn-outline-secondary btn-sm"id="suggestBtn"onclick="getSuggestions()">
+        <button class="btn btn-outline-secondary btn-sm" id="suggestBtn" onclick="getSuggestions()">
           <i class="bi bi-lightbulb me-1"></i>
           {% if ui_lang == 'en' %}Get Suggestions{% else %}اقتراحات ذكية{% endif %}
         </button>
@@ -100,8 +100,8 @@
     </div>
 
     {# Suggestions panel #}
-    <div class="charts-panel"id="suggestionsPanel"style="display:none;">
-      <h6 class="fw-semibold mb-3 text-muted text-uppercase"style="font-size:.7rem;letter-spacing:.08em;">
+    <div class="charts-panel" id="suggestionsPanel" style="display:none;">
+      <h6 class="fw-semibold mb-3 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em;">
         <i class="bi bi-magic me-1"></i>
         {% if ui_lang == 'en' %}AI Suggestions{% else %}اقتراحات ذكية{% endif %}
       </h6>
@@ -111,29 +111,29 @@
   </aside>
 
   {# ── Chart Output Area ─────────────────────────────────────────────── #}
-  <div class="flex-grow-1"style="min-width:0;">
+  <div class="flex-grow-1" style="min-width:0;">
     <div class="charts-panel">
 
       <div class="d-flex align-items-center justify-content-between mb-3">
         <div>
-          <span id="chartTitle"class="fw-semibold fs-6">
+          <span id="chartTitle" class="fw-semibold fs-6">
             {% if ui_lang == 'en' %}Select a source and click Render{% else %}اختر المصدر واضغط رسم{% endif %}
           </span>
-          <span id="rowCountBadge"class="badge ms-2"style="background:var(--admin-primary,#1F5E47);display:none;"></span>
-          <span id="cachedBadge"class="badge bg-secondary ms-1"style="display:none;">
+          <span id="rowCountBadge" class="badge ms-2" style="background:var(--admin-primary,#1F5E47);display:none;"></span>
+          <span id="cachedBadge" class="badge bg-secondary ms-1" style="display:none;">
             {% if ui_lang == 'en' %}cached{% else %}مخزن{% endif %}
           </span>
         </div>
-        <button type="button"class="btn btn-outline-secondary btn-sm"id="exportBtn"style="display:none;"onclick="exportChart()">
+        <button class="btn btn-outline-secondary btn-sm" id="exportBtn" style="display:none;" onclick="exportChart()">
           <i class="bi bi-download me-1"></i>
           {% if ui_lang == 'en' %}Export PNG{% else %}تصدير PNG{% endif %}
         </button>
       </div>
 
-      <div class="loading-spinner align-items-center justify-content-center"id="chartSpinner"style="min-height:300px;">
+      <div class="loading-spinner align-items-center justify-content-center" id="chartSpinner" style="min-height:300px;">
         <div class="text-center text-muted">
-          <div class="spinner-border text-success mb-3"role="status">
-            <span class="visually-hidden">جاري التحميل...</span>
+          <div class="spinner-border text-success mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
           </div>
           <div class="small">{% if ui_lang == 'en' %}Generating chart...{% else %}جاري إنشاء الرسم...{% endif %}</div>
         </div>
@@ -141,13 +141,13 @@
 
       <div id="chartOutput"></div>
 
-      <div id="taskStatus"class="mt-2"style="display:none;">
+      <div id="taskStatus" class="mt-2" style="display:none;">
         <div class="alert alert-info py-2 mb-0">
           <i class="bi bi-hourglass-split me-1"></i>
           <span id="taskStatusText">
             {% if ui_lang == 'en' %}Large dataset — processing in background...{% else %}مجموعة بيانات كبيرة — المعالجة في الخلفية...{% endif %}
           </span>
-          <span id="taskProgress"class="badge bg-info ms-2">0%</span>
+          <span id="taskProgress" class="badge bg-info ms-2">0%</span>
         </div>
       </div>
 
@@ -276,14 +276,14 @@ async function getSuggestions() {
       return;
     }
     list.innerHTML = data.suggestions.map(s => `
-      <div class="suggestion-card mb-2 d-flex align-items-start gap-2"role="button"
+      <div class="suggestion-card mb-2 d-flex align-items-start gap-2" role="button"
            onclick="applySuggestion('${s.chart_type}')">
         <div>
-          <div class="fw-semibold"style="font-size:.85rem;">
+          <div class="fw-semibold" style="font-size:.85rem;">
             ${s.chart_type.charAt(0).toUpperCase() + s.chart_type.slice(1)}
             <span class="confidence-badge ms-1">${Math.round(s.confidence * 100)}%</span>
           </div>
-          <div class="text-muted"style="font-size:.78rem;">${s.rationale}</div>
+          <div class="text-muted" style="font-size:.78rem;">${s.rationale}</div>
         </div>
       </div>
     `).join('');

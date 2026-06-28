@@ -344,7 +344,7 @@ class User(Base):
     notification_preferences = Column(JSON, nullable=True)
     preferred_language = Column(String(10), nullable=False, default="ar", server_default="ar")
     deleted_at = Column(DateTime(timezone=True), nullable=True)
-    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -380,7 +380,7 @@ class UserDashboardPreference(Base):
     __tablename__ = "user_dashboard_preferences"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
     widget_config = Column(JSON, nullable=True)  # JSON array of widget configurations
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -398,7 +398,7 @@ class UserFilterPreference(Base):
     __tablename__ = "user_filter_preferences"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
     filter_config = Column(JSON, nullable=True)  # JSON object of filter configurations
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -414,8 +414,8 @@ class UserFilterPreference(Base):
 class SupervisorProfile(Base):
     __tablename__ = "supervisor_profiles"
 
-    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
-    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    kindergarten_id = Column(Integer, ForeignKey("kindergartens.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -433,7 +433,7 @@ class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     token = Column(String(255), unique=True, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     used = Column(Boolean, default=False)
@@ -452,7 +452,7 @@ class ParentProfile(Base):
     __tablename__ = "parent_profiles"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
     first_name = Column(String(100), nullable=False)
     second_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=False)
@@ -478,7 +478,7 @@ class ParentProfile(Base):
     profile_complete = Column(Boolean, nullable=False, default=False)
     profile_completed_at = Column(DateTime(timezone=True), nullable=True)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
-    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -543,7 +543,7 @@ class Child(Base):
     blood_type = Column(String(5), nullable=True)
     vaccination_up_to_date = Column(Boolean, nullable=True)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
-    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     # Corresponding guardian (secondary contact who may pick up / be contacted for the child)
     corresponding_type = Column(String(20), nullable=True)  # PENDING_MANAGER, GUARDIAN

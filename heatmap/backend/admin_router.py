@@ -22,6 +22,7 @@ Uses standardized APIError responses from admin_security.
 """
 from __future__ import annotations
 import logging
+import secrets
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, Optional
 
@@ -55,6 +56,14 @@ def _require_admin(current_user: models.User = Depends(get_current_user)) -> mod
     if getattr(current_user, "role", None) != models.UserRole.ADMIN:
         raise forbidden_error("Admin access required")
     return current_user
+
+
+def _validate_csrf_token(request: Request) -> None:
+    """Double-submit CSRF validation for state-changing requests."""
+    header_token = request.headers.get("x-csrf-token")
+    cookie_token = request.cookies.get(settings.CSRF_COOKIE_NAME)
+    if not header_token or not cookie_token or not secrets.compare_digest(header_token, cookie_token):
+        raise validation_error("Invalid CSRF token", fields={"csrf_token": "invalid"})
 
 
 def _pagination_meta(page: int, page_size: int, total: int) -> Dict[str, Any]:
@@ -417,6 +426,7 @@ def refresh_heat_map(
     current_user: models.User = Depends(_require_admin),
     db: Session = Depends(get_db),
 ) -> dict:
+    _validate_csrf_token(request)
     """Force recompute the Heat Map by running the daily ETL pipeline.
 
     Optional `snapshot_date` query param (YYYY-MM-DD) reruns the pipeline for
@@ -598,6 +608,7 @@ def acknowledge_alert(
     current_user: models.User = Depends(_require_admin),
     db: Session = Depends(get_db),
 ) -> dict:
+    _validate_csrf_token(request)
     """Mark an open alert as acknowledged by the current admin."""
     alert = db.query(models.MapAlertHistory).filter(models.MapAlertHistory.id == alert_id).one_or_none()
     if alert is None:

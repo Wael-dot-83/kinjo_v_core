@@ -3,7 +3,7 @@ Dashboard customization API endpoints + unified summary endpoint.
 """
 import json
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -17,6 +17,8 @@ import models
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard Customization"])
 logger = logging.getLogger(__name__)
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 
 
 @router.get("/widgets")
@@ -121,7 +123,7 @@ def get_dashboard_summary(
 ):
     """Compact aggregate summary for the inline filter bar + chart panel.
     Returns children count, attendance rate, alert count, and 7-day trend."""
-    today = date.today()
+    today = datetime.now(_JORDAN_TZ).date()
 
     # resolve date window
     if body.period_start and body.period_end:
@@ -199,7 +201,7 @@ def get_dashboard_summary(
             "alerts": alerts,
             "chart": trend,
             "period": {"start": start.isoformat(), "end": end.isoformat()},
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(_JORDAN_TZ).isoformat(),
         }
     except Exception as e:
         logger.error("Dashboard summary error: %s", str(e), exc_info=True)
@@ -215,7 +217,7 @@ def get_suggested_actions(
     if current_user.role == models.UserRole.PARENT:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    today = date.today()
+    today = datetime.now(_JORDAN_TZ).date()
     week_start = today - timedelta(days=6)
     prev_week_end = today - timedelta(days=7)
     prev_week_start = today - timedelta(days=13)
@@ -277,7 +279,7 @@ def get_suggested_actions(
         return {
             "success": True,
             "data": actions,
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(_JORDAN_TZ).isoformat(),
         }
     except Exception as e:
         logger.error("Suggested actions error: %s", str(e), exc_info=True)

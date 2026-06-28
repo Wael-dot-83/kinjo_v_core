@@ -1,40 +1,40 @@
-﻿{% extends "admin_base.html"%}
+{% extends "admin_base.html" %}
 
 {% block title %}Import Logs — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard"class="admin-breadcrumb-item">
+<a href="/admin/dashboard" class="breadcrumb-item">
   <i class="bi bi-house"></i> Dashboard
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/import-kindergartens"class="admin-breadcrumb-item">Data Management</a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">Import Logs</span>
+<span class="breadcrumb-separator">/</span>
+<a href="/admin/import-kindergartens" class="breadcrumb-item">Data Management</a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">Import Logs</span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4">
-  <h1 class="admin-page-title">
+<div class="page-header mb-4">
+  <h1 class="page-title">
     <i class="bi bi-clock-history me-2"></i>Import Logs
   </h1>
-  <p class="admin-page-subtitle admin-text-muted">History of all CSV and Excel import jobs</p>
+  <p class="page-subtitle text-muted">History of all CSV and Excel import jobs</p>
 </div>
 
 <!-- Filters -->
-<div class="admin-card mb-4">
-  <div class="admin-card-body">
+<div class="card mb-4">
+  <div class="card-body">
     <div class="row g-3 align-items-end">
       <div class="col-md-3">
-        <label class="form-label small fw-semibold">Import Type</label>
-        <select id="typeFilter"class="form-select form-select-sm">
+        <label for="typeFilter" class="form-label small fw-semibold">Import Type</label>
+        <select id="typeFilter" class="form-select form-select-sm" aria-label="Import Type">
           <option value="">All Types</option>
           <option value="CSV_USERS">CSV — Users</option>
           <option value="EXCEL_KINDERGARTENS">Excel — Kindergartens</option>
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label small fw-semibold">الحالة</label>
-        <select id="statusFilter"class="form-select form-select-sm">
+        <label for="statusFilter" class="form-label small fw-semibold">Status</label>
+        <select id="statusFilter" class="form-select form-select-sm" aria-label="Status">
           <option value="">All Statuses</option>
           <option value="SUCCESS">Success</option>
           <option value="PARTIAL">Partial</option>
@@ -43,18 +43,18 @@
       </div>
       <div class="col-md-3">
         <label class="form-label small fw-semibold">Date From</label>
-        <input type="date"id="dateFrom"class="form-control form-control-sm">
+        <input type="date" id="dateFrom" class="form-control form-control-sm">
       </div>
       <div class="col-md-3">
         <label class="form-label small fw-semibold">Date To</label>
-        <input type="date"id="dateTo"class="form-control form-control-sm">
+        <input type="date" id="dateTo" class="form-control form-control-sm">
       </div>
     </div>
     <div class="mt-3 d-flex gap-2">
-      <button type="button"id="applyFiltersBtn"class="admin-btn admin-btn-primary admin-admin-btn-sm">
+      <button id="applyFiltersBtn" class="btn btn-primary btn-sm">
         <i class="bi bi-funnel"></i> Apply Filters
       </button>
-      <button type="button"id="resetFiltersBtn"class="admin-btn admin-btn-ghost admin-admin-btn-sm">
+      <button id="resetFiltersBtn" class="btn btn-ghost btn-sm">
         <i class="bi bi-x-lg"></i> Reset
       </button>
     </div>
@@ -62,24 +62,24 @@
 </div>
 
 <!-- Logs Table -->
-<div class="admin-card">
-  <div class="admin-card-header d-flex align-items-center justify-content-between">
-    <h2 class="admin-card-title mb-0">Import History</h2>
-    <button type="button"id="refreshBtn"class="admin-btn admin-btn-ghost admin-admin-btn-sm">
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <h2 class="card-title mb-0">Import History</h2>
+    <button id="refreshBtn" class="btn btn-ghost btn-sm">
       <i class="bi bi-arrow-clockwise"></i> Refresh
     </button>
   </div>
-  <div class="admin-card-body p-0">
+  <div class="card-body p-0">
     <div id="logsContainer">
-      <div class="text-center py-5 admin-text-muted"id="logsLoading">
-        <div class="spinner-border spinner-border-sm me-2"role="status"></div>
+      <div class="text-center py-5 text-muted" id="logsLoading">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
         Loading import logs…
       </div>
-      <div class="text-center py-5 admin-text-muted"id="logsEmpty"style="display:none;">
+      <div class="text-center py-5 text-muted" id="logsEmpty" style="display:none;">
         <i class="bi bi-inbox fs-1 mb-3 d-block opacity-50"></i>
         No import logs found.
       </div>
-      <div class="table-responsive"id="logsTableWrap"style="display:none;">
+      <div class="table-responsive" id="logsTableWrap" style="display:none;">
         <table class="table table-hover mb-0">
           <thead class="table-light">
             <tr>
@@ -89,9 +89,9 @@
               <th>Imported By</th>
               <th>Rows</th>
               <th>Errors</th>
-              <th>الحالة</th>
+              <th>Status</th>
               <th>Date</th>
-              <th><span class="visually-hidden">الإجراءات</span></th>
+              <th><span class="visually-hidden">Actions</span></th>
             </tr>
           </thead>
           <tbody id="logsTableBody"></tbody>
@@ -102,16 +102,16 @@
 </div>
 
 <!-- Detail Modal -->
-<div class="modal fade"id="logDetailModal"tabindex="-1"aria-hidden="true">
+<div class="modal fade" id="logDetailModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title"><i class="bi bi-file-text me-2"></i>Import Detail</h5>
-        <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
       </div>
-      <div class="modal-body"id="logDetailBody">
+      <div class="modal-body" id="logDetailBody">
         <div class="text-center py-4">
-          <div class="spinner-border"role="status"></div>
+          <div class="spinner-border" role="status"></div>
         </div>
       </div>
     </div>
@@ -164,34 +164,34 @@
       const tbody = document.getElementById('logsTableBody');
       tbody.innerHTML = logs.map(log => `
         <tr>
-          <td class="ps-4 admin-text-muted small">#${escHtml(log.id)}</td>
+          <td class="ps-4 text-muted small">#${escHtml(log.id)}</td>
           <td><span class="badge bg-light text-dark border">${escHtml(log.import_type || '—')}</span></td>
-          <td class="small text-truncate"style="max-width:160px;"title="${escHtml(log.filename || '')}">${escHtml(log.filename || '—')}</td>
+          <td class="small text-truncate" style="max-width:160px;" title="${escHtml(log.filename || '')}">${escHtml(log.filename || '—')}</td>
           <td class="small">${escHtml(log.imported_by || '—')}</td>
           <td>${log.total_rows ?? '—'}</td>
-          <td>${log.error_count ? `<span class="admin-text-danger fw-semibold">${Number(log.error_count)}</span>` : '<span class="admin-text-muted">0</span>'}</td>
+          <td>${log.error_count ? `<span class="text-danger fw-semibold">${Number(log.error_count)}</span>` : '<span class="text-muted">0</span>'}</td>
           <td>${statusBadge(log.status)}</td>
-          <td class="small admin-text-muted">${log.created_at ? new Date(log.created_at).toLocaleString() : '—'}</td>
-          <td><button type="button"class="btn admin-btn-sm btn-link p-0"data-log-id="${Number(log.id)}"aria-label="{% if ui_lang == 'en' %}View details{% else %}عرض التفاصيل{% endif %}"><i class="bi bi-eye"aria-hidden="true"></i></button></td>
+          <td class="small text-muted">${log.created_at ? new Date(log.created_at).toLocaleString() : '—'}</td>
+          <td><button class="btn btn-sm btn-link p-0" data-log-id="${Number(log.id)}" aria-label="{% if ui_lang == 'en' %}View details{% else %}عرض التفاصيل{% endif %}"><i class="bi bi-eye" aria-hidden="true"></i></button></td>
         </tr>
       `).join('');
       document.getElementById('logsTableWrap').style.display = '';
     } catch (err) {
       document.getElementById('logsLoading').style.display = 'none';
-      document.getElementById('logsEmpty').innerHTML = `<i class="bi bi-exclamation-circle fs-1 mb-3 d-block admin-text-danger opacity-75"></i>Failed to load logs: ${escHtml(err.message)}`;
+      document.getElementById('logsEmpty').innerHTML = `<i class="bi bi-exclamation-circle fs-1 mb-3 d-block text-danger opacity-75"></i>Failed to load logs: ${escHtml(err.message)}`;
       document.getElementById('logsEmpty').style.display = '';
     }
   }
 
   async function showDetail(id) {
     const modal = new bootstrap.Modal(document.getElementById('logDetailModal'));
-    document.getElementById('logDetailBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border"role="status"></div></div>';
+    document.getElementById('logDetailBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border" role="status"></div></div>';
     modal.show();
     try {
       const res = await fetch(`/api/admin/imports/logs/${Number(id)}`);
       const data = await res.json();
       const errRows = (data.errors || []).map(e =>
-        `<tr><td>${e.row ?? '—'}</td><td>${escHtml(e.field || '—')}</td><td class="admin-text-danger small">${escHtml(e.error || '—')}</td></tr>`
+        `<tr><td>${e.row ?? '—'}</td><td>${escHtml(e.field || '—')}</td><td class="text-danger small">${escHtml(e.error || '—')}</td></tr>`
       ).join('');
       document.getElementById('logDetailBody').innerHTML = `
         <dl class="row mb-0">
@@ -199,9 +199,9 @@
           <dt class="col-sm-3">File</dt><dd class="col-sm-9">${escHtml(data.filename || '—')}</dd>
           <dt class="col-sm-3">Imported By</dt><dd class="col-sm-9">${escHtml(data.imported_by || '—')}</dd>
           <dt class="col-sm-3">Total Rows</dt><dd class="col-sm-9">${data.total_rows ?? '—'}</dd>
-          <dt class="col-sm-3">Imported</dt><dd class="col-sm-9 admin-text-success fw-semibold">${data.success_count ?? '—'}</dd>
-          <dt class="col-sm-3">Errors</dt><dd class="col-sm-9 admin-text-danger fw-semibold">${data.error_count ?? '—'}</dd>
-          <dt class="col-sm-3">الحالة</dt><dd class="col-sm-9">${escHtml(data.status || '—')}</dd>
+          <dt class="col-sm-3">Imported</dt><dd class="col-sm-9 text-success fw-semibold">${data.success_count ?? '—'}</dd>
+          <dt class="col-sm-3">Errors</dt><dd class="col-sm-9 text-danger fw-semibold">${data.error_count ?? '—'}</dd>
+          <dt class="col-sm-3">Status</dt><dd class="col-sm-9">${escHtml(data.status || '—')}</dd>
           <dt class="col-sm-3">Date</dt><dd class="col-sm-9">${data.created_at ? new Date(data.created_at).toLocaleString() : '—'}</dd>
         </dl>
         ${errRows ? `<hr><h6 class="fw-semibold">Error Details</h6>
@@ -211,7 +211,7 @@
           </table></div>` : ''}
       `;
     } catch {
-      document.getElementById('logDetailBody').innerHTML = '<p class="admin-text-danger">Failed to load detail.</p>';
+      document.getElementById('logDetailBody').innerHTML = '<p class="text-danger">Failed to load detail.</p>';
     }
   }
 

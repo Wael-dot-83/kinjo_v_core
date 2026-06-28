@@ -14,6 +14,14 @@ from config import settings
 CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 CSRF_MFA_EXEMPT_PATHS = {"/api/auth/mfa/setup", "/api/auth/mfa/verify"}
 
+# Browser telemetry collectors are fire-and-forget reporters with no user-controlled
+# state changes, so forging a POST against them has negligible security impact.
+CSRF_TELEMETRY_EXEMPT_PATHS = {
+    "/api/telemetry/vitals",
+    "/api/telemetry/errors",
+    "/api/telemetry/api",
+}
+
 
 def _allowed_hosts(request: Request) -> set[str]:
     hosts = {host.lower() for host in settings.TRUSTED_HOSTS}
@@ -67,6 +75,10 @@ async def csrf_protection_middleware(request: Request, call_next: Callable):
 
     # Skip CSRF for MFA setup/verify endpoints (user has kinjo_mfa_ticket but no session)
     if request.url.path in CSRF_MFA_EXEMPT_PATHS:
+        return await call_next(request)
+
+    # Skip CSRF for browser telemetry collectors (no state changes, negligible forgery risk)
+    if request.url.path in CSRF_TELEMETRY_EXEMPT_PATHS:
         return await call_next(request)
 
     if not _same_origin_allowed(request):

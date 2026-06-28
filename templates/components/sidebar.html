@@ -1,111 +1,111 @@
 <!-- Sidebar Navigation -->
-<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar app-sidebar collapse">
-    <div class="position-sticky pt-3">
-        <!-- User Card -->
-        <div class="px-3 pb-3 mb-2 sidebar-user-card">
-            <div class="d-flex align-items-center gap-2 pt-2 pb-1">
-                <div class="avatar-md rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:2.5rem;height:2.5rem;background:rgba(59,130,246,0.18);border:2px solid rgba(59,130,246,0.28)">
-                    <i class="bi bi-person" style="color:#93c5fd;font-size:1.1rem;"></i>
-                </div>
-                <div style="min-width:0">
-                    <div style="color:#f9fafb;font-weight:700;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ current_user.username }}</div>
-                    <div class="mt-1">
-                        {% if current_user.role.value == 'ADMIN' %}
-                        <span class="sidebar-role-badge role-admin" data-i18n="roles.admin"><i class="bi bi-shield-fill"></i>{% if ui_lang == 'en' %}Admin{% else %}مدير النظام{% endif %}</span>
-                        {% elif current_user.role.value == 'MANAGER' %}
-                        <span class="sidebar-role-badge role-manager" data-i18n="roles.manager"><i class="bi bi-building"></i>{% if ui_lang == 'en' %}Manager{% else %}مدير الروضة{% endif %}</span>
-                        {% elif current_user.role.value == 'SUPERVISOR' %}
-                        <span class="sidebar-role-badge role-supervisor" data-i18n="roles.supervisor"><i class="bi bi-person-badge"></i>{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</span>
-                        {% else %}
-                        <span class="sidebar-role-badge role-parent" data-i18n="roles.parent"><i class="bi bi-heart"></i>{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
+<nav id="sidebarMenu" class="sidebar" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}القائمة الرئيسية{% endif %}">
+    <div class="sidebar-header">
+        <a href="/admin/dashboard" class="sidebar-logo" data-tooltip="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
+            <img src="/static/favicon.svg" width="32" height="32" alt="" class="sidebar-logo-icon" aria-hidden="true" loading="eager" />
+            <span>KinJo Admin</span>
+        </a>
+    </div>
 
-        <!-- Main Navigation -->
-        <ul class="nav flex-column gap-1 sidebar-nav">
-            <li class="nav-item mb-2">
-                <a class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}" href="/dashboard">
-                    <i class="bi bi-grid-1x2-fill me-2"></i>
+    <!-- User Card -->
+    <div class="sidebar-profile">
+        <div class="sidebar-profile-avatar" aria-hidden="true">
+            {{ current_user.username[0]|upper }}
+        </div>
+        <div class="sidebar-profile-info">
+            <div class="sidebar-profile-name">{{ current_user.username }}</div>
+            <span class="sidebar-profile-role" data-tooltip="{% if ui_lang == 'en' %}{{ current_user.role.value|title }}{% else %}{% if current_user.role.value == 'ADMIN' %}مدير النظام{% elif current_user.role.value == 'MANAGER' %}مدير الروضة{% elif current_user.role.value == 'SUPERVISOR' %}مشرف{% else %}ولي أمر{% endif %}{% endif %}">
+                {% if current_user.role.value == 'ADMIN' %}
+                <i class="bi bi-shield-fill"></i><span data-i18n="roles.admin">{% if ui_lang == 'en' %}Admin{% else %}مدير النظام{% endif %}</span>
+                {% elif current_user.role.value == 'MANAGER' %}
+                <i class="bi bi-building"></i><span data-i18n="roles.manager">{% if ui_lang == 'en' %}Manager{% else %}مدير الروضة{% endif %}</span>
+                {% elif current_user.role.value == 'SUPERVISOR' %}
+                <i class="bi bi-person-badge"></i><span data-i18n="roles.supervisor">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</span>
+                {% else %}
+                <i class="bi bi-heart"></i><span data-i18n="roles.parent">{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</span>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Main Navigation -->
+    <nav class="sidebar-nav" aria-label="{% if ui_lang == 'en' %}Navigation menu{% else %}قائمة التنقل{% endif %}">
+        <ul class="sidebar-menu" role="list">
+            <!-- Dashboard -->
+            <li class="nav-item">
+                <a class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}" href="/dashboard" data-tooltip="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
+                    <i class="bi bi-grid-1x2-fill" aria-hidden="true"></i>
                     <span data-i18n="sidebar.dashboard">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
                 </a>
             </li>
 
             <!-- Daily Operations Section -->
-            <li class="sidebar-divider-item" aria-hidden="true">
-                <div class="sidebar-divider"></div>
-            </li>
-            <li class="sidebar-section-item">
-                <p class="sidebar-section-title px-3 mt-3 mb-2 text-secondary small fw-bold" data-i18n="sidebar.section.daily_ops">
-                    {% if ui_lang == 'en' %}Daily Operations{% else %}التشغيل اليومي{% endif %}</p>
+            <li class="sidebar-section">
+                <p class="sidebar-section-title" data-i18n="sidebar.section.daily_ops">
+                    {% if ui_lang == 'en' %}Daily Operations{% else %}التشغيل اليومي{% endif %}
+                </p>
             </li>
 
             {% if current_user.role.value in ['MANAGER', 'SUPERVISOR'] %}
             <li class="nav-item">
-                <a class="nav-link {% if '/attendance' in request.url.path %}active{% endif %}" href="/attendance/daily">
-                    <i class="bi bi-calendar-check me-2"></i>
+                <a class="nav-link {% if '/attendance' in request.url.path %}active{% endif %}" href="/attendance/daily" data-tooltip="{% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}">
+                    <i class="bi bi-calendar-check" aria-hidden="true"></i>
                     <span data-i18n="sidebar.attendance_daily">{% if ui_lang == 'en' %}Daily Attendance{% else %}الحضور اليومي{% endif %}</span>
                 </a>
             </li>
             {% endif %}
 
-
             {% if current_user.role.value != 'PARENT' %}
             <li class="nav-item">
-                <a class="nav-link {% if '/safety' in request.url.path or '/incidents' in request.url.path %}active{% endif %}"
-                    href="/safety">
-                    <i class="bi bi-shield-lock me-2"></i>
+                <a class="nav-link {% if '/safety' in request.url.path or '/incidents' in request.url.path %}active{% endif %}" href="/safety" data-tooltip="{% if ui_lang == 'en' %}Safety and Incidents{% else %}السلامة والحوادث{% endif %}">
+                    <i class="bi bi-shield-lock" aria-hidden="true"></i>
                     <span data-i18n="sidebar.safety_incidents">{% if ui_lang == 'en' %}Safety and Incidents{% else %}السلامة والحوادث{% endif %}</span>
                 </a>
             </li>
             {% endif %}
 
             <li class="nav-item">
-                <a class="nav-link {% if '/messages' in request.url.path or '/communication' in request.url.path %}active{% endif %}"
-                    href="/messages">
-                    <i class="bi bi-chat-left-dots me-2"></i>
+                <a class="nav-link {% if '/messages' in request.url.path or '/communication' in request.url.path %}active{% endif %}" href="/messages" data-tooltip="{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}">
+                    <i class="bi bi-chat-left-dots" aria-hidden="true"></i>
                     <span data-i18n="sidebar.messages">{% if ui_lang == 'en' %}Messages{% else %}الرسائل{% endif %}</span>
                 </a>
             </li>
+
             {% if current_user.role.value == 'SUPERVISOR' %}
             <li class="nav-item">
-                <a class="nav-link {% if '/supervisor/performance' in request.url.path %}active{% endif %}"
-                    href="/supervisor/performance">
-                    <i class="bi bi-clipboard-data me-2"></i>
+                <a class="nav-link {% if '/supervisor/performance' in request.url.path %}active{% endif %}" href="/supervisor/performance" data-tooltip="{% if ui_lang == 'en' %}My Professional Performance{% else %}أدائي المهني{% endif %}">
+                    <i class="bi bi-clipboard-data" aria-hidden="true"></i>
                     <span data-i18n="sidebar.supervisor_performance">{% if ui_lang == 'en' %}My Professional Performance{% else %}أدائي المهني{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/supervisor/observations' in request.url.path %}active{% endif %}"
-                    href="/supervisor/observations">
-                    <i class="bi bi-eye me-2"></i>
+                <a class="nav-link {% if '/supervisor/observations' in request.url.path %}active{% endif %}" href="/supervisor/observations" data-tooltip="{% if ui_lang == 'en' %}My Educational Observations{% else %}ملاحظاتي التربوية{% endif %}">
+                    <i class="bi bi-eye" aria-hidden="true"></i>
                     <span data-i18n="sidebar.supervisor_observations">{% if ui_lang == 'en' %}My Educational Observations{% else %}ملاحظاتي التربوية{% endif %}</span>
                 </a>
             </li>
             {% endif %}
 
             <!-- Reports Section -->
-            <li class="sidebar-divider-item" aria-hidden="true"><div class="sidebar-divider"></div></li>
-            <li class="sidebar-section-item">
-                <p class="sidebar-section-title px-3 mt-3 mb-2 text-secondary small fw-bold" data-i18n="sidebar.section.reports_requests">
-                    {% if ui_lang == 'en' %}Reports and Requests{% else %}التقارير والطلبات{% endif %}</p>
+            <li class="sidebar-section">
+                <p class="sidebar-section-title" data-i18n="sidebar.section.reports_requests">
+                    {% if ui_lang == 'en' %}Reports and Requests{% else %}التقارير والطلبات{% endif %}
+                </p>
             </li>
 
             {% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
             <li class="nav-item">
-                <a class="nav-link {% if '/enrollments' in request.url.path %}active{% endif %}" href="/enrollments">
-                    <i class="bi bi-person-plus me-2"></i>
+                <a class="nav-link {% if '/enrollments' in request.url.path %}active{% endif %}" href="/enrollments" data-tooltip="{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}">
+                    <i class="bi bi-person-plus" aria-hidden="true"></i>
                     <span data-i18n="sidebar.enrollment_requests">{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}</span>
                 </a>
             </li>
             {% endif %}
+
             {% if current_user.role.value in ['MANAGER', 'SUPERVISOR'] %}
             <li class="nav-item">
-                <a class="nav-link {% if '/daily-reports' in request.url.path or '/reports' in request.url.path %}active{% endif %}"
-                    href="/daily-reports">
-                    <i class="bi bi-file-earmark-text me-2"></i>
+                <a class="nav-link {% if '/daily-reports' in request.url.path or '/reports' in request.url.path %}active{% endif %}" href="/daily-reports" data-tooltip="{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}">
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
                     <span data-i18n="sidebar.daily_reports">{% if ui_lang == 'en' %}Daily Reports{% else %}التقارير اليومية{% endif %}</span>
                 </a>
             </li>
@@ -113,45 +113,44 @@
 
             {% if current_user.role.value == 'PARENT' %}
             <li class="nav-item">
-                <a class="nav-link {% if '/parent/profile' in request.url.path %}active{% endif %}" href="/parent/profile">
-                    <i class="bi bi-person-circle me-2"></i>
+                <a class="nav-link {% if '/parent/profile' in request.url.path %}active{% endif %}" href="/parent/profile" data-tooltip="{% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %}">
+                    <i class="bi bi-person-circle" aria-hidden="true"></i>
                     <span data-i18n="sidebar.parent_profile">{% if ui_lang == 'en' %}My Profile{% else %}ملفي الشخصي{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/parent/children' in request.url.path %}active{% endif %}" href="/parent/children">
-                    <i class="bi bi-people me-2"></i>
+                <a class="nav-link {% if '/parent/children' in request.url.path %}active{% endif %}" href="/parent/children" data-tooltip="{% if ui_lang == 'en' %}My Children{% else %}أطفالي{% endif %}">
+                    <i class="bi bi-people" aria-hidden="true"></i>
                     <span data-i18n="sidebar.parent_children">{% if ui_lang == 'en' %}My Children{% else %}أطفالي{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/my-reports' in request.url.path %}active{% endif %}" href="/my-reports">
-                    <i class="bi bi-file-earmark-text me-2"></i>
+                <a class="nav-link {% if '/my-reports' in request.url.path %}active{% endif %}" href="/my-reports" data-tooltip="{% if ui_lang == 'en' %}My Children Reports{% else %}تقارير أطفالي{% endif %}">
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
                     <span data-i18n="sidebar.parent_reports">{% if ui_lang == 'en' %}My Children Reports{% else %}تقارير أطفالي{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/parent/enrollments' in request.url.path %}active{% endif %}"
-                    href="/parent/enrollments">
-                    <i class="bi bi-clipboard-check me-2"></i>
+                <a class="nav-link {% if '/parent/enrollments' in request.url.path %}active{% endif %}" href="/parent/enrollments" data-tooltip="{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}">
+                    <i class="bi bi-clipboard-check" aria-hidden="true"></i>
                     <span data-i18n="sidebar.parent_enrollments">{% if ui_lang == 'en' %}Enrollment Requests{% else %}طلبات التسجيل{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/enroll' in request.url.path %}active{% endif %}" href="/enroll">
-                    <i class="bi bi-person-plus me-2"></i>
+                <a class="nav-link {% if '/enroll' in request.url.path %}active{% endif %}" href="/enroll" data-tooltip="{% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}">
+                    <i class="bi bi-person-plus" aria-hidden="true"></i>
                     <span data-i18n="sidebar.parent_new_enrollment">{% if ui_lang == 'en' %}Register New Child{% else %}تسجيل طفل جديد{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/parent/attendance' in request.url.path %}active{% endif %}" href="/parent/attendance">
-                    <i class="bi bi-calendar-check me-2"></i>
+                <a class="nav-link {% if '/parent/attendance' in request.url.path %}active{% endif %}" href="/parent/attendance" data-tooltip="{% if ui_lang == 'en' %}Attendance{% else %}سجل الحضور{% endif %}">
+                    <i class="bi bi-calendar-check" aria-hidden="true"></i>
                     <span data-i18n="sidebar.parent_attendance">{% if ui_lang == 'en' %}Attendance{% else %}سجل الحضور{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/absence-requests' in request.url.path %}active{% endif %}" href="/absence-requests">
-                    <i class="bi bi-calendar-x me-2"></i>
+                <a class="nav-link {% if '/absence-requests' in request.url.path %}active{% endif %}" href="/absence-requests" data-tooltip="{% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الغياب{% endif %}">
+                    <i class="bi bi-calendar-x" aria-hidden="true"></i>
                     <span data-i18n="sidebar.parent_absence">{% if ui_lang == 'en' %}Absence Requests{% else %}طلبات الغياب{% endif %}</span>
                 </a>
             </li>
@@ -159,47 +158,48 @@
 
             <!-- Management Section -->
             {% if current_user.role.value in ['ADMIN', 'MANAGER'] %}
-            <li class="sidebar-divider-item" aria-hidden="true"><div class="sidebar-divider"></div></li>
-            <li class="sidebar-section-item">
-                <p class="sidebar-section-title px-3 mt-3 mb-2 text-secondary small fw-bold" data-i18n="sidebar.section.management">{% if ui_lang == 'en' %}Management{% else %}الإدارة{% endif %}
+            <li class="sidebar-section">
+                <p class="sidebar-section-title" data-i18n="sidebar.section.management">
+                    {% if ui_lang == 'en' %}Management{% else %}الإدارة{% endif %}
                 </p>
             </li>
 
             {% if current_user.role.value == 'ADMIN' %}
             <li class="nav-item">
-                <a class="nav-link {% if '/admin/kg-overview' in request.url.path %}active{% endif %}" href="/admin/kg-overview">
-                    <i class="bi bi-buildings-fill me-2"></i>
+                <a class="nav-link {% if '/admin/kg-overview' in request.url.path %}active{% endif %}" href="/admin/kg-overview" data-tooltip="{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}">
+                    <i class="bi bi-buildings-fill" aria-hidden="true"></i>
                     <span>{% if ui_lang == 'en' %}Kindergarten Overview{% else %}نظرة عامة على الروضات{% endif %}</span>
                 </a>
             </li>
             {% endif %}
+
             <li class="nav-item">
-                <a class="nav-link {% if '/kpi' in request.url.path %}active{% endif %}" href="/kpi">
-                    <i class="bi bi-bar-chart-line me-2"></i>
+                <a class="nav-link {% if '/kpi' in request.url.path %}active{% endif %}" href="/kpi" data-tooltip="{% if ui_lang == 'en' %}Key Performance Indicators{% else %}مؤشرات الأداء الرئيسية{% endif %}">
+                    <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
                     <span data-i18n="sidebar.kpi">{% if ui_lang == 'en' %}Key Performance Indicators (KPI){% else %}مؤشرات الأداء الرئيسية (KPI){% endif %}</span>
                 </a>
             </li>
+
             {% if current_user.role.value == 'MANAGER' %}
             <li class="nav-item">
-                <a class="nav-link {% if '/manager/benchmarking' in request.url.path %}active{% endif %}"
-                    href="/manager/benchmarking">
-                    <i class="bi bi-percent me-2"></i>
+                <a class="nav-link {% if '/manager/benchmarking' in request.url.path %}active{% endif %}" href="/manager/benchmarking" data-tooltip="{% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %}">
+                    <i class="bi bi-percent" aria-hidden="true"></i>
                     <span data-i18n="sidebar.manager_benchmarking">{% if ui_lang == 'en' %}Benchmarking{% else %}المقارنة المعيارية{% endif %}</span>
                 </a>
             </li>
             {% endif %}
 
             <li class="nav-item">
-                <a class="nav-link {% if '/kindergartens' in request.url.path %}active{% endif %}" href="/kindergartens">
-                    <i class="bi bi-building-gear me-2"></i>
+                <a class="nav-link {% if '/kindergartens' in request.url.path %}active{% endif %}" href="/kindergartens" data-tooltip="{% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}">
+                    <i class="bi bi-building-gear" aria-hidden="true"></i>
                     <span data-i18n="sidebar.kindergarten_info">{% if ui_lang == 'en' %}Kindergarten Information{% else %}معلومات الروضة{% endif %}</span>
                 </a>
             </li>
 
             {% if current_user.role.value == 'MANAGER' %}
             <li class="nav-item">
-                <a class="nav-link {% if '/classes' in request.url.path %}active{% endif %}" href="/classes">
-                    <i class="bi bi-people-fill me-2"></i>
+                <a class="nav-link {% if '/classes' in request.url.path %}active{% endif %}" href="/classes" data-tooltip="{% if ui_lang == 'en' %}Classes{% else %}الشعب الصفية{% endif %}">
+                    <i class="bi bi-people-fill" aria-hidden="true"></i>
                     <span data-i18n="sidebar.classes">{% if ui_lang == 'en' %}Classes{% else %}الشعب الصفية{% endif %}</span>
                 </a>
             </li>
@@ -207,81 +207,73 @@
 
             {% if current_user.role.value == 'ADMIN' %}
             <li class="nav-item">
-                <a class="nav-link {% if '/admin/users' in request.url.path %}active{% endif %}" href="/admin/users">
-                    <i class="bi bi-people me-2"></i>
+                <a class="nav-link {% if '/admin/users' in request.url.path %}active{% endif %}" href="/admin/users" data-tooltip="{% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}">
+                    <i class="bi bi-people" aria-hidden="true"></i>
                     <span data-i18n="sidebar.admin_users">{% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/admin/analytics' in request.url.path %}active{% endif %}" href="/admin/analytics">
-                    <i class="bi bi-graph-up-arrow me-2"></i>
+                <a class="nav-link {% if '/admin/analytics' in request.url.path %}active{% endif %}" href="/admin/analytics" data-tooltip="{% if ui_lang == 'en' %}Advanced Analytics{% else %}التحليلات المتقدمة{% endif %}">
+                    <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
                     <span data-i18n="sidebar.admin_analytics">{% if ui_lang == 'en' %}Advanced Analytics{% else %}التحليلات المتقدمة{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/admin/reports/incidents' in request.url.path %}active{% endif %}"
-                    href="/admin/reports/incidents/generate">
-                    <i class="bi bi-file-earmark-plus me-2"></i>
+                <a class="nav-link {% if '/admin/reports/incidents' in request.url.path %}active{% endif %}" href="/admin/reports/incidents/generate" data-tooltip="{% if ui_lang == 'en' %}Generate Incident Reports{% else %}إنشاء تقارير الحوادث{% endif %}">
+                    <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
                     <span data-i18n="sidebar.admin_incident_reports">{% if ui_lang == 'en' %}Generate Incident Reports{% else %}إنشاء تقارير الحوادث{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/admin/governance-reports' in request.url.path %}active{% endif %}"
-                    href="/admin/governance-reports">
-                    <i class="bi bi-clipboard2-data me-2"></i>
+                <a class="nav-link {% if '/admin/governance-reports' in request.url.path %}active{% endif %}" href="/admin/governance-reports" data-tooltip="{% if ui_lang == 'en' %}Daily Report Governance{% else %}حوكمة التقارير اليومية{% endif %}">
+                    <i class="bi bi-clipboard2-data" aria-hidden="true"></i>
                     <span data-i18n="sidebar.admin_governance_reports">{% if ui_lang == 'en' %}Daily Report Governance{% else %}حوكمة التقارير اليومية{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/admin/classification' in request.url.path %}active{% endif %}"
-                    href="/admin/classification">
-                    <i class="bi bi-trophy me-2"></i>
+                <a class="nav-link {% if '/admin/classification' in request.url.path %}active{% endif %}" href="/admin/classification" data-tooltip="{% if ui_lang == 'en' %}Classification and Benchmarking{% else %}التصنيف والمقارنات{% endif %}">
+                    <i class="bi bi-trophy" aria-hidden="true"></i>
                     <span data-i18n="sidebar.admin_classification">{% if ui_lang == 'en' %}Classification and Benchmarking{% else %}التصنيف والمقارنات{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/admin/safety-analytics' in request.url.path %}active{% endif %}"
-                    href="/admin/safety-analytics">
-                    <i class="bi bi-shield-exclamation me-2"></i>
+                <a class="nav-link {% if '/admin/safety-analytics' in request.url.path %}active{% endif %}" href="/admin/safety-analytics" data-tooltip="{% if ui_lang == 'en' %}Safety Analytics{% else %}تحليلات السلامة{% endif %}">
+                    <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
                     <span>{% if ui_lang == 'en' %}Safety Analytics{% else %}تحليلات السلامة{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/admin/impersonate' in request.url.path %}active{% endif %}"
-                    href="/admin/impersonate">
-                    <i class="bi bi-person-fill-lock me-2"></i>
+                <a class="nav-link {% if '/admin/impersonate' in request.url.path %}active{% endif %}" href="/admin/impersonate" data-tooltip="{% if ui_lang == 'en' %}Impersonate Manager{% else %}انتحال هوية مدير{% endif %}">
+                    <i class="bi bi-person-fill-lock" aria-hidden="true"></i>
                     <span>{% if ui_lang == 'en' %}Impersonate Manager{% else %}انتحال هوية مدير{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/admin/alerts' in request.url.path %}active{% endif %}"
-                    href="/admin/alerts">
-                    <i class="bi bi-bell me-2"></i>
+                <a class="nav-link {% if '/admin/alerts' in request.url.path %}active{% endif %}" href="/admin/alerts" data-tooltip="{% if ui_lang == 'en' %}Alert Management{% else %}إدارة التنبيهات{% endif %}">
+                    <i class="bi bi-bell" aria-hidden="true"></i>
                     <span>{% if ui_lang == 'en' %}Alert Management{% else %}إدارة التنبيهات{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/admin/heatmap' in request.url.path %}active{% endif %}"
-                    href="/admin/heatmap">
-                    <i class="bi bi-map me-2"></i>
+                <a class="nav-link {% if '/admin/heatmap' in request.url.path %}active{% endif %}" href="/admin/heatmap" data-tooltip="{% if ui_lang == 'en' %}Jordan Heat Map{% else %}خريطة الأردن الحرارية{% endif %}">
+                    <i class="bi bi-map" aria-hidden="true"></i>
                     <span>{% if ui_lang == 'en' %}Jordan Heat Map{% else %}خريطة الأردن الحرارية{% endif %}</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link {% if '/audit-logs' in request.url.path %}active{% endif %}" href="/audit-logs">
-                    <i class="bi bi-clock-history me-2"></i>
+                <a class="nav-link {% if '/audit-logs' in request.url.path %}active{% endif %}" href="/audit-logs" data-tooltip="{% if ui_lang == 'en' %}Task and Activity Log{% else %}سجل المهام والنشاط{% endif %}">
+                    <i class="bi bi-clock-history" aria-hidden="true"></i>
                     <span data-i18n="sidebar.audit_logs">{% if ui_lang == 'en' %}Task and Activity Log{% else %}سجل المهام والنشاط{% endif %}</span>
                 </a>
             </li>
             {% endif %}
 
             <li class="nav-item">
-                <a class="nav-link {% if '/tasks' in request.url.path %}active{% endif %}" href="/tasks">
-                    <i class="bi bi-check2-square me-2"></i>
+                <a class="nav-link {% if '/tasks' in request.url.path %}active{% endif %}" href="/tasks" data-tooltip="{% if ui_lang == 'en' %}Task List{% else %}قائمة المهام{% endif %}">
+                    <i class="bi bi-check2-square" aria-hidden="true"></i>
                     <span data-i18n="sidebar.tasks">{% if ui_lang == 'en' %}Task List{% else %}قائمة المهام{% endif %}</span>
                 </a>
             </li>
-            {% endif %}
         </ul>
-    </div>
+    </nav>
 </nav>

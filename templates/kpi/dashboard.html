@@ -462,7 +462,7 @@ endblock %} {% block extra_css %}
   </h5>
   <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 mb-5">
     {% set safety = [ ('incident_rate', ('معدل الحوادث' if ui_lang != 'en' else
-    'Incident Rate'), 'danger','bi-exclamation-triangle', ('عدد الحوادث لكل 100 يوم-طفل.' if ui_lang != 'en' else 'Number of incidents per 100 child-days.')), ('serious_incident_rate', ('الحوادث الخطرة' if
+    'Incident Rate'), 'danger','bi-exclamation-triangle', ('عدد الحوادث لكل 1,000 يوم-طفل.' if ui_lang != 'en' else 'Number of incidents per 1,000 child-days.')), ('serious_incident_rate', ('الحوادث الخطرة' if
     ui_lang != 'en' else 'Serious Incidents'), 'danger','bi-radioactive', ('عدد
     الحوادث الجسيمة التي تتطلب تدخل إجراء فورياً.' if ui_lang != 'en' else
     'Number of serious incidents requiring immediate action.')),
@@ -1798,6 +1798,14 @@ function renderDashboard(data) {
         "incident_followup_sla",
         "chronic_absence_rate",
         "capacity_utilization_rate",
+        "revenue_collection_efficiency",
+        "operating_cost_per_child",
+        "development_milestone_rate",
+        "ilp_completion_rate",
+        "accessibility_compliance_rate",
+        "language_support_rate",
+        "parent_portal_adoption",
+        "avg_message_response_time",
         "active_enrollments",
         "new_enrollments",
       ];
@@ -1829,6 +1837,11 @@ function renderDashboard(data) {
               key === "serious_incident_rate"
             ) {
               displayValue = numericValue.toFixed(2);
+            } else if (
+              key === "operating_cost_per_child" ||
+              key === "avg_message_response_time"
+            ) {
+              displayValue = numericValue.toFixed(1);
             } else {
               displayValue = `${numericValue.toFixed(1)}%`;
             }

@@ -582,12 +582,13 @@ class TestParentRedirects:
         assert response.status_code == 307
         assert "/parent/children" in response.headers["location"]
 
-    def test_profile_does_not_redirect_admin(self, client, admin_token, admin_user, test_db):
-        """GET /profile should NOT redirect admin"""
+    def test_profile_redirects_admin_to_admin_profile(self, client, admin_token, admin_user, test_db):
+        """GET /profile should redirect admin to their dedicated /admin/profile page"""
         client.cookies.set("kinjo_token", admin_token)
         response = client.get("/profile", follow_redirects=False)
-        # Admin should get 200 (settings page), not redirect
-        assert response.status_code == 200
+        # Admin gets redirected to dedicated admin profile page (not the generic user settings page)
+        assert response.status_code == 307
+        assert "/admin/profile" in response.headers.get("location", "")
 
     def test_enrollments_does_not_redirect_manager(self, client, manager_token, manager_user, test_db):
         """GET /enrollments should NOT redirect manager"""

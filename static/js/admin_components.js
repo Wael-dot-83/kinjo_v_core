@@ -444,15 +444,15 @@ class AdminComponents {
    * Initialize dropdown components
    */
   initDropdowns() {
-    const dropdowns = document.querySelectorAll(".admin-dropdown");
+    const dropdowns = document.querySelectorAll(".dropdown");
     dropdowns.forEach((dropdown) => {
       this.setupDropdown(dropdown);
     });
   }
 
   setupDropdown(dropdown) {
-    const trigger = dropdown.querySelector(".admin-dropdown-trigger");
-    const menu = dropdown.querySelector(".admin-dropdown-menu");
+    const trigger = dropdown.querySelector(".dropdown-trigger");
+    const menu = dropdown.querySelector(".dropdown-menu");
 
     if (!trigger || !menu) return;
 
@@ -485,7 +485,7 @@ class AdminComponents {
   }
 
   closeAllDropdowns() {
-    document.querySelectorAll(".admin-dropdown.open").forEach((dropdown) => {
+    document.querySelectorAll(".dropdown.open").forEach((dropdown) => {
       this.closeDropdown(dropdown);
     });
   }
@@ -632,7 +632,7 @@ class AdminComponents {
    */
   handleGlobalClick(event) {
     // Close dropdowns when clicking outside
-    if (!event.target.closest(".admin-dropdown")) {
+    if (!event.target.closest(".dropdown")) {
       this.closeAllDropdowns();
     }
 

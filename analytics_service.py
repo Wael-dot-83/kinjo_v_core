@@ -63,6 +63,35 @@ def _utcnow_naive() -> datetime:
     """Return UTC timestamp without tzinfo for legacy naive DB columns."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
+# Jordan timezone — UTC+3 (no DST). Use for all operational date arithmetic.
+_JORDAN_TZ = timezone(timedelta(hours=3))
+
+
+def _jordan_today() -> date:
+    """Return the current calendar date in Jordan (UTC+3)."""
+    return datetime.now(_JORDAN_TZ).date()
+
+
+def _jordan_now() -> datetime:
+    """Return the current datetime in Jordan (UTC+3), timezone-aware."""
+    return datetime.now(_JORDAN_TZ)
+
+
+def _to_jordan_iso(dt: datetime | None) -> str | None:
+    """
+    Serialise a datetime for JSON/JS consumption.
+
+    Naive datetimes are assumed to be UTC (as stored by SQLAlchemy on SQLite
+    with server_default=func.now()).  The value is shifted to Jordan UTC+3 and
+    returned as a full ISO-8601 string with offset (+03:00) so that
+    `new Date(val)` parses unambiguously in every browser and environment.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_JORDAN_TZ).isoformat()
+
 # =============================================================================
 # Pydantic Schemas for API
 # =============================================================================
@@ -333,8 +362,8 @@ def list_alerts(
             "message": alert.message,
             "severity": alert.severity,
             "status": alert.status,
-            "triggered_at": alert.triggered_at.isoformat(),
-            "acknowledged_at": alert.acknowledged_at.isoformat() if alert.acknowledged_at else None,
+            "triggered_at": _to_jordan_iso(alert.triggered_at),
+            "acknowledged_at": _to_jordan_iso(alert.acknowledged_at),
         }
         for alert in alerts
     ]}
@@ -534,7 +563,7 @@ def get_data_quality(
         "accuracy_score": latest.accuracy_score,
         "timeliness_score": latest.timeliness_score,
         "consistency_score": latest.consistency_score,
-        "evaluated_at": latest.evaluated_at.isoformat(),
+        "evaluated_at": _to_jordan_iso(latest.evaluated_at),
     }
 
 
@@ -555,7 +584,7 @@ def get_data_quality_report(
                 "accuracy_score": m.accuracy_score,
                 "timeliness_score": m.timeliness_score,
                 "consistency_score": m.consistency_score,
-                "evaluated_at": m.evaluated_at.isoformat(),
+                "evaluated_at": _to_jordan_iso(m.evaluated_at),
                 "details": m.details,
             }
             for m in metrics
@@ -747,8 +776,10 @@ class ExportJobResponse(BaseModel):
     job_id: int
     status: str
     report_type: str
-    created_at: datetime
+    created_at: Optional[str] = None  # ISO-8601 with Jordan +03:00 offset
     file_path: Optional[str] = None
+    error: Optional[str] = None       # short error message when status == FAILED
+    trace_url: Optional[str] = None   # link to audit log entry for this job
 
 
 class ExportRequest(BaseModel):
@@ -1149,7 +1180,7 @@ def export_analytics_data(
     
     if not start_str or not end_str:
          # Default to last 30 days if not provided
-         end_date = date.today()
+         end_date = _jordan_today()
          start_date = end_date - timedelta(days=30)
     else:
         try:
@@ -2134,14 +2165,13 @@ def get_kpi_analytics(
             models.AttendanceLog.status.in_([
                 models.AttendanceStatus.PRESENT,
                 models.AttendanceStatus.LATE,
-                models.AttendanceStatus.EXCUSED,
             ])
         )
         if kg_id:
             attended_logs_q = attended_logs_q.filter(models.Class.kindergarten_id == kg_id)
         attended_child_days = attended_logs_q.count()
         if attended_child_days > 0:
-            incident_rate = round((incident_count / attended_child_days) * 100, 2)
+            incident_rate = round((incident_count / attended_child_days) * 1000, 3)
     except SQLAlchemyError as e:
         logger.error(
             "Failed to compute incident rate KPI for kg_id=%s period=[%s,%s]: %s",
@@ -2214,8 +2244,8 @@ def get_analytics_attendance(
     if current_user.role not in [models.UserRole.ADMIN]:
         kg_id = current_user.kindergarten_id
     
-    today = date.today()
-    
+    today = _jordan_today()
+
     # Get total children
     children_query = db.query(models.Child)
     if kg_id:
@@ -2346,13 +2376,12 @@ def get_analytics_dashboard(
             models.AttendanceLog.status.in_([
                 models.AttendanceStatus.PRESENT,
                 models.AttendanceStatus.LATE,
-                models.AttendanceStatus.EXCUSED,
             ])
         )
         if kg_id:
             attended_q = attended_q.filter(models.Class.kindergarten_id == kg_id)
         attended_child_days_gov = attended_q.count()
-        kpis["incident_rate"] = round((incident_count / attended_child_days_gov * 100) if attended_child_days_gov > 0 else 0, 2)
+        kpis["incident_rate"] = round((incident_count / attended_child_days_gov * 1000) if attended_child_days_gov > 0 else 0, 3)
         
         # Report completion
         reports = db.query(models.DailyReport).filter(
@@ -2556,12 +2585,12 @@ def get_registration_drilldown(
             "status": ea.status.value if hasattr(ea.status, 'value') else str(ea.status),
             "status_reason": ea.status_reason,
             "source": ea.source,
-            "submitted_at": ea.submitted_at.isoformat() if ea.submitted_at else None,
-            "accepted_at": ea.accepted_at.isoformat() if ea.accepted_at else None,
-            "rejected_at": ea.rejected_at.isoformat() if ea.rejected_at else None,
-            "decision_at": ea.decision_at.isoformat() if ea.decision_at else None,
+            "submitted_at": _to_jordan_iso(ea.submitted_at),
+            "accepted_at": _to_jordan_iso(ea.accepted_at),
+            "rejected_at": _to_jordan_iso(ea.rejected_at),
+            "decision_at": _to_jordan_iso(ea.decision_at),
             "reviewer_name": f"{reviewer.full_name or reviewer.username}" if reviewer else None,
-            "created_at": ea.created_at.isoformat() if ea.created_at else None,
+            "created_at": _to_jordan_iso(ea.created_at),
         })
 
     total_pages = (total + page_size - 1) // page_size
@@ -2825,7 +2854,7 @@ def get_registration_entity_summary(
     ).count()
 
     # Quality indicators
-    now = datetime.now()
+    now = _jordan_now()
     stalled_draft    = ea_q.filter(
         models.EnrollmentApplication.status == models.EnrollmentStatus.DRAFT,
         models.EnrollmentApplication.created_at < now - timedelta(days=30),
@@ -3051,7 +3080,7 @@ def get_staffing_summary(
 @router.post("/export")
 def request_export(
     request_body: ExportRequest,
-    background_tasks: BackgroundTasks = None,
+    background_tasks: BackgroundTasks,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -3113,18 +3142,15 @@ def request_export(
         job_id=job.id,
         status_value=job.status.value,
     )
+    db.commit()  # release the write lock from the audit flush before background task runs
 
-    # Kick off background processing (or run inline if no BackgroundTasks provided)
-    if background_tasks is not None:
-        background_tasks.add_task(process_export_job, job.id)
-    else:
-        process_export_job(job.id)
+    background_tasks.add_task(_run_export_job_async, job.id)
 
     return ExportJobResponse(
         job_id=job.id,
         status=job.status.value,
         report_type=job.report_type,
-        created_at=job.created_at
+        created_at=_to_jordan_iso(job.created_at)
     )
 
 
@@ -3161,8 +3187,10 @@ def get_export_status(
         job_id=job.id,
         status=job.status.value,
         report_type=job.report_type,
-        created_at=job.created_at,
-        file_path=job.file_path
+        created_at=_to_jordan_iso(job.created_at),
+        file_path=job.file_path,
+        error=job.error_message if job.status == models.ExportStatus.FAILED else None,
+        trace_url=f"/admin/logs?job_id={job.id}" if job.status == models.ExportStatus.FAILED else None,
     )
 
 
@@ -3224,6 +3252,15 @@ def download_export_file(
 
 EXPORT_DIR = Path("data") / "exports"
 
+
+
+async def _run_export_job_async(job_id: int) -> None:
+    """Runs sync process_export_job in a thread pool to avoid blocking the event loop."""
+    import asyncio
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, process_export_job, job_id)
+
+
 def process_export_job(job_id: int):
     """Background processor for export jobs"""
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -3249,7 +3286,7 @@ def process_export_job(job_id: int):
             period_start = datetime.strptime(start_str, "%Y-%m-%d").date()
             period_end = datetime.strptime(end_str, "%Y-%m-%d").date()
         else:
-            period_end = date.today()
+            period_end = _jordan_today()
             period_start = period_end - timedelta(days=30)
 
         data_list = []
@@ -3332,12 +3369,43 @@ def process_export_job(job_id: int):
         job.completed_at = _utcnow_naive()
         db.commit()
 
-    except Exception as e:
-        db.rollback()
-        job.status = models.ExportStatus.FAILED
-        job.error_message = str(e)
-        job.completed_at = _utcnow_naive()
-        db.commit()
+        actor = db.query(models.User).filter(models.User.id == job.user_id).first()
+        _log_analytics_export_audit(
+            db,
+            action=AuditAction.ANALYTICS_EXPORT_JOB_COMPLETED,
+            actor=actor,
+            report_type=job.report_type,
+            export_format=job.export_format,
+            filters=job.filters,
+            job_id=job.id,
+            status_value=job.status.value,
+            file_path=job.file_path,
+            file_size=job.file_size,
+        )
+    except (SQLAlchemyError, OSError, ValueError, TypeError, AttributeError, RuntimeError, ImportError, csv.Error) as exc:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        job = db.query(models.ExportJob).filter(models.ExportJob.id == job_id).first()
+        if job:
+            job.status = models.ExportStatus.FAILED
+            job.error_message = str(exc)
+            db.commit()
+
+            actor = db.query(models.User).filter(models.User.id == job.user_id).first()
+            _log_analytics_export_audit(
+                db,
+                action=AuditAction.ANALYTICS_EXPORT_JOB_FAILED,
+                actor=actor,
+                report_type=job.report_type,
+                export_format=job.export_format,
+                filters=job.filters,
+                job_id=job.id,
+                status_value=job.status.value,
+                error_message=job.error_message,
+                sensitivity_level=3,
+            )
     finally:
         db.close()
 
@@ -3373,7 +3441,7 @@ class ReportHistoryItem(BaseModel):
     report_type: str
     report_name: str
     generated_by: str
-    generated_at: datetime
+    generated_at: Optional[str] = None  # ISO-8601 with Jordan +03:00 offset
     period_start: date
     period_end: date
     format: str
@@ -3560,6 +3628,51 @@ def get_kg_overview_summary(
     except Exception:
         pass
 
+    # Previous period — compute real deltas instead of hardcoded values
+    def _pct_delta(current: float, previous: Optional[float]) -> Optional[float]:
+        if previous is None or previous == 0:
+            return None
+        return round((current - previous) / abs(previous) * 100, 1)
+
+    prev_summary = None
+    prev_alert_count: Optional[int] = None
+    _prev = _previous_period_bounds(period_start, period_end)
+    if _prev:
+        try:
+            prev_summary = AnalyticsService.get_network_summary(db, _prev[0], _prev[1], kg_filter)
+        except Exception:
+            prev_summary = None
+        try:
+            _paq = db.query(func.count(models.ActiveAlert.id)).filter(
+                models.ActiveAlert.triggered_at.isnot(None),
+                func.date(models.ActiveAlert.triggered_at) >= _prev[0],
+                func.date(models.ActiveAlert.triggered_at) <= _prev[1],
+            )
+            if kg_filter:
+                _paq = _paq.filter(
+                    or_(
+                        models.ActiveAlert.scope_type == "NETWORK",
+                        models.ActiveAlert.scope_id.in_([str(k) for k in kg_filter]),
+                    )
+                )
+            prev_alert_count = int(_paq.scalar() or 0)
+        except Exception:
+            prev_alert_count = None
+
+    children_delta = _pct_delta(
+        float(summary.total_children),
+        float(prev_summary.total_children) if prev_summary else None,
+    )
+    attendance_delta = _pct_delta(
+        float(summary.attendance_rate),
+        float(prev_summary.attendance_rate) if prev_summary else None,
+    )
+    staff_delta = _pct_delta(
+        float(summary.total_staff),
+        float(prev_summary.total_staff) if prev_summary else None,
+    )
+    alerts_delta = _pct_delta(float(len(alerts)), float(prev_alert_count) if prev_alert_count is not None else None)
+
     kpis = [
         KgOverviewKPI(
             key="children",
@@ -3567,8 +3680,8 @@ def get_kg_overview_summary(
             label_en="Total Children",
             value=summary.total_children,
             unit="",
-            delta_percent=9.6,  # TODO: compute from previous period
-            delta_dir="up",
+            delta_percent=children_delta,
+            delta_dir="up" if (children_delta or 0) >= 0 else "down",
             target=None,
             risk_label_ar=None,
             risk_label_en=None,
@@ -3580,8 +3693,8 @@ def get_kg_overview_summary(
             label_en="Attendance Rate",
             value=round(summary.attendance_rate, 1),
             unit="%",
-            delta_percent=-1.3,
-            delta_dir="down",
+            delta_percent=attendance_delta,
+            delta_dir="up" if (attendance_delta or 0) >= 0 else "down",
             target=70.0,
             risk_label_ar=f"{below_target} روضات أقل من الحد الأدنى",
             risk_label_en=f"{below_target} kindergartens below target",
@@ -3593,8 +3706,8 @@ def get_kg_overview_summary(
             label_en="Teachers",
             value=summary.total_staff,
             unit="",
-            delta_percent=4.0,
-            delta_dir="up",
+            delta_percent=staff_delta,
+            delta_dir="up" if (staff_delta or 0) >= 0 else "down",
             target=None,
             risk_label_ar=None,
             risk_label_en=None,
@@ -3606,8 +3719,8 @@ def get_kg_overview_summary(
             label_en="Alerts",
             value=summary.risk_radar.__len__() if hasattr(summary, 'risk_radar') else len(alerts),
             unit="",
-            delta_percent=62.5,
-            delta_dir="up",
+            delta_percent=alerts_delta,
+            delta_dir="up" if (alerts_delta or 0) >= 0 else "down",
             target=0,
             risk_label_ar=f"{high} حرجة، {medium} متوسطة",
             risk_label_en=f"{high} high, {medium} medium",
@@ -3653,6 +3766,19 @@ def get_kg_overview_kindergartens(
         query = query.filter(models.Kindergarten.id.in_(kg_filter))
 
     kindergartens = query.all()
+
+    # Batch-load last report date per kindergarten (avoids N+1)
+    _kg_ids = [kg.id for kg in kindergartens]
+    _last_report_by_kg: dict[int, object] = {}
+    if _kg_ids:
+        _last_report_rows = (
+            db.query(models.DailyReport.kindergarten_id, func.max(models.DailyReport.submitted_at))
+            .filter(models.DailyReport.kindergarten_id.in_(_kg_ids))
+            .group_by(models.DailyReport.kindergarten_id)
+            .all()
+        )
+        _last_report_by_kg = {kg_id: ts for kg_id, ts in _last_report_rows}
+
     result = []
     for kg in kindergartens:
         try:
@@ -3730,7 +3856,7 @@ def get_kg_overview_kindergartens(
                 health_label_en=health_en,
                 recommended_action_ar=action_ar,
                 recommended_action_en=action_en,
-                last_report_at=None,  # TODO: fetch from daily reports if available
+                last_report_at=_last_report_by_kg.get(kg.id),
                 teacher_data_status=teacher_data_status,
             ))
         except Exception:
@@ -3857,6 +3983,32 @@ def get_kg_overview_governorates(
     allowed_kgs = _allowed_kindergarten_ids(current_user, db)
     breakdown = AnalyticsService.get_governorate_breakdown(db, period_start, period_end, None, allowed_kgs, None)
 
+    # Batch-count active alerts per governorate via two lean queries
+    gov_alert_counts: dict[str, int] = {}
+    try:
+        from collections import Counter
+        _alert_scope_ids = [
+            r.scope_id for r in
+            db.query(models.ActiveAlert.scope_id)
+            .filter(
+                models.ActiveAlert.scope_type == "KINDERGARTEN",
+                models.ActiveAlert.status == models.AlertStatus.ACTIVE,
+            )
+            .all()
+            if str(r.scope_id).isdigit()
+        ]
+        if _alert_scope_ids:
+            _alert_by_kg = Counter(int(s) for s in _alert_scope_ids)
+            _kg_gov_rows = (
+                db.query(models.Kindergarten.id, models.Kindergarten.governorate)
+                .filter(models.Kindergarten.id.in_(list(_alert_by_kg.keys())))
+                .all()
+            )
+            for _kg_id, _gov in _kg_gov_rows:
+                gov_alert_counts[_gov] = gov_alert_counts.get(_gov, 0) + _alert_by_kg[_kg_id]
+    except Exception:
+        gov_alert_counts = {}
+
     result = []
     for b in breakdown:
         risk = "low"
@@ -3871,7 +4023,7 @@ def get_kg_overview_governorates(
             children_count=b.children_count,
             avg_attendance=round(b.attendance_rate, 1),
             avg_occupancy=round(b.enrollment_rate, 1),
-            alert_count=0,  # TODO: aggregate from ActiveAlert
+            alert_count=gov_alert_counts.get(b.governorate, 0),
             risk_level=risk,
         ))
     return result
@@ -4111,7 +4263,14 @@ def preview_report(
     charts = []
     sample_data = []
     total_records = 0
-    data_quality = {}
+    data_quality = {
+        "total_records": 0,
+        "missing_fields": 0,
+        "duplicate_records": 0,
+        "incomplete_records": 0,
+        "completeness_percent": 100.0,
+        "last_refresh": _jordan_now().isoformat(),
+    }
 
     if report_type == "attendance":
         kpis = [
@@ -4370,8 +4529,8 @@ def preview_report(
                     "date": log.date.isoformat(),
                     "child_id": log.child_id,
                     "status": log.status.value if hasattr(log.status, "value") else str(log.status),
-                    "check_in": log.check_in_at.isoformat() if log.check_in_at else None,
-                    "check_out": log.check_out_at.isoformat() if log.check_out_at else None,
+                    "check_in": _to_jordan_iso(log.check_in_at),
+                    "check_out": _to_jordan_iso(log.check_out_at),
                 })
         except Exception:
             pass
@@ -4414,7 +4573,7 @@ def preview_report(
                     "kindergarten": kg.name_ar if kg else "",
                     "status": app.status.value if hasattr(app.status, "value") else str(app.status),
                     "source": app.source,
-                    "submitted_at": app.submitted_at.isoformat() if app.submitted_at else None,
+                    "submitted_at": _to_jordan_iso(app.submitted_at),
                 })
         except Exception:
             pass
@@ -4427,7 +4586,7 @@ def preview_report(
             for log in logs:
                 user = db.query(models.User).filter(models.User.id == log.user_id).first()
                 sample_data.append({
-                    "timestamp": log.created_at.isoformat() if log.created_at else None,
+                    "timestamp": _to_jordan_iso(log.created_at),
                     "user": user.full_name or user.username if user else "system",
                     "role": log.actor_role or (user.role.value if user else ""),
                     "action": log.action,
@@ -4553,9 +4712,9 @@ def get_report_history(
             report_type=job.report_type,
             report_name=job.report_type.replace("_", " ").title(),
             generated_by=current_user.username,
-            generated_at=job.created_at,
-            period_start=date.today() - timedelta(days=30),
-            period_end=date.today(),
+            generated_at=_to_jordan_iso(job.created_at),
+            period_start=_jordan_today() - timedelta(days=30),
+            period_end=_jordan_today(),
             format=job.export_format.value if hasattr(job.export_format, "value") else str(job.export_format),
             status=job.status.value if hasattr(job.status, "value") else str(job.status),
             file_size=job.file_size,
@@ -4935,7 +5094,7 @@ class AnalyticsService:
     def get_high_risk_children(db: Session, kg_ids: Optional[List[int]] = None) -> List[Dict[str, Any]]:
         """Get list of high-risk children based on attendance and incidents"""
         # Get children with low attendance (< 80%) in last 30 days
-        period_end = date.today()
+        period_end = _jordan_today()
         period_start = period_end - timedelta(days=30)
 
         # Find children with attendance rate below 80%
@@ -5065,7 +5224,7 @@ class AnalyticsService:
 
     @staticmethod
     def _compute_network_incident_rate(db: Session, period_start: date, period_end: date, kg_ids: Optional[List[int]] = None) -> float:
-        """Compute network-wide incident rate per 100 child-days"""
+        """Compute network-wide incident rate per 1,000 attended child-days"""
         # Count total incidents
         incident_q = db.query(func.count(models.Incident.id)).filter(
             func.date(models.Incident.occurred_at) >= period_start,
@@ -5075,10 +5234,14 @@ class AnalyticsService:
             incident_q = incident_q.filter(models.Incident.kindergarten_id.in_(kg_ids))
         total_incidents = incident_q.scalar() or 0
 
-        # Count total child-days attended
+        # Count physically attended child-days (PRESENT + LATE only, excludes EXCUSED)
         child_days_q = db.query(func.count(models.AttendanceLog.id)).filter(
             models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status.in_([
+                models.AttendanceStatus.PRESENT,
+                models.AttendanceStatus.LATE,
+            ]),
         )
         if kg_ids:
             child_days_q = child_days_q.join(models.Child).join(
@@ -5087,11 +5250,11 @@ class AnalyticsService:
             ).filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
         total_child_days = child_days_q.scalar() or 1
 
-        return round((total_incidents / total_child_days) * 100, 2)
+        return round((total_incidents / total_child_days) * 1000, 3)
 
     @staticmethod
     def _compute_network_serious_incident_rate(db: Session, period_start: date, period_end: date) -> float:
-        """Compute network-wide serious incident rate per 100 child-days"""
+        """Compute network-wide serious incident rate per 1,000 attended child-days"""
         # Count serious incidents
         serious_incidents = db.query(func.count(models.Incident.id)).filter(
             func.date(models.Incident.occurred_at) >= period_start,
@@ -5099,13 +5262,17 @@ class AnalyticsService:
             models.Incident.severity_level.in_([models.SeverityLevel.HIGH, models.SeverityLevel.CRITICAL])
         ).scalar() or 0
 
-        # Count total child-days attended
+        # Count physically attended child-days (PRESENT + LATE only, excludes EXCUSED)
         total_child_days = db.query(func.count(models.AttendanceLog.id)).filter(
             models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status.in_([
+                models.AttendanceStatus.PRESENT,
+                models.AttendanceStatus.LATE,
+            ]),
         ).scalar() or 1
 
-        return round((serious_incidents / total_child_days) * 100, 2)
+        return round((serious_incidents / total_child_days) * 1000, 3)
 
     @staticmethod
     def _compute_network_governance_score(db: Session, period_start: date, period_end: date) -> float:
@@ -5205,10 +5372,14 @@ class AnalyticsService:
             func.date(models.Incident.occurred_at) <= period_end
         ).scalar() or 0
 
-        # Count child-days
+        # Count physically attended child-days (PRESENT + LATE only, excludes EXCUSED)
         child_days = db.query(func.count(models.AttendanceLog.id)).filter(
             models.AttendanceLog.date >= period_start,
-            models.AttendanceLog.date <= period_end
+            models.AttendanceLog.date <= period_end,
+            models.AttendanceLog.status.in_([
+                models.AttendanceStatus.PRESENT,
+                models.AttendanceStatus.LATE,
+            ]),
         ).join(
             models.Child
         ).join(
@@ -5218,7 +5389,7 @@ class AnalyticsService:
             models.EnrollmentApplication.kindergarten_id.in_(kg_ids)
         ).scalar() or 1
 
-        return round((incidents / child_days) * 100, 2)
+        return round((incidents / child_days) * 1000, 3)
 
     @staticmethod
     def _compute_governorate_governance_score(
@@ -5270,10 +5441,12 @@ class AnalyticsService:
             attendance_score = min(attendance_rate, 100) * 0.4
 
             # Lower incident rates = better score
-            incident_score = max(0, 100 - incident_rate * 10) * 0.3
+            # compute_incident_rate() returns per-1,000 child-days; divide by 10 to
+            # restore per-100 equivalent before applying the original multiplier.
+            incident_score = max(0, 100 - (incident_rate / 10) * 10) * 0.3
 
             # Lower serious incident rates = better score
-            serious_incident_score = max(0, 100 - serious_incident_rate * 20) * 0.2
+            serious_incident_score = max(0, 100 - (serious_incident_rate / 10) * 20) * 0.2
 
             # Higher ratio compliance = better score
             ratio_score = ratio_compliance * 0.1
@@ -5423,7 +5596,9 @@ class AnalyticsService:
             kg_id = int(dimension_id)
             attendance_rate = KPIService.compute_attendance_rate(db, kg_id, period_start, period_end)
             chronic_absence_rate = KPIService.compute_chronic_absence_rate(db, kg_id, period_start, period_end)
-            incident_rate_per_100 = KPIService.compute_incident_rate(db, kg_id, period_start, period_end)
+            # compute_incident_rate() now returns per-1,000; divide by 10 to store
+            # the correct per-100 value in the incident_rate_per_100 column.
+            incident_rate_per_100 = KPIService.compute_incident_rate(db, kg_id, period_start, period_end) / 10.0
             serious_incident_rate = KPIService.compute_serious_incident_rate(db, kg_id, period_start, period_end)
             ratio_compliance_rate = KPIService.compute_ratio_compliance(db, kg_id, period_start, period_end)
 
@@ -5584,9 +5759,11 @@ class AnalyticsService:
         enrollment_rate = (children_count / kg_capacity * 100) if kg_capacity > 0 else 0
 
         # Attendance / incident: use cache if present
+        # incident_rate_per_100 stores per-100; multiply by 10 to expose per-1,000
+        # so both cached and live paths return the same scale in KindergartenMetrics.
         if cached:
             attendance_rate = cached.attendance_rate or 0
-            incident_rate = cached.incident_rate_per_100 or 0
+            incident_rate = (cached.incident_rate_per_100 or 0) * 10.0
             report_submission_rate = cached.report_completion_rate or 0
             attendance_trend_slope = cached.attendance_trend_slope
             risk_score = cached.risk_score
@@ -5871,7 +6048,7 @@ class AnalyticsService:
 
     @staticmethod
     def evaluate_thresholds(db: Session) -> None:
-        today = date.today()
+        today = _jordan_today()
         thresholds = db.query(models.AlertThreshold).filter(models.AlertThreshold.is_active == True).all()
         for threshold in thresholds:
             window_start = today - timedelta(days=threshold.window_days)
@@ -5958,7 +6135,7 @@ class AnalyticsService:
 
     @staticmethod
     def generate_recommendations_for_kindergarten(db: Session, kindergarten_id: int, user_id: int) -> None:
-        today = date.today()
+        today = _jordan_today()
         recent = db.query(models.Recommendation).filter(
             models.Recommendation.kindergarten_id == kindergarten_id,
             models.Recommendation.created_at >= _utcnow_naive() - timedelta(days=30)

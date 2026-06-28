@@ -6,7 +6,7 @@ Tasks run eagerly in-process when TESTING=True so no Redis is required in CI.
 import logging
 
 from celery import Celery
-from celery.signals import task_prerun, task_postrun, task_failure
+from celery.signals import task_prerun, task_postrun, task_failure, task_revoked
 
 from config import settings
 
@@ -16,7 +16,7 @@ celery_app = Celery(
     "kinjo",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["messaging_tasks", "charts.tasks"],
+    include=["messaging_tasks", "charts.tasks", "backup_tasks", "import_tasks", "export_tasks"],
 )
 
 celery_app.conf.update(
@@ -64,6 +64,11 @@ def _on_task_failure(task_id, exception, traceback, sender, **kwargs):
     _task_start_times.pop(task_id, None)
 
 
+@task_revoked.connect
+def _on_task_revoked(request, terminated, signum, **kwargs):
+    _task_start_times.pop(getattr(request, "id", None), None)
+
+
 def get_task_stats():
     durations = _task_stats["durations"]
     if not durations:
@@ -74,12 +79,12 @@ def get_task_stats():
             "p50_duration_ms": 0,
             "p95_duration_ms": 0,
         }
+    n = len(durations)
     sorted_d = sorted(durations)
-    n = len(sorted_d)
     return {
         "completed": _task_stats["completed"],
         "failed": _task_stats["failed"],
-        "avg_duration_ms": round(sum(sorted_d) / n, 1),
+        "avg_duration_ms": round(sum(durations) / n, 1),
         "p50_duration_ms": round(sorted_d[n // 2], 1),
         "p95_duration_ms": round(sorted_d[min(int(n * 0.95), n - 1)], 1),
     }

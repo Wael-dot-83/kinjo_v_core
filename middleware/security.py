@@ -28,7 +28,7 @@ AUDIT_EXCLUDED_PATHS = {
 }
 
 
-_CESIUM_CONNECT = [
+_GMAPS_CONNECT = [
     "'self'",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
@@ -36,12 +36,10 @@ _CESIUM_CONNECT = [
     "ws://127.0.0.1:8000",
     "https://cdn.jsdelivr.net",
     "https://cdnjs.cloudflare.com",
-    # Cesium CDN: workers, terrain, Ion API, and asset manifest fetched at runtime
-    "https://cesium.com",
-    "https://*.cesium.com",
-    # ESRI satellite imagery tiles (fallback when no Cesium Ion token)
-    "https://server.arcgisonline.com",
-    "https://services.arcgisonline.com",
+    # Google Maps APIs — tile downloads, geocoding, and places calls
+    "https://maps.googleapis.com",
+    "https://*.googleapis.com",
+    "https://*.gstatic.com",
 ]
 
 _BASE_CONNECT = [
@@ -56,25 +54,24 @@ _BASE_CONNECT = [
 
 
 def _security_csp(heatmap: bool = False) -> str:
-    # Cesium's Knockout.js widget bindings use new Function() to parse binding
-    # expressions, which requires 'unsafe-eval'. Scope it to /admin/heatmap only.
     script_src = (
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
-        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com https://cesium.com"
+        "script-src 'self' 'unsafe-inline' "
+        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com "
+        "https://maps.googleapis.com"
         if heatmap
         else
         "script-src 'self' 'unsafe-inline' "
         "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com"
     )
-    connect_sources = _CESIUM_CONNECT if heatmap else _BASE_CONNECT
+    connect_sources = _GMAPS_CONNECT if heatmap else _BASE_CONNECT
     img_src = (
-        "img-src 'self' data: blob: https://cesium.com https://server.arcgisonline.com https://services.arcgisonline.com"
+        "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com"
         if heatmap
         else "img-src 'self' data: blob:"
     )
     style_src = (
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
-        "https://fonts.googleapis.com https://cesium.com"
+        "https://fonts.googleapis.com"
         if heatmap
         else
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
@@ -123,7 +120,7 @@ async def security_headers_middleware(request: Request, call_next: Callable):
 
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["X-XSS-Protection"] = "0"
     # The password-reset page carries a single-use token in its URL query string;
     # use the strictest Referrer-Policy there so the token can never leak to a
     # third-party resource via the Referer header.

@@ -50,6 +50,7 @@ EXPECTED_VISIBLE_HREFS = [
     "/admin/classification",
     "/admin/audit-logs",
     "/admin/settings",
+    "/admin/observability",
 ]
 
 REMOVED_VISIBLE_HREFS = {

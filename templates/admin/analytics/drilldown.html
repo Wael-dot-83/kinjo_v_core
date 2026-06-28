@@ -1,19 +1,19 @@
-{% extends "admin_base.html"%}
+{% extends "admin_base.html" %}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 
 {% block title %}{% if ui_lang == 'en' %}Detailed Analysis: {{ dimension_id }}{% else %}تحليل تفصيلي: {{ dimension_id }}{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="Dashboard"><i class="bi bi-house"aria-hidden="true"></i></a>
-<span class="admin-breadcrumb-separator">/</span>
-<a href="/admin/analytics"class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active"id="breadcrumbDimension">{% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}</span>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="breadcrumb-separator">/</span>
+<a href="/admin/analytics" class="breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active" id="breadcrumbDimension">{% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}</span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
-  <h1 class="admin-page-title mb-0"id="drilldownTitle">
+<div class="page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="page-title mb-0" id="drilldownTitle">
     <i class="bi bi-graph-up me-2"></i>
     {% if ui_lang == 'en' %}Detailed Analysis{% else %}تحليل تفصيلي{% endif %}
   </h1>
@@ -28,27 +28,27 @@
     ) }}
   </div>
 </div>
-<div id="loading"class="text-center py-5">
-    <div class="spinner-border text-primary"role="status">
+<div id="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
     </div>
     <p class="mt-2">{% if ui_lang == 'en' %}Loading detailed data...{% else %}جاري تحميل البيانات التفصيلية...{% endif %}</p>
 </div>
 
-<div id="content"class="d-none">
+<div id="content" class="d-none">
     <!-- Summary Cards -->
-    <div class="row g-4 mb-4"id="summaryCardRow">
+    <div class="row g-4 mb-4" id="summaryCardRow">
         <!-- Summary cards will be injected here by JS -->
     </div>
 
     <!-- Main Data Table -->
-    <div class="card glass-panel border-0 shadow-sm mt-4">
-        <div class="card-header border-bottom border-light">
-            <h5 class="card-title mb-0"id="tableTitle"style="font: var(--type-section-title)">...</h5>
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0" id="tableTitle">...</h5>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0"id="drilldownTable">
-                <thead class="table-light"id="drilldownThead">
+            <table class="table table-hover align-middle mb-0" id="drilldownTable">
+                <thead class="table-light" id="drilldownThead">
                     <!-- Header will be injected here by JS -->
                 </thead>
                 <tbody id="drilldownTbody">
@@ -64,5 +64,5 @@
 <script src="https://cdn.jsdelivr.net/npm/tablesort@5.3.0/dist/tablesort.min.js"
     integrity="sha384-vhcBfNt762rNlbnxZsIJQSPWX7b+8NzToPmcW6J5cJzXSnOjZKS2LQ/O2uqLlHcX"
     crossorigin="anonymous"></script>
-<script src="/static/js/admin_analytics_drilldown.js"charset="utf-8"></script>
+<script src="/static/js/admin_analytics_drilldown.js" charset="utf-8"></script>
 {% endblock %}

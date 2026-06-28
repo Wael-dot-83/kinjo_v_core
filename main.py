@@ -1311,6 +1311,98 @@ async def heatmap_websocket(websocket: WebSocket):
         pass
 
 
+@app.websocket("/ws/notify")
+async def notify_websocket(websocket: WebSocket):
+    """
+    Per-user notification WebSocket backed by Redis pub/sub.
+
+    Clients connect with ?token=<jwt> or an active session cookie.
+    Messages published via realtime_service.publish_notification(user_id, payload)
+    are forwarded to the connected client in real time.
+    """
+    from jose import JWTError, jwt as _jwt
+
+    def decode_token(value: str) -> str:
+        payload = _jwt.decode(value, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        sub = payload.get("sub")
+        if not sub:
+            raise JWTError("missing subject")
+        return sub
+
+    token = websocket.query_params.get("token")
+    session_token = websocket.cookies.get(settings.SESSION_COOKIE_NAME)
+    username = None
+    for candidate in [token, session_token]:
+        if not candidate:
+            continue
+        try:
+            username = decode_token(candidate)
+            break
+        except JWTError:
+            pass
+
+    if not username:
+        await websocket.close(code=4001, reason="Authentication required")
+        return
+
+    db = next(get_db())
+    try:
+        user = db.query(models.User).filter(models.User.username == username).first()
+        if not user or user.status != models.UserStatus.ACTIVE:
+            await websocket.close(code=4003, reason="User not found or inactive")
+            return
+        user_id = user.id
+    finally:
+        db.close()
+
+    await websocket.accept()
+
+    from realtime_service import _NOTIFY_CHANNEL_PREFIX, _get_redis
+    channel = f"{_NOTIFY_CHANNEL_PREFIX}{user_id}"
+
+    loop = asyncio.get_event_loop()
+
+    def _listen():
+        rc = _get_redis()
+        pubsub = rc.pubsub()
+        pubsub.subscribe(channel)
+        try:
+            for message in pubsub.listen():
+                if message["type"] == "message":
+                    yield message["data"]
+        finally:
+            pubsub.unsubscribe(channel)
+            pubsub.close()
+
+    try:
+        async def _stream():
+            for raw in await loop.run_in_executor(None, lambda: list(_listen())):
+                pass
+
+        # Streaming via thread executor so the Redis blocking call doesn't stall the event loop
+        import concurrent.futures
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        rc = _get_redis()
+        pubsub = rc.pubsub()
+        pubsub.subscribe(channel)
+
+        try:
+            while True:
+                message = await loop.run_in_executor(executor, pubsub.get_message, True, 1.0)
+                if message and message["type"] == "message":
+                    data = message["data"]
+                    if isinstance(data, bytes):
+                        data = data.decode("utf-8")
+                    await websocket.send_text(data)
+        finally:
+            pubsub.unsubscribe(channel)
+            pubsub.close()
+            executor.shutdown(wait=False)
+
+    except Exception:
+        pass
+
+
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/hour")
 async def register(
@@ -1690,6 +1782,50 @@ async def predict_capacity_utilization(
             },
             "kindergarten_id": kindergarten_id,
             "generated_at": datetime.now(timezone.utc).isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, AttributeError, TypeError):
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/api/analytics/predict/enrollment")
+async def predict_enrollment_trend(
+    kindergarten_id: int,
+    days_ahead: int = 30,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Predict enrollment application trends for a kindergarten"""
+    try:
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
+            raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
+
+        prediction = await predictive_analytics.predict_enrollment_trend(db, kindergarten_id, days_ahead)
+
+        return {
+            "prediction": {
+                "type": prediction.prediction_type.value,
+                "predicted_value": round(prediction.predicted_value, 2),
+                "confidence_interval": [
+                    round(prediction.confidence_interval[0], 2),
+                    round(prediction.confidence_interval[1], 2),
+                ],
+                "confidence_level": round(prediction.confidence_level, 3),
+                "model_used": prediction.model_used.value,
+                "accuracy_score": round(prediction.accuracy_score, 3),
+                "historical_data_points": prediction.historical_data_points,
+                "prediction_date": prediction.prediction_date.isoformat(),
+                "forecast_period_days": prediction.forecast_period_days,
+            },
+            "kindergarten_id": kindergarten_id,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
         }
 
     except HTTPException:

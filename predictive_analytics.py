@@ -15,6 +15,7 @@ class PredictionType(Enum):
     ATTENDANCE = "attendance"
     INCIDENTS = "incidents"
     CAPACITY = "capacity"
+    ENROLLMENT = "enrollment"
 
 
 class ModelType(Enum):
@@ -270,6 +271,51 @@ class PredictiveAnalytics:
         values = self._capacity_series(db, kindergarten_id, days_window=180)
         return self._build_prediction(PredictionType.CAPACITY, values, days_ahead, percent_metric=True)
 
+    def _enrollment_series(self, db: Session, kindergarten_id: int, days_window: int = 180) -> List[float]:
+        end_day = date.today()
+        start_day = end_day - timedelta(days=max(30, days_window))
+
+        rows = (
+            db.query(
+                func.date(models.EnrollmentApplication.created_at),
+                func.count(models.EnrollmentApplication.id),
+            )
+            .filter(
+                models.EnrollmentApplication.kindergarten_id == kindergarten_id,
+                func.date(models.EnrollmentApplication.created_at) >= start_day,
+                func.date(models.EnrollmentApplication.created_at) <= end_day,
+            )
+            .group_by(func.date(models.EnrollmentApplication.created_at))
+            .order_by(func.date(models.EnrollmentApplication.created_at).asc())
+            .all()
+        )
+        by_date: Dict[date, int] = {}
+        for day_value, count_value in rows:
+            if isinstance(day_value, str):
+                bucket_day = date.fromisoformat(day_value)
+            elif isinstance(day_value, datetime):
+                bucket_day = day_value.date()
+            else:
+                bucket_day = day_value
+            by_date[bucket_day] = int(count_value)
+
+        # Return cumulative daily application counts as the time series
+        cumulative = 0
+        series: List[float] = []
+        for day in self._date_buckets(start_day, end_day):
+            cumulative += by_date.get(day, 0)
+            series.append(float(cumulative))
+        return series
+
+    async def predict_enrollment_trend(
+        self,
+        db: Session,
+        kindergarten_id: int,
+        days_ahead: int = 30,
+    ) -> Prediction:
+        values = self._enrollment_series(db, kindergarten_id, days_window=180)
+        return self._build_prediction(PredictionType.ENROLLMENT, values, days_ahead, percent_metric=False)
+
     async def analyze_trends(
         self,
         db: Session,
@@ -287,6 +333,9 @@ class PredictiveAnalytics:
         elif normalized == "capacity":
             values = self._capacity_series(db, kindergarten_id, days_window=min(max(days, 30), 365))
             percent_metric = True
+        elif normalized == "enrollment":
+            values = self._enrollment_series(db, kindergarten_id, days_window=min(max(days, 30), 365))
+            percent_metric = False
         else:
             raise ValueError("Unsupported metric type")
 

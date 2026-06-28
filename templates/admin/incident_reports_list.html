@@ -1,21 +1,21 @@
-﻿{% extends "admin_base.html"%}
+{% extends "admin_base.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="Dashboard"><i class="bi bi-house"aria-hidden="true"></i></a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}</span>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}</span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
-  <h1 class="admin-page-title mb-0">
-    <i class="bi bi-exclamation-triangle admin-text-warning me-2"aria-hidden="true"></i>
+<div class="page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="page-title mb-0">
+    <i class="bi bi-exclamation-triangle text-warning me-2" aria-hidden="true"></i>
     {% if ui_lang == 'en' %}Incident Reports{% else %}تقارير الحوادث{% endif %}
   </h1>
-  <button type="button"class="admin-btn admin-btn-primary"data-bs-toggle="modal"data-bs-target="#generateReportModal">
-    <i class="bi bi-plus-circle me-2"aria-hidden="true"></i>{% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generateReportModal">
+    <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
   </button>
 </div>
 
@@ -27,10 +27,10 @@
                 <h5 class="mb-0">{% if ui_lang == 'en' %}Filter Reports{% else %}تصفية التقارير{% endif %}</h5>
             </div>
             <div class="card-body">
-                <form id="filterForm"class="row g-3">
+                <form id="filterForm" class="row g-3">
                     <div class="col-md-3">
-                        <label for="scopeFilter"class="form-label">{% if ui_lang == 'en' %}Scope{% else %}النطاق{% endif %}</label>
-                        <select class="form-select"id="scopeFilter">
+                        <label for="scopeFilter" class="form-label">{% if ui_lang == 'en' %}Scope{% else %}النطاق{% endif %}</label>
+                        <select class="form-select" id="scopeFilter">
                             <option value="">{% if ui_lang == 'en' %}All Scopes{% else %}جميع النطاقات{% endif %}</option>
                             <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة محددة{% endif %}</option>
                             <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
@@ -38,22 +38,22 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label for="kindergartenFilter"class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
-                        <select class="form-select"id="kindergartenFilter"disabled>
+                        <label for="kindergartenFilter" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                        <select class="form-select" id="kindergartenFilter" disabled>
                             <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label for="governorateFilter"class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-                        <select class="form-select"id="governorateFilter"disabled>
+                        <label for="governorateFilter" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                        <select class="form-select" id="governorateFilter" disabled>
                             <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
                         </select>
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
-                        <button type="button"class="admin-btn admin-btn-ghost me-2"onclick="loadReports()">
+                        <button type="button" class="btn btn-outline-primary me-2" onclick="loadReports()">
                             <i class="bi bi-search me-1"></i>{% if ui_lang == 'en' %}Search{% else %}بحث{% endif %}
                         </button>
-                        <button type="button"class="btn btn-outline-secondary"onclick="resetFilters()">
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetFilters()">
                             <i class="bi bi-x-circle me-1"></i>{% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
                         </button>
                     </div>
@@ -67,7 +67,7 @@
         <div class="card shadow-sm">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">{% if ui_lang == 'en' %}Reports List{% else %}قائمة التقارير{% endif %}</h5>
-                <div id="loadingSpinner"class="spinner-border spinner-border-sm admin-text-primary d-none"role="status">
+                <div id="loadingSpinner" class="spinner-border spinner-border-sm text-primary d-none" role="status">
                     <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span>
                 </div>
             </div>
@@ -75,10 +75,10 @@
                 <div id="reportsTableContainer">
                     <!-- Reports will be loaded here -->
                 </div>
-                <div id="emptyState"class="text-center py-5 d-none">
-                    <i class="bi bi-file-earmark-x display-4 admin-text-muted mb-3"></i>
-                    <h5 class="admin-text-muted">{% if ui_lang == 'en' %}No reports{% else %}لا توجد تقارير{% endif %}</h5>
-                    <p class="admin-text-muted">{% if ui_lang == 'en' %}No reports found matching the search criteria.{% else %}لم يتم العثور على أي تقارير تطابق معايير البحث.{% endif %}</p>
+                <div id="emptyState" class="text-center py-5 d-none">
+                    <i class="bi bi-file-earmark-x display-4 text-muted mb-3"></i>
+                    <h5 class="text-muted">{% if ui_lang == 'en' %}No reports{% else %}لا توجد تقارير{% endif %}</h5>
+                    <p class="text-muted">{% if ui_lang == 'en' %}No reports found matching the search criteria.{% else %}لم يتم العثور على أي تقارير تطابق معايير البحث.{% endif %}</p>
                 </div>
             </div>
         </div>
@@ -86,39 +86,39 @@
 </div>
 
 <!-- Generate Report Modal -->
-<div class="modal fade"id="generateReportModal"tabindex="-1">
+<div class="modal fade" id="generateReportModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{% if ui_lang == 'en' %}Generate New Incident Report{% else %}إنشاء تقرير حوادث جديد{% endif %}</h5>
-                <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{{ _('إغلاق') }}"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
             </div>
             <div class="modal-body">
                 <form id="generateReportForm">
                     <div class="mb-3">
-                        <label for="reportScope"class="form-label">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
-                        <select class="form-select"id="reportScope"required>
+                        <label for="reportScope" class="form-label">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
+                        <select class="form-select" id="reportScope" required>
                             <option value="">{% if ui_lang == 'en' %}Select Scope{% else %}اختر النطاق{% endif %}</option>
                             <option value="KINDERGARTEN">{% if ui_lang == 'en' %}Specific Kindergarten{% else %}روضة محددة{% endif %}</option>
                             <option value="GOVERNORATE">{% if ui_lang == 'en' %}Governorate{% else %}محافظة{% endif %}</option>
                             <option value="ALL">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
                         </select>
                     </div>
-                    <div class="mb-3 d-none"id="kindergartenSelectDiv">
-                        <label for="reportKindergarten"class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
-                        <select class="form-select"id="reportKindergarten">
+                    <div class="mb-3 d-none" id="kindergartenSelectDiv">
+                        <label for="reportKindergarten" class="form-label">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                        <select class="form-select" id="reportKindergarten">
                             <option value="">{% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %}</option>
                         </select>
                     </div>
-                    <div class="mb-3 d-none"id="governorateSelectDiv">
-                        <label for="reportGovernorate"class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-                        <select class="form-select"id="reportGovernorate">
+                    <div class="mb-3 d-none" id="governorateSelectDiv">
+                        <label for="reportGovernorate" class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+                        <select class="form-select" id="reportGovernorate">
                             <option value="">{% if ui_lang == 'en' %}Select Governorate{% else %}اختر المحافظة{% endif %}</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="reportPeriod"class="form-label">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
-                        <select class="form-select"id="reportPeriod"required>
+                        <label for="reportPeriod" class="form-label">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
+                        <select class="form-select" id="reportPeriod" required>
                             <option value="">{% if ui_lang == 'en' %}Select Period{% else %}اختر الفترة{% endif %}</option>
                             <option value="week">{% if ui_lang == 'en' %}Current Week{% else %}الأسبوع الحالي{% endif %}</option>
                             <option value="month">{% if ui_lang == 'en' %}Current Month{% else %}الشهر الحالي{% endif %}</option>
@@ -126,17 +126,17 @@
                             <option value="annual">{% if ui_lang == 'en' %}Current Year{% else %}السنة الحالية{% endif %}</option>
                         </select>
                     </div>
-                    <div class="mb-3 d-none"id="yearSelectDiv">
-                        <label for="reportYear"class="form-label">{% if ui_lang == 'en' %}Year{% else %}السنة{% endif %}</label>
-                        <select class="form-select"id="reportYear">
+                    <div class="mb-3 d-none" id="yearSelectDiv">
+                        <label for="reportYear" class="form-label">{% if ui_lang == 'en' %}Year{% else %}السنة{% endif %}</label>
+                        <select class="form-select" id="reportYear">
                             <option value="">{% if ui_lang == 'en' %}Select Year{% else %}اختر السنة{% endif %}</option>
                         </select>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button"class="admin-btn admin-btn-secondary"data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button"class="admin-btn admin-btn-primary"onclick="generateReport()">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-primary" onclick="generateReport()">
                     <i class="bi bi-check-circle me-1"></i>{% if ui_lang == 'en' %}Generate Report{% else %}إنشاء التقرير{% endif %}
                 </button>
             </div>
@@ -145,12 +145,12 @@
 </div>
 
 <!-- Report Detail Modal -->
-<div class="modal fade"id="reportDetailModal"tabindex="-1">
+<div class="modal fade" id="reportDetailModal" tabindex="-1">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"id="reportDetailTitle">{% if ui_lang == 'en' %}Report Details{% else %}تفاصيل التقرير{% endif %}</h5>
-                <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{{ _('إغلاق') }}"></button>
+                <h5 class="modal-title" id="reportDetailTitle">{% if ui_lang == 'en' %}Report Details{% else %}تفاصيل التقرير{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('إغلاق') }}"></button>
             </div>
             <div class="modal-body">
                 <div id="reportDetailContent">
@@ -158,8 +158,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button"class="admin-btn admin-btn-secondary"data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
-                <button type="button"class="admin-btn admin-btn-success"onclick="exportReport()">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}</button>
+                <button type="button" class="btn btn-success" onclick="exportReport()">
                     <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}
                 </button>
             </div>
@@ -328,10 +328,10 @@
                 <td>${escHtml(report.created_by)}</td>
                 <td><span class="badge badge-soft badge-soft-warning">${report.total_incidents}</span></td>
                 <td>
-                    <button type="button"class="btn admin-btn-sm btn-outline-primary me-1"onclick="viewReport(${report.id})">
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="viewReport(${report.id})">
                         <i class="bi bi-eye"></i> ${T('عرض', 'View')}
                     </button>
-                    <button type="button"class="btn admin-btn-sm btn-outline-success"onclick="exportReport(${report.id})">
+                    <button class="btn btn-sm btn-outline-success" onclick="exportReport(${report.id})">
                         <i class="bi bi-download"></i> ${T('تصدير', 'Export')}
                     </button>
                 </td>
@@ -452,14 +452,14 @@
                 <div class="row text-center">
                     <div class="col-6">
                         <div class="border rounded p-2">
-                            <div class="h4 admin-text-warning mb-0">${metrics.total_incidents || 0}</div>
-                            <small class="admin-text-muted">${T('إجمالي الحوادث', 'Total Incidents')}</small>
+                            <div class="h4 text-warning mb-0">${metrics.total_incidents || 0}</div>
+                            <small class="text-muted">${T('إجمالي الحوادث', 'Total Incidents')}</small>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="border rounded p-2">
-                            <div class="h4 admin-text-success mb-0">${metrics.open_incidents || 0}</div>
-                            <small class="admin-text-muted">${T('حوادث مفتوحة', 'Open Incidents')}</small>
+                            <div class="h4 text-success mb-0">${metrics.open_incidents || 0}</div>
+                            <small class="text-muted">${T('حوادث مفتوحة', 'Open Incidents')}</small>
                         </div>
                     </div>
                 </div>

@@ -474,7 +474,8 @@ function showSkeletonLoaders() {
   }
 
   // Show skeleton for comparative analysis
-  document.getElementById("topPerformersList").innerHTML = `
+  const _topPerformersList = document.getElementById("topPerformersList");
+  if (_topPerformersList) _topPerformersList.innerHTML = `
         <div class="list-group-item text-muted text-center py-3 skeleton-row">
             <div class="skeleton-text w-75 mx-auto mb-2"></div>
             <div class="skeleton-text w-50 mx-auto"></div>
@@ -484,7 +485,8 @@ function showSkeletonLoaders() {
             <div class="skeleton-text w-50 mx-auto"></div>
         </div>
     `;
-  document.getElementById("lowPerformersList").innerHTML = `
+  const _lowPerformersList = document.getElementById("lowPerformersList");
+  if (_lowPerformersList) _lowPerformersList.innerHTML = `
         <div class="list-group-item text-muted text-center py-3 skeleton-row">
             <div class="skeleton-text w-75 mx-auto mb-2"></div>
             <div class="skeleton-text w-50 mx-auto"></div>
@@ -557,7 +559,7 @@ function updateNetworkSummary(summary) {
   safeSetText("avgAttendance", attendanceRate.toFixed(1) + "%");
 
   const incidentRate = summary.incident_rate || 0;
-  safeSetText("incidentRate", incidentRate.toFixed(2));
+  safeSetText("incidentRate", incidentRate.toFixed(2) + "/1K");
 
   const enrollmentRate = summary.enrollment_rate || 0;
   safeSetText("enrollmentRate", enrollmentRate.toFixed(1) + "%");
@@ -1030,7 +1032,7 @@ function updateGovernorateBreakdown(breakdownData) {
                      ${(row.attendance_rate ?? 0).toFixed(1)}%
                  </span>
              </td>
-             <td class="text-center" data-sort="${row.incident_rate}">${(row.incident_rate ?? 0).toFixed(2)}</td>
+             <td class="text-center" data-sort="${row.incident_rate}">${(row.incident_rate ?? 0).toFixed(2)}/1K</td>
              <td class="text-center" data-sort="${govScore}">
                  <div class="d-flex align-items-center justify-content-center">
                      <span class="fw-bold me-2">${displayScore}</span>

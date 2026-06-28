@@ -2,19 +2,19 @@
 {% block title %}{% if ui_lang == 'en' %}Incident Analytics — KinJo{% else %}تحليلات الحوادث — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard"class="admin-breadcrumb-item">
+<a href="/admin/dashboard" class="breadcrumb-item">
     <i class="bi bi-house"></i>
     <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Incident Analytics{% else %}تحليلات الحوادث{% endif %}</span>
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Incident Analytics{% else %}تحليلات الحوادث{% endif %}</span>
 {% endblock %}
 
 {% block extra_head %}
 <style>
 /* ── Field label ── */
 .field-label {
-    font-size: .75rem; font-weight: 700; color: var(--kinjo-admin-text-muted);
+    font-size: .75rem; font-weight: 700; color: var(--kinjo-text-muted);
     text-transform: uppercase; letter-spacing: .04em; display: block;
 }
 
@@ -27,7 +27,7 @@
                    height: 10px; overflow: hidden; }
 .mini-bar-fill   { height: 100%; border-radius: 50px; transition: width .45s ease; }
 .mini-bar-count  { min-width: 28px; font-size: .78rem; font-weight: 700;
-                   color: var(--kinjo-admin-text-primary); text-align: start; }
+                   color: var(--kinjo-text-primary); text-align: start; }
 
 /* ── Trend sparkline ── */
 .trend-bars      { display: flex; align-items: flex-end; gap: 3px; height: 64px; }
@@ -35,17 +35,17 @@
                    transition: height .4s ease; cursor: default; }
 .trend-bar:hover { opacity: .8; }
 .trend-labels    { display: flex; gap: 3px; margin-top: 4px; }
-.trend-label     { flex: 1; font-size: .6rem; color: var(--kinjo-admin-text-muted);
+.trend-label     { flex: 1; font-size: .6rem; color: var(--kinjo-text-muted);
                    text-align: center; white-space: nowrap; overflow: hidden;
                    text-overflow: ellipsis; }
 
 /* ── Table helpers ── */
-.th-sm { font-size: .75rem; font-weight: 700; color: var(--kinjo-admin-text-muted);
+.th-sm { font-size: .75rem; font-weight: 700; color: var(--kinjo-text-muted);
          text-transform: uppercase; letter-spacing: .04em; padding: .5rem .75rem; }
 td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
 
 /* ── Empty / Error states ── */
-.state-box { text-align: center; padding: 2rem 1rem; color: var(--kinjo-admin-text-muted); }
+.state-box { text-align: center; padding: 2rem 1rem; color: var(--kinjo-text-muted); }
 .state-box i { font-size: 2rem; display: block; margin-bottom: .5rem; opacity: .45; }
 .state-box p { margin: 0; font-size: .85rem; }
 
@@ -62,14 +62,14 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
 <!-- ── Page Header ──────────────────────────────────────────────────────────── -->
 <div class="page-header-wrap mb-4">
     <div>
-        <div class="page-header-eyebrow admin-text-danger">
-            <i class="bi bi-shield-exclamation"aria-hidden="true"></i>
+        <div class="page-header-eyebrow text-danger">
+            <i class="bi bi-shield-exclamation" aria-hidden="true"></i>
             <span>{% if ui_lang == 'en' %}Reports &amp; Analytics{% else %}تقارير وتحليلات{% endif %}</span>
         </div>
         <h1 class="page-header-title">{% if ui_lang == 'en' %}Incident Analytics Dashboard{% else %}لوحة تحليلات الحوادث{% endif %}</h1>
     </div>
     <div class="d-flex gap-2">
-        <a href="/safety"class="btn btn-ghost">
+        <a href="/safety" class="btn btn-ghost">
             <i class="bi bi-arrow-{% if ui_dir == 'rtl' %}right{% else %}left{% endif %} me-1"></i>
             {% if ui_lang == 'en' %}Safety Overview{% else %}نظرة عامة على السلامة{% endif %}
         </a>
@@ -78,7 +78,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
 
 <!-- ── Admin Notice ─────────────────────────────────────────────────────────── -->
 <div class="alert alert-primary d-flex gap-3 align-items-start mb-4 rounded-3">
-    <i class="bi bi-info-circle-fill flex-shrink-0 fs-5 mt-1"aria-hidden="true"></i>
+    <i class="bi bi-info-circle-fill flex-shrink-0 fs-5 mt-1" aria-hidden="true"></i>
     <div class="small">
         <strong>{% if ui_lang == 'en' %}Monitoring &amp; Analysis Dashboard — {% else %}لوحة المراقبة والتحليل — {% endif %}</strong>
         {% if ui_lang == 'en' %}This dashboard is for the system administrator to review incident statistics across all kindergartens. Administrators cannot register new incidents directly.{% else %}هذه اللوحة مخصصة للمشرف العام لمراجعة إحصائيات الحوادث عبر جميع الروضات. لا يمكن للمشرف العام تسجيل حوادث جديدة مباشرةً.{% endif %}
@@ -86,20 +86,20 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
 </div>
 
 <!-- ── Global Error Banner ──────────────────────────────────────────────────── -->
-<div id="errorBanner"class="alert alert-danger d-flex gap-2 align-items-center mb-4 d-none"role="alert">
+<div id="errorBanner" class="alert alert-danger d-flex gap-2 align-items-center mb-4 d-none" role="alert">
     <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
     <span id="errorBannerText">{% if ui_lang == 'en' %}Failed to load analytics data.{% else %}فشل تحميل بيانات التحليلات.{% endif %}</span>
-    <button type="button"class="btn-close ms-auto"onclick="document.getElementById('errorBanner').classList.add('d-none')"aria-label="Close"></button>
+    <button type="button" class="btn-close ms-auto" onclick="document.getElementById('errorBanner').classList.add('d-none')" aria-label="Close"></button>
 </div>
 
 <!-- ── Filters ──────────────────────────────────────────────────────────────── -->
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h6 class="card-title-sm mb-0">
-            <i class="bi bi-funnel-fill me-2 admin-text-primary"></i>
+            <i class="bi bi-funnel-fill me-2 text-primary"></i>
             {% if ui_lang == 'en' %}Report Filters{% else %}فلاتر التقرير{% endif %}
         </h6>
-        <button class="btn btn-ghost admin-btn-sm"id="resetFiltersBtn"type="button">
+        <button class="btn btn-ghost btn-sm" id="resetFiltersBtn" type="button">
             <i class="bi bi-arrow-counterclockwise me-1"></i>
             {% if ui_lang == 'en' %}Reset{% else %}إعادة ضبط{% endif %}
         </button>
@@ -107,14 +107,14 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
     <div class="card-body">
         <div class="row g-3">
             <div class="col-md-3">
-                <label class="field-label mb-1"for="filterKg">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
-                <select class="form-select form-select-sm"id="filterKg">
+                <label class="field-label mb-1" for="filterKg">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
+                <select class="form-select form-select-sm" id="filterKg">
                     <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}جميع الروضات{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1"for="filterType">{% if ui_lang == 'en' %}Incident Type{% else %}نوع الحادث{% endif %}</label>
-                <select class="form-select form-select-sm"id="filterType">
+                <label class="field-label mb-1" for="filterType">{% if ui_lang == 'en' %}Incident Type{% else %}نوع الحادث{% endif %}</label>
+                <select class="form-select form-select-sm" id="filterType">
                     <option value="">{% if ui_lang == 'en' %}All Types{% else %}جميع الأنواع{% endif %}</option>
                     <option value="INJURY">{% if ui_lang == 'en' %}Physical Injury{% else %}إصابة جسدية{% endif %}</option>
                     <option value="ILLNESS">{% if ui_lang == 'en' %}Illness{% else %}مرض{% endif %}</option>
@@ -124,8 +124,8 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1"for="filterClass">{% if ui_lang == 'en' %}Classification{% else %}تصنيف الحادث{% endif %}</label>
-                <select class="form-select form-select-sm"id="filterClass">
+                <label class="field-label mb-1" for="filterClass">{% if ui_lang == 'en' %}Classification{% else %}تصنيف الحادث{% endif %}</label>
+                <select class="form-select form-select-sm" id="filterClass">
                     <option value="">{% if ui_lang == 'en' %}All Classifications{% else %}جميع التصنيفات{% endif %}</option>
                     <option value="ACCIDENT">{% if ui_lang == 'en' %}Accidental{% else %}حادث عرضي{% endif %}</option>
                     <option value="BEHAVIORAL">{% if ui_lang == 'en' %}Behavioral{% else %}سلوكي{% endif %}</option>
@@ -135,8 +135,8 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1"for="filterSeverity">{% if ui_lang == 'en' %}Severity Level{% else %}درجة الخطورة{% endif %}</label>
-                <select class="form-select form-select-sm"id="filterSeverity">
+                <label class="field-label mb-1" for="filterSeverity">{% if ui_lang == 'en' %}Severity Level{% else %}درجة الخطورة{% endif %}</label>
+                <select class="form-select form-select-sm" id="filterSeverity">
                     <option value="">{% if ui_lang == 'en' %}All Levels{% else %}جميع الدرجات{% endif %}</option>
                     <option value="LOW">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</option>
                     <option value="MEDIUM">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</option>
@@ -145,23 +145,23 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1"for="filterParentInformed">{% if ui_lang == 'en' %}Parent Notified{% else %}إبلاغ ولي الأمر{% endif %}</label>
-                <select class="form-select form-select-sm"id="filterParentInformed">
+                <label class="field-label mb-1" for="filterParentInformed">{% if ui_lang == 'en' %}Parent Notified{% else %}إبلاغ ولي الأمر{% endif %}</label>
+                <select class="form-select form-select-sm" id="filterParentInformed">
                     <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
                     <option value="true">{% if ui_lang == 'en' %}Notified{% else %}تم الإبلاغ{% endif %}</option>
                     <option value="false">{% if ui_lang == 'en' %}Not Notified{% else %}لم يتم الإبلاغ{% endif %}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1"for="filterFrom">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %}</label>
-                <input type="date"class="form-control form-control-sm"id="filterFrom">
+                <label class="field-label mb-1" for="filterFrom">{% if ui_lang == 'en' %}From Date{% else %}من تاريخ{% endif %}</label>
+                <input type="date" class="form-control form-control-sm" id="filterFrom">
             </div>
             <div class="col-md-3">
-                <label class="field-label mb-1"for="filterTo">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %}</label>
-                <input type="date"class="form-control form-control-sm"id="filterTo">
+                <label class="field-label mb-1" for="filterTo">{% if ui_lang == 'en' %}To Date{% else %}إلى تاريخ{% endif %}</label>
+                <input type="date" class="form-control form-control-sm" id="filterTo">
             </div>
             <div class="col-md-3 d-flex align-items-end">
-                <button class="admin-btn admin-btn-primary admin-btn-sm w-100"id="applyFiltersBtn"type="button">
+                <button class="btn btn-primary btn-sm w-100" id="applyFiltersBtn" type="button">
                     <i class="bi bi-search me-1"></i>
                     {% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}
                 </button>
@@ -171,13 +171,13 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
 </div>
 
 <!-- ── KPI Cards ────────────────────────────────────────────────────────────── -->
-<div class="row g-3 mb-4"id="kpiRow">
+<div class="row g-3 mb-4" id="kpiRow">
     <div class="col-6 col-md-2">
         <div class="stat-card card">
             <div class="card-body">
                 <div class="stat-info">
                     <div class="stat-label">{% if ui_lang == 'en' %}Total Incidents{% else %}إجمالي الحوادث{% endif %}</div>
-                    <div class="stat-value"id="kpiTotal">—</div>
+                    <div class="stat-value" id="kpiTotal">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-danger">
                     <i class="bi bi-exclamation-triangle-fill"></i>
@@ -190,7 +190,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-body">
                 <div class="stat-info">
                     <div class="stat-label">{% if ui_lang == 'en' %}Open{% else %}مفتوحة{% endif %}</div>
-                    <div class="stat-value"id="kpiOpen">—</div>
+                    <div class="stat-value" id="kpiOpen">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-warning">
                     <i class="bi bi-clock-history"></i>
@@ -203,7 +203,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-body">
                 <div class="stat-info">
                     <div class="stat-label">{% if ui_lang == 'en' %}Closed{% else %}مغلقة{% endif %}</div>
-                    <div class="stat-value"id="kpiClosed">—</div>
+                    <div class="stat-value" id="kpiClosed">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-success">
                     <i class="bi bi-check-circle-fill"></i>
@@ -216,7 +216,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-body">
                 <div class="stat-info">
                     <div class="stat-label">{% if ui_lang == 'en' %}Parents Notified{% else %}أُبلغ أولياء الأمور{% endif %}</div>
-                    <div class="stat-value"id="kpiInformed">—</div>
+                    <div class="stat-value" id="kpiInformed">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-primary">
                     <i class="bi bi-bell-fill"></i>
@@ -229,7 +229,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-body">
                 <div class="stat-info">
                     <div class="stat-label">{% if ui_lang == 'en' %}Not Notified{% else %}لم يُبلَّغوا{% endif %}</div>
-                    <div class="stat-value"id="kpiNotInformed">—</div>
+                    <div class="stat-value" id="kpiNotInformed">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-danger">
                     <i class="bi bi-bell-slash-fill"></i>
@@ -242,7 +242,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             <div class="card-body">
                 <div class="stat-info">
                     <div class="stat-label">{% if ui_lang == 'en' %}Repeated Children{% else %}أطفال متكررون{% endif %}</div>
-                    <div class="stat-value"id="kpiRepeated">—</div>
+                    <div class="stat-value" id="kpiRepeated">—</div>
                 </div>
                 <div class="stat-icon-wrap stat-icon-warning">
                     <i class="bi bi-person-exclamation"></i>
@@ -258,12 +258,12 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="card h-100">
             <div class="card-header">
                 <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-bar-chart-fill me-2 admin-text-danger"></i>
+                    <i class="bi bi-bar-chart-fill me-2 text-danger"></i>
                     {% if ui_lang == 'en' %}Severity Distribution{% else %}توزيع درجات الخطورة{% endif %}
                 </h6>
             </div>
-            <div class="card-body"id="severityChart">
-                <div class="state-box"><div class="spinner-border spinner-border-sm admin-text-muted"></div></div>
+            <div class="card-body" id="severityChart">
+                <div class="state-box"><div class="spinner-border spinner-border-sm text-muted"></div></div>
             </div>
         </div>
     </div>
@@ -271,12 +271,12 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="card h-100">
             <div class="card-header">
                 <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-pie-chart-fill me-2 admin-text-warning"></i>
+                    <i class="bi bi-pie-chart-fill me-2 text-warning"></i>
                     {% if ui_lang == 'en' %}Type Distribution{% else %}توزيع أنواع الحوادث{% endif %}
                 </h6>
             </div>
-            <div class="card-body"id="typeChart">
-                <div class="state-box"><div class="spinner-border spinner-border-sm admin-text-muted"></div></div>
+            <div class="card-body" id="typeChart">
+                <div class="state-box"><div class="spinner-border spinner-border-sm text-muted"></div></div>
             </div>
         </div>
     </div>
@@ -284,12 +284,12 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="card h-100">
             <div class="card-header">
                 <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-tags-fill me-2 admin-text-primary"></i>
+                    <i class="bi bi-tags-fill me-2 text-primary"></i>
                     {% if ui_lang == 'en' %}Classification Distribution{% else %}توزيع التصنيفات{% endif %}
                 </h6>
             </div>
-            <div class="card-body"id="classificationChart">
-                <div class="state-box"><div class="spinner-border spinner-border-sm admin-text-muted"></div></div>
+            <div class="card-body" id="classificationChart">
+                <div class="state-box"><div class="spinner-border spinner-border-sm text-muted"></div></div>
             </div>
         </div>
     </div>
@@ -302,12 +302,12 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="card h-100">
             <div class="card-header">
                 <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-graph-up me-2 admin-text-success"></i>
+                    <i class="bi bi-graph-up me-2 text-success"></i>
                     {% if ui_lang == 'en' %}Monthly Trend{% else %}الاتجاه الشهري{% endif %}
                 </h6>
             </div>
-            <div class="card-body"id="trendChart">
-                <div class="state-box"><div class="spinner-border spinner-border-sm admin-text-muted"></div></div>
+            <div class="card-body" id="trendChart">
+                <div class="state-box"><div class="spinner-border spinner-border-sm text-muted"></div></div>
             </div>
         </div>
     </div>
@@ -317,10 +317,10 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="card-title-sm mb-0">
-                    <i class="bi bi-building-fill me-2 admin-text-primary"></i>
+                    <i class="bi bi-building-fill me-2 text-primary"></i>
                     {% if ui_lang == 'en' %}Incidents by Kindergarten{% else %}الحوادث حسب الروضة{% endif %}
                 </h6>
-                <span class="badge badge-soft badge-soft-danger"id="highRiskBadge"style="display:none;"></span>
+                <span class="badge badge-soft badge-soft-danger" id="highRiskBadge" style="display:none;"></span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -328,12 +328,12 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
                         <thead>
                             <tr>
                                 <th class="th-sm">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
-                                <th class="th-sm"style="width:80px;">{% if ui_lang == 'en' %}Incidents{% else %}حوادث{% endif %}</th>
-                                <th class="th-sm"style="width:90px;">{% if ui_lang == 'en' %}Risk Level{% else %}مستوى الخطر{% endif %}</th>
+                                <th class="th-sm" style="width:80px;">{% if ui_lang == 'en' %}Incidents{% else %}حوادث{% endif %}</th>
+                                <th class="th-sm" style="width:90px;">{% if ui_lang == 'en' %}Risk Level{% else %}مستوى الخطر{% endif %}</th>
                             </tr>
                         </thead>
                         <tbody id="kgTable">
-                            <tr><td colspan="3"><div class="state-box"><div class="spinner-border spinner-border-sm admin-text-muted"></div></div></td></tr>
+                            <tr><td colspan="3"><div class="state-box"><div class="spinner-border spinner-border-sm text-muted"></div></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -346,9 +346,9 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
 <div class="row g-4 mb-4">
     <div class="col-12">
         <div class="card">
-            <div class="card-header admin-bg-danger-subtle">
-                <h6 class="card-title-sm mb-0 admin-text-danger">
-                    <i class="bi bi-person-exclamation me-2"aria-hidden="true"></i>
+            <div class="card-header bg-danger-subtle">
+                <h6 class="card-title-sm mb-0 text-danger">
+                    <i class="bi bi-person-exclamation me-2" aria-hidden="true"></i>
                     {% if ui_lang == 'en' %}Children with Repeated Incidents{% else %}أطفال بحوادث متكررة{% endif %}
                 </h6>
             </div>
@@ -359,12 +359,12 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
                             <tr>
                                 <th class="th-sm">#</th>
                                 <th class="th-sm">{% if ui_lang == 'en' %}Child Name{% else %}اسم الطفل{% endif %}</th>
-                                <th class="th-sm"style="width:110px;">{% if ui_lang == 'en' %}Incident Count{% else %}عدد الحوادث{% endif %}</th>
-                                <th class="th-sm"style="width:110px;">{% if ui_lang == 'en' %}Actions{% else %}الإجراء{% endif %}</th>
+                                <th class="th-sm" style="width:110px;">{% if ui_lang == 'en' %}Incident Count{% else %}عدد الحوادث{% endif %}</th>
+                                <th class="th-sm" style="width:110px;">{% if ui_lang == 'en' %}Actions{% else %}الإجراء{% endif %}</th>
                             </tr>
                         </thead>
                         <tbody id="repeatedTable">
-                            <tr><td colspan="4"><div class="state-box"><div class="spinner-border spinner-border-sm admin-text-muted"></div></div></td></tr>
+                            <tr><td colspan="4"><div class="state-box"><div class="spinner-border spinner-border-sm text-muted"></div></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -378,7 +378,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
 {% block extra_scripts %}
 <script>
 (function () {
-   "use strict";
+    "use strict";
 
     /* ── Language ── */
     const _isEn = document.documentElement.lang === 'en';
@@ -500,9 +500,9 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
                     const color = colorMap[key] || '#6366f1';
                     const label = LABEL[key] || escapeHtml(key);
                     return `<div class="mini-bar-row">
-                        <span class="mini-bar-label"title="${escapeHtml(label)}">${escapeHtml(label)}</span>
-                        <div class="mini-bar-track"role="progressbar"aria-valuenow="${pct}"aria-valuemin="0"aria-valuemax="100">
-                            <div class="mini-bar-fill"style="width:${pct}%;background:${color};"></div>
+                        <span class="mini-bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+                        <div class="mini-bar-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${escapeHtml(label)}">
+                            <div class="mini-bar-fill" style="width:${pct}%;background:${color};"></div>
                         </div>
                         <span class="mini-bar-count">${val}</span>
                     </div>`;
@@ -526,10 +526,10 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         });
         el.innerHTML = `
             <div class="trend-bars">
-                ${bars.map(b => `<div class="trend-bar"style="height:${Math.max(b.pct, 4)}%;background:${TREND_COLOR};opacity:${0.45 + (b.pct / 100) * 0.55};"title="${escapeHtml(b.label)}: ${b.count}"></div>`).join('')}
+                ${bars.map(b => `<div class="trend-bar" style="height:${Math.max(b.pct, 4)}%;background:${TREND_COLOR};opacity:${0.45 + (b.pct / 100) * 0.55};" title="${escapeHtml(b.label)}: ${b.count}"></div>`).join('')}
             </div>
             <div class="trend-labels">
-                ${bars.map(b => `<span class="trend-label"title="${escapeHtml(b.label)}">${escapeHtml(b.label.slice(5))}</span>`).join('')}
+                ${bars.map(b => `<span class="trend-label" title="${escapeHtml(b.label)}">${escapeHtml(b.label.slice(5))}</span>`).join('')}
             </div>`;
     }
 
@@ -582,11 +582,11 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
             const name = _isEn ? (item.name_en || item.name_ar) : (item.name_ar || item.name_en);
             const safeId = parseInt(item.id, 10) || 0;
             return `<tr>
-                <td class="td-sm admin-text-muted">${idx + 1}</td>
+                <td class="td-sm text-muted">${idx + 1}</td>
                 <td class="td-sm fw-semibold">${escapeHtml(name)}</td>
-                <td class="td-sm"><span class="badge admin-bg-danger">${item.count}</span></td>
+                <td class="td-sm"><span class="badge bg-danger">${item.count}</span></td>
                 <td class="td-sm">
-                    <a href="/children/${safeId}"class="btn btn-ghost admin-btn-sm px-2 py-1">
+                    <a href="/children/${safeId}" class="btn btn-ghost btn-sm px-2 py-1">
                         <i class="bi bi-eye me-1"></i>${_t('عرض الملف', 'View Profile')}
                     </a>
                 </td>
@@ -597,7 +597,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
     /* ── Set a chart container to loading state ── */
     function setChartLoading(id) {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = `<div class="state-box"><div class="spinner-border spinner-border-sm admin-text-muted"></div></div>`;
+        if (el) el.innerHTML = `<div class="state-box"><div class="spinner-border spinner-border-sm text-muted"></div></div>`;
     }
 
     /* ── Main load function ── */
@@ -606,9 +606,9 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
         setKpisLoading();
         ['severityChart','typeChart','classificationChart','trendChart'].forEach(setChartLoading);
         document.getElementById('kgTable').innerHTML =
-            `<tr><td colspan="3"><div class="state-box"><div class="spinner-border spinner-border-sm admin-text-muted"></div></div></td></tr>`;
+            `<tr><td colspan="3"><div class="state-box"><div class="spinner-border spinner-border-sm text-muted"></div></div></td></tr>`;
         document.getElementById('repeatedTable').innerHTML =
-            `<tr><td colspan="4"><div class="state-box"><div class="spinner-border spinner-border-sm admin-text-muted"></div></div></td></tr>`;
+            `<tr><td colspan="4"><div class="state-box"><div class="spinner-border spinner-border-sm text-muted"></div></div></td></tr>`;
 
         try {
             const r = await fetch(`/api/safety/analytics?${buildParams().toString()}`);

@@ -256,9 +256,9 @@ def test_compute_incident_rate_uses_attended_child_days_denominator(
     )
     test_db.commit()
 
-    # 1 incident / 1 attended child-day * 100
+    # 1 incident / 1 attended child-day × 1,000 = 1000.0 per 1,000 child-days
     rate = KPIService.compute_incident_rate(test_db, sample_kindergarten.id, start, end)
-    assert rate == 100.0
+    assert rate == 1000.0
 
 
 def test_compute_chronic_absence_rate_uses_working_days_not_logged_days(

@@ -1,20 +1,20 @@
-﻿{% extends "admin_base.html"%}
+{% extends "admin_base.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}System Settings{% else %}إعدادات النظام{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="Dashboard">
-  <i class="bi bi-house"aria-hidden="true"></i>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard">
+  <i class="bi bi-house" aria-hidden="true"></i>
 </a>
-<span class="admin-breadcrumb-separator">/</span>
-<span class="admin-breadcrumb-item active">
+<span class="breadcrumb-separator">/</span>
+<span class="breadcrumb-item active">
   {% if ui_lang == 'en' %}System Settings{% else %}إعدادات النظام{% endif %}
 </span>
 {% endblock %}
 
 {% block content %}
-<div class="admin-page-header mb-4">
-  <h1 class="admin-page-title">
+<div class="page-header mb-4">
+  <h1 class="page-title">
     <i class="bi bi-gear me-2"></i>
     {% if ui_lang == 'en' %}System Settings{% else %}إعدادات النظام{% endif %}
   </h1>
@@ -22,15 +22,15 @@
 
 <div class="row g-4">
   <div class="col-lg-6">
-    <div class="admin-card">
-      <div class="admin-card-header">
-        <h2 class="admin-card-title">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
           {% if ui_lang == 'en' %}Session{% else %}الجلسة{% endif %}
         </h2>
       </div>
-      <div class="admin-card-body">
+      <div class="card-body">
         <dl class="row mb-0">
-          <dt class="col-sm-6 fw-semibold admin-text-muted">
+          <dt class="col-sm-6 fw-semibold text-muted">
             {% if ui_lang == 'en' %}Session Timeout{% else %}مهلة انتهاء الجلسة{% endif %}
           </dt>
           <dd class="col-sm-6">{{ session_timeout_minutes | default(30) }} {% if ui_lang == 'en' %}minutes{% else %}دقيقة{% endif %}</dd>
@@ -40,14 +40,14 @@
   </div>
 
   <div class="col-lg-6">
-    <div class="admin-card">
-      <div class="admin-card-header">
-        <h2 class="admin-card-title">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
           {% if ui_lang == 'en' %}Environment{% else %}البيئة{% endif %}
         </h2>
       </div>
-      <div class="admin-card-body">
-        <p class="admin-text-muted small mb-0">
+      <div class="card-body">
+        <p class="text-muted small mb-0">
           {% if ui_lang == 'en' %}
             Server-level configuration is managed via environment variables and the
             <code>.env</code> file. Contact your system administrator to change these values.

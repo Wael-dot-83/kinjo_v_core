@@ -214,4 +214,4 @@ class TestKPINetworkSummary:
             assert "kindergarten_id" in kg
             assert "attendance_rate" in kg
             assert "governance_band" in kg
-            assert kg["governance_band"] in ("RED", "AMBER", "GREEN")
+            assert kg["governance_band"] in ("RED", "AMBER", "GREEN", "INSUFFICIENT")

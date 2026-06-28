@@ -1,4 +1,4 @@
-﻿/**
+/**
  * KinJo authentication runtime.
  * Handles login, logout, MFA, session refresh, and authenticated fetch helpers.
  */

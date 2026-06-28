@@ -161,9 +161,7 @@
   overflow: hidden;
   transition: box-shadow var(--ko-transition), transform var(--ko-transition);
   border: 1.5px solid var(--ko-border);
-  -webkit--webkit-user-select: none;
-user-select: none; -webkit-user-select: none;
- user-select: none;
+  -webkit-user-select: none; user-select: none;
 }
 .ko-kpi-card::before {
   content: '';
@@ -536,9 +534,7 @@ user-select: none; -webkit-user-select: none;
 .ko-overlay {
   position: fixed; inset: 0;
   background: rgba(10,15,30,.45);
-  -webkit--webkit-backdrop-filter: blur(10px);
-backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(3px);
- backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
   z-index: var(--ko-z-overlay);
   opacity: 0;
   pointer-events: none;
@@ -677,8 +673,8 @@ backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(3px);
   100%{ transform: scale(1); }
 }
 @keyframes koShimmer {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 @keyframes koSlideIn {
   from { opacity: 0; transform: translateY(-10px); }

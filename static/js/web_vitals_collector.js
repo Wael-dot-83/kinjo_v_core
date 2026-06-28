@@ -9,8 +9,8 @@
   if (typeof window === "undefined") return;
 
   var CONFIG = {
-    batchSize: typeof CONFIG_BATCH !== "undefined" ? CONFIG_BATCH : 20,
-    flushInterval: typeof CONFIG_INTERVAL !== "undefined" ? CONFIG_INTERVAL : 10000,
+    batchSize: (typeof CONFIG_BATCH !== "undefined" ? CONFIG_BATCH : 20),
+    flushInterval: (typeof CONFIG_INTERVAL !== "undefined" ? CONFIG_INTERVAL : 10000),
     endpoint: "/api/telemetry/vitals",
     enabled: true,
   };
