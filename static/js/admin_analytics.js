@@ -171,6 +171,15 @@ function adminAnalyticsText(arText, enText) {
   return String(lang).toLowerCase().startsWith("en") ? enText : arText;
 }
 
+// Safe translate wrapper for AdminI18n
+function safeTranslate(key) {
+  if (typeof window.AdminI18n?.translate === 'function') {
+    const result = window.AdminI18n.translate(key);
+    return typeof result === 'string' ? result : key;
+  }
+  return key;
+}
+
 function adminAnalyticsLocale() {
   return adminAnalyticsText("ar-JO", "en-US");
 }
@@ -345,12 +354,23 @@ async function loadAdminAnalytics(retryCount = 0) {
   } catch (error) {
     console.error("Analytics load error:", error);
 
-    // Hide overlay, show error state
-    const overlay = document.getElementById("trendChartOverlay");
-    const errorDiv = document.getElementById("trendChartError");
-    if (overlay) overlay.classList.add("d-none");
-    if (errorDiv) errorDiv.classList.add("show");
-
+    // Show cached "stale" state if we have data, else error
+    if (window.lastDashboardData) {
+      showToast(adminAnalyticsText("يتم عرض البيانات المخزنة مؤقتاً لتعذر الاتصال بالخادم", "Showing cached data. Server unreachable."), "warning");
+    } else {
+      const overlay = document.getElementById("trendChartOverlay");
+      const errorDiv = document.getElementById("trendChartError");
+      if (overlay) overlay.classList.add("d-none");
+      if (errorDiv) {
+        errorDiv.classList.add("show");
+        errorDiv.innerHTML = `
+          <i class="bi bi-exclamation-circle text-danger fs-1"></i>
+          <p class="mt-2 text-danger"> فشل تحميل البيانات. </p>
+          <button class="btn btn-primary btn-sm mt-2" onclick="loadAdminAnalytics()">إعادة المحاولة</button>
+        `;
+      }
+    }
+    
     // Handle timeout
     if (error.name === "AbortError") {
       console.error("Request timed out");
@@ -405,8 +425,10 @@ function showSkeletonLoaders() {
     .forEach((el) => {
       el.innerHTML = '<div class="skeleton-text w-50"></div>';
     });
-  document.querySelector("#enrollmentRateBar").style.width = "0%";
-  document.querySelector("#kpiKgGrowth").innerHTML = '<div class="skeleton-text w-75"></div>';
+  const erBar = document.querySelector("#enrollmentRateBar");
+  if (erBar) erBar.style.width = "0%";
+  const kgGrowth = document.querySelector("#kpiKgGrowth");
+  if (kgGrowth) kgGrowth.innerHTML = '<div class="skeleton-text w-75"></div>';
 
   // Show skeleton for registration KPI cards
   document
@@ -2641,10 +2663,12 @@ function _renderMonthlyTrendChart(trends) {
       scales: {
         x: {
           grid: { display: false },
+          title: { display: true, text: adminAnalyticsText("التاريخ", "Date"), color: "#6c757d" },
           ticks: { font: { size: 10 }, maxRotation: 0 },
         },
         y: {
           beginAtZero: true,
+          title: { display: true, text: adminAnalyticsText("القيمة (العدد أو النسبة %)", "Value (Count or %)"), color: "#6c757d" },
           ticks: { font: { size: 10 }, stepSize: 1 },
           grid: { color: "rgba(0,0,0,.04)" },
         },
@@ -2658,3 +2682,25 @@ window.addEventListener("languageChanged", () => {
     loadAdminAnalytics();
   }
 });
+
+function exportTableToCSV(tableId, filename) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  let csv = [];
+  for (let i = 0; i < table.rows.length; i++) {
+    let row = [], cols = table.rows[i].querySelectorAll("td, th");
+    for (let j = 0; j < cols.length; j++) {
+      let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").replace(/,/g, "");
+      row.push('"' + data + '"');
+    }
+    csv.push(row.join(","));
+  }
+  let csvFile = new Blob([csv.join("\n")], {type: "text/csv;charset=utf-8;"});
+  let downloadLink = document.createElement("a");
+  downloadLink.download = filename;
+  downloadLink.href = window.URL.createObjectURL(csvFile);
+  downloadLink.style.display = "none";
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
+}

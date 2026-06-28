@@ -246,6 +246,7 @@ async def lifespan(app: FastAPI):
 
         # Start waitlist expiry scheduler (every 15 min)
         waitlist_expiry_scheduler.start_scheduler()
+        analytics_report_scheduler.start_scheduler()
 
         # Start monitoring services
         performance_monitor.start_monitoring()
@@ -268,6 +269,7 @@ async def lifespan(app: FastAPI):
         backup_scheduler.stop_scheduler()
         daily_report_scheduler.stop_scheduler()
         waitlist_expiry_scheduler.stop_scheduler()
+        analytics_report_scheduler.stop_scheduler()
 
         auto_scaler.stop_auto_scaling()
 
@@ -1582,10 +1584,10 @@ async def predict_attendance_rate(
     """Predict attendance rate for the next N days"""
     try:
         # Check permissions
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR] and current_user.kindergarten_id != kindergarten_id:
             raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
 
         prediction = await predictive_analytics.predict_attendance_rate(db, kindergarten_id, days_ahead)
@@ -1624,10 +1626,10 @@ async def predict_incident_trend(
     """Predict incident trends for risk assessment"""
     try:
         # Check permissions
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR] and current_user.kindergarten_id != kindergarten_id:
             raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
 
         prediction = await predictive_analytics.predict_incident_trend(db, kindergarten_id, days_ahead)
@@ -1666,10 +1668,10 @@ async def predict_capacity_utilization(
     """Predict capacity utilization trends"""
     try:
         # Check permissions
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR] and current_user.kindergarten_id != kindergarten_id:
             raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
 
         prediction = await predictive_analytics.predict_capacity_utilization(db, kindergarten_id, days_ahead)
@@ -1709,10 +1711,10 @@ async def analyze_trends(
     """Perform comprehensive trend analysis"""
     try:
         # Check permissions
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR] and current_user.kindergarten_id != kindergarten_id:
             raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
 
         # Validate metric type
@@ -1756,10 +1758,10 @@ async def get_predictive_insights(
     """Generate comprehensive predictive insights"""
     try:
         # Check permissions
-        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR, models.UserRole.MANAGER]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-        if current_user.role != models.UserRole.ADMIN and current_user.kindergarten_id != kindergarten_id:
+        if current_user.role not in [models.UserRole.ADMIN, models.UserRole.SUPERVISOR] and current_user.kindergarten_id != kindergarten_id:
             raise HTTPException(status_code=403, detail="Access denied to this kindergarten")
 
         insights = await predictive_analytics.get_predictive_insights(db, kindergarten_id)

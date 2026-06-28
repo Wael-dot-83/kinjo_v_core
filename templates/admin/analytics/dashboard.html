@@ -857,7 +857,7 @@
             <div class="card h-100 border-0 shadow-sm border-start border-success border-4">
                 <div class="card-header bg-success bg-opacity-10 text-success fw-bold border-bottom border-success border-opacity-25"style="font: var(--type-card-title)">
                     <i class="bi bi-trophy-fill me-2"></i>{% if ui_lang == 'en' %}Top 5 Performing Kindergartens{% else %}أفضل 5 روضات أداءً{% endif %}
-                    <small class="float-end text-success-emphasis fw-normal">{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
+                    <small class="float-end text-success-emphasis fw-normal" style="cursor:pointer;" data-bs-toggle="modal" data-bs-target="#governanceModal"><i class="bi bi-question-circle me-1"></i>{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush"id="topPerformersList">
@@ -877,7 +877,7 @@
             <div class="card h-100 border-0 shadow-sm border-start border-danger border-4">
                 <div class="card-header bg-danger bg-opacity-10 text-danger fw-bold border-bottom border-danger border-opacity-25"style="font: var(--type-card-title)">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>{% if ui_lang == 'en' %}Kindergartens Need Urgent Support{% else %}الروضات تحتاج دعم عاجل{% endif %}
-                    <small class="float-end text-danger-emphasis fw-normal">{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
+                    <small class="float-end text-danger-emphasis fw-normal" style="cursor:pointer;" data-bs-toggle="modal" data-bs-target="#governanceModal"><i class="bi bi-question-circle me-1"></i>{% if ui_lang == 'en' %}Governance Index{% else %}مؤشر الحوكمة{% endif %}</small>
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush"id="lowPerformersList">
@@ -1126,6 +1126,35 @@
         flex-basis: 100%;
         max-width: none;
       }
+    }
+    /* AI Predictive Premium Styling */
+    .ai-card {
+        background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.05) 0%, rgba(var(--bs-info-rgb), 0.1) 100%);
+        border: 1px solid rgba(var(--bs-primary-rgb), 0.15) !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 12px;
+    }
+    .ai-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(var(--bs-primary-rgb), 0.1);
+    }
+    .ai-pulse-icon {
+        animation: ai-pulse 2s infinite;
+        color: var(--bs-primary);
+    }
+    @keyframes ai-pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.15); opacity: 0.7; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .ai-insight-badge {
+        background: rgba(var(--bs-primary-rgb), 0.1);
+        padding: 6px 12px;
+        border-radius: 20px;
+        border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
 </style>
 <script>

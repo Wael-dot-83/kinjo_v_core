@@ -95,28 +95,28 @@ class PredictiveAnalytics:
         end_day = date.today()
         start_day = end_day - timedelta(days=max(7, days_window))
 
-        active_children = (
-            db.query(models.EnrollmentApplication.child_id)
-            .filter(
-                models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-                models.EnrollmentApplication.is_active.is_(True),
-            )
-            .distinct()
-            .count()
-        )
+        q_active = db.query(models.EnrollmentApplication.child_id).filter(models.EnrollmentApplication.is_active.is_(True))
+        if kindergarten_id > 0:
+            q_active = q_active.filter(models.EnrollmentApplication.kindergarten_id == kindergarten_id)
+        
+        active_children = q_active.distinct().count()
         if active_children <= 0:
-            raise ValueError("No active children for this kindergarten")
+            raise ValueError("No active children for this scope")
 
-        rows = (
+        q_rows = (
             db.query(models.AttendanceLog.date, func.count(models.AttendanceLog.id))
             .join(models.Class, models.Class.id == models.AttendanceLog.class_id)
             .filter(
-                models.Class.kindergarten_id == kindergarten_id,
                 models.AttendanceLog.date >= start_day,
                 models.AttendanceLog.date <= end_day,
                 models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
             )
-            .group_by(models.AttendanceLog.date)
+        )
+        if kindergarten_id > 0:
+            q_rows = q_rows.filter(models.Class.kindergarten_id == kindergarten_id)
+            
+        rows = (
+            q_rows.group_by(models.AttendanceLog.date)
             .order_by(models.AttendanceLog.date.asc())
             .all()
         )
@@ -130,14 +130,18 @@ class PredictiveAnalytics:
         end_day = date.today()
         start_day = end_day - timedelta(days=max(14, days_window))
 
-        rows = (
+        q_rows = (
             db.query(func.date(models.Incident.occurred_at), func.count(models.Incident.id))
             .filter(
-                models.Incident.kindergarten_id == kindergarten_id,
                 func.date(models.Incident.occurred_at) >= start_day,
                 func.date(models.Incident.occurred_at) <= end_day,
             )
-            .group_by(func.date(models.Incident.occurred_at))
+        )
+        if kindergarten_id > 0:
+            q_rows = q_rows.filter(models.Incident.kindergarten_id == kindergarten_id)
+            
+        rows = (
+            q_rows.group_by(func.date(models.Incident.occurred_at))
             .order_by(func.date(models.Incident.occurred_at).asc())
             .all()
         )
@@ -157,39 +161,38 @@ class PredictiveAnalytics:
         end_day = date.today()
         start_day = end_day - timedelta(days=max(30, days_window))
 
-        capacity_total = (
-            db.query(func.sum(models.Class.capacity_total))
-            .filter(models.Class.kindergarten_id == kindergarten_id, models.Class.is_active.is_(True))
-            .scalar()
-            or 0
-        )
+        q_cap = db.query(func.sum(models.Class.capacity_total)).filter(models.Class.is_active.is_(True))
+        if kindergarten_id > 0:
+            q_cap = q_cap.filter(models.Class.kindergarten_id == kindergarten_id)
+            
+        capacity_total = q_cap.scalar() or 0
         if capacity_total <= 0:
-            raise ValueError("No class capacity configured for this kindergarten")
+            raise ValueError("No class capacity configured for this scope")
 
-        rows = (
+        q_rows = (
             db.query(models.EnrollmentApplication.enrollment_start_date, func.count(models.EnrollmentApplication.id))
             .filter(
-                models.EnrollmentApplication.kindergarten_id == kindergarten_id,
                 models.EnrollmentApplication.is_active.is_(True),
                 models.EnrollmentApplication.enrollment_start_date.isnot(None),
                 models.EnrollmentApplication.enrollment_start_date >= start_day,
                 models.EnrollmentApplication.enrollment_start_date <= end_day,
             )
-            .group_by(models.EnrollmentApplication.enrollment_start_date)
+        )
+        if kindergarten_id > 0:
+            q_rows = q_rows.filter(models.EnrollmentApplication.kindergarten_id == kindergarten_id)
+            
+        rows = (
+            q_rows.group_by(models.EnrollmentApplication.enrollment_start_date)
             .order_by(models.EnrollmentApplication.enrollment_start_date.asc())
             .all()
         )
         by_date = {row[0]: int(row[1]) for row in rows}
 
-        baseline_active = (
-            db.query(func.count(models.EnrollmentApplication.id))
-            .filter(
-                models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-                models.EnrollmentApplication.is_active.is_(True),
-            )
-            .scalar()
-            or 0
-        )
+        q_base = db.query(func.count(models.EnrollmentApplication.id)).filter(models.EnrollmentApplication.is_active.is_(True))
+        if kindergarten_id > 0:
+            q_base = q_base.filter(models.EnrollmentApplication.kindergarten_id == kindergarten_id)
+            
+        baseline_active = q_base.scalar() or 0
 
         cumulative = max(0, int(baseline_active) - sum(by_date.values()))
         series: List[float] = []

@@ -1,7 +1,17 @@
 {% extends "admin_base.html"%}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 
-{% block title %}{% if ui_lang == 'en' %}Reports Center{% else %}مركز التقارير{% endif %} — KinJo{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Reports Center{% else %}مركز التقارير{% endif %} — KinJo
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+  <div id="actionToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMessage"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
 
 {% block breadcrumb %}
 <a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="Dashboard"><i class="bi bi-house"aria-hidden="true"></i></a>
@@ -9,6 +19,16 @@
 <a href="/admin/analytics"class="admin-breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
 <span class="admin-breadcrumb-separator">/</span>
 <span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</span>
+
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+  <div id="actionToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMessage"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block content %}
@@ -81,27 +101,27 @@
 <div class="reports-tabs mb-4">
   <ul class="nav nav-pills"id="reportCategoryTabs"role="tablist">
     <li class="nav-item"role="presentation">
-      <button class="nav-link active"id="tab-attendance"data-bs-toggle="pill"data-bs-target="#pane-attendance"type="button"role="tab">
+      <button class="nav-link active"id="tab-attendance"data-bs-toggle="pill"data-bs-target="#pane-attendance"type="button"role="tab" title="{% if ui_lang == 'en' %}Track kindergarten attendance rates, absences, and governorate-level breakdowns.{% else %}تتبع نسب حضور رياض الأطفال، الغياب، وتفاصيل المحافظات.{% endif %}">
         <i class="bi bi-calendar-check me-1"></i>{% if ui_lang == 'en' %}Attendance{% else %}الحضور والغياب{% endif %}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-incidents"data-bs-toggle="pill"data-bs-target="#pane-incidents"type="button"role="tab">
+      <button class="nav-link"id="tab-incidents"data-bs-toggle="pill"data-bs-target="#pane-incidents"type="button"role="tab" title="{% if ui_lang == 'en' %}Monitor child safety incidents, open cases, and critical severity levels.{% else %}مراقبة حوادث سلامة الأطفال، القضايا المفتوحة، والمستويات الحرجة.{% endif %}">
         <i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Incidents{% else %}الحوادث{% endif %}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-compliance"data-bs-toggle="pill"data-bs-target="#pane-compliance"type="button"role="tab">
+      <button class="nav-link"id="tab-compliance"data-bs-toggle="pill"data-bs-target="#pane-compliance"type="button"role="tab" title="{% if ui_lang == 'en' %}Assess nursery compliance scores and governance level distributions.{% else %}تقييم درجات امتثال رياض الأطفال وتوزيعات مستويات الحوكمة.{% endif %}">
         <i class="bi bi-shield-check me-1"></i>{% if ui_lang == 'en' %}Governance{% else %}الحوكمة والامتثال{% endif %}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-enrollment"data-bs-toggle="pill"data-bs-target="#pane-enrollment"type="button"role="tab">
+      <button class="nav-link"id="tab-enrollment"data-bs-toggle="pill"data-bs-target="#pane-enrollment"type="button"role="tab" title="{% if ui_lang == 'en' %}Analyze registration applications, funnel status, and intake sources.{% else %}تحليل طلبات التسجيل، حالة قمع التحويل، ومصادر الاستيعاب.{% endif %}">
         <i class="bi bi-folder2-open me-1"></i>{% if ui_lang == 'en' %}Enrollment{% else %}التسجيل{% endif %}
       </button>
     </li>
     <li class="nav-item"role="presentation">
-      <button class="nav-link"id="tab-audit"data-bs-toggle="pill"data-bs-target="#pane-audit"type="button"role="tab">
+      <button class="nav-link"id="tab-audit"data-bs-toggle="pill"data-bs-target="#pane-audit"type="button"role="tab" title="{% if ui_lang == 'en' %}Review system operations, actor roles, and security sensitivity levels.{% else %}مراجعة العمليات البرمجية، أدوار المستخدمين، ومستويات الأمان الحساسة.{% endif %}">
         <i class="bi bi-list-check me-1"></i>{% if ui_lang == 'en' %}Audit Log{% else %}سجل التدقيق{% endif %}
       </button>
     </li>
@@ -122,30 +142,30 @@
           <input type="hidden"id="reportType"value="attendance">
 
           <!-- Dynamic Filters -->
-          <div class="mb-3">
+          <div class="mb-3" id="filterGovContainer">
             <label class="form-label fw-bold">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
-            <select class="form-select"id="governorateFilter">
+            <select class="form-select" id="governorateFilter" multiple size="3">
               <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}كل المحافظات{% endif %}</option>
             </select>
           </div>
 
-          <div class="mb-3">
+          <div class="mb-3" id="filterKgContainer">
             <label class="form-label fw-bold">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</label>
-            <select class="form-select"id="kindergartenFilter">
+            <select class="form-select" id="kindergartenFilter" multiple size="3">
               <option value="">{% if ui_lang == 'en' %}All Kindergartens{% else %}كل الروضات{% endif %}</option>
             </select>
           </div>
 
-          <div class="mb-3">
+          <div class="mb-3" id="filterStatusContainer">
             <label class="form-label fw-bold">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
-            <select class="form-select"id="statusFilter">
+            <select class="form-select" id="statusFilter" multiple size="3">
               <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
             </select>
           </div>
 
-          <div class="mb-3">
+          <div class="mb-3" id="filterSeverityContainer">
             <label class="form-label fw-bold">{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</label>
-            <select class="form-select"id="severityFilter">
+            <select class="form-select" id="severityFilter" multiple size="3">
               <option value="">{% if ui_lang == 'en' %}All Severities{% else %}كل الدرجات{% endif %}</option>
               <option value="LOW">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</option>
               <option value="MEDIUM">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</option>
@@ -154,9 +174,9 @@
             </select>
           </div>
 
-          <div class="mb-3">
+          <div class="mb-3" id="filterSourceContainer">
             <label class="form-label fw-bold">{% if ui_lang == 'en' %}Source{% else %}المصدر{% endif %}</label>
-            <select class="form-select"id="sourceFilter">
+            <select class="form-select" id="sourceFilter" multiple size="3">
               <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
               <option value="WEB">Web</option>
               <option value="MOBILE">{% if ui_lang == 'en' %}Mobile{% else %}موبايل{% endif %}</option>
@@ -164,9 +184,9 @@
             </select>
           </div>
 
-          <div class="mb-3">
+          <div class="mb-3" id="filterReviewerContainer">
             <label class="form-label fw-bold">{% if ui_lang == 'en' %}Reviewer{% else %}المراجع{% endif %}</label>
-            <select class="form-select"id="reviewerFilter">
+            <select class="form-select" id="reviewerFilter" multiple size="3">
               <option value="">{% if ui_lang == 'en' %}All Reviewers{% else %}كل المُراجعين{% endif %}</option>
             </select>
           </div>
@@ -376,14 +396,44 @@
   </div>
 </div>
 
+
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+  <div id="actionToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMessage"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet"href="/static/css/admin_design_system.css?v=2.1">
+
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+  <div id="actionToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMessage"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="/static/js/chart_utils.js?v=2.1"charset="utf-8"></script>
 <script src="/static/js/admin_analytics.js?v=2.1"charset="utf-8"></script>
 <script src="/static/js/admin_reports.js?v=1.0"charset="utf-8"></script>
+
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+  <div id="actionToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMessage"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

@@ -989,6 +989,13 @@ const defaultEnglishTranslations = {
     data: "Data Management",
     security: "Security",
   },
+  a11y: {
+    skip_nav: { en: "Skip to navigation", ar: "تخطي إلى التصفح" }
+  },
+  components: {
+    error_title: { en: "Error", ar: "خطأ" },
+    background_error: { en: "A background error occurred", ar: "حدث خطأ في الخلفية" }
+  },
   common: {
     save: "Save",
     cancel: "Cancel",
@@ -1077,6 +1084,13 @@ const defaultArabicTranslations = {
     governance: "الحوكمة",
     data: "إدارة البيانات",
     security: "الأمان",
+  },
+  a11y: {
+    skip_nav: { en: "Skip to navigation", ar: "تخطي إلى التصفح" }
+  },
+  components: {
+    error_title: { en: "Error", ar: "خطأ" },
+    background_error: { en: "A background error occurred", ar: "حدث خطأ في الخلفية" }
   },
   common: {
     save: "حفظ",

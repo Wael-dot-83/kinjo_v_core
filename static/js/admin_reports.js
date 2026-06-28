@@ -9,9 +9,67 @@
 
   const API_BASE = "/api/analytics";
 
+  let historyItems = [];
+  let previewItems = [];
+  let previewColumns = [];
+  let previewCurrentPage = 1;
+  const previewPageSize = 5;
+  let previewSortColumn = "";
+  let previewSortDirection = "asc";
+  let historySearchText = "";
+  let historyCurrentPage = 1;
+  const historyPageSize = 5;
+
+  function showToast(msg) {
+    const toastMessage = getEl("toastMessage");
+    const actionToast = getEl("actionToast");
+    if (toastMessage && actionToast) {
+        toastMessage.innerText = msg;
+        const toast = new window.bootstrap.Toast(actionToast);
+        toast.show();
+    }
+  }
+
+  function updateFilterVisibility(reportType) {
+    const gov = getEl("filterGovContainer");
+    const kg = getEl("filterKgContainer");
+    const status = getEl("filterStatusContainer");
+    const severity = getEl("filterSeverityContainer");
+    const source = getEl("filterSourceContainer");
+    const reviewer = getEl("filterReviewerContainer");
+
+    // Hide all first
+    [gov, kg, status, severity, source, reviewer].forEach(el => {
+      if (el) el.classList.add("d-none");
+    });
+
+    if (reportType === "attendance" || reportType === "compliance") {
+      if (gov) gov.classList.remove("d-none");
+      if (kg) kg.classList.remove("d-none");
+    } else if (reportType === "incidents") {
+      if (gov) gov.classList.remove("d-none");
+      if (kg) kg.classList.remove("d-none");
+      if (status) status.classList.remove("d-none");
+      if (severity) severity.classList.remove("d-none");
+    } else if (reportType === "enrollment") {
+      if (status) status.classList.remove("d-none");
+      if (source) source.classList.remove("d-none");
+      if (reviewer) reviewer.classList.remove("d-none");
+    } else if (reportType === "full_audit") {
+      // only uses date filters which are outside the dynamic filters section
+    }
+  }
+
+
   // ===========================================================================
   // Helpers
   // ===========================================================================
+    function getMultiSelectValues(id) {
+    const el = getEl(id);
+    if (!el) return [];
+    return Array.from(el.selectedOptions).map(opt => opt.value).filter(val => val !== "");
+  }
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replace(/&/g, "&amp;")
@@ -59,12 +117,12 @@
 
   function getFilters() {
     return {
-      governorate: getGovernorate(),
-      kindergarten_id: getEl("kindergartenFilter")?.value ? Number(getEl("kindergartenFilter").value) : null,
-      status: getEl("statusFilter")?.value || null,
-      severity: getEl("severityFilter")?.value || null,
-      source: getEl("sourceFilter")?.value || null,
-      reviewer_id: getEl("reviewerFilter")?.value ? Number(getEl("reviewerFilter").value) : null,
+      governorates: getMultiSelectValues("governorateFilter"),
+      kindergarten_ids: getMultiSelectValues("kindergartenFilter").map(Number),
+      statuses: getMultiSelectValues("statusFilter"),
+      severities: getMultiSelectValues("severityFilter"),
+      sources: getMultiSelectValues("sourceFilter"),
+      reviewer_ids: getMultiSelectValues("reviewerFilter").map(Number),
     };
   }
 
@@ -309,7 +367,17 @@
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } }
+            plugins: {
+              legend: {
+                position: 'bottom',
+                rtl: document.documentElement.getAttribute("dir") === "rtl" || document.documentElement.getAttribute("lang") === "ar",
+                textDirection: document.documentElement.getAttribute("dir") === "rtl" || document.documentElement.getAttribute("lang") === "ar" ? 'rtl' : 'ltr'
+              },
+              tooltip: {
+                rtl: document.documentElement.getAttribute("dir") === "rtl" || document.documentElement.getAttribute("lang") === "ar",
+                textDirection: document.documentElement.getAttribute("dir") === "rtl" || document.documentElement.getAttribute("lang") === "ar" ? 'rtl' : 'ltr'
+              }
+            }
           }
         });
       });
@@ -323,66 +391,102 @@
     }
 
     // Sample data table
-    const thead = getEl("previewTableHead");
-    const tbody = getEl("previewTableBody");
-    if (thead && tbody && data.sample_data && data.sample_data.length) {
-      const columns = Object.keys(data.sample_data[0]);
-      thead.innerHTML = `<tr>${columns.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr>`;
-      tbody.innerHTML = data.sample_data
-        .map(
-          (row) => `
-        <tr>${columns
-          .map((c) => {
-            const val = row[c];
-            if (c.toLowerCase().includes("date") || c.toLowerCase().includes("at")) {
-              return `<td>${val ? new Date(val).toLocaleDateString() : "-"}</td>`;
-            }
-            return `<td>${escapeHtml(String(val ?? "-"))}</td>`;
-          })
-          .join("")}</tr>
-      `
-        )
-        .join("");
-    } else if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("لا توجد بيانات", "No data")}</td></tr>`;
-    }
-
-    // Insights
-    if (data.insights && data.insights.length) {
-      showEl("previewInsights");
-      getEl("insightsList").innerHTML = data.insights
-        .map((i) => {
-          const text = typeof i === 'object' ? reportsText(i.ar || i, i.en || i) : i;
-          return `<li class="list-group-item text-success border-success-subtle bg-success-subtle bg-opacity-10">${escapeHtml(text)}</li>`;
-        })
-        .join("");
-    } else {
-      hideEl("previewInsights");
-    }
-
-    // Warnings
-    if (data.warnings && data.warnings.length) {
-      showEl("previewWarnings");
-      getEl("warningsList").innerHTML = data.warnings
-        .map((w) => {
-          const text = typeof w === 'object' ? reportsText(w.ar || w, w.en || w) : w;
-          return `<li class="list-group-item text-warning border-warning-subtle bg-warning-subtle bg-opacity-10">${escapeHtml(text)}</li>`;
-        })
-        .join("");
-    } else {
-      hideEl("previewWarnings");
-    }
-
-    // Data quality
-    if (data.data_quality) {
-      showEl("dataQualityBanner");
-      setText("dataQualityScore", data.data_quality.completeness_percent ?? 100);
-    }
+    previewItems = data.sample_data || [];
+    previewColumns = previewItems.length ? Object.keys(previewItems[0]) : [];
+    previewCurrentPage = 1;
+    previewSortColumn = "";
+    
+    renderPreviewTable();
   }
 
-  // ===========================================================================
-  // Export
-  // ===========================================================================
+  function renderPreviewTable() {
+    const thead = getEl("previewTableHead");
+    const tbody = getEl("previewTableBody");
+    const pag = getEl("previewTablePagination");
+
+    if (!thead || !tbody) return;
+
+    if (!previewItems.length) {
+      thead.innerHTML = `<tr><th colspan="5" class="text-center text-muted">${reportsText("لا تتوفر معاينة للتقرير", "No preview data")}</th></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("لا توجد بيانات", "No data")}</td></tr>`;
+      if (pag) pag.classList.add("d-none");
+      return;
+    }
+
+    if (pag) pag.classList.remove("d-none");
+
+    // Sort
+    let sorted = [...previewItems];
+    if (previewSortColumn) {
+      sorted.sort((a, b) => {
+        let valA = a[previewSortColumn];
+        let valB = b[previewSortColumn];
+        if (valA === null || valA === undefined) valA = "";
+        if (valB === null || valB === undefined) valB = "";
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+        if (valA < valB) return previewSortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return previewSortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    // Paginate
+    const totalPages = Math.ceil(sorted.length / previewPageSize);
+    if (previewCurrentPage > totalPages) previewCurrentPage = totalPages;
+    if (previewCurrentPage < 1) previewCurrentPage = 1;
+
+    const startIdx = (previewCurrentPage - 1) * previewPageSize;
+    const endIdx = Math.min(startIdx + previewPageSize, sorted.length);
+    const paginated = sorted.slice(startIdx, endIdx);
+
+    // Render Headers with sort icons
+    thead.innerHTML = `<tr>${previewColumns.map((col) => {
+      const isSorted = previewSortColumn === col;
+      const caret = isSorted ? (previewSortDirection === 'asc' ? ' <i class="bi bi-caret-up-fill"></i>' : ' <i class="bi bi-caret-down-fill"></i>') : '';
+      return `<th style="cursor: pointer" class="sortable-header" data-col="${escapeHtml(col)}">${escapeHtml(col)}${caret}</th>`;
+    }).join("")}</tr>`;
+
+    // Add sort listeners
+    thead.querySelectorAll('.sortable-header').forEach(th => {
+      th.addEventListener('click', (e) => {
+        const col = e.currentTarget.getAttribute('data-col');
+        if (previewSortColumn === col) {
+          previewSortDirection = previewSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          previewSortColumn = col;
+          previewSortDirection = 'asc';
+        }
+        renderPreviewTable();
+      });
+    });
+
+    // Render Rows
+    tbody.innerHTML = paginated
+      .map(
+        (row) => `
+      <tr>${previewColumns
+        .map((col) => {
+          let val = row[col];
+          if (val === null || val === undefined) val = "-";
+          // Try to format if it looks like ISO date
+          if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+             val = formatLocalDate(val);
+          }
+          return `<td>${escapeHtml(String(val))}</td>`;
+        })
+        .join("")}</tr>`
+      )
+      .join("");
+
+    // Update pagination controls
+    setText("previewPaginationInfo", `${startIdx + 1}-${endIdx} of ${sorted.length}`);
+    const prevBtn = getEl("prevPreviewPageBtn");
+    const nextBtn = getEl("nextPreviewPageBtn");
+    if (prevBtn) prevBtn.disabled = previewCurrentPage === 1;
+    if (nextBtn) nextBtn.disabled = previewCurrentPage === totalPages;
+  }
+
   async function exportCurrentReport() {
     const period = getPeriod();
     if (!period.start || !period.end) {
@@ -446,6 +550,89 @@
   // ===========================================================================
   // Templates
   // ===========================================================================
+  
+  // ===========================================================================
+  // Templates Loading logic
+  // ===========================================================================
+  let loadedTemplates = [];
+
+  async function loadSavedTemplates() {
+    const list = getEl("templateList");
+    if (!list) return;
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/reports/templates`);
+      if (!res) return;
+      loadedTemplates = await res.json();
+      
+      if (!loadedTemplates.length) {
+        list.innerHTML = `<li><span class="dropdown-item-text text-muted small">${reportsText("لا توجد قوالب محفوظة", "No saved templates")}</span></li>`;
+        return;
+      }
+      
+      list.innerHTML = loadedTemplates.map(t => {
+          return `<li><a class="dropdown-item" href="#" data-template-id="${t.id}">${escapeHtml(t.name)}</a></li>`;
+      }).join('');
+      
+      list.querySelectorAll('.dropdown-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+              e.preventDefault();
+              const tid = e.target.getAttribute('data-template-id');
+              applyTemplate(tid);
+          });
+      });
+    } catch (e) {
+      console.error("Failed to load templates", e);
+      list.innerHTML = `<li><span class="dropdown-item-text text-danger small">${reportsText("تعذر التحميل", "Failed to load")}</span></li>`;
+    }
+  }
+
+  function applyTemplate(id) {
+      const t = loadedTemplates.find(x => String(x.id) === String(id));
+      if (!t) return;
+      
+      // switch tab
+      const tabMap = {
+          "attendance": "#tab-attendance",
+          "incidents": "#tab-incidents",
+          "compliance": "#tab-compliance",
+          "enrollment": "#tab-enrollment",
+          "full_audit": "#tab-audit"
+      };
+      const tabId = tabMap[t.report_type];
+      if (tabId) {
+          const tabEl = document.querySelector(tabId);
+          if (tabEl) {
+              const tab = new window.bootstrap.Tab(tabEl);
+              tab.show();
+          }
+      }
+      
+      // Wait a moment for tab switch to update visibility
+      setTimeout(() => {
+          if (t.filters) {
+              const setMultiValues = (id, vals) => {
+                  const select = getEl(id);
+                  if (!select || !vals) return;
+                  const arr = Array.isArray(vals) ? vals : [vals];
+                  Array.from(select.options).forEach(opt => {
+                      opt.selected = arr.map(String).includes(String(opt.value));
+                  });
+              };
+              setMultiValues("governorateFilter", t.filters.governorates || t.filters.governorate);
+              setMultiValues("kindergartenFilter", t.filters.kindergarten_ids || t.filters.kindergarten_id);
+              setMultiValues("statusFilter", t.filters.statuses || t.filters.status);
+              setMultiValues("severityFilter", t.filters.severities || t.filters.severity);
+              setMultiValues("sourceFilter", t.filters.sources || t.filters.source);
+              setMultiValues("reviewerFilter", t.filters.reviewer_ids || t.filters.reviewer_id);
+          }
+          if(getEl("exportFormat")) getEl("exportFormat").value = t.export_format || "CSV";
+          if(getEl("includeCharts")) getEl("includeCharts").checked = t.include_charts;
+          if(getEl("includeSummary")) getEl("includeSummary").checked = t.include_summary;
+          
+          loadReportPreview();
+      }, 100);
+  }
+
   async function saveAsTemplate() {
     const name = getEl("templateName")?.value?.trim();
     if (!name) {
@@ -472,7 +659,271 @@
       await res.json();
       const modal = window.bootstrap?.Modal?.getInstance(getEl("saveTemplateModal"));
       if (modal) modal.hide();
-      alert(reportsText("تم حفظ القالب بنجاح", "Template saved successfully"));
+      showToast(reportsText("تم حفظ القالب بنجاح", "Template saved successfully"));
+      loadSavedTemplates();
+    } catch (e) {
+      console.error("Save template failed", e);
+      alert(reportsText("فشل حفظ القالب", "Failed to save template"));
+    }
+  }
+
+  // ===========================================================================
+  // Scheduling
+  // ===========================================================================
+  async function scheduleReport() {
+    const name = getEl("scheduleName")?.value?.trim();
+    if (!name) {
+      alert(reportsText("يرجى إدخال اسم الجدولة", "Please enter a schedule name"));
+      return;
+    }
+
+    const frequency = getEl("scheduleFrequency")?.value || "monthly";
+    const recipientsRaw = getEl("scheduleRecipients")?.value || "";
+    const recipients = recipientsRaw
+      .split(",")
+      .map((r) => r.trim())
+      .filter((r) => r.length > 0);
+
+    const payload = {
+      name,
+      report_type: getReportType(),
+      filters: getFilters(),
+      export_format: getEl("exportFormat")?.value || "CSV",
+      frequency,
+      recipients,
+    };
+
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/reports/schedules`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res) return;
+      await res.json();
+      const modal = window.bootstrap?.Modal?.getInstance(getEl("scheduleModal"));
+      if (modal) modal.hide();
+      alert(reportsText("تمت الجدولة بنجاح", "Report scheduled successfully"));
+      loadRecentHistory();
+    } catch (e) {
+      console.error("Schedule failed", e);
+      alert(reportsText("فشل جدولة التقرير", "Failed to schedule report"));
+    }
+  }
+
+  // ===========================================================================
+  // Recent History
+  // ===========================================================================
+  async function loadRecentHistory() {
+    const tbody = getEl("reportsHistoryBody");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("جاري التحميل...", "Loading...")}</td></tr>`;
+
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/reports/history?limit=100`);
+      if (!res) return;
+      const data = await res.json();
+      historyItems = Array.isArray(data) ? data : [];
+      historyCurrentPage = 1;
+      renderRecentHistory();
+    } catch (e) {
+      console.error("History load failed", e);
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${reportsText("تعذر تحميل السجل", "Failed to load history")}</td></tr>`;
+    }
+  }
+
+  function renderRecentHistory() {
+    const tbody = getEl("reportsHistoryBody");
+    if (!tbody) return;
+
+    // Filter
+    const filtered = historyItems.filter(item => {
+      const name = (item.report_name || item.report_type).toLowerCase();
+      const format = (item.format || "").toLowerCase();
+      const status = (item.status || "").toLowerCase();
+      const query = historySearchText.toLowerCase();
+      return name.includes(query) || format.includes(query) || status.includes(query);
+    });
+
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">${reportsText("لا توجد نتائج مطابقة", "No matching reports")}</td></tr>`;
+      setText("historyPaginationInfo", "0-0 of 0");
+      return;
+    }
+
+    const totalPages = Math.ceil(filtered.length / historyPageSize);
+    if (historyCurrentPage > totalPages) historyCurrentPage = totalPages;
+    if (historyCurrentPage < 1) historyCurrentPage = 1;
+
+    const startIdx = (historyCurrentPage - 1) * historyPageSize;
+    const endIdx = Math.min(startIdx + historyPageSize, filtered.length);
+    const paginated = filtered.slice(startIdx, endIdx);
+
+    const statusBadge = (status) => {
+      const map = {
+        PENDING: "bg-warning",
+        PROCESSING: "bg-info",
+        COMPLETED: "bg-success",
+        FAILED: "bg-danger",
+      };
+      return map[status] || "bg-secondary";
+    };
+
+    tbody.innerHTML = paginated
+      .map(
+        (item) => `
+      <tr>
+        <td class="fw-medium">${escapeHtml(item.report_name || item.report_type)}</td>
+        <td>${escapeHtml(item.format)}</td>
+        <td>${item.generated_at ? new Date(item.generated_at).toLocaleString() : "-"}</td>
+        <td><span class="badge ${statusBadge(item.status)}">${escapeHtml(item.status)}</span></td>
+        <td class="text-center">
+          ${item.status === "COMPLETED" && item.id ? `<a href="/api/analytics/export/${item.id}/file" class="btn btn-sm btn-outline-primary" aria-label="Download report"><i class="bi bi-download"></i></a>` : ""}
+          ${item.status === "FAILED" ? `<button class="btn btn-sm btn-outline-danger retry-export-btn" data-job-id="${item.id}" aria-label="Retry export"><i class="bi bi-arrow-counterclockwise"></i></button>` : ""}
+        </td>
+      </tr>`
+      )
+      .join("");
+
+    // Wire up retry buttons
+    tbody.querySelectorAll('.retry-export-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+         const jobId = e.currentTarget.getAttribute('data-job-id');
+         await retryExportJob(jobId);
+      });
+    });
+
+    // Update pagination elements
+    setText("historyPaginationInfo", `${startIdx + 1}-${endIdx} of ${filtered.length}`);
+    const prevBtn = getEl("prevHistoryPageBtn");
+    const nextBtn = getEl("nextHistoryPageBtn");
+    if (prevBtn) prevBtn.disabled = historyCurrentPage === 1;
+    if (nextBtn) nextBtn.disabled = historyCurrentPage === totalPages;
+  }
+
+  async function retryExportJob(jobId) {
+     showToast(reportsText("جاري إعادة محاولة التصدير...", "Retrying export..."));
+     try {
+       const res = await fetchWithAuth(`${API_BASE}/export`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ retry_job_id: Number(jobId) })
+       });
+       if (res) {
+          showToast(reportsText("تم بدء تصدير التقرير", "Export job started"));
+          await loadRecentHistory();
+       }
+     } catch(e) {
+        showToast(reportsText("تعذر إعادة محاولة التصدير", "Failed to retry export"));
+     }
+  }
+
+  
+  async function loadSavedTemplates() {
+    const list = getEl("templateList");
+    if (!list) return;
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/reports/templates`);
+      if (!res) return;
+      loadedTemplates = await res.json();
+      
+      if (!loadedTemplates.length) {
+        list.innerHTML = `<li><span class="dropdown-item-text text-muted small">${reportsText("لا توجد قوالب محفوظة", "No saved templates")}</span></li>`;
+        return;
+      }
+      
+      list.innerHTML = loadedTemplates.map(t => {
+          return `<li><a class="dropdown-item" href="#" data-template-id="${t.id}">${escapeHtml(t.name)}</a></li>`;
+      }).join('');
+      
+      list.querySelectorAll('.dropdown-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+              e.preventDefault();
+              const tid = e.target.getAttribute('data-template-id');
+              applyTemplate(tid);
+          });
+      });
+    } catch (e) {
+      console.error("Failed to load templates", e);
+      list.innerHTML = `<li><span class="dropdown-item-text text-danger small">${reportsText("تعذر التحميل", "Failed to load")}</span></li>`;
+    }
+  }
+
+  function applyTemplate(id) {
+      const t = loadedTemplates.find(x => String(x.id) === String(id));
+      if (!t) return;
+      
+      // switch tab
+      const tabMap = {
+          "attendance": "#tab-attendance",
+          "incidents": "#tab-incidents",
+          "compliance": "#tab-compliance",
+          "enrollment": "#tab-enrollment",
+          "full_audit": "#tab-audit"
+      };
+      const tabId = tabMap[t.report_type];
+      if (tabId) {
+          const tabEl = document.querySelector(tabId);
+          if (tabEl) {
+              const tab = new window.bootstrap.Tab(tabEl);
+              tab.show();
+          }
+      }
+      
+      // Wait a moment for tab switch to update visibility
+      setTimeout(() => {
+          if (t.filters) {
+              const setMultiValues = (id, vals) => {
+                  const select = getEl(id);
+                  if (!select || !vals) return;
+                  const arr = Array.isArray(vals) ? vals : [vals];
+                  Array.from(select.options).forEach(opt => {
+                      opt.selected = arr.map(String).includes(String(opt.value));
+                  });
+              };
+              setMultiValues("governorateFilter", t.filters.governorates || t.filters.governorate);
+              setMultiValues("kindergartenFilter", t.filters.kindergarten_ids || t.filters.kindergarten_id);
+              setMultiValues("statusFilter", t.filters.statuses || t.filters.status);
+              setMultiValues("severityFilter", t.filters.severities || t.filters.severity);
+              setMultiValues("sourceFilter", t.filters.sources || t.filters.source);
+              setMultiValues("reviewerFilter", t.filters.reviewer_ids || t.filters.reviewer_id);
+          }
+          if(getEl("exportFormat")) getEl("exportFormat").value = t.export_format || "CSV";
+          if(getEl("includeCharts")) getEl("includeCharts").checked = t.include_charts;
+          if(getEl("includeSummary")) getEl("includeSummary").checked = t.include_summary;
+          
+          loadReportPreview();
+      }, 100);
+  }
+
+  async function saveAsTemplate() {
+    const name = getEl("templateName")?.value?.trim();
+    if (!name) {
+      alert(reportsText("يرجى إدخال اسم القالب", "Please enter a template name"));
+      return;
+    }
+
+    const payload = {
+      name,
+      report_type: getReportType(),
+      filters: getFilters(),
+      export_format: getEl("exportFormat")?.value || "CSV",
+      include_charts: getEl("includeCharts")?.checked ?? true,
+      include_summary: getEl("includeSummary")?.checked ?? true,
+    };
+
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/reports/templates`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res) return;
+      await res.json();
+      const modal = window.bootstrap?.Modal?.getInstance(getEl("saveTemplateModal"));
+      if (modal) modal.hide();
+      showToast(reportsText("تم حفظ القالب بنجاح", "Template saved successfully"));
+      loadSavedTemplates();
     } catch (e) {
       console.error("Save template failed", e);
       alert(reportsText("فشل حفظ القالب", "Failed to save template"));
@@ -638,8 +1089,58 @@
     await loadSummaryStats();
     await loadScheduledCount();
     await loadRecentHistory();
+    await loadSavedTemplates();
 
     // Wire events
+    const initialType = getReportType();
+    updateFilterVisibility(initialType);
+
+    document.querySelectorAll("#reportCategoryTabs .nav-link").forEach(tab => {
+        tab.addEventListener("shown.bs.tab", (e) => {
+            const reportType = getReportType();
+            updateFilterVisibility(reportType);
+        });
+    });
+
+    // History search input
+    getEl("searchHistoryInput")?.addEventListener("input", (e) => {
+        historySearchText = e.target.value;
+        historyCurrentPage = 1;
+        renderRecentHistory();
+    });
+
+    // History Pagination controls
+    getEl("prevHistoryPageBtn")?.addEventListener("click", () => {
+        if (historyCurrentPage > 1) {
+            historyCurrentPage--;
+            renderRecentHistory();
+        }
+    });
+
+    getEl("nextHistoryPageBtn")?.addEventListener("click", () => {
+        const totalPages = Math.ceil(historyItems.length / historyPageSize);
+        if (historyCurrentPage < totalPages) {
+            historyCurrentPage++;
+            renderRecentHistory();
+        }
+    });
+
+    // Preview Pagination controls
+    getEl("prevPreviewPageBtn")?.addEventListener("click", () => {
+        if (previewCurrentPage > 1) {
+            previewCurrentPage--;
+            renderPreviewTable();
+        }
+    });
+
+    getEl("nextPreviewPageBtn")?.addEventListener("click", () => {
+        const totalPages = Math.ceil(previewItems.length / previewPageSize);
+        if (previewCurrentPage < totalPages) {
+            previewCurrentPage++;
+            renderPreviewTable();
+        }
+    });
+
     getEl("previewReportBtn")?.addEventListener("click", loadReportPreview);
     getEl("exportReportBtn")?.addEventListener("click", exportCurrentReport);
     getEl("saveTemplateBtn")?.addEventListener("click", () => {

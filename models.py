@@ -1502,8 +1502,9 @@ class AdvancedAnalyticsCache(Base):
 class ExportFormat(str, PyEnum):
     """Export file formats"""
     CSV = "CSV"
-    PDF = "PDF"
+    JSON = "JSON"
     EXCEL = "EXCEL"
+    PDF = "PDF"
 
 
 class AnalyticsDimensionCache(Base):

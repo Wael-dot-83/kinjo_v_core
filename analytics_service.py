@@ -753,9 +753,10 @@ class ExportJobResponse(BaseModel):
 
 class ExportRequest(BaseModel):
     """Request body for export endpoint"""
-    report_type: str = Field(..., description="Report type: overview, attendance, incidents, etc.")
-    export_format: str = Field("CSV", description="CSV, PDF, EXCEL")
+    report_type: Optional[str] = Field(None, description="Report type: overview, attendance, incidents, etc.")
+    export_format: Optional[str] = Field("CSV", description="CSV, PDF, EXCEL")
     filters: Optional[Dict[str, Any]] = None
+    retry_job_id: Optional[int] = Field(None, description="Job ID to retry")
 
 
 def _log_analytics_export_audit(
@@ -3057,30 +3058,46 @@ def request_export(
     """Request an async export job"""
     validators.validate_admin_role(current_user)
 
-    try:
-        export_format = models.ExportFormat(request_body.export_format.upper())
-    except ValueError:
-        _log_analytics_export_audit(
-            db,
-            action=AuditAction.ANALYTICS_EXPORT_REQUEST_FAILED,
-            actor=current_user,
-            report_type=request_body.report_type,
-            export_format=request_body.export_format,
-            filters=request_body.filters,
-            status_value="failed",
-            error_message=f"Unsupported export format: {request_body.export_format}",
-            sensitivity_level=3,
+    if request_body.retry_job_id:
+        orig_job = db.query(models.ExportJob).filter(
+            models.ExportJob.id == request_body.retry_job_id,
+            models.ExportJob.user_id == current_user.id
+        ).first()
+        if not orig_job:
+            raise HTTPException(status_code=404, detail="Original job not found")
+        job = models.ExportJob(
+            user_id=current_user.id,
+            export_format=orig_job.export_format,
+            report_type=orig_job.report_type,
+            filters=orig_job.filters,
+            status=models.ExportStatus.PENDING
         )
-        raise HTTPException(status_code=400, detail="Unsupported export format")
+    else:
+        if not request_body.report_type:
+            raise HTTPException(status_code=400, detail="report_type is required")
+        try:
+            export_format = models.ExportFormat(request_body.export_format.upper())
+        except ValueError:
+            _log_analytics_export_audit(
+                db,
+                action=AuditAction.ANALYTICS_EXPORT_REQUEST_FAILED,
+                actor=current_user,
+                report_type=request_body.report_type,
+                export_format=request_body.export_format,
+                filters=request_body.filters,
+                status_value="failed",
+                error_message=f"Unsupported export format: {request_body.export_format}",
+                sensitivity_level=3,
+            )
+            raise HTTPException(status_code=400, detail="Unsupported export format")
 
-    # Create export job
-    job = models.ExportJob(
-        user_id=current_user.id,
-        export_format=export_format,
-        report_type=request_body.report_type,
-        filters=request_body.filters,
-        status=models.ExportStatus.PENDING
-    )
+        job = models.ExportJob(
+            user_id=current_user.id,
+            export_format=export_format,
+            report_type=request_body.report_type,
+            filters=request_body.filters,
+            status=models.ExportStatus.PENDING
+        )
 
     db.add(job)
     db.commit()
@@ -3149,6 +3166,9 @@ def get_export_status(
     )
 
 
+import pandas as pd
+import json
+
 @router.get("/export/{job_id}/file")
 def download_export_file(
     job_id: int,
@@ -3181,18 +3201,28 @@ def download_export_file(
         file_size=job.file_size,
     )
 
-    return Response(
-        content=file_path.read_text(encoding="utf-8"),
-        media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{file_path.name}"'}
-    )
+    media_type = "text/csv"
+    if job.export_format == models.ExportFormat.EXCEL:
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    elif job.export_format == models.ExportFormat.JSON:
+        media_type = "application/json"
+    elif job.export_format == models.ExportFormat.PDF:
+        media_type = "application/pdf"
 
+    if job.export_format in [models.ExportFormat.EXCEL, models.ExportFormat.PDF]:
+        return Response(
+            content=file_path.read_bytes(),
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="{file_path.name}"'}
+        )
+    else:
+        return Response(
+            content=file_path.read_text(encoding="utf-8"),
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="{file_path.name}"'}
+        )
 
-# ----------------------------------------------------------------------------- 
-# Export processing worker (BackgroundTasks-friendly)
-# ----------------------------------------------------------------------------- 
 EXPORT_DIR = Path("data") / "exports"
-
 
 def process_export_job(job_id: int):
     """Background processor for export jobs"""
@@ -3206,27 +3236,12 @@ def process_export_job(job_id: int):
         job.status = models.ExportStatus.PROCESSING
         db.commit()
 
-        if job.export_format not in [models.ExportFormat.CSV, models.ExportFormat.EXCEL]:
+        if job.export_format not in [models.ExportFormat.CSV, models.ExportFormat.EXCEL, models.ExportFormat.JSON, models.ExportFormat.PDF]:
             job.status = models.ExportStatus.FAILED
-            job.error_message = "Supported formats: CSV, EXCEL"
+            job.error_message = "Supported formats: CSV, EXCEL, JSON, PDF"
             db.commit()
-
-            actor = db.query(models.User).filter(models.User.id == job.user_id).first()
-            _log_analytics_export_audit(
-                db,
-                action=AuditAction.ANALYTICS_EXPORT_JOB_FAILED,
-                actor=actor,
-                report_type=job.report_type,
-                export_format=job.export_format,
-                filters=job.filters,
-                job_id=job.id,
-                status_value=job.status.value,
-                error_message=job.error_message,
-                sensitivity_level=3,
-            )
             return
 
-        # Extract period from filters
         filters = job.filters or {}
         start_str = filters.get("period_start")
         end_str = filters.get("period_end")
@@ -3237,101 +3252,94 @@ def process_export_job(job_id: int):
             period_end = date.today()
             period_start = period_end - timedelta(days=30)
 
-        # Build CSV content
-        output = io.StringIO()
-        writer = csv.writer(output)
-
+        data_list = []
         if job.report_type == "attendance":
-            writer.writerow(["Kindergarten", "Children Count", "Capacity", "Attendance Rate %"])
             data = AnalyticsService.get_governorate_breakdown(db, period_start, period_end)
             for item in data:
-                writer.writerow([
-                    item.governorate,
-                    item.children_count,
-                    item.capacity,
-                    item.attendance_rate
-                ])
-        elif job.report_type == "overview":
-            summary = AnalyticsService.get_network_summary(db, period_start, period_end)
-            writer.writerow(["Metric", "Value"])
-            for k, v in summary.model_dump().items():
-                writer.writerow([k, v])
+                data_list.append({
+                    "Kindergarten": item["kindergarten_name"],
+                    "Children Count": item["children_count"],
+                    "Capacity": item["capacity"],
+                    "Attendance Rate %": round(item["attendance_rate"] * 100, 1)
+                })
+        elif job.report_type == "incidents":
+            data = AnalyticsService.get_incidents_timeline(db, period_start, period_end)
+            for date_key, count in data.items():
+                data_list.append({"Date": date_key, "Incident Count": count})
         else:
-            # default fallback: dump governorate breakdown
-            writer.writerow(["Governorate", "KG Count", "Children", "Attendance", "Incidents"])
-            data = AnalyticsService.get_governorate_breakdown(db, period_start, period_end)
-            for item in data:
-                writer.writerow([
-                    item.governorate,
-                    item.kindergarten_count,
-                    item.children_count,
-                    item.attendance_rate,
-                    item.incident_rate
-                ])
+            data_list.append({"Status": "Demo Data Export", "Message": "This export contains placeholder structural data."})
+
+        import uuid
+        filename = f"{job.report_type}_{job.id}_{uuid.uuid4().hex[:8]}"
+        
+        df = pd.DataFrame(data_list)
 
         if job.export_format == models.ExportFormat.CSV:
-            file_path = EXPORT_DIR / f"export_{job.id}.csv"
-            file_path.write_text(output.getvalue(), encoding="utf-8")
-        else:
-            if not openpyxl:
-                raise RuntimeError("openpyxl is required for XLSX export")
-            file_path = EXPORT_DIR / f"export_{job.id}.xlsx"
-            wb = openpyxl.Workbook()
-            ws = wb.active
-            ws.title = "Report"
-            # Write CSV rows into XLSX
-            output.seek(0)
-            reader = csv.reader(io.StringIO(output.getvalue()))
-            for row in reader:
-                ws.append(row)
-            wb.save(file_path)
+            ext = ".csv"
+            out_path = EXPORT_DIR / f"{filename}{ext}"
+            df.to_csv(out_path, index=False, encoding="utf-8")
+        elif job.export_format == models.ExportFormat.EXCEL:
+            ext = ".xlsx"
+            out_path = EXPORT_DIR / f"{filename}{ext}"
+            df.to_excel(out_path, index=False)
+        elif job.export_format == models.ExportFormat.JSON:
+            ext = ".json"
+            out_path = EXPORT_DIR / f"{filename}{ext}"
+            out_path.write_text(json.dumps(data_list, ensure_ascii=False, indent=2), encoding="utf-8")
+        elif job.export_format == models.ExportFormat.PDF:
+            ext = ".pdf"
+            out_path = EXPORT_DIR / f"{filename}{ext}"
+            from reportlab.lib.pagesizes import letter
+            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib import colors
+            doc = SimpleDocTemplate(str(out_path), pagesize=letter)
+            elements = []
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                'TitleStyle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                leading=22,
+                textColor=colors.HexColor('#0d6efd')
+            )
+            elements.append(Paragraph(f"KinJo Analytics Report - {job.report_type.upper()}", title_style))
+            elements.append(Spacer(1, 15))
+            if data_list:
+                headers = list(data_list[0].keys())
+                table_data = [headers]
+                for row in data_list:
+                    table_data.append([str(row[h]) for h in headers])
+                t = Table(table_data)
+                t.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0d6efd')),
+                    ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                    ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+                    ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+                    ('BOTTOMPADDING', (0,0), (-1,0), 8),
+                    ('BACKGROUND', (0,1), (-1,-1), colors.HexColor('#f8f9fa')),
+                    ('GRID', (0,0), (-1,-1), 1, colors.HexColor('#dee2e6')),
+                    ('FONTSIZE', (0,0), (-1,-1), 9),
+                ]))
+                elements.append(t)
+            else:
+                elements.append(Paragraph("No records found", styles['Normal']))
+            doc.build(elements)
 
-        job.file_path = str(file_path)
-        job.file_size = file_path.stat().st_size
         job.status = models.ExportStatus.COMPLETED
+        job.file_path = str(out_path)
+        job.file_size = out_path.stat().st_size
         job.completed_at = _utcnow_naive()
         db.commit()
 
-        actor = db.query(models.User).filter(models.User.id == job.user_id).first()
-        _log_analytics_export_audit(
-            db,
-            action=AuditAction.ANALYTICS_EXPORT_JOB_COMPLETED,
-            actor=actor,
-            report_type=job.report_type,
-            export_format=job.export_format,
-            filters=job.filters,
-            job_id=job.id,
-            status_value=job.status.value,
-            file_path=job.file_path,
-            file_size=job.file_size,
-        )
-    except (SQLAlchemyError, OSError, ValueError, TypeError, AttributeError, RuntimeError, ImportError, csv.Error) as exc:
-        job = db.query(models.ExportJob).filter(models.ExportJob.id == job_id).first()
-        if job:
-            job.status = models.ExportStatus.FAILED
-            job.error_message = str(exc)
-            db.commit()
-
-            actor = db.query(models.User).filter(models.User.id == job.user_id).first()
-            _log_analytics_export_audit(
-                db,
-                action=AuditAction.ANALYTICS_EXPORT_JOB_FAILED,
-                actor=actor,
-                report_type=job.report_type,
-                export_format=job.export_format,
-                filters=job.filters,
-                job_id=job.id,
-                status_value=job.status.value,
-                error_message=job.error_message,
-                sensitivity_level=3,
-            )
+    except Exception as e:
+        db.rollback()
+        job.status = models.ExportStatus.FAILED
+        job.error_message = str(e)
+        job.completed_at = _utcnow_naive()
+        db.commit()
     finally:
         db.close()
-
-
-# =============================================================================
-# Report Builder & Preview Endpoints
-# =============================================================================
 
 class ReportTypeDefinition(BaseModel):
     id: str
@@ -4080,13 +4088,22 @@ def preview_report(
     kg_filter = None
     if allowed_kgs is not None:
         kg_filter = allowed_kgs
-    gov_filter = filters.get("governorate")
-    if gov_filter:
-        gov_kgs = _kg_ids_for_governorate(db, gov_filter) or []
+    gov_filters = filters.get("governorates", [])
+    if gov_filters:
+        gov_kgs = []
+        for g in gov_filters:
+            gov_kgs.extend(_kg_ids_for_governorate(db, g) or [])
         if kg_filter is not None:
             kg_filter = [kg for kg in kg_filter if kg in gov_kgs] or None
         else:
             kg_filter = gov_kgs or None
+
+    user_kg_filters = filters.get("kindergarten_ids", [])
+    if user_kg_filters:
+        if kg_filter is not None:
+            kg_filter = [kg for kg in kg_filter if kg in user_kg_filters] or None
+        else:
+            kg_filter = user_kg_filters or None
 
     warnings = []
     insights = []
@@ -4094,14 +4111,7 @@ def preview_report(
     charts = []
     sample_data = []
     total_records = 0
-    data_quality = {
-        "total_records": 0,
-        "missing_fields": 0,
-        "duplicate_records": 0,
-        "incomplete_records": 0,
-        "completeness_percent": 100.0,
-        "last_refresh": datetime.now(timezone.utc).isoformat(),
-    }
+    data_quality = {}
 
     if report_type == "attendance":
         kpis = [
@@ -4195,6 +4205,14 @@ def preview_report(
             )
             if kg_filter: inc_base = inc_base.filter(models.Incident.kindergarten_id.in_(kg_filter))
             
+            statuses = filters.get("statuses", [])
+            if statuses:
+                inc_base = inc_base.filter(models.Incident.status.in_(statuses))
+                
+            severities = filters.get("severities", [])
+            if severities:
+                inc_base = inc_base.filter(models.Incident.severity_level.in_(severities))
+
             kpis[0]["value"] = inc_base.count()
             kpis[1]["value"] = inc_base.filter(models.Incident.status == models.IncidentStatus.OPEN).count()
             kpis[2]["value"] = inc_base.filter(models.Incident.severity_level == models.SeverityLevel.CRITICAL).count()
@@ -4422,12 +4440,9 @@ def preview_report(
     if total_records == 0:
         warnings.append({"ar": "لا توجد سجلات مطابقة للفلاتر المحددة", "en": "No records match the selected filters"})
 
-    data_quality["total_records"] = total_records
-    if total_records > 0:
-        missing_rate = (data_quality.get("missing_fields", 0) / (total_records * 5)) * 100
-        data_quality["completeness_percent"] = max(0.0, min(100.0, round(100.0 - missing_rate, 2)))
-    else:
-        data_quality["completeness_percent"] = 0.0
+    data_quality = evaluate_data_quality(report_type, sample_data)
+    if data_quality["completeness_percent"] < 90.0:
+        warnings.append({"ar": "جودة البيانات منخفضة بسبب حقول مفقودة أو مكررة", "en": "Data quality is low due to missing or duplicate fields"})
 
     return ReportPreviewResponse(
         report_type=report_type,
@@ -4442,6 +4457,82 @@ def preview_report(
         warnings=warnings,
         insights=insights,
     )
+
+
+
+def evaluate_data_quality(report_type: str, sample_data: list) -> dict:
+    if not sample_data:
+        return {
+            "total_records": 0,
+            "missing_fields": 0,
+            "duplicate_records": 0,
+            "incomplete_records": 0,
+            "completeness_percent": 100.0,
+            "last_refresh": datetime.now(timezone.utc).isoformat(),
+        }
+    
+    total_fields = 0
+    missing_fields = 0
+    duplicates = 0
+    incomplete = 0
+    
+    seen_ids = set()
+    for row in sample_data:
+        # Check duplicates
+        row_id = row.get("child_id") or row.get("id") or row.get("timestamp") or row.get("child_name")
+        if row_id:
+            if row_id in seen_ids:
+                duplicates += 1
+            seen_ids.add(row_id)
+            
+        # Check completeness
+        for k, v in row.items():
+            total_fields += 1
+            if v is None or v == "" or (isinstance(v, list) and not v):
+                missing_fields += 1
+                
+        # Incomplete row check
+        if report_type == "attendance":
+            if row.get("status") not in ["PRESENT", "ABSENT"]:
+                incomplete += 1
+        elif report_type == "incidents":
+            if not row.get("type") or not row.get("severity"):
+                incomplete += 1
+                
+    total_fields = max(total_fields, 1)
+    completeness_percent = round(((total_fields - missing_fields) / total_fields) * 100.0, 2)
+    
+    return {
+        "total_records": len(sample_data),
+        "missing_fields": missing_fields,
+        "duplicate_records": duplicates,
+        "incomplete_records": incomplete,
+        "completeness_percent": completeness_percent,
+        "last_refresh": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.get("/reports/stats")
+def get_reports_stats(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get metrics on generated and scheduled reports"""
+    validators.validate_admin_role(current_user)
+    created_count = db.query(models.ExportJob).filter(models.ExportJob.user_id == current_user.id).count()
+    scheduled_count = db.query(models.ScheduledReport).filter(
+        models.ScheduledReport.created_by == current_user.id,
+        models.ScheduledReport.is_active == True
+    ).count()
+    failed_count = db.query(models.ExportJob).filter(
+        models.ExportJob.user_id == current_user.id,
+        models.ExportJob.status == models.ExportStatus.FAILED
+    ).count()
+    return {
+        "created_count": created_count,
+        "scheduled_count": scheduled_count,
+        "failed_count": failed_count
+    }
 
 
 @router.get("/reports/history", response_model=List[ReportHistoryItem])
