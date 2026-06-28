@@ -405,8 +405,10 @@ function showSkeletonLoaders() {
     .forEach((el) => {
       el.innerHTML = '<div class="skeleton-text w-50"></div>';
     });
-  document.querySelector("#enrollmentRateBar").style.width = "0%";
-  document.querySelector("#kpiKgGrowth").innerHTML = '<div class="skeleton-text w-75"></div>';
+  const _enrollmentRateBar = document.querySelector("#enrollmentRateBar");
+  if (_enrollmentRateBar) _enrollmentRateBar.style.width = "0%";
+  const _kpiKgGrowth = document.querySelector("#kpiKgGrowth");
+  if (_kpiKgGrowth) _kpiKgGrowth.innerHTML = '<div class="skeleton-text w-75"></div>';
 
   // Show skeleton for registration KPI cards
   document
@@ -452,7 +454,8 @@ function showSkeletonLoaders() {
   }
 
   // Show skeleton for comparative analysis
-  document.getElementById("topPerformersList").innerHTML = `
+  const _topPerformersList = document.getElementById("topPerformersList");
+  if (_topPerformersList) _topPerformersList.innerHTML = `
         <div class="list-group-item text-muted text-center py-3 skeleton-row">
             <div class="skeleton-text w-75 mx-auto mb-2"></div>
             <div class="skeleton-text w-50 mx-auto"></div>
@@ -462,7 +465,8 @@ function showSkeletonLoaders() {
             <div class="skeleton-text w-50 mx-auto"></div>
         </div>
     `;
-  document.getElementById("lowPerformersList").innerHTML = `
+  const _lowPerformersList = document.getElementById("lowPerformersList");
+  if (_lowPerformersList) _lowPerformersList.innerHTML = `
         <div class="list-group-item text-muted text-center py-3 skeleton-row">
             <div class="skeleton-text w-75 mx-auto mb-2"></div>
             <div class="skeleton-text w-50 mx-auto"></div>

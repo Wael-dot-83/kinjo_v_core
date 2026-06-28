@@ -1,7 +1,7 @@
 {% extends "admin_base.html" %}
 
 {% block title %}
-  {% if ui_lang == 'en' %}3D Globe Heatmaps — KinJo{% else %}خريطة الكرة الأرضية ثلاثية الأبعاد — كينجو{% endif %}
+  {% if ui_lang == 'en' %}Satellite Heatmap — KinJo{% else %}الخريطة الحرارية بالقمر الاصطناعي — كينجو{% endif %}
 {% endblock %}
 
 {% block breadcrumb %}
@@ -10,14 +10,11 @@
 </a>
 <span class="breadcrumb-separator">/</span>
 <span class="breadcrumb-item active">
-  {% if ui_lang == 'en' %}3D Geographic Heatmaps{% else %}الخرائط الجغرافية ثلاثية الأبعاد{% endif %}
+  {% if ui_lang == 'en' %}Geographic Heatmap{% else %}الخريطة الجغرافية الحرارية{% endif %}
 </span>
 {% endblock %}
 
 {% block extra_head %}
-{# ── Cesium JS CDN ──────────────────────────────────────────────── #}
-<link href="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Widgets/widgets.css" rel="stylesheet" crossorigin="anonymous">
-
 <style>
 /* ── BASE THEME ─────────────────────────────────────────────────── */
 .geo-cc { position:relative; min-height:100vh; font-family:var(--admin-font-family-ar); background:#0a0f1a; color:#f1f5f9; }
@@ -64,7 +61,7 @@
 .kpi-card-warn .kpi-value { color:#f97316; }
 .kpi-card-crit .kpi-value { color:#ef4444; }
 
-/* ── 3-PANEL CESIUM SCENE ────────────────────────────────────────── */
+/* ── 3-PANEL MAP SCENE ───────────────────────────────────────────── */
 .cs-scene { display:flex; height:calc(100vh - 320px); min-height:520px; }
 
 /* Left panel — governorate list */
@@ -80,20 +77,10 @@
 .cs-gov-item.selected { background:rgba(47,125,98,0.20); border-inline-start:3px solid #2F7D62; }
 .cs-gov-name { font-size:0.8125rem; color:#e2e8f0; }
 
-/* Center — Cesium globe */
-#cesiumContainer { flex:1; min-width:0; position:relative; background:#0a0f1a; }
+/* Center — Google Maps container */
+#googleMapContainer { flex:1; min-width:0; position:relative; background:#0a0f1a; }
 
-/* Cesium widget overrides */
-.cesium-viewer-toolbar { background:rgba(10,15,26,0.80)!important; border:1px solid rgba(255,255,255,0.10)!important; }
-.cesium-button { background:rgba(15,23,36,0.85)!important; color:#e2e8f0!important; }
-.cesium-button:hover { background:rgba(47,125,98,0.6)!important; }
-.cesium-timeline-main { background:rgba(10,15,26,0.90)!important; }
-.cesium-timeline-bar { background:rgba(255,255,255,0.06)!important; }
-.cesium-timeline-ticLabel { color:#94a3b8!important; }
-.cesium-animation-theme .cesium-animation-rectButton { fill:#2F7D62!important; }
-.cesium-sceneModePicker-wrapper { background:rgba(10,15,26,0.85)!important; }
-
-/* Layer toggles row (beneath globe) */
+/* Layer toggles row (beneath map) */
 .cs-layer-toggles { padding:0.5rem 0.875rem; background:rgba(10,15,26,0.6); border-top:1px solid rgba(255,255,255,0.06); display:flex; gap:1.25rem; flex-wrap:wrap; border-inline-end:1px solid rgba(255,255,255,0.08); }
 .cs-toggle-label { display:flex; align-items:center; gap:0.45rem; font-size:0.8125rem; color:#94a3b8; cursor:pointer; user-select:none; }
 .cs-toggle-label input[type="checkbox"] { accent-color:#1F5E47; width:15px; height:15px; }
@@ -237,7 +224,7 @@
   .cs-left  { width:100%; height:200px; border-inline-end:none; border-bottom:1px solid rgba(255,255,255,0.08); flex-direction:row; }
   .cs-left-body { display:flex; flex-direction:row; overflow-x:auto; overflow-y:hidden; }
   .cs-gov-item { border-bottom:none; border-inline-end:1px solid rgba(255,255,255,0.04); min-width:130px; flex-direction:column; align-items:flex-start; gap:0.25rem; }
-  #cesiumContainer { height:400px; }
+  #googleMapContainer { height:400px; }
   .intel-panel { width:100%; border-inline-start:none; border-top:1px solid rgba(255,255,255,0.08); }
   .kpi-strip { gap:0.375rem; }
   .kpi-card  { min-width:90px; }
@@ -261,9 +248,9 @@
 {% endblock %}
 
 {% block content %}
-{# ── Pass Cesium token to JS ──────────────────────────────────────── #}
+{# ── Pass Google Maps API key to JS ──────────────────────────────────── #}
 <script>
-  window.CESIUM_ION_TOKEN = {{ cesium_token | tojson | safe }};
+  window.GOOGLE_MAPS_API_KEY = {{ google_maps_api_key | tojson | safe }};
 </script>
 
 <div class="p-section">
@@ -271,7 +258,7 @@
      dir="{{ 'ltr' if ui_lang == 'en' else 'rtl' }}"
      lang="{{ ui_lang }}"
      role="main"
-     aria-label="{% if ui_lang == 'ar' %}خريطة الأردن الجغرافية ثلاثية الأبعاد{% else %}Jordan 3D Geographic Heatmap{% endif %}">
+     aria-label="{% if ui_lang == 'ar' %}خريطة الأردن الجغرافية بالقمر الاصطناعي{% else %}Jordan Satellite Heatmap{% endif %}">
 
   {# ═══════════════════════════════════════════════════════════
      PAGE HEADER
@@ -294,7 +281,7 @@
           {% if ui_lang == 'ar' %}الخريطة الحرارية التفاعلية — الحضانات ورياض الأطفال{% else %}Interactive Risk Heatmap — Kindergartens & Nurseries{% endif %}
         </h1>
         <div class="cc-subtitle">
-          {% if ui_lang == 'ar' %}مصدر البيانات: قاعدة بيانات كينجو المركزية • Cesium Globe • تحديث مباشر{% else %}Data source: KinJo Central Database • Cesium Globe • Live updates{% endif %}
+          {% if ui_lang == 'ar' %}مصدر البيانات: قاعدة بيانات كينجو المركزية • خرائط جوجل • تحديث مباشر{% else %}Data source: KinJo Central Database • Google Maps Satellite • Live updates{% endif %}
         </div>
       </div>
     </div>
@@ -355,12 +342,6 @@
             aria-label="{% if ui_lang == 'ar' %}تبديل نوع صورة الخريطة{% else %}Toggle imagery style{% endif %}">
       <i class="bi bi-globe2" aria-hidden="true"></i>
       {% if ui_lang == 'ar' %}صورة القمر الاصطناعي{% else %}Satellite{% endif %}
-    </button>
-
-    <button id="csColumbusBtn" class="cc-btn"
-            aria-label="{% if ui_lang == 'ar' %}تبديل العرض ثنائي الأبعاد{% else %}Toggle 2.5D Columbus view{% endif %}">
-      <i class="bi bi-layers" aria-hidden="true"></i>
-      2.5D
     </button>
 
     <button id="refreshBtn" class="cc-btn"
@@ -431,9 +412,9 @@
   <div id="dataQualityStrip" role="alert" aria-live="assertive" style="display:none"></div>
 
   {# ═══════════════════════════════════════════════════════════
-     3-PANEL CESIUM SCENE
+     3-PANEL MAP SCENE
        LEFT:   Governorate list
-       CENTER: Cesium 3D globe
+       CENTER: Google Maps satellite view
        RIGHT:  Intelligence / detail panel
      ═══════════════════════════════════════════════════════════ #}
   <div class="cs-scene">
@@ -452,11 +433,6 @@
                   aria-label="{% if ui_lang == 'ar' %}العودة إلى الأردن{% else %}Reset to Jordan view{% endif %}">
             <i class="bi bi-house" aria-hidden="true"></i>
             {% if ui_lang == 'ar' %}عودة{% else %}Reset{% endif %}
-          </button>
-          <button id="csPlayBtn" class="cc-btn" style="flex:1;justify-content:center"
-                  title="{% if ui_lang == 'ar' %}تشغيل / إيقاف الجدول الزمني{% else %}Play / pause timeline{% endif %}"
-                  aria-label="{% if ui_lang == 'ar' %}تشغيل الجدول الزمني{% else %}Play timeline{% endif %}">
-            <i class="bi bi-play-fill" aria-hidden="true"></i>
           </button>
         </div>
       </div>
@@ -499,11 +475,10 @@
       </div>
     </aside>
 
-    {# ── CENTER: CESIUM GLOBE ────────────────────────────────── #}
-    <div id="cesiumContainer"
+    {# ── CENTER: GOOGLE MAPS SATELLITE ──────────────────────── #}
+    <div id="googleMapContainer"
          role="region"
-         aria-label="{% if ui_lang == 'ar' %}خريطة الأردن ثلاثية الأبعاد — الحضانات ورياض الأطفال{% else %}Jordan 3D globe — Kindergartens and nurseries{% endif %}">
-      {# Cesium renders here — fallback shown if JS fails #}
+         aria-label="{% if ui_lang == 'ar' %}خريطة الأردن بالقمر الاصطناعي — الحضانات ورياض الأطفال{% else %}Jordan satellite map — Kindergartens and nurseries{% endif %}">
     </div>
 
     {# ── RIGHT: INTELLIGENCE PANEL ──────────────────────────── #}
@@ -513,13 +488,13 @@
          aria-live="polite">
       <div class="intel-placeholder">
         <div class="intel-placeholder-icon">
-          <i class="bi bi-globe2" style="font-size:3rem;opacity:0.18" aria-hidden="true"></i>
+          <i class="bi bi-map" style="font-size:3rem;opacity:0.18" aria-hidden="true"></i>
         </div>
         <div class="intel-placeholder-title">
           {% if ui_lang == 'ar' %}اختر محافظة{% else %}Select a Governorate{% endif %}
         </div>
         <div class="intel-placeholder-sub">
-          {% if ui_lang == 'ar' %}انقر على أي محافظة من الخريطة أو من القائمة لعرض التقرير الكامل والمؤشرات التفصيلية.{% else %}Click any governorate on the globe or in the list to view the full report and detailed indicators.{% endif %}
+          {% if ui_lang == 'ar' %}انقر على أي محافظة من الخريطة أو من القائمة لعرض التقرير الكامل والمؤشرات التفصيلية.{% else %}Click any governorate on the map or in the list to view the full report and detailed indicators.{% endif %}
         </div>
       </div>
     </div>
@@ -620,15 +595,9 @@
 {% endblock %}
 
 {% block extra_scripts %}
-{# ── Cesium JS ──────────────────────────────────────────────────────── #}
-{# CRITICAL: CESIUM_BASE_URL must be set BEFORE Cesium.js loads so that
-   Cesium's web workers resolve to the CDN paths instead of blob: URLs.
-   Without this, workers fail with "Failed to execute 'importScripts'" errors. #}
-<script>window.CESIUM_BASE_URL = 'https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/';</script>
-<script src="https://cesium.com/downloads/cesiumjs/releases/1.115/Build/Cesium/Cesium.js"
-        crossorigin="anonymous"></script>
-
-{# ── Cesium heatmap application ─────────────────────────────────── #}
-<script src="/static/js/jordan_cesium_map.js?v=5" charset="utf-8"></script>
-
+{# ── Heatmap application (must load before Google Maps callback fires) ── #}
+<script src="/static/js/jordan_cesium_map.js?v=6" charset="utf-8"></script>
+{# ── Google Maps JavaScript API — satellite imagery ───────────────────── #}
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key | default('') }}&callback=_gmapsLoaded&v=weekly"></script>
 {% endblock %}

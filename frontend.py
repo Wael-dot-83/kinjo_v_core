@@ -1758,7 +1758,7 @@ async def admin_heatmap_page(request: Request, current_user: User = Depends(get_
     return templates.TemplateResponse(request=request, name="admin/heatmap.html", context={
         "current_user": current_user,
         "today": date.today(),
-        "cesium_token": settings.CESIUM_ION_TOKEN,
+        "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
     })
 
 

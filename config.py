@@ -281,8 +281,11 @@ class Settings(BaseSettings):
     GOVERNANCE_REPORT_DEADLINE_HOUR: int = 16  # 4 PM Amman time
     AMMAN_TIMEZONE: str = "Asia/Amman"
 
-    # Cesium ion access token for 3D globe terrain + satellite imagery
-    # Get a free token at https://cesium.com/ion/tokens
+    # Google Maps API key for the heatmap satellite view
+    # Enable "Maps JavaScript API" in Google Cloud Console and set this key
+    GOOGLE_MAPS_API_KEY: str = ""
+
+    # Cesium ion access token (kept for reference — map now uses Google Maps)
     CESIUM_ION_TOKEN: str = ""
 
     # AI/ML (ai/ package: ml.py, llm.py, insights.py, embeddings.py) — local Ollama

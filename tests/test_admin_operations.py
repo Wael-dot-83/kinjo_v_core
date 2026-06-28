@@ -46,6 +46,7 @@ Targets:
   Lines 4890        calculate_governorate_risk_score high incident count
 """
 import io
+import secrets
 import pytest
 import openpyxl
 from datetime import date, datetime, timedelta
@@ -1030,6 +1031,34 @@ class TestHeatmapError:
             r = client.get("/api/admin/heatmap-data", headers=headers)
         # With both the service and fallback failing, endpoint returns 500
         assert r.status_code in [200, 500]
+
+
+def _csrf_headers():
+    csrf = secrets.token_hex(32)
+    return {
+        "X-CSRF-Token": csrf,
+        "Cookie": f"kinjo_csrf_token={csrf}",
+    }
+
+
+class TestHeatmapCsrf:
+    def test_refresh_requires_csrf(self, client, test_db):
+        """POST /admin/heat-map/refresh must reject requests without valid CSRF."""
+        admin = _make_admin(test_db, "hm_csrf_adm", "1")
+        auth_headers = _tok(client, "hm_csrf_adm1")
+
+        r = client.post("/api/admin/heat-map/refresh", headers=auth_headers)
+        assert r.status_code == 400
+
+    def test_refresh_succeeds_with_csrf(self, client, test_db):
+        """POST /admin/heat-map/refresh accepts requests with valid CSRF token."""
+        admin = _make_admin(test_db, "hm_csrf_ok", "1")
+        auth_headers = _tok(client, "hm_csrf_ok1")
+        csrf_h = _csrf_headers()
+        headers = {**auth_headers, **csrf_h}
+
+        r = client.post("/api/admin/heat-map/refresh", headers=headers)
+        assert r.status_code == 200
 
 
 # ---------------------------------------------------------------------------
