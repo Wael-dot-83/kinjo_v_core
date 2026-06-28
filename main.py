@@ -176,7 +176,6 @@ def _ignore_connection_reset(loop, context):
     loop.default_exception_handler(context)
 
 # Import routers
-from missing_endpoints import router as api_router
 from frontend import router as frontend_router
 from communication_service import router as communication_router
 from safety_service import router as safety_router
@@ -1184,7 +1183,7 @@ app.include_router(messaging_router, prefix="/api", tags=["Messaging"])
 app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
 app.include_router(government_api_router, prefix="/api", tags=["Government API"])
 app.include_router(public_router, prefix="/api", tags=["Public"])
-app.include_router(api_router, prefix="/api", tags=["API"])
+
 app.include_router(charts_router, tags=["Charts"])
 app.include_router(telemetry_router)
 app.include_router(observability_router)
