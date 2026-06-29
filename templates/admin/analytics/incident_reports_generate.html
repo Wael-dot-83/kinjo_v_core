@@ -1,14 +1,8 @@
-{% extends "admin_base.html" %}
+{% extends "admin_base_premium.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}Generate Incident Report{% else %}إنشاء تقرير الحوادث{% endif %} — KinJo{% endblock %}
 
-{% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
-<span class="breadcrumb-separator">/</span>
-<a href="/admin/reports/incidents" class="breadcrumb-item">{% if ui_lang == 'en' %}Reports{% else %}التقارير{% endif %}</a>
-<span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Generate Report{% else %}إنشاء تقرير{% endif %}</span>
-{% endblock %}
+
 
 {% block content %}
 <div class="page-header mb-4">
@@ -38,7 +32,7 @@
                     <div class="mb-4">
                         <label class="form-label fw-bold">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
                         <div class="row g-3">
-                            <div class="col-md-6">
+                            <div>
                                 <div class="form-check custom-card-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="periodWeek"
                                         value="week" checked>
@@ -46,12 +40,12 @@
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-week text-primary fs-4 mb-2 d-block"></i>
                                             <strong>{% if ui_lang == 'en' %}Current Week{% else %}الأسبوع الحالي{% endif %}</strong>
-                                            <div class="small text-muted">{% if ui_lang == 'en' %}Last 7 days{% else %}آخر 7 أيام{% endif %}</div>
+                                            <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Last 7 days{% else %}آخر 7 أيام{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div>
                                 <div class="form-check custom-card-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="periodMonth"
                                         value="month">
@@ -59,12 +53,12 @@
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-month text-success fs-4 mb-2 d-block"></i>
                                             <strong>{% if ui_lang == 'en' %}Current Month{% else %}الشهر الحالي{% endif %}</strong>
-                                            <div class="small text-muted">{% if ui_lang == 'en' %}Last 30 days{% else %}آخر 30 يوم{% endif %}</div>
+                                            <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Last 30 days{% else %}آخر 30 يوم{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div>
                                 <div class="form-check custom-card-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="period3Years"
                                         value="3years">
@@ -72,12 +66,12 @@
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-range text-warning fs-4 mb-2 d-block"></i>
                                             <strong>{% if ui_lang == 'en' %}Last 3 Years{% else %}آخر 3 سنوات{% endif %}</strong>
-                                            <div class="small text-muted">{% if ui_lang == 'en' %}Rolling backward{% else %}متحرك للخلف{% endif %}</div>
+                                            <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Rolling backward{% else %}متحرك للخلف{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div>
                                 <div class="form-check custom-card-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="periodAnnual"
                                         value="annual">
@@ -85,7 +79,7 @@
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-year text-info fs-4 mb-2 d-block"></i>
                                             <strong>{% if ui_lang == 'en' %}Current Year{% else %}السنة الحالية{% endif %}</strong>
-                                            <div class="small text-muted">{% if ui_lang == 'en' %}Annual summary{% else %}ملخص سنوي{% endif %}</div>
+                                            <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Annual summary{% else %}ملخص سنوي{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
@@ -103,7 +97,6 @@
                 </form>
             </div>
         </div>
-    </div>
 </div>
 
 <!-- Success Modal -->
@@ -118,11 +111,10 @@
                 <p>{% if ui_lang == 'en' %}The incident report has been generated successfully. You can now view the report or create another one.{% else %}تم إنشاء تقرير الحوادث بنجاح. يمكنك الآن عرض التقرير أو إنشاء تقرير آخر.{% endif %}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Generate Another Report{% else %}إنشاء تقرير آخر{% endif %}</button>
-                <a href="/admin/reports/incidents" class="btn btn-primary">{% if ui_lang == 'en' %}View Reports{% else %}عرض التقارير{% endif %}</a>
+                <button type="button" class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Generate Another Report{% else %}إنشاء تقرير آخر{% endif %}</button>
+                <a href="/admin/reports/incidents" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]">{% if ui_lang == 'en' %}View Reports{% else %}عرض التقارير{% endif %}</a>
             </div>
         </div>
-    </div>
 </div>
 {% endblock %}
 
@@ -169,7 +161,7 @@
                 title.textContent = scope.name;
 
                 const subtitle = document.createElement('div');
-                subtitle.className = 'small text-muted';
+                subtitle.className = 'small text-on-surface-variant';
                 subtitle.textContent = getScopeDescription(scope);
 
                 card.appendChild(icon);

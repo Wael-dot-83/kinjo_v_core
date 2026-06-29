@@ -18,7 +18,7 @@
     </div>
     {% if current_user.role.value in ['ADMIN', 'MANAGER', 'SUPERVISOR'] %}
     <div class="page-header-actions">
-        <a href="/reports/create" class="btn btn-primary">
+        <a href="/reports/create" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]">
             <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Create New Report{% else %}إنشاء تقرير جديد{% endif %}
         </a>
     </div>
@@ -32,13 +32,13 @@
         <div class="d-flex align-items-center mb-4 bg-white p-3 rounded shadow-sm border">
             <span class="fw-bold me-3">{% if ui_lang == 'en' %}Report Date:{% else %}تاريخ التقرير:{% endif %}</span>
             <input type="date" class="form-control w-auto me-3" id="dateFilter" value="{{ today }}">
-            <button class="btn btn-outline-primary" type="button" onclick="loadReports()">
+            <button class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10 transition-colors" type="button" onclick="loadReports()">
                 {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
             </button>
         </div>
 
         <div id="reportsContainer">
-            <div class="text-center py-5 text-muted">
+            <div class="text-center py-5 text-on-surface-variant">
                 <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                 <span class="ms-2">{% if ui_lang == 'en' %}Loading reports...{% else %}جاري تحميل التقارير...{% endif %}</span>
             </div>
@@ -47,10 +47,10 @@
 
     <div class="col-lg-4">
         <div class="card mb-4">
-            <div class="card-header">
+            <div class="mb-6 border-b border-white/5 pb-4 relative z-10">
                 <h6 class="mb-0">{% if ui_lang == 'en' %}Today's Summary{% else %}ملخص اليوم{% endif %}</h6>
             </div>
-            <div class="card-body">
+            <div class="relative z-10">
                 <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                     <span>{% if ui_lang == 'en' %}Total Displayed Reports{% else %}إجمالي التقارير المعروضة{% endif %}</span>
                     <span class="fw-bold" id="reportsSummaryCount">--</span>
@@ -62,14 +62,15 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="glass-panel border border-white/10 rounded-2xl p-6 relative overflow-hidden group mb-6">
+                <div class="absolute -top-32 -right-32 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500"></div>
             <div class="card-header bg-info bg-opacity-10">
                 <h6 class="mb-0 text-dark">
                     <i class="bi bi-info-circle me-2"></i>{% if ui_lang == 'en' %}Quick Information{% else %}معلومات سريعة{% endif %}
                 </h6>
             </div>
-            <div class="card-body">
-                <p class="small text-muted mb-0">
+            <div class="relative z-10">
+                <p class="small text-on-surface-variant mb-0">
                     {% if ui_lang == 'en' %}
                     This page shows reports based on the user role and available permissions within the kindergarten.
                     {% else %}
@@ -78,7 +79,6 @@
                 </p>
             </div>
         </div>
-    </div>
 </div>
 {% endblock %}
 
@@ -138,8 +138,9 @@
         const container = document.getElementById('reportsContainer');
         if (!container) return;
         container.innerHTML = `
-            <div class="card">
-                <div class="card-body text-center py-5 text-muted">
+            <div class="glass-panel border border-white/10 rounded-2xl p-6 relative overflow-hidden group mb-6">
+                <div class="absolute -top-32 -right-32 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500"></div>
+                <div class="card-body text-center py-5 text-on-surface-variant">
                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                     ${message}
                 </div>
@@ -166,7 +167,7 @@
                 <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
                     <div>
                         <h6 class="mb-1 fw-bold">${escHtml(report.child_name || '-')}</h6>
-                        <small class="text-muted">
+                        <small class="text-on-surface-variant">
                             ${tr('التاريخ', 'Date')}: ${formatUiDate(report.date)} | ${tr('المشرف', 'Supervisor')}: ${escHtml(report.submitted_by || tr('غير محدد', 'Not specified'))}
                         </small>
                     </div>
@@ -177,7 +178,7 @@
                 <div class="card-body py-3">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <span class="badge badge-soft badge-soft-warning">${tr('بانتظار مراجعة المدير', 'Pending manager review')}</span>
-                        <small class="text-muted">${tr('وقت الرفع', 'Submitted at')}: ${formatUiDate(report.submitted_at)}</small>
+                        <small class="text-on-surface-variant">${tr('وقت الرفع', 'Submitted at')}: ${formatUiDate(report.submitted_at)}</small>
                     </div>
                 </div>
             </div>
@@ -211,10 +212,10 @@
                     <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <div>
                             <h6 class="mb-1 fw-bold">${escHtml(child.child_name || '-')}</h6>
-                            <small class="text-muted">${escHtml(child.class_name || tr('بدون شعبة', 'No class'))}</small>
+                            <small class="text-on-surface-variant">${escHtml(child.class_name || tr('بدون شعبة', 'No class'))}</small>
                         </div>
                         <div class="text-end">
-                            <div class="small text-muted mb-2">${statusText}</div>
+                            <div class="small text-on-surface-variant mb-2">${statusText}</div>
                             ${actionHtml}
                         </div>
                     </div>
@@ -230,7 +231,7 @@
 
         if (container) {
             container.innerHTML = `
-                <div class="text-center py-5 text-muted">
+                <div class="text-center py-5 text-on-surface-variant">
                     <div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>
                     <span class="ms-2">${tr('جاري تحميل التقارير...', 'Loading reports...')}</span>
                 </div>
