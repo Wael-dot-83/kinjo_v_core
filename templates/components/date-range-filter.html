@@ -1,61 +1,70 @@
-{% macro date_range_filter(start_date_id="startDate", end_date_id="endDate", start_label=None, end_label=None, apply_button_id="applyFilter", apply_text=None, start_id=None, end_id=None, show_governorate=True,
-refresh_btn_id=None, on_refresh=None, show_export=True, governorate_id=None, export_modal_id=None, user_role=None) %}
+{% macro date_range_filter(start_date_id="startDate", end_date_id="endDate", start_label=None, end_label=None, apply_button_id="applyFilter", apply_text=None, start_id=None, end_id=None, show_governorate=True, refresh_btn_id=None, on_refresh=None, show_export=True, governorate_id=None, export_modal_id=None, user_role=None) %}
 {% set _start_label = start_label or ('من تاريخ' if ui_lang != 'en' else 'From Date') %}
 {% set _end_label = end_label or ('إلى تاريخ' if ui_lang != 'en' else 'To Date') %}
 {% set _apply_text = apply_text or ('تطبيق' if ui_lang != 'en' else 'Apply') %}
 {% set start_field_id = start_id or start_date_id %}
 {% set end_field_id = end_id or end_date_id %}
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label for="{{ start_field_id }}" class="form-label">{{ _start_label }}</label>
-                <input type="date" class="form-control" id="{{ start_field_id }}">
-            </div>
-            <div class="col-md-3">
-                <label for="{{ end_field_id }}" class="form-label">{{ _end_label }}</label>
-                <input type="date" class="form-control" id="{{ end_field_id }}">
-            </div>
-            <div class="col-md-2">
-                {% if refresh_btn_id %}
-                <button type="button" class="btn btn-primary w-100" id="{{ refresh_btn_id }}" {% if on_refresh
-                    %}onclick="{{ on_refresh }}()" {% endif %}>
-                    <i class="bi bi-arrow-clockwise me-1"></i>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
-                </button>
-                {% else %}
-                <button type="button" class="btn btn-primary w-100" id="{{ apply_button_id }}">
-                    <i class="bi bi-funnel me-1"></i>{{ _apply_text }}
-                </button>
-                {% endif %}
-            </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-outline-secondary w-100"
-                    onclick="clearDateFilters('{{ start_field_id }}', '{{ end_field_id }}')">
-                    <i class="bi bi-x-lg me-1"></i>{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}
-                </button>
-            </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-outline-info w-100"
-                    onclick="setLastMonth('{{ start_field_id }}', '{{ end_field_id }}')">
-                    <i class="bi bi-calendar-month me-1"></i>{% if ui_lang == 'en' %}Last Month{% else %}الشهر الماضي{% endif %}
-                </button>
-            </div>
-            {% if show_governorate and governorate_id %}
-            <div class="col-md-2">
-                <select class="form-select" id="{{ governorate_id }}" data-user-role="{{ user_role or '' }}">
-                    <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
-                </select>
-            </div>
-            {% endif %}
-            {% if show_export and export_modal_id %}
-            <div class="col-md-auto">
-                <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#{{ export_modal_id }}">
-                    <i class="bi bi-download me-1"></i>{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
-                </button>
-            </div>
-            {% endif %}
+
+<div class="flex flex-wrap items-end gap-3 w-full">
+    
+    <!-- Dates -->
+    <div class="flex flex-wrap items-center gap-3 bg-black/20 p-1.5 rounded-xl border border-white/5 relative z-20">
+        <div class="flex flex-col relative">
+            <label for="{{ start_field_id }}" class="absolute -top-5 start-1 font-label-sm text-[10px] text-on-surface-variant">{{ _start_label }}</label>
+            <input type="date" class="bg-transparent text-on-surface text-sm border-none focus:ring-0 outline-none ps-2 pe-2 cursor-pointer" id="{{ start_field_id }}">
+        </div>
+        <div class="w-[1px] h-6 bg-white/10"></div>
+        <div class="flex flex-col relative">
+            <label for="{{ end_field_id }}" class="absolute -top-5 start-1 font-label-sm text-[10px] text-on-surface-variant">{{ _end_label }}</label>
+            <input type="date" class="bg-transparent text-on-surface text-sm border-none focus:ring-0 outline-none ps-2 pe-2 cursor-pointer" id="{{ end_field_id }}">
         </div>
     </div>
+
+    <!-- Governorate -->
+    {% if show_governorate and governorate_id %}
+    <div class="flex flex-col relative min-w-[140px] z-20">
+        <label for="{{ governorate_id }}" class="absolute -top-5 start-1 font-label-sm text-[10px] text-on-surface-variant">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
+        <select class="w-full bg-black/20 border border-white/5 text-on-surface text-sm rounded-xl px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none cursor-pointer" id="{{ governorate_id }}" data-user-role="{{ user_role or '' }}">
+            <option value="" class="bg-surface text-on-surface">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
+        </select>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="flex items-center gap-2 ms-auto relative z-20">
+        
+        <!-- Quick Preset -->
+        <button type="button" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-on-surface text-sm transition-colors" onclick="setLastMonth('{{ start_field_id }}', '{{ end_field_id }}')" title="{% if ui_lang == 'en' %}Last Month{% else %}الشهر الماضي{% endif %}">
+            <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+            <span class="hidden xl:inline">{% if ui_lang == 'en' %}Last Month{% else %}الشهر الماضي{% endif %}</span>
+        </button>
+        
+        <button type="button" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-error/20 border border-white/5 hover:border-error/30 text-on-surface hover:text-error text-sm transition-colors" onclick="clearDateFilters('{{ start_field_id }}', '{{ end_field_id }}')" title="{% if ui_lang == 'en' %}Clear Filters{% else %}مسح الفلاتر{% endif %}">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+            <span class="hidden xl:inline">{% if ui_lang == 'en' %}Clear{% else %}مسح{% endif %}</span>
+        </button>
+
+        {% if refresh_btn_id %}
+        <button type="button" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-sm transition-colors shadow-[0_0_15px_rgba(47,125,98,0.2)]" id="{{ refresh_btn_id }}" {% if on_refresh %}onclick="{{ on_refresh }}()"{% endif %}>
+            <span class="material-symbols-outlined text-[18px]">refresh</span>
+            <span>{% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}</span>
+        </button>
+        {% else %}
+        <button type="button" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-sm transition-colors shadow-[0_0_15px_rgba(47,125,98,0.2)]" id="{{ apply_button_id }}">
+            <span class="material-symbols-outlined text-[18px]">filter_alt</span>
+            <span>{{ _apply_text }}</span>
+        </button>
+        {% endif %}
+
+        {% if show_export and export_modal_id %}
+        <div class="w-[1px] h-8 bg-white/10 mx-1"></div>
+        <button type="button" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-tertiary/20 hover:bg-tertiary/30 border border-tertiary/30 text-tertiary text-sm transition-colors shadow-[0_0_10px_rgba(102,153,204,0.1)]" data-bs-toggle="modal" data-bs-target="#{{ export_modal_id }}" onclick="typeof showModal !== 'undefined' ? showModal('{{ export_modal_id }}') : null">
+            <span class="material-symbols-outlined text-[18px]">download</span>
+            <span class="hidden md:inline">{% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}</span>
+        </button>
+        {% endif %}
+    </div>
+
 </div>
 
 <script>
@@ -66,6 +75,8 @@ refresh_btn_id=None, on_refresh=None, show_export=True, governorate_id=None, exp
         document.getElementById(endId).value = '';
         if (typeof applyDateFilter === 'function') {
             applyDateFilter();
+        } else if (typeof window.loadAdminAnalytics === 'function') {
+            window.loadAdminAnalytics();
         }
     }
 
@@ -81,6 +92,8 @@ refresh_btn_id=None, on_refresh=None, show_export=True, governorate_id=None, exp
 
         if (typeof applyDateFilter === 'function') {
             applyDateFilter();
+        } else if (typeof window.loadAdminAnalytics === 'function') {
+            window.loadAdminAnalytics();
         }
     }
 
@@ -89,8 +102,8 @@ refresh_btn_id=None, on_refresh=None, show_export=True, governorate_id=None, exp
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startElem = document.getElementById('{{ start_field_id }}');
         const endElem = document.getElementById('{{ end_field_id }}');
-        if (startElem) startElem.value = startOfMonth.toISOString().split('T')[0];
-        if (endElem) endElem.value = now.toISOString().split('T')[0];
+        if (startElem && !startElem.value) startElem.value = startOfMonth.toISOString().split('T')[0];
+        if (endElem && !endElem.value) endElem.value = now.toISOString().split('T')[0];
     });
 </script>
 {% endmacro %}
