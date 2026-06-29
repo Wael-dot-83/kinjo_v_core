@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html class="dark" lang="{{ ui_lang | default('ar') }}" dir="{{ 'ltr' if ui_lang == 'en' else 'rtl' }}">
+<head>
+  <meta charset="utf-8" />
+  <script>(function(){var h=document.documentElement,l=h.getAttribute('lang')||'ar';h.dir=l==='en'?'ltr':'rtl';}());</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}CYBERLUME - Dashboard{% endblock %}</title>
+
+  <!-- Tailwind and Fonts -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+  
+  <script id="tailwind-config">
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                "colors": {
+                    "tertiary": "#89ceff",
+                    "surface-container-highest": "#353437",
+                    "on-surface": "#e5e1e4",
+                    "surface-variant": "#353437",
+                    "secondary-fixed": "#f0dbff",
+                    "on-primary-fixed": "#07006c",
+                    "primary-fixed": "#e1e0ff",
+                    "primary": "#c0c1ff",
+                    "tertiary-container": "#009ada",
+                    "inverse-primary": "#494bd6",
+                    "primary-fixed-dim": "#c0c1ff",
+                    "on-secondary-fixed": "#2c0051",
+                    "inverse-on-surface": "#313032",
+                    "on-secondary-container": "#d6a9ff",
+                    "secondary-container": "#6f00be",
+                    "tertiary-fixed-dim": "#89ceff",
+                    "on-primary": "#1000a9",
+                    "surface-container-lowest": "#0e0e10",
+                    "on-background": "#e5e1e4",
+                    "secondary-fixed-dim": "#ddb7ff",
+                    "on-primary-container": "#0d0096",
+                    "surface": "#131315",
+                    "background": "#131315",
+                    "on-secondary-fixed-variant": "#6900b3",
+                    "on-error": "#690005",
+                    "on-tertiary-fixed-variant": "#004c6e",
+                    "primary-container": "#8083ff",
+                    "inverse-surface": "#e5e1e4",
+                    "surface-container-high": "#2a2a2c",
+                    "on-error-container": "#ffdad6",
+                    "surface-tint": "#c0c1ff",
+                    "surface-bright": "#39393b",
+                    "on-tertiary-container": "#002d43",
+                    "on-primary-fixed-variant": "#2f2ebe",
+                    "error-container": "#93000a",
+                    "on-surface-variant": "#c7c4d7",
+                    "secondary": "#ddb7ff",
+                    "on-tertiary": "#00344d",
+                    "outline-variant": "#464554",
+                    "surface-container-low": "#1c1b1d",
+                    "surface-dim": "#131315",
+                    "tertiary-fixed": "#c9e6ff",
+                    "outline": "#908fa0",
+                    "on-secondary": "#490080",
+                    "surface-container": "#201f21",
+                    "error": "#ffb4ab",
+                    "on-tertiary-fixed": "#001e2f",
+                    "success": "#4ade80",
+                    "warning": "#fbbf24",
+                    "danger": "#ef4444",
+                    "info": "#38bdf8"
+                },
+                "fontFamily": {
+                    "display-lg-mobile": ["Outfit"],
+                    "body-md": ["Outfit"],
+                    "headline-lg": ["Outfit"],
+                    "body-lg": ["Outfit"],
+                    "label-md": ["Outfit"],
+                    "label-sm": ["Outfit"],
+                    "headline-md": ["Outfit"],
+                    "display-lg": ["Outfit"]
+                },
+                "spacing": {
+                    "md": "16px",
+                    "margin-mobile": "16px",
+                    "xl": "48px",
+                    "xs": "4px",
+                    "gutter": "24px",
+                    "container-max": "1440px",
+                    "unit": "4px",
+                    "margin-desktop": "32px",
+                    "lg": "24px",
+                    "sm": "8px"
+                }
+            }
+        }
+    }
+  </script>
+  
+  <style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: all 0.3s ease;
+    }
+    .glass-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.1);
+    }
+    .chart-gradient {
+        background: linear-gradient(180deg, rgba(192, 193, 255, 0.2) 0%, rgba(192, 193, 255, 0) 100%);
+    }
+    
+    /* RTL Adjustments */
+    [dir="rtl"] .ml-64 { margin-left: 0; margin-right: 16rem; }
+    [dir="rtl"] .left-0 { left: auto; right: 0; }
+    [dir="rtl"] .right-0 { right: auto; left: 0; }
+    [dir="rtl"] .border-r { border-right: none; border-left: 1px solid rgba(255,255,255,0.1); }
+    [dir="rtl"] .pl-8 { padding-left: 0; padding-right: 2rem; }
+    [dir="rtl"] .pr-2 { padding-right: 0; padding-left: 0.5rem; }
+    [dir="rtl"] .border-l { border-left: none; border-right: 1px solid rgba(255,255,255,0.1); }
+    [dir="rtl"] .ml-8 { margin-left: 0; margin-right: 2rem; }
+    [dir="rtl"] .text-right { text-align: left; }
+    
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-background text-on-surface min-h-screen overflow-x-hidden font-body-md selection:bg-primary/30 selection:text-primary">
+  
+  <!-- WebGL Background -->
+  <div class="fixed inset-0 w-full h-full -z-10 pointer-events-none opacity-60" style="display:block;">
+    <canvas id="shader-canvas-ANIMATION_9" style="display:block;width:100%;height:100%"></canvas>
+    <script>
+    (function() {
+      const canvas = document.getElementById('shader-canvas-ANIMATION_9');
+      function syncSize() {
+        const w = canvas.clientWidth || 1280;
+        const h = canvas.clientHeight || 720;
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+        }
+      }
+      if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(syncSize).observe(canvas);
+      }
+      syncSize();
+
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) return;
+      const vs = `attribute vec2 a_position; varying vec2 v_texCoord; void main() { v_texCoord = a_position * 0.5 + 0.5; gl_Position = vec4(a_position, 0.0, 1.0); }`;
+      const fs = `precision highp float; varying vec2 v_texCoord; uniform float u_time; void main() { vec2 uv = v_texCoord; float time = u_time * 0.2; float noise1 = sin(uv.x * 3.0 + time) * cos(uv.y * 2.0 - time * 0.5); float noise2 = sin(uv.y * 4.0 - time * 0.8) * cos(uv.x * 2.5 + time * 0.3); float combined = (noise1 + noise2) * 0.5 + 0.5; vec3 baseColor = vec3(0.04, 0.04, 0.05); vec3 indigo = vec3(0.24, 0.27, 0.95); vec3 violet = vec3(0.55, 0.2, 0.9); vec3 gradient = mix(indigo, violet, uv.x + combined * 0.3); vec3 finalColor = mix(baseColor, gradient, combined * 0.15); float vignette = 1.0 - length(uv - 0.5) * 0.5; gl_FragColor = vec4(finalColor * vignette, 1.0); }`;
+      
+      function cs(type, src) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return s;
+      }
+      const prog = gl.createProgram();
+      gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+      gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+      gl.linkProgram(prog);
+      gl.useProgram(prog);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+      const pos = gl.getAttribLocation(prog, 'a_position');
+      gl.enableVertexAttribArray(pos);
+      gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+      const uTime = gl.getUniformLocation(prog, 'u_time');
+      
+      function render(t) {
+        if (typeof ResizeObserver === 'undefined') syncSize();
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        if (uTime) gl.uniform1f(uTime, t * 0.001);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        requestAnimationFrame(render);
+      }
+      render(0);
+    })();
+    </script>
+  </div>
+
+  <!-- Sidebar -->
+  <nav class="hidden md:flex flex-col bg-white/5 backdrop-blur-xl h-screen w-64 fixed left-0 top-0 border-r border-white/10 shadow-2xl py-8 z-50">
+    <div class="px-lg mb-xl flex items-center gap-sm">
+      <span class="material-symbols-outlined text-primary text-3xl">hexagon</span>
+      <div class="font-display-lg text-display-lg font-black tracking-tighter text-primary leading-none" style="font-size: 28px;">{% if ui_lang == 'en' %}CYBERLUME{% else %}سايبر لوم{% endif %}</div>
+    </div>
+    
+    <div class="px-lg mb-8">
+      <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">
+        {% if ui_lang == 'en' %}Admin Console{% else %}لوحة الإدارة{% endif %}
+      </span>
+    </div>
+    
+    <div class="flex-1 px-sm space-y-1 overflow-y-auto">
+      {% set current_path = request.url.path %}
+      {% set sidebar_sections = [
+        {
+          "id": "home", "icon": "dashboard", "label_ar": "الرئيسية", "label_en": "Home",
+          "items": [
+            {"href": "/admin/dashboard", "icon": "speedometer", "label_ar": "لوحة التحكم العامة", "label_en": "General Dashboard", "active_paths": ["/admin/dashboard"]}
+          ]
+        },
+        {
+          "id": "management", "icon": "group", "label_ar": "الإدارة", "label_en": "Management",
+          "items": [
+            {"href": "/admin/users", "icon": "people", "label_ar": "المستخدمون", "label_en": "Users", "active_paths": ["/admin/users"], "active_prefixes": ["/admin/users/"]},
+            {"href": "/admin/messages", "icon": "send", "label_ar": "التواصل", "label_en": "Communication", "active_paths": ["/admin/messages", "/admin/contact-messages"], "active_prefixes": ["/admin/messages/"]},
+            {"href": "/admin/imported-kindergartens", "icon": "database", "label_ar": "إدارة البيانات", "label_en": "Data Management", "active_paths": ["/admin/imported-kindergartens", "/admin/import-kindergartens", "/admin/import-logs"]}
+          ]
+        },
+        {
+          "id": "analytics-reports", "icon": "insights", "label_ar": "التحليلات والتقارير", "label_en": "Analytics & Reports",
+          "items": [
+            {"href": "/admin/analytics", "icon": "trending_up", "label_ar": "نظرة عامة على التحليلات", "label_en": "Analytics Overview", "active_paths": ["/admin/analytics", "/admin/kpi", "/admin/kg-overview", "/admin/analytics/charts"]},
+            {"href": "/admin/analytics/reports", "icon": "description", "label_ar": "التقارير المفصلة", "label_en": "Detailed Reports", "active_paths": ["/admin/analytics/reports"]},
+            {"href": "/admin/analytics/daily-reports", "icon": "calendar_today", "label_ar": "التقارير اليومية", "label_en": "Daily Reports", "active_paths": ["/admin/analytics/daily-reports"]},
+            {"href": "/admin/daily-reports-organization", "icon": "event_available", "label_ar": "جدولة التقارير", "label_en": "Report Scheduling", "active_paths": ["/admin/daily-reports-organization"]}
+          ]
+        },
+        {
+          "id": "incidents", "icon": "warning", "label_ar": "الحوادث", "label_en": "Incidents",
+          "items": [
+            {"href": "/admin/reports/incidents", "icon": "fact_check", "label_ar": "سجل الحوادث", "label_en": "Incident Log", "active_paths": ["/admin/reports/incidents"]},
+            {"href": "/admin/reports/incidents/generate", "icon": "medical_information", "label_ar": "تقارير الحوادث", "label_en": "Incident Reports", "active_paths": ["/admin/reports/incidents/generate"]}
+          ]
+        },
+        {
+          "id": "heatmap", "icon": "map", "label_ar": "الخريطة الحرارية", "label_en": "Heat Map",
+          "items": [
+            {"href": "/admin/heatmap", "icon": "public", "label_ar": "نظرة عامة على الخريطة", "label_en": "Map Overview", "active_paths": ["/admin/heatmap"]},
+            {"href": "/admin/heatmap#governorates", "icon": "pin_drop", "label_ar": "تحليل المحافظات", "label_en": "Governorate Analysis", "active_paths": []}
+          ]
+        },
+        {
+          "id": "governance", "icon": "account_balance", "label_ar": "الحوكمة", "label_en": "Governance",
+          "items": [
+            {"href": "/admin/governance-reports", "icon": "assessment", "label_ar": "مؤشرات الحوكمة", "label_en": "Governance Indicators", "active_paths": ["/admin/governance-reports", "/admin/governance/reminders"]},
+            {"href": "/admin/classification", "icon": "military_tech", "label_ar": "التصنيف والمقارنات", "label_en": "Classification & Benchmarking", "active_paths": ["/admin/classification"]}
+          ]
+        },
+        {
+          "id": "system", "icon": "settings", "label_ar": "النظام", "label_en": "System",
+          "items": [
+            {"href": "/admin/audit-logs", "icon": "shield_lock", "label_ar": "الأمان", "label_en": "Security & Audit", "active_paths": ["/admin/audit-logs", "/admin/alerts", "/admin/safety-analytics", "/admin/impersonate"]},
+            {"href": "/admin/settings", "icon": "manage_accounts", "label_ar": "الإعدادات", "label_en": "Settings", "active_paths": ["/admin/settings"]},
+            {"href": "/admin/observability", "icon": "speed", "label_ar": "المراقبة والأداء", "label_en": "Observability", "active_paths": ["/admin/observability"]}
+          ]
+        }
+      ] %}
+      
+      {% for section in sidebar_sections %}
+        {% set section_state = namespace(active=false) %}
+        {% for item in section.items %}
+          {% set item_state = namespace(active=current_path in item.active_paths) %}
+          {% if item.active_prefixes is defined %}
+            {% for prefix in item.active_prefixes %}
+              {% if current_path.startswith(prefix) %}
+                {% set item_state.active = true %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          {% if item_state.active %}
+            {% set section_state.active = true %}
+          {% endif %}
+        {% endfor %}
+
+        <div class="mb-2 group">
+            <button class="w-full flex items-center justify-between px-md py-2 rounded-lg transition-colors duration-300 {% if section_state.active %}text-primary bg-primary/10{% else %}text-on-surface-variant/70 hover:bg-white/5{% endif %}" onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.chevron').classList.toggle('rotate-180');">
+                <div class="flex items-center gap-md">
+                    <span class="material-symbols-outlined text-[18px]">{{ section.icon }}</span>
+                    <span class="font-label-md text-xs uppercase tracking-wider font-bold">
+                        {% if ui_lang == 'en' %}{{ section.label_en }}{% else %}{{ section.label_ar }}{% endif %}
+                    </span>
+                </div>
+                <span class="material-symbols-outlined text-[18px] chevron transition-transform duration-300 {% if section_state.active %}rotate-180{% endif %}">expand_more</span>
+            </button>
+            
+            <div class="mt-1 ml-4 border-l border-white/10 space-y-1 {% if not section_state.active %}hidden{% endif %}">
+            {% for item in section.items %}
+                {% set is_active = current_path in item.active_paths %}
+                {% if item.active_prefixes is defined %}
+                  {% for prefix in item.active_prefixes %}
+                    {% if current_path.startswith(prefix) %}
+                      {% set is_active = true %}
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+                <a class="flex items-center gap-3 pl-3 pr-2 py-1.5 ml-[-1px] transition-all duration-300 {% if is_active %}text-on-surface opacity-100 border-l-2 border-primary bg-gradient-to-r from-primary/10 to-transparent{% else %}text-on-surface opacity-60 hover:opacity-100 hover:border-l-2 hover:border-white/30{% endif %}" href="{{ item.href }}">
+                  <span class="material-symbols-outlined text-[16px] {% if is_active %}text-primary{% endif %}">{{ item.icon }}</span>
+                  <span class="font-body-md text-sm">{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
+                </a>
+            {% endfor %}
+            </div>
+        </div>
+      {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="px-lg mt-auto space-y-4">
+      <div class="space-y-1">
+        <a class="flex items-center gap-md px-md py-2 rounded-lg text-on-surface opacity-60 hover:opacity-100 transition-opacity hover:bg-white/5 duration-300" href="/admin/profile">
+          <span class="material-symbols-outlined text-lg">person</span>
+          <span class="font-label-sm text-label-sm">
+             {% if current_user %}
+                {{ current_user.full_name or current_user.username }}
+             {% else %}
+                {% if ui_lang == 'en' %}Profile{% else %}الملف الشخصي{% endif %}
+             {% endif %}
+          </span>
+        </a>
+        <a class="flex items-center gap-md px-md py-2 rounded-lg text-error opacity-80 hover:opacity-100 transition-opacity hover:bg-white/5 duration-300" href="/auth/logout">
+          <span class="material-symbols-outlined text-lg">logout</span>
+          <span class="font-label-sm text-label-sm">{% if ui_lang == 'en' %}Logout{% else %}تسجيل خروج{% endif %}</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Top Header -->
+  <header class="hidden md:flex items-center justify-between px-margin-desktop w-[calc(100%-16rem)] h-16 fixed top-0 right-0 bg-surface/30 backdrop-blur-md border-b border-white/5 shadow-sm z-40">
+    <div class="flex items-center bg-surface-container-highest/50 border border-white/10 rounded-lg px-3 py-1.5 w-64 focus-within:ring-2 focus-within:ring-primary/50 transition-all">
+      <span class="material-symbols-outlined text-on-surface-variant mr-2 text-sm">search</span>
+      <input class="bg-transparent border-none outline-none text-on-surface font-body-md text-sm w-full placeholder:text-on-surface-variant/50 focus:ring-0" placeholder="{% if ui_lang == 'en' %}Search...{% else %}بحث...{% endif %}" type="text"/>
+    </div>
+    
+    <div class="flex items-center gap-md">
+      <!-- Language Switcher Dummy (In a real app, this would use the KinJo API) -->
+      <button class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1" onclick="window.location.search = '?lang=' + ('{{ ui_lang }}' === 'en' ? 'ar' : 'en')">
+        <span class="material-symbols-outlined text-sm">language</span>
+        <span class="text-xs">{{ 'AR' if ui_lang == 'en' else 'EN' }}</span>
+      </button>
+      <button class="text-on-surface-variant hover:text-primary transition-colors">
+        <span class="material-symbols-outlined">notifications</span>
+      </button>
+      <div class="w-8 h-8 rounded-full border border-primary/30 overflow-hidden ml-2 cursor-pointer hover:border-primary transition-colors">
+        <img class="w-full h-full object-cover" src="/static/img/admin_avatar.png" onerror="this.src='https://ui-avatars.com/api/?name={{ current_user.username if current_user else \'Admin\' }}&background=1F5E47&color=fff'"/>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="md:ml-64 pt-24 pb-xl px-margin-mobile md:px-margin-desktop min-h-screen">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Scripts -->
+  <script src="/static/js/auth.js?v=2.1"></script>
+  <script src="/static/js/kinjo-api.js?v=2.0"></script>
+  <script src="/static/js/admin_i18n.js?v=1.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

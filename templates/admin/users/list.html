@@ -1,198 +1,189 @@
-{% extends "admin_base.html" %}
-{% from 'components/page-header.html' import page_header %}
-{% from 'components/filter-row.html' import filter_row %}
-{% from 'components/data-table.html' import pagination %}
+{% extends "admin_base_premium.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}{% endblock %}
 
-{% block page_header %}
-{% set toolbar_actions %}
-<div class="btn-group me-2" id="bulkActions" style="display: none;">
-    <button class="btn btn-outline-danger" onclick="bulkDelete()" id="bulkDeleteBtn">
-        <i class="bi bi-trash"></i> <span id="bulkDeleteLabel">{% if ui_lang == 'en' %}Delete Selected{% else %}حذف المحدد{% endif %}</span>
-    </button>
-    <button class="btn btn-outline-warning" onclick="bulkStatusUpdate('SUSPENDED')">
-        <i class="bi bi-pause-circle"></i> {% if ui_lang == 'en' %}Suspend{% else %}تعليق{% endif %}
-    </button>
-    <button class="btn btn-outline-success" onclick="bulkStatusUpdate('ACTIVE')">
-        <i class="bi bi-play-circle"></i> {% if ui_lang == 'en' %}Activate{% else %}تفعيل{% endif %}
-    </button>
-    <button class="btn btn-outline-secondary" onclick="clearSelection()">
-        <i class="bi bi-x-circle"></i> {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
-    </button>
-</div>
-<a href="/admin/users/create" class="btn btn-primary">
-    <i class="bi bi-person-plus me-2"></i>
-    {% if ui_lang == 'en' %}Add New User{% else %}إضافة مستخدم جديد{% endif %}
-</a>
-<button class="btn btn-outline-secondary ms-2" onclick="showImportModal()">
-    <i class="bi bi-upload"></i> {% if ui_lang == 'en' %}Import from CSV{% else %}استيراد من CSV{% endif %}
-</button>
-{% endset %}
-{{ page_header(
-title="User Management" if ui_lang == 'en' else "إدارة المستخدمين",
-icon="bi-people",
-breadcrumbs=[
-{"label": "Dashboard" if ui_lang == 'en' else "لوحة التحكم", "url": "/dashboard"},
-{"label": "Users" if ui_lang == 'en' else "المستخدمين", "url": None}
-],
-actions=toolbar_actions
-) }}
-
-{% endblock %}
-
 {% block content %}
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <!-- Filters -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-4">
-                <div class="input-group input-group-icon">
-                    <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
-                    <input type="text" class="form-control" id="searchUser"
-                        placeholder="{% if ui_lang == 'en' %}Search by name or email...{% else %}بحث بالاسم أو البريد الإلكتروني...{% endif %}"
-                        aria-label="{% if ui_lang == 'en' %}Search users{% else %}بحث عن مستخدمين{% endif %}">
-                </div>
-            </div>
-            <div class="col-md-3">
-                <label id="roleFilterLabel" class="form-label small fw-semibold mb-1" for="roleFilter">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</label>
-                <select name="roleFilter" class="form-select" id="roleFilter" title="{% if ui_lang == 'en' %}Filter by role{% else %}تصفية حسب الدور{% endif %}" aria-labelledby="roleFilterLabel">
-                    <option value="">{% if ui_lang == 'en' %}All Roles{% else %}كل الأدوار{% endif %}</option>
-                    <option value="MANAGER">{% if ui_lang == 'en' %}Kindergarten Manager{% else %}مدير روضة{% endif %}</option>
-                    <option value="SUPERVISOR">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
-                    <option value="PARENT">{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label id="statusFilterLabel" class="form-label small fw-semibold mb-1" for="statusFilter">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
-                <select name="statusFilter" class="form-select" id="statusFilter" title="{% if ui_lang == 'en' %}Filter by status{% else %}تصفية حسب الحالة{% endif %}" aria-labelledby="statusFilterLabel">
-                    <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
-                    <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
-                    <option value="SUSPENDED">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}</option>
-                    <option value="INACTIVE">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-outline-secondary w-100" id="resetFilters">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i> {% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
-                </button>
-            </div>
-        </div>
-
-        <!-- Users Table -->
-        <!-- Results count (GWS U.2.3-068) -->
-        <div class="d-flex align-items-center justify-content-between mb-2">
-            <small class="text-muted" id="resultCount" aria-live="polite" aria-atomic="true"></small>
-        </div>
-
-        <div class="table-responsive">
-            <table class="table table-hover align-middle" id="usersTable" aria-label="{% if ui_lang == 'en' %}Users Table{% else %}جدول المستخدمين{% endif %}">
-                <thead class="table-light">
-                    <tr>
-                        <th scope="col" style="width: 50px;">
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="selectAll"
-                                    onchange="toggleSelectAll()" aria-label="{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}">
-                            </div>
-                        </th>
-                        <th scope="col" class="sortable" data-sort="username" onclick="sortTable('username')">{% if ui_lang == 'en' %}User{% else %}المستخدم{% endif %}
-                        </th>
-                        <th scope="col" class="sortable" data-sort="role" onclick="sortTable('role')">{% if ui_lang == 'en' %}Role{% else %}الدور{% endif %}</th>
-                        <th scope="col">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
-                        <th scope="col" class="sortable" data-sort="status" onclick="sortTable('status')">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
-                        <th scope="col" class="sortable" data-sort="created_at" onclick="sortTable('created_at')">{% if ui_lang == 'en' %}Registration Date{% else %}تاريخ
-                            التسجيل{% endif %}</th>
-                        <th scope="col" class="text-end" style="width: 150px;">{% if ui_lang == 'en' %}Actions{% else %}الإجراءات{% endif %}</th>
-                    </tr>
-                </thead>
-                <tbody id="usersTableBody">
-                    <tr>
-                        <td colspan="7" class="text-center py-5">
-                            <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
-                            <p class="mt-2 text-muted mb-0">{% if ui_lang == 'en' %}Loading user data...{% else %}جاري تحميل بيانات المستخدمين...{% endif %}</p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        {{ pagination(pagination_id="pagination", aria_label="Page navigation") }}
+<div class="max-w-container-max mx-auto animate-fade-in-up pb-32">
+  
+  <header class="mb-xl flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+    <div>
+      <h1 class="font-headline-lg text-headline-lg text-on-surface mb-2">
+        {% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}
+      </h1>
+      <p class="font-body-md text-body-md text-on-surface-variant">
+        {% if ui_lang == 'en' %}Manage system users, roles, and access permissions.{% else %}إدارة مستخدمي النظام والأدوار وصلاحيات الوصول.{% endif %}
+      </p>
     </div>
+    <div class="flex items-center gap-2">
+      <button class="px-4 py-2 rounded-lg bg-surface-container-highest text-on-surface font-label-sm text-label-sm border border-white/10 hover:bg-white/10 transition-colors flex items-center gap-2" onclick="showImportModal()">
+        <span class="material-symbols-outlined text-sm">upload</span>
+        {% if ui_lang == 'en' %}Import from CSV{% else %}استيراد من CSV{% endif %}
+      </button>
+      <a href="/admin/users/create" class="px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary text-surface font-label-sm text-label-sm hover:scale-105 transition-transform shadow-[0_0_15px_rgba(192,193,255,0.3)] flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm">person_add</span>
+        {% if ui_lang == 'en' %}Add User{% else %}إضافة مستخدم{% endif %}
+      </a>
+    </div>
+  </header>
+
+  <!-- Filters & Search -->
+  <div class="glass-card rounded-xl p-4 mb-lg flex flex-col md:flex-row gap-4 items-center justify-between border border-white/5">
+    
+    <!-- Bulk Actions (Hidden by default) -->
+    <div id="bulkActions" class="w-full flex flex-wrap gap-2 items-center" style="display: none;">
+        <span class="text-on-surface font-label-md mr-4"><span id="selectedCountDisplay">0</span> {% if ui_lang == 'en' %}Selected{% else %}محدد{% endif %}</span>
+        
+        <button class="px-3 py-1.5 rounded bg-error/20 text-error border border-error/30 hover:bg-error/30 transition-colors font-label-sm flex items-center gap-1" onclick="bulkDelete()" id="bulkDeleteBtn">
+            <span class="material-symbols-outlined text-sm">delete</span> <span id="bulkDeleteLabel">{% if ui_lang == 'en' %}Delete{% else %}حذف{% endif %}</span>
+        </button>
+        <button class="px-3 py-1.5 rounded bg-[#fbbf24]/20 text-[#fbbf24] border border-[#fbbf24]/30 hover:bg-[#fbbf24]/30 transition-colors font-label-sm flex items-center gap-1" onclick="bulkStatusUpdate('SUSPENDED')">
+            <span class="material-symbols-outlined text-sm">pause_circle</span> {% if ui_lang == 'en' %}Suspend{% else %}تعليق{% endif %}
+        </button>
+        <button class="px-3 py-1.5 rounded bg-[#4ade80]/20 text-[#4ade80] border border-[#4ade80]/30 hover:bg-[#4ade80]/30 transition-colors font-label-sm flex items-center gap-1" onclick="bulkStatusUpdate('ACTIVE')">
+            <span class="material-symbols-outlined text-sm">play_circle</span> {% if ui_lang == 'en' %}Activate{% else %}تفعيل{% endif %}
+        </button>
+        <button class="px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors font-label-sm flex items-center gap-1 ml-auto" onclick="clearSelection()">
+            <span class="material-symbols-outlined text-sm">close</span> {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+        </button>
+    </div>
+
+    <!-- Regular Filters (Visible by default) -->
+    <div id="regularFilters" class="w-full flex flex-col md:flex-row gap-4 justify-between items-center">
+        <!-- Search -->
+        <div class="relative w-full md:w-96 group">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60">search</span>
+            <input type="text" class="input-glass rounded-lg pl-10 pr-4 py-2 w-full text-sm font-body-md focus:shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-300 placeholder:text-on-surface-variant/40" id="searchUser" placeholder="{% if ui_lang == 'en' %}Search by name or email...{% else %}بحث بالاسم أو البريد الإلكتروني...{% endif %}">
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <select name="roleFilter" class="input-glass rounded-lg px-3 py-2 text-sm text-on-surface cursor-pointer w-full md:w-auto" id="roleFilter">
+                <option value="">{% if ui_lang == 'en' %}All Roles{% else %}كل الأدوار{% endif %}</option>
+                <option value="MANAGER">{% if ui_lang == 'en' %}Manager{% else %}مدير{% endif %}</option>
+                <option value="SUPERVISOR">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
+                <option value="PARENT">{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</option>
+            </select>
+            
+            <select name="statusFilter" class="input-glass rounded-lg px-3 py-2 text-sm text-on-surface cursor-pointer w-full md:w-auto" id="statusFilter">
+                <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
+                <option value="ACTIVE">{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+                <option value="SUSPENDED">{% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}</option>
+                <option value="INACTIVE">{% if ui_lang == 'en' %}Inactive{% else %}غير نشط{% endif %}</option>
+            </select>
+
+            <button class="p-2 rounded-lg bg-surface-container-highest text-on-surface-variant hover:text-on-surface hover:bg-white/10 transition-colors flex items-center justify-center w-full md:w-auto" id="resetFilters" title="{% if ui_lang == 'en' %}Reset Filters{% else %}إعادة تعيين{% endif %}">
+                <span class="material-symbols-outlined text-sm">restart_alt</span>
+            </button>
+        </div>
+    </div>
+  </div>
+
+  <div class="flex justify-between items-center mb-4">
+    <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+            <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-white/20 bg-surface focus:ring-primary focus:ring-offset-surface text-primary" onchange="toggleSelectAll()">
+            <label for="selectAll" class="text-sm text-on-surface-variant cursor-pointer">{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}</label>
+        </div>
+        <small class="text-on-surface-variant" id="resultCount"></small>
+    </div>
+    
+    <div class="flex items-center gap-2">
+        <span class="text-on-surface-variant/60 font-label-sm text-label-sm uppercase tracking-wider">{% if ui_lang == 'en' %}Sort by:{% else %}ترتيب حسب:{% endif %}</span>
+        <button class="flex items-center gap-1 text-on-surface font-label-md text-label-md hover:text-primary transition-colors" onclick="sortTable('created_at')" id="sortDateBtn">
+            {% if ui_lang == 'en' %}Registration Date{% else %}تاريخ التسجيل{% endif %} <span class="material-symbols-outlined text-sm" id="sortDateIcon">expand_more</span>
+        </button>
+    </div>
+  </div>
+
+  <!-- User Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-lg" id="usersTableBody">
+      <!-- Populated by JavaScript -->
+      <div class="col-span-full text-center py-12 text-on-surface-variant">
+          <span class="material-symbols-outlined text-4xl animate-spin mb-4">hourglass_empty</span>
+          <p>{% if ui_lang == 'en' %}Loading user data...{% else %}جاري تحميل بيانات المستخدمين...{% endif %}</p>
+      </div>
+  </div>
+
+  <!-- Pagination Placeholder -->
+  <div class="mt-8 flex justify-center" id="pagination-container">
+      <!-- Handled by generic JS if it exists, otherwise we keep the container -->
+      <nav id="pagination" aria-label="Page navigation"></nav>
+  </div>
 </div>
 
-<!-- CSV Import Modal -->
-<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-bottom">
-                <h5 class="modal-title" id="importModalLabel">
-                    <i class="bi bi-upload me-2 text-primary"></i>
-                    {% if ui_lang == 'en' %}Import Users from CSV{% else %}استيراد المستخدمين من CSV{% endif %}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info d-flex align-items-start" role="alert">
-                    <i class="bi bi-info-circle-fill me-2 mt-1"></i>
-                    <div>
-                        <strong>{% if ui_lang == 'en' %}Required file format:{% else %}تنسيق الملف المطلوب:{% endif %}</strong>
-                        <p class="mb-1 mt-1">{% if ui_lang == 'en' %}The file must contain the following columns (in English as inside the file):{% else %}يجب أن يحتوي الملف على الأعمدة التالية (بالإنجليزية كما هي داخل الملف):{% endif %}</p>
-                        <code class="d-block bg-light p-2 rounded">username, email, password, role</code>
-                        <small class="text-muted d-block mt-1">{% if ui_lang == 'en' %}Optional columns:{% else %}الأعمدة الاختيارية:{% endif %} <code>kindergarten_id</code> ({% if ui_lang == 'en' %}kindergarten ID{% else %}معرّف
-                            الروضة{% endif %})</small>
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <label for="csvFile" class="form-label fw-semibold">
-                        <i class="bi bi-file-earmark-spreadsheet me-1"></i>
-                        {% if ui_lang == 'en' %}Choose CSV File{% else %}اختر ملف CSV{% endif %}
-                    </label>
-                    <input type="file" class="form-control" id="csvFile" accept=".csv" aria-describedby="csvFileHelp">
-                    <div id="csvFileHelp" class="form-text">
-                        {% if ui_lang == 'en' %}Maximum file size: 5 MB{% else %}الحد الأقصى لحجم الملف: 5 ميجابايت{% endif %}
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">
-                        <i class="bi bi-eye me-1"></i>
-                        {% if ui_lang == 'en' %}Data Preview{% else %}معاينة البيانات{% endif %}
-                    </label>
-                    <div id="csvPreview" class="border rounded p-3 bg-light csv-preview-container">
-                        <p class="text-muted mb-0 text-center">
-                            <i class="bi bi-cloud-upload fs-4 d-block mb-2"></i>
-                            {% if ui_lang == 'en' %}Choose a CSV file to see the preview...{% else %}اختر ملف CSV لرؤية المعاينة...{% endif %}
-                        </p>
-                    </div>
-                </div>
-
-                <div id="importResults" class="d-none">
-                    <h6 class="fw-semibold mb-3">
-                        <i class="bi bi-clipboard-data me-1"></i>
-                        {% if ui_lang == 'en' %}Import Results:{% else %}نتائج الاستيراد:{% endif %}
-                    </h6>
-                    <div id="importSuccess" class="alert alert-success d-none" role="alert"></div>
-                    <div id="importErrors" class="alert alert-danger d-none" role="alert"></div>
+<!-- CSV Import Modal (Premium Redesign) -->
+<div id="importModalWrapper" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="hideImportModal()"></div>
+    
+    <!-- Modal Content -->
+    <div class="glass-card rounded-2xl w-full max-w-3xl relative z-10 m-4 flex flex-col max-h-[90vh] overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.4),0_0_20px_rgba(99,102,241,0.1)] border border-white/10 animate-fade-in-up">
+        <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-surface/30">
+            <h5 class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">upload</span>
+                {% if ui_lang == 'en' %}Import Users from CSV{% else %}استيراد المستخدمين من CSV{% endif %}
+            </h5>
+            <button class="text-on-surface-variant hover:text-white transition-colors" onclick="hideImportModal()">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto flex-1">
+            <div class="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6 flex gap-3 text-on-surface">
+                <span class="material-symbols-outlined text-primary mt-1">info</span>
+                <div>
+                    <strong class="font-label-md block mb-2">{% if ui_lang == 'en' %}Required file format:{% else %}تنسيق الملف المطلوب:{% endif %}</strong>
+                    <p class="text-sm text-on-surface-variant mb-2">{% if ui_lang == 'en' %}The file must contain the following columns (in English as inside the file):{% else %}يجب أن يحتوي الملف على الأعمدة التالية (بالإنجليزية كما هي داخل الملف):{% endif %}</p>
+                    <code class="block bg-surface-container-highest px-3 py-2 rounded text-primary mb-2 text-sm font-mono border border-white/5">username, email, password, role</code>
+                    <small class="text-on-surface-variant text-xs">{% if ui_lang == 'en' %}Optional columns:{% else %}الأعمدة الاختيارية:{% endif %} <code class="text-primary bg-surface-container-highest px-1 rounded border border-white/5">kindergarten_id</code></small>
                 </div>
             </div>
-            <div class="modal-footer border-top">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i>
-                    {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
-                </button>
-                <button type="button" class="btn btn-primary" id="importBtn" disabled>
-                    <span class="btn-text">
-                        <i class="bi bi-upload me-2"></i>
-                        {% if ui_lang == 'en' %}Import Users{% else %}استيراد المستخدمين{% endif %}
-                    </span>
-                    <span class="btn-loading d-none">
-                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        {% if ui_lang == 'en' %}Importing...{% else %}جاري الاستيراد...{% endif %}
-                    </span>
-                </button>
+
+            <div class="mb-6">
+                <label class="block font-label-md text-on-surface mb-2 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">description</span>
+                    {% if ui_lang == 'en' %}Choose CSV File{% else %}اختر ملف CSV{% endif %}
+                </label>
+                <input type="file" id="csvFile" accept=".csv" class="w-full block text-sm text-on-surface-variant file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-label-md file:bg-surface-container-highest file:text-on-surface hover:file:bg-white/10 transition-colors border border-white/10 rounded-lg p-2 bg-[#16161A]">
+                <div class="text-xs text-on-surface-variant mt-2">{% if ui_lang == 'en' %}Maximum file size: 5 MB{% else %}الحد الأقصى لحجم الملف: 5 ميجابايت{% endif %}</div>
             </div>
+
+            <div class="mb-2">
+                <label class="block font-label-md text-on-surface mb-2 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">visibility</span>
+                    {% if ui_lang == 'en' %}Data Preview{% else %}معاينة البيانات{% endif %}
+                </label>
+                <div id="csvPreview" class="border border-white/5 rounded-lg p-4 bg-[#16161A] overflow-x-auto min-h-[150px] flex items-center justify-center">
+                    <div class="text-center text-on-surface-variant opacity-60">
+                        <span class="material-symbols-outlined text-4xl block mb-2">cloud_upload</span>
+                        <p class="text-sm">{% if ui_lang == 'en' %}Choose a CSV file to see the preview...{% else %}اختر ملف CSV لرؤية المعاينة...{% endif %}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="importResults" class="hidden mt-6">
+                <h6 class="font-label-md text-on-surface mb-3 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">assignment_turned_in</span>
+                    {% if ui_lang == 'en' %}Import Results:{% else %}نتائج الاستيراد:{% endif %}
+                </h6>
+                <div id="importSuccess" class="hidden bg-[#4ade80]/10 border border-[#4ade80]/20 text-[#4ade80] rounded-lg p-3 text-sm mb-3"></div>
+                <div id="importErrors" class="hidden bg-error/10 border border-error/20 text-error rounded-lg p-3 text-sm"></div>
+            </div>
+        </div>
+        
+        <div class="px-6 py-4 border-t border-white/5 flex justify-end gap-3 bg-surface/30">
+            <button type="button" class="px-4 py-2 rounded-lg bg-surface-container-highest text-on-surface font-label-sm border border-white/10 hover:bg-white/10 transition-colors" onclick="hideImportModal()">
+                {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+            </button>
+            <button type="button" id="importBtn" class="px-6 py-2 rounded-lg bg-gradient-to-r from-primary to-secondary text-surface font-label-sm shadow-[0_0_15px_rgba(192,193,255,0.3)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed flex items-center gap-2" disabled>
+                <span class="btn-text flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">upload</span>
+                    {% if ui_lang == 'en' %}Import Users{% else %}استيراد المستخدمين{% endif %}
+                </span>
+                <span class="btn-loading hidden flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm animate-spin">refresh</span>
+                    {% if ui_lang == 'en' %}Importing...{% else %}جاري الاستيراد...{% endif %}
+                </span>
+            </button>
         </div>
     </div>
 </div>
@@ -200,7 +191,7 @@ actions=toolbar_actions
 
 {% block extra_scripts %}
 <script>
-    const IS_EN = document.documentElement.lang === 'en';
+    const IS_EN = window.KINJO_LANG === 'en' || "{{ ui_lang }}" === "en";
     const T = (ar, en) => IS_EN ? en : ar;
 
     let allUsers = [];
@@ -221,12 +212,10 @@ actions=toolbar_actions
             loadUsers();
         });
 
-        // Import button handler
         const importBtn = document.getElementById('importBtn');
         if (importBtn) {
             importBtn.addEventListener('click', performImport);
         }
-
 
         const usersTableBody = document.getElementById('usersTableBody');
         if (usersTableBody) {
@@ -244,23 +233,10 @@ actions=toolbar_actions
                 }
             });
         }
-
-        // Add keyboard support for sortable headers
-        document.querySelectorAll('.sortable').forEach(header => {
-            header.setAttribute('tabindex', '0');
-            header.setAttribute('role', 'button');
-            header.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    sortTable(header.dataset.sort);
-                }
-            });
-        });
     });
 
-    // Sort table function
+    // Sort grid function (simplified for date primarily, as others can be handled by API or expanded)
     function sortTable(field) {
-        // Toggle direction if same field
         if (currentSort.field === field) {
             currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
         } else {
@@ -268,21 +244,15 @@ actions=toolbar_actions
             currentSort.direction = 'asc';
         }
 
-        // Update UI
-        document.querySelectorAll('.sortable').forEach(th => {
-            th.classList.remove('asc', 'desc');
-        });
-        const activeHeader = document.querySelector(`[data-sort="${field}"]`);
-        if (activeHeader) {
-            activeHeader.classList.add(currentSort.direction);
+        const icon = document.getElementById('sortDateIcon');
+        if(icon) {
+            icon.textContent = currentSort.direction === 'asc' ? 'expand_less' : 'expand_more';
         }
 
-        // Sort allUsers array
         allUsers.sort((a, b) => {
             let valA = a[field] || '';
             let valB = b[field] || '';
 
-            // Handle date sorting
             if (field === 'created_at') {
                 valA = new Date(valA).getTime();
                 valB = new Date(valB).getTime();
@@ -302,12 +272,10 @@ actions=toolbar_actions
     async function loadUsers() {
         const tbody = document.getElementById('usersTableBody');
         tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
-                    <p class="mt-2 text-muted mb-0">${T('جاري التحديث...', 'Updating...')}</p>
-                </td>
-            </tr>
+            <div class="col-span-full text-center py-12 text-on-surface-variant">
+                <span class="material-symbols-outlined text-4xl animate-spin mb-4">hourglass_empty</span>
+                <p>${T('جاري التحديث...', 'Updating...')}</p>
+            </div>
         `;
 
         try {
@@ -320,12 +288,11 @@ actions=toolbar_actions
             if (role) params.role = role;
             if (status) params.status = status;
 
+            // Use the global api object assuming it is included in base template
             const users = await api.get('/api/admin/users', params);
 
-            // Store users for sorting (extract data array from API response)
             allUsers = users.data || [];
 
-            // Apply current sort
             if (currentSort.field) {
                 sortTable(currentSort.field);
             } else {
@@ -335,24 +302,18 @@ actions=toolbar_actions
         } catch (error) {
             console.error('Error loading users:', error);
             tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center py-5">
-                        <div class="text-danger">
-                            <i class="bi bi-exclamation-triangle fs-1 d-block mb-3 opacity-50"></i>
-                            <p class="mb-1">${T('حدث خطأ أثناء تحميل البيانات', 'Error loading data')}</p>
-                            <small class="text-muted">${escapeHtml(error.message)}</small>
-                            <button class="btn btn-outline-primary btn-sm mt-3" onclick="loadUsers()">
-                                <i class="bi bi-arrow-clockwise me-1"></i>
-                                ${T('إعادة المحاولة', 'Retry')}
-                            </button>
-                        </div>
-                    </td>
-                </tr>
+                <div class="col-span-full glass-card border-error/30 p-8 text-center rounded-xl max-w-md mx-auto">
+                    <span class="material-symbols-outlined text-error text-4xl mb-4">error</span>
+                    <h3 class="font-headline-md text-on-surface mb-2">${T('حدث خطأ', 'Error occurred')}</h3>
+                    <p class="text-on-surface-variant mb-6">${escapeHtml(error.message)}</p>
+                    <button class="px-6 py-2 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors" onclick="loadUsers()">
+                        ${T('إعادة المحاولة', 'Retry')}
+                    </button>
+                </div>
             `;
         }
     }
 
-    // Escape HTML to prevent XSS
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -360,241 +321,165 @@ actions=toolbar_actions
     }
 
     function renderUsers(users) {
-        const tbody = document.getElementById('usersTableBody');
+        const container = document.getElementById('usersTableBody');
+        const selectAll = document.getElementById('selectAll');
+        if(selectAll) selectAll.checked = false; // reset
+        updateBulkActions();
 
         if (!users || users.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center py-5">
-                        <div class="empty-state">
-                            <i class="bi bi-person-x"></i>
-                            <h5>${T('لا توجد نتائج مطابقة', 'No matching results')}</h5>
-                            <p class="text-muted">${T('جرب تغيير معايير البحث أو الفلاتر', 'Try changing search criteria or filters')}</p>
-                        </div>
-                    </td>
-                </tr>
+            container.innerHTML = `
+                <div class="col-span-full text-center py-16 text-on-surface-variant opacity-70">
+                    <span class="material-symbols-outlined text-6xl mb-4 opacity-50">person_off</span>
+                    <h5 class="font-headline-md text-on-surface mb-2">${T('لا توجد نتائج مطابقة', 'No matching results')}</h5>
+                    <p class="font-body-sm">${T('جرب تغيير معايير البحث أو الفلاتر', 'Try changing search criteria or filters')}</p>
+                </div>
             `;
             return;
         }
 
-        // Update results count (GWS U.2.3-068)
         const resultCount = document.getElementById('resultCount');
         if (resultCount) {
-            const totalCount = allUsers.length;
-            resultCount.textContent = T(
-                `عرض ${totalCount} مستخدم`,
-                `Showing ${totalCount} user(s)`
-            );
+            resultCount.textContent = T(`عرض ${users.length} مستخدم`, `Showing ${users.length} user(s)`);
         }
 
-        tbody.innerHTML = users.map(user => {
+        let delay = 100;
+        container.innerHTML = users.map((user, idx) => {
             const safeUsername = escapeHtml(user.username);
             const safeEmail = escapeHtml(user.email);
             const initial = safeUsername.charAt(0).toUpperCase();
+            
+            // Adjust delay for staggered animation (max out at 500ms to not be annoying)
+            const d = (idx % 5 + 1) * 100;
+            
+            // Status specific styling for avatar ring
+            let ringColor = "border-surface-variant opacity-60 grayscale";
+            let dotColor = "bg-surface-variant";
+            if(user.status === 'ACTIVE') {
+                ringColor = "border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.3)]";
+                dotColor = "bg-emerald-500";
+            } else if (user.status === 'SUSPENDED') {
+                ringColor = "border-error shadow-[0_0_10px_rgba(255,180,171,0.3)]";
+                dotColor = "bg-error";
+            }
 
             return `
-            <tr data-user-id="${user.id}">
-                <td>
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input user-checkbox" value="${user.id}" onchange="updateBulkActions()" aria-label="${T('تحديد', 'Select')} ${safeUsername}">
-                    </div>
-                </td>
-                <td>
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-initials bg-soft-primary text-primary rounded-circle me-3" aria-hidden="true">
+            <div class="glass-card rounded-xl p-6 relative group flex flex-col justify-between min-h-[200px] animate-fade-in-up" style="animation-delay: ${d}ms">
+                
+                <!-- Checkbox -->
+                <div class="absolute top-4 left-4 z-10">
+                    <input type="checkbox" class="w-4 h-4 rounded border-white/20 bg-black/30 focus:ring-primary focus:ring-offset-surface text-primary user-checkbox cursor-pointer" value="${user.id}" onchange="updateBulkActions()">
+                </div>
+
+                <!-- Actions Menu -->
+                <div class="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-0 focus-within:opacity-100">
+                    <a href="/admin/users/${user.id}/edit" class="p-2 rounded text-on-surface-variant/60 hover:text-primary hover:bg-primary/10 transition-colors flex" title="${T('تعديل', 'Edit')}">
+                        <span class="material-symbols-outlined text-[18px]">edit</span>
+                    </a>
+                    ${currentUserRole === 'ADMIN' ? `
+                    <button data-action="reset-password" data-user-id="${user.id}" data-username="${safeUsername}" class="p-2 rounded text-on-surface-variant/60 hover:text-[#fbbf24] hover:bg-[#fbbf24]/10 transition-colors flex" title="${T('إعادة تعيين كلمة المرور', 'Reset password')}">
+                        <span class="material-symbols-outlined text-[18px]">key</span>
+                    </button>
+                    ` : ''}
+                    ${currentUserRole === 'ADMIN' && user.role !== 'ADMIN' ? `
+                    <button data-action="delete-user" data-user-id="${user.id}" data-username="${safeUsername}" class="p-2 rounded text-on-surface-variant/60 hover:text-error hover:bg-error/10 transition-colors flex" title="${T('حذف', 'Delete')}">
+                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                    ` : ''}
+                </div>
+
+                <div class="flex items-start gap-4 mb-4 mt-4">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-12 h-12 rounded-full overflow-hidden border-2 ${ringColor} flex items-center justify-center bg-surface-container-highest text-on-surface font-headline-md">
                             ${initial}
                         </div>
-                        <div>
-                            <div class="fw-semibold">${safeUsername}</div>
-                            <div class="small text-muted">${safeEmail}</div>
-                        </div>
+                        <div class="absolute -bottom-1 -right-1 w-4 h-4 ${dotColor} rounded-full border-2 border-surface"></div>
                     </div>
-                </td>
-                <td>${getRoleBadge(user.role)}</td>
-                <td>
-                    ${user.kindergarten_id ? `<span class="text-body"><i class="bi bi-building me-1 text-muted" aria-hidden="true"></i>${T('رقم', 'No.')} ${user.kindergarten_id}</span>` : '<span class="text-muted">-</span>'}
-                </td>
-                <td>${getStatusBadge(user.status)}</td>
-                <td>
-                    <time class="small text-muted" datetime="${user.created_at}" title="${new Date(user.created_at).toLocaleString('ar-JO')}">
-                        ${new Date(user.created_at).toLocaleDateString('ar-JO')}
-                    </time>
-                </td>
-                <td class="text-end">
-                    <div class="btn-group" role="group" aria-label="${T('إجراءات المستخدم', 'User actions')}">
-                        <a href="/admin/users/${user.id}/edit" class="btn btn-sm btn-outline-secondary" title="${T('تعديل', 'Edit')}" aria-label="${T('تعديل', 'Edit')} ${safeUsername}">
-                            <i class="bi bi-pencil" aria-hidden="true"></i>
-                        </a>
-                        ${currentUserRole === 'ADMIN' ? `
-                        <button data-action="reset-password" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-warning js-user-action" title="${T('إعادة تعيين كلمة المرور', 'Reset password')}" aria-label="${T('إعادة تعيين كلمة مرور', 'Reset password for')} ${safeUsername}">
-                            <i class="bi bi-key" aria-hidden="true"></i>
-                        </button>
-                        ` : ''}
-                        ${currentUserRole === 'ADMIN' && user.role !== 'ADMIN' ? `
-                        <button data-action="delete-user" data-user-id="${user.id}" data-username="${safeUsername}" class="btn btn-sm btn-outline-danger js-user-action" title="${T('حذف', 'Delete')}" aria-label="${T('حذف', 'Delete')} ${safeUsername}">
-                            <i class="bi bi-trash" aria-hidden="true"></i>
-                        </button>
-                        ` : ''}
+                    <div class="min-w-0 pr-8">
+                        <h3 class="font-headline-sm text-on-surface truncate" title="${safeUsername}">${safeUsername}</h3>
+                        <p class="text-on-surface-variant/60 font-body-sm truncate text-sm" title="${safeEmail}">${safeEmail}</p>
+                        ${user.kindergarten_id ? `<p class="text-on-surface-variant/40 text-[11px] truncate mt-1 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">business</span> ${T('روضة رقم', 'KG No.')} ${user.kindergarten_id}</p>` : ''}
                     </div>
-                </td>
-            </tr>
-        `}).join('');
+                </div>
+
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-4">
+                        ${getRoleBadge(user.role)}
+                        ${getStatusBadge(user.status)}
+                    </div>
+                    <div class="w-full h-[1px] bg-white/5 mb-3"></div>
+                    <div class="flex items-center text-on-surface-variant/40 text-xs">
+                        <span class="material-symbols-outlined text-[14px] mr-1">history</span> 
+                        ${T('تسجيل:', 'Joined:')} ${new Date(user.created_at).toLocaleDateString(IS_EN ? 'en-US' : 'ar-JO')}
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
     }
 
     function getRoleBadge(role) {
-        const badges = {
-            'ADMIN': `<span class="badge bg-dark">${T('مدير النظام', 'System Admin')}</span>`,
-            'MANAGER': `<span class="badge badge-soft badge-soft-primary">${T('مدير روضة', 'Kindergarten Manager')}</span>`,
-            'SUPERVISOR': `<span class="badge badge-soft badge-soft-info">${T('مشرف', 'Supervisor')}</span>`,
-            'PARENT': `<span class="badge badge-soft badge-soft-success">${T('ولي أمر', 'Parent')}</span>`
+        const b = {
+            'ADMIN': `bg-secondary-container/20 text-secondary-container border-secondary-container/30`,
+            'MANAGER': `bg-primary-container/20 text-primary-container border-primary-container/30`,
+            'SUPERVISOR': `bg-tertiary-container/20 text-tertiary border-tertiary-container/30`,
+            'PARENT': `bg-[#4ade80]/10 text-[#4ade80] border-[#4ade80]/20`
         };
-        return badges[role] || `<span class="badge badge-soft badge-soft-secondary">${role}</span>`;
+        const c = b[role] || `bg-surface-variant text-on-surface-variant border-outline/30`;
+        const l = {
+            'ADMIN': T('مدير النظام', 'System Admin'),
+            'MANAGER': T('مدير روضة', 'KG Manager'),
+            'SUPERVISOR': T('مشرف', 'Supervisor'),
+            'PARENT': T('ولي أمر', 'Parent')
+        };
+        return `<span class="px-2 py-1 rounded font-label-sm text-[11px] border ${c}">${l[role] || role}</span>`;
     }
 
     function getStatusBadge(status) {
-        const badges = {
-            'ACTIVE': `<span class="badge badge-soft badge-soft-success"><i class="bi bi-check-circle me-1"></i>${T('نشط', 'Active')}</span>`,
-            'INACTIVE': `<span class="badge badge-soft badge-soft-secondary"><i class="bi bi-dash-circle me-1"></i>${T('غير نشط', 'Inactive')}</span>`,
-            'SUSPENDED': `<span class="badge badge-soft badge-soft-danger"><i class="bi bi-ban me-1"></i>${T('موقوف', 'Suspended')}</span>`
+        const b = {
+            'ACTIVE': `text-[#4ade80]`,
+            'INACTIVE': `text-on-surface-variant/60`,
+            'SUSPENDED': `text-error`
         };
-        return badges[status] || `<span class="badge bg-light text-dark">${status}</span>`;
-    }
-
-    async function handleDeleteUser(id, name) {
-        if (confirm(T(`هل أنت متأكد من رغبتك في حذف المستخدم "${name}"؟\nهذا الإجراء لا رجعة فيه.`, `Are you sure you want to delete user "${name}"?\nThis action cannot be undone.`))) {
-            try {
-                await api.delete(`/api/admin/users/${id}`);
-                showToast(T('تم حذف المستخدم بنجاح', 'User deleted successfully'), 'success');
-                loadUsers();
-            } catch (error) {
-                showToast(error.message || T('فشل حذف المستخدم', 'Failed to delete user'), 'error');
-            }
-        }
-    }
-
-    async function handleResetPassword(id, name) {
-        // Check if we're on the edit page or list page
-        if (typeof showPasswordResetModal !== 'undefined') {
-            showPasswordResetModal(id, name);
-        } else {
-            // Fallback for list page - redirect to edit page with modal trigger
-            window.location.href = `/admin/users/${id}/edit?reset_password=1`;
-        }
-    }
-
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
+        const c = b[status] || `text-on-surface-variant`;
+        const l = {
+            'ACTIVE': T('نشط', 'Active'),
+            'INACTIVE': T('غير نشط', 'Inactive'),
+            'SUSPENDED': T('موقوف', 'Suspended')
         };
+        const i = { 'ACTIVE': 'check_circle', 'INACTIVE': 'remove_circle_outline', 'SUSPENDED': 'block'};
+        
+        return `<span class="px-2 py-1 flex items-center gap-1 font-label-sm text-[11px] ${c}">
+            <span class="material-symbols-outlined text-[12px]">${i[status] || 'info'}</span> ${l[status] || status}
+        </span>`;
     }
 
-    // Bulk Operations Functions
-    function toggleSelectAll() {
-        const selectAllCheckbox = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.user-checkbox');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = selectAllCheckbox.checked;
-        });
-        updateBulkActions();
-    }
-
-    function updateBulkActions() {
-        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-        const bulkActions = document.getElementById('bulkActions');
-        const selectedCount = checkboxes.length;
-
-        if (selectedCount > 0) {
-            bulkActions.style.display = 'block';
-            // Update count in buttons
-            const deleteLbl = document.getElementById('bulkDeleteLabel');
-            if (deleteLbl) {
-                deleteLbl.textContent = `${T('حذف المحدد', 'Delete selected')} (${selectedCount})`;
-            }
-        } else {
-            bulkActions.style.display = 'none';
-        }
-    }
-
-    function clearSelection() {
-        const checkboxes = document.querySelectorAll('.user-checkbox');
-        const selectAllCheckbox = document.getElementById('selectAll');
-        checkboxes.forEach(checkbox => checkbox.checked = false);
-        selectAllCheckbox.checked = false;
-        updateBulkActions();
-    }
-
-    async function bulkDelete() {
-        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-        const userIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-
-        if (userIds.length === 0) return;
-
-        if (!confirm(T(`هل أنت متأكد من رغبتك في حذف ${userIds.length} مستخدم؟\nهذا الإجراء لا رجعة فيه.`, `Are you sure you want to delete ${userIds.length} user(s)?\nThis action cannot be undone.`))) {
-            return;
-        }
-
-        try {
-            await api.post('/api/admin/users/bulk-delete', { user_ids: userIds });
-            showToast(T(`تم حذف ${userIds.length} مستخدم بنجاح`, `Successfully deleted ${userIds.length} user(s)`), 'success');
-            clearSelection();
-            loadUsers();
-        } catch (error) {
-            showToast(error.message || T('فشل حذف المستخدمين', 'Failed to delete users'), 'error');
-        }
-    }
-
-    async function bulkStatusUpdate(newStatus) {
-        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-        const userIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-
-        if (userIds.length === 0) return;
-
-        const statusText = newStatus === 'ACTIVE' ? T('تفعيل', 'activate') : newStatus === 'SUSPENDED' ? T('تعليق', 'suspend') : T('إلغاء تفعيل', 'deactivate');
-        if (!confirm(T(`هل أنت متأكد من رغبتك في ${statusText} ${userIds.length} مستخدم؟`, `Are you sure you want to ${statusText} ${userIds.length} user(s)?`))) {
-            return;
-        }
-
-        try {
-            await api.post('/api/admin/users/bulk-status-update', {
-                user_ids: userIds,
-                new_status: newStatus
-            });
-            showToast(T(`تم ${statusText} ${userIds.length} مستخدم بنجاح`, `Successfully ${statusText}d ${userIds.length} user(s)`), 'success');
-            clearSelection();
-            loadUsers();
-        } catch (error) {
-            showToast(error.message || T(`فشل ${statusText} المستخدمين`, `Failed to ${statusText} users`), 'error');
-        }
-    }
-
+    // Modal logic
     function showImportModal() {
-        const modal = new bootstrap.Modal(document.getElementById('importModal'));
-        modal.show();
-
-        // Reset modal state
+        document.getElementById('importModalWrapper').classList.remove('hidden');
+        
         document.getElementById('csvFile').value = '';
-        document.getElementById('csvPreview').innerHTML = `<p class="text-muted mb-0">${T('اختر ملف CSV لرؤية المعاينة...', 'Choose a CSV file to see the preview...')}</p>`;
-        document.getElementById('importResults').classList.add('d-none');
+        document.getElementById('csvPreview').innerHTML = `
+            <div class="text-center text-on-surface-variant opacity-60">
+                <span class="material-symbols-outlined text-4xl block mb-2">cloud_upload</span>
+                <p class="text-sm">${T('اختر ملف CSV لرؤية المعاينة...', 'Choose a CSV file to see the preview...')}</p>
+            </div>`;
+        document.getElementById('importResults').classList.add('hidden');
         document.getElementById('importBtn').disabled = true;
-
-        // Set up file input handler
         document.getElementById('csvFile').addEventListener('change', handleFileSelect);
     }
 
+    function hideImportModal() {
+        document.getElementById('importModalWrapper').classList.add('hidden');
+    }
+
+    // Data parsing logic copied directly from old implementation
     function handleFileSelect(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = function (e) {
-            const csv = e.target.result;
-            parseCSV(csv);
+            parseCSV(e.target.result);
         };
         reader.readAsText(file);
     }
@@ -615,32 +500,30 @@ actions=toolbar_actions
             return;
         }
 
-        // Preview first 5 rows
         const previewRows = lines.slice(1, 6);
-        let previewHTML = '<table class="table table-sm"><thead><tr>';
+        let previewHTML = '<table class="w-full text-left text-sm text-on-surface"><thead><tr class="border-b border-white/10 text-on-surface-variant">';
         headers.forEach(header => {
-            previewHTML += `<th>${escapeHtml(header)}</th>`;
+            previewHTML += `<th class="pb-2 font-label-md">${escapeHtml(header)}</th>`;
         });
-        previewHTML += '</tr></thead><tbody>';
+        previewHTML += '</tr></thead><tbody class="divide-y divide-white/5">';
 
         previewRows.forEach(row => {
             const cells = row.split(',').map(cell => cell.trim());
             previewHTML += '<tr>';
             cells.forEach(cell => {
-                previewHTML += `<td>${escapeHtml(cell)}</td>`;
+                previewHTML += `<td class="py-2 text-on-surface/80">${escapeHtml(cell)}</td>`;
             });
             previewHTML += '</tr>';
         });
 
         if (lines.length > 6) {
-            previewHTML += `<tr><td colspan="${headers.length}" class="text-muted">... ${T('و', 'and')} ${lines.length - 6} ${T('صفوف أخرى', 'more rows')}</td></tr>`;
+            previewHTML += `<tr><td colspan="${headers.length}" class="py-2 text-on-surface-variant/60 text-center text-xs">... ${T('و', 'and')} ${lines.length - 6} ${T('صفوف أخرى', 'more rows')}</td></tr>`;
         }
 
         previewHTML += '</tbody></table>';
         document.getElementById('csvPreview').innerHTML = previewHTML;
         document.getElementById('importBtn').disabled = false;
 
-        // Store parsed data for import
         window.csvData = lines.slice(1).map(line => {
             const values = line.split(',').map(v => v.trim());
             const user = {};
@@ -652,7 +535,7 @@ actions=toolbar_actions
     }
 
     function showCSVError(message) {
-        document.getElementById('csvPreview').innerHTML = `<div class="alert alert-danger">${message}</div>`;
+        document.getElementById('csvPreview').innerHTML = `<div class="bg-error/20 text-error p-3 rounded-lg text-sm">${message}</div>`;
         document.getElementById('importBtn').disabled = true;
     }
 
@@ -660,15 +543,11 @@ actions=toolbar_actions
         if (!window.csvData || window.csvData.length === 0) return;
 
         const btn = document.getElementById('importBtn');
-        const btnText = btn.querySelector('.btn-text');
-        const btnLoading = btn.querySelector('.btn-loading');
-
         btn.disabled = true;
-        btnText.classList.add('d-none');
-        btnLoading.classList.remove('d-none');
+        btn.querySelector('.btn-text').classList.add('hidden');
+        btn.querySelector('.btn-loading').classList.remove('hidden');
 
         try {
-            // Convert CSV data to API format
             const users = window.csvData.map(row => ({
                 username: row.username,
                 email: row.email,
@@ -678,217 +557,131 @@ actions=toolbar_actions
             }));
 
             const response = await api.post('/api/admin/users/bulk-create', { users: users });
-
-            // Show results
-            document.getElementById('importResults').classList.remove('d-none');
-
-            // API returns { succeeded: [...], errors: [...] }
+            
+            document.getElementById('importResults').classList.remove('hidden');
             const createdCount = (response.succeeded || []).length;
+            
             if (createdCount > 0) {
-                document.getElementById('importSuccess').classList.remove('d-none');
-                document.getElementById('importSuccess').textContent =
-                    T(`تم إنشاء ${createdCount} مستخدم بنجاح`, `Successfully created ${createdCount} user(s)`);
+                const s = document.getElementById('importSuccess');
+                s.classList.remove('hidden');
+                s.textContent = T(`تم إنشاء ${createdCount} مستخدم بنجاح`, `Successfully created ${createdCount} user(s)`);
             }
 
             if (response.errors && response.errors.length > 0) {
-                const formattedErrors = response.errors.map((error) => {
-                    if (typeof error === 'string') return escapeHtml(error);
-                    const row     = error.row     ? `Row ${error.row}` : 'Row';
-                    const field   = error.field   ? ` (${escapeHtml(error.field)})` : '';
-                    const message = error.message ? escapeHtml(error.message) : 'Unknown error';
-                    return `${row}${field}: ${message}`;
-                });
                 const errEl = document.getElementById('importErrors');
-                errEl.classList.remove('d-none');
-                errEl.innerHTML = `
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>${T('أخطاء:', 'Errors:')}</strong><br>
-                    ${formattedErrors.map(err => `- ${err}`).join('<br>')}
-                `;
+                errEl.classList.remove('hidden');
+                const formattedErrors = response.errors.map(err => {
+                    if (typeof err === 'string') return escapeHtml(err);
+                    return `Row ${err.row || ''}: ${escapeHtml(err.message || '')}`;
+                });
+                errEl.innerHTML = `<strong>${T('أخطاء:', 'Errors:')}</strong><br>${formattedErrors.map(e => `- ${e}`).join('<br>')}`;
             }
 
             if (createdCount > 0) loadUsers();
 
         } catch (error) {
-            document.getElementById('importResults').classList.remove('d-none');
-            document.getElementById('importErrors').classList.remove('d-none');
-            document.getElementById('importErrors').innerHTML = `
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                <strong>${T('خطأ:', 'Error:')}</strong> ${escapeHtml(error.message || T('حدث خطأ غير متوقع', 'An unexpected error occurred'))}
-            `;
+            document.getElementById('importResults').classList.remove('hidden');
+            const errEl = document.getElementById('importErrors');
+            errEl.classList.remove('hidden');
+            errEl.textContent = error.message || T('حدث خطأ', 'An error occurred');
         } finally {
             btn.disabled = false;
-            btnText.classList.remove('d-none');
-            btnLoading.classList.add('d-none');
+            btn.querySelector('.btn-text').classList.remove('hidden');
+            btn.querySelector('.btn-loading').classList.add('hidden');
         }
     }
 
-    async function exportUsers() {
-        const btn = document.querySelector('button[onclick="exportUsers()"]');
-        const originalText = btn.innerHTML;
+    // Bulk actions
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked = selectAll.checked);
+        updateBulkActions();
+    }
+
+    function updateBulkActions() {
+        const count = document.querySelectorAll('.user-checkbox:checked').length;
+        const bulk = document.getElementById('bulkActions');
+        const reg = document.getElementById('regularFilters');
+        
+        if (count > 0) {
+            bulk.style.display = 'flex';
+            reg.style.display = 'none';
+            document.getElementById('selectedCountDisplay').textContent = count;
+            document.getElementById('bulkDeleteLabel').textContent = `${T('حذف', 'Delete')} (${count})`;
+        } else {
+            bulk.style.display = 'none';
+            reg.style.display = 'flex';
+            const selectAll = document.getElementById('selectAll');
+            if(selectAll) selectAll.checked = false;
+        }
+    }
+
+    function clearSelection() {
+        document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked = false);
+        updateBulkActions();
+    }
+
+    async function bulkDelete() {
+        const cbs = document.querySelectorAll('.user-checkbox:checked');
+        const ids = Array.from(cbs).map(cb => parseInt(cb.value));
+        if (ids.length === 0) return;
+
+        if (!confirm(T(`هل أنت متأكد من رغبتك في حذف ${ids.length} مستخدم؟\nهذا الإجراء لا رجعة فيه.`, `Are you sure you want to delete ${ids.length} user(s)?\nThis action cannot be undone.`))) return;
 
         try {
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${T('جاري التصدير...', 'Exporting...')}`;
-            btn.disabled = true;
+            await api.post('/api/admin/users/bulk-delete', { user_ids: ids });
+            showToast(T(`تم الحذف بنجاح`, `Successfully deleted`), 'success');
+            clearSelection();
+            loadUsers();
+        } catch (error) {
+            showToast(error.message || T('فشل الحذف', 'Failed to delete'), 'error');
+        }
+    }
 
-            const params = new URLSearchParams();
-            const role = document.getElementById('roleFilter').value;
-            const status = document.getElementById('statusFilter').value;
+    async function bulkStatusUpdate(newStatus) {
+        const cbs = document.querySelectorAll('.user-checkbox:checked');
+        const ids = Array.from(cbs).map(cb => parseInt(cb.value));
+        if (ids.length === 0) return;
 
-            if (role) params.append('role', role);
-            if (status) params.append('status', status);
+        const actionText = newStatus === 'ACTIVE' ? T('تفعيل', 'activate') : 'تعليق/suspend';
+        if (!confirm(T(`تأكيد تغيير حالة ${ids.length} مستخدم؟`, `Confirm status change for ${ids.length} user(s)?`))) return;
 
-            const response = await fetch(`/api/admin/users/export?${params.toString()}`);
-            if (!response || !response.ok) throw new Error(T('فشل التصدير', 'Export failed'));
+        try {
+            await api.post('/api/admin/users/bulk-status-update', { user_ids: ids, new_status: newStatus });
+            showToast(T(`تم التحديث بنجاح`, `Updated successfully`), 'success');
+            clearSelection();
+            loadUsers();
+        } catch (error) {
+            showToast(error.message || T('فشل التحديث', 'Update failed'), 'error');
+        }
+    }
 
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `users_export_${new Date().toISOString().slice(0, 10)}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-
-            showToast(T('تم تصدير القائمة بنجاح', 'List exported successfully'), 'success');
-
-        } catch (e) {
-            console.error(e);
-            showToast(T('فشل تصدير البيانات', 'Failed to export data'), 'error');
-        } finally {
-            if (btn) {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+    async function handleDeleteUser(id, name) {
+        if (confirm(T(`هل أنت متأكد من حذف "${name}"؟`, `Are you sure you want to delete "${name}"?`))) {
+            try {
+                await api.delete(`/api/admin/users/${id}`);
+                showToast(T('تم الحذف', 'Deleted'), 'success');
+                loadUsers();
+            } catch (error) {
+                showToast(error.message, 'error');
             }
         }
     }
+
+    function handleResetPassword(id, name) {
+        if (typeof showPasswordResetModal !== 'undefined') {
+            showPasswordResetModal(id, name);
+        } else {
+            window.location.href = `/admin/users/${id}/edit?reset_password=1`;
+        }
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), wait);
+        };
+    }
 </script>
-
-<style>
-    /* Soft Background Colors */
-    .bg-soft-primary {
-        background-color: rgba(31, 94, 71, 0.1);
-    }
-
-    .bg-soft-success {
-        background-color: rgba(25, 135, 84, 0.1);
-    }
-
-    .bg-soft-danger {
-        background-color: rgba(220, 53, 69, 0.1);
-    }
-
-    .bg-soft-secondary {
-        background-color: rgba(108, 117, 125, 0.1);
-    }
-
-    .bg-soft-warning {
-        background-color: rgba(255, 193, 7, 0.1);
-    }
-
-    .bg-soft-info {
-        background-color: rgba(13, 202, 240, 0.1);
-    }
-
-    /* Avatar Initials */
-    .avatar-initials {
-        width: 40px;
-        height: 40px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 1rem;
-        flex-shrink: 0;
-    }
-
-    /* CSV Preview Container */
-    .csv-preview-container {
-        max-height: 300px;
-        overflow-y: auto;
-    }
-
-    /* Sortable Table Headers */
-    .sortable {
-        cursor: pointer;
-        user-select: none;
-        position: relative;
-        padding-inline-start: 1.5rem !important;
-    }
-
-    .sortable:hover {
-        background-color: rgba(31, 94, 71, 0.08);
-    }
-
-    .sortable::after {
-        content: '\F282';
-        font-family: 'bootstrap-icons';
-        position: absolute;
-        right: auto;
-        left: 0.5rem;
-        opacity: 0.3;
-        font-size: 0.75rem;
-    }
-
-    .sortable.asc::after {
-        content: '\F235';
-        opacity: 1;
-        color: var(--kinjo-primary, #1F5E47);
-    }
-
-    .sortable.desc::after {
-        content: '\F229';
-        opacity: 1;
-        color: var(--kinjo-primary, #1F5E47);
-    }
-
-    /* Bulk Actions Toolbar */
-    #bulkActions {
-        animation: fadeIn 0.2s ease-out;
-    }
-
-    /* User Table Row Hover */
-    .table tbody tr {
-        transition: background-color 0.15s ease;
-    }
-
-    /* Badge Improvements */
-    .badge {
-        font-weight: 500;
-        letter-spacing: 0.02em;
-    }
-
-    /* Responsive Adjustments */
-    @media (max-width: 991.98px) {
-        .btn-toolbar {
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .btn-toolbar .btn-group {
-            width: 100%;
-        }
-
-        .btn-toolbar .btn {
-            width: 100%;
-        }
-    }
-
-    @media (max-width: 767.98px) {
-        .table-responsive {
-            font-size: 0.875rem;
-        }
-
-        .avatar-initials {
-            width: 32px;
-            height: 32px;
-            font-size: 0.875rem;
-        }
-
-        .btn-group .btn {
-            padding: 0.25rem 0.375rem;
-        }
-    }
-</style>
 {% endblock %}

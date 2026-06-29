@@ -1,191 +1,94 @@
-{% extends "admin_base.html" %}
+{% extends "admin_base_premium.html" %}
 
 {% block title %}{% if ui_lang == 'en' %}KinJo Admin — Dashboard{% else %}إدارة كينجو — لوحة التحكم{% endif %}{% endblock %}
 
 {% block content %}
-<div class="admin-main-content">
-  <!-- Page Header -->
-  <div class="admin-page-header">
-    <div class="admin-page-header-content">
-      <h1 class="admin-page-title">
-        {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
+<div class="max-w-container-max mx-auto" id="admin-dashboard" data-ui-state="loading">
+  
+  <header class="mb-xl flex justify-between items-end">
+    <div>
+      <h1 class="font-headline-lg text-headline-lg text-on-surface mb-2">
+        {% if ui_lang == 'en' %}Dashboard Overview{% else %}نظرة عامة على لوحة التحكم{% endif %}
       </h1>
-      <p class="admin-page-subtitle">
-        {% if ui_lang == 'en' %}Monitor system performance and manage operations{% else %}مراقبة أداء النظام وإدارة العمليات{% endif %}
+      <p class="font-body-md text-body-md text-on-surface-variant">
+        {% if ui_lang == 'en' %}Real-time metrics and system health monitoring.{% else %}مقاييس في الوقت الفعلي ومراقبة صحة النظام.{% endif %}
       </p>
     </div>
-    <div class="admin-page-header-actions">
-      <button class="admin-btn admin-btn-secondary" id="refresh-dashboard">
-        <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
-        {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
+    <div>
+      <button class="px-4 py-2 rounded-lg bg-surface-container-highest text-on-surface font-label-sm text-label-sm border border-white/10 hover:bg-white/10 transition-colors flex items-center gap-2" id="refresh-dashboard">
+        <span class="material-symbols-outlined text-sm">refresh</span>
+        {% if ui_lang == 'en' %}Refresh Data{% else %}تحديث البيانات{% endif %}
       </button>
     </div>
+  </header>
+
+  <!-- Error State (Hidden by default, handled by JS) -->
+  <div id="dashboard-error" class="hidden glass-card rounded-xl p-lg text-center border-error/30 mb-8">
+    <span class="material-symbols-outlined text-error text-4xl mb-4">error</span>
+    <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{% if ui_lang == 'en' %}Error Loading Dashboard{% else %}خطأ في تحميل لوحة التحكم{% endif %}</h3>
+    <p id="error-message" class="text-on-surface-variant mb-6">{% if ui_lang == 'en' %}Unable to load dashboard data. Please try again.{% else %}تعذّر تحميل البيانات. يرجى المحاولة مرة أخرى.{% endif %}</p>
+    <button id="retry-dashboard" class="px-6 py-2 rounded-lg bg-error/20 text-error font-label-md hover:bg-error/30 transition-colors border border-error/30">
+      {% if ui_lang == 'en' %}Try Again{% else %}إعادة المحاولة{% endif %}
+    </button>
   </div>
 
-  <!-- Dashboard Root — initial state is "loading"; JS drives transitions -->
-  <div class="admin-dashboard" id="admin-dashboard" data-ui-state="loading">
+  <!-- Stats Grid -->
+  <!-- CSS mapping state from admin-dashboard to this container for loading vs success -->
+  <style>
+    #admin-dashboard[data-ui-state="loading"] #dashboard-content { opacity: 0.5; pointer-events: none; }
+    #admin-dashboard[data-ui-state="error"] #dashboard-content { display: none; }
+    #admin-dashboard[data-ui-state="error"] #dashboard-error { display: block; }
+  </style>
 
-    <!-- Loading State — skeleton loader -->
-    <div class="admin-dashboard-skeleton" id="dashboard-loading" aria-busy="true" role="status">
-      <span class="visually-hidden">{% if ui_lang == 'en' %}Loading dashboard data…{% else %}جارٍ تحميل البيانات…{% endif %}</span>
+  <div id="dashboard-content">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-xl" id="kpi-cards">
+      <!-- Populated dynamically by JavaScript -->
+    </div>
 
-      <!-- Skeleton KPI cards (7 placeholders — matches actual KPI count) -->
-      <div class="admin-skeleton-kpi-row">
-        {% for _ in range(7) %}
-        <div class="admin-skeleton-kpi-card" aria-hidden="true">
-          <div class="admin-skeleton-icon"></div>
-          <div class="admin-skeleton-content">
-            <div class="admin-skeleton-line admin-skeleton-line--value"></div>
-            <div class="admin-skeleton-line admin-skeleton-line--label"></div>
-          </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-gutter mb-xl">
+      <!-- Chart 1 -->
+      <div class="glass-card rounded-xl p-lg flex flex-col">
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-white/5">
+          <h2 class="font-headline-md text-headline-md text-on-surface">{% if ui_lang == 'en' %}User Activity{% else %}نشاط المستخدمين{% endif %}</h2>
         </div>
-        {% endfor %}
+        <div class="flex-1 relative min-h-[300px]">
+          <canvas id="user-activity-chart" width="400" height="300"></canvas>
+        </div>
       </div>
 
-      <!-- Skeleton Charts -->
-      <div class="admin-skeleton-chart-row">
-        <div class="admin-skeleton-chart-card" aria-hidden="true"></div>
-        <div class="admin-skeleton-chart-card" aria-hidden="true"></div>
+      <!-- Chart 2 -->
+      <div class="glass-card rounded-xl p-lg flex flex-col">
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-white/5">
+          <h2 class="font-headline-md text-headline-md text-on-surface">{% if ui_lang == 'en' %}Enrollment Status{% else %}حالة التسجيل{% endif %}</h2>
+        </div>
+        <div class="flex-1 relative min-h-[300px]">
+          <canvas id="enrollment-status-chart" width="400" height="300"></canvas>
+        </div>
       </div>
     </div>
 
-    <!-- Error State -->
-    <div class="admin-dashboard-error" id="dashboard-error">
-      <div class="admin-error-state">
-        <i class="bi bi-exclamation-triangle"></i>
-        <h3>{% if ui_lang == 'en' %}Error Loading Dashboard{% else %}خطأ في تحميل لوحة التحكم{% endif %}</h3>
-        <p id="error-message">
-          {% if ui_lang == 'en' %}Unable to load dashboard data. Please try again.{% else %}تعذّر تحميل البيانات. يرجى المحاولة مرة أخرى.{% endif %}
-        </p>
-        <button class="admin-btn admin-btn-primary" id="retry-dashboard">
-          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
-          {% if ui_lang == 'en' %}Try Again{% else %}إعادة المحاولة{% endif %}
-        </button>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-gutter mb-xl">
+      <!-- Recent Activity -->
+      <div class="glass-card rounded-xl p-lg flex flex-col">
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-white/5">
+          <h2 class="font-headline-md text-headline-md text-on-surface">{% if ui_lang == 'en' %}Recent Activity{% else %}النشاط الأخير{% endif %}</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto pr-2 space-y-4 max-h-[400px]" id="activity-feed">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="glass-card rounded-xl p-lg flex flex-col">
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-white/5">
+          <h2 class="font-headline-md text-headline-md text-on-surface">{% if ui_lang == 'en' %}System Alerts{% else %}تنبيهات النظام{% endif %}</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto pr-2 space-y-4 max-h-[400px]" id="alerts-list">
+          <!-- Populated by JavaScript -->
+        </div>
       </div>
     </div>
-
-    <!-- Dashboard Content -->
-    <div class="admin-dashboard-grid" id="dashboard-content">
-
-      <!-- KPI Cards -->
-      <div class="admin-dashboard-cards" id="kpi-cards">
-        <!-- Populated by JavaScript -->
-      </div>
-
-      <!-- Charts -->
-      <div class="admin-dashboard-charts">
-
-        <div class="admin-dashboard-chart-container">
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}User Activity{% else %}نشاط المستخدمين{% endif %}
-              </h3>
-            </div>
-            <div class="admin-card-body">
-              <canvas id="user-activity-chart" width="400" height="200"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <div class="admin-dashboard-chart-container">
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}Enrollment Status{% else %}حالة التسجيل{% endif %}
-              </h3>
-            </div>
-            <div class="admin-card-body">
-              <canvas id="enrollment-status-chart" width="400" height="200"></canvas>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Activity, Alerts & Quick Actions -->
-      <div class="admin-dashboard-bottom">
-
-        <div class="admin-dashboard-activity">
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}Recent Activity{% else %}النشاط الأخير{% endif %}
-              </h3>
-            </div>
-            <div class="admin-card-body">
-              <div class="admin-activity-feed" id="activity-feed" role="list"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="admin-dashboard-alerts">
-          <!-- Alerts -->
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}System Alerts{% else %}تنبيهات النظام{% endif %}
-              </h3>
-            </div>
-            <div class="admin-card-body">
-              <div class="admin-alerts-list" id="alerts-list" role="list"></div>
-            </div>
-          </div>
-
-          <!-- Quick Actions -->
-          <div class="admin-card">
-            <div class="admin-card-header">
-              <h3 class="admin-card-title">
-                {% if ui_lang == 'en' %}Quick Actions{% else %}الإجراءات السريعة{% endif %}
-              </h3>
-            </div>
-            <div class="admin-card-body">
-              <div class="admin-quick-actions">
-
-                <a href="/admin/users" class="admin-quick-action-card">
-                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--primary">
-                    <i class="bi bi-person-plus-fill" aria-hidden="true"></i>
-                  </span>
-                  <span class="admin-quick-action-card-label">
-                    {% if ui_lang == 'en' %}Manage Users{% else %}إدارة المستخدمين{% endif %}
-                  </span>
-                </a>
-
-                <a href="/admin/messages/compose" class="admin-quick-action-card">
-                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--success">
-                    <i class="bi bi-envelope-fill" aria-hidden="true"></i>
-                  </span>
-                  <span class="admin-quick-action-card-label">
-                    {% if ui_lang == 'en' %}Send Message{% else %}إرسال رسالة{% endif %}
-                  </span>
-                </a>
-
-                <a href="/admin/analytics" class="admin-quick-action-card">
-                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--info">
-                    <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
-                  </span>
-                  <span class="admin-quick-action-card-label">
-                    {% if ui_lang == 'en' %}View Analytics{% else %}عرض التحليلات{% endif %}
-                  </span>
-                </a>
-
-                <a href="/admin/imported-kindergartens" class="admin-quick-action-card">
-                  <span class="admin-quick-action-card-icon admin-quick-action-card-icon--warning">
-                    <i class="bi bi-database-fill" aria-hidden="true"></i>
-                  </span>
-                  <span class="admin-quick-action-card-label">
-                    {% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}
-                  </span>
-                </a>
-
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /.admin-dashboard-bottom -->
-    </div><!-- /#dashboard-content -->
-  </div><!-- /#admin-dashboard -->
+  </div>
 </div>
 {% endblock %}
 
@@ -193,4 +96,120 @@
 <script>window.KINJO_LANG = "{{ ui_lang }}";</script>
 <script src="/static/js/chart_utils.js?v=2.1"></script>
 <script src="/static/js/admin_dashboard.js?v=2.7"></script>
+<script>
+  // OVERRIDE FOR PREMIUM DASHBOARD AESTHETICS
+  document.addEventListener("DOMContentLoaded", () => {
+    if (window.adminDashboard) {
+      
+      // Override Chart globals for dark mode
+      if (typeof Chart !== "undefined") {
+        Chart.defaults.color = "#c7c4d7"; // text-on-surface-variant
+        Chart.defaults.scale.grid.color = "rgba(255,255,255,0.05)";
+      }
+
+      window.adminDashboard.createKPICard = function(config, value) {
+        const card = document.createElement("div");
+        card.className = "glass-card rounded-xl p-lg flex flex-col justify-between";
+        card.setAttribute("role", "region");
+        card.setAttribute("aria-label", this.t(`dashboard.${config.key}`, config.key));
+
+        const { formattedValue, badgeHtml } = this.formatKPIValue(config, value);
+
+        // Icon classes map
+        const colorMap = {
+            primary: "text-primary bg-primary/10 border-primary/20",
+            success: "text-[#4ade80] bg-[#4ade80]/10 border-[#4ade80]/20",
+            info: "text-tertiary bg-tertiary/10 border-tertiary/20",
+            warning: "text-[#fbbf24] bg-[#fbbf24]/10 border-[#fbbf24]/20",
+            danger: "text-error bg-error/10 border-error/20"
+        };
+        const iconColor = colorMap[config.color] || colorMap.primary;
+        
+        let iconName = "insights";
+        if(config.icon.includes("people") || config.icon.includes("person")) iconName = "group";
+        else if(config.icon.includes("house")) iconName = "home";
+        else if(config.icon.includes("file")) iconName = "description";
+        else if(config.icon.includes("clock")) iconName = "schedule";
+        else if(config.icon.includes("graph")) iconName = "trending_up";
+
+        card.innerHTML = `
+          <div class="flex justify-between items-start mb-4">
+            <span class="font-label-md text-label-md text-on-surface-variant">${this.t('dashboard.' + config.key, KPI_LABEL_FALLBACK[config.key] || config.key)}</span>
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center border ${iconColor}">
+              <span class="material-symbols-outlined text-sm">${iconName}</span>
+            </div>
+          </div>
+          <div>
+            <div class="font-display-lg-mobile text-display-lg-mobile text-on-surface" dir="ltr">${formattedValue}</div>
+            ${badgeHtml ? '<div class="mt-2 text-sm text-primary">' + badgeHtml + '</div>' : ''}
+          </div>
+        `;
+        return card;
+      };
+      
+      window.adminDashboard.createActivityItem = function(activity) {
+        const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+        const message = activity["message_" + lang] || activity.message || "";
+        const item = document.createElement("div");
+        item.className = "flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-white/5";
+        
+        let icon = "history";
+        if (activity.type === "user_login") icon = "login";
+        else if (activity.type === "data_submit") icon = "upload";
+        
+        item.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center">
+              <span class="material-symbols-outlined text-on-surface-variant text-sm">${icon}</span>
+            </div>
+            <div>
+              <div class="font-label-md text-label-md text-on-surface">${message}</div>
+              <div class="font-label-sm text-label-sm text-on-surface-variant">${this.formatTimeAgo(activity.timestamp)}</div>
+            </div>
+          </div>
+        `;
+        return item;
+      };
+      
+      window.adminDashboard.createAlertItem = function(alert) {
+        const lang = window.KINJO_LANG === "en" ? "en" : "ar";
+        const message = alert["message_" + lang] || alert.message || "";
+        const item = document.createElement("div");
+        item.className = "flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-white/5";
+        
+        let colorClass = "text-info bg-info/10";
+        if(alert.severity === "critical") colorClass = "text-error bg-error/10 border-error/20";
+        else if(alert.severity === "warning") colorClass = "text-[#fbbf24] bg-[#fbbf24]/10 border-[#fbbf24]/20";
+        else if(alert.severity === "success") colorClass = "text-[#4ade80] bg-[#4ade80]/10 border-[#4ade80]/20";
+        else colorClass = "text-primary bg-primary/10 border-primary/20";
+
+        item.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center">
+              <span class="material-symbols-outlined text-on-surface-variant text-sm">notifications</span>
+            </div>
+            <div>
+              <div class="font-label-md text-label-md text-on-surface">${message}</div>
+              <div class="font-label-sm text-label-sm text-on-surface-variant">${this.formatTimeAgo(alert.timestamp)}</div>
+            </div>
+          </div>
+          <span class="px-2 py-1 rounded font-label-sm text-[10px] uppercase tracking-wider border ${colorClass}">${alert.severity || "info"}</span>
+        `;
+        return item;
+      };
+
+      // Empty states overrides
+      window.adminDashboard.createEmptyState = function(primaryKey, primaryFallback, hintKey, hintFallback) {
+         const wrapper = document.createElement("div");
+         wrapper.className = "text-center py-8 text-on-surface-variant";
+         wrapper.innerHTML = `
+            <span class="material-symbols-outlined text-4xl mb-4 opacity-50">inbox</span>
+            <p class="font-label-md text-on-surface">${this.t(primaryKey, primaryFallback)}</p>
+            <p class="font-label-sm opacity-60">${this.t(hintKey, hintFallback)}</p>
+         `;
+         return wrapper;
+      }
+    }
+  });
+</script>
 {% endblock %}
