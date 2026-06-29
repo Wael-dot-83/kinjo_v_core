@@ -293,12 +293,15 @@ async def get_current_user_or_redirect(
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         username: str = payload.get("sub")
         if username is None:
+            logger.error("JWT payload missing 'sub'")
             raise RedirectToLogin("/login?expired=true")
-    except JWTError:
+    except JWTError as e:
+        logger.error(f"JWTError in get_current_user_or_redirect: {str(e)} | token: {token[:10]}...")
         raise RedirectToLogin("/login?expired=true")
 
     user = db.query(models.User).filter(models.User.username == username).first()
     if user is None:
+        logger.error(f"User not found for username: {username}")
         raise RedirectToLogin("/login")
 
     if user.status != models.UserStatus.ACTIVE:

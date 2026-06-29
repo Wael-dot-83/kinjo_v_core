@@ -110,7 +110,7 @@ def main():
                 name_ar=name_ar,
                 name_en=name_en,
                 governorate=governorate,
-                city=city,
+                district=city,
                 area=area,
                 address_line=address_line,
                 contact_phone="N/A",

@@ -95,7 +95,7 @@ def run():
                 name_ar="روضة الأمل",
                 name_en="Al Amal Kindergarten",
                 governorate="عمان",
-                city="عمان",
+                district="عمان",
                 area="الجبيهة",
                 address_line="شارع الجامعة الأردنية",
                 contact_phone="0791234567",
@@ -124,16 +124,18 @@ def run():
                 print()
             prev_person = person
 
+            import uuid
             kg_id = kg.id if role in ROLES_NEEDING_KG else None
             db.execute(
                 text(
                     "INSERT INTO users "
-                    "  (username, email, hashed_password, role, status, "
+                    "  (public_id, username, email, hashed_password, role, status, "
                     "   kindergarten_id, must_change_password, failed_login_count) "
                     "VALUES "
-                    "  (:u, :e, :h, :r, 'ACTIVE', :kg, 0, 0)"
+                    "  (:pub_id, :u, :e, :h, :r, 'ACTIVE', :kg, 0, 0)"
                 ),
                 {
+                    "pub_id": str(uuid.uuid4()),
                     "u":  username,
                     "e":  email,
                     "h":  _hash(password),

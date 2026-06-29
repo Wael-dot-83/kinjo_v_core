@@ -143,7 +143,7 @@ def seed_kindergartens(db: Session) -> List[Kindergarten]:
         lat, lng = (_jitter(*center) if center else (None, None))
         db.add(Kindergarten(
             name_ar=name_ar, name_en=name_en,
-            governorate=gov, city=city, area=area, address_line=addr,
+            governorate=gov, district=city, area=area, address_line=addr,
             contact_phone="N/A", latitude=lat, longitude=lng,
             status=KindergartenStatus.ACTIVE,
         ))
@@ -159,7 +159,7 @@ def seed_kindergartens(db: Session) -> List[Kindergarten]:
         lat, lng = (_jitter(*center) if center else (None, None))
         db.add(Kindergarten(
             name_ar=name_ar, name_en=name_en,
-            governorate=gov, city=city, area=area, address_line=addr,
+            governorate=gov, district=city, area=area, address_line=addr,
             contact_phone="N/A", latitude=lat, longitude=lng,
             status=KindergartenStatus.ACTIVE,
         ))

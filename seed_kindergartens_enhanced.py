@@ -461,7 +461,7 @@ def seed():
                     name_ar=rec["name_ar"],
                     name_en=rec["name_en"],
                     governorate=rec["governorate"],
-                    city=rec["city"],
+                    district=rec["city"],
                     area=rec["area"],
                     address_line=rec["address_line"],
                     contact_phone=rec["contact_phone"],

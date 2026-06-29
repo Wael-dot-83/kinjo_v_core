@@ -53,7 +53,7 @@ def run():
             db.execute(_text(
                 "UPDATE kindergartens SET "
                 "name_ar='روضة البراعم', name_en='Al Baraaem Kindergarten', "
-                "governorate='عمان', city='عمان', area='الرابية', "
+                "governorate='عمان', district='عمان', area='الرابية', "
                 "address_line='شارع الرابية، عمان', contact_phone='0799000001' "
                 "WHERE id=:id"
             ), {"id": _id})
@@ -68,7 +68,7 @@ def run():
                 name_ar="روضة الأمل",
                 name_en="Al Amal Kindergarten",
                 governorate="عمان",
-                city="عمان",
+                district="عمان",
                 area="الجبيهة",
                 address_line="شارع الجامعة الأردنية، عمان",
                 contact_phone="0791234567",
@@ -81,7 +81,7 @@ def run():
                 name_ar="روضة النجوم",
                 name_en="Al Nujoom Kindergarten",
                 governorate="إربد",
-                city="إربد",
+                district="إربد",
                 area="وسط البلد",
                 address_line="شارع الملك حسين، إربد",
                 contact_phone="0798765432",
@@ -157,14 +157,13 @@ def run():
         def upsert_parent_profile(user_id, phone, nationality, first, last, gender_val=Gender.MALE):
             pp = db.query(ParentProfile).filter(ParentProfile.user_id == user_id).first()
             if not pp:
-                import uuid as _uuid
                 db.execute(text(
                     "INSERT INTO parent_profiles "
                     "(user_id, first_name, last_name, phone_number, gender, nationality, "
-                    "home_governorate, home_city, home_area, home_address_line, "
-                    "correspondence_preference, profile_complete, public_id) "
-                    "VALUES (:uid, :fn, :ln, :ph, :g, :nat, 'عمان', 'عمان', 'الجبيهة', 'شارع الجامعة', 1, 1, :pid)"
-                ), {"uid": user_id, "fn": first, "ln": last, "ph": phone, "g": gender_val.value, "nat": nationality, "pid": str(_uuid.uuid4())})
+                    "home_governorate, home_district, home_area, home_address_line, "
+                    "correspondence_preference, profile_complete) "
+                    "VALUES (:uid, :fn, :ln, :ph, :g, :nat, 'عمان', 'عمان', 'الجبيهة', 'شارع الجامعة', 1, 1)"
+                ), {"uid": user_id, "fn": first, "ln": last, "ph": phone, "g": gender_val.value, "nat": nationality})
                 db.commit()
                 pp = db.query(ParentProfile).filter(ParentProfile.user_id == user_id).first()
             return pp
