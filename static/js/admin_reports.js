@@ -31,32 +31,43 @@
   }
 
   function updateFilterVisibility(reportType) {
-    const gov = getEl("filterGovContainer");
-    const kg = getEl("filterKgContainer");
-    const status = getEl("filterStatusContainer");
-    const severity = getEl("filterSeverityContainer");
-    const source = getEl("filterSourceContainer");
-    const reviewer = getEl("filterReviewerContainer");
+    const allFilters = [
+      "filterGovContainer", "filterKgContainer", "filterStatusContainer",
+      "filterSeverityContainer", "filterSourceContainer", "filterReviewerContainer",
+      "filterAbsenceReasonContainer", "filterIncidentTypeContainer", "filterSlaContainer",
+      "filterParentInformedContainer", "filterDistrictContainer", "filterSensitivityContainer",
+      "filterActorRoleContainer", "filterTrainingStatusContainer",
+    ];
+    allFilters.forEach(id => { const el = getEl(id); if (el) el.classList.add("d-none"); });
 
-    // Hide all first
-    [gov, kg, status, severity, source, reviewer].forEach(el => {
-      if (el) el.classList.add("d-none");
-    });
+    const show = (...ids) => ids.forEach(id => { const el = getEl(id); if (el) el.classList.remove("d-none"); });
 
-    if (reportType === "attendance" || reportType === "compliance") {
-      if (gov) gov.classList.remove("d-none");
-      if (kg) kg.classList.remove("d-none");
+    if (reportType === "attendance") {
+      show("filterGovContainer", "filterKgContainer", "filterAbsenceReasonContainer");
+    } else if (reportType === "compliance") {
+      show("filterGovContainer", "filterKgContainer");
     } else if (reportType === "incidents") {
-      if (gov) gov.classList.remove("d-none");
-      if (kg) kg.classList.remove("d-none");
-      if (status) status.classList.remove("d-none");
-      if (severity) severity.classList.remove("d-none");
+      show("filterGovContainer", "filterKgContainer", "filterStatusContainer",
+           "filterSeverityContainer", "filterIncidentTypeContainer",
+           "filterSlaContainer", "filterParentInformedContainer");
     } else if (reportType === "enrollment") {
-      if (status) status.classList.remove("d-none");
-      if (source) source.classList.remove("d-none");
-      if (reviewer) reviewer.classList.remove("d-none");
+      show("filterStatusContainer", "filterSourceContainer", "filterReviewerContainer",
+           "filterDistrictContainer");
     } else if (reportType === "full_audit") {
-      // only uses date filters which are outside the dynamic filters section
+      show("filterSensitivityContainer", "filterActorRoleContainer");
+    } else if (reportType === "staff_training") {
+      show("filterGovContainer", "filterKgContainer", "filterTrainingStatusContainer");
+    } else if (reportType === "welfare") {
+      show("filterGovContainer", "filterKgContainer", "filterIncidentTypeContainer",
+           "filterSlaContainer", "filterParentInformedContainer");
+    } else if (reportType === "trends") {
+      show("filterGovContainer", "filterKgContainer");
+    } else if (reportType === "capacity") {
+      show("filterGovContainer", "filterKgContainer", "filterDistrictContainer");
+    } else if (reportType === "parent_engagement") {
+      show("filterGovContainer", "filterKgContainer");
+    } else if (reportType === "data_quality") {
+      show("filterGovContainer", "filterKgContainer");
     }
   }
 
@@ -116,6 +127,7 @@
   }
 
   function getFilters() {
+    const singleVal = (id) => { const el = getEl(id); return el?.value || ""; };
     return {
       governorates: getMultiSelectValues("governorateFilter"),
       kindergarten_ids: getMultiSelectValues("kindergartenFilter").map(Number),
@@ -123,6 +135,14 @@
       severities: getMultiSelectValues("severityFilter"),
       sources: getMultiSelectValues("sourceFilter"),
       reviewer_ids: getMultiSelectValues("reviewerFilter").map(Number),
+      absence_reasons: getMultiSelectValues("absenceReasonFilter"),
+      incident_types: getMultiSelectValues("incidentTypeFilter"),
+      sla_status: singleVal("slaFilter"),
+      parent_informed: singleVal("parentInformedFilter"),
+      district: singleVal("districtFilter"),
+      sensitivity_level: singleVal("sensitivityFilter") ? Number(singleVal("sensitivityFilter")) : null,
+      actor_role: singleVal("actorRoleFilter"),
+      training_status: singleVal("trainingStatusFilter"),
     };
   }
 
@@ -134,6 +154,12 @@
       if (target === "#pane-compliance") return "compliance";
       if (target === "#pane-enrollment") return "enrollment";
       if (target === "#pane-audit") return "full_audit";
+      if (target === "#pane-staff") return "staff_training";
+      if (target === "#pane-welfare") return "welfare";
+      if (target === "#pane-trends") return "trends";
+      if (target === "#pane-capacity") return "capacity";
+      if (target === "#pane-parent") return "parent_engagement";
+      if (target === "#pane-dataquality") return "data_quality";
     }
     return "attendance";
   }
@@ -662,7 +688,13 @@
           "incidents": "#tab-incidents",
           "compliance": "#tab-compliance",
           "enrollment": "#tab-enrollment",
-          "full_audit": "#tab-audit"
+          "full_audit": "#tab-audit",
+          "staff_training": "#tab-staff",
+          "welfare": "#tab-welfare",
+          "trends": "#tab-trends",
+          "capacity": "#tab-capacity",
+          "parent_engagement": "#tab-parent",
+          "data_quality": "#tab-dataquality",
       };
       const tabId = tabMap[t.report_type];
       if (tabId) {
@@ -925,7 +957,13 @@
           "incidents": "#tab-incidents",
           "compliance": "#tab-compliance",
           "enrollment": "#tab-enrollment",
-          "full_audit": "#tab-audit"
+          "full_audit": "#tab-audit",
+          "staff_training": "#tab-staff",
+          "welfare": "#tab-welfare",
+          "trends": "#tab-trends",
+          "capacity": "#tab-capacity",
+          "parent_engagement": "#tab-parent",
+          "data_quality": "#tab-dataquality",
       };
       const tabId = tabMap[t.report_type];
       if (tabId) {

@@ -99,6 +99,36 @@
         <i class="bi bi-list-check me-1"></i>{% if ui_lang == 'en' %}Audit Log{% else %}سجل التدقيق{% endif %}
       </button>
     </li>
+    <li class="nav-item"role="presentation">
+      <button class="nav-link"id="tab-staff"data-bs-toggle="pill"data-bs-target="#pane-staff"type="button"role="tab" title="{% if ui_lang == 'en' %}Staff training completion, ratio compliance, and HR metrics.{% else %}إتمام تدريب الموظفين، الامتثال للنسب، ومقاييس الموارد البشرية.{% endif %}">
+        <i class="bi bi-people me-1"></i>{% if ui_lang == 'en' %}Staff & Training{% else %}الموظفون والتدريب{% endif %}
+      </button>
+    </li>
+    <li class="nav-item"role="presentation">
+      <button class="nav-link"id="tab-welfare"data-bs-toggle="pill"data-bs-target="#pane-welfare"type="button"role="tab" title="{% if ui_lang == 'en' %}Child welfare: safeguarding cases, incident resolution, and parent engagement.{% else %}رفاهية الطفل: قضايا الحماية، حل الحوادث، ومشاركة الوالدين.{% endif %}">
+        <i class="bi bi-shield-heart me-1"></i>{% if ui_lang == 'en' %}Child Welfare{% else %}رفاهية الطفل{% endif %}
+      </button>
+    </li>
+    <li class="nav-item"role="presentation">
+      <button class="nav-link"id="tab-trends"data-bs-toggle="pill"data-bs-target="#pane-trends"type="button"role="tab" title="{% if ui_lang == 'en' %}Multi-metric period-over-period trends and comparative analysis.{% else %}اتجاهات متعددة المقاييس للفترات وتحليل مقارن.{% endif %}">
+        <i class="bi bi-graph-up me-1"></i>{% if ui_lang == 'en' %}Trends{% else %}الاتجاهات{% endif %}
+      </button>
+    </li>
+    <li class="nav-item"role="presentation">
+      <button class="nav-link"id="tab-capacity"data-bs-toggle="pill"data-bs-target="#pane-capacity"type="button"role="tab" title="{% if ui_lang == 'en' %}Capacity utilization, enrollment waitlists, and available slots by governorate.{% else %}استخدام السعة، قوائم الانتظار، والمقاعد المتاحة حسب المحافظة.{% endif %}">
+        <i class="bi bi-building me-1"></i>{% if ui_lang == 'en' %}Capacity{% else %}الطاقة الاستيعابية{% endif %}
+      </button>
+    </li>
+    <li class="nav-item"role="presentation">
+      <button class="nav-link"id="tab-parent"data-bs-toggle="pill"data-bs-target="#pane-parent"type="button"role="tab" title="{% if ui_lang == 'en' %}Parent report view rates, notification receipt, and engagement metrics.{% else %}معدل مشاهدة الوالدين للتقارير، استلام الإخطارات، ومقاييس التفاعل.{% endif %}">
+        <i class="bi bi-chat-heart me-1"></i>{% if ui_lang == 'en' %}Parent Engagement{% else %}مشاركة الوالدين{% endif %}
+      </button>
+    </li>
+    <li class="nav-item"role="presentation">
+      <button class="nav-link"id="tab-dataquality"data-bs-toggle="pill"data-bs-target="#pane-dataquality"type="button"role="tab" title="{% if ui_lang == 'en' %}Report submission completeness, missing data, and zero-attendance anomalies.{% else %}اكتمال تقديم التقارير، البيانات المفقودة، وشذوذات الحضور الصفري.{% endif %}">
+        <i class="bi bi-clipboard-data me-1"></i>{% if ui_lang == 'en' %}Data Quality{% else %}جودة البيانات{% endif %}
+      </button>
+    </li>
   </ul>
 </div>
 
@@ -180,6 +210,93 @@
                 <option value="en">English</option>
               </select>
             </div>
+          </div>
+
+          <!-- New: Absence Reason (attendance tab) -->
+          <div class="mb-3 d-none" id="filterAbsenceReasonContainer">
+            <label class="form-label fw-bold" for="absenceReasonFilter">{% if ui_lang == 'en' %}Absence Reason{% else %}سبب الغياب{% endif %}</label>
+            <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="absenceReasonFilter" multiple size="3">
+              <option value="">{% if ui_lang == 'en' %}All Reasons{% else %}كل الأسباب{% endif %}</option>
+              <option value="SICK">{% if ui_lang == 'en' %}Sick{% else %}مرضي{% endif %}</option>
+              <option value="EXCUSED">{% if ui_lang == 'en' %}Excused{% else %}إجازة مبررة{% endif %}</option>
+              <option value="UNEXCUSED">{% if ui_lang == 'en' %}Unexcused{% else %}إجازة غير مبررة{% endif %}</option>
+              <option value="HOLIDAY">{% if ui_lang == 'en' %}Holiday{% else %}عطلة رسمية{% endif %}</option>
+            </select>
+          </div>
+
+          <!-- New: Incident Type (incidents tab) -->
+          <div class="mb-3 d-none" id="filterIncidentTypeContainer">
+            <label class="form-label fw-bold" for="incidentTypeFilter">{% if ui_lang == 'en' %}Incident Type{% else %}نوع الحادثة{% endif %}</label>
+            <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="incidentTypeFilter" multiple size="3">
+              <option value="">{% if ui_lang == 'en' %}All Types{% else %}كل الأنواع{% endif %}</option>
+              <option value="INJURY">{% if ui_lang == 'en' %}Injury{% else %}إصابة{% endif %}</option>
+              <option value="BEHAVIOR">{% if ui_lang == 'en' %}Behavior{% else %}سلوك{% endif %}</option>
+              <option value="ILLNESS">{% if ui_lang == 'en' %}Illness{% else %}مرض{% endif %}</option>
+              <option value="ACCIDENT">{% if ui_lang == 'en' %}Accident{% else %}حادث{% endif %}</option>
+              <option value="SAFEGUARDING">{% if ui_lang == 'en' %}Safeguarding{% else %}حماية الطفل{% endif %}</option>
+            </select>
+          </div>
+
+          <!-- New: SLA Status (incidents + welfare tabs) -->
+          <div class="mb-3 d-none" id="filterSlaContainer">
+            <label class="form-label fw-bold" for="slaFilter">{% if ui_lang == 'en' %}SLA Status{% else %}حالة SLA{% endif %}</label>
+            <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="slaFilter">
+              <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+              <option value="overdue">{% if ui_lang == 'en' %}Overdue{% else %}متأخرة{% endif %}</option>
+              <option value="on_track">{% if ui_lang == 'en' %}On Track{% else %}في الموعد{% endif %}</option>
+            </select>
+          </div>
+
+          <!-- New: Parent Informed (incidents + welfare tabs) -->
+          <div class="mb-3 d-none" id="filterParentInformedContainer">
+            <label class="form-label fw-bold" for="parentInformedFilter">{% if ui_lang == 'en' %}Parent Informed{% else %}إخطار الوالدين{% endif %}</label>
+            <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="parentInformedFilter">
+              <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+              <option value="yes">{% if ui_lang == 'en' %}Informed{% else %}تم الإخطار{% endif %}</option>
+              <option value="no">{% if ui_lang == 'en' %}Not Informed{% else %}لم يتم الإخطار{% endif %}</option>
+            </select>
+          </div>
+
+          <!-- New: District (enrollment + capacity tabs) -->
+          <div class="mb-3 d-none" id="filterDistrictContainer">
+            <label class="form-label fw-bold" for="districtFilter">{% if ui_lang == 'en' %}District{% else %}المنطقة{% endif %}</label>
+            <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="districtFilter">
+              <option value="">{% if ui_lang == 'en' %}All Districts{% else %}كل المناطق{% endif %}</option>
+            </select>
+          </div>
+
+          <!-- New: Sensitivity Level (audit tab) -->
+          <div class="mb-3 d-none" id="filterSensitivityContainer">
+            <label class="form-label fw-bold" for="sensitivityFilter">{% if ui_lang == 'en' %}Sensitivity Level{% else %}مستوى الحساسية{% endif %}</label>
+            <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="sensitivityFilter">
+              <option value="">{% if ui_lang == 'en' %}All Levels{% else %}كل المستويات{% endif %}</option>
+              <option value="1">1 — {% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</option>
+              <option value="2">2 — {% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</option>
+              <option value="3">3 — {% if ui_lang == 'en' %}High{% else %}مرتفع{% endif %}</option>
+              <option value="4">4 — {% if ui_lang == 'en' %}Critical{% else %}حرج{% endif %}</option>
+              <option value="5">5 — {% if ui_lang == 'en' %}Top Secret{% else %}سري للغاية{% endif %}</option>
+            </select>
+          </div>
+
+          <!-- New: Actor Role (audit tab) -->
+          <div class="mb-3 d-none" id="filterActorRoleContainer">
+            <label class="form-label fw-bold" for="actorRoleFilter">{% if ui_lang == 'en' %}Actor Role{% else %}دور المستخدم{% endif %}</label>
+            <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="actorRoleFilter">
+              <option value="">{% if ui_lang == 'en' %}All Roles{% else %}كل الأدوار{% endif %}</option>
+              <option value="ADMIN">Admin</option>
+              <option value="SUPERVISOR">{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
+              <option value="PARENT">{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</option>
+            </select>
+          </div>
+
+          <!-- New: Training Status (staff tab) -->
+          <div class="mb-3 d-none" id="filterTrainingStatusContainer">
+            <label class="form-label fw-bold" for="trainingStatusFilter">{% if ui_lang == 'en' %}Training Status{% else %}حالة التدريب{% endif %}</label>
+            <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="trainingStatusFilter">
+              <option value="">{% if ui_lang == 'en' %}All{% else %}الكل{% endif %}</option>
+              <option value="passed">{% if ui_lang == 'en' %}Passed{% else %}اجتاز{% endif %}</option>
+              <option value="failed">{% if ui_lang == 'en' %}Failed{% else %}لم يجتز{% endif %}</option>
+            </select>
           </div>
 
           <div class="form-check form-switch mb-3">

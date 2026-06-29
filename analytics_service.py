@@ -4502,6 +4502,432 @@ def preview_report(
             kpis[1]["value"] = high_risk
         except Exception:
             warnings.append({"ar": "تعذر تحميل سجل التدقيق", "en": "Failed to load audit log data"})
+
+    elif report_type == "staff_training":
+        kpis = [
+            {"id": "trained_count", "label_ar": "موظفون مدرَّبون", "label_en": "Trained Staff", "value": 0, "unit": ""},
+            {"id": "training_rate", "label_ar": "معدل التدريب", "label_en": "Training Rate", "value": 0, "unit": "%"},
+            {"id": "ratio_compliant", "label_ar": "روضات ملتزمة بالنسب", "label_en": "Ratio-Compliant KGs", "value": 0, "unit": ""},
+            {"id": "ratio_violations", "label_ar": "مخالفات النسب", "label_en": "Ratio Violations", "value": 0, "unit": ""},
+            {"id": "avg_compliance_score", "label_ar": "متوسط درجة الامتثال", "label_en": "Avg Compliance Score", "value": 0, "unit": "%"},
+        ]
+        charts = [
+            {"id": "training_by_kg", "type": "bar", "label_ar": "التدريب حسب الروضة", "label_en": "Training by KG"},
+            {"id": "ratio_compliance_dist", "type": "doughnut", "label_ar": "توزيع امتثال النسب", "label_en": "Ratio Compliance Distribution"},
+        ]
+        try:
+            from sqlalchemy import func
+            stc_q = db.query(func.count(models.StaffTrainingCompletion.id)).filter(
+                models.StaffTrainingCompletion.completed_at >= utc_start,
+                models.StaffTrainingCompletion.completed_at <= utc_end,
+                models.StaffTrainingCompletion.passed == True,
+            )
+            kpis[0]["value"] = stc_q.scalar() or 0
+
+            # Total staff (users with SUPERVISOR role)
+            total_supervisors = db.query(func.count(models.User.id)).filter(
+                models.User.role == models.UserRole.SUPERVISOR,
+                models.User.deleted_at.is_(None),
+            ).scalar() or 0
+            kpis[1]["value"] = round(kpis[0]["value"] / total_supervisors * 100, 1) if total_supervisors > 0 else 0.0
+
+            rc_q = db.query(models.RatioCompliance)
+            if kg_filter:
+                rc_q = rc_q.filter(models.RatioCompliance.kindergarten_id.in_(kg_filter))
+            rc_q = rc_q.filter(
+                models.RatioCompliance.checked_at >= utc_start,
+                models.RatioCompliance.checked_at <= utc_end,
+            )
+            rc_rows = rc_q.all()
+            total_rc = len(rc_rows)
+            compliant = sum(1 for r in rc_rows if getattr(r, 'is_compliant', False))
+            kpis[2]["value"] = compliant
+            kpis[3]["value"] = total_rc - compliant
+            scores = [float(getattr(r, 'compliance_score', 0) or 0) for r in rc_rows]
+            kpis[4]["value"] = round(sum(scores) / len(scores), 1) if scores else 0.0
+            total_records = kpis[0]["value"]
+
+            # Training by KG
+            tby_kg = db.query(
+                models.Kindergarten.name_ar,
+                func.count(models.StaffTrainingCompletion.id)
+            ).join(
+                models.StaffTrainingCompletion,
+                models.StaffTrainingCompletion.kindergarten_id == models.Kindergarten.id,
+                isouter=True,
+            ).filter(
+                models.StaffTrainingCompletion.completed_at >= utc_start,
+                models.StaffTrainingCompletion.completed_at <= utc_end,
+            )
+            if kg_filter:
+                tby_kg = tby_kg.filter(models.Kindergarten.id.in_(kg_filter))
+            tby_kg_data = tby_kg.group_by(models.Kindergarten.name_ar).limit(15).all()
+            charts[0]["data"] = {
+                "labels": [{"ar": row[0] or "—", "en": row[0] or "—"} for row in tby_kg_data],
+                "datasets": [{"label": {"ar": "التدريب", "en": "Training"}, "data": [row[1] for row in tby_kg_data], "backgroundColor": "#4F46E5"}],
+            }
+            charts[1]["data"] = {
+                "labels": [{"ar": "ملتزم", "en": "Compliant"}, {"ar": "غير ملتزم", "en": "Non-Compliant"}],
+                "datasets": [{"data": [compliant, total_rc - compliant], "backgroundColor": ["#198754", "#dc3545"]}],
+            }
+        except Exception as e:
+            logger.error(f"staff_training preview failed: {e}", exc_info=True)
+            warnings.append({"ar": "تعذر تحميل بيانات الموظفين", "en": "Failed to load staff data"})
+
+    elif report_type == "welfare":
+        kpis = [
+            {"id": "open_incidents", "label_ar": "حوادث مفتوحة", "label_en": "Open Incidents", "value": 0, "unit": ""},
+            {"id": "overdue_sla", "label_ar": "SLA متأخرة", "label_en": "Overdue SLA", "value": 0, "unit": ""},
+            {"id": "parent_informed_rate", "label_ar": "معدل إخطار الوالدين", "label_en": "Parent Informed Rate", "value": 0, "unit": "%"},
+            {"id": "avg_resolution_days", "label_ar": "متوسط أيام الحل", "label_en": "Avg Resolution Days", "value": 0, "unit": "days"},
+            {"id": "safeguarding_cases", "label_ar": "قضايا الحماية", "label_en": "Safeguarding Cases", "value": 0, "unit": ""},
+        ]
+        charts = [
+            {"id": "incidents_by_type", "type": "doughnut", "label_ar": "الحوادث حسب النوع", "label_en": "Incidents by Type"},
+            {"id": "welfare_trend", "type": "line", "label_ar": "اتجاه الرفاهية", "label_en": "Welfare Trend"},
+        ]
+        try:
+            from sqlalchemy import func
+            now_dt = _jordan_now()
+            inc_q = db.query(models.Incident).filter(
+                models.Incident.occurred_at >= utc_start,
+                models.Incident.occurred_at <= utc_end,
+                models.Incident.deleted_at.is_(None),
+            )
+            if kg_filter:
+                inc_q = inc_q.filter(models.Incident.kindergarten_id.in_(kg_filter))
+
+            all_incs = inc_q.all()
+            total_records = len(all_incs)
+            open_incs = [i for i in all_incs if i.closed_at is None]
+            kpis[0]["value"] = len(open_incs)
+
+            overdue = [i for i in open_incs if i.followup_sla_deadline and i.followup_sla_deadline < now_dt]
+            kpis[1]["value"] = len(overdue)
+
+            informed = [i for i in all_incs if i.parent_informed]
+            kpis[2]["value"] = round(len(informed) / len(all_incs) * 100, 1) if all_incs else 0.0
+
+            closed_incs = [i for i in all_incs if i.closed_at]
+            if closed_incs:
+                avg_days = sum(
+                    (i.closed_at - i.occurred_at).days for i in closed_incs
+                ) / len(closed_incs)
+                kpis[3]["value"] = round(avg_days, 1)
+
+            sg_q = db.query(func.count(models.SafeguardingCase.id)).filter(
+                models.SafeguardingCase.created_at >= utc_start,
+                models.SafeguardingCase.created_at <= utc_end,
+            )
+            if kg_filter:
+                sg_q = sg_q.filter(models.SafeguardingCase.kindergarten_id.in_(kg_filter))
+            kpis[4]["value"] = sg_q.scalar() or 0
+
+            # By type
+            type_data = {}
+            for i in all_incs:
+                t = i.type.value if hasattr(i.type, 'value') else str(i.type)
+                type_data[t] = type_data.get(t, 0) + 1
+            charts[0]["data"] = {
+                "labels": [{"ar": k, "en": k} for k in type_data],
+                "datasets": [{"data": list(type_data.values()), "backgroundColor": ["#4F46E5","#dc3545","#ffc107","#198754","#0dcaf0"]}],
+            }
+
+            # Trend by month
+            from collections import Counter
+            month_counts: Counter = Counter()
+            for i in all_incs:
+                key = i.occurred_at.strftime("%Y-%m") if i.occurred_at else "unknown"
+                month_counts[key] += 1
+            sorted_months = sorted(month_counts.keys())
+            charts[1]["data"] = {
+                "labels": [{"ar": m, "en": m} for m in sorted_months],
+                "datasets": [{"label": {"ar": "الحوادث", "en": "Incidents"}, "data": [month_counts[m] for m in sorted_months], "borderColor": "#dc3545", "fill": False}],
+            }
+        except Exception as e:
+            logger.error(f"welfare preview failed: {e}", exc_info=True)
+            warnings.append({"ar": "تعذر تحميل بيانات الرفاهية", "en": "Failed to load welfare data"})
+
+    elif report_type == "trends":
+        kpis = [
+            {"id": "attendance_change", "label_ar": "تغير الحضور", "label_en": "Attendance Change", "value": 0, "unit": "%"},
+            {"id": "incident_change", "label_ar": "تغير الحوادث", "label_en": "Incident Change", "value": 0, "unit": "%"},
+            {"id": "enrollment_change", "label_ar": "تغير التسجيل", "label_en": "Enrollment Change", "value": 0, "unit": "%"},
+            {"id": "report_submission_change", "label_ar": "تغير نسبة التقارير", "label_en": "Report Submission Change", "value": 0, "unit": "%"},
+        ]
+        charts = [
+            {"id": "multi_metric_trend", "type": "line", "label_ar": "اتجاه متعدد المقاييس", "label_en": "Multi-Metric Trend"},
+        ]
+        try:
+            from sqlalchemy import func
+            # Attendance trend
+            att_q = db.query(models.AttendanceLog.date, func.count(models.AttendanceLog.id)).filter(
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end,
+                models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
+            )
+            if kg_filter:
+                att_q = att_q.join(models.Class).filter(models.Class.kindergarten_id.in_(kg_filter))
+            att_data = att_q.group_by(models.AttendanceLog.date).order_by(models.AttendanceLog.date).all()
+
+            # Incident trend
+            inc_q = db.query(
+                func.date(models.Incident.occurred_at).label("d"),
+                func.count(models.Incident.id),
+            ).filter(
+                models.Incident.occurred_at >= utc_start,
+                models.Incident.occurred_at <= utc_end,
+                models.Incident.deleted_at.is_(None),
+            )
+            if kg_filter:
+                inc_q = inc_q.filter(models.Incident.kindergarten_id.in_(kg_filter))
+            inc_data = inc_q.group_by("d").order_by("d").all()
+
+            # Report submission trend
+            rep_q = db.query(models.DailyReport.date, func.count(models.DailyReport.id)).filter(
+                models.DailyReport.date >= period_start,
+                models.DailyReport.date <= period_end,
+            )
+            if kg_filter:
+                rep_q = rep_q.filter(models.DailyReport.kindergarten_id.in_(kg_filter))
+            rep_data = rep_q.group_by(models.DailyReport.date).order_by(models.DailyReport.date).all()
+
+            # Build combined labels from all unique dates
+            all_dates = sorted(set(
+                [str(r[0]) for r in att_data] +
+                [str(r[0]) for r in inc_data] +
+                [str(r[0]) for r in rep_data]
+            ))
+            att_map = {str(r[0]): r[1] for r in att_data}
+            inc_map = {str(r[0]): r[1] for r in inc_data}
+            rep_map = {str(r[0]): r[1] for r in rep_data}
+
+            charts[0]["data"] = {
+                "labels": [{"ar": d, "en": d} for d in all_dates],
+                "datasets": [
+                    {"label": {"ar": "الحضور", "en": "Attendance"}, "data": [att_map.get(d, 0) for d in all_dates], "borderColor": "#4F46E5", "fill": False},
+                    {"label": {"ar": "الحوادث", "en": "Incidents"}, "data": [inc_map.get(d, 0) for d in all_dates], "borderColor": "#dc3545", "fill": False},
+                    {"label": {"ar": "التقارير", "en": "Reports"}, "data": [rep_map.get(d, 0) for d in all_dates], "borderColor": "#198754", "fill": False},
+                ],
+            }
+            total_records = len(all_dates)
+
+            # Period-over-period % changes
+            half = len(all_dates) // 2
+            if half > 0:
+                att_vals = [att_map.get(d, 0) for d in all_dates]
+                first_att = sum(att_vals[:half]) or 1
+                last_att = sum(att_vals[half:])
+                kpis[0]["value"] = round((last_att - first_att) / first_att * 100, 1)
+
+                inc_vals = [inc_map.get(d, 0) for d in all_dates]
+                first_inc = sum(inc_vals[:half]) or 1
+                last_inc = sum(inc_vals[half:])
+                kpis[1]["value"] = round((last_inc - first_inc) / first_inc * 100, 1)
+
+                rep_vals = [rep_map.get(d, 0) for d in all_dates]
+                first_rep = sum(rep_vals[:half]) or 1
+                last_rep = sum(rep_vals[half:])
+                kpis[3]["value"] = round((last_rep - first_rep) / first_rep * 100, 1)
+
+        except Exception as e:
+            logger.error(f"trends preview failed: {e}", exc_info=True)
+            warnings.append({"ar": "تعذر تحميل بيانات الاتجاهات", "en": "Failed to load trends data"})
+
+    elif report_type == "capacity":
+        kpis = [
+            {"id": "total_capacity", "label_ar": "السعة الإجمالية", "label_en": "Total Capacity", "value": 0, "unit": ""},
+            {"id": "enrolled_count", "label_ar": "المسجلون", "label_en": "Enrolled", "value": 0, "unit": ""},
+            {"id": "utilization_rate", "label_ar": "معدل الاستخدام", "label_en": "Utilization Rate", "value": 0, "unit": "%"},
+            {"id": "waitlist_count", "label_ar": "قائمة الانتظار", "label_en": "Waitlist", "value": 0, "unit": ""},
+            {"id": "available_slots", "label_ar": "مقاعد متاحة", "label_en": "Available Slots", "value": 0, "unit": ""},
+        ]
+        charts = [
+            {"id": "capacity_by_gov", "type": "bar", "label_ar": "السعة حسب المحافظة", "label_en": "Capacity by Governorate"},
+            {"id": "utilization_dist", "type": "doughnut", "label_ar": "توزيع نسبة الاستخدام", "label_en": "Utilization Distribution"},
+        ]
+        try:
+            from sqlalchemy import func
+            kg_q = db.query(models.Kindergarten).filter(
+                models.Kindergarten.status == models.KindergartenStatus.ACTIVE
+            )
+            if kg_filter:
+                kg_q = kg_q.filter(models.Kindergarten.id.in_(kg_filter))
+            kgs = kg_q.all()
+
+            total_cap = sum(getattr(kg, 'capacity', 0) or 0 for kg in kgs)
+            kpis[0]["value"] = total_cap
+
+            enrolled = db.query(func.count(models.EnrollmentApplication.id)).filter(
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            )
+            if kg_filter:
+                enrolled = enrolled.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
+            enrolled_cnt = enrolled.scalar() or 0
+            kpis[1]["value"] = enrolled_cnt
+            kpis[2]["value"] = round(enrolled_cnt / total_cap * 100, 1) if total_cap > 0 else 0.0
+            kpis[4]["value"] = max(0, total_cap - enrolled_cnt)
+
+            waitlist = db.query(func.count(models.EnrollmentApplication.id)).filter(
+                models.EnrollmentApplication.status == models.EnrollmentStatus.PENDING_REVIEW,
+            )
+            if kg_filter:
+                waitlist = waitlist.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
+            kpis[3]["value"] = waitlist.scalar() or 0
+
+            total_records = len(kgs)
+
+            # Capacity by governorate
+            gov_cap = {}
+            for kg in kgs:
+                gov = kg.governorate or "Other"
+                gov_cap[gov] = gov_cap.get(gov, 0) + (getattr(kg, 'capacity', 0) or 0)
+            charts[0]["data"] = {
+                "labels": [{"ar": g, "en": g} for g in gov_cap],
+                "datasets": [{"label": {"ar": "السعة", "en": "Capacity"}, "data": list(gov_cap.values()), "backgroundColor": "#4F46E5"}],
+            }
+
+            # Utilization distribution: low/medium/high
+            low = sum(1 for kg in kgs if (getattr(kg, 'capacity', 1) or 1) > 0 and enrolled_cnt / (getattr(kg, 'capacity', 1) or 1) < 0.5)
+            med = sum(1 for kg in kgs if 0.5 <= enrolled_cnt / (getattr(kg, 'capacity', 1) or 1) < 0.85)
+            high = len(kgs) - low - med
+            charts[1]["data"] = {
+                "labels": [{"ar": "منخفض <50%", "en": "Low <50%"}, {"ar": "متوسط 50-85%", "en": "Medium 50-85%"}, {"ar": "مرتفع >85%", "en": "High >85%"}],
+                "datasets": [{"data": [low, med, high], "backgroundColor": ["#198754", "#ffc107", "#dc3545"]}],
+            }
+        except Exception as e:
+            logger.error(f"capacity preview failed: {e}", exc_info=True)
+            warnings.append({"ar": "تعذر تحميل بيانات السعة", "en": "Failed to load capacity data"})
+
+    elif report_type == "parent_engagement":
+        kpis = [
+            {"id": "total_reports_viewed", "label_ar": "تقارير مُشاهَدة", "label_en": "Reports Viewed", "value": 0, "unit": ""},
+            {"id": "view_rate", "label_ar": "معدل المشاهدة", "label_en": "View Rate", "value": 0, "unit": "%"},
+            {"id": "parent_informed_count", "label_ar": "أولياء مُبلَّغون", "label_en": "Parents Informed", "value": 0, "unit": ""},
+            {"id": "avg_view_lag_hours", "label_ar": "متوسط تأخر المشاهدة (ساعات)", "label_en": "Avg View Lag (hours)", "value": 0, "unit": "h"},
+        ]
+        charts = [
+            {"id": "daily_views", "type": "line", "label_ar": "المشاهدات اليومية", "label_en": "Daily Views"},
+        ]
+        try:
+            from sqlalchemy import func
+            view_q = db.query(models.DailyReportView).filter(
+                models.DailyReportView.viewed_at >= utc_start,
+                models.DailyReportView.viewed_at <= utc_end,
+            )
+            if kg_filter:
+                view_q = view_q.join(
+                    models.DailyReport,
+                    models.DailyReportView.daily_report_id == models.DailyReport.id,
+                ).filter(models.DailyReport.kindergarten_id.in_(kg_filter))
+
+            total_viewed = view_q.count()
+            kpis[0]["value"] = total_viewed
+
+            total_reports = db.query(func.count(models.DailyReport.id)).filter(
+                models.DailyReport.date >= period_start,
+                models.DailyReport.date <= period_end,
+            )
+            if kg_filter:
+                total_reports = total_reports.filter(models.DailyReport.kindergarten_id.in_(kg_filter))
+            total_rep_cnt = total_reports.scalar() or 0
+            kpis[1]["value"] = round(total_viewed / total_rep_cnt * 100, 1) if total_rep_cnt > 0 else 0.0
+
+            informed_q = db.query(func.count(models.Incident.id)).filter(
+                models.Incident.occurred_at >= utc_start,
+                models.Incident.occurred_at <= utc_end,
+                models.Incident.parent_informed == True,
+                models.Incident.deleted_at.is_(None),
+            )
+            if kg_filter:
+                informed_q = informed_q.filter(models.Incident.kindergarten_id.in_(kg_filter))
+            kpis[2]["value"] = informed_q.scalar() or 0
+
+            total_records = total_viewed
+
+            daily_views = db.query(
+                func.date(models.DailyReportView.viewed_at).label("d"),
+                func.count(models.DailyReportView.id),
+            ).filter(
+                models.DailyReportView.viewed_at >= utc_start,
+                models.DailyReportView.viewed_at <= utc_end,
+            ).group_by("d").order_by("d").all()
+            charts[0]["data"] = {
+                "labels": [{"ar": str(r[0]), "en": str(r[0])} for r in daily_views],
+                "datasets": [{"label": {"ar": "المشاهدات", "en": "Views"}, "data": [r[1] for r in daily_views], "borderColor": "#0dcaf0", "fill": True}],
+            }
+        except Exception as e:
+            logger.error(f"parent_engagement preview failed: {e}", exc_info=True)
+            warnings.append({"ar": "تعذر تحميل بيانات مشاركة الوالدين", "en": "Failed to load parent engagement data"})
+
+    elif report_type == "data_quality":
+        kpis = [
+            {"id": "active_kgs", "label_ar": "الروضات الفعّالة", "label_en": "Active KGs", "value": 0, "unit": ""},
+            {"id": "submission_rate", "label_ar": "نسبة تقديم التقارير", "label_en": "Report Submission Rate", "value": 0, "unit": "%"},
+            {"id": "missing_reports", "label_ar": "تقارير مفقودة", "label_en": "Missing Reports", "value": 0, "unit": ""},
+            {"id": "zero_attendance_days", "label_ar": "أيام بدون حضور", "label_en": "Zero-Attendance Days", "value": 0, "unit": ""},
+            {"id": "data_completeness", "label_ar": "اكتمال البيانات", "label_en": "Data Completeness", "value": 0, "unit": "%"},
+        ]
+        charts = [
+            {"id": "submission_by_gov", "type": "bar", "label_ar": "التقديم حسب المحافظة", "label_en": "Submission by Governorate"},
+        ]
+        try:
+            from sqlalchemy import func
+            kg_q = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+            if kg_filter:
+                kg_q = kg_q.filter(models.Kindergarten.id.in_(kg_filter))
+            active_kgs = kg_q.all()
+            kpis[0]["value"] = len(active_kgs)
+
+            period_days = (period_end - period_start).days + 1
+            expected = len(active_kgs) * period_days
+            actual = db.query(func.count(models.DailyReport.id)).filter(
+                models.DailyReport.date >= period_start,
+                models.DailyReport.date <= period_end,
+            )
+            if kg_filter:
+                actual = actual.filter(models.DailyReport.kindergarten_id.in_(kg_filter))
+            actual_cnt = actual.scalar() or 0
+            kpis[2]["value"] = max(0, expected - actual_cnt)
+            kpis[1]["value"] = round(actual_cnt / expected * 100, 1) if expected > 0 else 0.0
+
+            att_days_q = db.query(func.count(models.AttendanceLog.id)).filter(
+                models.AttendanceLog.date >= period_start,
+                models.AttendanceLog.date <= period_end,
+                models.AttendanceLog.status == models.AttendanceStatus.PRESENT,
+            )
+            if kg_filter:
+                att_days_q = att_days_q.join(models.Class).filter(models.Class.kindergarten_id.in_(kg_filter))
+            if att_days_q.scalar() or 0 == 0:
+                kpis[3]["value"] = period_days
+
+            kpis[4]["value"] = kpis[1]["value"]
+            total_records = actual_cnt
+
+            # Submission by governorate
+            gov_sub = db.query(
+                models.Kindergarten.governorate,
+                func.count(models.DailyReport.id)
+            ).join(
+                models.DailyReport,
+                models.DailyReport.kindergarten_id == models.Kindergarten.id,
+                isouter=True,
+            ).filter(
+                models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
+                models.DailyReport.date >= period_start,
+                models.DailyReport.date <= period_end,
+            )
+            if kg_filter:
+                gov_sub = gov_sub.filter(models.Kindergarten.id.in_(kg_filter))
+            gov_sub_data = gov_sub.group_by(models.Kindergarten.governorate).all()
+            charts[0]["data"] = {
+                "labels": [{"ar": r[0] or "—", "en": r[0] or "—"} for r in gov_sub_data],
+                "datasets": [{"label": {"ar": "التقارير", "en": "Reports"}, "data": [r[1] for r in gov_sub_data], "backgroundColor": "#0d6efd"}],
+            }
+        except Exception as e:
+            logger.error(f"data_quality preview failed: {e}", exc_info=True)
+            warnings.append({"ar": "تعذر تحميل بيانات الجودة", "en": "Failed to load data quality metrics"})
+
     else:
         raise HTTPException(status_code=400, detail=f"Unsupported report type: {report_type}")
 
