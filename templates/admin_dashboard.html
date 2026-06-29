@@ -67,7 +67,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-gutter mb-xl">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter mb-xl">
       <!-- Recent Activity -->
       <div class="glass-card rounded-xl p-lg flex flex-col">
         <div class="flex justify-between items-center mb-6 pb-4 border-b border-white/5">
@@ -85,6 +85,31 @@
         </div>
         <div class="flex-1 overflow-y-auto pr-2 space-y-4 max-h-[400px]" id="alerts-list">
           <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Quick Actions (Restored) -->
+      <div class="glass-card rounded-xl p-lg flex flex-col">
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-white/5">
+          <h2 class="font-headline-md text-headline-md text-on-surface">{% if ui_lang == 'en' %}Quick Actions{% else %}الإجراءات السريعة{% endif %}</h2>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <a href="/admin/users" class="flex flex-col items-center justify-center p-4 rounded-xl border border-white/10 hover:border-primary hover:bg-primary/10 transition-all text-center group">
+            <span class="material-symbols-outlined text-primary text-3xl mb-2 group-hover:scale-110 transition-transform">person_add</span>
+            <span class="font-label-sm text-on-surface">{% if ui_lang == 'en' %}Manage Users{% else %}إدارة المستخدمين{% endif %}</span>
+          </a>
+          <a href="/admin/messages/compose" class="flex flex-col items-center justify-center p-4 rounded-xl border border-white/10 hover:border-success hover:bg-success/10 transition-all text-center group">
+            <span class="material-symbols-outlined text-[#4ade80] text-3xl mb-2 group-hover:scale-110 transition-transform">mail</span>
+            <span class="font-label-sm text-on-surface">{% if ui_lang == 'en' %}Send Message{% else %}إرسال رسالة{% endif %}</span>
+          </a>
+          <a href="/admin/analytics" class="flex flex-col items-center justify-center p-4 rounded-xl border border-white/10 hover:border-info hover:bg-info/10 transition-all text-center group">
+            <span class="material-symbols-outlined text-[#60a5fa] text-3xl mb-2 group-hover:scale-110 transition-transform">bar_chart</span>
+            <span class="font-label-sm text-on-surface">{% if ui_lang == 'en' %}View Analytics{% else %}عرض التحليلات{% endif %}</span>
+          </a>
+          <a href="/admin/imported-kindergartens" class="flex flex-col items-center justify-center p-4 rounded-xl border border-white/10 hover:border-warning hover:bg-warning/10 transition-all text-center group">
+            <span class="material-symbols-outlined text-[#fbbf24] text-3xl mb-2 group-hover:scale-110 transition-transform">database</span>
+            <span class="font-label-sm text-on-surface">{% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}</span>
+          </a>
         </div>
       </div>
     </div>
