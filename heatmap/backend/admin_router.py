@@ -175,7 +175,7 @@ def list_kindergartens(
         query = heatmap_service.build_kindergarten_query(
             db,
             governorate=governorate,
-            city=city,
+            district=city,
             status=status,
             from_date=from_date,
             to_date=to_date,
@@ -219,7 +219,7 @@ def get_kindergarten_map_data(
         return heatmap_service.get_kindergarten_map_data(
             db,
             governorate=governorate,
-            city=city,
+            district=city,
             status=status,
             from_date=from_date,
             to_date=to_date,
@@ -245,7 +245,7 @@ def get_kindergarten_stats(
         return heatmap_service.get_kindergarten_stats(
             db,
             governorate=governorate,
-            city=city,
+            district=city,
             status=status,
             from_date=from_date,
             to_date=to_date,

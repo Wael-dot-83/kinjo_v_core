@@ -128,9 +128,9 @@ district_name=None, district_id=None, postal_name=None, postal_id=None) %}
         <div class="invalid-feedback">{{ 'Please enter street' if lang == 'en' else 'يرجى إدخال الشارع' }}</div>
     </div>
     <div class="col-md-6 mb-3">
-        <label for="{{ city_id }}" class="form-label required">{{ 'District' if lang == 'en' else 'المدينة' }}</label>
+        <label for="{{ city_id }}" class="form-label required">{{ 'District' if lang == 'en' else 'اللواء' }}</label>
         <input type="text" class="form-control required" id="{{ city_id }}" name="{{ city_name }}" required>
-        <div class="invalid-feedback">{{ 'Please enter district' if lang == 'en' else 'يرجى إدخال المدينة' }}</div>
+        <div class="invalid-feedback">{{ 'Please enter district' if lang == 'en' else 'يرجى إدخال اللواء' }}</div>
     </div>
 </div>
 <div class="row">

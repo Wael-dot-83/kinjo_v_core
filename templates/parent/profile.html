@@ -539,7 +539,7 @@
       sel.innerHTML = `<option value="">${T("لا توجد مدن", "No cities")}</option>`;
       return;
     }
-    sel.innerHTML = `<option value="">${T("اختر المدينة...", "Select district...")}</option>`;
+    sel.innerHTML = `<option value="">${T("اختر اللواء...", "Select district...")}</option>`;
     gov.cities.forEach((c) => {
       const opt = document.createElement("option");
       opt.value = c;
@@ -623,7 +623,7 @@
     // Address
     document.getElementById("viewGovernorate").textContent =
       GOVERNORATE_AR[p.home_governorate] || p.home_governorate || "—";
-    document.getElementById("viewCity").textContent = p.home_city || "—";
+    document.getElementById("viewCity").textContent = p.home_district || "—";
     document.getElementById("viewArea").textContent = p.home_area || "—";
     document.getElementById("viewAddressLine").textContent =
       p.home_address_line || "—";
@@ -658,7 +658,7 @@
     );
     govSelect.value = matchedGov ? matchedGov.name_ar : govValue;
     if (matchedGov) {
-      populateCities(matchedGov.name_ar, p.home_city || "");
+      populateCities(matchedGov.name_ar, p.home_district || "");
     }
     document.getElementById("editArea").value = p.home_area || "";
     document.getElementById("editAddressLine").value =
@@ -817,7 +817,7 @@
 
       const payload = {
         home_governorate: document.getElementById("editGovernorate").value,
-        home_city: document.getElementById("editCity").value.trim(),
+        home_district: document.getElementById("editCity").value.trim(),
         home_area: document.getElementById("editArea").value.trim(),
         home_address_line: document
           .getElementById("editAddressLine")
@@ -828,7 +828,7 @@
 
       if (
         !payload.home_governorate ||
-        !payload.home_city ||
+        !payload.home_district ||
         !payload.home_area ||
         !payload.home_address_line
       ) {

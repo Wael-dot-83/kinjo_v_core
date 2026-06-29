@@ -73,7 +73,7 @@ breadcrumbs=[
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0"><i class="bi bi-building me-2"></i>{% if ui_lang == 'en' %}Register Child in Kindergarten{% else %}تسجيل طفل في روضة{% endif %}</h5>
-                        <small class="text-muted d-block mt-1">{% if ui_lang == 'en' %}Select the governorate then the district or search by kindergarten name{% else %}اختر المحافظة ثم المدينة أو ابحث باسم الروضة{% endif %}</small>
+                        <small class="text-muted d-block mt-1">{% if ui_lang == 'en' %}Select the governorate then the district or search by kindergarten name{% else %}اختر المحافظة ثم اللواء أو ابحث باسم الروضة{% endif %}</small>
                     </div>
                     <div class="card-body">
                         <!-- Hidden field that stores the selected kindergarten ID -->
@@ -125,9 +125,9 @@ breadcrumbs=[
                                 <!-- District Filter -->
                                 <div class="col-md-4">
                                     <label for="cityFilter" class="form-label">
-                                        <i class="bi bi-pin-map me-1"></i>{% if ui_lang == 'en' %}District{% else %}المدينة{% endif %}
+                                        <i class="bi bi-pin-map me-1"></i>{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}
                                     </label>
-                                    <select class="form-select" id="cityFilter" disabled aria-label="{% if ui_lang == 'en' %}Select district{% else %}اختر المدينة{% endif %}">
+                                    <select class="form-select" id="cityFilter" disabled aria-label="{% if ui_lang == 'en' %}Select district{% else %}اختر اللواء{% endif %}">
                                         <option value="">{% if ui_lang == 'en' %}Select governorate first{% else %}اختر المحافظة أولاً{% endif %}</option>
                                     </select>
                                 </div>
@@ -185,7 +185,7 @@ breadcrumbs=[
                                 <div class="kg-placeholder text-center text-muted py-4">
                                     <i class="bi bi-building fs-1 d-block mb-2 opacity-50"></i>
                                     <p class="mb-1">{% if ui_lang == 'en' %}Select a governorate or type a kindergarten name to search{% else %}اختر المحافظة أو اكتب اسم الروضة للبحث{% endif %}</p>
-                                    <small>{% if ui_lang == 'en' %}You can filter results by governorate, district, and name{% else %}يمكنك تصفية النتائج حسب المحافظة والمدينة والاسم{% endif %}</small>
+                                    <small>{% if ui_lang == 'en' %}You can filter results by governorate, district, and name{% else %}يمكنك تصفية النتائج حسب المحافظة واللواء والاسم{% endif %}</small>
                                 </div>
                             </div>
                         </div>

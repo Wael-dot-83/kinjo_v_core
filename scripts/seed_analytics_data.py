@@ -225,7 +225,7 @@ def create_children_and_enrollments(db: Session, kindergartens: list, classes: l
             nationality="Jordanian",
             national_id=f"{random.randint(1000000000, 9999999999)}",
             home_governorate=governorate,
-            home_city=random.choice(CITIES.get(governorate, ["عمان"])),
+            home_district=random.choice(CITIES.get(governorate, ["عمان"])),
             home_area=random.choice(AREAS.get(governorate, ["وسط المدينة"])),
             home_address_line=f"شارع {random.randint(1, 100)}"
         )

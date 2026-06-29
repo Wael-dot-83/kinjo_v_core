@@ -24,6 +24,32 @@ def _ulang(user) -> str:
 
 router = APIRouter(tags=["Enrollment"])
 
+VALID_TRANSITIONS: dict[models.EnrollmentStatus, set[models.EnrollmentStatus]] = {
+    models.EnrollmentStatus.DRAFT:          {models.EnrollmentStatus.SUBMITTED, models.EnrollmentStatus.WITHDRAWN},
+    models.EnrollmentStatus.SUBMITTED:      {models.EnrollmentStatus.PENDING_REVIEW, models.EnrollmentStatus.ACCEPTED, models.EnrollmentStatus.REJECTED, models.EnrollmentStatus.WITHDRAWN},
+    models.EnrollmentStatus.PENDING_REVIEW: {models.EnrollmentStatus.ACCEPTED, models.EnrollmentStatus.REJECTED, models.EnrollmentStatus.WITHDRAWN},
+    models.EnrollmentStatus.ACCEPTED:       {models.EnrollmentStatus.ACTIVE, models.EnrollmentStatus.WITHDRAWN},
+    models.EnrollmentStatus.ACTIVE:         {models.EnrollmentStatus.WITHDRAWN},
+    models.EnrollmentStatus.WAITLISTED:     {models.EnrollmentStatus.ACCEPTED, models.EnrollmentStatus.WITHDRAWN},
+    models.EnrollmentStatus.REJECTED:       set(),
+    models.EnrollmentStatus.WITHDRAWN:      set(),
+}
+
+
+def _assert_valid_transition(
+    current: models.EnrollmentStatus,
+    target: models.EnrollmentStatus,
+    lang: str = "ar",
+) -> None:
+    allowed = VALID_TRANSITIONS.get(current, set())
+    if target not in allowed:
+        msg = (
+            f"Cannot move enrollment from {current.value} to {target.value}"
+            if lang == "en"
+            else f"لا يمكن تغيير حالة الطلب من {current.value} إلى {target.value}"
+        )
+        raise HTTPException(status_code=400, detail=msg)
+
 @router.get("/enrollments")
 def list_enrollments(
     status: Optional[str] = None,
@@ -275,8 +301,7 @@ def submit_enrollment(
     if current_user.role not in {models.UserRole.PARENT, models.UserRole.ADMIN}:
         raise HTTPException(status_code=403, detail="Only parents can submit enrollment applications")
 
-    if enrollment.status != models.EnrollmentStatus.DRAFT:
-        raise HTTPException(status_code=400, detail="Only draft applications can be submitted")
+    _assert_valid_transition(enrollment.status, models.EnrollmentStatus.SUBMITTED, _ulang(current_user))
 
     # Verify parent owns this enrollment
     if current_user.role == models.UserRole.PARENT:
@@ -328,8 +353,8 @@ def review_enrollment(
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
 
-    if enrollment.status != models.EnrollmentStatus.SUBMITTED:
-        raise HTTPException(status_code=400, detail="Only submitted applications can be reviewed")
+    target_status = models.EnrollmentStatus.REJECTED if decision == "reject" else models.EnrollmentStatus.ACCEPTED
+    _assert_valid_transition(enrollment.status, target_status, _ulang(current_user))
 
     before_state = {"status": enrollment.status.value, "class_id": enrollment.class_id}
 

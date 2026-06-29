@@ -232,7 +232,7 @@ def seed(db: Session):
             first_name_en=fn_en, last_name_en=ln_en,
             phone_number=phone, gender=gender,
             nationality=nationality, national_id=nid,
-            home_governorate=gov, home_city=city,
+            home_governorate=gov, home_district=city,
             home_area=area, home_address_line=addr,
             correspondence_preference=True,
             profile_complete=True,

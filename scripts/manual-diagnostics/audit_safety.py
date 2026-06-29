@@ -76,7 +76,7 @@ try:
     pp = models.ParentProfile(
         user_id=parent_user.id, first_name="P", last_name="T", phone_number="079", 
         gender=models.Gender.MALE, nationality="Jordanian", home_governorate="Amman", 
-        home_city="Amman", home_area="Area", home_address_line="Street"
+        home_district="Amman", home_area="Area", home_address_line="Street"
     )
     db.add(pp)
     db.commit()

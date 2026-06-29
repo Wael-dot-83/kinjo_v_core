@@ -589,7 +589,7 @@ def kindergarten_to_dict(
         "name_en": kindergarten.name_en,
         "governorate": C.normalize_governorate(kindergarten.governorate),
         "governorate_name_en": kindergarten.governorate,
-        "city": kindergarten.district,
+        "district": kindergarten.district,
         "area": kindergarten.area,
         "address_line": kindergarten.address_line,
         "contact_phone": kindergarten.contact_phone,
@@ -627,7 +627,7 @@ def get_kindergarten_map_data(
     db: Session,
     *,
     governorate: Optional[str] = None,
-    city: Optional[str] = None,
+    district: Optional[str] = None,
     status: Optional[str] = None,
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
@@ -635,7 +635,7 @@ def get_kindergarten_map_data(
     rows = build_kindergarten_query(
         db,
         governorate=governorate,
-        city=city,
+        district=district,
         status=status,
         from_date=from_date,
         to_date=to_date,
@@ -686,7 +686,7 @@ def get_kindergarten_map_data(
         "missing_location_count": missing_location_count,
         "filters": {
             "governorate": governorate,
-            "city": city,
+            "district": district,
             "status": status,
             "from": from_date.isoformat() if from_date else None,
             "to": to_date.isoformat() if to_date else None,
@@ -699,7 +699,7 @@ def get_kindergarten_stats(
     db: Session,
     *,
     governorate: Optional[str] = None,
-    city: Optional[str] = None,
+    district: Optional[str] = None,
     status: Optional[str] = None,
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
@@ -707,7 +707,7 @@ def get_kindergarten_stats(
     rows = build_kindergarten_query(
         db,
         governorate=governorate,
-        city=city,
+        district=district,
         status=status,
         from_date=from_date,
         to_date=to_date,
@@ -737,13 +737,13 @@ def get_kindergarten_stats(
         scores.append(float(kg_dict["kpi_score"]))
 
         gov_key = kg_dict["governorate"]
-        city_key = kg_dict["city"] or "Unknown"
+        district_key = kg_dict["district"] or "Unknown"
         governorate_counts.setdefault(gov_key, {s.value: 0 for s in KPIStatus})
         governorate_counts[gov_key]["total"] = governorate_counts[gov_key].get("total", 0) + 1
         governorate_counts[gov_key][kpi_status] = governorate_counts[gov_key].get(kpi_status, 0) + 1
-        city_counts.setdefault(city_key, {s.value: 0 for s in KPIStatus})
-        city_counts[city_key]["total"] = city_counts[city_key].get("total", 0) + 1
-        city_counts[city_key][kpi_status] = city_counts[city_key].get(kpi_status, 0) + 1
+        city_counts.setdefault(district_key, {s.value: 0 for s in KPIStatus})
+        city_counts[district_key]["total"] = city_counts[district_key].get("total", 0) + 1
+        city_counts[district_key][kpi_status] = city_counts[district_key].get(kpi_status, 0) + 1
 
         for indicator_key, indicator in kg_dict["main_indicators"].items():
             indicator_scores.setdefault(indicator_key, []).append(float(indicator["score"]))
@@ -764,7 +764,7 @@ def get_kindergarten_stats(
         },
         "filters": {
             "governorate": governorate,
-            "city": city,
+            "district": district,
             "status": status,
             "from": from_date.isoformat() if from_date else None,
             "to": to_date.isoformat() if to_date else None,
@@ -777,7 +777,7 @@ def build_kindergarten_query(
     db: Session,
     *,
     governorate: Optional[str] = None,
-    city: Optional[str] = None,
+    district: Optional[str] = None,
     status: Optional[str] = None,
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
@@ -791,8 +791,8 @@ def build_kindergarten_query(
             raise ValueError(f"Unknown governorate slug: {governorate!r}")
         query = query.filter(models.Kindergarten.governorate.in_(_names_for_slug(slug)))
 
-    if city:
-        query = query.filter(models.Kindergarten.district == city)
+    if district:
+        query = query.filter(models.Kindergarten.district == district)
 
     if from_date:
         query = query.filter(func.date(func.coalesce(models.Kindergarten.updated_at, models.Kindergarten.created_at)) >= from_date)
@@ -906,10 +906,10 @@ def get_governorate_overview(db: Session, slug: str) -> Dict:
 
 
 def get_city_summary(db: Session, slug: str) -> Dict:
-    """Return city-level KPI aggregation for all cities within a governorate.
+    """Return district-level KPI aggregation for all districts within a governorate.
 
-    Groups kindergartens by their `city` field, computes average KPI scores
-    per city, converts to risk scale, and sorts by descending risk.
+    Groups kindergartens by their `district` field, computes average KPI scores
+    per district, converts to risk scale, and sorts by descending risk.
 
     Response shape::
 
@@ -918,7 +918,7 @@ def get_city_summary(db: Session, slug: str) -> Dict:
           "governorate_ar": "عمان",
           "cities": [
             {
-              "city": "عمّان",
+              "district": "عمّان",
               "kindergarten_count": 42,
               "avg_kpi_score": 81.5,
               "risk_score": 18.5,
@@ -956,11 +956,11 @@ def get_city_summary(db: Session, slug: str) -> Dict:
     from collections import defaultdict
     city_map: Dict[str, list] = defaultdict(list)
     for kg in kgs:
-        city_name = (kg.district or '').strip() or 'غير محدد'
-        city_map[city_name].append(kg)
+        district_name = (kg.district or '').strip() or 'غير محدد'
+        city_map[district_name].append(kg)
 
     cities = []
-    for city_name, city_kgs in city_map.items():
+    for district_name, city_kgs in city_map.items():
         scores: List[float] = []
         enrollments = 0
         for kg in city_kgs:
@@ -978,7 +978,7 @@ def get_city_summary(db: Session, slug: str) -> Dict:
         critical_count = sum(1 for s in scores if (100.0 - s) >= 75)
 
         cities.append({
-            "city": city_name,
+            "district": district_name,
             "kindergarten_count": len(city_kgs),
             "avg_kpi_score": avg_perf,
             "risk_score": risk_score,

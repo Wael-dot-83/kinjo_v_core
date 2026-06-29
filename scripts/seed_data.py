@@ -134,7 +134,7 @@ def seed_database():
             nationality="Jordanian",
             national_id="1234567890",
             home_governorate="عمان",
-            home_city="عمان",
+            home_district="عمان",
             home_area="عبدون",
             home_address_line="شارع المنزل 123",
             correspondence_preference=True

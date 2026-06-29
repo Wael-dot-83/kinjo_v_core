@@ -48,7 +48,7 @@ def seed_demographics():
                 nationality="Jordanian",
                 national_id="0000000000",
                 home_governorate="Amman",
-                home_city="Amman",
+                home_district="Amman",
                 home_area="Center",
                 home_address_line="System Address"
             )

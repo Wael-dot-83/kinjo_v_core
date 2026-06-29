@@ -163,7 +163,7 @@ def seed_tasks():
                 nationality="Jordanian",
                 national_id="1234567890",
                 home_governorate="Amman",
-                home_city="Amman",
+                home_district="Amman",
                 home_area="Abdoun",
                 home_address_line="Street 123"
             )

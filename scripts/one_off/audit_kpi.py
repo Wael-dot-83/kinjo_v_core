@@ -58,7 +58,7 @@ try:
     db.add(parent_user)
     db.commit()
     
-    pp = models.ParentProfile(user_id=parent_user.id, first_name="P", last_name="T", phone_number="0", gender=models.Gender.MALE, nationality="J", home_governorate="A", home_city="A", home_area="A", home_address_line="A")
+    pp = models.ParentProfile(user_id=parent_user.id, first_name="P", last_name="T", phone_number="0", gender=models.Gender.MALE, nationality="J", home_governorate="A", home_district="A", home_area="A", home_address_line="A")
     db.add(pp)
     db.commit() # Commit to get ID
     

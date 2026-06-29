@@ -64,7 +64,7 @@ try:
         gender=models.Gender.MALE,
         nationality="Jordanian",
         home_governorate="Amman",
-        home_city="Amman",
+        home_district="Amman",
         home_area="Area",
         home_address_line="Street"
     )

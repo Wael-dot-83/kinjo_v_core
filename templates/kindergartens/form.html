@@ -88,12 +88,12 @@ breadcrumbs=[
                             <div class="invalid-feedback">{% if ui_lang == 'en' %}Please select a governorate.{% else %}يرجى اختيار المحافظة.{% endif %}</div>
                         </div>
                         <div class="col-md-4 mb-3 mb-md-0">
-                            <label for="district" class="form-label required">{% if ui_lang == 'en' %}District{% else %}المدينة{% endif %} <span
+                            <label for="district" class="form-label required">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %} <span
                                     class="text-danger">*</span></label>
                             <select class="form-select" id="district" name="district" data-testid="district" required>
                                 <option value="">{% if ui_lang == 'en' %}Select governorate first{% else %}اختر المحافظة أولاً{% endif %}</option>
                             </select>
-                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter the district.{% else %}يرجى إدخال المدينة.{% endif %}</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter the district.{% else %}يرجى إدخال اللواء.{% endif %}</div>
                         </div>
                         <div class="col-md-4">
                             <label for="area" class="form-label required">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %} <span
@@ -259,7 +259,7 @@ breadcrumbs=[
             citySelect.innerHTML = '<option value="">' + T('لا توجد مدن', 'No cities') + '</option>';
             return;
         }
-        citySelect.innerHTML = '<option value="">' + T('اختر المدينة...', 'Select district...') + '</option>';
+        citySelect.innerHTML = '<option value="">' + T('اختر اللواء...', 'Select district...') + '</option>';
         gov.cities.forEach(c => {
             const opt = document.createElement('option');
             opt.value = c;

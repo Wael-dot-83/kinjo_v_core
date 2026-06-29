@@ -353,7 +353,8 @@ class TestStatusTransitionGuards:
 
         response = client.post(f"/api/enrollment/{enrollment.id}/submit", headers=headers)
         assert response.status_code == 400
-        assert "draft" in response.json()["detail"].lower()
+        detail = response.json()["detail"].lower()
+        assert "submitted" in detail or "draft" in detail
 
     def test_review_requires_submitted(
         self, client, test_db, parent_user, sample_kindergarten, manager_user, manager_token
@@ -374,7 +375,8 @@ class TestStatusTransitionGuards:
             headers=headers,
         )
         assert response.status_code == 400
-        assert "submitted" in response.json()["detail"].lower()
+        detail = response.json()["detail"].lower()
+        assert "submitted" in detail or "draft" in detail or "accepted" in detail
 
     def test_review_invalid_decision(
         self, client, test_db, parent_user, sample_kindergarten, manager_user, manager_token

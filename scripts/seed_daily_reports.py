@@ -138,7 +138,7 @@ def seed(kg_id: int = 1, start: str = "2026-02-01", end: str = "2026-02-09"):
                     nationality="Jordanian",
                     national_id=f"SEED{i:06d}",
                     home_governorate="Amman",
-                    home_city="Amman",
+                    home_district="Amman",
                     home_area="Downtown",
                     home_address_line="شارع البذور",
                     correspondence_preference=True,

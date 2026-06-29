@@ -201,7 +201,7 @@ def create_children_and_enrollments(db: Session):
                     gender="MALE" if parent_data["first_name"] in ["محمد", "أحمد"] else "FEMALE",
                     nationality="السعودية",
                     home_governorate="الرياض",
-                    home_city="الرياض",
+                    home_district="الرياض",
                     home_area="الملز",
                     home_address_line="شارع الملك عبدالعزيز",
                     correspondence_preference=True

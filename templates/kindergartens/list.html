@@ -78,9 +78,9 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="district" class="form-label">{% if ui_lang == 'en' %}District{% else %}المدينة{% endif %}</label>
+                        <label for="district" class="form-label">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</label>
                         <input type="text" class="form-control" id="district" name="district" value="{{ filters.district or '' }}"
-                            placeholder="{% if ui_lang == 'en' %}Search by district...{% else %}البحث بالمدينة...{% endif %}">
+                            placeholder="{% if ui_lang == 'en' %}Search by district...{% else %}البحث باللواء...{% endif %}">
                     </div>
                     <div class="col-md-2">
                         <label for="status" class="form-label">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
