@@ -319,7 +319,7 @@ function exportAuditLogs() {
   modal.show();
 }
 
-function doExport() {
+async function doExport() {
   const format = document.getElementById("exportFormat").value;
   const period = document.getElementById("exportPeriod").value;
 
