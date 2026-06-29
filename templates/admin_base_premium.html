@@ -260,7 +260,7 @@
       
       {% for section in sidebar_sections %}
         {% set section_state = namespace(active=false) %}
-        {% for item in section.items %}
+        {% for item in section['items'] %}
           {% set item_state = namespace(active=current_path in item.active_paths) %}
           {% if item.active_prefixes is defined %}
             {% for prefix in item.active_prefixes %}
@@ -286,7 +286,7 @@
             </button>
             
             <div class="mt-1 ml-4 border-l border-white/10 space-y-1 {% if not section_state.active %}hidden{% endif %}">
-            {% for item in section.items %}
+            {% for item in section['items'] %}
                 {% set is_active = current_path in item.active_paths %}
                 {% if item.active_prefixes is defined %}
                   {% for prefix in item.active_prefixes %}
