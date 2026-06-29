@@ -732,3 +732,23 @@
 [dir="rtl"] .ko-table th,
 [dir="rtl"] .ko-table td { text-align: right; }
 [dir="rtl"] .ko-alert-item { border-inline-start: 4px solid var(--sev-color); border-inline-end: none; }
+
+/* ── 23. Table pagination ───────────────────────────────── */
+.ko-pg-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 .5rem;
+  border: 1px solid var(--ko-border);
+  background: var(--ko-surface);
+  color: var(--ko-text);
+  border-radius: 6px;
+  font-size: .83rem;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ko-pg-btn:hover:not([disabled]) { background: var(--ko-surface-alt); border-color: var(--ko-primary); }
+.ko-pg-btn.active { background: var(--ko-primary); border-color: var(--ko-primary); color: #fff; font-weight: 700; }
+.ko-pg-btn[disabled] { opacity: .4; cursor: default; }

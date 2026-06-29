@@ -10,8 +10,8 @@
     <i class="bi bi-inbox me-2"></i>
     {% if ui_lang == 'en' %}Message Management{% else %}إدارة الرسائل{% endif %}
   </h1>
-  <a href="/admin/messages/compose" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]">
-    <i class="bi bi-plus-lg me-1"></i>{% if ui_lang == 'en' %}New Message{% else %}إنشاء رسالة جديدة{% endif %}
+  <a href="/admin/messages/compose" class="btn btn-primary d-flex align-items-center gap-2">
+    <i class="bi bi-plus-lg"></i>{% if ui_lang == 'en' %}New Message{% else %}إنشاء رسالة جديدة{% endif %}
   </a>
 </div>
 <div class="messages-list">
@@ -54,8 +54,8 @@
                         <i class="bi bi-envelope-x fs-1 text-on-surface-variant mb-3"></i>
                         <h5 class="text-on-surface-variant">{% if ui_lang == 'en' %}No sent messages{% else %}لا توجد رسائل مرسلة{% endif %}</h5>
                         <p class="text-on-surface-variant">{% if ui_lang == 'en' %}Start by composing a new message to users.{% else %}ابدأ بإنشاء رسالة جديدة للمستخدمين.{% endif %}</p>
-                        <a href="/admin/messages/compose" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]">
-                            <i class="bi bi-plus me-1"></i>{% if ui_lang == 'en' %}Create First Message{% else %}إنشاء أول رسالة{% endif %}
+                        <a href="/admin/messages/compose" class="btn btn-primary d-inline-flex align-items-center gap-2 mt-2">
+                            <i class="bi bi-plus"></i>{% if ui_lang == 'en' %}Create First Message{% else %}إنشاء أول رسالة{% endif %}
                         </a>
                     </div>
                     {% endif %}

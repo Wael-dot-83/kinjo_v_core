@@ -33,6 +33,11 @@
       href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <!-- Material Symbols — used by CYBERLUME premium pages for icon glyphs -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+    />
 
         <!-- Bootstrap CSS (direction-aware on initial SSR) -->
     <link
@@ -129,6 +134,144 @@
       }
       .app-container .spinner-border.text-primary {
         color: var(--admin-primary, #1F5E47) !important;
+      }
+
+      /* ── Material Symbols glyph rendering ──────────────────────────────────
+         Ensure icon font renders as symbols, not raw ligature text. */
+      .material-symbols-outlined {
+        font-family: 'Material Symbols Outlined', sans-serif;
+        font-weight: normal;
+        font-style: normal;
+        font-size: 1.25rem;
+        line-height: 1;
+        letter-spacing: normal;
+        text-transform: none;
+        display: inline-block;
+        white-space: nowrap;
+        word-wrap: normal;
+        direction: ltr;
+        -webkit-font-feature-settings: 'liga';
+        font-feature-settings: 'liga';
+        -webkit-font-smoothing: antialiased;
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        vertical-align: middle;
+        user-select: none;
+      }
+
+      /* ── Tailwind dark-palette → light admin background remapping ─────────
+         Tailwind extends colors with dark-surface tokens (e.g. text-on-surface
+         = #e5e1e4). On the admin's white background they are nearly invisible.
+         These overrides remap them to readable dark-on-light equivalents. */
+      .text-on-surface         { color: #1e293b !important; }
+      .text-on-surface-variant { color: #64748b !important; }
+      .text-on-primary         { color: #ffffff !important; }
+      .text-primary            { color: #1F5E47 !important; }
+      .text-secondary          { color: #0D9488 !important; }
+      .text-error              { color: #dc2626 !important; }
+      .text-warning            { color: #b45309 !important; }
+      .text-success            { color: #047857 !important; }
+      .text-info               { color: #0369a1 !important; }
+
+      /* ── Glass surface components ─────────────────────────────────────────
+         glass-panel, glass-card, cyberlume-card were phantom classes with no
+         CSS definition. Defined here as clean frosted-glass cards that suit
+         the admin's light background. */
+      .glass-panel,
+      .glass-card {
+        background: rgba(255, 255, 255, 0.96) !important;
+        border: 1px solid rgba(0, 0, 0, 0.07) !important;
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+        border-radius: 0.75rem;
+      }
+
+      .cyberlume-card {
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.07);
+        box-shadow: 0 1px 12px rgba(0, 0, 0, 0.05);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+      }
+
+      /* ── Glass form inputs ────────────────────────────────────────────────
+         input-glass was also a phantom class. Styled to match the admin's
+         clean form aesthetic on a light background. */
+      .input-glass {
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        color: #1e293b !important;
+        border-radius: 0.5rem;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .input-glass:focus {
+        background: #ffffff !important;
+        border-color: #1F5E47 !important;
+        box-shadow: 0 0 0 3px rgba(31, 94, 71, 0.12) !important;
+        outline: none;
+      }
+      .input-glass::placeholder {
+        color: #94a3b8 !important;
+      }
+
+      /* ── Dark Tailwind table cells on light admin background ──────────────
+         bg-surface-container and related classes generate very dark BG
+         (#201f21). Inside a white glass-panel this clashes. Soften them. */
+      .glass-panel  .bg-surface-container\/20,
+      .glass-card   .bg-surface-container\/20,
+      .cyberlume-card .bg-surface-container\/20 {
+        background: rgba(241, 245, 249, 0.6) !important;
+      }
+      /* Tailwind border-white/* classes are invisible on white; remap to subtle gray */
+      .glass-panel  .border-white\/10,
+      .glass-card   .border-white\/10,
+      .cyberlume-card .border-white\/10 {
+        border-color: rgba(0, 0, 0, 0.07) !important;
+      }
+      .glass-panel  .border-white\/5,
+      .glass-card   .border-white\/5,
+      .cyberlume-card .border-white\/5 {
+        border-color: rgba(0, 0, 0, 0.04) !important;
+      }
+      /* bg-white/5 and bg-white/10 hover states — make them visible on light bg */
+      .glass-panel  .bg-white\/5,
+      .glass-card   .bg-white\/5,
+      .cyberlume-card .bg-white\/5 { background: rgba(0, 0, 0, 0.02) !important; }
+      .glass-panel  .bg-white\/10,
+      .glass-card   .bg-white\/10,
+      .cyberlume-card .bg-white\/10 { background: rgba(0, 0, 0, 0.04) !important; }
+
+      /* ── Tailwind display/headline type scale → admin-appropriate sizes ──
+         Tailwind JIT doesn't define font-display-md/text-display-md by default;
+         Bootstrap h1 sizing picks up for h1 elements making them too large.
+         Cap them here. */
+      h1.font-display-md, h1.text-display-md { font-size: 1.5rem !important; font-weight: 700 !important; }
+      h1.font-headline-lg, h1.text-headline-lg { font-size: 1.375rem !important; font-weight: 700 !important; }
+      h2.font-title-lg, h2.text-title-lg { font-size: 1.125rem !important; font-weight: 600 !important; }
+      h5.font-title-md { font-size: 0.9375rem !important; font-weight: 600 !important; }
+
+      /* ── Content area card/table improvements ────────────────────────────
+         Bootstrap table-dark rows inside glass-panel look jarring on white.
+         Soften the dark table to a subtle stripe pattern. */
+      .glass-panel .table-dark,
+      .glass-card  .table-dark,
+      .cyberlume-card .table-dark {
+        --bs-table-bg: #f8fafc;
+        --bs-table-striped-bg: #f1f5f9;
+        --bs-table-hover-bg: #e2e8f0;
+        --bs-table-color: #1e293b;
+        --bs-table-border-color: #e2e8f0;
+      }
+      .glass-panel .table-dark thead,
+      .glass-card  .table-dark thead,
+      .cyberlume-card .table-dark thead {
+        background: #e2e8f0 !important;
+        color: #334155 !important;
+      }
+      .glass-panel .table-dark th,
+      .glass-panel .table-dark td,
+      .cyberlume-card .table-dark th,
+      .cyberlume-card .table-dark td {
+        color: #1e293b !important;
+        border-color: #e2e8f0 !important;
       }
       /* Form check (checkbox/radio) checked state — overrides Bootstrap's #0d6efd fill */
       .app-container .form-check-input:checked {

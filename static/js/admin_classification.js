@@ -9,6 +9,9 @@
 
   let autoRefreshInterval = null;
   let sortState = { column: null, ascending: false };
+  let classPage = 1;
+  const CLASS_PAGE_SIZE = 25;
+  let allClassRows = [];
 
   const lang = window.KINJO_LANG === "en" ? "en" : "ar";
   const isEn = lang === "en";
@@ -371,21 +374,72 @@
     return "/api/admin/classification/kindergartens";
   }
 
-  function renderRows(rows) {
+  function renderRows(rows, resetPage = true) {
+    if (resetPage) classPage = 1;
+    allClassRows = rows || [];
+    window._classificationData = { rows: allClassRows };
+
     const tbody = document.getElementById("classificationTableBody");
-    if (!tbody) {
-      return;
-    }
-    if (!rows || rows.length === 0) {
+    if (!tbody) return;
+
+    if (!allClassRows.length) {
       tbody.innerHTML = "";
       setEmpty(true);
-      window._classificationData = { rows: [] };
+      const pg = document.getElementById("classificationPagination");
+      if (pg) pg.innerHTML = "";
       return;
     }
     setEmpty(false);
-    window._classificationData = { rows };
-    tbody.innerHTML = rows.map((row) => tableRowHtml(row)).join("");
+    renderClassPage();
   }
+
+  function renderClassPage() {
+    const tbody = document.getElementById("classificationTableBody");
+    if (!tbody) return;
+
+    const start = (classPage - 1) * CLASS_PAGE_SIZE;
+    const page  = allClassRows.slice(start, start + CLASS_PAGE_SIZE);
+    tbody.innerHTML = page.map((row) => tableRowHtml(row)).join("");
+    renderClassPagination(allClassRows.length);
+  }
+
+  function renderClassPagination(total) {
+    const el = document.getElementById("classificationPagination");
+    if (!el) return;
+    const totalPages = Math.ceil(total / CLASS_PAGE_SIZE);
+    if (totalPages <= 1) { el.innerHTML = ""; return; }
+
+    const show = new Set([1, totalPages, classPage, classPage - 1, classPage + 1]
+      .filter(p => p >= 1 && p <= totalPages));
+    const pages = [...show].sort((a, b) => a - b);
+
+    let prev = 0;
+    const parts = [];
+    for (const p of pages) {
+      if (p - prev > 1) parts.push('<span class="text-muted px-1" aria-hidden="true">…</span>');
+      parts.push(`<button class="btn btn-sm ${p === classPage ? 'btn-primary' : 'btn-outline-secondary'}"
+        onclick="window.goClassPage(${p})" aria-label="${isEn ? 'Page' : 'صفحة'} ${p}">${p}</button>`);
+      prev = p;
+    }
+
+    el.innerHTML = `
+      <button class="btn btn-sm btn-outline-secondary" ${classPage === 1 ? 'disabled' : ''}
+        onclick="window.goClassPage(${classPage - 1})" aria-label="${isEn ? 'Previous' : 'السابق'}">
+        <i class="bi bi-chevron-${isEn ? 'left' : 'right'}"></i>
+      </button>
+      ${parts.join('')}
+      <button class="btn btn-sm btn-outline-secondary" ${classPage === totalPages ? 'disabled' : ''}
+        onclick="window.goClassPage(${classPage + 1})" aria-label="${isEn ? 'Next' : 'التالي'}">
+        <i class="bi bi-chevron-${isEn ? 'right' : 'left'}"></i>
+      </button>`;
+  }
+
+  window.goClassPage = function(p) {
+    classPage = p;
+    renderClassPage();
+    document.getElementById("classificationTableBody")?.closest("table")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   function chartOptions(extra = {}) {
     return {

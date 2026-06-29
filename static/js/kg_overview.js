@@ -588,7 +588,9 @@ class KgOverview {
             ${delta.dir === 'up' ? '<i class="bi bi-arrow-up-short"></i>' : delta.dir === 'down' ? '<i class="bi bi-arrow-down-short"></i>' : '<i class="bi bi-dash"></i>'}
             ${delta.text} ${isAr ? 'مقارنة بالشهر السابق' : 'vs last period'}
           </div>
-          <canvas class="ko-sparkline" id="ko-spark-${key}" aria-hidden="true"></canvas>
+          <div style="height:44px;overflow:hidden;position:relative;margin-top:.875rem;">
+            <canvas id="ko-spark-${key}" aria-hidden="true" style="display:block;width:100%;height:44px;"></canvas>
+          </div>
         </div>`;
     }).join('');
 
@@ -653,6 +655,7 @@ class KgOverview {
       <!-- Cards View -->
       <div class="ko-data-panel ${this.#currentView !== 'cards' ? 'ko-hidden' : ''}" id="ko-view-cards">
         <div class="ko-kg-grid" id="ko-kg-cards"></div>
+        <div id="ko-cards-pagination" class="d-flex align-items-center justify-content-center gap-1 py-2 flex-wrap" style="border-top:1px solid var(--ko-border)"></div>
       </div>
 
       <!-- Chart View -->
@@ -685,6 +688,7 @@ class KgOverview {
             <tbody id="ko-table-body"></tbody>
           </table>
         </div>
+        <div id="ko-table-pagination" class="d-flex align-items-center justify-content-center gap-1 py-2 flex-wrap" style="border-top:1px solid var(--ko-border)"></div>
       </div>`;
 
     /* View switcher */
@@ -733,13 +737,29 @@ class KgOverview {
   }
 
   #renderKGCards(kgs) {
+    this.#cardsAllKgs = kgs;
+    this.#cardsPage = 1;
+    this.#renderCardsPage();
+  }
+
+  #renderCardsPage() {
     const wrap = document.getElementById('ko-kg-cards');
     if (!wrap) return;
+    const kgs  = this.#cardsAllKgs;
     const lang = window.KINJO_LANG || 'ar';
     const isAr = lang !== 'en';
-    if (!kgs.length) { wrap.innerHTML = `<div class="ko-empty"><i class="bi bi-search"></i><p>${isAr ? 'لا توجد نتائج' : 'No results'}</p></div>`; return; }
 
-    wrap.innerHTML = kgs.map(kg => {
+    if (!kgs.length) {
+      wrap.innerHTML = `<div class="ko-empty"><i class="bi bi-search"></i><p>${isAr ? 'لا توجد نتائج' : 'No results'}</p></div>`;
+      const pg = document.getElementById('ko-cards-pagination');
+      if (pg) pg.innerHTML = '';
+      return;
+    }
+
+    const start = (this.#cardsPage - 1) * this.#cardsPageSize;
+    const page  = kgs.slice(start, start + this.#cardsPageSize);
+
+    wrap.innerHTML = page.map(kg => {
       const pct     = Math.max(0, Math.min(100, Number(kg.attendance) || 0));
       const cls     = pct >= 80 ? '' : pct >= 65 ? 'warn' : 'alert';
       const badge   = pct >= 80 ? 'green' : pct >= 65 ? 'amber' : 'red';
@@ -775,7 +795,56 @@ class KgOverview {
         if (kg) this.#openKGPanel(kg);
       });
     });
+
+    this.#renderKgCardsPagination(kgs.length);
   }
+
+  #renderKgCardsPagination(total) {
+    const el = document.getElementById('ko-cards-pagination');
+    if (!el) return;
+    const totalPages = Math.ceil(total / this.#cardsPageSize);
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+    const lang  = window.KINJO_LANG || 'ar';
+    const isAr  = lang !== 'en';
+    const cur   = this.#cardsPage;
+
+    const show = new Set([1, totalPages, cur, cur - 1, cur + 1]
+      .filter(p => p >= 1 && p <= totalPages));
+    const pages = [...show].sort((a, b) => a - b);
+
+    let prev = 0;
+    const parts = [];
+    for (const p of pages) {
+      if (p - prev > 1) parts.push('<span style="padding:0 .3rem;color:var(--ko-text-muted)">…</span>');
+      parts.push(`<button class="ko-pg-btn ${p === cur ? 'active' : ''}" data-pg="${p}">${p}</button>`);
+      prev = p;
+    }
+
+    el.innerHTML = `
+      <button class="ko-pg-btn" data-pg="${cur - 1}" ${cur === 1 ? 'disabled' : ''} aria-label="${isAr ? 'السابق' : 'Previous'}">
+        <i class="bi bi-chevron-${isAr ? 'right' : 'left'}"></i>
+      </button>
+      ${parts.join('')}
+      <button class="ko-pg-btn" data-pg="${cur + 1}" ${cur === totalPages ? 'disabled' : ''} aria-label="${isAr ? 'التالي' : 'Next'}">
+        <i class="bi bi-chevron-${isAr ? 'left' : 'right'}"></i>
+      </button>`;
+
+    el.querySelectorAll('.ko-pg-btn:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.#cardsPage = Number(btn.dataset.pg);
+        this.#renderCardsPage();
+        document.getElementById('ko-view-cards')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  }
+
+  #tablePage = 1;
+  #tablePageSize = 25;
+  #tableAllKgs = [];
+  #cardsPage = 1;
+  #cardsPageSize = 24;
+  #cardsAllKgs = [];
 
   #sortDir = {};
   #sortTable(key, th) {
@@ -790,13 +859,29 @@ class KgOverview {
   }
 
   #renderTable(kgs) {
+    this.#tableAllKgs = kgs;
+    this.#tablePage = 1;
+    this.#renderTablePage();
+  }
+
+  #renderTablePage() {
     const tbody = document.getElementById('ko-table-body');
     if (!tbody) return;
+    const kgs  = this.#tableAllKgs;
     const lang = window.KINJO_LANG || 'ar';
     const isAr = lang !== 'en';
-    if (!kgs.length) { tbody.innerHTML = `<tr><td colspan="7" class="ko-empty"><i class="bi bi-search"></i><br>${isAr ? 'لا توجد نتائج' : 'No results'}</td></tr>`; return; }
 
-    tbody.innerHTML = kgs.map(kg => {
+    if (!kgs.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="ko-empty"><i class="bi bi-search"></i><br>${isAr ? 'لا توجد نتائج' : 'No results'}</td></tr>`;
+      const pg = document.getElementById('ko-table-pagination');
+      if (pg) pg.innerHTML = '';
+      return;
+    }
+
+    const start = (this.#tablePage - 1) * this.#tablePageSize;
+    const page  = kgs.slice(start, start + this.#tablePageSize);
+
+    tbody.innerHTML = page.map(kg => {
       const attCls = kg.attendance >= 80 ? 'green' : kg.attendance >= 65 ? 'amber' : 'red';
       const alCls  = kg.alerts === 0 ? 'green' : kg.alerts <= 2 ? 'amber' : 'red';
       const safeId = koEscape(kg.id);
@@ -816,6 +901,48 @@ class KgOverview {
       row.addEventListener('click', () => {
         const kg = kgs.find(k => String(k.id) === row.dataset.kgId);
         if (kg) this.#openKGPanel(kg);
+      });
+    });
+
+    this.#renderKgTablePagination(kgs.length);
+  }
+
+  #renderKgTablePagination(total) {
+    const el = document.getElementById('ko-table-pagination');
+    if (!el) return;
+    const totalPages = Math.ceil(total / this.#tablePageSize);
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+    const lang  = window.KINJO_LANG || 'ar';
+    const isAr  = lang !== 'en';
+    const cur   = this.#tablePage;
+
+    const show = new Set([1, totalPages, cur, cur - 1, cur + 1]
+      .filter(p => p >= 1 && p <= totalPages));
+    const pages = [...show].sort((a, b) => a - b);
+
+    let prev = 0;
+    const parts = [];
+    for (const p of pages) {
+      if (p - prev > 1) parts.push('<span style="padding:0 .3rem;color:var(--ko-text-muted)">…</span>');
+      parts.push(`<button class="ko-pg-btn ${p === cur ? 'active' : ''}" data-pg="${p}">${p}</button>`);
+      prev = p;
+    }
+
+    el.innerHTML = `
+      <button class="ko-pg-btn" data-pg="${cur - 1}" ${cur === 1 ? 'disabled' : ''} aria-label="${isAr ? 'السابق' : 'Previous'}">
+        <i class="bi bi-chevron-${isAr ? 'right' : 'left'}"></i>
+      </button>
+      ${parts.join('')}
+      <button class="ko-pg-btn" data-pg="${cur + 1}" ${cur === totalPages ? 'disabled' : ''} aria-label="${isAr ? 'التالي' : 'Next'}">
+        <i class="bi bi-chevron-${isAr ? 'left' : 'right'}"></i>
+      </button>`;
+
+    el.querySelectorAll('.ko-pg-btn:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.#tablePage = Number(btn.dataset.pg);
+        this.#renderTablePage();
+        document.getElementById('ko-kg-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
   }

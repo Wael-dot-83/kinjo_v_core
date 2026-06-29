@@ -431,29 +431,28 @@
 
 /* Main Panel Modernization */
 .admin-page-header {
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.9), rgba(14, 165, 233, 0.9));
+    background: linear-gradient(135deg, #163d2e 0%, #1F5E47 60%, #2F7D62 100%);
     color: #ffffff;
-    padding: 2rem;
-    border-radius: 16px;
-    margin-bottom: 2rem;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    padding: 1.75rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 1.75rem;
+    box-shadow: 0 4px 20px rgba(22, 61, 46, 0.25);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
 }
 
 .admin-page-title {
-    font-size: 2rem;
-    font-weight: 800;
-    margin-bottom: 0.5rem;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.01em;
 }
 
 .admin-page-subtitle {
-    font-size: 1.1rem;
-    opacity: 0.9;
+    font-size: 0.9rem;
+    opacity: 0.85;
+    font-weight: 400;
 }
 
 /* Glassmorphism KPI Cards */

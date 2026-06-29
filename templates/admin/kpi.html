@@ -285,6 +285,7 @@
                 </tbody>
             </table>
         </div>
+        <div id="kpiPagination" class="d-flex align-items-center justify-content-center gap-1 py-2 border-top flex-wrap"></div>
         <div class="card-footer py-2 d-flex align-items-center justify-content-between">
             <span class="text-muted small" id="tableFooter"></span>
             <div class="d-flex gap-2">
@@ -319,6 +320,9 @@
     let attendanceChart = null;
     let bandChart       = null;
     let allRows         = [];
+    let kpiPage = 1;
+    const KPI_PAGE_SIZE = 25;
+    let kpiSorted = [];
 
     /* ── init ──────────────────────────────────────────────────────── */
     // Use local calendar date (not UTC) so Jordan users (UTC+3) get the correct
@@ -475,23 +479,32 @@
     }
 
     function filterTable() {
+        kpiPage = 1;
         const q  = (document.getElementById('tableSearch').value || '').toLowerCase();
         const filtered = q
             ? allRows.filter(r => (r.kindergarten_name || '').toLowerCase().includes(q)
                               || (r.governorate || '').toLowerCase().includes(q))
             : allRows;
+        kpiSorted = [...filtered].sort((a, b) => b.governance_score - a.governance_score);
+        renderKpiPage();
+    }
 
-        const sorted = [...filtered].sort((a, b) => b.governance_score - a.governance_score);
-        const tbody  = document.getElementById('kpiTableBody');
+    function renderKpiPage() {
+        const tbody = document.getElementById('kpiTableBody');
+        if (!tbody) return;
 
-        if (!sorted.length) {
+        if (!kpiSorted.length) {
             tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">
                 ${T('لا توجد نتائج', 'No results found')}</td></tr>`;
             document.getElementById('tableFooter').textContent = '';
+            document.getElementById('kpiPagination').innerHTML = '';
             return;
         }
 
-        tbody.innerHTML = sorted.map((r, i) => {
+        const start = (kpiPage - 1) * KPI_PAGE_SIZE;
+        const page  = kpiSorted.slice(start, start + KPI_PAGE_SIZE);
+
+        tbody.innerHTML = page.map((r) => {
             const att  = r.attendance_rate  ?? 0;
             const rat  = r.ratio_compliance ?? 0;
             const inc  = r.incident_rate    ?? 0;
@@ -532,9 +545,50 @@
             </tr>`;
         }).join('');
 
+        const endNum = Math.min(start + KPI_PAGE_SIZE, kpiSorted.length);
         document.getElementById('tableFooter').textContent =
-            `${T('إجمالي الروضات:', 'Total kindergartens:')} ${sorted.length}`;
+            T(`عرض ${start + 1}–${endNum} من ${kpiSorted.length} روضة`,
+              `Showing ${start + 1}–${endNum} of ${kpiSorted.length} kindergartens`);
+
+        renderKpiPagination(kpiSorted.length);
     }
+
+    function renderKpiPagination(total) {
+        const el = document.getElementById('kpiPagination');
+        if (!el) return;
+        const totalPages = Math.ceil(total / KPI_PAGE_SIZE);
+        if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+        const show = new Set([1, totalPages, kpiPage, kpiPage - 1, kpiPage + 1]
+            .filter(p => p >= 1 && p <= totalPages));
+        const pages = [...show].sort((a, b) => a - b);
+
+        let prev = 0;
+        const parts = [];
+        for (const p of pages) {
+            if (p - prev > 1) parts.push('<span class="text-muted px-1" aria-hidden="true">…</span>');
+            parts.push(`<button class="btn btn-sm ${p === kpiPage ? 'btn-primary' : 'btn-outline-secondary'}"
+                onclick="window.goKpiPage(${p})" aria-label="${T('صفحة', 'Page')} ${p}">${p}</button>`);
+            prev = p;
+        }
+
+        el.innerHTML = `
+            <button class="btn btn-sm btn-outline-secondary" ${kpiPage === 1 ? 'disabled' : ''}
+                onclick="window.goKpiPage(${kpiPage - 1})" aria-label="${T('السابق', 'Previous')}">
+                <i class="bi bi-chevron-${IS_EN ? 'left' : 'right'}"></i>
+            </button>
+            ${parts.join('')}
+            <button class="btn btn-sm btn-outline-secondary" ${kpiPage === totalPages ? 'disabled' : ''}
+                onclick="window.goKpiPage(${kpiPage + 1})" aria-label="${T('التالي', 'Next')}">
+                <i class="bi bi-chevron-${IS_EN ? 'right' : 'left'}"></i>
+            </button>`;
+    }
+
+    window.goKpiPage = function(p) {
+        kpiPage = p;
+        renderKpiPage();
+        document.getElementById('kpiTable')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
     /* ── helpers ────────────────────────────────────────────────────── */
     function bandColor(b) {
