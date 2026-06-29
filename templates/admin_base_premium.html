@@ -13,7 +13,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
   
   <script id="tailwind-config">
-    tailwind.config = {
+    if (typeof tailwind !== 'undefined') {
+      tailwind.config = {
         darkMode: "class",
         theme: {
             extend: {
@@ -94,6 +95,9 @@
                 }
             }
         }
+      };
+    } else {
+      console.warn("Tailwind CSS CDN failed to load. Styling may be broken.");
     }
   </script>
   
