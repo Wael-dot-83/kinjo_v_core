@@ -88,7 +88,7 @@ def manager_user(test_db):
 @pytest.fixture
 def parent_user(test_db):
     """
-    Create a parent user for testing
+    Create a parent user with profile for testing
     """
     user = models.User(
         username="testparent",
@@ -100,6 +100,24 @@ def parent_user(test_db):
     test_db.add(user)
     test_db.commit()
     test_db.refresh(user)
+
+    profile = models.ParentProfile(
+        user_id=user.id,
+        first_name="Test",
+        last_name="Parent",
+        phone_number="+962791234567",
+        gender=models.Gender.MALE,
+        nationality="Jordanian",
+        national_id="1234567890",
+        home_governorate="Amman",
+        home_district="Amman",
+        home_area="Abdoun",
+        home_address_line="123 Main Street",
+        correspondence_preference=True
+    )
+    test_db.add(profile)
+    test_db.commit()
+    test_db.refresh(profile)
     return user
 
 

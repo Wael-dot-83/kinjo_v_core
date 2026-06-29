@@ -129,9 +129,9 @@ COLUMN_ALIASES = {
     "اسم الروضة باللغة الإنجليزية": "name_en",
     "governorate": "governorate",
     "المحافظة": "governorate",
-    "city": "city",
-    "المدينة": "city",
-    "district": "area",
+    "city": "district",
+    "المدينة": "district",
+    "district": "district",
     "area": "area",
     "المنطقة": "area",
     "الحي": "area",
@@ -179,7 +179,7 @@ MODEL_FIELDS = {
     "name_ar",
     "name_en",
     "governorate",
-    "city",
+    "district",
     "area",
     "address_line",
     "contact_phone",
@@ -491,7 +491,7 @@ def prepare_row(row: pd.Series, excel_row: int) -> tuple[PreparedRow | None, dic
     extra: dict[str, Any] = {}
     match_phone = ""
 
-    for text_field in ("name_ar", "name_en", "city", "area", "address_line", "license_number"):
+    for text_field in ("name_ar", "name_en", "district", "area", "address_line", "license_number"):
         value = clean_display_text(row.get(text_field))
         if value:
             payload[text_field] = value
@@ -563,7 +563,7 @@ def prepare_row(row: pd.Series, excel_row: int) -> tuple[PreparedRow | None, dic
         "name_ar": normalize_arabic_for_match(payload.get("name_ar")),
         "name_en": normalize_generic_for_match(payload.get("name_en")),
         "governorate": normalize_generic_for_match(payload.get("governorate")),
-        "city": normalize_generic_for_match(payload.get("city")),
+        "district": normalize_generic_for_match(payload.get("district")),
         "area": normalize_generic_for_match(payload.get("area")),
         "address_line": normalize_generic_for_match(payload.get("address_line")),
         "contact_phone": match_phone,
@@ -576,7 +576,7 @@ def candidate_from_kindergarten(kg: models.Kindergarten) -> Candidate:
         "name_ar": kg.name_ar,
         "name_en": kg.name_en,
         "governorate": kg.governorate,
-        "city": kg.district,
+        "district": kg.district,
         "area": kg.area,
         "address_line": kg.address_line,
         "contact_phone": kg.contact_phone,
@@ -593,7 +593,7 @@ def candidate_from_kindergarten(kg: models.Kindergarten) -> Candidate:
         "name_ar": normalize_arabic_for_match(kg.name_ar),
         "name_en": normalize_generic_for_match(kg.name_en),
         "governorate": normalize_generic_for_match(kg.governorate),
-        "city": normalize_generic_for_match(kg.district),
+        "district": normalize_generic_for_match(kg.district),
         "area": normalize_generic_for_match(kg.area),
         "address_line": normalize_generic_for_match(kg.address_line),
         "contact_phone": normalize_phone(kg.contact_phone, kg.governorate)[0] or "",
@@ -622,8 +622,8 @@ def _add_candidate_to_indexes(indexes: dict[str, dict[Any, list[Candidate]]], ca
     add("license_number", candidate.match.get("license_number"))
     add("name_ar_governorate", (candidate.match.get("name_ar"), candidate.match.get("governorate")))
     add(
-        "name_ar_city_area",
-        (candidate.match.get("name_ar"), candidate.match.get("city"), candidate.match.get("area")),
+        "name_ar_district_area",
+        (candidate.match.get("name_ar"), candidate.match.get("district"), candidate.match.get("area")),
     )
     add("name_ar_address", (candidate.match.get("name_ar"), candidate.match.get("address_line")))
     add("contact_phone", candidate.match.get("contact_phone"))
@@ -635,7 +635,7 @@ def build_indexes(candidates: list[Candidate]) -> dict[str, dict[Any, list[Candi
         "id": {},
         "license_number": {},
         "name_ar_governorate": {},
-        "name_ar_city_area": {},
+        "name_ar_district_area": {},
         "name_ar_address": {},
         "contact_phone": {},
         "name_en_governorate": {},
@@ -650,7 +650,7 @@ def find_match(row: PreparedRow, indexes: dict[str, dict[Any, list[Candidate]]])
         ("id", row.match.get("id")),
         ("license_number", row.match.get("license_number")),
         ("name_ar_governorate", (row.match.get("name_ar"), row.match.get("governorate"))),
-        ("name_ar_city_area", (row.match.get("name_ar"), row.match.get("city"), row.match.get("area"))),
+        ("name_ar_district_area", (row.match.get("name_ar"), row.match.get("district"), row.match.get("area"))),
         ("name_ar_address", (row.match.get("name_ar"), row.match.get("address_line"))),
         ("contact_phone", row.match.get("contact_phone")),
         ("name_en_governorate", (row.match.get("name_en"), row.match.get("governorate"))),
@@ -688,7 +688,7 @@ def non_empty_update_payload(prepared: PreparedRow, existing: models.Kindergarte
 def create_payload(prepared: PreparedRow) -> dict[str, Any]:
     payload = prepared.payload.copy()
     payload.setdefault("governorate", MISSING_DB_TEXT)
-    payload.setdefault("city", payload.get("governorate") or MISSING_DB_TEXT)
+    payload.setdefault("district", payload.get("governorate") or MISSING_DB_TEXT)
     payload.setdefault("area", MISSING_DB_TEXT)
     payload.setdefault("address_line", MISSING_DB_TEXT)
     payload.setdefault("contact_phone", prepared.extra.get("contact_phone_original") or MISSING_PHONE_TEXT)
@@ -753,7 +753,7 @@ def build_import_plan(
                             "excel_row": match.excel_row,
                             "name_ar": match.payload.get("name_ar"),
                             "governorate": match.payload.get("governorate"),
-                            "city": match.payload.get("city"),
+                            "district": match.payload.get("district"),
                             "phone": match.payload.get("contact_phone"),
                             "license_number": match.payload.get("license_number"),
                         }
@@ -965,7 +965,7 @@ def write_reports(plan: ImportPlan, report_base_dir: Path) -> Path:
             "name_ar",
             "name_en",
             "governorate",
-            "city",
+            "district",
             "area",
             "address_line",
             "contact_phone",

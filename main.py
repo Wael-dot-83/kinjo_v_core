@@ -217,6 +217,7 @@ from routers.admin_impersonation import router as admin_impersonation_router
 from routers.messaging import router as messaging_router
 from government_api import router as government_api_router
 from api.public import router as public_router
+from api.missing_endpoints import router as missing_endpoints_router
 from charts_api import router as charts_router
 from telemetry_service import router as telemetry_router
 from observability_endpoints import router as observability_router
@@ -1201,6 +1202,7 @@ app.include_router(messaging_router, prefix="/api", tags=["Messaging"])
 app.include_router(portfolio_router, prefix="/api", tags=["Portfolio"])
 app.include_router(government_api_router, prefix="/api", tags=["Government API"])
 app.include_router(public_router, prefix="/api", tags=["Public"])
+app.include_router(missing_endpoints_router, prefix="/api", tags=["Missing Endpoints"])
 
 app.include_router(charts_router, tags=["Charts"])
 app.include_router(telemetry_router)

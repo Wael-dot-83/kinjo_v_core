@@ -35,7 +35,7 @@ def _kindergarten(
         name_ar=name_ar,
         name_en=name_en,
         governorate=governorate,
-        district=city,
+        district=district,
         area=area,
         address_line=address_line,
         contact_phone=contact_phone,

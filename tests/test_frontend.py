@@ -2771,9 +2771,8 @@ class TestFrontendRoutes:
     # my-reports — valid child filter (lines 1044, 1048-1066)
     # ------------------------------------------------------------------
 
-    def test_my_reports_valid_child_filter_own_child(self, client, parent_user, test_db):
+    def test_my_reports_valid_child_filter_own_child(self, client, parent_user, sample_child, test_db):
         """Parent can filter /my-reports by their own child_id"""
-        from conftest import sample_child as _sample_child
         parent_profile = test_db.query(models.ParentProfile).filter(
             models.ParentProfile.user_id == parent_user.id
         ).first()

@@ -51,7 +51,7 @@ def _mk_class(test_db, kg, capadistrict=20, code_suffix=""):
         name_en="Class A",
         class_code=f"P0-{kg.id}{code_suffix}",
         age_group="AGE_1_2",
-        capacity_total=capacity,
+        capacity_total=capadistrict,
         min_age_months=12,
         max_age_months=24,
         is_active=True,

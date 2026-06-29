@@ -312,6 +312,7 @@ def submit_enrollment(
 
 
 @router.post("/enrollment/{enrollment_id}/review")
+@router.post("/enrollments/{enrollment_id}/review", include_in_schema=False)
 def review_enrollment(
     enrollment_id: int,
     decision: str = Query(..., pattern="^(accept|reject)$"),

@@ -1379,7 +1379,8 @@ async def admin_kpi_dashboard(request: Request, current_user: User = Depends(get
     )
 
 
-@router.get("/admin/analytics", response_class=HTMLResponse)
+@router.get("/admin/analytics", response_class=HTMLResponse, include_in_schema=False)
+@router.get("/admin/analytics/dashboard", response_class=HTMLResponse)
 async def admin_analytics(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     """Admin analytics and reporting dashboard"""
     if current_user.role != UserRole.ADMIN:

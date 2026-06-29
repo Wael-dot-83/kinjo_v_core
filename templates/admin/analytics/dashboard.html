@@ -1,4 +1,4 @@
-﻿{% extends "admin_base.html" %}
+{% extends "admin_base.html" %}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 {% from 'components/export-modal.html' import export_modal %}
 
@@ -47,7 +47,7 @@
       </div>
       <div class="col-12 col-xl-auto">
         <div class="d-flex gap-2 flex-wrap">
-            <select class="form-select form-select-sm"id="regStatusFilter"style="min-width: 150px; border-radius: 8px;">
+            <select aria-label="{% if ui_lang == 'en' %}Filter by Status{% else %}تصفية حسب الحالة{% endif %}" class="form-select form-select-sm" id="regStatusFilter" style="min-width: 150px; border-radius: 8px;">
                 <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}كل الحالات{% endif %}</option>
                 <option value="DRAFT">{% if ui_lang == 'en' %}Incomplete{% else %}غير مكتمل{% endif %}</option>
                 <option value="SUBMITTED">{% if ui_lang == 'en' %}Under Verification{% else %}قيد التحقق{% endif %}</option>
@@ -58,13 +58,13 @@
                 <option value="WAITLISTED">{% if ui_lang == 'en' %}Waitlisted{% else %}قائمة انتظار{% endif %}</option>
                 <option value="WITHDRAWN">{% if ui_lang == 'en' %}Withdrawn{% else %}منسحب{% endif %}</option>
             </select>
-            <select class="form-select form-select-sm"id="regSourceFilter"style="min-width: 130px; border-radius: 8px;">
+            <select aria-label="{% if ui_lang == 'en' %}Filter by Source{% else %}تصفية حسب المصدر{% endif %}" class="form-select form-select-sm" id="regSourceFilter" style="min-width: 130px; border-radius: 8px;">
                 <option value="">{% if ui_lang == 'en' %}All Sources{% else %}كل المصادر{% endif %}</option>
                 <option value="WEB">Web</option>
                 <option value="MOBILE">{% if ui_lang == 'en' %}Mobile{% else %}موبايل{% endif %}</option>
                 <option value="OFFICE">{% if ui_lang == 'en' %}Office{% else %}مكتب{% endif %}</option>
             </select>
-            <select class="form-select form-select-sm"id="regReviewerFilter"style="min-width: 160px; border-radius: 8px;">
+            <select aria-label="{% if ui_lang == 'en' %}Filter by Reviewer{% else %}تصفية حسب المراجع{% endif %}" class="form-select form-select-sm" id="regReviewerFilter" style="min-width: 160px; border-radius: 8px;">
                 <option value="">{% if ui_lang == 'en' %}All Reviewers{% else %}كل المُراجعين{% endif %}</option>
             </select>
         </div>
@@ -650,7 +650,7 @@
                         <i class="bi bi-table me-2 text-primary"></i>{% if ui_lang == 'en' %}Recent Applications{% else %}الطلبات الحديثة{% endif %}
                     </h5>
                     <div class="d-flex gap-2 flex-wrap">
-                        <input type="text"class="form-control form-control-sm"id="regSearchInput"placeholder="{% if ui_lang == 'en' %}Search...{% else %}بحث...{% endif %}"style="min-width: 200px;">
+                        <input aria-label="{% if ui_lang == 'en' %}Search applications{% else %}البحث في الطلبات{% endif %}" type="text" class="form-control form-control-sm" id="regSearchInput" placeholder="{% if ui_lang == 'en' %}Search...{% else %}بحث...{% endif %}" style="min-width: 200px;">
                         <button type="button"class="btn btn-sm btn-outline-primary"id="regRefreshTable">
                             <i class="bi bi-arrow-clockwise"></i>
                         </button>
