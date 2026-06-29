@@ -105,7 +105,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{% if ui_lang == 'en' %}Report Generated Successfully{% else %}تم إنشاء التقرير بنجاح{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <p>{% if ui_lang == 'en' %}The incident report has been generated successfully. You can now view the report or create another one.{% else %}تم إنشاء تقرير الحوادث بنجاح. يمكنك الآن عرض التقرير أو إنشاء تقرير آخر.{% endif %}</p>

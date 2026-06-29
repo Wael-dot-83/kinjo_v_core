@@ -99,7 +99,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">{% if ui_lang == 'en' %}Export Report{% else %}تصدير التقرير{% endif %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <p>{% if ui_lang == 'en' %}The report will be exported in CSV format. Do you want to continue?{% else %}سيتم تصدير التقرير بتنسيق CSV. هل تريد المتابعة؟{% endif %}</p>

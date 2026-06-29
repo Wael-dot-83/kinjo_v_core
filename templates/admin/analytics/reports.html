@@ -318,7 +318,7 @@
     <div class="modal-content glass-panel border-0 shadow">
       <div class="modal-header">
         <h5 class="modal-title">{% if ui_lang == 'en' %}Save as Template{% else %}حفظ كقالب{% endif %}</h5>
-        <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="Close"></button>
+        <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
       </div>
       <div class="modal-body">
         <div class="mb-3">
@@ -340,7 +340,7 @@
     <div class="modal-content glass-panel border-0 shadow">
       <div class="modal-header">
         <h5 class="modal-title">{% if ui_lang == 'en' %}Schedule Report{% else %}جدولة التقرير{% endif %}</h5>
-        <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="Close"></button>
+        <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
       </div>
       <div class="modal-body">
         <div class="mb-3">
@@ -374,7 +374,7 @@
   <div id="actionToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="d-flex">
       <div class="toast-body" id="toastMessage"></div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
     </div>
   </div>
 </div>

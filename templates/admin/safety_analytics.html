@@ -89,7 +89,7 @@ td.td-sm { font-size: .82rem; padding: .45rem .75rem; }
 <div id="errorBanner" class="alert alert-danger d-flex gap-2 align-items-center mb-4 d-none" role="alert">
     <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
     <span id="errorBannerText">{% if ui_lang == 'en' %}Failed to load analytics data.{% else %}فشل تحميل بيانات التحليلات.{% endif %}</span>
-    <button type="button" class="btn-close ms-auto" onclick="document.getElementById('errorBanner').classList.add('d-none')" aria-label="Close"></button>
+    <button type="button" class="btn-close ms-auto" onclick="document.getElementById('errorBanner').classList.add('d-none')" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
 </div>
 
 <!-- ── Filters ──────────────────────────────────────────────────────────────── -->
