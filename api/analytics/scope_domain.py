@@ -58,10 +58,12 @@ def kg_ids_for_governorate(db: Session, governorate: Optional[str]) -> Optional[
     """Return active kindergarten IDs for a governorate; None means no governorate filter."""
     if not governorate:
         return None
+    from config import settings
+    normalized = settings.JORDAN_GOVERNORATE_ALIASES.get(governorate, governorate)
     rows = (
         db.query(models.Kindergarten.id)
         .filter(
-            models.Kindergarten.governorate == governorate,
+            models.Kindergarten.governorate == normalized,
             models.Kindergarten.status == models.KindergartenStatus.ACTIVE,
         )
         .all()

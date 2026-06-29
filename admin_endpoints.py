@@ -3718,9 +3718,10 @@ def get_kg_overview(
     active_kgs = [kg for kg in all_kgs if kg.status == models.KindergartenStatus.ACTIVE]
 
     if governorate:
-        all_kgs = [kg for kg in all_kgs if kg.governorate == governorate]
+        gov_normalized = settings.JORDAN_GOVERNORATE_ALIASES.get(governorate, governorate)
+        all_kgs = [kg for kg in all_kgs if kg.governorate == gov_normalized]
         kg_ids = [kg.id for kg in all_kgs]
-        active_kgs = [kg for kg in active_kgs if kg.governorate == governorate]
+        active_kgs = [kg for kg in active_kgs if kg.governorate == gov_normalized]
 
     # Batch queries
     active_enrollments = db.query(
@@ -5331,17 +5332,18 @@ def get_admin_alerts(
         # Governorate filter: match GOVERNORATE-scoped alerts directly, and KINDERGARTEN
         # alerts where the kindergarten sits in that governorate.
         if governorate:
+            gov_normalized = settings.JORDAN_GOVERNORATE_ALIASES.get(governorate, governorate)
             kg_id_strings = [
                 str(row.id)
                 for row in db.query(models.Kindergarten.id).filter(
-                    models.Kindergarten.governorate == governorate
+                    models.Kindergarten.governorate == gov_normalized
                 ).all()
             ]
             query = query.filter(
                 or_(
                     and_(
                         models.ActiveAlert.scope_type == "GOVERNORATE",
-                        models.ActiveAlert.scope_id == governorate,
+                        models.ActiveAlert.scope_id == gov_normalized,
                     ),
                     and_(
                         models.ActiveAlert.scope_type == "KINDERGARTEN",

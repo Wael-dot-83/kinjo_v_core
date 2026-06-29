@@ -31,16 +31,21 @@ def seed_divisions():
         print("Cleared existing administrative divisions.")
         
         # Insert new data
+        # Normalize governorate aliases so DB matches KG data (e.g. العاصمة → عمان)
+        GOV_NORMALIZE = {"العاصمة": "عمان", "عاصمة": "عمان"}
+
         records = []
         for index, row in df.iterrows():
             gov = str(row['المحافظة']).strip()
             dist = str(row['قصبة / لواء']).strip()
             area = str(row['المنطقة']).strip()
-            
+
             # Skip empty rows if any
             if not gov or gov == 'nan':
                 continue
-                
+
+            gov = GOV_NORMALIZE.get(gov, gov)
+
             records.append(
                 AdministrativeDivision(
                     governorate=gov,

@@ -5701,7 +5701,6 @@ class AnalyticsService:
             attendance_incident_correlation=attendance_incident_correlation,
             staffing_quality_correlation=staffing_quality_correlation,
             health_alerts_count=health_alerts_count,
-            curriculum_progress=curriculum_progress
         )
         db.add(cache)
         db.commit()

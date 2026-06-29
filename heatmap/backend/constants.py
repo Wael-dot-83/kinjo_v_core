@@ -49,6 +49,9 @@ for g in GOVERNORATES:
     GOVERNORATE_NAME_ALIASES[g["name_ar"]] = g["slug"]
     GOVERNORATE_NAME_ALIASES[g["name_ar"].replace("أ", "ا").replace("إ", "ا")] = g["slug"]
     GOVERNORATE_NAME_ALIASES[g["name_ar"].replace("ة", "ه")] = g["slug"]
+# Official Jordanian admin name for Amman governorate
+GOVERNORATE_NAME_ALIASES["العاصمة"] = "amman"
+GOVERNORATE_NAME_ALIASES["عاصمة"] = "amman"
 
 
 def normalize_governorate(value: str) -> str:

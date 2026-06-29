@@ -213,6 +213,8 @@ class Settings(BaseSettings):
     JORDAN_GOVERNORATE_ALIASES: Dict[str, str] = {
         "amman": "عمان",
         "عمان": "عمان",
+        "العاصمة": "عمان",  # official admin name for Amman governorate
+        "عاصمة": "عمان",
         "irbid": "إربد",
         "إربد": "إربد",
         "zarqa": "الزرقاء",
