@@ -303,8 +303,6 @@
             </div>
         </div>
       {% endfor %}
-        </div>
-      {% endfor %}
     </div>
 
     <div class="px-lg mt-auto space-y-4">
@@ -344,7 +342,7 @@
         <span class="material-symbols-outlined">notifications</span>
       </button>
       <div class="w-8 h-8 rounded-full border border-primary/30 overflow-hidden ml-2 cursor-pointer hover:border-primary transition-colors">
-        <img class="w-full h-full object-cover" src="/static/img/admin_avatar.png" onerror="this.src='https://ui-avatars.com/api/?name={{ current_user.username if current_user else \'Admin\' }}&background=1F5E47&color=fff'"/>
+        <img class="w-full h-full object-cover" src="/static/img/admin_avatar.png" onerror="this.src='https://ui-avatars.com/api/?name={{ current_user.username if current_user else 'Admin' }}&background=1F5E47&color=fff'"/>
       </div>
     </div>
   </header>
