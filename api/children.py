@@ -38,7 +38,7 @@ class ParentProfileUpdateRequest(BaseModel):
     last_name: Optional[str] = None
     phone_number: Optional[str] = None
     home_governorate: Optional[str] = None
-    home_city: Optional[str] = None
+    home_district: Optional[str] = None
     home_area: Optional[str] = None
     home_address_line: Optional[str] = None
     work_address: Optional[str] = None
@@ -67,7 +67,7 @@ def update_parent_profile(
 
     # Apply updates
     changed = False
-    for field in ['first_name','second_name','last_name','phone_number','home_governorate','home_city','home_area','home_address_line','work_address','emergency_contact_name','emergency_contact_phone','emergency_contact_relationship','relationship_to_child','correspondence_preference']:
+    for field in ['first_name','second_name','last_name','phone_number','home_governorate','home_district','home_area','home_address_line','work_address','emergency_contact_name','emergency_contact_phone','emergency_contact_relationship','relationship_to_child','correspondence_preference']:
         val = getattr(payload, field)
         if val is not None:
             setattr(parent, field, val)

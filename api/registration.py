@@ -39,7 +39,7 @@ class ParentRegistrationRequest(BaseModel):
     national_id: Optional[str] = None
     passport_number: Optional[str] = None
     home_governorate: str
-    home_city: str
+    home_district: str
     home_area: str
     home_address_line: str
     correspondence_preference: Optional[bool] = True
@@ -127,7 +127,7 @@ def register_parent(
         national_id=registration_data.national_id,
         passport_number=registration_data.passport_number,
         home_governorate=registration_data.home_governorate,
-        home_city=registration_data.home_city,
+        home_district=registration_data.home_district,
         home_area=registration_data.home_area,
         home_address_line=registration_data.home_address_line,
         correspondence_preference=registration_data.correspondence_preference or True,

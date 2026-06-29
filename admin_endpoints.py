@@ -460,7 +460,7 @@ def create_user(
             gender=models.Gender.MALE,
             nationality="",
             home_governorate="",
-            home_city="",
+            home_district="",
             home_area="",
             home_address_line="",
             correspondence_preference=True,
@@ -3024,7 +3024,7 @@ def list_kindergarten_options(
                 "name_ar": kg.name_ar,
                 "name_en": kg.name_en,
                 "governorate": kg.governorate,
-                "city": kg.district,
+                "district": kg.district,
                 "status": kg.status.value,
                 "contact_phone": kg.contact_phone
             }
@@ -3152,7 +3152,7 @@ class DashboardKindergarten(BaseModel):
     status: str
     license_status: str
     governorate: Optional[str] = None
-    city: Optional[str] = None
+    district: Optional[str] = None
     enrollments: int = 0
     attendance_today: int = 0
     pending_reports: int = 0
@@ -3594,7 +3594,7 @@ class KgKindergartenCard(BaseModel):
     name_ar: str
     name_en: Optional[str] = None
     governorate: str
-    city: str
+    district: str
     children_count: int
     attendance_rate: float
     attendance_status: str
@@ -3874,7 +3874,7 @@ def get_kg_overview(
             name_ar=kg.name_ar,
             name_en=kg.name_en,
             governorate=kg.governorate,
-            city=kg.district,
+            district=kg.district,
             children_count=kids,
             attendance_rate=att_rate,
             attendance_status=att_status,
@@ -4426,7 +4426,7 @@ def import_kindergartens_from_excel(
       - Column A: اسم الروضة (عربي)  → name_ar
       - Column B: اسم الروضة (إنجليزي) → name_en
       - Column C: المحافظة           → governorate
-      - Column D: المدينة            → city
+      - Column D: المدينة            → district
       - Column E: المنطقة            → area
       - Column F: العنوان التفصيلي    → address_line
       - Column G: رقم الهاتف         → contact_phone
@@ -4479,7 +4479,7 @@ def import_kindergartens_from_excel(
         name_ar = _clean(row[0])
         name_en = _clean(row[1])
         governorate = _clean(row[2]) or "غير محدد"
-        city = _clean(row[3]) or "غير محدد"
+        district = _clean(row[3]) or "غير محدد"
         area = _clean(row[4]) or "غير محدد"
         address_line = _clean(row[5]) or "غير محدد"
         phone = _clean(row[6]) or "غير متوفر"
@@ -4488,7 +4488,7 @@ def import_kindergartens_from_excel(
             result.skipped_empty += 1
             continue
 
-        key = (name_ar, governorate, city)
+        key = (name_ar, governorate, district)
         if key in existing:
             result.skipped_duplicate += 1
             continue
@@ -4499,7 +4499,7 @@ def import_kindergartens_from_excel(
                     name_ar=name_ar,
                     name_en=name_en or None,
                     governorate=governorate,
-                    city=city,
+                    district=district,
                     area=area,
                     address_line=address_line,
                     contact_phone=phone,
@@ -4803,7 +4803,7 @@ async def list_imported_kindergartens(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
     governorate: str = Query(None),
-    city: str = Query(None),
+    district: str = Query(None),
     search: str = Query(None),
     current_user: models.User = Depends(require_admin_or_manager),
     db: Session = Depends(get_db)
@@ -4813,7 +4813,7 @@ async def list_imported_kindergartens(
     service = KindergartenImportService(db)
     result = service.get_imported_kindergartens(
         page=page, per_page=per_page,
-        governorate=governorate, city=city, search=search
+        governorate=governorate, district=district, search=search
     )
 
     return result

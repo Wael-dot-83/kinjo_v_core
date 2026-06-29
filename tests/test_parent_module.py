@@ -35,7 +35,7 @@ class TestParentProfileAPI:
         assert data["last_name"] == "Al-Rashid"
         assert data["phone_number"] == "+962791234567"
         assert data["home_governorate"] == "Amman"
-        assert data["home_city"] == "Amman"
+        assert data["home_district"] == "Amman"
         assert data["email"] == "testparent@test.com"
         assert data["username"] == "testparent@test.com"
         assert data["user_id"] == parent_user.id

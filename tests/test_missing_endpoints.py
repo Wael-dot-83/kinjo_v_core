@@ -2358,7 +2358,7 @@ class TestMissingEndpointsCoverage2:
         app.dependency_overrides[get_current_user] = lambda: pr_user
         response = client.put(f"/api/parent-profiles/{profile.id}", json={
             "first_name": "Updated",
-            "home_city": "Irbid"
+            "home_district": "Irbid"
         })
         assert response.status_code == 200
         app.dependency_overrides.clear()

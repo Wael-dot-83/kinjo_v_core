@@ -44,7 +44,7 @@ def _valid_parent_payload(overrides=None):
         "nationality": "Jordanian",
         "national_id": "1234567890",
         "home_governorate": "Amman",
-        "home_city": "Amman",
+        "home_district": "Amman",
         "home_area": "Abdoun",
         "home_address_line": "123 Main St",
         "email": f"parent_{secrets.token_hex(4)}@test.com",

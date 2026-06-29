@@ -1,7 +1,7 @@
 """
 Tests for the enrollment creation flow:
-- Cities endpoint (GET /api/governorates/{gov}/cities)
-- Kindergarten filtering with city param
+- Districts endpoint (GET /api/governorates/{gov}/districts)
+- Kindergarten filtering with district param
 - Parent access to kindergarten details
 - Duplicate enrollment prevention
 - Frontend page rendering
@@ -15,17 +15,17 @@ from sqlalchemy.exc import IntegrityError
 
 
 class TestCitiesEndpoint:
-    """Test GET /api/governorates/{gov}/cities"""
+    """Test GET /api/governorates/{gov}/districts"""
 
     def test_cities_by_governorate_returns_cities(self, client, admin_token, test_db, sample_kindergarten):
-        """Should return cities for a given governorate"""
+        """Should return districts for a given governorate"""
         headers = {"Authorization": f"Bearer {admin_token}"}
         # The sample_kindergarten has governorate="Amman" and district="Amman"
-        response = client.get("/api/governorates/Amman/cities", headers=headers)
+        response = client.get("/api/governorates/Amman/districts", headers=headers)
         assert response.status_code == 200
         data = response.json()
-        assert "cities" in data
-        assert isinstance(data["cities"], list)
+        assert "districts" in data
+        assert isinstance(data["districts"], list)
 
     def test_cities_by_arabic_governorate(self, client, admin_token, test_db):
         """Should work with Arabic governorate names"""
@@ -40,24 +40,24 @@ class TestCitiesEndpoint:
         test_db.add(kg)
         test_db.commit()
 
-        response = client.get("/api/governorates/عمان/cities", headers=headers)
+        response = client.get("/api/governorates/عمان/districts", headers=headers)
         assert response.status_code == 200
         data = response.json()
-        assert "الجبيهة" in data["cities"]
+        assert "الجبيهة" in data["districts"]
 
     def test_cities_parent_access(self, client, parent_token, test_db, sample_kindergarten):
-        """Parents should be able to access cities endpoint"""
+        """Parents should be able to access districts endpoint"""
         headers = {"Authorization": f"Bearer {parent_token}"}
-        response = client.get("/api/governorates/Amman/cities", headers=headers)
+        response = client.get("/api/governorates/Amman/districts", headers=headers)
         assert response.status_code == 200
 
     def test_cities_unknown_governorate(self, client, admin_token, test_db):
         """Should return empty list for unknown governorate"""
         headers = {"Authorization": f"Bearer {admin_token}"}
-        response = client.get("/api/governorates/UnknownGov/cities", headers=headers)
+        response = client.get("/api/governorates/UnknownGov/districts", headers=headers)
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data["cities"], list)
+        assert isinstance(data["districts"], list)
 
 
 class TestKindergartenFilteringWithCity:

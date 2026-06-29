@@ -159,7 +159,7 @@ def get_parent_profile(
         "national_id": profile.national_id,
         "passport_number": profile.passport_number,
         "home_governorate": profile.home_governorate,
-        "home_city": profile.home_city,
+        "home_district": profile.home_district,
         "home_area": profile.home_area,
         "home_address_line": profile.home_address_line,
         "work_address": profile.work_address,
@@ -396,7 +396,7 @@ class ParentProfileSelfUpdateRequest(BaseModel):
     national_id: Optional[str] = None
     passport_number: Optional[str] = None
     home_governorate: Optional[str] = None
-    home_city: Optional[str] = None
+    home_district: Optional[str] = None
     home_area: Optional[str] = None
     home_address_line: Optional[str] = None
     work_address: Optional[str] = None
@@ -428,7 +428,7 @@ def update_parent_profile_self(
     profile_fields = [
         "first_name", "second_name", "last_name", "first_name_en", "last_name_en",
         "phone_number", "gender", "nationality", "national_id", "passport_number",
-        "home_governorate", "home_city", "home_area", "home_address_line", "work_address",
+        "home_governorate", "home_district", "home_area", "home_address_line", "work_address",
         "emergency_contact_name", "emergency_contact_phone", "emergency_contact_relationship",
         "relationship_to_child", "correspondence_preference", "notification_language",
     ]

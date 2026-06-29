@@ -209,15 +209,15 @@ class KindergartenImportService:
         return {"created": created}
 
     def get_imported_kindergartens(self, page: int = 1, per_page: int = 50,
-                                   governorate: str = None, city: str = None,
+                                   governorate: str = None, district: str = None,
                                    search: str = None) -> Dict[str, Any]:
         """Get paginated list of imported kindergartens."""
         query = self.db.query(ImportedKindergarten)
 
         if governorate:
             query = query.filter(ImportedKindergarten.governorate == governorate)
-        if city:
-            query = query.filter(ImportedKindergarten.district == city)
+        if district:
+            query = query.filter(ImportedKindergarten.district == district)
         if search:
             search_filter = f"%{search}%"
             query = query.filter(

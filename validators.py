@@ -607,7 +607,7 @@ def check_profile_complete(db, child_id: int) -> (bool, list):
         ('last_name', parent.last_name if parent else None),
         ('phone_number', parent.phone_number if parent else None),
         ('home_address_line', parent.home_address_line if parent else None),
-        ('home_city', parent.home_city if parent else None)
+        ('home_district', parent.home_district if parent else None)
     ]
     for fname, val in required_parent_fields:
         if val is None or (isinstance(val, str) and not val.strip()):
