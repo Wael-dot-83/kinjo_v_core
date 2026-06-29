@@ -1,4 +1,4 @@
-﻿"""
+"""
 KInJo - Kindergarten Management Platform
 Main FastAPI Application
 """
@@ -309,6 +309,20 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     logger.exception(
         "UNHANDLED_EXCEPTION method=%s path=%s", request.method, request.url.path
     )
+    
+    # Check if the client is expecting an HTML response
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept:
+        from fastapi.templating import Jinja2Templates
+        from fastapi.responses import HTMLResponse
+        error_templates = Jinja2Templates(directory="templates")
+        return error_templates.TemplateResponse(
+            request=request, 
+            name="500.html", 
+            context={},
+            status_code=500
+        )
+        
     return JSONResponse(status_code=500, content={"detail": "Internal server error."})
 
 # Trusted host middleware
