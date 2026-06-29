@@ -1,3 +1,20 @@
+
+// UX Error Banner & Tooltips Handlers
+window.showDataErrorBanner = function(timeStr) {
+    const banner = document.getElementById('offlineBanner');
+    if (banner) {
+        banner.classList.remove('hidden');
+        document.getElementById('offlineTime').textContent = timeStr || new Date().toLocaleTimeString();
+    }
+};
+
+window.hideDataErrorBanner = function() {
+    const banner = document.getElementById('offlineBanner');
+    if (banner) {
+        banner.classList.add('hidden');
+    }
+};
+
 // safeChartData() is provided globally by chart_utils.js (loaded before this script).
 
 var lastDashboardData = null;
@@ -593,7 +610,7 @@ function renderDeltaIndicator(delta, elementId, metricKey) {
   if (!element) return;
 
   const unavailableText = adminAnalyticsText(
-    "غير متوفر للفترة السابقة",
+    `<span title="${adminAnalyticsText('لا توجد بيانات كافية للفترة السابقة للمقارنة', 'Not enough data in the previous period to compare')}" class="cursor-help border-b border-dashed border-on-surface-variant/50">${adminAnalyticsText("لا توجد بيانات", "No Data")}</span>`,
     "No previous-period data"
   );
 
@@ -2376,7 +2393,7 @@ async function loadRegistrationTable() {
     document.getElementById("regNextPage")?.toggleAttribute("disabled", (data.pagination?.page || 1) >= regTableTotalPages);
   } catch (error) {
     console.error("Registration table load error:", error);
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">${adminAnalyticsText("تعذر تحميل البيانات.", "Failed to load data.")}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">${adminAnalyticsText("تعذر تحميل البيانات. (الرجاء إعادة المحاولة)", "Failed to load data. (Please retry)")}</td></tr>`;
   }
 }
 
@@ -2468,7 +2485,7 @@ async function loadRegistrationQualityBreakdown() {
     console.error("Quality breakdown load error:", err);
     const tbody = document.getElementById("regGovTableBody");
     if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-3 text-danger small">
-      ${adminAnalyticsText("تعذر تحميل البيانات", "Failed to load data")}
+      ${adminAnalyticsText("تأخرت البيانات", "Data delayed")}
     </td></tr>`;
   }
 }

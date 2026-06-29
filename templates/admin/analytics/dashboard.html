@@ -7,6 +7,22 @@
 {% block content %}
 <div class="pt-12 pb-12 px-margin-desktop space-y-gutter max-w-container-max mx-auto animate-fade-in-up" id="analyticsDashboardMain">
     
+    
+    <!-- Global Offline Banner (Hidden by default) -->
+    <div id="offlineBanner" class="hidden mb-6 p-4 rounded-xl bg-error/10 border border-error/30 flex items-center justify-between shadow-[0_0_20px_rgba(255,100,100,0.15)]">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-error">wifi_off</span>
+            <div>
+                <h3 class="font-label-md text-error font-bold">{% if ui_lang == 'en' %}Data Connection Offline{% else %}فقدان الاتصال بالبيانات{% endif %}</h3>
+                <p class="font-body-sm text-on-surface-variant">{% if ui_lang == 'en' %}Showing cached snapshot from{% else %}يتم عرض نسخة مخبأة من{% endif %} <span id="offlineTime" class="font-bold text-on-surface"></span>. {% if ui_lang == 'en' %}Some metrics may be delayed.{% else %}بعض المؤشرات قد تكون متأخرة.{% endif %}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="typeof loadAdminAnalytics === 'function' ? loadAdminAnalytics() : window.location.reload()" class="px-3 py-1.5 rounded-lg bg-error text-white text-sm font-bold hover:bg-error/90 transition-colors">{% if ui_lang == 'en' %}Retry Connection{% else %}إعادة المحاولة{% endif %}</button>
+            <button onclick="document.getElementById('offlineBanner').classList.add('hidden')" class="p-1.5 rounded-lg hover:bg-white/5 text-on-surface-variant transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+        </div>
+    </div>
+
     <!-- Dashboard Header & Date Picker -->
     <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-lg gap-4">
         <div>
@@ -90,23 +106,22 @@
             </p>
         </div>
 
-        <!-- Incident Rate -->
-        <div class="glass-panel rounded-xl p-lg relative overflow-hidden group">
-            <div class="absolute -right-4 -top-4 w-24 h-24 bg-error/10 blur-3xl group-hover:bg-error/20 transition-all duration-500 pointer-events-none"></div>
+        <!-- Incident Rate (Elevated) -->
+        <div class="glass-panel rounded-xl p-lg relative overflow-hidden group border-error/40 shadow-[0_0_25px_rgba(255,70,70,0.15)] ring-1 ring-error/20">
+            <div class="absolute -right-4 -top-4 w-32 h-32 bg-error/20 blur-3xl group-hover:bg-error/30 transition-all duration-500 pointer-events-none"></div>
             <div class="flex items-start justify-between mb-4 relative z-10">
-                <div class="p-3 rounded-lg bg-error/10 border border-error/20">
+                <div class="p-3 rounded-lg bg-error/20 border border-error/40 animate-pulse-slow">
                     <span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
                 </div>
                 <span class="text-xs font-bold text-on-surface/80 bg-white/5 px-2 py-1 rounded-full" id="incidentTrend">
                     <span class="skeleton-text w-12 inline-block"></span>
                 </span>
             </div>
-            <h3 class="font-label-sm text-label-sm text-on-surface/60 uppercase tracking-widest relative z-10">{% if ui_lang == 'en' %}Incident Rate{% else %}معدل الحوادث{% endif %}</h3>
+            <h3 class="font-label-sm text-label-sm text-error uppercase tracking-widest relative z-10 font-bold">{% if ui_lang == 'en' %}Incident Rate Alert{% else %}معدل الحوادث{% endif %}</h3>
             <p class="font-display-lg-mobile text-display-lg-mobile font-bold text-on-surface relative z-10" id="incidentRate">
                 <span class="skeleton-text w-16 inline-block"></span>
             </p>
         </div>
-    </div>
 
     <!-- Comprehensive Registration Summary -->
     <h4 class="font-label-md text-label-md uppercase tracking-wider text-on-surface mb-4 pl-2">{% if ui_lang == 'en' %}Registration Summary{% else %}ملخص التسجيل{% endif %}</h4>

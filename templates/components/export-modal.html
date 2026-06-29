@@ -1,62 +1,106 @@
 {% macro export_modal(modal_id="exportModal", form_id="exportForm", spinner_id="exportSpinner", report_types=None) %}
-<!-- Export Modal Component -->
+<!-- CYBERLUME Export Modal Component -->
 <div class="modal fade" id="{{ modal_id }}" tabindex="-1" aria-labelledby="{{ modal_id }}Label" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="{{ modal_id }}Label">
-                    <i class="bi bi-download"></i> {% if ui_lang == 'en' %}Export Data{% else %}تصدير البيانات{% endif %}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-panel border border-white/10 rounded-3xl bg-surface-container-high text-on-surface shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden relative">
+            <div class="absolute -top-32 -right-32 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <!-- Header -->
+            <div class="modal-header border-b border-white/5 pb-4 px-6 pt-6 flex justify-between items-center relative z-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-tertiary/20 flex items-center justify-center border border-tertiary/30">
+                        <span class="material-symbols-outlined text-tertiary">download</span>
+                    </div>
+                    <div>
+                        <h5 class="font-title-lg font-bold" id="{{ modal_id }}Label">
+                            {% if ui_lang == 'en' %}Export Data{% else %}تصدير البيانات{% endif %}
+                        </h5>
+                        <p class="text-xs text-on-surface-variant mt-0.5">{% if ui_lang == 'en' %}Configure your report download{% else %}إعداد تحميل التقرير{% endif %}</p>
+                    </div>
+                </div>
+                <button type="button" class="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors text-on-surface-variant" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}">
+                    <span class="material-symbols-outlined text-sm">close</span>
+                </button>
             </div>
-            <div class="modal-body">
-                <form id="{{ form_id }}">
-                    <div class="mb-3">
-                        <label class="form-label">{% if ui_lang == 'en' %}Export Format{% else %}صيغة التصدير{% endif %}</label>
-                        <div class="btn-group w-100" role="group">
-                            <input type="radio" class="btn-check" name="exportFormat" id="formatExcel" value="excel"
-                                checked>
-                            <label class="btn btn-outline-primary" for="formatExcel">
-                                <i class="bi bi-file-earmark-excel"></i> Excel
+
+            <!-- Body -->
+            <div class="modal-body p-6 relative z-10">
+                
+                <!-- Dynamic Summary Bar -->
+                <div class="mb-6 p-3 rounded-xl bg-tertiary/10 border border-tertiary/20 flex items-center gap-2 text-tertiary font-label-sm">
+                    <span class="material-symbols-outlined text-[16px]">info</span>
+                    <span id="exportSummary">{% if ui_lang == 'en' %}Exporting: Excel · Current Page · All columns{% else %}تصدير: Excel · الصفحة الحالية · جميع الأعمدة{% endif %}</span>
+                </div>
+
+                <form id="{{ form_id }}" class="space-y-6">
+                    
+                    <!-- Format Selection -->
+                    <div>
+                        <label class="block font-label-sm text-on-surface-variant mb-2">{% if ui_lang == 'en' %}Export Format{% else %}صيغة التصدير{% endif %}</label>
+                        <div class="grid grid-cols-3 gap-3" role="group">
+                            <input type="radio" class="peer hidden" name="exportFormat" id="formatExcel" value="excel" checked>
+                            <label class="flex flex-col items-center justify-center gap-1 p-3 rounded-xl border border-white/10 bg-black/20 cursor-pointer peer-checked:bg-primary/20 peer-checked:border-primary/50 peer-checked:text-primary transition-all hover:bg-white/5" for="formatExcel">
+                                <span class="material-symbols-outlined text-2xl">table_chart</span>
+                                <span class="text-xs font-bold">Excel</span>
                             </label>
 
-                            <input type="radio" class="btn-check" name="exportFormat" id="formatCsv" value="csv">
-                            <label class="btn btn-outline-primary" for="formatCsv">
-                                <i class="bi bi-file-earmark-text"></i> CSV
+                            <input type="radio" class="peer hidden" name="exportFormat" id="formatCsv" value="csv">
+                            <label class="flex flex-col items-center justify-center gap-1 p-3 rounded-xl border border-white/10 bg-black/20 cursor-pointer peer-checked:bg-primary/20 peer-checked:border-primary/50 peer-checked:text-primary transition-all hover:bg-white/5" for="formatCsv">
+                                <span class="material-symbols-outlined text-2xl">csv</span>
+                                <span class="text-xs font-bold">CSV</span>
                             </label>
 
-                            <input type="radio" class="btn-check" name="exportFormat" id="formatPdf" value="pdf">
-                            <label class="btn btn-outline-primary" for="formatPdf">
-                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                            <input type="radio" class="peer hidden" name="exportFormat" id="formatPdf" value="pdf">
+                            <label class="flex flex-col items-center justify-center gap-1 p-3 rounded-xl border border-white/10 bg-black/20 cursor-pointer peer-checked:bg-primary/20 peer-checked:border-primary/50 peer-checked:text-primary transition-all hover:bg-white/5" for="formatPdf">
+                                <span class="material-symbols-outlined text-2xl">picture_as_pdf</span>
+                                <span class="text-xs font-bold">PDF</span>
                             </label>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">{% if ui_lang == 'en' %}Data Range{% else %}نطاق البيانات{% endif %}</label>
-                        <select class="form-select" id="exportRange">
-                            <option value="current">{% if ui_lang == 'en' %}Current Page{% else %}الصفحة الحالية{% endif %}</option>
-                            <option value="all">{% if ui_lang == 'en' %}All Data{% else %}جميع البيانات{% endif %}</option>
-                            <option value="filtered">{% if ui_lang == 'en' %}Filtered Data{% else %}البيانات المفلترة{% endif %}</option>
-                        </select>
+                    <!-- Range Selection -->
+                    <div>
+                        <label class="block font-label-sm text-on-surface-variant mb-2">{% if ui_lang == 'en' %}Data Range{% else %}نطاق البيانات{% endif %}</label>
+                        <div class="relative">
+                            <select class="w-full bg-black/20 border border-white/10 text-on-surface rounded-xl px-4 py-3 outline-none focus:border-primary/50 transition-colors appearance-none cursor-pointer" id="exportRange">
+                                <option value="current" class="bg-surface text-on-surface">{% if ui_lang == 'en' %}Current Page (Displayed data){% else %}الصفحة الحالية (البيانات المعروضة){% endif %}</option>
+                                <option value="filtered" class="bg-surface text-on-surface">{% if ui_lang == 'en' %}Filtered Data (All pages matching filter){% else %}البيانات المفلترة (جميع الصفحات المطابقة){% endif %}</option>
+                                <option value="all" class="bg-surface text-on-surface">{% if ui_lang == 'en' %}All Data (Full Database){% else %}جميع البيانات (قاعدة البيانات كاملة){% endif %}</option>
+                            </select>
+                            <span class="material-symbols-outlined absolute end-3 top-3.5 text-on-surface-variant pointer-events-none">expand_more</span>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">{% if ui_lang == 'en' %}Columns to Export{% else %}الأعمدة المراد تصديرها{% endif %}</label>
-                        <div id="exportColumns" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
-                            <!-- Columns will be populated dynamically -->
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="colAll" checked>
-                                <label class="form-check-label" for="colAll">{% if ui_lang == 'en' %}Select All{% else %}تحديد الكل{% endif %}</label>
+                    <!-- Column Selection -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="font-label-sm text-on-surface-variant">{% if ui_lang == 'en' %}Columns to Export{% else %}الأعمدة المراد تصديرها{% endif %}</label>
+                            <span class="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded" id="colCountBadge">{% if ui_lang == 'en' %}All selected{% else %}الكل محدد{% endif %}</span>
+                        </div>
+                        <div class="bg-black/20 border border-white/10 rounded-xl overflow-hidden">
+                            <div class="p-3 border-b border-white/5 bg-white/5 flex items-center gap-2">
+                                <input class="w-4 h-4 rounded border-white/20 bg-transparent text-primary focus:ring-primary focus:ring-offset-0" type="checkbox" id="colAll" checked>
+                                <label class="text-sm font-bold cursor-pointer" for="colAll">{% if ui_lang == 'en' %}Select All Columns{% else %}تحديد جميع الأعمدة{% endif %}</label>
+                            </div>
+                            <div id="exportColumns" class="p-3 max-h-[160px] overflow-y-auto space-y-2 custom-scrollbar">
+                                <!-- Columns will be populated dynamically by JS -->
+                                <div class="text-xs text-on-surface-variant p-2 text-center">
+                                    {% if ui_lang == 'en' %}Columns will load based on current view...{% else %}سيتم تحميل الأعمدة بناءً على العرض الحالي...{% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
-                <button type="button" class="btn btn-primary" id="confirmExport">
-                    <i class="bi bi-download"></i> {% if ui_lang == 'en' %}Export{% else %}تصدير{% endif %}
+
+            <!-- Footer -->
+            <div class="modal-footer border-t border-white/5 p-6 flex justify-end gap-3 relative z-10 bg-white/5">
+                <button type="button" class="px-5 py-2.5 rounded-xl border border-white/10 text-on-surface hover:bg-white/5 transition-colors font-label-md" data-bs-dismiss="modal">
+                    {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
+                </button>
+                <button type="button" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-tertiary hover:bg-tertiary/90 text-on-tertiary font-bold transition-colors shadow-[0_0_15px_rgba(102,153,204,0.3)]" id="confirmExport">
+                    <span class="material-symbols-outlined text-[18px]">download</span>
+                    {% if ui_lang == 'en' %}Export Now{% else %}تصدير الآن{% endif %}
                 </button>
             </div>
         </div>
@@ -64,10 +108,63 @@
 </div>
 
 <script>
-    // Export functionality
+    // CYBERLUME Export Modal UI Logic
+    function updateExportSummary() {
+        const formatElem = document.querySelector('input[name="exportFormat"]:checked');
+        const rangeElem = document.getElementById('exportRange');
+        const format = formatElem ? formatElem.value.toUpperCase() : 'EXCEL';
+        const rangeText = rangeElem && rangeElem.options[rangeElem.selectedIndex] ? rangeElem.options[rangeElem.selectedIndex].text.split('(')[0].trim() : '';
+        
+        const checkboxes = document.querySelectorAll('#exportColumns input[type="checkbox"]:not(#colAll)');
+        let selectedCols = Array.from(checkboxes).filter(cb => cb.checked).length;
+        let totalCols = checkboxes.length;
+        
+        let colText = "{{ 'All columns' if ui_lang == 'en' else 'جميع الأعمدة' }}";
+        if (totalCols > 0 && selectedCols < totalCols) {
+            colText = "{{ 'columns selected' if ui_lang == 'en' else 'أعمدة محددة' }}";
+            colText = selectedCols + " " + colText;
+        }
+
+        const summaryText = "{{ 'Exporting:' if ui_lang == 'en' else 'تصدير:' }} " + format + " · " + rangeText + " · " + colText;
+        
+        const summaryElem = document.getElementById('exportSummary');
+        if (summaryElem) summaryElem.textContent = summaryText;
+
+        const badgeElem = document.getElementById('colCountBadge');
+        if (badgeElem) badgeElem.textContent = (totalCols === 0 || selectedCols === totalCols) ? 
+            "{{ 'All selected' if ui_lang == 'en' else 'الكل محدد' }}" : 
+            selectedCols + "/" + totalCols;
+    }
+
+    document.querySelectorAll('input[name="exportFormat"]').forEach(el => {
+        el.addEventListener('change', updateExportSummary);
+    });
+    
+    document.getElementById('exportRange')?.addEventListener('change', updateExportSummary);
+
+    // Select all columns toggle
+    document.getElementById('colAll')?.addEventListener('change', function () {
+        const checkboxes = document.querySelectorAll('#exportColumns input[type="checkbox"]:not(#colAll)');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        updateExportSummary();
+    });
+
+    // Listen for dynamically added checkboxes
+    document.getElementById('exportColumns')?.addEventListener('change', function(e) {
+        if (e.target && e.target.type === 'checkbox' && e.target.id !== 'colAll') {
+            const checkboxes = document.querySelectorAll('#exportColumns input[type="checkbox"]:not(#colAll)');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            const colAll = document.getElementById('colAll');
+            if (colAll) colAll.checked = allChecked;
+            updateExportSummary();
+        }
+    });
+
     document.getElementById('confirmExport')?.addEventListener('click', function () {
-        const format = document.querySelector('input[name="exportFormat"]:checked').value;
-        const range = document.getElementById('exportRange').value;
+        const formatElem = document.querySelector('input[name="exportFormat"]:checked');
+        const format = formatElem ? formatElem.value : 'excel';
+        const rangeElem = document.getElementById('exportRange');
+        const range = rangeElem ? rangeElem.value : 'current';
 
         // Trigger export event
         const event = new CustomEvent('exportData', {
@@ -76,13 +173,17 @@
         document.dispatchEvent(event);
 
         // Close modal
-        bootstrap.Modal.getInstance(document.getElementById('{{ modal_id }}')).hide();
+        try {
+            const modalEl = document.getElementById('{{ modal_id }}');
+            if (modalEl) {
+                bootstrap.Modal.getInstance(modalEl).hide();
+            }
+        } catch(e) {}
     });
 
-    // Select all columns toggle
-    document.getElementById('colAll')?.addEventListener('change', function () {
-        const checkboxes = document.querySelectorAll('#exportColumns input[type="checkbox"]:not(#colAll)');
-        checkboxes.forEach(cb => cb.checked = this.checked);
+    // Run summary initialization after a short delay to allow dynamic columns to load
+    document.getElementById('{{ modal_id }}')?.addEventListener('shown.bs.modal', function () {
+        setTimeout(updateExportSummary, 200);
     });
 </script>
 {% endmacro %}
