@@ -819,7 +819,7 @@ def delete_user(
     # Capture before state for audit
     before_state = model_to_dict(user)
 
-    user.deleted_at = datetime.now(timezone.utc)
+    user.deleted_at = datetime.now(_JORDAN_TZ)
     user.deleted_by = current_user.id
     user.status = models.UserStatus.INACTIVE
     db.commit()
@@ -1031,7 +1031,7 @@ def admin_mfa_bypass(
         metadata={
             "reason": mfa_request.reason,
             "initiated_by": current_user.username,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(_JORDAN_TZ).isoformat()
         },
         sensitivity_level=3  # Critical security event
     )
@@ -1840,7 +1840,7 @@ def resolve_contact_message(
     if not msg.is_resolved:
         msg.is_resolved = True
         msg.resolved_by_id = current_user.id
-        msg.resolved_at = datetime.now(timezone.utc)
+        msg.resolved_at = datetime.now(_JORDAN_TZ)
         db.commit()
 
         log_audit_event(
@@ -3245,7 +3245,7 @@ def admin_health_check(
         "status": overall,
         "checks": checks,
         "admin_id": current_user.id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(_JORDAN_TZ).isoformat(),
     }
 
 
@@ -4557,7 +4557,9 @@ from governance_kpi_service import (
     detect_low_performers,
     check_reminder_cooldown,
     send_governance_reminder,
+    compute_full_gqi,
 )
+from governance_quality_service import GovernanceQualityService as _GovQualitySvc
 
 
 class GovernanceReminderRequest(BaseModel):
@@ -4584,6 +4586,11 @@ async def get_governance_kpis(
     timeliness = compute_timeliness_metrics(db, start_date, end_date, kindergarten_id)
     quality = compute_quality_metrics(db, start_date, end_date, kindergarten_id)
     consistency = compute_consistency_index(db, start_date, end_date, kindergarten_id)
+    gqi = compute_full_gqi(db, start_date, end_date, kindergarten_id)
+
+    _qsvc = _GovQualitySvc()
+    rejection = _qsvc.report_rejection_rate(db, kindergarten_id)
+    morning = _qsvc.submission_timing_distribution(db, kindergarten_id)
 
     return {
         "start_date": str(start_date),
@@ -4592,6 +4599,9 @@ async def get_governance_kpis(
         "timeliness": timeliness,
         "quality": quality,
         "consistency": consistency,
+        "gqi": gqi,
+        "rejection_rate": rejection.get("rejection_rate", 0.0),
+        "morning_rate": morning.get("morning_rate", 0.0),
     }
 
 
@@ -4611,12 +4621,247 @@ async def get_governance_leaderboard(
     funnel = compute_governance_funnel(db, start_date, end_date)
     ranked = compute_fair_ranking(funnel, db)
     low_performers = detect_low_performers(funnel, db)
+    consistency = compute_consistency_index(db, start_date, end_date)
+
+    kg_ids = [e["kindergarten_id"] for e in ranked]
+
+    if kg_ids:
+        # Last report date per KG
+        _last_date_rows = (
+            db.query(models.DailyReport.kindergarten_id, func.max(models.DailyReport.date))
+            .filter(models.DailyReport.kindergarten_id.in_(kg_ids))
+            .group_by(models.DailyReport.kindergarten_id)
+            .all()
+        )
+        _last_dates = {kg_id: d for kg_id, d in _last_date_rows}
+
+        # Reminder count per KG (all time)
+        _reminder_rows = (
+            db.query(models.GovernanceReminder.target_id, func.count(models.GovernanceReminder.id))
+            .filter(
+                models.GovernanceReminder.target_type == "kindergarten",
+                models.GovernanceReminder.target_id.in_(kg_ids),
+            )
+            .group_by(models.GovernanceReminder.target_id)
+            .all()
+        )
+        _reminder_counts = {kg_id: c for kg_id, c in _reminder_rows}
+
+        # Rejection rate per KG (30 days)
+        _cutoff = datetime.now(_JORDAN_TZ) - timedelta(days=30)
+        _total_rows = (
+            db.query(models.DailyReport.kindergarten_id, func.count(models.DailyReport.id))
+            .filter(
+                models.DailyReport.kindergarten_id.in_(kg_ids),
+                models.DailyReport.created_at >= _cutoff,
+                models.DailyReport.status.in_([
+                    models.DailyReportStatus.SUBMITTED,
+                    models.DailyReportStatus.APPROVED,
+                    models.DailyReportStatus.REJECTED,
+                    models.DailyReportStatus.RETURNED,
+                    models.DailyReportStatus.SENT_TO_PARENT,
+                ]),
+            )
+            .group_by(models.DailyReport.kindergarten_id)
+            .all()
+        )
+        _rejected_rows = (
+            db.query(models.DailyReport.kindergarten_id, func.count(models.DailyReport.id))
+            .filter(
+                models.DailyReport.kindergarten_id.in_(kg_ids),
+                models.DailyReport.created_at >= _cutoff,
+                models.DailyReport.status.in_([
+                    models.DailyReportStatus.REJECTED,
+                    models.DailyReportStatus.RETURNED,
+                ]),
+            )
+            .group_by(models.DailyReport.kindergarten_id)
+            .all()
+        )
+        _total_submitted = {kg_id: c for kg_id, c in _total_rows}
+        _rejected = {kg_id: c for kg_id, c in _rejected_rows}
+
+        # Morning rate per KG: batch query, compute in Python
+        _timing_rows = (
+            db.query(models.DailyReport.kindergarten_id, models.DailyReport.created_at)
+            .filter(
+                models.DailyReport.kindergarten_id.in_(kg_ids),
+                models.DailyReport.created_at >= _cutoff,
+            )
+            .all()
+        )
+        from collections import defaultdict
+        _kg_timing = defaultdict(lambda: [0, 0])  # [morning, total]
+        from datetime import timezone as _tz
+        for _kg_id, _cat in _timing_rows:
+            if _cat:
+                if _cat.tzinfo is None:
+                    _cat = _cat.replace(tzinfo=_tz.utc)
+                _kg_timing[_kg_id][1] += 1
+                if _cat.hour < 10:
+                    _kg_timing[_kg_id][0] += 1
+        _morning_rates = {
+            _kg_id: round(_c[0] / _c[1] * 100, 1) if _c[1] > 0 else 0.0
+            for _kg_id, _c in _kg_timing.items()
+        }
+
+        # Average approval hours per KG
+        _approval_rows = (
+            db.query(
+                models.DailyReport.kindergarten_id,
+                func.avg(
+                    (func.julianday(models.DailyReport.approved_at) - func.julianday(models.DailyReport.submitted_at)) * 24
+                ),
+            )
+            .filter(
+                models.DailyReport.kindergarten_id.in_(kg_ids),
+                models.DailyReport.created_at >= _cutoff,
+                models.DailyReport.status.in_([
+                    models.DailyReportStatus.APPROVED,
+                    models.DailyReportStatus.SENT_TO_PARENT,
+                ]),
+                models.DailyReport.approved_at.isnot(None),
+                models.DailyReport.submitted_at.isnot(None),
+            )
+            .group_by(models.DailyReport.kindergarten_id)
+            .all()
+        )
+        _avg_approval = {
+            kg_id: round(float(h), 1) if h is not None else None
+            for kg_id, h in _approval_rows
+        }
+
+        # Consistency index per KG from existing computation
+        _consistency_per_kg = consistency.get("per_kindergarten", {})
+
+        # Enrich leaderboard entries
+        for entry in ranked:
+            _kid = entry["kindergarten_id"]
+            _tot = _total_submitted.get(_kid, 0)
+            _rej = _rejected.get(_kid, 0)
+            entry["rejection_rate"] = round(_rej / _tot * 100, 1) if _tot > 0 else 0.0
+            entry["morning_rate"] = _morning_rates.get(_kid, 0.0)
+            entry["last_report_date"] = _last_dates[_kid].isoformat() if _last_dates.get(_kid) else None
+            entry["reminder_count"] = _reminder_counts.get(_kid, 0)
+            entry["avg_approval_hours"] = _avg_approval.get(_kid)
+            _ci = _consistency_per_kg.get(str(_kid)) or _consistency_per_kg.get(_kid) or {}
+            entry["consistency_index"] = round(_ci.get("consistency_index", 0.0) * 100, 1) if _ci else None
 
     return {
         "start_date": str(start_date),
         "end_date": str(end_date),
         "leaderboard": ranked,
         "low_performers": low_performers,
+    }
+
+
+@router.get("/admin/governance/trend")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+async def get_governance_trend(
+    request: Request,
+    days: int = Query(30, ge=7, le=90, description="Number of days for trend (7–90)"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Return daily submission rate for the last N days (trend line data)."""
+    today = datetime.now(_JORDAN_TZ).date()
+    start = today - timedelta(days=days)
+
+    active_count = (
+        db.query(func.count(models.Kindergarten.id))
+        .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
+        .scalar()
+        or 0
+    )
+
+    if active_count == 0:
+        return {"trend": [], "days": days}
+
+    _submitted_by_date = dict(
+        db.query(models.DailyReport.date, func.count(models.DailyReport.id))
+        .filter(models.DailyReport.date >= start, models.DailyReport.date <= today)
+        .group_by(models.DailyReport.date)
+        .all()
+    )
+
+    trend = []
+    for i in range(days):
+        d = start + timedelta(days=i + 1)
+        submitted = _submitted_by_date.get(d, 0)
+        trend.append({
+            "date": d.isoformat(),
+            "submitted": submitted,
+            "required": active_count,
+            "submission_rate": round(submitted / active_count, 4),
+        })
+
+    return {"trend": trend, "days": days}
+
+
+@router.get("/admin/governance/safeguarding")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_READ)
+async def get_governance_safeguarding(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Return low-performing kindergartens that also have open incidents (safeguarding overlap)."""
+    today = datetime.now(_JORDAN_TZ).date()
+    week_ago = today - timedelta(days=7)
+
+    funnel = compute_governance_funnel(db, week_ago, today)
+    low_performers = detect_low_performers(funnel, db)
+    lp_ids = {lp["kindergarten_id"] for lp in low_performers}
+
+    if not lp_ids:
+        return {"overlapping": [], "low_performer_count": 0, "open_incident_count": 0}
+
+    _open_rows = (
+        db.query(models.Incident.kindergarten_id, func.count(models.Incident.id))
+        .filter(
+            models.Incident.kindergarten_id.in_(lp_ids),
+            models.Incident.closed_at.is_(None),
+            models.Incident.deleted_at.is_(None),
+        )
+        .group_by(models.Incident.kindergarten_id)
+        .all()
+    )
+    _incident_counts = {kg_id: c for kg_id, c in _open_rows}
+
+    overlapping_ids = list(_incident_counts.keys())
+    if not overlapping_ids:
+        return {
+            "overlapping": [],
+            "low_performer_count": len(lp_ids),
+            "open_incident_count": 0,
+        }
+
+    _kg_names = {
+        kg.id: {"name_ar": kg.name_ar, "name_en": kg.name_en}
+        for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(overlapping_ids)).all()
+    }
+    _lp_lookup = {lp["kindergarten_id"]: lp for lp in low_performers}
+
+    overlapping = sorted(
+        [
+            {
+                "kindergarten_id": kg_id,
+                "name_ar": _kg_names.get(kg_id, {}).get("name_ar", f"KG#{kg_id}"),
+                "name_en": _kg_names.get(kg_id, {}).get("name_en", f"KG#{kg_id}"),
+                "submission_rate": _lp_lookup.get(kg_id, {}).get("submission_rate", 0.0),
+                "open_incidents": _incident_counts[kg_id],
+            }
+            for kg_id in overlapping_ids
+            if kg_id in _lp_lookup
+        ],
+        key=lambda x: x["open_incidents"],
+        reverse=True,
+    )
+
+    return {
+        "overlapping": overlapping,
+        "low_performer_count": len(lp_ids),
+        "open_incident_count": sum(_incident_counts.values()),
     }
 
 
@@ -5453,7 +5698,7 @@ def acknowledge_alert(
     if alert.status == models.AlertStatus.ACKNOWLEDGED:
         raise HTTPException(status_code=409, detail="Alert is already acknowledged")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(_JORDAN_TZ)
     alert.status = models.AlertStatus.ACKNOWLEDGED
     alert.acknowledged_by = current_user.id
     alert.acknowledged_at = now

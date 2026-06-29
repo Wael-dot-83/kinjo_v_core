@@ -59,6 +59,67 @@
                 <small class="text-on-surface-variant" id="kpiRejectionInfo">--</small>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- GQI Section -->
+<div class="cyberlume-card border-0 mb-4">
+    <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+            <i class="bi bi-shield-check me-2 text-success"></i>
+            {% if ui_lang == 'en' %}Governance Quality Index (GQI){% else %}مؤشر جودة الحوكمة{% endif %}
+            <span class="badge bg-success ms-2 fs-6" id="gqiScore">--</span>
+        </h6>
+        <small class="text-on-surface-variant">{% if ui_lang == 'en' %}Composite of 5 sub-indicators (0–100){% else %}مركّب من 5 مؤشرات فرعية (0–100){% endif %}</small>
+    </div>
+    <div class="card-body">
+        <div class="row g-3" id="gqiSubIndicators">
+            <div class="col-6 col-md-4 col-lg">
+                <div class="border rounded p-3 text-center">
+                    <div class="fs-4 fw-bold text-primary" id="gqiReportSubmission">--</div>
+                    <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Report Submission{% else %}تقديم التقارير{% endif %}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg">
+                <div class="border rounded p-3 text-center">
+                    <div class="fs-4 fw-bold text-info" id="gqiRatioCompliance">--</div>
+                    <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Ratio Compliance{% else %}الامتثال للنسب{% endif %}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg">
+                <div class="border rounded p-3 text-center">
+                    <div class="fs-4 fw-bold text-warning" id="gqiLicenseValidity">--</div>
+                    <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}License Validity{% else %}صلاحية الترخيص{% endif %}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg">
+                <div class="border rounded p-3 text-center">
+                    <div class="fs-4 fw-bold text-success" id="gqiTrainingCoverage">--</div>
+                    <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Training Coverage{% else %}تغطية التدريب{% endif %}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4 col-lg">
+                <div class="border rounded p-3 text-center">
+                    <div class="fs-4 fw-bold text-danger" id="gqiIncidentSla">--</div>
+                    <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Incident SLA{% else %}SLA الحوادث{% endif %}</div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3 mt-1">
+            <div class="col-md-6">
+                <div class="border rounded p-3 d-flex justify-content-between align-items-center">
+                    <span class="text-on-surface-variant small">{% if ui_lang == 'en' %}Rejection Rate (30d){% else %}معدل الرفض (30 يوم){% endif %}</span>
+                    <span class="fw-bold" id="kpiRejectionRate">--</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="border rounded p-3 d-flex justify-content-between align-items-center">
+                    <span class="text-on-surface-variant small">{% if ui_lang == 'en' %}Morning Submission Rate{% else %}معدل التقديم الصباحي{% endif %}</span>
+                    <span class="fw-bold" id="kpiMorningRate">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Funnel Chart + Consistency -->
@@ -94,6 +155,33 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- 30-Day Submission Trend -->
+<div class="cyberlume-card border-0 mb-4">
+    <div class="card-header bg-transparent border-0">
+        <h6 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>{% if ui_lang == 'en' %}30-Day Submission Rate Trend{% else %}اتجاه نسبة التقديم (30 يوم){% endif %}</h6>
+    </div>
+    <div class="card-body">
+        <canvas id="trendChart" height="120"></canvas>
+    </div>
+</div>
+
+<!-- Safeguarding Overlap Panel -->
+<div id="safeguardingSection" class="mb-4 d-none">
+    <div class="cyberlume-card border-danger border-0">
+        <div class="card-header bg-danger bg-opacity-10 border-0 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 text-danger">
+                <i class="bi bi-shield-exclamation me-2"></i>
+                {% if ui_lang == 'en' %}Safeguarding Risk — Low Compliance + Open Incidents{% else %}خطر الحماية — امتثال منخفض + حوادث مفتوحة{% endif %}
+            </h6>
+            <span class="badge bg-danger" id="safeguardingCount">0</span>
+        </div>
+        <div class="card-body">
+            <div id="safeguardingList" class="row g-2"></div>
+        </div>
+    </div>
 </div>
 
 <!-- Low Performers Alert -->
@@ -105,6 +193,7 @@
         <div class="relative z-10">
             <div id="lowPerformersList" class="row g-2"></div>
         </div>
+    </div>
 </div>
 
 <!-- Leaderboard Table -->
@@ -113,28 +202,35 @@
         <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>{% if ui_lang == 'en' %}Kindergarten Ranking (Weighted){% else %}ترتيب الرياض (ترجيحي){% endif %}</h6>
     </div>
     <div class="card-body p-0">
-        <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-            <table class="table table-dark table-hover cyberlume-table align-middle table-hover mb-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover cyberlume-table align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th style="width:60px">#</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Required{% else %}المطلوب{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Submitted{% else %}المقدم{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Delivered{% else %}المسلم{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Viewed{% else %}المشاهد{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Raw Rate{% else %}النسبة الخام{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Weighted Score{% else %}النتيجة الترجيحية{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
+                        <th style="width:50px">#</th>
+                        <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Req{% else %}مطلوب{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Sub{% else %}مقدم{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Del{% else %}مسلم{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}View{% else %}مشاهد{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Raw%{% else %}خام%{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Score{% else %}النتيجة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Reject%{% else %}رفض%{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Morning%{% else %}صباح%{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Consist.{% else %}اتساق{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Avg Approv.{% else %}متوسط موافقة{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Last Report{% else %}آخر تقرير{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Remind.{% else %}تذكيرات{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Action{% else %}إجراء{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboardBody">
-                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td colspan="9" class="text-center text-on-surface-variant py-4">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td>
+                    <tr>
+                        <td colspan="15" class="text-center text-on-surface-variant py-4">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
+    </div>
 </div>
 
 <!-- Reminder History -->
@@ -143,24 +239,25 @@
         <h6 class="mb-0"><i class="bi bi-bell me-2"></i>{% if ui_lang == 'en' %}Reminders Log{% else %}سجل التذكيرات{% endif %}</h6>
     </div>
     <div class="card-body p-0">
-        <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-            <table class="table table-dark table-hover cyberlume-table align-middle table-hover mb-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover cyberlume-table align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Target{% else %}الهدف{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Reminder Type{% else %}نوع التذكير{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Sent Date{% else %}تاريخ الإرسال{% endif %}</th>
-                        <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Cooldown Expiry{% else %}انتهاء التبريد{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Target{% else %}الهدف{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Reminder Type{% else %}نوع التذكير{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Sent Date{% else %}تاريخ الإرسال{% endif %}</th>
+                        <th>{% if ui_lang == 'en' %}Cooldown Expiry{% else %}انتهاء التبريد{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody id="remindersBody">
-                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td colspan="5" class="text-center text-on-surface-variant py-4">{% if ui_lang == 'en' %}No reminders{% else %}لا توجد تذكيرات{% endif %}</td>
+                    <tr>
+                        <td colspan="5" class="text-center text-on-surface-variant py-4">{% if ui_lang == 'en' %}No reminders{% else %}لا توجد تذكيرات{% endif %}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
+    </div>
 </div>
 
 <!-- Reminder Confirmation Modal -->
@@ -177,12 +274,13 @@
                 <p class="text-on-surface-variant small">{% if ui_lang == 'en' %}A 48-hour cooldown period will be applied after sending.{% else %}سيتم تطبيق فترة تبريد 48 ساعة بعد الإرسال.{% endif %}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
                 <button type="button" class="btn btn-warning" id="confirmReminderBtn">
                     <i class="bi bi-bell me-1"></i>{% if ui_lang == 'en' %}Send{% else %}إرسال{% endif %}
                 </button>
             </div>
         </div>
+    </div>
 </div>
 {% endblock %}
 

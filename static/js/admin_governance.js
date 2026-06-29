@@ -3,6 +3,7 @@
  */
 
 let funnelChart = null;
+let trendChart = null;
 let _reminderTarget = null;
 
 function governanceLangCode() {
@@ -90,6 +91,11 @@ function formatPercent(val) {
   return (val * 100).toFixed(1) + "%";
 }
 
+function formatPct(val) {
+  if (val == null) return "--";
+  return Number(val).toFixed(1) + "%";
+}
+
 function formatHours(h) {
   if (h == null) return "--";
   if (h < 1) {
@@ -111,19 +117,22 @@ async function loadGovernanceData() {
       refreshBtn.disabled = true;
       refreshBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${governanceText("جاري التحميل...", "Loading...")}`;
     }
-    const query = new URLSearchParams({
-      start_date: start,
-      end_date: end,
-    }).toString();
+    const query = new URLSearchParams({ start_date: start, end_date: end }).toString();
 
-    const [kpis, board, reminders] = await Promise.all([
+    const [kpis, board, reminders, trend, safeguarding] = await Promise.all([
       governanceFetch(`/api/admin/governance/kpis?${query}`),
       governanceFetch(`/api/admin/governance/leaderboard?${query}`),
       governanceFetch(`/api/admin/governance/reminders?page=1&page_size=10`),
+      governanceFetch(`/api/admin/governance/trend?days=30`),
+      governanceFetch(`/api/admin/governance/safeguarding`),
     ]);
+
     renderKPICards(kpis);
+    renderGQI(kpis);
     renderFunnelChart(kpis.funnel);
     renderTimeliness(kpis.timeliness, kpis.consistency);
+    renderTrendChart(trend.trend || []);
+    renderSafeguarding(safeguarding);
     renderLeaderboard(board.leaderboard);
     renderLowPerformers(board.low_performers);
     renderReminders(reminders.items);
@@ -162,7 +171,6 @@ function renderKPICards(kpis) {
   document.getElementById("kpiViewRate").textContent = formatPercent(agg.view_rate);
   document.getElementById("kpiViewed").textContent = agg.viewed || 0;
 
-  // Quality from first KG aggregate
   const qualityKgs = kpis.quality?.per_kindergarten || {};
   const allQuality = Object.values(qualityKgs);
   if (allQuality.length > 0) {
@@ -175,6 +183,45 @@ function renderKPICards(kpis) {
       `${totalRejected} مرفوض من ${totalAll}`,
       `${totalRejected} rejected out of ${totalAll}`
     );
+  }
+}
+
+// ─── GQI Sub-indicators ──────────────────────────────────────────────────
+
+function renderGQI(kpis) {
+  const gqi = kpis.gqi || {};
+  const sub = gqi.sub_indicators || {};
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  const rawScore = gqi.gqi != null ? clamp(gqi.gqi, 0, 100) : null;
+  const scoreEl = document.getElementById("gqiScore");
+  if (scoreEl) {
+    scoreEl.textContent = rawScore != null ? `${rawScore.toFixed(1)} / 100` : "--";
+    scoreEl.className = "badge ms-2 fs-6 " + (
+      rawScore == null ? "bg-secondary" :
+      rawScore >= 80 ? "bg-success" :
+      rawScore >= 60 ? "bg-warning text-dark" :
+      "bg-danger"
+    );
+  }
+
+  const setGqi = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val != null ? `${clamp(Number(val), 0, 100).toFixed(1)}%` : "--";
+  };
+  setGqi("gqiReportSubmission", sub.report_submission);
+  setGqi("gqiRatioCompliance", sub.ratio_compliance);
+  setGqi("gqiLicenseValidity", sub.license_validity);
+  setGqi("gqiTrainingCoverage", sub.training_coverage);
+  setGqi("gqiIncidentSla", sub.incident_sla);
+
+  const rejEl = document.getElementById("kpiRejectionRate");
+  if (rejEl) {
+    rejEl.textContent = kpis.rejection_rate != null ? `${Number(kpis.rejection_rate).toFixed(1)}%` : "--";
+  }
+  const morEl = document.getElementById("kpiMorningRate");
+  if (morEl) {
+    morEl.textContent = kpis.morning_rate != null ? `${Number(kpis.morning_rate).toFixed(1)}%` : "--";
   }
 }
 
@@ -236,12 +283,114 @@ function renderTimeliness(timeliness, consistency) {
   }
 }
 
+// ─── 30-Day Trend Chart ──────────────────────────────────────────────────
+
+function renderTrendChart(trend) {
+  const ctx = document.getElementById("trendChart");
+  if (!ctx) return;
+
+  if (trendChart) trendChart.destroy();
+
+  const labels = trend.map((p) => {
+    const d = new Date(p.date);
+    return d.toLocaleDateString(governanceLocale(), { month: "short", day: "numeric" });
+  });
+  const rates = trend.map((p) => +(p.submission_rate * 100).toFixed(1));
+
+  trendChart = new Chart(ctx.getContext("2d"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: governanceText("نسبة التقديم %", "Submission Rate %"),
+          data: rates,
+          borderColor: "#4F46E5",
+          backgroundColor: "rgba(79,70,229,0.08)",
+          fill: true,
+          tension: 0.35,
+          pointRadius: 2,
+          borderWidth: 2,
+        },
+        {
+          label: governanceText("هدف 80%", "Target 80%"),
+          data: trend.map(() => 80),
+          borderColor: "#198754",
+          borderDash: [6, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: "bottom" },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}%`,
+          },
+        },
+      },
+      scales: {
+        y: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + "%" } },
+        x: { grid: { display: false } },
+      },
+    },
+  });
+}
+
+// ─── Safeguarding Overlap ────────────────────────────────────────────────
+
+function renderSafeguarding(data) {
+  const section = document.getElementById("safeguardingSection");
+  const list = document.getElementById("safeguardingList");
+  const countEl = document.getElementById("safeguardingCount");
+  if (!section || !list) return;
+
+  const items = data?.overlapping || [];
+  if (items.length === 0) {
+    section.classList.add("d-none");
+    return;
+  }
+
+  section.classList.remove("d-none");
+  if (countEl) countEl.textContent = items.length;
+
+  list.innerHTML = items
+    .map((item) => {
+      const name = escapeHtml(
+        governanceLangCode().startsWith("en")
+          ? (item.name_en || item.name_ar || `KG#${item.kindergarten_id}`)
+          : (item.name_ar || item.name_en || `KG#${item.kindergarten_id}`)
+      );
+      const subRate = (+(item.submission_rate || 0) * 100).toFixed(1);
+      return `
+        <div class="col-md-4">
+          <div class="border border-danger rounded p-3 bg-danger bg-opacity-5">
+            <div class="fw-bold text-danger">${name}</div>
+            <div class="small text-on-surface-variant mt-1">
+              <i class="bi bi-graph-down-arrow me-1"></i>
+              ${governanceText("نسبة التقديم:", "Submission:")} ${subRate}%
+            </div>
+            <div class="small text-on-surface-variant">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              ${item.open_incidents} ${governanceText("حادثة مفتوحة", "open incident(s)")}
+            </div>
+          </div>
+        </div>`;
+    })
+    .join("");
+}
+
 // ─── Leaderboard ─────────────────────────────────────────────────────────
 
 function renderLeaderboard(entries) {
   const tbody = document.getElementById("leaderboardBody");
   if (!entries || entries.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">${governanceText("لا توجد بيانات كافية", "Insufficient data")}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15" class="text-center text-muted py-4">${governanceText("لا توجد بيانات كافية", "Insufficient data")}</td></tr>`;
     return;
   }
 
@@ -253,24 +402,40 @@ function renderLeaderboard(entries) {
       const lowBadge = e.is_low_performer
         ? `<span class="badge bg-warning text-dark ms-1">${governanceText("ضعيف", "Weak")}</span>`
         : "";
+      const rejRate = e.rejection_rate != null ? `${e.rejection_rate}%` : "--";
+      const morRate = e.morning_rate != null ? `${e.morning_rate}%` : "--";
+      const ciVal = e.consistency_index != null ? `${e.consistency_index}%` : "--";
+      const approvalH = e.avg_approval_hours != null ? formatHours(e.avg_approval_hours) : "--";
+      const lastDate = e.last_report_date
+        ? new Date(e.last_report_date).toLocaleDateString(governanceLocale())
+        : "--";
+      const reminderCnt = e.reminder_count != null ? e.reminder_count : "--";
+
       return `<tr>
-            <td><span class="rank-badge ${rankClass}">${e.rank}</span></td>
-            <td>${kgName} ${lowBadge}</td>
-            <td>${e.required}</td>
-            <td>${e.submitted}</td>
-            <td>${e.delivered}</td>
-            <td>${e.viewed}</td>
-            <td>${formatPercent(e.raw_rate)}</td>
-            <td><strong>${formatPercent(e.bayesian_score)}</strong></td>
-            <td>
-                <button class="btn btn-sm btn-outline-warning js-reminder-btn"
-                        data-target-type="kindergarten"
-                        data-target-id="${e.kindergarten_id}"
-                        data-target-name="${kgName}">
-                    <i class="bi bi-bell"></i>
-                </button>
-            </td>
-        </tr>`;
+          <td><span class="rank-badge ${rankClass}">${e.rank}</span></td>
+          <td>${kgName} ${lowBadge}</td>
+          <td>${e.required}</td>
+          <td>${e.submitted}</td>
+          <td>${e.delivered}</td>
+          <td>${e.viewed}</td>
+          <td>${formatPercent(e.raw_rate)}</td>
+          <td><strong>${formatPercent(e.bayesian_score)}</strong></td>
+          <td><span class="${e.rejection_rate > 15 ? 'text-danger fw-bold' : ''}">${rejRate}</span></td>
+          <td>${morRate}</td>
+          <td>${ciVal}</td>
+          <td>${approvalH}</td>
+          <td>${lastDate}</td>
+          <td>${reminderCnt}</td>
+          <td>
+              <button class="btn btn-sm btn-outline-warning js-reminder-btn"
+                      data-target-type="kindergarten"
+                      data-target-id="${e.kindergarten_id}"
+                      data-target-name="${kgName}"
+                      title="${governanceText('إرسال تذكير', 'Send reminder')}">
+                  <i class="bi bi-bell"></i>
+              </button>
+          </td>
+      </tr>`;
     })
     .join("");
 }
