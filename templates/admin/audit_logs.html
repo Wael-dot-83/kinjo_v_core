@@ -1,4 +1,4 @@
-{% extends "admin_base_premium.html" %}
+{% extends "admin_base.html" %}
 {% from 'components/filter-row.html' import filter_row_labeled %}
 {% from 'components/data-table.html' import loading_state, pagination %}
 
@@ -8,7 +8,7 @@
 
 {% block content %}
 <div class="page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
-  <h1 class="page-title mb-0">
+  <h1 class="page-title mb-0" cyberlume-glow-text>
     <i class="bi bi-clock-history me-2"></i>
     {% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}
   </h1>
@@ -22,7 +22,7 @@
   </div>
 </div>
 
-<div class="card shadow-sm mb-4">
+<div class="cyberlume-card  mb-4">
     <div class="relative z-10">
         <!-- Filters -->
         <div class="row g-3 mb-4">
@@ -74,10 +74,10 @@
 </div>
 
 <!-- Audit Logs Table -->
-<div class="card shadow-sm">
+<div class="cyberlume-card ">
     <div class="relative z-10">
         <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-            <table class="table table-hover" id="auditLogsTable" aria-label="{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}">
+            <table class="table table-dark table-hover cyberlume-table align-middle table-hover" id="auditLogsTable" aria-label="{% if ui_lang == 'en' %}Audit Logs{% else %}سجلات التدقيق{% endif %}">
                 <thead class="table-light">
                     <tr>
                         <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Date & Time{% else %}التاريخ والوقت{% endif %}</th>

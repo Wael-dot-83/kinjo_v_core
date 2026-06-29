@@ -13,7 +13,7 @@
         </p>
     </div>
     <div class="col-md-4 text-md-end mt-2 mt-md-0 d-flex justify-content-md-end align-items-center gap-2">
-        <button id="exportClassificationBtn" class="btn btn-sm btn-outline-secondary"
+        <button id="exportClassificationBtn" class="btn btn-sm cyberlume-btn cyberlume-btn-outline"
             aria-label="{% if ui_lang == 'en' %}Export data as CSV{% else %}تصدير البيانات كملف CSV{% endif %}"
             data-bs-toggle="tooltip"
             title="{% if ui_lang == 'en' %}Export CSV{% else %}تصدير CSV{% endif %}">
@@ -34,7 +34,7 @@
 </div>
 
 <div id="classificationRoot" class="classification-page mb-4">
-    <div class="card shadow-sm border-0 mb-3">
+    <div class="cyberlume-card  border-0 mb-3">
         <div class="relative z-10">
             <div class="row g-3 align-items-end" role="search">
                 <div class="col-lg-2 col-md-4">
@@ -86,10 +86,10 @@
                     <input id="minSampleDays" type="number" min="1" max="365" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" value="30">
                 </div>
                 <div class="col-lg-2 col-md-4">
-                    <button id="applyClassificationFiltersBtn" class="btn btn-primary w-100" aria-label="{% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}">
+                    <button id="applyClassificationFiltersBtn" class="btn cyberlume-btn cyberlume-btn-primary w-100" aria-label="{% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}">
                         <i class="bi bi-funnel ms-1"></i>
                         {% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}
-                        <span id="activeFilterCount" class="badge bg-light text-dark ms-1 d-none">0</span>
+                        <span id="activeFilterCount" class="badge bg-light text-cyber-light ms-1 d-none">0</span>
                     </button>
                 </div>
                 <div class="col-auto d-flex align-items-end mb-0">
@@ -198,7 +198,7 @@
         </div>
     </div>
 
-    <div class="card shadow-sm border-0">
+    <div class="cyberlume-card  border-0">
         <div class="card-header bg-white">
             <ul class="nav nav-tabs card-header-tabs" id="classificationTabs">
                 <li class="nav-item">
@@ -226,7 +226,7 @@
                 الحالية.{% endif %}</div>
 
             <div class="overflow-x-auto rounded-xl border border-white/10 bg-surface-container/20">
-                <table class="table table-striped table-hover align-middle" id="classificationTable" role="table" aria-label="{% if ui_lang == 'en' %}Classification results{% else %}نتائج التصنيف{% endif %}">
+                <table class="table table-dark table-hover cyberlume-table align-middle table-striped table-hover align-middle" id="classificationTable" role="table" aria-label="{% if ui_lang == 'en' %}Classification results{% else %}نتائج التصنيف{% endif %}">
                     <thead>
                         <tr>
                             <th scope="col" aria-sort="ascending" data-label="{% if ui_lang == 'en' %}Rank{% else %}الترتيب{% endif %}" data-i18n="classification.table.rank">{% if ui_lang == 'en' %}Rank{% else %}الترتيب{% endif %}</th>
@@ -256,7 +256,7 @@
                     <div id="classificationDetailSummary" class="mb-3"></div>
                     <div class="row g-3">
                         <div class="col-lg-6">
-                            <div class="card h-100">
+                            <div class="cyberlume-card h-100">
                                 <div class="relative z-10">
                                     <h6 class="fw-bold">{% if ui_lang == 'en' %}Aspect Distribution{% else %}توزيع الجوانب{% endif %}</h6>
                                     <ul class="list-group list-group-flush" id="classificationAspectsList"></ul>
@@ -264,7 +264,7 @@
                             </div>
                         </div>
                         <div class="col-lg-6">
-                            <div class="card h-100">
+                            <div class="cyberlume-card h-100">
                                 <div class="relative z-10">
                                     <h6 class="fw-bold">{% if ui_lang == 'en' %}Suggested Actions{% else %}إجراءات مقترحة{% endif %}</h6>
                                     <ul id="classificationActionsList" class="mb-0"></ul>
@@ -272,7 +272,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card mt-3">
+                    <div class="cyberlume-card mt-3">
                         <div class="relative z-10">
                             <h6 class="fw-bold">{% if ui_lang == 'en' %}Score Trend Across Periods{% else %}اتجاه الدرجة عبر الفترات{% endif %}</h6>
                             <canvas id="classificationTrendChart" height="100"></canvas>

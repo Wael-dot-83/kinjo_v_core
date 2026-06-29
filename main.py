@@ -189,6 +189,8 @@ from export_api import router as export_router
 # from realtime_service import websocket_endpoint
 import audit_service
 from admin_endpoints import router as admin_router
+from admin_advanced_analytics_endpoints import router as admin_advanced_analytics_router
+
 from daily_report_analytics import router as dr_analytics_router, frontend_router as dr_analytics_frontend
 from monitoring_endpoints import router as monitoring_router
 from manager_analytics_endpoints import router as manager_analytics_router
@@ -245,7 +247,6 @@ async def lifespan(app: FastAPI):
 
         # Start waitlist expiry scheduler (every 15 min)
         waitlist_expiry_scheduler.start_scheduler()
-        analytics_report_scheduler.start_scheduler()
 
         # Start monitoring services
         performance_monitor.start_monitoring()
@@ -268,7 +269,6 @@ async def lifespan(app: FastAPI):
         backup_scheduler.stop_scheduler()
         daily_report_scheduler.stop_scheduler()
         waitlist_expiry_scheduler.stop_scheduler()
-        analytics_report_scheduler.stop_scheduler()
 
         auto_scaler.stop_auto_scaling()
 
@@ -1148,6 +1148,8 @@ async def refresh_token(
 
 # Include routers AFTER auth endpoints
 app.include_router(admin_router, prefix="/api", tags=["Admin"])
+app.include_router(admin_advanced_analytics_router)
+
 
 # Jordan Heat Map admin-facing endpoints (canonical route is /api/admin/heat-map/*)
 try:

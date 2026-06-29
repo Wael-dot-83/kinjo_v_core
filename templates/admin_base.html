@@ -179,6 +179,39 @@
     </title>
 
         {% block extra_head %}{% endblock %}
+    
+    <!-- Tailwind support for premium pages (Preflight disabled to protect Bootstrap) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      if (typeof tailwind !== 'undefined') {
+        tailwind.config = {
+          darkMode: "class",
+          corePlugins: { preflight: false },
+          theme: {
+              extend: {
+                  "colors": {
+                      "surface-container-highest": "#353437",
+                      "on-surface": "#e5e1e4",
+                      "surface-variant": "#353437",
+                      "primary": "#c0c1ff",
+                      "inverse-on-surface": "#313032",
+                      "background": "#131315",
+                      "surface-container-high": "#2a2a2c",
+                      "surface-bright": "#39393b",
+                      "surface-dim": "#131315",
+                      "surface-container": "#201f21",
+                      "success": "#4ade80",
+                      "warning": "#fbbf24",
+                      "danger": "#ef4444",
+                      "info": "#38bdf8"
+                  }
+              }
+          }
+        };
+      }
+    </script>
+    <!-- Odometer CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/odometer.js/0.4.8/themes/odometer-theme-default.css" integrity="sha512-kMPqFnKueEwgOht55KEzWe0Vv/wwI/n8122d2508tZ/b2Tgz0q1xVp6R/v+EwY2T1nB8B8X8M8X+xZpT11P0pA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
 
   <body class="app-container">
@@ -724,6 +757,9 @@
     {% include 'components/help_modal.html' %}
 
     {% block extra_scripts %}{% endblock %}
+
+    <!-- Odometer JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/odometer.js/0.4.8/odometer.min.js" integrity="sha512-zQhW5mI1JqE2TFXzBq/A7OebQoQOWeJqfV5D4QhOQ+0aQ/A+kE8FjS2pZf6l/pL4vSXZWb+6w8w/B/hV8f6a+A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <script>
       // Prevent all date inputs from accepting future dates.

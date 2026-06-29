@@ -173,10 +173,6 @@ html[dir="rtl"] .sidebar {
   border-right: none;
 }
 
-html[dir="rtl"] .sidebar.collapsed + .main {
-  margin-right: 0;
-  margin-left: var(--sidebar-width-collapsed);
-}
 
 /* English (LTR) Language Support */
 html[dir="ltr"] {
@@ -189,10 +185,6 @@ html[dir="ltr"] .sidebar {
   border-left: none;
 }
 
-html[dir="ltr"] .sidebar.collapsed + .main {
-  margin-left: 0;
-  margin-right: var(--sidebar-width-collapsed);
-}
 
 /* ============================================================================
    BASE ADMIN STYLES
@@ -491,7 +483,6 @@ html[dir="rtl"] .nav-item.active::before {
   background-color: var(--color-primary-surface, #ffffff);
   padding: var(--space-8, 2rem);
   overflow-x: auto;
-  transition: margin var(--transition-normal);
 }
 
 /* Header */

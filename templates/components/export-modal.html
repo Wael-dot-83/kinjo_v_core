@@ -3,7 +3,7 @@
 <div class="modal fade" id="{{ modal_id }}" tabindex="-1" aria-labelledby="{{ modal_id }}Label" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content glass-panel border border-white/10 rounded-3xl bg-surface-container-high text-on-surface shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden relative">
-            <div class="absolute -top-32 -right-32 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -top-32 -end-32 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
             
             <!-- Header -->
             <div class="modal-header border-b border-white/5 pb-4 px-6 pt-6 flex justify-between items-center relative z-10">
@@ -18,7 +18,7 @@
                         <p class="text-xs text-on-surface-variant mt-0.5">{% if ui_lang == 'en' %}Configure your report download{% else %}إعداد تحميل التقرير{% endif %}</p>
                     </div>
                 </div>
-                <button type="button" class="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors text-on-surface-variant" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}">
+                <button type="button" class="btn w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors text-on-surface-variant" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}">
                     <span class="material-symbols-outlined text-sm">close</span>
                 </button>
             </div>
@@ -95,10 +95,10 @@
 
             <!-- Footer -->
             <div class="modal-footer border-t border-white/5 p-6 flex justify-end gap-3 relative z-10 bg-white/5">
-                <button type="button" class="px-5 py-2.5 rounded-xl border border-white/10 text-on-surface hover:bg-white/5 transition-colors font-label-md" data-bs-dismiss="modal">
+                <button type="button" class="btn px-5 py-2.5 rounded-xl border border-white/10 text-on-surface hover:bg-white/5 transition-colors font-label-md" data-bs-dismiss="modal">
                     {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
                 </button>
-                <button type="button" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-tertiary hover:bg-tertiary/90 text-on-tertiary font-bold transition-colors shadow-[0_0_15px_rgba(102,153,204,0.3)]" id="confirmExport">
+                <button type="button" class="btn flex items-center gap-2 px-5 py-2.5 rounded-xl bg-tertiary hover:bg-tertiary/90 text-on-tertiary font-bold transition-colors shadow-[0_0_15px_rgba(102,153,204,0.3)]" id="confirmExport">
                     <span class="material-symbols-outlined text-[18px]">download</span>
                     {% if ui_lang == 'en' %}Export Now{% else %}تصدير الآن{% endif %}
                 </button>

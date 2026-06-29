@@ -339,6 +339,25 @@ async function loadAdminAnalytics(retryCount = 0) {
 
     const data = await response.json();
 
+    // Fetch Advanced Analytics Gap Service Metrics
+    try {
+        const advResponse = await fetchWithAuth(`/api/admin/analytics/network?locale=${adminAnalyticsLocale().split('-')[0]}`);
+        if (advResponse && advResponse.ok) {
+            const advData = await advResponse.json();
+            // Store advanced metrics globally so charts can use them
+            window.advancedMetrics = advData.metrics;
+            if (typeof renderAdvancedMetrics === 'function') {
+                renderAdvancedMetrics(advData.metrics);
+            }
+        }
+    } catch (e) {
+        console.warn("Advanced analytics metrics unavailable:", e);
+        const container = document.getElementById("advancedMetricsContainer");
+        if (container) {
+            container.innerHTML = `<div class="col-12 text-center text-muted">Failed to load advanced metrics.</div>`;
+        }
+    }
+
     // Update all dashboard components
     lastDashboardData = data;
     updateNetworkSummary(data.network_summary);
@@ -558,6 +577,45 @@ function updateLastUpdatedTimestamp() {
   el.innerHTML = `<i class="bi bi-clock"></i> <span>${adminAnalyticsText("آخر تحديث:", "Last updated:")} ${formatter.format(now)}</span>`;
 }
 
+// Keep track of odometer instances
+window.odometers = window.odometers || {};
+
+function safeSetText(id, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  
+  // Strip non-numeric for odometer if it's a number
+  const numMatch = text.toString().match(/([0-9.]+)/);
+  const isPercent = text.toString().includes('%');
+  const isRate = text.toString().includes('/1K');
+  
+  if (numMatch && typeof Odometer !== 'undefined') {
+    if (!window.odometers[id]) {
+      // Clear skeleton
+      el.innerHTML = '';
+      window.odometers[id] = new Odometer({
+        el: el,
+        value: 0,
+        format: isPercent || isRate ? '(,ddd).dd' : '(,ddd)',
+        theme: 'default'
+      });
+    }
+    window.odometers[id].update(parseFloat(numMatch[1]));
+    
+    // Append suffixes if needed, but Odometer replaces innerHTML. 
+    // We should handle suffixes outside the odometer element.
+    if (isPercent && !el.dataset.hasSuffix) {
+      el.insertAdjacentHTML('afterend', '<span class="ms-1">%</span>');
+      el.dataset.hasSuffix = 'true';
+    } else if (isRate && !el.dataset.hasSuffix) {
+      el.insertAdjacentHTML('afterend', '<span class="ms-1">/1K</span>');
+      el.dataset.hasSuffix = 'true';
+    }
+  } else {
+    el.innerHTML = adminAnalyticsLiteral(text);
+  }
+}
+
 function updateNetworkSummary(summary) {
   if (!summary) {
     return;
@@ -566,11 +624,11 @@ function updateNetworkSummary(summary) {
   // Update KPI cards with proper formatting
   safeSetText(
     "totalKg",
-    summary.total_kindergartens?.toLocaleString(adminAnalyticsLocale()) || "0"
+    summary.total_kindergartens || 0
   );
 
   const childrenCount = summary.total_children || 0;
-  safeSetText("totalChildren", childrenCount.toLocaleString(adminAnalyticsLocale()));
+  safeSetText("totalChildren", childrenCount);
 
   const attendanceRate = summary.attendance_rate || 0;
   safeSetText("avgAttendance", attendanceRate.toFixed(1) + "%");
@@ -593,6 +651,60 @@ function updateNetworkSummary(summary) {
     lastDashboardData.network_summary = summary;
     renderSparklines(lastDashboardData);
   }
+}
+
+function renderAdvancedMetrics(metrics) {
+    const container = document.getElementById("advancedMetricsContainer");
+    if (!container || !metrics || !metrics.length) return;
+    
+    container.innerHTML = ''; // clear loading state
+    
+    const locale = adminAnalyticsLocale().split('-')[0];
+    
+    metrics.forEach((m, idx) => {
+        // Create an elegant glassmorphism card
+        const col = document.createElement("div");
+        col.className = "col-sm-6 col-md-4 col-xl-3";
+        
+        const cardId = `adv_metric_${m.metric}`;
+        const label = m.chart?.dataset_label_ar && locale === 'ar' ? m.chart.dataset_label_ar : 
+                      (m.chart?.dataset_label_en ? m.chart.dataset_label_en : m.metric.replace(/_/g, ' '));
+                      
+        // Generate a random gradient seed or map by index for visual variety
+        const hue = (idx * 45) % 360;
+        
+        col.innerHTML = `
+            <div class="card h-100 ai-card border-0" style="background: linear-gradient(135deg, hsla(${hue}, 70%, 15%, 0.9) 0%, hsla(${hue + 40}, 80%, 20%, 0.8) 100%); backdrop-filter: blur(10px); color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                <div class="card-body p-3 d-flex flex-column justify-content-between">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="small fw-semibold opacity-75 text-uppercase" style="letter-spacing: 0.5px;">${label}</span>
+                        <i class="bi bi-cpu ai-pulse-icon" style="color: hsla(${hue}, 100%, 70%, 1); text-shadow: 0 0 10px hsla(${hue}, 100%, 70%, 0.5);"></i>
+                    </div>
+                    <div class="mt-auto">
+                        <h3 class="fw-bold mb-0" id="${cardId}" style="font-size: 1.8rem; text-shadow: 0 0 15px rgba(255,255,255,0.3);">${m.value}</h3>
+                    </div>
+                </div>
+                <div class="card-footer border-0 py-2" style="background: rgba(0,0,0,0.2); font-size: 0.75rem;">
+                    <span class="opacity-75"><i class="bi bi-graph-up-arrow me-1"></i> AI Derived Insight</span>
+                </div>
+            </div>
+        `;
+        container.appendChild(col);
+        
+        // Setup Odometer for the new value
+        if (typeof Odometer !== 'undefined') {
+            const el = document.getElementById(cardId);
+            if (el) {
+                el.innerHTML = '';
+                new Odometer({
+                    el: el,
+                    value: 0,
+                    format: '(,ddd).dd',
+                    theme: 'default'
+                }).update(parseFloat(m.value) || 0);
+            }
+        }
+    });
 }
 
 function updateTrendIndicators(summary) {

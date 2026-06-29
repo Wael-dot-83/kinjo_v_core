@@ -1170,160 +1170,153 @@ def export_analytics_data(
     db: Session = Depends(get_db)
 ):
     """
-    Export analytics reports (CSV).
+    Export analytics reports (CSV or Excel) with memory streaming for large datasets.
     """
     validators.validate_admin_role(current_user)
 
-    # Extract dates from filters if present
     start_str = request.filters.get("period_start") if request.filters else None
     end_str = request.filters.get("period_end") if request.filters else None
     
     if not start_str or not end_str:
-         # Default to last 30 days if not provided
          end_date = _jordan_today()
          start_date = end_date - timedelta(days=30)
     else:
         try:
-            # Handle string dates
-            if isinstance(start_str, str):
-                start_date = datetime.strptime(start_str, "%Y-%m-%d").date()
-            else:
-                start_date = start_str
-                
-            if isinstance(end_str, str):
-                end_date = datetime.strptime(end_str, "%Y-%m-%d").date()
-            else:
-                end_date = end_str
+            start_date = datetime.strptime(start_str, "%Y-%m-%d").date() if isinstance(start_str, str) else start_str
+            end_date = datetime.strptime(end_str, "%Y-%m-%d").date() if isinstance(end_str, str) else end_str
         except ValueError:
             _log_analytics_export_audit(
-                db,
-                action=AuditAction.ANALYTICS_EXPORT_SYNC_FAILED,
-                actor=current_user,
-                report_type=request.report_type,
-                export_format=request.export_format,
-                filters=request.filters,
-                status_value="failed",
-                error_message="Invalid date format",
-                sensitivity_level=3,
+                db, action=AuditAction.ANALYTICS_EXPORT_SYNC_FAILED, actor=current_user,
+                report_type=request.report_type, export_format=request.export_format,
+                filters=request.filters, status_value="failed", error_message="Invalid date format", sensitivity_level=3
             )
             raise HTTPException(status_code=400, detail="Invalid date format")
 
     import csv
     import io
-    from fastapi.responses import Response
+    from fastapi.responses import Response, StreamingResponse
 
-    output = io.StringIO()
-    writer = csv.writer(output)
+    # Determine headers and row generator
+    headers = []
+    
+    def row_generator():
+        if request.report_type == "attendance":
+            headers.extend(["Kindergarten", "Children Count", "Capacity", "Attendance Rate %"])
+            yield headers
+            kgs = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE).yield_per(100)
+            for kg in kgs:
+                rate = KPIService.compute_attendance_rate(db, kg.id, start_date, end_date)
+                yield [kg.name_ar, len(kg.enrollments), "N/A", rate]
+                
+        elif request.report_type == "incidents":
+            headers.extend(["Date", "Kindergarten", "Type", "Severity", "Description", "Child"])
+            yield headers
+            incidents = db.query(models.Incident).filter(
+                func.date(models.Incident.occurred_at) >= start_date,
+                func.date(models.Incident.occurred_at) <= end_date
+            ).yield_per(100)
+            for inc in incidents:
+                ch_name = f"{inc.child.first_name} {inc.child.last_name}" if inc.child else "Unknown"
+                yield [inc.occurred_at.strftime("%Y-%m-%d"), inc.kindergarten.name_ar if inc.kindergarten else "", inc.type.value, inc.severity_level.value, inc.description, ch_name]
 
-    if request.report_type == "attendance":
-        writer.writerow(["Kindergarten", "Children Count", "Capacity", "Attendance Rate %"])
-        # Re-use governorate breakdown or network summary logic? 
-        # Better to iterate all KGs for a detailed report
-        kgs = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE).all()
-        for kg in kgs:
-            rate = KPIService.compute_attendance_rate(db, kg.id, start_date, end_date)
-            # Fetch other metrics if needed
-            writer.writerow([kg.name_ar, len(kg.enrollments), "N/A", rate])
+        elif request.report_type == "compliance":
+            headers.extend(["Kindergarten", "Ratio Compliance %", "Governance Score"])
+            yield headers
+            kgs = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE).yield_per(100)
+            for kg in kgs:
+                ratio = KPIService.compute_ratio_compliance(db, kg.id, start_date, end_date)
+                try:
+                    gov_score, _ = KPIService.compute_governance_score(db, kg.id, start_date, end_date)
+                except (SQLAlchemyError, TypeError, ValueError):
+                    gov_score = 0
+                yield [kg.name_ar, ratio, gov_score]
 
-    elif request.report_type == "incidents":
-        writer.writerow(["Date", "Kindergarten", "Type", "Severity", "Description", "Child"])
-        incidents = db.query(models.Incident).filter(
-            func.date(models.Incident.occurred_at) >= start_date,
-            func.date(models.Incident.occurred_at) <= end_date
-        ).all()
-        for inc in incidents:
-            ch_name = f"{inc.child.first_name} {inc.child.last_name}" if inc.child else "Unknown"
-            writer.writerow([
-                inc.occurred_at.strftime("%Y-%m-%d"),
-                inc.kindergarten.name_ar,
-                inc.type.value,
-                inc.severity_level.value,
-                inc.description,
-                ch_name
-            ])
+        elif request.report_type == "governorate":
+            headers.extend(["Governorate", "Kindergartens", "Children", "Attendance %", "Incident Rate", "Governance Score"])
+            yield headers
+            data = AnalyticsService.get_governorate_breakdown(db, start_date, end_date, None, None, None)
+            for item in data:
+                yield [item.governorate, item.kindergarten_count, item.children_count, item.attendance_rate, item.incident_rate, item.governance_score]
 
-    elif request.report_type == "compliance":
-        writer.writerow(["Kindergarten", "Ratio Compliance %", "Governance Score"])
-        kgs = db.query(models.Kindergarten).filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE).all()
-        for kg in kgs:
-            ratio = KPIService.compute_ratio_compliance(db, kg.id, start_date, end_date)
-            try:
-                gov_score, _ = KPIService.compute_governance_score(db, kg.id, start_date, end_date)
-            except (SQLAlchemyError, TypeError, ValueError):
-                gov_score = 0
-            writer.writerow([kg.name_ar, ratio, gov_score])
+        elif request.report_type == "full_audit":
+            headers.extend(["Timestamp", "User", "Action", "Entity", "Details", "IP"])
+            yield headers
+            
+            # Streaming query for large audit logs
+            query = db.query(models.AuditLog).filter(
+                 func.date(models.AuditLog.created_at) >= start_date,
+                 func.date(models.AuditLog.created_at) <= end_date
+            ).order_by(desc(models.AuditLog.created_at))
+            
+            # Simple caching for users
+            user_cache = {}
+            for log in query.yield_per(500):
+                uid = log.user_id
+                username = "Unknown"
+                if uid:
+                    if uid not in user_cache:
+                        u = db.query(models.User.username).filter(models.User.id == uid).first()
+                        user_cache[uid] = u[0] if u else "Unknown"
+                    username = user_cache[uid]
+                yield [str(log.created_at), username, log.action, log.entity_type, log.details, log.ip_address]
+                
+        else:
+            raise ValueError("Invalid report type")
 
-    elif request.report_type == "governorate":
-        writer.writerow(["Governorate", "Kindergartens", "Children", "Attendance %", "Incident Rate", "Governance Score"])
-        # Re-use existing service logic
-        data = AnalyticsService.get_governorate_breakdown(db, start_date, end_date)
-        for item in data:
-            writer.writerow([
-                item.governorate,
-                item.kindergarten_count,
-                item.children_count,
-                item.attendance_rate,
-                item.incident_rate,
-                item.governance_score
-            ])
-
-    elif request.report_type == "full_audit":
-        writer.writerow(["Timestamp", "User", "Action", "Entity", "Details", "IP"])
-        logs = db.query(models.AuditLog).filter(
-             func.date(models.AuditLog.created_at) >= start_date,
-             func.date(models.AuditLog.created_at) <= end_date
-        ).order_by(desc(models.AuditLog.created_at)).all()
-        
-        # Pre-fetch only referenced users to avoid unbounded memory load
-        referenced_user_ids = {log.user_id for log in logs if log.user_id}
-        user_map = {
-            u.id: u.username
-            for u in db.query(models.User).filter(models.User.id.in_(referenced_user_ids)).all()
-        } if referenced_user_ids else {}
-        
-        for log in logs:
-            username = user_map.get(log.user_id, "Unknown")
-            writer.writerow([
-                log.created_at,
-                username,
-                log.action,
-                log.entity_type,
-                log.details,
-                log.ip_address
-            ])
-
-    else:
+    try:
+        # Pre-flight check to fail early if report type is invalid
+        gen = row_generator()
+        first_row_headers = next(gen)
+    except ValueError:
         _log_analytics_export_audit(
-            db,
-            action=AuditAction.ANALYTICS_EXPORT_SYNC_FAILED,
-            actor=current_user,
-            report_type=request.report_type,
-            export_format=request.export_format,
-            filters=request.filters,
-            status_value="failed",
-            error_message="Invalid report type",
-            sensitivity_level=3,
+            db, action=AuditAction.ANALYTICS_EXPORT_SYNC_FAILED, actor=current_user,
+            report_type=request.report_type, export_format=request.export_format,
+            filters=request.filters, status_value="failed", error_message="Invalid report type", sensitivity_level=3
         )
         raise HTTPException(status_code=400, detail="Invalid report type")
 
+    # Excel Export
+    if request.export_format and request.export_format.lower() == "excel":
+        if openpyxl is None:
+            raise HTTPException(status_code=500, detail="Excel export is not supported (openpyxl missing)")
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = request.report_type.capitalize()
+        
+        ws.append(first_row_headers)
+        for row in gen:
+            ws.append(row)
+            
+        output = io.BytesIO()
+        wb.save(output)
+        
+        filename = f"{request.report_type}_report_{start_date}_{end_date}.xlsx"
+        _log_analytics_export_audit(db, action=AuditAction.ANALYTICS_EXPORT_SYNC, actor=current_user, report_type=request.report_type, export_format="EXCEL", filters=request.filters, status_value="completed", file_path=filename)
+        return Response(
+            content=output.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    # Default: CSV Export (Streaming)
     filename = f"{request.report_type}_report_{start_date}_{end_date}.csv"
+    _log_analytics_export_audit(db, action=AuditAction.ANALYTICS_EXPORT_SYNC, actor=current_user, report_type=request.report_type, export_format="CSV", filters=request.filters, status_value="completed", file_path=filename)
 
-    _log_analytics_export_audit(
-        db,
-        action=AuditAction.ANALYTICS_EXPORT_SYNC,
-        actor=current_user,
-        report_type=request.report_type,
-        export_format=request.export_format,
-        filters=request.filters,
-        status_value="completed",
-        file_path=filename,
-    )
+    def iter_csv():
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(first_row_headers)
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+        
+        for row in gen:
+            writer.writerow(row)
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
 
-    return Response(
-        content=output.getvalue(),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
+    return StreamingResponse(iter_csv(), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
 def get_enrollment_analytics(
@@ -5248,7 +5241,10 @@ class AnalyticsService:
                 models.EnrollmentApplication,
                 models.EnrollmentApplication.child_id == models.Child.id
             ).filter(models.EnrollmentApplication.kindergarten_id.in_(kg_ids))
-        total_child_days = child_days_q.scalar() or 1
+        total_child_days = child_days_q.scalar() or  0
+        if total_child_days == 0:
+            return 0.0
+
 
         return round((total_incidents / total_child_days) * 1000, 3)
 

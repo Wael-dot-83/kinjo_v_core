@@ -1,4 +1,4 @@
-{% extends "admin_base.html"%}
+{% extends "admin_base.html" %}
 {% from 'components/page-header.html' import page_header %}
 
 {% block title %}{% if user_obj %}{% if ui_lang == 'en' %}Edit User{% else %}تعديل المستخدم{% endif %}{% else %}{% if ui_lang == 'en' %}Add New User{% else %}إضافة مستخدم جديد{% endif %}{% endif %}{% endblock %}
