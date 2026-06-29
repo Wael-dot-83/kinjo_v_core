@@ -76,8 +76,8 @@ def test_kpi_dashboard_manager_cannot_access_other_city_dimension(client, auth_h
     params = {
         'period_start': '2026-01-01',
         'period_end': '2026-01-10',
-        'dimension_type': 'CITY',
-        'dimension_id': 'OtherCity',
+        'dimension_type': 'DISTRICT',
+        'dimension_id': 'OtherDistrict',
     }
     response = client.get('/api/kpi/dashboard-data', headers=auth_headers_manager, params=params)
     assert response.status_code == 403

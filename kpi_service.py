@@ -146,7 +146,7 @@ class KPIDashboardResponse(BaseModel):
     period_end: date
     kindergarten_id: Optional[int] = None # if filtered for single KG
     governorate: Optional[str] = None # if filtered for single Governorate
-    city: Optional[str] = None
+    district: Optional[str] = None
     area: Optional[str] = None
     dimension_type: Optional[str] = None
     dimension_id: Optional[str] = None
@@ -3060,7 +3060,7 @@ def get_consolidated_kpi_dashboard_data(
                 query = query.filter(models.Kindergarten.governorate.in_(list(governorate_values)))
             elif normalized_dimension_type == models.AnalyticsDimensionType.DISTRICT.value:
                 if not dimension_id:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="dimension_id is required for CITY")
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="dimension_id is required for DISTRICT")
                 selected_city = dimension_id
                 query = query.filter(models.Kindergarten.district == dimension_id)
             elif normalized_dimension_type == models.AnalyticsDimensionType.AREA.value:
@@ -4121,7 +4121,7 @@ def get_consolidated_kpi_dashboard_data(
         period_end=period_end,
         kindergarten_id=single_kindergarten_id,
         governorate=selected_governorate_value,
-        city=selected_city_value,
+        district=selected_city_value,
         area=selected_area_value,
         dimension_type=normalized_dimension_type,
         dimension_id=dimension_id,
