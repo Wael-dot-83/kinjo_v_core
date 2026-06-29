@@ -121,12 +121,12 @@
     
     /* RTL Adjustments */
     [dir="rtl"] .ml-64 { margin-left: 0; margin-right: 16rem; }
-    [dir="rtl"] .left-0 { left: auto; right: 0; }
-    [dir="rtl"] .right-0 { right: auto; left: 0; }
-    [dir="rtl"] .border-r { border-right: none; border-left: 1px solid rgba(255,255,255,0.1); }
+    [dir="rtl"] .start-0 { left: auto; right: 0; }
+    [dir="rtl"] .end-0 { right: auto; left: 0; }
+    [dir="rtl"] .border-e { border-eight: none; border-seft: 1px solid rgba(255,255,255,0.1); }
     [dir="rtl"] .pl-8 { padding-left: 0; padding-right: 2rem; }
-    [dir="rtl"] .pr-2 { padding-right: 0; padding-left: 0.5rem; }
-    [dir="rtl"] .border-l { border-left: none; border-right: 1px solid rgba(255,255,255,0.1); }
+    [dir="rtl"] .pe-2 { padding-right: 0; padding-left: 0.5rem; }
+    [dir="rtl"] .border-s { border-seft: none; border-eight: 1px solid rgba(255,255,255,0.1); }
     [dir="rtl"] .ml-8 { margin-left: 0; margin-right: 2rem; }
     [dir="rtl"] .text-right { text-align: left; }
     
@@ -193,7 +193,7 @@
   </div>
 
   <!-- Sidebar -->
-  <nav class="hidden md:flex flex-col bg-white/5 backdrop-blur-xl h-screen w-64 fixed left-0 top-0 border-r border-white/10 shadow-2xl py-8 z-50">
+  <nav class="hidden md:flex flex-col bg-white/5 backdrop-blur-xl h-screen w-64 fixed start-0 top-0 border-e border-white/10 shadow-2xl py-8 z-50">
     <div class="px-lg mb-xl flex items-center gap-sm">
       <span class="material-symbols-outlined text-primary text-3xl">hexagon</span>
       <div class="font-display-lg text-display-lg font-black tracking-tighter text-primary leading-none" style="font-size: 28px;">KinJo</div>
@@ -289,7 +289,7 @@
                 <span class="material-symbols-outlined text-[18px] chevron transition-transform duration-300 {% if section_state.active %}rotate-180{% endif %}">expand_more</span>
             </button>
             
-            <div class="mt-1 ml-4 border-l border-white/10 space-y-1 {% if not section_state.active %}hidden{% endif %}">
+            <div class="mt-1 ms-4 border-s border-white/10 space-y-1 {% if not section_state.active %}hidden{% endif %}">
             {% for item in section['items'] %}
                 {% set is_active = current_path in item.active_paths %}
                 {% if item.active_prefixes is defined %}
@@ -299,7 +299,7 @@
                     {% endif %}
                   {% endfor %}
                 {% endif %}
-                <a class="flex items-center gap-3 pl-3 pr-2 py-1.5 ml-[-1px] transition-all duration-300 {% if is_active %}text-on-surface opacity-100 border-l-2 border-primary bg-gradient-to-r from-primary/10 to-transparent{% else %}text-on-surface opacity-60 hover:opacity-100 hover:border-l-2 hover:border-white/30{% endif %}" href="{{ item.href }}">
+                <a class="flex items-center gap-3 ps-3 pe-2 py-1.5 ms-[-1px] transition-all duration-300 {% if is_active %}text-on-surface opacity-100 border-s-2 border-primary ltr:bg-gradient-to-r rtl:bg-gradient-to-l from-primary/10 to-transparent{% else %}text-on-surface opacity-60 hover:opacity-100 hover:border-s-2 hover:border-white/30{% endif %}" href="{{ item.href }}">
                   <span class="material-symbols-outlined text-[16px] {% if is_active %}text-primary{% endif %}">{{ item.icon }}</span>
                   <span class="font-body-md text-sm">{% if ui_lang == 'en' %}{{ item.label_en }}{% else %}{{ item.label_ar }}{% endif %}</span>
                 </a>
@@ -330,9 +330,9 @@
   </nav>
 
   <!-- Top Header -->
-  <header class="hidden md:flex items-center justify-between px-margin-desktop w-[calc(100%-16rem)] h-16 fixed top-0 right-0 bg-surface/30 backdrop-blur-md border-b border-white/5 shadow-sm z-40">
+  <header class="hidden md:flex items-center justify-between px-margin-desktop w-[calc(100%-16rem)] h-16 fixed top-0 end-0 bg-surface/30 backdrop-blur-md border-b border-white/5 shadow-sm z-40">
     <div class="flex items-center bg-surface-container-highest/50 border border-white/10 rounded-lg px-3 py-1.5 w-64 focus-within:ring-2 focus-within:ring-primary/50 transition-all">
-      <span class="material-symbols-outlined text-on-surface-variant mr-2 text-sm">search</span>
+      <span class="material-symbols-outlined text-on-surface-variant me-2 text-sm">search</span>
       <input class="bg-transparent border-none outline-none text-on-surface font-body-md text-sm w-full placeholder:text-on-surface-variant/50 focus:ring-0" placeholder="{% if ui_lang == 'en' %}Search...{% else %}بحث...{% endif %}" type="text"/>
     </div>
     
@@ -345,14 +345,14 @@
       <button class="text-on-surface-variant hover:text-primary transition-colors">
         <span class="material-symbols-outlined">notifications</span>
       </button>
-      <div class="w-8 h-8 rounded-full border border-primary/30 overflow-hidden ml-2 cursor-pointer hover:border-primary transition-colors">
+      <div class="w-8 h-8 rounded-full border border-primary/30 overflow-hidden ms-2 cursor-pointer hover:border-primary transition-colors">
         <img class="w-full h-full object-cover" src="/static/img/admin_avatar.png" onerror="this.src='https://ui-avatars.com/api/?name={{ current_user.username if current_user else 'Admin' }}&background=1F5E47&color=fff'"/>
       </div>
     </div>
   </header>
 
   <!-- Main Content -->
-  <main class="md:ml-64 pt-24 pb-xl px-margin-mobile md:px-margin-desktop min-h-screen">
+  <main class="md:ms-64 pt-24 pb-xl px-margin-mobile md:px-margin-desktop min-h-screen">
     {% block content %}{% endblock %}
   </main>
 
