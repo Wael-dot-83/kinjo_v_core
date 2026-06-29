@@ -198,6 +198,7 @@ from classification_service import router as classification_router
 from daily_reports_organization_api import router as daily_reports_organization_router
 from api.parent import router as parent_router
 from api.kindergartens import router as kindergartens_router
+from api.locations import router as locations_router
 from api.enrollment import router as enrollment_router
 from api.daily_reports_routes import router as daily_reports_api_router
 from api.children import router as children_router
@@ -1181,6 +1182,7 @@ app.include_router(daily_reports_organization_router, prefix="/api", tags=["Dail
 app.include_router(frontend_router)
 app.include_router(parent_router, prefix="/api", tags=["Parent"])
 app.include_router(kindergartens_router, prefix="/api", tags=["Kindergartens"])
+app.include_router(locations_router, prefix="/api/locations", tags=["Locations"])
 app.include_router(enrollment_router, prefix="/api", tags=["Enrollment"])
 app.include_router(daily_reports_api_router, prefix="/api", tags=["Daily Reports API"])
 app.include_router(children_router, prefix="/api", tags=["Children"])

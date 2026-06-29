@@ -78,9 +78,9 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="city" class="form-label">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</label>
-                        <input type="text" class="form-control" id="city" name="city" value="{{ filters.city or '' }}"
-                            placeholder="{% if ui_lang == 'en' %}Search by city...{% else %}البحث بالمدينة...{% endif %}">
+                        <label for="district" class="form-label">{% if ui_lang == 'en' %}District{% else %}المدينة{% endif %}</label>
+                        <input type="text" class="form-control" id="district" name="district" value="{{ filters.district or '' }}"
+                            placeholder="{% if ui_lang == 'en' %}Search by district...{% else %}البحث بالمدينة...{% endif %}">
                     </div>
                     <div class="col-md-2">
                         <label for="status" class="form-label">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
@@ -149,7 +149,7 @@
                                 </td>
                                 <td>
                                     <div>
-                                        {{ kg.governorate }}, {{ kg.city }}
+                                        {{ kg.governorate }}, {{ kg.district }}
                                         {% if kg.area %}
                                         <br><small class="text-muted">{{ kg.area }}</small>
                                         {% endif %}
@@ -283,7 +283,7 @@
                             <h6 class="text-muted mb-2">
                                 <i class="bi bi-geo-alt me-1"></i>{% if ui_lang == 'en' %}Location{% else %}الموقع{% endif %}
                             </h6>
-                            <p class="mb-0">{{ kg.governorate }}, {{ kg.city }}, {{ kg.area }}</p>
+                            <p class="mb-0">{{ kg.governorate }}, {{ kg.district }}, {{ kg.area }}</p>
                         </div>
                     </div>
                     <div class="col-md-12">

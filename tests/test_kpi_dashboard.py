@@ -64,12 +64,12 @@ def test_kpi_dashboard_admin_city_filter(client, auth_headers_admin, sample_kind
     params = {
         'period_start': '2026-01-01',
         'period_end': '2026-01-31',
-        'city': sample_kindergarten.city,
+        'district': sample_kindergarten.district,
     }
     response = client.get('/api/kpi/dashboard-data', headers=auth_headers_admin, params=params)
     assert response.status_code == 200
     data = response.json()
-    assert data['city'] == sample_kindergarten.city
+    assert data['district'] == sample_kindergarten.district
 
 
 def test_kpi_dashboard_manager_cannot_access_other_city_dimension(client, auth_headers_manager):

@@ -62,7 +62,7 @@ def _seed_second_kindergarten_attendance(test_db, parent_user, supervisor_user):
         name_en="Future Kindergarten",
         license_number="LIC-2026-099",
         governorate="Irbid",
-        city="Irbid",
+        district="Irbid",
         area="University Street",
         address_line="456 Second Street",
         contact_phone="+962792222222",

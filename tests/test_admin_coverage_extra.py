@@ -1046,7 +1046,7 @@ class TestGovernorateOptionsInvalidGov:
             name_ar=f"روضة_{name_suffix}",
             name_en=f"KG_{name_suffix}",
             governorate=gov,
-            city="City",
+            district="City",
             area="Area",
             address_line="Address",
             contact_phone="0777000099",

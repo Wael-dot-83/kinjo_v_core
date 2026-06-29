@@ -1035,7 +1035,7 @@ class AnalyticsGapService:
         kg_obj = self.db.query(models.Kindergarten).filter(models.Kindergarten.id == kg_id).first()
         kg_score = 0.0
         if kg_obj:
-            kg_fields = [kg_obj.name_ar, kg_obj.governorate, kg_obj.city,
+            kg_fields = [kg_obj.name_ar, kg_obj.governorate, kg_obj.district,
                          kg_obj.area, kg_obj.contact_phone, kg_obj.address_line]
             kg_score = round(sum(1 for f in kg_fields if f) / len(kg_fields) * 100, 1)
 

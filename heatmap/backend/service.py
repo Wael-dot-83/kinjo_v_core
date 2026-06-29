@@ -589,7 +589,7 @@ def kindergarten_to_dict(
         "name_en": kindergarten.name_en,
         "governorate": C.normalize_governorate(kindergarten.governorate),
         "governorate_name_en": kindergarten.governorate,
-        "city": kindergarten.city,
+        "city": kindergarten.district,
         "area": kindergarten.area,
         "address_line": kindergarten.address_line,
         "contact_phone": kindergarten.contact_phone,
@@ -792,7 +792,7 @@ def build_kindergarten_query(
         query = query.filter(models.Kindergarten.governorate.in_(_names_for_slug(slug)))
 
     if city:
-        query = query.filter(models.Kindergarten.city == city)
+        query = query.filter(models.Kindergarten.district == city)
 
     if from_date:
         query = query.filter(func.date(func.coalesce(models.Kindergarten.updated_at, models.Kindergarten.created_at)) >= from_date)
@@ -956,7 +956,7 @@ def get_city_summary(db: Session, slug: str) -> Dict:
     from collections import defaultdict
     city_map: Dict[str, list] = defaultdict(list)
     for kg in kgs:
-        city_name = (kg.city or '').strip() or 'غير محدد'
+        city_name = (kg.district or '').strip() or 'غير محدد'
         city_map[city_name].append(kg)
 
     cities = []

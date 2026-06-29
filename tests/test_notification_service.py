@@ -249,7 +249,7 @@ class TestManagerNotifications:
             name_ar="Test KG",
             name_en="Test KG",
             governorate="Amman",
-            city="Amman",
+            district="Amman",
             area="Test Area",
             address_line="Test Address",
             contact_phone="1234567890",
@@ -280,7 +280,7 @@ class TestManagerNotifications:
             nationality="Jordanian",
             national_id="1234567890",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Test Area",
             home_address_line="Test Address"
         )
@@ -330,7 +330,7 @@ class TestManagerNotifications:
             name_ar="Test KG",
             name_en="Test KG",
             governorate="Amman",
-            city="Amman",
+            district="Amman",
             area="Test Area",
             address_line="Test Address",
             contact_phone="1234567890",
@@ -349,7 +349,7 @@ class TestManagerNotifications:
             nationality="Jordanian",
             national_id="1234567890",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Test Area",
             home_address_line="Test Address"
         )
@@ -416,7 +416,7 @@ class TestSupervisorNotifications:
             nationality="Jordanian",
             national_id="1234567890",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Test Area",
             home_address_line="Test Address"
         )
@@ -470,7 +470,7 @@ class TestSupervisorNotifications:
             nationality="Jordanian",
             national_id="1234567890",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Test Area",
             home_address_line="Test Address"
         )
@@ -532,7 +532,7 @@ class TestMissingReportAlerts:
             name_ar="Test KG",
             name_en="Test KG",
             governorate="Amman",
-            city="Amman",
+            district="Amman",
             area="Test Area",
             address_line="Test Address",
             contact_phone="1234567890",
@@ -585,7 +585,7 @@ class TestMissingReportAlerts:
             name_ar="Test KG",
             name_en="Test KG",
             governorate="Amman",
-            city="Amman",
+            district="Amman",
             area="Test Area",
             address_line="Test Address",
             contact_phone="1234567890",
@@ -628,7 +628,7 @@ class TestMissingReportAlerts:
             name_ar="Test KG",
             name_en="Test KG",
             governorate="Amman",
-            city="Amman",
+            district="Amman",
             area="Test Area",
             address_line="Test Address",
             contact_phone="1234567890",

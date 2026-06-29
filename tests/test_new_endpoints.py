@@ -236,7 +236,7 @@ class TestManagerSupervisors:
     ):
         other_kg = models.Kindergarten(
             name_ar="روضة أخرى", name_en="Other KG",
-            governorate="Irbid", city="Irbid", area="Center", address_line="St 1",
+            governorate="Irbid", district="Irbid", area="Center", address_line="St 1",
             contact_phone="0600000002", status=models.KindergartenStatus.ACTIVE,
         )
         test_db.add(other_kg)
@@ -348,7 +348,7 @@ class TestManagerChildren:
     ):
         other_kg = models.Kindergarten(
             name_ar="روضة غريبة2", name_en="Foreign KG2",
-            governorate="Zarqa", city="Zarqa", area="West", address_line="St 7",
+            governorate="Zarqa", district="Zarqa", area="West", address_line="St 7",
             contact_phone="0600000003", status=models.KindergartenStatus.ACTIVE,
         )
         test_db.add(other_kg)
@@ -429,7 +429,7 @@ class TestMessagesBroadcast:
     ):
         other_kg = models.Kindergarten(
             name_ar="روضة خارجية", name_en="Ext KG",
-            governorate="Aqaba", city="Aqaba", area="East", address_line="St 3",
+            governorate="Aqaba", district="Aqaba", area="East", address_line="St 3",
             contact_phone="0600000004", status=models.KindergartenStatus.ACTIVE,
         )
         test_db.add(other_kg)
@@ -556,7 +556,7 @@ class TestManagerReportEdit:
     ):
         other_kg = models.Kindergarten(
             name_ar="روضة أخرى", name_en="Other KG",
-            governorate="Zarqa", city="Zarqa", area="West", address_line="St 5",
+            governorate="Zarqa", district="Zarqa", area="West", address_line="St 5",
             contact_phone="0600000099", status=models.KindergartenStatus.ACTIVE,
         )
         test_db.add(other_kg)
@@ -725,7 +725,7 @@ class TestManagerChildMove:
     ):
         other_kg = models.Kindergarten(
             name_ar="روضة مختلفة", name_en="Other KG",
-            governorate="Zarqa", city="Zarqa", area="West", address_line="St 1",
+            governorate="Zarqa", district="Zarqa", area="West", address_line="St 1",
             contact_phone="0600000042", status=models.KindergartenStatus.ACTIVE,
         )
         test_db.add(other_kg)

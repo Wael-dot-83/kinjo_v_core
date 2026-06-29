@@ -64,7 +64,7 @@ class TestChildIdorProtection:
             gender=models.Gender.FEMALE,
             nationality="Jordanian",
             home_governorate="Irbid",
-            home_city="Irbid",
+            home_district="Irbid",
             home_area="Downtown",
             home_address_line="456 Other Street",
             correspondence_preference=True,

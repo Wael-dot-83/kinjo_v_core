@@ -354,7 +354,7 @@ class BenchmarkingService:
             elif level == "GOVERNORATE":
                 query = query.filter(models.Kindergarten.governorate == level_value)
             elif level == "CITY":
-                query = query.filter(models.Kindergarten.city == level_value)
+                query = query.filter(models.Kindergarten.district == level_value)
             elif level == "AREA":
                 query = query.filter(models.Kindergarten.area == level_value)
             elif level == "KINDERGARTEN":
@@ -371,7 +371,7 @@ class BenchmarkingService:
         if governorate:
             query = query.filter(models.Kindergarten.governorate == governorate)
         if city:
-            query = query.filter(models.Kindergarten.city == city)
+            query = query.filter(models.Kindergarten.district == city)
         if area:
             query = query.filter(models.Kindergarten.area == area)
         if kindergarten_id:
@@ -435,9 +435,9 @@ class BenchmarkingService:
         elif level == "GOVERNORATE":
             geo_part = f"{country_name}|{kg.governorate}"
         elif level == "CITY":
-            geo_part = f"{country_name}|{kg.governorate}|{kg.city}"
+            geo_part = f"{country_name}|{kg.governorate}|{kg.district}"
         elif level == "AREA":
-            geo_part = f"{country_name}|{kg.governorate}|{kg.city}|{kg.area}"
+            geo_part = f"{country_name}|{kg.governorate}|{kg.district}|{kg.area}"
         else:
             geo_part = f"KG:{kg.id}"
         return f"{geo_part}|{size_mode}:{size_band}"
@@ -616,7 +616,7 @@ class BenchmarkingService:
                 geography={
                     "country": BenchmarkingService._kg_country(kg),
                     "governorate": kg.governorate,
-                    "city": kg.city,
+                    "city": kg.district,
                     "area": kg.area,
                 },
                 aspects={
@@ -958,7 +958,7 @@ class BenchmarkingService:
                     geography={
                         "country": BenchmarkingService._kg_country(kg),
                         "governorate": kg.governorate,
-                        "city": kg.city,
+                        "city": kg.district,
                         "area": kg.area,
                     },
                     aspects={
@@ -1414,7 +1414,7 @@ def _load_filters(db: Session) -> ClassificationFiltersResponse:
         )
         cities = sorted(
             {
-                str(row[0]) for row in db.query(models.Kindergarten.city).filter(
+                str(row[0]) for row in db.query(models.Kindergarten.district).filter(
                     models.Kindergarten.status == models.KindergartenStatus.ACTIVE
                 ).distinct().all()
                 if row and row[0]

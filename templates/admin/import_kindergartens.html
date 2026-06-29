@@ -132,7 +132,7 @@
                             <th>{% if ui_lang == 'en' %}Name (AR){% else %}الاسم (عربي){% endif %}</th>
                             <th>{% if ui_lang == 'en' %}Name (EN){% else %}الاسم (إنجليزي){% endif %}</th>
                             <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-                            <th>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}District{% else %}المدينة{% endif %}</th>
                             <th>{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</th>
                             <th>{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
                             <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
@@ -217,7 +217,7 @@
                             <td>${escHtml(kg.name_ar)}</td>
                             <td>${escHtml(kg.name_en || '')}</td>
                             <td>${escHtml(kg.governorate)}</td>
-                            <td>${escHtml(kg.city)}</td>
+                            <td>${escHtml(kg.district)}</td>
                             <td>${escHtml(kg.area || '')}</td>
                             <td>${escHtml(kg.phone)}</td>
                             <td><span class="badge bg-success text-white">${_isEn ? 'Imported' : 'مستورد'}</span></td>

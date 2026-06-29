@@ -256,13 +256,13 @@ class TestParentEnrollmentsAPI:
         # Create 2 kindergartens
         kg1 = models.Kindergarten(
             name_ar="روضة الأمل", name_en="Hope KG",
-            governorate="Amman", city="Amman", area="A",
+            governorate="Amman", district="Amman", area="A",
             address_line="St 1", contact_phone="+962790000001",
             status=models.KindergartenStatus.ACTIVE
         )
         kg2 = models.Kindergarten(
             name_ar="روضة النور", name_en="Light KG",
-            governorate="Amman", city="Amman", area="B",
+            governorate="Amman", district="Amman", area="B",
             address_line="St 2", contact_phone="+962790000002",
             status=models.KindergartenStatus.ACTIVE
         )
@@ -305,7 +305,7 @@ class TestParentEnrollmentsAPI:
 
         kg = models.Kindergarten(
             name_ar="روضة", name_en="KG",
-            governorate="Amman", city="Amman", area="A",
+            governorate="Amman", district="Amman", area="A",
             address_line="St", contact_phone="+962790000099",
             status=models.KindergartenStatus.ACTIVE
         )
@@ -370,7 +370,7 @@ class TestParentEnrollmentsAPI:
             user_id=user_a.id, first_name="A", last_name="A",
             phone_number="+962790000010", gender=models.Gender.MALE,
             nationality="Jordanian", national_id="AAAA",
-            home_governorate="Amman", home_city="Amman",
+            home_governorate="Amman", home_district="Amman",
             home_area="Abdoun", home_address_line="St 1"
         )
         test_db.add(profile_a)
@@ -390,7 +390,7 @@ class TestParentEnrollmentsAPI:
             user_id=user_b.id, first_name="B", last_name="B",
             phone_number="+962790000011", gender=models.Gender.FEMALE,
             nationality="Jordanian", national_id="BBBB",
-            home_governorate="Amman", home_city="Amman",
+            home_governorate="Amman", home_district="Amman",
             home_area="Abdoun", home_address_line="St 2"
         )
         test_db.add(profile_b)
@@ -409,7 +409,7 @@ class TestParentEnrollmentsAPI:
 
         kg = models.Kindergarten(
             name_ar="روضة خاصة", name_en="Private KG",
-            governorate="Amman", city="Amman", area="X",
+            governorate="Amman", district="Amman", area="X",
             address_line="St", contact_phone="+962790000012",
             status=models.KindergartenStatus.ACTIVE
         )
@@ -628,7 +628,7 @@ class TestParentEnrollmentViewAccess:
             user_id=user2.id, first_name="Other", last_name="Parent",
             phone_number="+962790009999", gender=models.Gender.FEMALE,
             nationality="Jordanian", national_id="XXXX",
-            home_governorate="Amman", home_city="Amman",
+            home_governorate="Amman", home_district="Amman",
             home_area="Abdoun", home_address_line="St 1"
         )
         test_db.add(profile2)
@@ -647,7 +647,7 @@ class TestParentEnrollmentViewAccess:
 
         kg = models.Kindergarten(
             name_ar="روضة أخرى", name_en="Other KG",
-            governorate="Amman", city="Amman", area="Z",
+            governorate="Amman", district="Amman", area="Z",
             address_line="St", contact_phone="+962790009998",
             status=models.KindergartenStatus.ACTIVE
         )
@@ -692,7 +692,7 @@ class TestParentChildrenIsolation:
             user_id=user_a.id, first_name="PA", last_name="A",
             phone_number="+962791111111", gender=models.Gender.MALE,
             nationality="Jordanian", national_id="PA1",
-            home_governorate="Amman", home_city="Amman",
+            home_governorate="Amman", home_district="Amman",
             home_area="Abdoun", home_address_line="St 1"
         )
         test_db.add(profile_a)
@@ -721,7 +721,7 @@ class TestParentChildrenIsolation:
             user_id=user_b.id, first_name="PB", last_name="B",
             phone_number="+962792222222", gender=models.Gender.FEMALE,
             nationality="Jordanian", national_id="PB1",
-            home_governorate="Amman", home_city="Amman",
+            home_governorate="Amman", home_district="Amman",
             home_area="Khalda", home_address_line="St 2"
         )
         test_db.add(profile_b)
@@ -783,7 +783,7 @@ class TestParentProfileIsolation:
             user_id=user_a.id, first_name="Khalid", last_name="Mansour",
             phone_number="+962793333333", gender=models.Gender.MALE,
             nationality="Jordanian", national_id="KM01",
-            home_governorate="Amman", home_city="Amman",
+            home_governorate="Amman", home_district="Amman",
             home_area="Abdoun", home_address_line="St 1"
         )
         test_db.add(profile_a)
@@ -802,7 +802,7 @@ class TestParentProfileIsolation:
             user_id=user_b.id, first_name="Nour", last_name="Haddad",
             phone_number="+962794444444", gender=models.Gender.FEMALE,
             nationality="Jordanian", national_id="NH01",
-            home_governorate="Amman", home_city="Amman",
+            home_governorate="Amman", home_district="Amman",
             home_area="Shmeisani", home_address_line="St 2"
         )
         test_db.add(profile_b)
@@ -945,7 +945,7 @@ class TestParentMyReportsPage:
             nationality="Jordanian",
             national_id="2000000001",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Abdoun",
             home_address_line="Street 9",
         )
@@ -1117,7 +1117,7 @@ class TestParentMyReportsPage:
             nationality="Jordanian",
             national_id="3000000001",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Abdoun",
             home_address_line="Street 99",
         )

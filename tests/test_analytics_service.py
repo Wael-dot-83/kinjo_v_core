@@ -58,7 +58,7 @@ def manager_user(test_db):
         name_ar="روضة تجريبية",
         name_en="Test Kindergarten",
         governorate="Test Governorate",
-        city="Test City",
+        district="Test City",
         area="Test Area",
         address_line="Test Address",
         contact_phone="0791234567",
@@ -91,7 +91,7 @@ def sample_data(test_db):
         name_ar="روضة الاختبار",
         name_en="Test Kindergarten",
         governorate="عمان",
-        city="عمان",
+        district="عمان",
         area="القويسمة",
         address_line="شارع الاختبار",
         contact_phone="0791234567",
@@ -145,7 +145,7 @@ def sample_data(test_db):
         gender=models.Gender.MALE,
         nationality="أردني",
         home_governorate="عمان",
-        home_city="عمان",
+        home_district="عمان",
         home_area="وسط البلد",
         home_address_line="شارع الملك فيصل"
     )

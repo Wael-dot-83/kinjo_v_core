@@ -55,7 +55,7 @@
                                     <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Name (AR){% else %}الاسم (عربي){% endif %}</th>
                                     <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Name (EN){% else %}الاسم (إنجليزي){% endif %}</th>
                                     <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}</th>
+                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}District{% else %}المدينة{% endif %}</th>
                                     <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</th>
                                     <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
                                     <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %}</th>
@@ -92,7 +92,7 @@
     const _next     = _isEn ? 'Next' : 'التالي';
 
     let currentPage = 1;
-    let currentFilters = { search: '', governorate: '', city: '' };
+    let currentFilters = { search: '', governorate: '', district: '' };
 
     function escHtml(s) {
         return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -128,7 +128,7 @@
 <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.name_ar)}</td>
                         <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.name_en || '')}</td>
                         <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.governorate)}</td>
-                        <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.city)}</td>
+                        <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.district)}</td>
                         <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.area || '')}</td>
                         <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.phone)}</td>
                         <td class="px-4 py-3 text-body-md text-on-surface">${escHtml(kg.detailed_address || '')}</td>
@@ -169,7 +169,7 @@
     function applyFilters() {
         currentFilters.search = document.getElementById('searchInput').value;
         currentFilters.governorate = document.getElementById('governorateFilter').value;
-        currentFilters.city = document.getElementById('cityFilter').value;
+        currentFilters.district = document.getElementById('cityFilter').value;
         loadKindergartens(1);
     }
 
@@ -177,7 +177,7 @@
         document.getElementById('searchInput').value = '';
         document.getElementById('governorateFilter').value = '';
         document.getElementById('cityFilter').value = '';
-        currentFilters = { search: '', governorate: '', city: '' };
+        currentFilters = { search: '', governorate: '', district: '' };
         loadKindergartens(1);
     }
 

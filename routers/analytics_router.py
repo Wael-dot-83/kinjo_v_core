@@ -143,7 +143,7 @@ def scatter_plot_data(
     if dim_type == "NETWORK":
         target_type = models.AnalyticsDimensionType.GOVERNORATE
     elif dim_type == "GOVERNORATE":
-        target_type = models.AnalyticsDimensionType.CITY
+        target_type = models.AnalyticsDimensionType.DISTRICT
     
     # Query the target dimensions. For simplicity, we just query recent caches
     # where the dimension ID starts with the dim_id (since we constructed City IDs as "Gov_City").
@@ -153,7 +153,7 @@ def scatter_plot_data(
     
     if dim_type == "GOVERNORATE":
         query = query.filter(models.AnalyticsDimensionCache.dimension_id.like(f"{dim_id}_%"))
-    elif dim_type == "CITY":
+    elif dim_type == "DISTRICT":
         # For City -> KG, we need a join. But since we lack direct parent IDs in cache,
         # we just plot all KGs for now as a statistical sample.
         pass
@@ -197,10 +197,10 @@ def get_demographics(
 
     if dim_type == "GOVERNORATE":
         query = query.filter(models.Kindergarten.governorate == dim_id)
-    elif dim_type == "CITY":
+    elif dim_type == "DISTRICT":
         # dim_id might be "Amman_Amman" or just "Amman". We'll use like or split.
-        city_name = dim_id.split("_")[-1] if "_" in dim_id else dim_id
-        query = query.filter(models.Kindergarten.city == city_name)
+        district_name = dim_id.split("_")[-1] if "_" in dim_id else dim_id
+        query = query.filter(models.Kindergarten.district == district_name)
     elif dim_type == "KINDERGARTEN":
         query = query.filter(models.Kindergarten.id == dim_id)
 

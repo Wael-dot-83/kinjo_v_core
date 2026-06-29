@@ -86,7 +86,7 @@ def test_children_list_filters_out_of_range(client, test_db, admin_user, sample_
         gender=models.Gender.MALE,
         nationality="Jordanian",
         home_governorate="Amman",
-        home_city="Amman",
+        home_district="Amman",
         home_area="Area",
         home_address_line="Address",
         correspondence_preference=True,

@@ -39,7 +39,7 @@ def _make_kg(db, name_ar="روضة تجريبية", name_en="Test KG", gov="عم
         name_ar=name_ar,
         name_en=name_en,
         governorate=gov,
-        city="عمّان",
+        district="عمّان",
         area="المدينة",
         address_line="شارع الاختبار",
         contact_phone="0791234567",
@@ -51,7 +51,7 @@ def _make_kg(db, name_ar="روضة تجريبية", name_en="Test KG", gov="عم
     return kg
 
 
-def _make_class(db, kg_id, capacity=20):
+def _make_class(db, kg_id, capadistrict=20):
     cls = models.Class(
         kindergarten_id=kg_id,
         name_ar="فصل الاختبار",
@@ -87,7 +87,7 @@ def _make_parent(db, suffix=""):
         gender=models.Gender.MALE,
         nationality="أردني",
         home_governorate="عمّان",
-        home_city="عمّان",
+        home_district="عمّان",
         home_area="المدينة",
         home_address_line="شارع الاختبار 1",
     )
@@ -268,7 +268,7 @@ class TestNetworkLayer:
 
     def test_capacity_pressure_with_data(self, test_db):
         kg = _make_kg(test_db)
-        _make_class(test_db, kg.id, capacity=10)  # enrolled=5, cap=10 → 50%
+        _make_class(test_db, kg.id, capadistrict=10)  # enrolled=5, cap=10 → 50%
         test_db.commit()
         result = AnalyticsGapService(test_db).get_network_metrics("en")
         cap = next(m for m in result.metrics if m.metric == "capacity_pressure")

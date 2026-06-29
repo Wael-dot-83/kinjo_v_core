@@ -49,13 +49,13 @@ from admin_security import forbidden_error
 # Helpers – create test data
 # ──────────────────────────────────────────────────────────────────────
 
-def _make_kindergarten(db, name, governorate="عمان", city="عمان"):
+def _make_kindergarten(db, name, governorate="عمان", district="عمان"):
     kg = models.Kindergarten(
         name_ar=name,
         name_en=f"{name}_en",
         license_number=f"LIC-{name}-{id(name)}",
         governorate=governorate,
-        city=city,
+        district=city,
         area="TestArea",
         address_line="Test Address",
         contact_phone="+96279" + str(abs(hash(name)) % 10_000_000).zfill(7),
@@ -94,7 +94,7 @@ def _make_parent_with_enrollment(db, username, kindergarten, governorate="عما
         nationality="Jordanian",
         national_id=str(abs(hash(username)) % 10**10).zfill(10),
         home_governorate=governorate,
-        home_city="TestCity",
+        home_district="TestCity",
         home_area="TestArea",
         home_address_line="Test Address",
         correspondence_preference=True,
@@ -143,7 +143,7 @@ def _make_parent_no_enrollment(db, username, governorate="عمان"):
         nationality="Jordanian",
         national_id=str(abs(hash(username + "ne")) % 10**10).zfill(10),
         home_governorate=governorate,
-        home_city="TestCity",
+        home_district="TestCity",
         home_area="TestArea",
         home_address_line="Test Address",
         correspondence_preference=True,

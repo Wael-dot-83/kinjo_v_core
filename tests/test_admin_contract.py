@@ -217,5 +217,5 @@ def test_heatmap_api_strings_are_escaped_before_inner_html_rendering():
     assert "${esc(g.name_ar || g.name_en)}" in source
     assert "${esc(k.name_ar || k.name_en || 'منشأة')}" in source
     assert "${esc(a.message || '')}" in source
-    assert "${esc(c.city || '')}" in source or "const cityName = esc(c.city || '')" in source
+    assert "${esc(c.district || '')}" in source or "const cityName = esc(c.district || '')" in source
     assert "${esc(message)}" in source

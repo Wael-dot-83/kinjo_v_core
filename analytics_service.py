@@ -2574,7 +2574,7 @@ def get_registration_drilldown(
             "child_name": f"{child.first_name} {child.last_name}" if child else "N/A",
             "parent_name": f"{parent.first_name} {parent.last_name}" if parent else "N/A",
             "kindergarten_name": kg.name_ar or kg.name_en if kg else "N/A",
-            "kindergarten_city": kg.city if kg else "N/A",
+            "kindergarten_city": kg.district if kg else "N/A",
             "status": ea.status.value if hasattr(ea.status, 'value') else str(ea.status),
             "status_reason": ea.status_reason,
             "source": ea.source,
@@ -6180,7 +6180,7 @@ class AnalyticsService:
         complete_kgs = db.query(func.count(models.Kindergarten.id)).filter(
             models.Kindergarten.name_ar.isnot(None),
             models.Kindergarten.governorate.isnot(None),
-            models.Kindergarten.city.isnot(None),
+            models.Kindergarten.district.isnot(None),
             models.Kindergarten.area.isnot(None),
             models.Kindergarten.address_line.isnot(None),
             models.Kindergarten.contact_phone.isnot(None)

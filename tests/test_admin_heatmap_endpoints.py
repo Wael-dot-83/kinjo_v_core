@@ -167,7 +167,11 @@ def test_alerts_acknowledge(app):
             pytest.skip("No open alerts to acknowledge")
         alert_id = data["alerts"][0]["id"]
         # Acknowledge it
-        r = client.post(f"/api/admin/heat-map/alerts/{alert_id}/acknowledge")
+        r = client.post(
+            f"/api/admin/heat-map/alerts/{alert_id}/acknowledge",
+            headers={"X-CSRF-Token": "test"},
+            cookies={"kinjo_csrf_token": "test"}
+        )
         assert r.status_code == 200
         result = r.json()
         assert result["status"] in ("acknowledged", "already_acknowledged")
@@ -179,5 +183,9 @@ def test_alerts_acknowledge(app):
 
 def test_alerts_acknowledge_unknown_404(app):
     with TestClient(app) as client:
-        r = client.post("/api/admin/heat-map/alerts/999999/acknowledge")
+        r = client.post(
+            "/api/admin/heat-map/alerts/999999/acknowledge",
+            headers={"X-CSRF-Token": "test"},
+            cookies={"kinjo_csrf_token": "test"}
+        )
         assert r.status_code == 404

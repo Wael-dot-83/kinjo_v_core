@@ -98,11 +98,11 @@ def find_existing(session, name_ar: str, city: str, area: str) -> Optional[model
     # Match by lower(trim(name_ar)) and city and area
     q = session.query(models.Kindergarten).filter(
         models.Kindergarten.name_ar != None,
-        models.Kindergarten.city != None,
+        models.Kindergarten.district != None,
         models.Kindergarten.area != None,
         (models.Kindergarten.name_ar.ilike(n_name)) | (models.Kindergarten.name_en.ilike(n_name))
     ).filter(
-        models.Kindergarten.city.ilike(n_city),
+        models.Kindergarten.district.ilike(n_city),
         models.Kindergarten.area.ilike(n_area)
     )
     # Return first exact-ish match
@@ -240,7 +240,7 @@ def import_file(path: str, commit: bool = False, default_status: str = "ACTIVE",
             w.writerow(["id", "name_ar", "name_en", "governorate", "city", "area", "address_line", "contact_phone", "contact_email", "license_number", "license_valid_until", "status"])
             for r in affected_existing_records:
                 w.writerow([
-                    r.id, r.name_ar, r.name_en, r.governorate, r.city, r.area, r.address_line, r.contact_phone, r.contact_email, r.license_number, r.license_valid_until, getattr(r.status, "value", None)
+                    r.id, r.name_ar, r.name_en, r.governorate, r.district, r.area, r.address_line, r.contact_phone, r.contact_email, r.license_number, r.license_valid_until, getattr(r.status, "value", None)
                 ])
 
     if commit:

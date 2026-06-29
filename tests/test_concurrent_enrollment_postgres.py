@@ -63,7 +63,7 @@ def pg_sessionmaker():
 def seeded_scenario(pg_sessionmaker):
     """Mirror tests/test_concurrent_enrollment.py's full_scenario, against real PostgreSQL.
 
-    Capacity=1 class, one manager, two parents/children each with a SUBMITTED->ACCEPTED
+    Capadistrict=1 class, one manager, two parents/children each with a SUBMITTED->ACCEPTED
     enrollment competing for the single seat. Rows are committed (visible to other
     connections/threads) then cleaned up in teardown.
     """
@@ -79,7 +79,7 @@ def seeded_scenario(pg_sessionmaker):
         name_en=f"PG Competition KG {suffix}",
         license_number=f"LIC-PG-{suffix}",
         governorate="عمان",
-        city="Amman",
+        district="Amman",
         area="Jubeiha",
         address_line="1 Concurrent St",
         contact_phone="+962791111111",
@@ -136,7 +136,7 @@ def seeded_scenario(pg_sessionmaker):
             nationality="Jordanian",
             national_id=f"77777777{idx}{suffix[:2]}",
             home_governorate="عمان",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Jubeiha",
             home_address_line=f"{idx} Test St",
             correspondence_preference=True,

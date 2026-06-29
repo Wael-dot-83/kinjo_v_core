@@ -284,7 +284,7 @@
         <div class="form-check">
             <input class="form-check-input kg-checkbox" type="checkbox" value="${kg.id}" id="kg_${kg.id}">
             <label class="form-check-label small" for="kg_${kg.id}">
-                ${escHtml(kg.name_ar || kg.name)} <span class="text-muted">(${escHtml(kg.city)})</span>
+                ${escHtml(kg.name_ar || kg.name)} <span class="text-muted">(${escHtml(kg.district)})</span>
             </label>
         </div>
     `).join('');
@@ -295,7 +295,7 @@
         const filtered = allKindergartens.filter(kg =>
             (kg.name_ar && kg.name_ar.toLowerCase().includes(term)) ||
             (kg.name_en && kg.name_en.toLowerCase().includes(term)) ||
-            (kg.city && kg.city.toLowerCase().includes(term))
+            (kg.district && kg.district.toLowerCase().includes(term))
         );
         renderKgList(filtered);
     }

@@ -61,7 +61,7 @@ class DataQualityService:
         complete = base.filter(
             models.Kindergarten.name_ar.isnot(None),
             models.Kindergarten.governorate.isnot(None),
-            models.Kindergarten.city.isnot(None),
+            models.Kindergarten.district.isnot(None),
             models.Kindergarten.area.isnot(None),
             models.Kindergarten.address_line.isnot(None),
             models.Kindergarten.contact_phone.isnot(None),

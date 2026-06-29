@@ -173,7 +173,7 @@ class DashboardFilterService:
         # City filter
         cities = filters.get("cities", [])
         if cities:
-            query = query.filter(models.Kindergarten.city.in_(cities))
+            query = query.filter(models.Kindergarten.district.in_(cities))
 
         # Status filter
         status = filters.get("status")
@@ -192,7 +192,7 @@ class DashboardFilterService:
                     models.Kindergarten.name_ar.ilike(search_term),
                     models.Kindergarten.name_en.ilike(search_term),
                     models.Kindergarten.governorate.ilike(search_term),
-                    models.Kindergarten.city.ilike(search_term),
+                    models.Kindergarten.district.ilike(search_term),
                     models.Kindergarten.area.ilike(search_term),
                     models.Kindergarten.address_line.ilike(search_term),
                     models.Kindergarten.license_number.ilike(search_term),
@@ -212,7 +212,7 @@ class DashboardFilterService:
             "name_ar": models.Kindergarten.name_ar,
             "name_en": models.Kindergarten.name_en,
             "governorate": models.Kindergarten.governorate,
-            "city": models.Kindergarten.city,
+            "city": models.Kindergarten.district,
             "area": models.Kindergarten.area,
             "status": models.Kindergarten.status,
             "created_at": models.Kindergarten.created_at,
@@ -254,7 +254,7 @@ class DashboardFilterService:
 
             kindergartens = kg_query.all()
             governorates = sorted({kg.governorate for kg in kindergartens if kg.governorate})
-            cities = sorted({kg.city for kg in kindergartens if kg.city})
+            cities = sorted({kg.district for kg in kindergartens if kg.district})
 
             return {
                 "kindergartens": [{"id": kg.id, "name": kg.name_ar or kg.name_en} for kg in kindergartens],
@@ -277,7 +277,7 @@ class DashboardFilterService:
                     models.Kindergarten.name_ar.ilike(f"%{query}%"),
                     models.Kindergarten.name_en.ilike(f"%{query}%"),
                     models.Kindergarten.governorate.ilike(f"%{query}%"),
-                    models.Kindergarten.city.ilike(f"%{query}%"),
+                    models.Kindergarten.district.ilike(f"%{query}%"),
                 )
             )
 
@@ -292,7 +292,7 @@ class DashboardFilterService:
                     "name_ar": kg.name_ar,
                     "name_en": kg.name_en,
                     "governorate": kg.governorate,
-                    "city": kg.city,
+                    "city": kg.district,
                 }
                 for kg in kindergartens
             ]
@@ -316,7 +316,7 @@ class DashboardFilterService:
                     "name_ar": kg.name_ar,
                     "name_en": kg.name_en,
                     "governorate": kg.governorate,
-                    "city": kg.city,
+                    "city": kg.district,
                     "area": kg.area,
                     "status": kg.status.value if hasattr(kg.status, "value") else str(kg.status),
                     "license_number": kg.license_number,

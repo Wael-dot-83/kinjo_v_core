@@ -204,7 +204,7 @@ def get_decision_support_dashboard(
         utilization_pct = _pct(enrolled, capacity)
         attendance_rate = _pct(present, enrolled)
 
-        group_key = (kg.governorate or "غير محدد", kg.city or "غير محدد")
+        group_key = (kg.governorate or "غير محدد", kg.district or "غير محدد")
         group = geo_groups.setdefault(
             group_key,
             {
@@ -276,7 +276,7 @@ def get_decision_support_dashboard(
                 {
                     "kindergarten_id": kg.id,
                     "kindergarten_name": kg.name_ar or kg.name_en or f"Kindergarten {kg.id}",
-                    "city": kg.city or "غير محدد",
+                    "city": kg.district or "غير محدد",
                     "risk_score": min(risk_score, 100),
                     "risk_factors": risk_factors,
                 }

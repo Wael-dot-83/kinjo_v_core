@@ -344,7 +344,7 @@ def get_attendance_report(
                 "name_ar": kindergarten.name_ar,
                 "name_en": kindergarten.name_en,
                 "governorate": kindergarten.governorate,
-                "city": kindergarten.city,
+                "district": kindergarten.district,
                 "area": kindergarten.area,
                 "phone": kindergarten.contact_phone,
                 "address": kindergarten.address_line

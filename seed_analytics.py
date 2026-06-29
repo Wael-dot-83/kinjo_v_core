@@ -146,7 +146,7 @@ def seed_analytics():
                     m["inc"] += incidents
                     m["gov_scores"].append(gov_score)
 
-                agg(city_data, f"{kg.governorate}_{kg.city}")
+                agg(city_data, f"{kg.governorate}_{kg.district}")
                 agg(gov_data, kg.governorate)
                 agg(network_data, "JORDAN")
 
@@ -213,7 +213,7 @@ def seed_analytics():
                         attendance_trend_slope=calculate_linear_trend(hist_att)
                     ))
 
-        process_agg(city_data, AnalyticsDimensionType.CITY)
+        process_agg(city_data, AnalyticsDimensionType.DISTRICT)
         process_agg(gov_data, AnalyticsDimensionType.GOVERNORATE)
         process_agg(network_data, AnalyticsDimensionType.NETWORK)
 

@@ -24,66 +24,69 @@ def get_governorates(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Return list of governorates that have active kindergartens."""
-    rows = (
-        db.query(models.Kindergarten.governorate)
-        .filter(models.Kindergarten.status == models.KindergartenStatus.ACTIVE)
-        .distinct()
-        .all()
-    )
-    govs = []
-    for (gov,) in rows:
+    """Return list of governorates and their districts from AdministrativeDivision."""
+    divisions = db.query(models.AdministrativeDivision).all()
+    
+    gov_map = {}
+    for div in divisions:
+        gov = div.governorate
+        dist = div.district
         if not gov:
             continue
         try:
             normalized = validators.validate_jordan_governorate(gov)
         except validators.ValidationError:
-            continue
-        english_label = None
-        if normalized in settings.JORDAN_GOVERNORATES:
-            idx = settings.JORDAN_GOVERNORATES.index(normalized)
-            if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
-                english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx]
-        govs.append({
-            "id": normalized,
-            "name_ar": normalized,
-            "name_en": english_label or normalized,
-        })
-    # Deduplicate and sort
-    seen = set()
-    unique = []
-    for g in govs:
-        if g["id"] not in seen:
-            seen.add(g["id"])
-            unique.append(g)
-    return {"governorates": sorted(unique, key=lambda x: x["name_ar"])}
+            normalized = gov
+            
+        if normalized not in gov_map:
+            english_label = None
+            if normalized in settings.JORDAN_GOVERNORATES:
+                idx = settings.JORDAN_GOVERNORATES.index(normalized)
+                if idx < len(settings.JORDAN_GOVERNORATES_ENGLISH):
+                    english_label = settings.JORDAN_GOVERNORATES_ENGLISH[idx]
+            gov_map[normalized] = {
+                "id": normalized,
+                "name_ar": normalized,
+                "name_en": english_label or normalized,
+                "cities": set() # we will use 'cities' for backwards compatibility with frontend
+            }
+        
+        if dist:
+            gov_map[normalized]["cities"].add(dist)
+            
+    govs = []
+    for g in gov_map.values():
+        g["cities"] = sorted(list(g["cities"]))
+        govs.append(g)
+        
+    return {"governorates": sorted(govs, key=lambda x: x["name_ar"])}
 
 
-@router.get("/governorates/{gov}/cities")
-def get_cities_by_governorate(
+@router.get("/governorates/{gov}/districts")
+def get_districts_by_governorate(
     gov: str,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Return distinct cities for a governorate, from DB records."""
+    """Return distinct districts for a governorate, from DB records."""
     # Normalise alias
     alias_map = settings.JORDAN_GOVERNORATE_ALIASES
     normalised = alias_map.get(gov, alias_map.get(gov.lower(), gov))
 
-    cities = (
-        db.query(models.Kindergarten.city)
+    districts = (
+        db.query(models.Kindergarten.district)
         .filter(models.Kindergarten.governorate == normalised)
         .distinct()
         .all()
     )
-    return {"cities": sorted([c[0] for c in cities])}
+    return {"governorate": gov, "districts": [d[0] for d in districts if d[0]]}
 
 
 class KindergartenCreate(BaseModel):
     name_ar: str
     name_en: Optional[str] = None
     governorate: str
-    city: str
+    district: str
     area: str
     address_line: str
     contact_phone: str
@@ -207,7 +210,7 @@ def create_kindergarten(
 def list_kindergartens(
     status: Optional[str] = None,
     governorate: Optional[str] = None,
-    city: Optional[str] = None,
+    district: Optional[str] = None,
     phone: Optional[str] = None,
     name: Optional[str] = None,
     include_inactive: bool = False,
@@ -228,8 +231,8 @@ def list_kindergartens(
         except validators.ValidationError:
             normalized_governorate = governorate
         query = query.filter(models.Kindergarten.governorate.ilike(f"%{normalized_governorate}%"))
-    if city:
-        query = query.filter(models.Kindergarten.city.ilike(f"%{city}%"))
+    if district:
+        query = query.filter(models.Kindergarten.district.ilike(f"%{district}%"))
     if phone:
         query = query.filter(models.Kindergarten.contact_phone.ilike(f"%{phone}%"))
     if name:
@@ -328,7 +331,7 @@ def update_kindergarten(
         "name_ar": kindergarten.name_ar,
         "name_en": kindergarten.name_en,
         "governorate": kindergarten.governorate,
-        "city": kindergarten.city,
+        "district": kindergarten.district,
         "area": kindergarten.area,
         "address_line": kindergarten.address_line,
         "contact_phone": kindergarten.contact_phone,

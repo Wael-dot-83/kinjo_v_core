@@ -3002,7 +3002,7 @@ def list_kindergarten_options(
         query = query.filter(or_(
             models.Kindergarten.name_ar.ilike(search_term),
             models.Kindergarten.name_en.ilike(search_term),
-            models.Kindergarten.city.ilike(search_term),
+            models.Kindergarten.district.ilike(search_term),
             models.Kindergarten.contact_phone.ilike(search_term)
         ))
 
@@ -3024,7 +3024,7 @@ def list_kindergarten_options(
                 "name_ar": kg.name_ar,
                 "name_en": kg.name_en,
                 "governorate": kg.governorate,
-                "city": kg.city,
+                "city": kg.district,
                 "status": kg.status.value,
                 "contact_phone": kg.contact_phone
             }
@@ -3874,7 +3874,7 @@ def get_kg_overview(
             name_ar=kg.name_ar,
             name_en=kg.name_en,
             governorate=kg.governorate,
-            city=kg.city,
+            city=kg.district,
             children_count=kids,
             attendance_rate=att_rate,
             attendance_status=att_status,
@@ -4461,9 +4461,9 @@ def import_kindergartens_from_excel(
     for kg in db.query(
         models.Kindergarten.name_ar,
         models.Kindergarten.governorate,
-        models.Kindergarten.city,
+        models.Kindergarten.district,
     ).all():
-        existing.add((kg.name_ar, kg.governorate, kg.city))
+        existing.add((kg.name_ar, kg.governorate, kg.district))
 
     result = KindergartenImportResult(total_rows=len(rows))
     row_errors: List[Dict[str, Any]] = []

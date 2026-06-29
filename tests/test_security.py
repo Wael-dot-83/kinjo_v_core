@@ -119,7 +119,7 @@ class TestAuthorizationSecurity:
             nationality="Jordanian",
             national_id="8888888888",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Tla Al Ali",
             home_address_line="456 Other St"
         )
@@ -178,7 +178,7 @@ class TestAuthorizationSecurity:
             name_en="Protected Other KG",
             license_number="LIC-PROTECT-001",
             governorate="Aqaba",
-            city="Aqaba",
+            district="Aqaba",
             area="Port Area",
             address_line="999 Port St",
             contact_phone="+962794444444",

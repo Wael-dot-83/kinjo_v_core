@@ -116,7 +116,7 @@ district_name=None, district_id=None, postal_name=None, postal_id=None) %}
 {% set street_name = street_name or prefix + "_street" %}
 {% set street_id = street_id or prefix + "Street" %}
 {% set city_name = city_name or prefix + "_city" %}
-{% set city_id = city_id or prefix + "City" %}
+{% set city_id = city_id or prefix + "District" %}
 {% set district_name = district_name or prefix + "_district" %}
 {% set district_id = district_id or prefix + "District" %}
 {% set postal_name = postal_name or prefix + "_postal_code" %}
@@ -128,9 +128,9 @@ district_name=None, district_id=None, postal_name=None, postal_id=None) %}
         <div class="invalid-feedback">{{ 'Please enter street' if lang == 'en' else 'يرجى إدخال الشارع' }}</div>
     </div>
     <div class="col-md-6 mb-3">
-        <label for="{{ city_id }}" class="form-label required">{{ 'City' if lang == 'en' else 'المدينة' }}</label>
+        <label for="{{ city_id }}" class="form-label required">{{ 'District' if lang == 'en' else 'المدينة' }}</label>
         <input type="text" class="form-control required" id="{{ city_id }}" name="{{ city_name }}" required>
-        <div class="invalid-feedback">{{ 'Please enter city' if lang == 'en' else 'يرجى إدخال المدينة' }}</div>
+        <div class="invalid-feedback">{{ 'Please enter district' if lang == 'en' else 'يرجى إدخال المدينة' }}</div>
     </div>
 </div>
 <div class="row">

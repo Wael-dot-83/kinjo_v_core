@@ -61,7 +61,7 @@ def sample_kindergarten(test_db):
         name_en="Hope Kindergarten",
         license_number="LIC-2026-001",
         governorate="Amman",
-        city="Amman",
+        district="Amman",
         area="Abdoun",
         address_line="123 Main Street",
         contact_phone="+962791234567",

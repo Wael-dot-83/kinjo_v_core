@@ -115,7 +115,7 @@ breadcrumbs=[
                                 user_obj.kindergarten_id==kg.id %}selected {% elif not user_obj and
                                 request.query_params.get('kindergarten_id') and
                                 request.query_params.get('kindergarten_id')|int==kg.id %}selected {% endif %}>
-                                {{ kg.name_en if ui_lang == 'en' and kg.name_en else kg.name_ar }} ({{ kg.city }})
+                                {{ kg.name_en if ui_lang == 'en' and kg.name_en else kg.name_ar }} ({{ kg.district }})
                             </option>
                             {% endfor %}
                         </select>

@@ -24,7 +24,7 @@ def _kindergarten(
     name_ar="روضة الأمل",
     name_en="Hope KG",
     governorate="عمان",
-    city="عمان",
+    district="عمان",
     area="وسط البلد",
     address_line="عنوان قديم",
     contact_phone="0791111111",
@@ -35,7 +35,7 @@ def _kindergarten(
         name_ar=name_ar,
         name_en=name_en,
         governorate=governorate,
-        city=city,
+        district=city,
         area=area,
         address_line=address_line,
         contact_phone=contact_phone,
@@ -75,7 +75,7 @@ def test_duplicate_matching_by_license_number(test_db, tmp_path):
             {
                 "name_ar": "روضة الأمل الجديدة",
                 "governorate": "عمان",
-                "city": "عمان",
+                "district": "عمان",
                 "area": "الجبيهة",
                 "address_line": "عنوان جديد",
                 "contact_phone": "0792222222",
@@ -95,14 +95,14 @@ def test_duplicate_matching_by_license_number(test_db, tmp_path):
 
 
 def test_duplicate_matching_by_arabic_name_and_governorate(test_db, tmp_path):
-    existing = _kindergarten(test_db, name_ar="روضة الأمل", governorate="عمان", city="عمان")
+    existing = _kindergarten(test_db, name_ar="روضة الأمل", governorate="عمان", district="عمان")
     file_path = _write_excel(
         tmp_path,
         [
             {
                 "name_ar": "روضة الامل",
                 "governorate": "Amman",
-                "city": "خلدا",
+                "district": "خلدا",
                 "address_line": "عنوان محدث",
                 "contact_phone": "0793333333",
             }
@@ -124,7 +124,7 @@ def test_invalid_phone_does_not_overwrite_existing_phone(test_db, tmp_path):
             {
                 "name_ar": "روضة الهاتف",
                 "governorate": "عمان",
-                "city": "عمان",
+                "district": "عمان",
                 "address_line": "عنوان محدث",
                 "contact_phone": "5555",
             }
@@ -146,7 +146,7 @@ def test_create_new_kindergarten_when_no_match(test_db, tmp_path):
             {
                 "name_ar": "روضة جديدة",
                 "governorate": "الزرقاء",
-                "city": "الزرقاء",
+                "district": "الزرقاء",
                 "area": "الوسط",
                 "address_line": "شارع الاختبار",
                 "contact_phone": "0794444444",
@@ -161,8 +161,8 @@ def test_create_new_kindergarten_when_no_match(test_db, tmp_path):
 
 
 def test_ambiguous_match_is_skipped(test_db, tmp_path):
-    _kindergarten(test_db, name_ar="روضة مشتركة", governorate="عمان", city="عمان", contact_phone="0795555551")
-    _kindergarten(test_db, name_ar="روضه مشتركه", governorate="عمان", city="خلدا", contact_phone="0795555552")
+    _kindergarten(test_db, name_ar="روضة مشتركة", governorate="عمان", district="عمان", contact_phone="0795555551")
+    _kindergarten(test_db, name_ar="روضه مشتركه", governorate="عمان", district="خلدا", contact_phone="0795555552")
     file_path = _write_excel(tmp_path, [{"name_ar": "روضة مشتركة", "governorate": "عمان"}])
 
     plan = build_import_plan(test_db, file_path, mode="dry-run")
@@ -177,7 +177,7 @@ def test_existing_record_first_excel_match_wins_for_idempotency(test_db, tmp_pat
         test_db,
         name_ar="روضة مكررة",
         governorate="عمان",
-        city="عمان",
+        district="عمان",
         area="الجبيهة",
         address_line="العنوان الأول",
         contact_phone="0795656565",
@@ -188,7 +188,7 @@ def test_existing_record_first_excel_match_wins_for_idempotency(test_db, tmp_pat
             {
                 "name_ar": "روضة مكررة",
                 "governorate": "عمان",
-                "city": "عمان",
+                "district": "عمان",
                 "area": "الجبيهة",
                 "address_line": "العنوان الأول",
                 "contact_phone": "0795656565",
@@ -196,7 +196,7 @@ def test_existing_record_first_excel_match_wins_for_idempotency(test_db, tmp_pat
             {
                 "name_ar": "روضة مكررة",
                 "governorate": "عمان",
-                "city": "عمان",
+                "district": "عمان",
                 "area": "خلدا",
                 "address_line": "عنوان لاحق",
                 "contact_phone": "0795656565",
@@ -214,7 +214,7 @@ def test_existing_record_first_excel_match_wins_for_idempotency(test_db, tmp_pat
 def test_dry_run_does_not_write(test_db, tmp_path):
     file_path = _write_excel(
         tmp_path,
-        [{"name_ar": "روضة جافة", "governorate": "عمان", "city": "عمان", "contact_phone": "0796666666"}],
+        [{"name_ar": "روضة جافة", "governorate": "عمان", "district": "عمان", "contact_phone": "0796666666"}],
     )
     before = test_db.query(models.Kindergarten).count()
 
@@ -228,7 +228,7 @@ def test_dry_run_does_not_write(test_db, tmp_path):
 def test_commit_writes_expected_rows(test_db, tmp_path):
     file_path = _write_excel(
         tmp_path,
-        [{"name_ar": "روضة ملتزمة", "governorate": "عمان", "city": "عمان", "contact_phone": "0797777777"}],
+        [{"name_ar": "روضة ملتزمة", "governorate": "عمان", "district": "عمان", "contact_phone": "0797777777"}],
     )
     before = test_db.query(models.Kindergarten).count()
 

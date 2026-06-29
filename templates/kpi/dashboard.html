@@ -643,7 +643,7 @@ endblock %} {% block extra_css %}
       endDate: "",
       granularity: "weekly",
       governorate: "",
-      city: "",
+      district: "",
       area: "",
       kindergartenIds: [],
       isLoading: false,
@@ -778,7 +778,7 @@ endblock %} {% block extra_css %}
       if (granularityEl) granularityEl.value = state.granularity;
 
       state.governorate = "";
-      state.city = "";
+      state.district = "";
       state.area = "";
       state.kindergartenIds = [];
       state.isLoading = true;
@@ -873,7 +873,7 @@ endblock %} {% block extra_css %}
       state.granularity =
         (granularityEl && granularityEl.value) || state.granularity;
       state.governorate = (governorateEl && governorateEl.value) || "";
-      state.city = (cityEl && cityEl.value) || "";
+      state.district = (cityEl && cityEl.value) || "";
       state.area = (areaEl && areaEl.value) || "";
       const selected = select
         ? Array.from(select.selectedOptions)
@@ -1011,7 +1011,7 @@ endblock %} {% block extra_css %}
         `${kpiText("common.governorate", "المحافظة", "Governorate")}: ${governorateLabel(state.governorate)}`,
       );
       parts.push(
-        `${kpiText("common.city", "المدينة", "City")}: ${cityLabel(state.city)}`,
+        `${kpiText("common.district", "المدينة", "District")}: ${cityLabel(state.district)}`,
       );
       parts.push(
         `${kpiText("common.area", "المنطقة", "Area")}: ${areaLabel(state.area)}`,
@@ -1088,12 +1088,12 @@ endblock %} {% block extra_css %}
           citySelect.innerHTML = "";
           if (defaultOption) citySelect.appendChild(defaultOption);
           const seenCity = new Set();
-          cityList.forEach((city) => {
-            if (!city || !city.name || seenCity.has(city.name)) return;
-            seenCity.add(city.name);
+          cityList.forEach((district) => {
+            if (!district || !district.name || seenCity.has(district.name)) return;
+            seenCity.add(district.name);
             const option = document.createElement("option");
-            option.value = city.name;
-            option.textContent = city.name;
+            option.value = district.name;
+            option.textContent = district.name;
             citySelect.appendChild(option);
           });
         }
@@ -1569,8 +1569,8 @@ endblock %} {% block extra_css %}
         if (state.governorate) {
           params.append("governorate", state.governorate);
         }
-        if (state.city) {
-          params.append("city", state.city);
+        if (state.district) {
+          params.append("district", state.district);
         }
         if (state.area) {
           params.append("area", state.area);

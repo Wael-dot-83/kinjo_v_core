@@ -29,7 +29,7 @@ def kg_a(test_db):
         name_ar="روضة أ",
         name_en="Kindergarten A",
         governorate="عمّان",
-        city="عمّان",
+        district="عمّان",
         area="الدعيس",
         address_line="شارع الملك",
         contact_phone="0789123456",
@@ -49,7 +49,7 @@ def kg_b(test_db):
         name_ar="روضة ب",
         name_en="Kindergarten B",
         governorate="الزرقاء",
-        city="الزرقاء",
+        district="الزرقاء",
         area="المقابلين",
         address_line="شارع الجديدة",
         contact_phone="0789234567",
@@ -224,7 +224,7 @@ def parent_kg_a(test_db, kg_a):
         nationality="الأردن",
         national_id="1234567890",
         home_governorate="عمّان",
-        home_city="عمّان",
+        home_district="عمّان",
         home_area="الدعيس",
         home_address_line="شارع الملك"
     )

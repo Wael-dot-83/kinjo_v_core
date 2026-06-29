@@ -20,7 +20,7 @@ class TestCitiesEndpoint:
     def test_cities_by_governorate_returns_cities(self, client, admin_token, test_db, sample_kindergarten):
         """Should return cities for a given governorate"""
         headers = {"Authorization": f"Bearer {admin_token}"}
-        # The sample_kindergarten has governorate="Amman" and city="Amman"
+        # The sample_kindergarten has governorate="Amman" and district="Amman"
         response = client.get("/api/governorates/Amman/cities", headers=headers)
         assert response.status_code == 200
         data = response.json()
@@ -33,7 +33,7 @@ class TestCitiesEndpoint:
         # Create a KG in عمان
         kg = models.Kindergarten(
             name_ar="روضة اختبار", name_en="Test KG",
-            governorate="عمان", city="الجبيهة", area="منطقة",
+            governorate="عمان", district="الجبيهة", area="منطقة",
             address_line="عنوان", contact_phone="+962791110001",
             status=models.KindergartenStatus.ACTIVE
         )
@@ -70,7 +70,7 @@ class TestKindergartenFilteringWithCity:
         for i, city in enumerate(["عمان", "الجبيهة", "القويسمة"]):
             kg = models.Kindergarten(
                 name_ar=f"روضة {city}", name_en=f"KG {city}",
-                governorate="عمان", city=city, area="test",
+                governorate="عمان", district=city, area="test",
                 address_line="test", contact_phone=f"+96279111000{i}",
                 status=models.KindergartenStatus.ACTIVE
             )
@@ -78,26 +78,26 @@ class TestKindergartenFilteringWithCity:
         test_db.commit()
 
         # Filter by city
-        response = client.get("/api/kindergartens?city=الجبيهة&status=ACTIVE", headers=headers)
+        response = client.get("/api/kindergartens?district=الجبيهة&status=ACTIVE", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert data["total"] >= 1
         for kg in data["kindergartens"]:
-            assert "الجبيهة" in kg["city"]
+            assert "الجبيهة" in kg["district"]
 
     def test_filter_by_gov_and_city(self, client, admin_token, test_db):
         """Should filter by both governorate and city"""
         headers = {"Authorization": f"Bearer {admin_token}"}
         kg = models.Kindergarten(
             name_ar="روضة إربد", name_en="Irbid KG",
-            governorate="إربد", city="الحصن", area="test",
+            governorate="إربد", district="الحصن", area="test",
             address_line="test", contact_phone="+962791112222",
             status=models.KindergartenStatus.ACTIVE
         )
         test_db.add(kg)
         test_db.commit()
 
-        response = client.get("/api/kindergartens?governorate=إربد&city=الحصن&status=ACTIVE", headers=headers)
+        response = client.get("/api/kindergartens?governorate=إربد&district=الحصن&status=ACTIVE", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert data["total"] >= 1
@@ -107,14 +107,14 @@ class TestKindergartenFilteringWithCity:
         headers = {"Authorization": f"Bearer {parent_token}"}
         kg = models.Kindergarten(
             name_ar="روضة الزرقاء", name_en="Zarqa KG",
-            governorate="الزرقاء", city="الزرقاء", area="test",
+            governorate="الزرقاء", district="الزرقاء", area="test",
             address_line="test", contact_phone="+962791113333",
             status=models.KindergartenStatus.ACTIVE
         )
         test_db.add(kg)
         test_db.commit()
 
-        response = client.get("/api/kindergartens?city=الزرقاء&status=ACTIVE", headers=headers)
+        response = client.get("/api/kindergartens?district=الزرقاء&status=ACTIVE", headers=headers)
         assert response.status_code == 200
 
 
@@ -134,7 +134,7 @@ class TestParentKindergartenDetails:
         headers = {"Authorization": f"Bearer {parent_token}"}
         kg = models.Kindergarten(
             name_ar="روضة غير نشطة", name_en="Inactive KG",
-            governorate="عمان", city="عمان", area="test",
+            governorate="عمان", district="عمان", area="test",
             address_line="test", contact_phone="+962791114444",
             status=models.KindergartenStatus.INACTIVE
         )
@@ -149,7 +149,7 @@ class TestParentKindergartenDetails:
         headers = {"Authorization": f"Bearer {parent_token}"}
         kg = models.Kindergarten(
             name_ar="روضة مسودة", name_en="Draft KG",
-            governorate="عمان", city="عمان", area="test",
+            governorate="عمان", district="عمان", area="test",
             address_line="test", contact_phone="+962791115555",
             status=models.KindergartenStatus.DRAFT
         )
@@ -210,7 +210,7 @@ class TestDuplicateEnrollmentPrevention:
         # Create second kindergarten
         kg2 = models.Kindergarten(
             name_ar="روضة ثانية", name_en="Second KG",
-            governorate="عمان", city="عمان", area="test",
+            governorate="عمان", district="عمان", area="test",
             address_line="test", contact_phone="+962791116666",
             status=models.KindergartenStatus.ACTIVE
         )
@@ -273,7 +273,7 @@ class TestDuplicateEnrollmentPrevention:
         # Create second KG
         kg2 = models.Kindergarten(
             name_ar="روضة ثانية", name_en="Second KG",
-            governorate="Amman", city="Amman", area="test",
+            governorate="Amman", district="Amman", area="test",
             address_line="test", contact_phone="+962791116777",
             status=models.KindergartenStatus.ACTIVE
         )
@@ -329,7 +329,7 @@ class TestDuplicateEnrollmentPrevention:
 
         kg2 = models.Kindergarten(
             name_ar="روضة ثالثة", name_en="Third KG",
-            governorate="Amman", city="Amman", area="test",
+            governorate="Amman", district="Amman", area="test",
             address_line="test", contact_phone="+962791116888",
             status=models.KindergartenStatus.ACTIVE
         )

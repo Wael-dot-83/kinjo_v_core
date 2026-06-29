@@ -93,7 +93,7 @@ def parent_user(test_db, sample_kindergarten):
         nationality="Jordanian",
         national_id="123456789",
         home_governorate="Amman",
-        home_city="Amman",
+        home_district="Amman",
         home_area="Abdoun",
         home_address_line="123 Main St",
         correspondence_preference=True  # Boolean field, not enum
@@ -473,7 +473,7 @@ class TestFrontendRoutes:
             name_ar="Test KG",
             name_en="Test KG",
             governorate="Amman",
-            city="Amman",
+            district="Amman",
             area="Abdoun",
             address_line="Test Address",
             contact_phone="+962791234567",
@@ -507,7 +507,7 @@ class TestFrontendRoutes:
             name_ar="Test KG",
             name_en="Test KG",
             governorate="Amman",
-            city="Amman",
+            district="Amman",
             area="Abdoun",
             address_line="Test Address",
             contact_phone="+962791234567",
@@ -569,7 +569,7 @@ class TestFrontendRoutes:
         # Create real test data
         kg = models.Kindergarten(
             name_ar="Test KG", name_en="Test KG",
-            governorate="Amman", city="Amman", area="Test",
+            governorate="Amman", district="Amman", area="Test",
             address_line="Test", contact_phone="+962791234567",
             status=models.KindergartenStatus.ACTIVE
         )
@@ -582,7 +582,7 @@ class TestFrontendRoutes:
             first_name="Test", last_name="Parent",
             phone_number="+962791234567",
             gender=models.Gender.MALE, nationality="Jordanian",
-            home_governorate="Amman", home_city="Amman",
+            home_governorate="Amman", home_district="Amman",
             home_area="Test", home_address_line="Test"
         )
         test_db.add(parent_profile)
@@ -917,7 +917,7 @@ class TestFrontendRoutes:
             name_ar="Test KG",
             name_en="Test KG",
             governorate="Amman",
-            city="Amman",
+            district="Amman",
             area="Abdoun",
             address_line="Test Address",
             contact_phone="+962791234567",
@@ -991,7 +991,7 @@ class TestFrontendRoutes:
             gender=models.Gender.MALE,
             nationality="Jordanian",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Abdoun",
             home_address_line="Test Address",
             correspondence_preference=True
@@ -1854,7 +1854,7 @@ class TestFrontendRoutes:
     def test_kindergartens_admin_with_city_name_filter(self, client, admin_user, test_db, sample_kindergarten):
         """Admin can filter kindergartens by city and name"""
         app.dependency_overrides[get_current_user_or_redirect] = lambda: admin_user
-        response = client.get("/kindergartens?city=Amman&name=test")
+        response = client.get("/kindergartens?district=Amman&name=test")
         assert response.status_code == 200
         app.dependency_overrides.clear()
 
@@ -1876,7 +1876,7 @@ class TestFrontendRoutes:
             name_en="Other KG",
             license_number="OTHER001",
             governorate="Irbid",
-            city="Irbid",
+            district="Irbid",
             area="Irbid Center",
             address_line="Other Addr",
             contact_phone="+96222000001",
@@ -1912,7 +1912,7 @@ class TestFrontendRoutes:
             name_en="Other KG 2",
             license_number="OTHER002",
             governorate="Zarqa",
-            city="Zarqa",
+            district="Zarqa",
             area="Zarqa Center",
             address_line="Other Addr 2",
             contact_phone="+96222000002",
@@ -1980,7 +1980,7 @@ class TestFrontendRoutes:
             name_en="Third KG",
             license_number="THIRD001",
             governorate="Amman",
-            city="Amman",
+            district="Amman",
             area="Amman Center",
             address_line="Third St",
             contact_phone="+96222000003",
@@ -2259,7 +2259,7 @@ class TestFrontendRoutes:
             name_en="Fourth KG",
             license_number="FOUR001",
             governorate="Amman",
-            city="Amman",
+            district="Amman",
             area="Amman West",
             address_line="Four St",
             contact_phone="+96222000004",
@@ -2341,7 +2341,7 @@ class TestFrontendRoutes:
             nationality="Jordanian",
             national_id="999888777",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Test",
             home_address_line="Test",
             correspondence_preference=True
@@ -2392,7 +2392,7 @@ class TestFrontendRoutes:
             nationality="Jordanian",
             national_id="999888778",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Test2",
             home_address_line="Test2",
             correspondence_preference=True
@@ -2823,7 +2823,7 @@ class TestFrontendRoutes:
             nationality="Jordanian",
             national_id="RPT100001",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Test",
             home_address_line="Test",
             correspondence_preference=True

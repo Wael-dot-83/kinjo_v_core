@@ -30,7 +30,7 @@ def _mk_kg(test_db, suffix: str, license_valid_until=date(2030, 12, 31)):
         name_en=f"KG {suffix}",
         license_number=f"LIC-P0-{suffix}",
         governorate="Amman",
-        city="Amman",
+        district="Amman",
         area="Test",
         address_line="1 Test St",
         contact_phone=f"+962790{suffix[:5].ljust(5, '0')}",
@@ -44,7 +44,7 @@ def _mk_kg(test_db, suffix: str, license_valid_until=date(2030, 12, 31)):
     return obj
 
 
-def _mk_class(test_db, kg, capacity=20, code_suffix=""):
+def _mk_class(test_db, kg, capadistrict=20, code_suffix=""):
     cls = models.Class(
         kindergarten_id=kg.id,
         name_ar="صف أ",
@@ -485,7 +485,7 @@ class TestHardOverrideRules:
     def test_overcapacity_forces_red(self, test_db):
         """Active enrollments > class capacity must force RED (not AMBER)."""
         kg = _mk_kg(test_db, "CAP01")
-        cls = _mk_class(test_db, kg, capacity=2, code_suffix="x")
+        cls = _mk_class(test_db, kg, capadistrict=2, code_suffix="x")
 
         parent_user = models.User(
             username="par_cap_p0",
@@ -506,7 +506,7 @@ class TestHardOverrideRules:
             nationality="Jordanian",
             national_id=f"CAP{kg.id:07d}",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="A",
             home_address_line="1 A",
             correspondence_preference=False,

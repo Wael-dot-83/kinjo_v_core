@@ -190,7 +190,7 @@
               <div class="fw-semibold" id="viewGovernorate">—</div>
             </div>
             <div class="col-md-4">
-              <label class="text-muted small">{{ _('City') }}</label>
+              <label class="text-muted small">{{ _('District') }}</label>
               <div class="fw-semibold" id="viewCity">—</div>
             </div>
             <div class="col-md-4">
@@ -222,7 +222,7 @@
             </div>
             <div class="col-md-4">
               <label for="editCity" class="form-label"
-                >{{ _('City') }} <span class="text-danger">*</span></label
+                >{{ _('District') }} <span class="text-danger">*</span></label
               >
               <select class="form-select" id="editCity" required>
                 <option value="">{{ _('Select governorate first') }}</option>
@@ -539,7 +539,7 @@
       sel.innerHTML = `<option value="">${T("لا توجد مدن", "No cities")}</option>`;
       return;
     }
-    sel.innerHTML = `<option value="">${T("اختر المدينة...", "Select city...")}</option>`;
+    sel.innerHTML = `<option value="">${T("اختر المدينة...", "Select district...")}</option>`;
     gov.cities.forEach((c) => {
       const opt = document.createElement("option");
       opt.value = c;

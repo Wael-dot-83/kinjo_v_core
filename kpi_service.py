@@ -55,7 +55,7 @@ def _today_jordan() -> date:
 KPI_SUPPORTED_DIMENSION_TYPES: Tuple[str, ...] = (
     models.AnalyticsDimensionType.NETWORK.value,
     models.AnalyticsDimensionType.GOVERNORATE.value,
-    models.AnalyticsDimensionType.CITY.value,
+    models.AnalyticsDimensionType.DISTRICT.value,
     models.AnalyticsDimensionType.AREA.value,
     models.AnalyticsDimensionType.KINDERGARTEN.value,
 )
@@ -3058,11 +3058,11 @@ def get_consolidated_kpi_dashboard_data(
                     idx = settings.JORDAN_GOVERNORATES.index(normalized_dim_gov)
                     governorate_values.add(settings.JORDAN_GOVERNORATES_ENGLISH[idx])
                 query = query.filter(models.Kindergarten.governorate.in_(list(governorate_values)))
-            elif normalized_dimension_type == models.AnalyticsDimensionType.CITY.value:
+            elif normalized_dimension_type == models.AnalyticsDimensionType.DISTRICT.value:
                 if not dimension_id:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="dimension_id is required for CITY")
                 selected_city = dimension_id
-                query = query.filter(models.Kindergarten.city == dimension_id)
+                query = query.filter(models.Kindergarten.district == dimension_id)
             elif normalized_dimension_type == models.AnalyticsDimensionType.AREA.value:
                 if not dimension_id:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="dimension_id is required for AREA")
@@ -3084,7 +3084,7 @@ def get_consolidated_kpi_dashboard_data(
                 governorate_values.add(settings.JORDAN_GOVERNORATES_ENGLISH[idx])
             query = query.filter(models.Kindergarten.governorate.in_(list(governorate_values)))
         if selected_city:
-            query = query.filter(models.Kindergarten.city == selected_city)
+            query = query.filter(models.Kindergarten.district == selected_city)
         if selected_area:
             query = query.filter(models.Kindergarten.area == selected_area)
 
@@ -3108,7 +3108,7 @@ def get_consolidated_kpi_dashboard_data(
                 governorate_values.add(settings.JORDAN_GOVERNORATES_ENGLISH[idx])
             if manager_kg.governorate not in governorate_values:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager's kindergarten is not in the specified governorate")
-        if city and manager_kg.city != city:
+        if city and manager_kg.district != city:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager's kindergarten is not in the specified city")
         if area and manager_kg.area != area:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager's kindergarten is not in the specified area")
@@ -3118,7 +3118,7 @@ def get_consolidated_kpi_dashboard_data(
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager can only access own kindergarten dimension")
             elif normalized_dimension_type in {
                 models.AnalyticsDimensionType.GOVERNORATE.value,
-                models.AnalyticsDimensionType.CITY.value,
+                models.AnalyticsDimensionType.DISTRICT.value,
                 models.AnalyticsDimensionType.AREA.value,
             } and dimension_id:
                 dim_value = dimension_id
@@ -3133,13 +3133,13 @@ def get_consolidated_kpi_dashboard_data(
                         governorate_values.add(settings.JORDAN_GOVERNORATES_ENGLISH[idx])
                     if manager_kg.governorate not in governorate_values:
                         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager cannot access out-of-scope dimension")
-                elif normalized_dimension_type == models.AnalyticsDimensionType.CITY.value and manager_kg.city != dim_value:
+                elif normalized_dimension_type == models.AnalyticsDimensionType.DISTRICT.value and manager_kg.district != dim_value:
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager cannot access out-of-scope dimension")
                 elif normalized_dimension_type == models.AnalyticsDimensionType.AREA.value and manager_kg.area != dim_value:
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager cannot access out-of-scope dimension")
 
         selected_governorate = manager_kg.governorate
-        selected_city = manager_kg.city
+        selected_city = manager_kg.district
         selected_area = manager_kg.area
         target_kindergarten_ids = [current_user.kindergarten_id]
     else:
@@ -4111,8 +4111,8 @@ def get_consolidated_kpi_dashboard_data(
         if fallback_kg:
             if not selected_governorate_value and fallback_kg.governorate:
                 selected_governorate_value = fallback_kg.governorate
-            if not selected_city_value and fallback_kg.city:
-                selected_city_value = fallback_kg.city
+            if not selected_city_value and fallback_kg.district:
+                selected_city_value = fallback_kg.district
             if not selected_area_value and fallback_kg.area:
                 selected_area_value = fallback_kg.area
 
@@ -4267,7 +4267,7 @@ def get_kpi_filters(
             active_scope_query = active_scope_query.filter(models.Kindergarten.id == -1)
 
     scoped_kindergartens = active_scope_query.all()
-    unique_cities = sorted({kg.city for kg in scoped_kindergartens if kg.city})
+    unique_cities = sorted({kg.district for kg in scoped_kindergartens if kg.district})
     unique_areas = sorted({kg.area for kg in scoped_kindergartens if kg.area})
     cities = [FilterOption(id=i + 1, name=city_name) for i, city_name in enumerate(unique_cities)]
     areas = [FilterOption(id=i + 1, name=area_name) for i, area_name in enumerate(unique_areas)]
@@ -4275,7 +4275,7 @@ def get_kpi_filters(
     dimension_types = [
         FilterOption(id=1, name=models.AnalyticsDimensionType.NETWORK.value),
         FilterOption(id=2, name=models.AnalyticsDimensionType.GOVERNORATE.value),
-        FilterOption(id=3, name=models.AnalyticsDimensionType.CITY.value),
+        FilterOption(id=3, name=models.AnalyticsDimensionType.DISTRICT.value),
         FilterOption(id=4, name=models.AnalyticsDimensionType.AREA.value),
         FilterOption(id=5, name=models.AnalyticsDimensionType.KINDERGARTEN.value),
     ]

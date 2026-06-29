@@ -889,7 +889,7 @@ class TestKindergartenExcelImportCoverage:
         from io import BytesIO
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.append(["name_ar", "name_en", "governorate", "city", "area", "address", "phone"])
+        ws.append(["name_ar", "name_en", "governorate", "district", "area", "address", "phone"])
         for row in rows:
             ws.append(row)
         buf = BytesIO()
@@ -1324,7 +1324,7 @@ class TestKindergartenExcelImportErrorsCoverage:
         from io import BytesIO
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.append(["name_ar", "name_en", "governorate", "city", "area", "address", "phone"])
+        ws.append(["name_ar", "name_en", "governorate", "district", "area", "address", "phone"])
         ws.append(["روضة خطأ", "Error KG", "Amman", "Amman", "Abdoun", "Street 5", "0790000005"])
         buf = BytesIO()
         wb.save(buf)
@@ -1355,7 +1355,7 @@ class TestKindergartenExcelImportErrorsCoverage:
         from io import BytesIO
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.append(["name_ar", "name_en", "governorate", "city", "area", "address", "phone"])
+        ws.append(["name_ar", "name_en", "governorate", "district", "area", "address", "phone"])
         ws.append(["روضة فشل الحفظ", "Commit Fail KG", "Amman", "Amman", "Abdoun", "Street 6", "0790000006"])
         buf = BytesIO()
         wb.save(buf)

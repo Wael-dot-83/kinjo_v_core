@@ -31,7 +31,7 @@ def test_daily_reports_organization_grouping_and_statuses(
         name_ar="روضة النخبة",
         name_en="Elite KG",
         governorate="Amman",
-        city="Amman",
+        district="Amman",
         area="Shmeisani",
         address_line="الشارع الرئيسي",
         contact_phone="+962790000111",

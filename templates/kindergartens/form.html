@@ -88,12 +88,12 @@ breadcrumbs=[
                             <div class="invalid-feedback">{% if ui_lang == 'en' %}Please select a governorate.{% else %}يرجى اختيار المحافظة.{% endif %}</div>
                         </div>
                         <div class="col-md-4 mb-3 mb-md-0">
-                            <label for="city" class="form-label required">{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %} <span
+                            <label for="district" class="form-label required">{% if ui_lang == 'en' %}District{% else %}المدينة{% endif %} <span
                                     class="text-danger">*</span></label>
-                            <select class="form-select" id="city" name="city" data-testid="city" required>
+                            <select class="form-select" id="district" name="district" data-testid="district" required>
                                 <option value="">{% if ui_lang == 'en' %}Select governorate first{% else %}اختر المحافظة أولاً{% endif %}</option>
                             </select>
-                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter the city.{% else %}يرجى إدخال المدينة.{% endif %}</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter the district.{% else %}يرجى إدخال المدينة.{% endif %}</div>
                         </div>
                         <div class="col-md-4">
                             <label for="area" class="form-label required">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %} <span
@@ -222,11 +222,11 @@ breadcrumbs=[
 <script>
     const kindergartenId = JSON.parse('{{ (kindergarten.id if kindergarten else None) | tojson }}');
     const existingGovernorate = JSON.parse('{{ (kindergarten.governorate if kindergarten else "") | tojson }}');
-    const existingCity = JSON.parse('{{ (kindergarten.city if kindergarten else "") | tojson }}');
+    const existingCity = JSON.parse('{{ (kindergarten.district if kindergarten else "") | tojson }}');
     const IS_EN = document.documentElement.lang === 'en';
     const T = (ar, en) => IS_EN ? en : ar;
 
-    // --- Dynamic Governorate/City loading ---
+    // --- Dynamic Governorate/District loading ---
     let _govData = [];
 
     async function loadGovernorates() {
@@ -253,13 +253,13 @@ breadcrumbs=[
     }
 
     function loadCities(govName, selectedCity) {
-        const citySelect = document.getElementById('city');
+        const citySelect = document.getElementById('district');
         const gov = _govData.find(g => g.name_ar === govName);
         if (!gov || !gov.cities.length) {
             citySelect.innerHTML = '<option value="">' + T('لا توجد مدن', 'No cities') + '</option>';
             return;
         }
-        citySelect.innerHTML = '<option value="">' + T('اختر المدينة...', 'Select city...') + '</option>';
+        citySelect.innerHTML = '<option value="">' + T('اختر المدينة...', 'Select district...') + '</option>';
         gov.cities.forEach(c => {
             const opt = document.createElement('option');
             opt.value = c;
@@ -325,7 +325,7 @@ breadcrumbs=[
     });
 
     function normalizeKindergartenPayload(payload) {
-        const trimFields = ['name_ar', 'name_en', 'governorate', 'city', 'area', 'address_line', 'contact_phone'];
+        const trimFields = ['name_ar', 'name_en', 'governorate', 'district', 'area', 'address_line', 'contact_phone'];
         trimFields.forEach(field => {
             if (payload[field]) {
                 payload[field] = payload[field].trim();

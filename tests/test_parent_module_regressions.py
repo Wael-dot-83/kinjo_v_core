@@ -240,7 +240,7 @@ def test_passport_only_parent_can_apply_for_enrollment(
         passport_number="P1234567",
         relationship_to_child="father",
         home_governorate="Amman",
-        home_city="Amman",
+        home_district="Amman",
         home_area="Area",
         home_address_line="Address",
         correspondence_preference=True,

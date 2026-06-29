@@ -10,7 +10,7 @@ def _create_kindergarten(db, name_suffix):
         name_en=f"Test KG {name_suffix}",
         license_number=f"LIC-{name_suffix}-001",
         governorate="Amman",
-        city="Amman",
+        district="Amman",
         area="Abdoun",
         address_line="123 Test Street",
         contact_phone="+962791234567",

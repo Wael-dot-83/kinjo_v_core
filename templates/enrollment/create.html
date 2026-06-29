@@ -73,7 +73,7 @@ breadcrumbs=[
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0"><i class="bi bi-building me-2"></i>{% if ui_lang == 'en' %}Register Child in Kindergarten{% else %}تسجيل طفل في روضة{% endif %}</h5>
-                        <small class="text-muted d-block mt-1">{% if ui_lang == 'en' %}Select the governorate then the city or search by kindergarten name{% else %}اختر المحافظة ثم المدينة أو ابحث باسم الروضة{% endif %}</small>
+                        <small class="text-muted d-block mt-1">{% if ui_lang == 'en' %}Select the governorate then the district or search by kindergarten name{% else %}اختر المحافظة ثم المدينة أو ابحث باسم الروضة{% endif %}</small>
                     </div>
                     <div class="card-body">
                         <!-- Hidden field that stores the selected kindergarten ID -->
@@ -122,12 +122,12 @@ breadcrumbs=[
                                         {% endfor %}
                                     </select>
                                 </div>
-                                <!-- City Filter -->
+                                <!-- District Filter -->
                                 <div class="col-md-4">
                                     <label for="cityFilter" class="form-label">
-                                        <i class="bi bi-pin-map me-1"></i>{% if ui_lang == 'en' %}City{% else %}المدينة{% endif %}
+                                        <i class="bi bi-pin-map me-1"></i>{% if ui_lang == 'en' %}District{% else %}المدينة{% endif %}
                                     </label>
-                                    <select class="form-select" id="cityFilter" disabled aria-label="{% if ui_lang == 'en' %}Select city{% else %}اختر المدينة{% endif %}">
+                                    <select class="form-select" id="cityFilter" disabled aria-label="{% if ui_lang == 'en' %}Select district{% else %}اختر المدينة{% endif %}">
                                         <option value="">{% if ui_lang == 'en' %}Select governorate first{% else %}اختر المحافظة أولاً{% endif %}</option>
                                     </select>
                                 </div>
@@ -185,7 +185,7 @@ breadcrumbs=[
                                 <div class="kg-placeholder text-center text-muted py-4">
                                     <i class="bi bi-building fs-1 d-block mb-2 opacity-50"></i>
                                     <p class="mb-1">{% if ui_lang == 'en' %}Select a governorate or type a kindergarten name to search{% else %}اختر المحافظة أو اكتب اسم الروضة للبحث{% endif %}</p>
-                                    <small>{% if ui_lang == 'en' %}You can filter results by governorate, city, and name{% else %}يمكنك تصفية النتائج حسب المحافظة والمدينة والاسم{% endif %}</small>
+                                    <small>{% if ui_lang == 'en' %}You can filter results by governorate, district, and name{% else %}يمكنك تصفية النتائج حسب المحافظة والمدينة والاسم{% endif %}</small>
                                 </div>
                             </div>
                         </div>
@@ -664,7 +664,7 @@ breadcrumbs=[
         const cityFilter = document.getElementById('cityFilter');
         if (!searchInput) return; // manager/supervisor flow
 
-        // Governorate change → fetch cities, reset city, fetch KGs
+        // Governorate change → fetch cities, reset district, fetch KGs
         govFilter.addEventListener('change', function () {
             clearTimeout(kgSearchTimer);
             const gov = this.value;
@@ -678,7 +678,7 @@ breadcrumbs=[
             updateClearFiltersBtn();
         });
 
-        // City change → fetch KGs
+        // District change → fetch KGs
         cityFilter.addEventListener('change', function () {
             clearTimeout(kgSearchTimer);
             fetchKgResults();
@@ -708,7 +708,7 @@ breadcrumbs=[
         const resultsList = document.getElementById('kgResultsList');
         const query = (searchInput && searchInput.value.trim()) || '';
         const gov = (govFilter && govFilter.value) || '';
-        const city = (cityFilter && !cityFilter.disabled && cityFilter.value) || '';
+        const district = (cityFilter && !cityFilter.disabled && cityFilter.value) || '';
 
         // Show loading state
         if (spinner) { spinner.style.display = ''; }
@@ -720,7 +720,7 @@ breadcrumbs=[
             const params = { status: 'ACTIVE' };
             if (query) params.search = query;
             if (gov) params.governorate = gov;
-            if (city) params.city = city;
+            if (district) params.district = district;
             const data = await api.searchKindergartens(params);
             kgResults = data.kindergartens || [];
             renderKgResults(kgResults, query);
@@ -752,10 +752,10 @@ breadcrumbs=[
         listEl.innerHTML = items.map((kg, idx) => {
             const name = highlightText(preferredEnrollmentText(kg.name_ar || kg.name, kg.name_en || kg.name), query);
             const gov = preferredEnrollmentText(kg.governorate, kg.governorate_en);
-            const city = preferredEnrollmentText(kg.city, kg.city_en);
+            const district = preferredEnrollmentText(kg.district, kg.city_en);
             const area = kg.area || '';
             const phone = kg.contact_phone || '';
-            const locationParts = [gov, city, area].filter(Boolean);
+            const locationParts = [gov, district, area].filter(Boolean);
             return `<div class="kg-item" data-index="${idx}" onclick="selectKg(kgResults[${idx}])" role="button" tabindex="0" onkeydown="if(event.key==='Enter')selectKg(kgResults[${idx}])">
                 <div class="kg-info">
                     <div class="kg-name">${name}</div>
@@ -787,7 +787,7 @@ breadcrumbs=[
 
         document.getElementById('selectedKgName').textContent = preferredEnrollmentText(kg.name_ar || kg.name, kg.name_en || kg.name);
         document.getElementById('selectedKgGov').textContent = preferredEnrollmentText(kg.governorate, kg.governorate_en);
-        document.getElementById('selectedKgArea').textContent = [preferredEnrollmentText(kg.city, kg.city_en), kg.area].filter(Boolean).join(' \u2013 ');
+        document.getElementById('selectedKgArea').textContent = [preferredEnrollmentText(kg.district, kg.city_en), kg.area].filter(Boolean).join(' \u2013 ');
         document.getElementById('selectedKgPhone').textContent = kg.contact_phone || '';
 
         document.getElementById('selectedKgCard').classList.remove('d-none');
@@ -803,7 +803,7 @@ breadcrumbs=[
         fetchKgResults();
     }
 
-    /* ========== City Filter ========== */
+    /* ========== District Filter ========== */
     async function fetchCities(governorate) {
         const cityFilter = document.getElementById('cityFilter');
         if (!governorate) return;
@@ -879,7 +879,7 @@ breadcrumbs=[
                 { label: preferredEnrollmentText('\u0627\u0644\u0627\u0633\u0645 \u0628\u0627\u0644\u0639\u0631\u0628\u064a\u0629', 'Arabic name'), value: kg.name_ar || '\u2014' },
                 { label: preferredEnrollmentText('\u0627\u0644\u0627\u0633\u0645 \u0628\u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629', 'English name'), value: kg.name_en || '\u2014' },
                 { label: preferredEnrollmentText('\u0627\u0644\u0645\u062d\u0627\u0641\u0638\u0629', 'Governorate'), value: kg.governorate || '\u2014' },
-                { label: preferredEnrollmentText('\u0627\u0644\u0645\u062f\u064a\u0646\u0629', 'City'), value: kg.city || '\u2014' },
+                { label: preferredEnrollmentText('\u0627\u0644\u0645\u062f\u064a\u0646\u0629', 'District'), value: kg.district || '\u2014' },
                 { label: preferredEnrollmentText('\u0627\u0644\u0645\u0646\u0637\u0642\u0629', 'Area'), value: kg.area || '\u2014' },
                 { label: preferredEnrollmentText('\u0627\u0644\u0639\u0646\u0648\u0627\u0646', 'Address'), value: kg.address_line || '\u2014' },
                 { label: preferredEnrollmentText('\u0627\u0644\u0647\u0627\u062a\u0641', 'Phone'), value: kg.contact_phone || '\u2014' },

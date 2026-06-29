@@ -402,7 +402,7 @@ async def list_kindergartens(
             query = query.filter(Kindergarten.governorate.ilike(f"%{normalized_governorate}%"))
 
         if city:
-            query = query.filter(Kindergarten.city.ilike(f"%{city}%"))
+            query = query.filter(Kindergarten.district.ilike(f"%{city}%"))
 
         if name:
             query = query.filter(

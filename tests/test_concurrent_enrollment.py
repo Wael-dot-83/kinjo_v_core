@@ -52,9 +52,9 @@ def _login(client: TestClient, username: str, password: str) -> str:
 @pytest.fixture()
 def full_scenario(test_db, client):
     """
-    Set up a class with capacity=1 and one existing ACTIVE enrollment (the class
+    Set up a class with capadistrict=1 and one existing ACTIVE enrollment (the class
     is full).  Return two *different* SUBMITTED enrollments that are both competing
-    for a seat in a second class of capacity=1 (initially empty).
+    for a seat in a second class of capadistrict=1 (initially empty).
 
     Returns dict with all IDs needed by the concurrent test.
     """
@@ -64,7 +64,7 @@ def full_scenario(test_db, client):
         name_en="Competition KG",
         license_number="LIC-CONC-001",
         governorate="عمان",
-        city="Amman",
+        district="Amman",
         area="Jubeiha",
         address_line="1 Concurrent St",
         contact_phone="+962791111111",
@@ -75,7 +75,7 @@ def full_scenario(test_db, client):
     test_db.add(kg)
     test_db.flush()
 
-    # Class with capacity=1 (the contested seat)
+    # Class with capadistrict=1 (the contested seat)
     cls = models.Class(
         kindergarten_id=kg.id,
         name_ar="الصف المتنافس",
@@ -124,7 +124,7 @@ def full_scenario(test_db, client):
             nationality="Jordanian",
             national_id=f"999999999{idx}",
             home_governorate="عمان",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Jubeiha",
             home_address_line=f"{idx} Test St",
             correspondence_preference=True,

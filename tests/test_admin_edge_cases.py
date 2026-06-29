@@ -66,7 +66,7 @@ def _make_kg(db, name_ar="روضة", name_en="KG", governorate="Amman"):
         name_ar=name_ar,
         name_en=name_en,
         governorate=governorate,
-        city="Amman",
+        district="Amman",
         area="area",
         address_line="street",
         contact_phone="+96279000001",

@@ -85,8 +85,8 @@ def import_kindergartens(file_path: str, dry_run: bool = False, sheet_name: str 
     try:
         # Get existing kindergartens to avoid duplicates (match on name_ar + governorate + city)
         existing = set()
-        for kg in db.query(Kindergarten.name_ar, Kindergarten.governorate, Kindergarten.city).all():
-            existing.add((kg.name_ar, kg.governorate, kg.city))
+        for kg in db.query(Kindergarten.name_ar, Kindergarten.governorate, Kindergarten.district).all():
+            existing.add((kg.name_ar, kg.governorate, kg.district))
         logger.info("Existing kindergartens in DB: %d", len(existing))
 
         inserted = 0

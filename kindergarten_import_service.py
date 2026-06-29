@@ -187,7 +187,7 @@ class KindergartenImportService:
         existing = self.db.query(ImportedKindergarten).filter(
             and_(
                 ImportedKindergarten.name_ar == data["name_ar"],
-                ImportedKindergarten.city == data["city"],
+                ImportedKindergarten.district == data["city"],
                 ImportedKindergarten.phone == data["phone"]
             )
         ).first()
@@ -217,7 +217,7 @@ class KindergartenImportService:
         if governorate:
             query = query.filter(ImportedKindergarten.governorate == governorate)
         if city:
-            query = query.filter(ImportedKindergarten.city == city)
+            query = query.filter(ImportedKindergarten.district == city)
         if search:
             search_filter = f"%{search}%"
             query = query.filter(

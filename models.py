@@ -26,7 +26,7 @@ class AnalyticsDimensionType(str, PyEnum):
     KINDERGARTEN = "KINDERGARTEN"
     CLASS = "CLASS"
     CHILD = "CHILD"
-    CITY = "CITY"
+    DISTRICT = "DISTRICT"
     AREA = "AREA"
     STAFF = "STAFF"
     PARENT = "PARENT"
@@ -272,7 +272,7 @@ class Kindergarten(Base):
     name_ar = Column(String(255), nullable=False)
     name_en = Column(String(255), nullable=True)
     governorate = Column(String(100), nullable=False)
-    city = Column(String(100), nullable=False)
+    district = Column(String(100), nullable=False)
     area = Column(String(100), nullable=False)
     address_line = Column(Text, nullable=False)
     contact_phone = Column(String(20), nullable=False)
@@ -290,7 +290,7 @@ class Kindergarten(Base):
     __table_args__ = (
         UniqueConstraint("license_number", name="uq_kindergartens_license_number"),
         Index("idx_kindergartens_governorate", "governorate"),
-        Index("idx_kindergartens_governorate_city", "governorate", "city"),
+        Index("idx_kindergartens_governorate_district", "governorate", "district"),
         Index("idx_kindergartens_status", "status"),
         Index("idx_kindergartens_latitude", "latitude"),
         Index("idx_kindergartens_longitude", "longitude"),
@@ -464,7 +464,7 @@ class ParentProfile(Base):
     national_id = Column(String(50), nullable=True)
     passport_number = Column(String(50), nullable=True)
     home_governorate = Column(String(100), nullable=False)
-    home_city = Column(String(100), nullable=False)
+    home_district = Column(String(100), nullable=False)
     home_area = Column(String(100), nullable=False)
     home_address_line = Column(Text, nullable=False)
     work_address = Column(Text, nullable=True)
@@ -1983,7 +1983,7 @@ class ImportedKindergarten(Base):
     name_ar = Column(String(255), nullable=False)
     name_en = Column(String(255), nullable=True)
     governorate = Column(String(100), nullable=False)
-    city = Column(String(100), nullable=False)
+    district = Column(String(100), nullable=False)
     area = Column(String(100), nullable=True)
     detailed_address = Column(Text, nullable=True)
     phone = Column(String(20), nullable=False)
@@ -1991,9 +1991,9 @@ class ImportedKindergarten(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
-        UniqueConstraint("name_ar", "city", "phone", name="uq_imported_kindergartens_name_city_phone"),
+        UniqueConstraint("name_ar", "district", "phone", name="uq_imported_kindergartens_name_district_phone"),
         Index("idx_imported_kindergartens_governorate", "governorate"),
-        Index("idx_imported_kindergartens_city", "city"),
+        Index("idx_imported_kindergartens_district", "district"),
     )
 
 
@@ -2202,13 +2202,26 @@ class Governorate(Base):
     __tablename__ = "governorate"
 
     code = Column(String(8), primary_key=True)
-    slug = Column(String(20), nullable=False, unique=True, index=True)
-    name_en = Column(String(40), nullable=False)
-    name_ar = Column(String(40), nullable=False)
+    slug = Column(String(32), unique=True, nullable=False)
+    name_en = Column(String(64), nullable=False)
+    name_ar = Column(String(64), nullable=False)
     center_lon = Column(Float, nullable=False)
     center_lat = Column(Float, nullable=False)
-    display_order = Column(Integer, nullable=False)
-    active = Column(Boolean, nullable=False, default=True)
+    display_order = Column(Integer, default=99)
+    active = Column(Boolean, default=True)
+
+class AdministrativeDivision(Base):
+    """The official 3-level Jordanian administrative divisions from the Excel hierarchy."""
+    __tablename__ = "administrative_divisions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    governorate = Column(String(100), nullable=False, index=True)
+    district = Column(String(100), nullable=False, index=True)
+    area = Column(String(100), nullable=False, index=True)
+
+    __table_args__ = (
+        UniqueConstraint("governorate", "district", "area", name="uq_admin_div_gov_dist_area"),
+    )
 
 
 # =============================================================================

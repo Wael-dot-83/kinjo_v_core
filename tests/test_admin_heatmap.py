@@ -53,13 +53,13 @@ def _reset_kindergarten_heatmap_data():
         db.commit()
 
 
-def _seed_kindergarten(db, *, kg_id: int, governorate: str, city: str, status, high_score: bool):
+def _seed_kindergarten(db, *, kg_id: int, governorate: str, district: str, status, high_score: bool):
     kg = models.Kindergarten(
         id=kg_id,
         name_ar=f"روضة {kg_id}",
         name_en=f"KG {kg_id}",
         governorate=governorate,
-        city=city,
+        district=city,
         area="Area",
         address_line="Street",
         contact_phone="0790000000",
@@ -88,7 +88,7 @@ def _seed_kindergarten(db, *, kg_id: int, governorate: str, city: str, status, h
             gender=models.Gender.FEMALE,
             nationality="Jordanian",
             home_governorate=governorate,
-            home_city=city,
+            home_district=city,
             home_area="Area",
             home_address_line="Home",
             correspondence_preference=True,
@@ -292,9 +292,9 @@ def test_service_governance_score_uses_governance_score_table():
     from heatmap.backend import service
     _reset_kindergarten_heatmap_data()
     with TestingSessionLocal() as db:
-        _seed_kindergarten(db, kg_id=11, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
-        _seed_kindergarten(db, kg_id=12, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
-        _seed_kindergarten(db, kg_id=13, governorate="Irbid", city="Irbid", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=11, governorate="Amman", district="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=12, governorate="Amman", district="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=13, governorate="Irbid", district="Irbid", status=models.KindergartenStatus.ACTIVE, high_score=True)
         db.flush()
         db.query(models.GovernanceScore).filter_by(kindergarten_id=11).one().final_governance_score = 80
         db.query(models.GovernanceScore).filter_by(kindergarten_id=12).one().final_governance_score = 100
@@ -309,9 +309,9 @@ def test_pipeline_governance_score_uses_governance_score_table():
     from heatmap.backend import pipeline
     _reset_kindergarten_heatmap_data()
     with TestingSessionLocal() as db:
-        _seed_kindergarten(db, kg_id=21, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
-        _seed_kindergarten(db, kg_id=22, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
-        _seed_kindergarten(db, kg_id=23, governorate="Irbid", city="Irbid", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=21, governorate="Amman", district="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=22, governorate="Amman", district="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=23, governorate="Irbid", district="Irbid", status=models.KindergartenStatus.ACTIVE, high_score=True)
         db.flush()
         db.query(models.GovernanceScore).filter_by(kindergarten_id=21).one().final_governance_score = 80
         db.query(models.GovernanceScore).filter_by(kindergarten_id=22).one().final_governance_score = 100
@@ -385,8 +385,8 @@ def test_api_governorate_detail():
 def test_api_kindergartens_list_filters_and_pagination():
     _reset_kindergarten_heatmap_data()
     with TestingSessionLocal() as db:
-        _seed_kindergarten(db, kg_id=1, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
-        _seed_kindergarten(db, kg_id=2, governorate="Irbid", city="Irbid", status=models.KindergartenStatus.INACTIVE, high_score=False)
+        _seed_kindergarten(db, kg_id=1, governorate="Amman", district="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=2, governorate="Irbid", district="Irbid", status=models.KindergartenStatus.INACTIVE, high_score=False)
         db.commit()
 
     app.dependency_overrides[get_db] = override_get_db
@@ -410,7 +410,7 @@ def test_api_kindergartens_list_filters_and_pagination():
 def test_api_kindergarten_detail():
     _reset_kindergarten_heatmap_data()
     with TestingSessionLocal() as db:
-        _seed_kindergarten(db, kg_id=3, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=3, governorate="Amman", district="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
         db.commit()
 
     app.dependency_overrides[get_db] = override_get_db
@@ -430,14 +430,14 @@ def test_api_kindergarten_detail():
 def test_api_kindergartens_map_data():
     _reset_kindergarten_heatmap_data()
     with TestingSessionLocal() as db:
-        _seed_kindergarten(db, kg_id=4, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
-        _seed_kindergarten(db, kg_id=5, governorate="Amman", city="Amman", status=models.KindergartenStatus.INACTIVE, high_score=False)
+        _seed_kindergarten(db, kg_id=4, governorate="Amman", district="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=5, governorate="Amman", district="Amman", status=models.KindergartenStatus.INACTIVE, high_score=False)
         db.commit()
 
     app.dependency_overrides[get_db] = override_get_db
     try:
         with TestClient(app) as client:
-            r = client.get('/api/admin/heat-map/kindergartens/map-data?city=Amman')
+            r = client.get('/api/admin/heat-map/kindergartens/map-data?district=Amman')
             assert r.status_code == 200, r.text
             data = r.json()
             assert data['type'] == 'FeatureCollection'
@@ -455,8 +455,8 @@ def test_api_kindergartens_map_data():
 def test_api_kindergartens_stats():
     _reset_kindergarten_heatmap_data()
     with TestingSessionLocal() as db:
-        _seed_kindergarten(db, kg_id=6, governorate="Amman", city="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
-        _seed_kindergarten(db, kg_id=7, governorate="Irbid", city="Irbid", status=models.KindergartenStatus.INACTIVE, high_score=False)
+        _seed_kindergarten(db, kg_id=6, governorate="Amman", district="Amman", status=models.KindergartenStatus.ACTIVE, high_score=True)
+        _seed_kindergarten(db, kg_id=7, governorate="Irbid", district="Irbid", status=models.KindergartenStatus.INACTIVE, high_score=False)
         db.commit()
 
     app.dependency_overrides[get_db] = override_get_db

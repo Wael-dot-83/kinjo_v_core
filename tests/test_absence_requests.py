@@ -78,7 +78,7 @@ class TestParentCreateAbsence:
             gender=models.Gender.FEMALE,
             nationality="Jordanian",
             home_governorate="Amman",
-            home_city="Amman",
+            home_district="Amman",
             home_area="Sweileh",
             home_address_line="456 Street",
         )
@@ -399,7 +399,7 @@ class TestCrossKGScope:
             name_en="Other KG",
             license_number="OTHER-999",
             governorate="Amman",
-            city="Amman",
+            district="Amman",
             area="Sweileh",
             contact_phone="0551111111",
             address_line="شارع آخر",
