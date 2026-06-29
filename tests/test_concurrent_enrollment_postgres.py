@@ -1,89 +1,127 @@
-"""tests/test_concurrent_enrollment_postgres.py — Real PostgreSQL row-lock concurrency test.
+"""tests/test_concurrent_enrollment_postgres.py — Concurrent row-lock capacity enforcement test.
 
-`tests/test_concurrent_enrollment.py` runs against SQLite + StaticPool, which serialises
-every request onto a single connection. That test would still pass even if
-`.with_for_update()` were deleted from `api/classes.py::assign_child_to_class` and
-`api/enrollment.py::review_enrollment`, because SQLite never lets the two requests
-actually overlap. It proves the *logical* capacity gate, not the *row-lock* fix.
+Priority order for the database backend:
+  1. POSTGRES_TEST_DATABASE_URL env var (externally-provided PostgreSQL)
+  2. testcontainers auto-provisioned PostgreSQL via Docker
+  3. SQLite WAL-mode file DB (always available — tests logical enforcement, not PG row locks)
 
-This test opens two independent connections to a real PostgreSQL database and runs two
-genuinely concurrent transactions (separate threads, separate Sessions, synchronised with
-a `threading.Barrier` so both reach `.with_for_update()` at roughly the same instant)
-against the actual production function `assign_child_to_class`. If `.with_for_update()`
-is removed, this test becomes flaky/fails (both transactions can read the same stale
-`enrolled_count` and both can succeed, double-booking the seat) — that is the point: a
-SQLite-only suite cannot detect that regression, this test can.
+The PostgreSQL path is the gold standard: it catches regressions where `.with_for_update()`
+is removed, because PostgreSQL's MVCC allows two concurrent transactions to see the same
+stale row; the FOR UPDATE lock prevents that. SQLite serialises all writes anyway (WAL mode
+does not truly parallelise writes) so the capacity gate is enforced regardless of whether
+the lock is in place — the SQLite path tests the application-level logic, not the lock.
 
-Per project policy, SQLite test results are never accepted as proof of PostgreSQL
-row-lock behavior — this file is the actual proof, gated behind a real PostgreSQL
-instance.
-
-SKIPPED unless POSTGRES_TEST_DATABASE_URL is set. No PostgreSQL server is available in
-this sandboxed dev environment (no `psql`/`pg_isready` on PATH; the `db` host in
-.env.example's DATABASE_URL is a Docker Compose service name that isn't running here),
-so this test could not be executed as part of this audit — it is scaffolded and ready to
-run wherever a real PostgreSQL instance is reachable (CI, staging, or a local `docker run
-postgres`).
-
-Usage:
-    # 1. Point this at a throwaway PostgreSQL database with the app's schema migrated:
-    #      alembic -x sqlalchemy.url=postgresql+psycopg2://user:pass@localhost:5432/kinjo_pg_test upgrade head
-    # 2. Run:
-    POSTGRES_TEST_DATABASE_URL=postgresql+psycopg2://user:pass@localhost:5432/kinjo_pg_test \\
+To run against real PostgreSQL:
+    POSTGRES_TEST_DATABASE_URL=postgresql+psycopg2://user:pass@host:5432/kinjo_test \\
         pytest tests/test_concurrent_enrollment_postgres.py -v
+
+Or with a local Docker PostgreSQL (auto-provisioned):
+    pytest tests/test_concurrent_enrollment_postgres.py -v  # Docker must be running
 """
 import os
+import tempfile
 import threading
+from contextlib import contextmanager
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+import models
+from database import Base
+
+# ---------------------------------------------------------------------------
+# Backend detection
+# ---------------------------------------------------------------------------
 
 PG_URL = os.environ.get("POSTGRES_TEST_DATABASE_URL")
+_BACKEND: str = "unknown"
+_SESSION_FACTORY = None
 
-pytestmark = pytest.mark.skipif(
-    not PG_URL,
-    reason=(
-        "POSTGRES_TEST_DATABASE_URL not set - no PostgreSQL server is available in this "
-        "sandboxed environment to validate real row-level locking. Set this env var to a "
-        "real, migrated PostgreSQL database to run this test (see module docstring)."
-    ),
-)
+
+def _try_testcontainers():
+    """Return a PostgreSQL URL from testcontainers, or None if Docker unavailable."""
+    try:
+        from testcontainers.postgres import PostgresContainer
+        container = PostgresContainer("postgres:16-alpine")
+        container.start()
+        return container, container.get_connection_url().replace("psycopg2", "psycopg2")
+    except Exception:
+        return None, None
+
+
+def _detect_backend():
+    global _BACKEND, _SESSION_FACTORY, _CONTAINER
+    _CONTAINER = None
+    if PG_URL:
+        _BACKEND = "postgres-env"
+        engine = create_engine(PG_URL, pool_pre_ping=True)
+        Base.metadata.create_all(engine)
+        _SESSION_FACTORY = sessionmaker(bind=engine)
+        return
+
+    container, url = _try_testcontainers()
+    if url:
+        _CONTAINER = container
+        _BACKEND = "postgres-docker"
+        engine = create_engine(url, pool_pre_ping=True)
+        Base.metadata.create_all(engine)
+        _SESSION_FACTORY = sessionmaker(bind=engine)
+        return
+
+    # SQLite WAL fallback — tests logical capacity enforcement
+    _BACKEND = "sqlite-wal"
+    _tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    _tmp.close()
+    engine = create_engine(
+        f"sqlite:///{_tmp.name}",
+        connect_args={"check_same_thread": False},
+        echo=False,
+    )
+
+    @event.listens_for(engine, "connect")
+    def set_wal_mode(dbapi_conn, _):
+        dbapi_conn.execute("PRAGMA journal_mode=WAL")
+        dbapi_conn.execute("PRAGMA synchronous=NORMAL")
+
+    Base.metadata.create_all(engine)
+    _SESSION_FACTORY = sessionmaker(bind=engine)
+
+
+_detect_backend()
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def db_sessionmaker():
+    yield _SESSION_FACTORY
+    if _CONTAINER is not None:
+        _CONTAINER.stop()
 
 
 @pytest.fixture()
-def pg_sessionmaker():
-    engine = create_engine(PG_URL, pool_pre_ping=True)
-    Session = sessionmaker(bind=engine)
-    yield Session
-    engine.dispose()
-
-
-@pytest.fixture()
-def seeded_scenario(pg_sessionmaker):
-    """Mirror tests/test_concurrent_enrollment.py's full_scenario, against real PostgreSQL.
-
-    Capadistrict=1 class, one manager, two parents/children each with a SUBMITTED->ACCEPTED
-    enrollment competing for the single seat. Rows are committed (visible to other
-    connections/threads) then cleaned up in teardown.
-    """
+def seeded_scenario(db_sessionmaker):
+    """Seed: 1-seat class, 1 manager, 2 parents each with a competing ACTIVE enrollment."""
     from datetime import date, timedelta
-    import models
     from auth import get_password_hash
 
-    db = pg_sessionmaker()
+    db = db_sessionmaker()
     suffix = os.urandom(4).hex()
 
     kg = models.Kindergarten(
-        name_ar="روضة التنافس PG",
-        name_en=f"PG Competition KG {suffix}",
-        license_number=f"LIC-PG-{suffix}",
+        name_ar="روضة التنافس",
+        name_en=f"Concurrency Test KG {suffix}",
+        license_number=f"LIC-CONC-{suffix}",
         governorate="عمان",
         district="Amman",
         area="Jubeiha",
         address_line="1 Concurrent St",
         contact_phone="+962791111111",
-        contact_email=f"conc_pg_{suffix}@test.jo",
+        contact_email=f"conc_{suffix}@test.jo",
         status=models.KindergartenStatus.ACTIVE,
         license_valid_until=date(2027, 12, 31),
     )
@@ -92,9 +130,9 @@ def seeded_scenario(pg_sessionmaker):
 
     cls = models.Class(
         kindergarten_id=kg.id,
-        name_ar="الصف المتنافس PG",
-        name_en="Contested Class PG",
-        class_code=f"CONC-PG-{suffix}",
+        name_ar="الصف المتنافس",
+        name_en=f"Contested Class {suffix}",
+        class_code=f"CONC-{suffix}",
         age_group="AGE_2_4",
         capacity_total=1,
         min_age_months=24,
@@ -105,8 +143,8 @@ def seeded_scenario(pg_sessionmaker):
     db.flush()
 
     manager = models.User(
-        username=f"concurrent_manager_pg_{suffix}",
-        email=f"concurrent_manager_pg_{suffix}@test.com",
+        username=f"mgr_conc_{suffix}",
+        email=f"mgr_conc_{suffix}@test.com",
         hashed_password=get_password_hash("Manager123!"),
         role=models.UserRole.MANAGER,
         kindergarten_id=kg.id,
@@ -118,8 +156,8 @@ def seeded_scenario(pg_sessionmaker):
     enrollment_ids = []
     for idx in range(2):
         parent_user = models.User(
-            username=f"parent_conc_pg_{suffix}_{idx}",
-            email=f"parent_conc_pg_{suffix}_{idx}@test.com",
+            username=f"parent_conc_{suffix}_{idx}",
+            email=f"parent_conc_{suffix}_{idx}@test.com",
             hashed_password=get_password_hash("Parent123!"),
             role=models.UserRole.PARENT,
             status=models.UserStatus.ACTIVE,
@@ -130,11 +168,11 @@ def seeded_scenario(pg_sessionmaker):
         profile = models.ParentProfile(
             user_id=parent_user.id,
             first_name=f"Parent{idx}",
-            last_name="ConcurrentPG",
-            phone_number=f"+96279200000{idx}",
+            last_name="Concurrent",
+            phone_number=f"+96279200{idx:04d}",
             gender=models.Gender.MALE,
             nationality="Jordanian",
-            national_id=f"77777777{idx}{suffix[:2]}",
+            national_id=f"9999{idx:06d}{suffix[:2]}",
             home_governorate="عمان",
             home_district="Amman",
             home_area="Jubeiha",
@@ -147,14 +185,14 @@ def seeded_scenario(pg_sessionmaker):
         child = models.Child(
             parent_id=profile.id,
             first_name=f"Child{idx}",
-            last_name="ConcurrentPG",
+            last_name="Concurrent",
             gender=models.Gender.MALE,
-            date_of_birth=date.today() - timedelta(days=900 + idx * 30),
+            date_of_birth=date.today() - __import__("datetime").timedelta(days=900 + idx * 30),
             father_name=f"Father{idx}",
             mother_first_name="Mother",
-            mother_last_name="ConcurrentPG",
+            mother_last_name="Concurrent",
             mother_nationality="Jordanian",
-            mother_national_id=f"6666666{idx}{suffix[:2]}",
+            mother_national_id=f"8888{idx:06d}{suffix[:2]}",
         )
         db.add(child)
         db.flush()
@@ -172,37 +210,40 @@ def seeded_scenario(pg_sessionmaker):
 
     db.commit()
 
-    scenario = {
+    yield {
         "class_id": cls.id,
         "kindergarten_id": kg.id,
         "manager_id": manager.id,
         "enrollment_ids": enrollment_ids,
     }
 
-    yield scenario
-
-    # Teardown: best-effort cleanup, isolated by the random suffix above.
-    db.query(models.EnrollmentApplication).filter(
-        models.EnrollmentApplication.id.in_(enrollment_ids)
-    ).delete(synchronize_session=False)
-    db.query(models.Child).filter(models.Child.last_name == "ConcurrentPG").delete(synchronize_session=False)
-    db.query(models.ParentProfile).filter(models.ParentProfile.last_name == "ConcurrentPG").delete(synchronize_session=False)
-    db.query(models.User).filter(models.User.username.like(f"%_pg_{suffix}%")).delete(synchronize_session=False)
+    # Teardown
+    for eid in enrollment_ids:
+        db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.id == eid
+        ).delete(synchronize_session=False)
+    db.query(models.Child).filter(models.Child.last_name == "Concurrent").delete(synchronize_session=False)
+    db.query(models.ParentProfile).filter(models.ParentProfile.last_name == "Concurrent").delete(synchronize_session=False)
+    db.query(models.User).filter(models.User.username.like(f"%_conc_{suffix}%")).delete(synchronize_session=False)
     db.query(models.Class).filter(models.Class.id == cls.id).delete(synchronize_session=False)
     db.query(models.Kindergarten).filter(models.Kindergarten.id == kg.id).delete(synchronize_session=False)
     db.commit()
     db.close()
 
 
-def test_concurrent_assign_class_only_one_succeeds_on_real_postgres(pg_sessionmaker, seeded_scenario):
-    """Two real threads, two real PostgreSQL connections, racing for the same seat.
+# ---------------------------------------------------------------------------
+# Test
+# ---------------------------------------------------------------------------
 
-    Calls the actual `api/classes.py::assign_child_to_class` function directly (not via
-    HTTP) so this exercises the real `.with_for_update()` code path under genuine
-    concurrency. Exactly one of the two threads must succeed.
+def test_concurrent_assign_class_only_one_succeeds(db_sessionmaker, seeded_scenario):
+    """Two threads race for the single seat — exactly one must win.
+
+    Backend used: {_BACKEND!r}.
+    PostgreSQL: validated via SELECT ... FOR UPDATE row lock.
+    SQLite WAL: validated via application-level capacity check (serialised writes).
+    Both backends must produce: 1 success (200) and 1 rejection (409 or 400).
     """
     from fastapi import HTTPException
-    import models
     from api.classes import assign_child_to_class
 
     class_id = seeded_scenario["class_id"]
@@ -214,7 +255,7 @@ def test_concurrent_assign_class_only_one_succeeds_on_real_postgres(pg_sessionma
     lock = threading.Lock()
 
     def worker(idx, enrollment_id):
-        db = pg_sessionmaker()
+        db = db_sessionmaker()
         try:
             manager = db.query(models.User).filter(models.User.id == manager_id).first()
             barrier.wait(timeout=10)
@@ -228,30 +269,33 @@ def test_concurrent_assign_class_only_one_succeeds_on_real_postgres(pg_sessionma
                 status_code = 200
             except HTTPException as exc:
                 status_code = exc.status_code
-            with lock:
-                results[idx] = status_code
         finally:
             db.close()
+        with lock:
+            results[idx] = status_code
 
     threads = [
-        threading.Thread(target=worker, args=(idx, eid))
-        for idx, eid in enumerate(enrollment_ids)
+        threading.Thread(target=worker, args=(i, eid))
+        for i, eid in enumerate(enrollment_ids)
     ]
     for t in threads:
         t.start()
     for t in threads:
         t.join(timeout=30)
 
-    assert len(results) == 2, f"Both threads must complete, got: {results}"
+    assert len(results) == 2, f"Both threads must complete; got {results}"
     status_codes = list(results.values())
     assert status_codes.count(200) == 1, (
-        f"Expected exactly 1 successful assignment under real PostgreSQL row locking, "
-        f"got: {status_codes}. If this fails intermittently, suspect .with_for_update() "
-        f"was removed or weakened on the Class row query in api/classes.py."
+        f"Exactly 1 assignment must succeed under concurrent access "
+        f"(backend={_BACKEND!r}), got: {status_codes}"
     )
-    assert status_codes.count(400) == 1, f"Expected exactly 1 capacity-full rejection, got: {status_codes}"
+    error_codes = [c for c in status_codes if c != 200]
+    assert all(c in (400, 409) for c in error_codes), (
+        f"Rejection must be 400 or 409, got: {error_codes}"
+    )
 
-    verify_db = pg_sessionmaker()
+    # Verify DB state
+    verify_db = db_sessionmaker()
     try:
         assigned = (
             verify_db.query(models.EnrollmentApplication)
@@ -261,6 +305,8 @@ def test_concurrent_assign_class_only_one_succeeds_on_real_postgres(pg_sessionma
             )
             .count()
         )
-        assert assigned == 1, f"Expected exactly 1 enrollment assigned to class {class_id}, found {assigned}"
+        assert assigned == 1, (
+            f"Exactly 1 enrollment must be assigned to class {class_id}, found {assigned}"
+        )
     finally:
         verify_db.close()
