@@ -69,7 +69,10 @@ REMOVED_VISIBLE_HREFS = {
 
 def _admin_sidebar_source() -> str:
     source = ADMIN_BASE.read_text(encoding="utf-8")
-    return source[source.index('<aside class="admin-sidebar"') : source.index("</aside>")]
+    # Locate the admin sidebar by its stable id attribute (class name may vary).
+    idx = source.index('id="admin-sidebar"')
+    start = source.rindex("<aside", 0, idx)
+    return source[start : source.index("</aside>", start)]
 
 
 def test_admin_sidebar_arabic_structure_matches_required_order():

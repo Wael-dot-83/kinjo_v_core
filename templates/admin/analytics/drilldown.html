@@ -4,7 +4,7 @@
 {% block title %}{% if ui_lang == 'en' %}Detailed Analysis: {{ dimension_id }}{% else %}تحليل تفصيلي: {{ dimension_id }}{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="Dashboard"><i class="bi bi-house" aria-hidden="true"></i></a>
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house" aria-hidden="true"></i></a>
 <span class="breadcrumb-separator">/</span>
 <a href="/admin/analytics" class="breadcrumb-item">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</a>
 <span class="breadcrumb-separator">/</span>

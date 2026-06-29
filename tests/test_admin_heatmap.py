@@ -1,6 +1,7 @@
 """Smoke + integration tests for the Admin Jordan Heat Map feature."""
 import math
 import os
+import secrets
 import sys
 from datetime import date, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -556,9 +557,15 @@ def test_api_refresh_post():
     with Session_() as db:
         seed_governorates(db)
 
+    csrf_token = secrets.token_hex(32)
+    csrf_headers = {
+        "X-CSRF-Token": csrf_token,
+        "Cookie": f"kinjo_csrf_token={csrf_token}",
+    }
+
     try:
         with TestClient(app) as client:
-            r = client.post('/api/admin/heat-map/refresh')
+            r = client.post('/api/admin/heat-map/refresh', headers=csrf_headers)
             assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text[:200]}"
             data = r.json()
             assert data["status"] == "success"

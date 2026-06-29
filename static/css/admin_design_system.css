@@ -14,6 +14,9 @@
   --font-arabic: "Cairo", "Noto Sans Arabic", "Segoe UI", sans-serif;
   --font-latin:  "Inter", "Segoe UI", sans-serif;
 
+  /* Sidebar layout token */
+  --admin-sidebar-width: 280px;
+
   /* Focus ring — visible keyboard navigation */
   --focus-ring: 0 0 0 3px rgba(43, 58, 103, 0.45);
 
@@ -1632,6 +1635,27 @@ html[dir="rtl"] .sidebar .submenu .nav-link {
 .sidebar .nav-toggle.is-active i:first-child {
   color: #D6C56B;
   opacity: 1;
+}
+
+/* admin-sidebar semantic alias — the <aside> carries both classes; these selectors
+   mirror the .sidebar equivalents so both families match the same elements. */
+.admin-sidebar .nav-link span {
+  color: inherit !important;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+html[dir="rtl"] .admin-sidebar .nav-link.active {
+  background-color: rgba(214, 197, 107, 0.12);
+  border-inline-start-color: #D6C56B;
+  color: #ffffff;
+}
+
+.admin-sidebar .submenu .nav-link.active {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-inline-start-color: #D6C56B;
+  color: #ffffff;
 }
 
 /* Responsive Design */

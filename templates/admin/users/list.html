@@ -106,7 +106,7 @@
   <!-- Pagination Placeholder -->
   <div class="mt-8 flex justify-center" id="pagination-container">
       <!-- Handled by generic JS if it exists, otherwise we keep the container -->
-      <nav id="pagination" aria-label="Page navigation"></nav>
+      <nav id="pagination" aria-label="{% if ui_lang == 'en' %}Page navigation{% else %}التنقل بين الصفحات{% endif %}"></nav>
   </div>
 </div>
 

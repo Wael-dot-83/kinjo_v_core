@@ -1748,7 +1748,9 @@ function updateModelMeta(meta) {
   const trainedAt = meta.last_trained || meta.trained_at || "--";
   const version = meta.model_version || "v1";
   const confidence = meta.confidence ? `${(meta.confidence * 100).toFixed(0)}%` : "--";
-  container.innerHTML = `<div class="small text-muted">${adminAnalyticsText(`آخر تدريب: ${trainedAt} | الإصدار: ${version} | الثقة: ${confidence}`, `Last training: ${trainedAt} | Version: ${version} | Confidence: ${confidence}`)}</div>`;
+  const safeTrainedAt = escapeHtml(trainedAt);
+  const safeVersion = escapeHtml(version);
+  container.innerHTML = `<div class="small text-muted">${adminAnalyticsText(`آخر تدريب: ${safeTrainedAt} | الإصدار: ${safeVersion} | الثقة: ${confidence}`, `Last training: ${safeTrainedAt} | Version: ${safeVersion} | Confidence: ${confidence}`)}</div>`;
 }
 
 async function loadAnomalies(start, end, scopeType, scopeId) {

@@ -1,11 +1,11 @@
-{% extends "admin_base.html" %}
+﻿{% extends "admin_base.html" %}
 {% from 'components/date-range-filter.html' import date_range_filter %}
 {% from 'components/export-modal.html' import export_modal %}
 
 {% block title %}{% if ui_lang == 'en' %}Central Analytics Dashboard{% else %}لوحة التحليلات المركزية{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="Dashboard"><i class="bi bi-house"aria-hidden="true"></i></a>
+<a href="/admin/dashboard"class="admin-breadcrumb-item"aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}"><i class="bi bi-house"aria-hidden="true"></i></a>
 <span class="admin-breadcrumb-separator">/</span>
 <span class="admin-breadcrumb-item active">{% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}</span>
 {% endblock %}

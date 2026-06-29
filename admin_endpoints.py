@@ -588,7 +588,7 @@ def export_users(
         return JSONResponse(
             content=data,
             headers={
-                "Content-Disposition": f"attachment; filename=users_export_{date.today()}.json"
+                "Content-Disposition": f"attachment; filename=users_export_{datetime.now(_JORDAN_TZ).date()}.json"
             }
         )
 
@@ -611,7 +611,7 @@ def export_users(
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=users_export_{date.today()}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=users_export_{datetime.now(_JORDAN_TZ).date()}.csv"}
     )
 
 
@@ -1723,7 +1723,7 @@ def download_csv_error_report(
         iter([output.getvalue()]),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f"attachment; filename=import_errors_{date.today()}.csv"
+            "Content-Disposition": f"attachment; filename=import_errors_{datetime.now(_JORDAN_TZ).date()}.csv"
         }
     )
 
@@ -2682,7 +2682,7 @@ def create_admin_message(
                 sensitivity_level=1
             )
         if not notifications_enabled:
-            warnings.append("إشعارات الرسالة معطلة؛ سيتم مراجعة الحالة لاحقاً.")
+            warnings.append("Message notifications are disabled; status will be reviewed later.")
             log_audit_event(
                 db=db,
                 action="MESSAGE_NOTIFICATIONS_SKIPPED",
@@ -2694,7 +2694,7 @@ def create_admin_message(
             )
     except (SQLAlchemyError, RuntimeError, TypeError, AttributeError) as exc:
         logger.warning("Failed to enqueue notifications for message %s: %s", message.id, exc)
-        warnings.append("فشل نظام الإشعارات؛ الرجاء التحقق يدوياً.")
+        warnings.append("Notification system error; please verify manually.")
 
     return AdminMessageResponse(
         id=message.id,
@@ -3697,8 +3697,8 @@ def get_kg_overview(
     db: Session = Depends(get_db)
 ):
     """Get comprehensive kindergarten overview with KPIs, health cards, charts, and alerts."""
-    now = datetime.now(timezone.utc)
-    today = date.today()
+    now = datetime.now(_JORDAN_TZ)
+    today = now.date()
 
     if period == "today":
         date_start = today
@@ -4646,7 +4646,7 @@ async def send_governance_reminder_endpoint(
         )
 
     # Build metrics snapshot for the reminder payload
-    today = date.today()
+    today = datetime.now(_JORDAN_TZ).date()
     week_ago = today - timedelta(days=7)
     kg_id = body.target_id if body.target_type == "kindergarten" else None
     funnel = compute_governance_funnel(db, week_ago, today, kg_id)
@@ -4884,7 +4884,7 @@ async def get_governance_reminder_stats(
     db: Session = Depends(get_db)
 ):
     """Summary stats for the governance reminders dashboard."""
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    today_start = datetime.now(_JORDAN_TZ).replace(hour=0, minute=0, second=0, microsecond=0)
     sent_today = db.query(func.count(models.GovernanceReminder.id)).filter(
         models.GovernanceReminder.sent_at >= today_start
     ).scalar() or 0
@@ -5216,17 +5216,23 @@ def list_managers_for_impersonation(
         )
         .all()
     )
-    result = []
-    for m in managers:
-        kg = None
-        if m.kindergarten_id:
-            kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == m.kindergarten_id).first()
-        result.append({
+    kg_ids = [m.kindergarten_id for m in managers if m.kindergarten_id]
+    kg_map = {
+        kg.id: kg
+        for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
+    } if kg_ids else {}
+    result = [
+        {
             "id": m.id,
             "username": m.username,
             "name": m.full_name or m.username,
-            "kindergarten_name": (kg.name_ar or kg.name_en) if kg else None,
-        })
+            "kindergarten_name": (
+                (kg_map[m.kindergarten_id].name_ar or kg_map[m.kindergarten_id].name_en)
+                if m.kindergarten_id and m.kindergarten_id in kg_map else None
+            ),
+        }
+        for m in managers
+    ]
     return {"managers": result}
 
 

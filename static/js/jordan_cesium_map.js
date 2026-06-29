@@ -58,6 +58,13 @@ function riskAr(score) {
   return { low: 'منخفض', medium: 'متوسط', high: 'مرتفع', critical: 'حرج' }[getRiskLevel(score)];
 }
 
+// XSS-safe helper for all innerHTML interpolation of server-supplied strings
+function esc(value) {
+  const d = document.createElement('div');
+  d.textContent = String(value ?? '');
+  return d.innerHTML;
+}
+
 // ── App State ─────────────────────────────────────────────────────────────────
 const CsApp = {
   map:               null,   // google.maps.Map
@@ -439,7 +446,7 @@ function showGovTooltip(gov) {
     indRow = `<div class="tt-row"><span>${lbl?.ar || ind}</span><b style="color:${riskHex(100-v)}">${v.toFixed(1)}</b></div>`;
   }
   tooltip.innerHTML = `
-    <div class="tt-name">${gov.name_ar || gov.name_en}</div>
+    <div class="tt-name">${esc(gov.name_ar || gov.name_en)}</div>
     <div class="tt-badge"><span class="rank-badge risk-${riskClass(score)}">${riskAr(score)}</span></div>
     <div class="tt-divider"></div>
     <div class="tt-row"><span>درجة الخطر</span><b style="color:${riskHex(score)}">${score.toFixed(1)}/100</b></div>
@@ -452,18 +459,18 @@ function showGovTooltip(gov) {
   positionTooltip(CsApp._mouseX, CsApp._mouseY);
 }
 
-function showKgTooltip(kg) {
+function showKgTooltip(k) {
   const tooltip = document.getElementById('geoTooltip');
   if (!tooltip) return;
-  const score  = parseFloat(kg.kpi_score) || 0;
+  const score  = parseFloat(k.kpi_score) || 0;
   const riskSc = 100 - score;
-  const govAr  = govNameAr(kg.governorate) || kg.governorate_name_en || '';
-  const cityTxt = kg.city ? `<div class="tt-row"><span>المدينة</span><b>${kg.city}</b></div>` : '';
+  const govAr  = govNameAr(k.governorate) || k.governorate_name_en || '';
+  const cityTxt = k.city ? `<div class="tt-row"><span>المدينة</span><b>${esc(k.city)}</b></div>` : '';
   tooltip.innerHTML = `
-    <div class="tt-name">${kg.name_ar || kg.name_en || 'منشأة'}</div>
+    <div class="tt-name">${esc(k.name_ar || k.name_en || 'منشأة')}</div>
     <div class="tt-badge"><span class="rank-badge risk-${riskClass(riskSc)}">${riskAr(riskSc)}</span></div>
     <div class="tt-divider"></div>
-    <div class="tt-row"><span>المحافظة</span><b>${govAr}</b></div>
+    <div class="tt-row"><span>المحافظة</span><b>${esc(govAr)}</b></div>
     ${cityTxt}
     <div class="tt-row"><span>درجة الأداء</span><b style="color:${riskHex(riskSc)}">${score.toFixed(1)}</b></div>
     <div class="tt-hint">انقر للتفاصيل</div>`;
@@ -644,7 +651,7 @@ function renderIntelPanel(d) {
     ? alerts.slice(0, 6).map(a => `
         <div class="intel-alert-row">
           <div class="intel-alert-dot" aria-hidden="true"></div>
-          <span>${a.message || ''}</span>
+          <span>${esc(a.message || '')}</span>
         </div>`).join('')
     : '<div class="intel-no-alerts">لا توجد تنبيهات نشطة</div>';
 
@@ -777,15 +784,16 @@ function renderCitySection(cityData, errorMsg) {
     const stLabel   = c.children_count ? `· ${c.children_count} طفل` : '';
     const critLabel = c.critical_kindergartens
       ? `<span style="color:#ef4444;font-size:.7rem"> — ${c.critical_kindergartens} حرجة</span>` : '';
-    const safeCity  = c.city.replace(/'/g, "\\'");
+    const cityName = esc(c.district || '');
+    const safeCity  = (c.district || '').replace(/'/g, "\\'");
     return `
-      <div class="city-row" data-city="${c.city}"
+      <div class="city-row" data-city="${cityName}"
            role="button" tabindex="0"
-           aria-label="${c.city} — خطر: ${riskAr(riskSc)}"
+           aria-label="${cityName} — خطر: ${riskAr(riskSc)}"
            onclick="selectCity('${safeCity}')"
            onkeydown="if(event.key==='Enter'||event.key===' ')selectCity('${safeCity}')">
         <div class="city-row-name">
-          <span>${c.city}</span>${critLabel}
+          <span>${cityName}</span>${critLabel}
           <div style="font-size:.7rem;color:#64748b;margin-top:1px">${kgLabel}${stLabel}</div>
         </div>
         <div class="city-row-score">
@@ -921,11 +929,11 @@ function populateGovList(govs) {
     return `
       <div class="cs-gov-item" data-slug="${g.slug}" data-risk-class="${cls}"
            tabindex="0" role="button"
-           aria-label="${g.name_ar || g.name_en} — ${riskAr(score)}"
+           aria-label="${esc(g.name_ar || g.name_en)} — ${riskAr(score)}"
            onclick="selectGovernorate(${govJson})"
            onkeydown="if(event.key==='Enter'||event.key===' ')selectGovernorate(${govJson})">
         <div>
-          <div class="cs-gov-name">${g.name_ar || g.name_en}</div>
+          <div class="cs-gov-name">${esc(g.name_ar || g.name_en)}</div>
           ${kgLabel}
         </div>
         <span class="rank-badge risk-${cls}" style="flex-shrink:0"
@@ -1104,7 +1112,7 @@ function showHeatmapToast(message, type) {
   const chip = document.getElementById('lastUpdateStatus');
   if (!chip) return;
   const old = chip.innerHTML;
-  chip.innerHTML = `<i class="bi bi-info-circle" aria-hidden="true"></i> ${message}`;
+  chip.innerHTML = `<i class="bi bi-info-circle" aria-hidden="true"></i> ${esc(message)}`;
   setTimeout(() => { if (chip) chip.innerHTML = old; }, 3500);
 }
 

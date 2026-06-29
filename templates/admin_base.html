@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-ui-lang="{{ ui_lang | default('ar') }}">
+<html lang="{{ ui_lang | default('ar') }}" dir="{{ ui_dir | default('rtl') }}" data-ui-lang="{{ ui_lang | default('ar') }}">
 <head>
   <meta charset="utf-8" />
   <!-- Patch lang/dir immediately so every script that reads documentElement.lang gets the right value. -->
@@ -363,7 +363,7 @@
     {% include 'components/impersonation_banner.html' %}
     <div class="layout" id="admin-layout">
       <!-- Sidebar -->
-      <aside class="sidebar" id="admin-sidebar">
+      <aside class="admin-sidebar sidebar" id="admin-sidebar">
         <div class="sidebar-header">
           <a href="/admin/dashboard" class="sidebar-logo">
             <img src="/static/favicon.svg" width="32" height="32" alt="" class="sidebar-logo-icon" aria-hidden="true" loading="eager" />

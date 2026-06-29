@@ -55,7 +55,7 @@ def _make_kindergarten(db, name, governorate="عمان", district="عمان"):
         name_en=f"{name}_en",
         license_number=f"LIC-{name}-{id(name)}",
         governorate=governorate,
-        district=city,
+        district=district,
         area="TestArea",
         address_line="Test Address",
         contact_phone="+96279" + str(abs(hash(name)) % 10_000_000).zfill(7),
