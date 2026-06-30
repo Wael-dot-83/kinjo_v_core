@@ -4,7 +4,9 @@ Absence Request endpoints
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
-from datetime import date, datetime, timedelta, UTC
+from datetime import date, datetime, timedelta, timezone, UTC
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import Optional
 from pydantic import BaseModel, field_validator
 
@@ -24,7 +26,7 @@ class CreateAbsenceRequest(BaseModel):
     @field_validator("start_date")
     @classmethod
     def start_must_be_future(cls, v):
-        if v <= date.today():
+        if v <= datetime.now(_JORDAN_TZ).date():
             raise ValueError("start_date must be in the future")
         return v
 

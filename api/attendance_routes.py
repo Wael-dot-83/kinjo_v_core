@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import IntegrityError
 from datetime import date, datetime, timedelta, timezone
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -392,7 +394,7 @@ def correct_attendance_status(
         raise HTTPException(status_code=404, detail="Attendance record not found")
 
     # 2. Limit corrections to within 7 days of the attendance date
-    if (date.today() - att.date).days > 7:
+    if (datetime.now(_JORDAN_TZ).date() - att.date).days > 7:
         raise HTTPException(
             status_code=400,
             detail="Attendance corrections are only permitted within 7 days of the recorded date"

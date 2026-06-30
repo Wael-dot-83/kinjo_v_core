@@ -10,6 +10,8 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta, timezone
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -191,7 +193,7 @@ def _get_supervisor_active_class_ids(db: Session, supervisor_id: int, on_date: d
 
 
 def _get_supervisor_child_enrollment(db: Session, supervisor_id: int, child_id: int):
-    class_ids = _get_supervisor_active_class_ids(db, supervisor_id, date.today())
+    class_ids = _get_supervisor_active_class_ids(db, supervisor_id, datetime.now(_JORDAN_TZ).date())
     if not class_ids:
         return None
     return db.query(models.EnrollmentApplication).filter(
@@ -313,7 +315,7 @@ def get_child_observations(
             models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
         ).first()
         if active_enrollment:
-            today = date.today()
+            today = datetime.now(_JORDAN_TZ).date()
             assignment = db.query(models.SupervisorAssignment).filter(
                 models.SupervisorAssignment.supervisor_id == current_user.id,
                 models.SupervisorAssignment.class_id == active_enrollment.class_id,
@@ -451,7 +453,7 @@ def record_observation(
     validators.validate_kindergarten_scope(current_user, active_enrollment.kindergarten_id)
 
     # Verify supervisor is assigned to the child's class
-    today = date.today()
+    today = datetime.now(_JORDAN_TZ).date()
     assignment = db.query(models.SupervisorAssignment).filter(
         models.SupervisorAssignment.supervisor_id == current_user.id,
         models.SupervisorAssignment.class_id == active_enrollment.class_id,
@@ -518,7 +520,7 @@ def get_supervisor_children(
     children = SupervisorService.get_supervisor_children(db, current_user)
     
     # Enrich with today's attendance status
-    today = date.today()
+    today = datetime.now(_JORDAN_TZ).date()
     results = []
     
     for child in children:
@@ -857,7 +859,7 @@ def get_supervisor_dashboard(
         models.SupervisorAssignment.supervisor_id == current_user.id,
         or_(
             models.SupervisorAssignment.end_date.is_(None),
-            models.SupervisorAssignment.end_date >= date.today()
+            models.SupervisorAssignment.end_date >= datetime.now(_JORDAN_TZ).date()
         )
     ).all()
     
@@ -870,7 +872,7 @@ def get_supervisor_dashboard(
     ).scalar() or 0
     
     # Count today's attendance
-    today = date.today()
+    today = datetime.now(_JORDAN_TZ).date()
     today_attendance = db.query(func.count(models.AttendanceLog.id)).join(
         models.EnrollmentApplication,
         models.AttendanceLog.child_id == models.EnrollmentApplication.child_id

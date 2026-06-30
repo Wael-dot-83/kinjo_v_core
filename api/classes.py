@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -87,7 +89,7 @@ def create_class(
             supervisor_id=class_data.supervisor_id,
             is_primary=True,
             full_time_dedication=True,
-            start_date=date.today()
+            start_date=datetime.now(_JORDAN_TZ).date()
         )
         db.add(assignment)
         db.commit()
@@ -126,7 +128,7 @@ def list_classes(
     classes_orm = query.all()
     
     result = []
-    today = date.today()
+    today = datetime.now(_JORDAN_TZ).date()
     
     for c in classes_orm:
         # Get active primary supervisor
@@ -206,7 +208,7 @@ def get_eligible_supervisors(
     validators.validate_manager_role(current_user)
     validators.validate_kindergarten_scope(current_user, kindergarten_id)
 
-    today = date.today()
+    today = datetime.now(_JORDAN_TZ).date()
     # Get all supervisors in this kindergarten
     supervisors = db.query(models.User).filter(
         models.User.kindergarten_id == kindergarten_id,
@@ -502,7 +504,7 @@ def assign_child_to_class(
         "class_assignment_date": enrollment.class_assignment_date.isoformat() if enrollment.class_assignment_date else None,
     }
     enrollment.class_id = class_id
-    enrollment.class_assignment_date = date.today()
+    enrollment.class_assignment_date = datetime.now(_JORDAN_TZ).date()
 
     db.commit()
     db.refresh(enrollment)

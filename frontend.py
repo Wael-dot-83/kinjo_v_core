@@ -992,15 +992,10 @@ async def create_daily_report(request: Request, current_user: User = Depends(get
 
 @router.get("/curriculum", response_class=HTMLResponse)
 async def curriculum_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
-    """Curriculum management page.
-
-    TODO: Implement full curriculum management template.
-    Currently redirects to dashboard as curriculum module is not yet built.
-    """
+    """Curriculum management placeholder - redirects to dashboard until module is built."""
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role in ('ADMIN', 'SUPERVISOR'):
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
-    # Curriculum module placeholder â€” redirect to dashboard
     return RedirectResponse(url="/dashboard")
 
 

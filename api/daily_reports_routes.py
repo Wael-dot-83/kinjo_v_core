@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from datetime import date, datetime, timedelta, timezone
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 import re
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
@@ -40,7 +42,7 @@ class DailyReportCreateRequest(BaseModel):
             parsed = date.fromisoformat(v)
         except ValueError:
             raise ValueError("date must be in YYYY-MM-DD format")
-        if parsed > date.today():
+        if parsed > datetime.now(_JORDAN_TZ).date():
             raise ValueError("date cannot be in the future")
         return v
 
@@ -80,7 +82,7 @@ def create_daily_report(
     
     # Validate date
     report_date = date.fromisoformat(report_data.date)
-    if report_date > date.today():
+    if report_date > datetime.now(_JORDAN_TZ).date():
         raise HTTPException(status_code=400, detail="Cannot create reports for future dates")
 
     # Ensure child profile is complete before creating a report

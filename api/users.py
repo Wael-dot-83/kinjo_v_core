@@ -8,7 +8,9 @@ from fastapi.responses import Response
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta, UTC
+from datetime import date, datetime, timedelta, timezone, UTC
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -452,7 +454,7 @@ def export_users(
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=users_export_{date.today()}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=users_export_{datetime.now(_JORDAN_TZ).date()}.csv"}
     )
 
 @router.post("/users", status_code=status.HTTP_201_CREATED)

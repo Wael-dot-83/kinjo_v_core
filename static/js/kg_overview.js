@@ -391,7 +391,6 @@ class KgOverview {
     this.#dnd.enable('.ko-kpi-grid');
     this.#startRealtime();
     this.#renderLastUpdated();
-    console.log('[KgOverview] initialised ✓');
   }
 
   async #loadOverviewData() {
@@ -1250,10 +1249,6 @@ class KgOverview {
       this.#savePrefs();
     });
 
-    /* Drilldown from chart */
-    document.addEventListener('ko:drilldown', e => {
-      console.log('[KgOverview] drilldown →', e.detail.label);
-    });
   }
 
   /* ── Realtime Simulation ──────────────────────────────── */

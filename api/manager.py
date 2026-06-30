@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -53,7 +55,7 @@ def get_manager_dashboard(
     ).scalar() or 0
 
     # Today's attendance
-    today = date.today()
+    today = datetime.now(_JORDAN_TZ).date()
     attendance_today = db.query(func.count(models.AttendanceLog.id)).join(
         models.Child
     ).join(

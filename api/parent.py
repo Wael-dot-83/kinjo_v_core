@@ -7,7 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, B
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -60,7 +62,7 @@ def get_parent_dashboard(
         ).first()
 
         # Today's attendance
-        today = date.today()
+        today = datetime.now(_JORDAN_TZ).date()
         attendance = db.query(models.AttendanceLog).filter(
             models.AttendanceLog.child_id == child.id,
             models.AttendanceLog.date == today
@@ -330,7 +332,7 @@ def get_parent_attendance(
 
     # Default: last 30 days
     if not start_date and not end_date:
-        query = query.filter(models.AttendanceLog.date >= date.today() - timedelta(days=30))
+        query = query.filter(models.AttendanceLog.date >= datetime.now(_JORDAN_TZ).date() - timedelta(days=30))
 
     records = query.order_by(models.AttendanceLog.date.desc()).all()
 

@@ -1,5 +1,7 @@
 """Scoped access and date-range helpers for analytics endpoints."""
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional, Tuple
 
 from fastapi import HTTPException, Query
@@ -14,7 +16,7 @@ def get_date_range(
 ) -> Tuple[date, date]:
     """Parse date range; default to the last 30 days."""
     if end_date is None:
-        end_date = date.today()
+        end_date = datetime.now(_JORDAN_TZ).date()
     if start_date is None:
         start_date = end_date - timedelta(days=30)
     return start_date, end_date
