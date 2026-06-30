@@ -506,7 +506,7 @@ async def enforce_english_language_integrity(request: Request, call_next):
 # CSRF protection â€” validate Origin/Referer on state-changing requests
 # Cookie uses SameSite=Lax (set in auth.js), this is defense-in-depth.
 _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-_CSRF_DOUBLE_SUBMIT_EXEMPT_PATHS = {"/token", "/api/auth/login", "/api/auth/register", "/api/auth/mfa/setup", "/api/auth/mfa/verify"}
+_CSRF_DOUBLE_SUBMIT_EXEMPT_PATHS = {"/token", "/api/auth/login", "/api/auth/register", "/api/auth/mfa/setup", "/api/auth/mfa/verify", "/api/telemetry/vitals", "/api/telemetry/errors", "/api/telemetry/api"}
 _CSRF_ALLOWED_HOSTS = {
     origin.split("://", 1)[-1].rstrip("/")
     for origin in (settings.CORS_ALLOWED_ORIGINS or ["http://127.0.0.1:8000", "http://localhost:8000"])
