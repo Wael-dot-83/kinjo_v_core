@@ -34,6 +34,7 @@ from models import (
     UserRole,
 )
 from rbac import assert_manager_owns_kindergarten
+from audit_actions import AuditAction
 
 router = APIRouter(prefix="/api/manager", tags=["manager"])
 
@@ -417,7 +418,7 @@ def edit_daily_report(
 
     db.add(AuditLog(
         user_id=current_user.id,
-        action="edit",
+        action=AuditAction.DAILY_REPORT_EDITED,
         entity_type="daily_report",
         entity_id=report.id,
         details=f"Manager edited daily report for child {report.child_id}",
@@ -462,7 +463,7 @@ def send_report_to_parents(
     report.approved_at = datetime.now(_JORDAN_TZ)
     db.add(AuditLog(
         user_id=current_user.id,
-        action="send_to_parent",
+        action=AuditAction.DAILY_REPORT_SENT_TO_PARENT,
         entity_type="daily_report",
         entity_id=report.id,
         details=f"Manager sent daily report for child {report.child_id} to parent",
@@ -514,7 +515,7 @@ def delete_report(
 
     db.add(AuditLog(
         user_id=current_user.id,
-        action="delete",
+        action=AuditAction.DAILY_REPORT_DELETED,
         entity_type="daily_report",
         entity_id=report.id,
         details=f"Manager deleted daily report for child {report.child_id} dated {report.date}",

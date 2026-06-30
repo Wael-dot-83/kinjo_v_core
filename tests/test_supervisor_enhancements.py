@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 import models
 import pyotp
 
+from audit_actions import AuditAction
 from mfa_service import decrypt_secret
 
 
@@ -95,7 +96,7 @@ def test_supervisor_message_unread_count_and_soft_delete(
     audit = test_db.query(models.AuditLog).filter(
         models.AuditLog.entity_type == "message",
         models.AuditLog.entity_id == message.id,
-        models.AuditLog.action == "delete",
+        models.AuditLog.action == AuditAction.MESSAGE_DELETED,
     ).first()
     assert audit is not None
 

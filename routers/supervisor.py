@@ -25,6 +25,7 @@ from sqlalchemy import func, and_, or_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from audit_actions import AuditAction
 from config import settings
 from database import get_db
 from dependencies import get_current_user
@@ -565,7 +566,7 @@ def record_attendance(
         db.add(
             AuditLog(
                 user_id=current_user.id,
-                action="attendance_override",
+                action=AuditAction.ATTENDANCE_OVERRIDE,
                 entity_type="attendance",
                 entity_id=body.child_id,
                 details=(
@@ -828,7 +829,7 @@ def create_daily_report(
         report.kindergarten_id = current_user.kindergarten_id
         db.add(AuditLog(
             user_id=current_user.id,
-            action="force_update",
+            action=AuditAction.DAILY_REPORT_FORCE_UPDATED,
             entity_type="daily_report",
             entity_id=report.id,
             details=f"Supervisor overwrote daily report for child {body.child_id} dated {body.date} as {target_status.value}",
@@ -857,7 +858,7 @@ def create_daily_report(
         db.flush()
         db.add(AuditLog(
             user_id=current_user.id,
-            action=target_status.value.lower(),
+            action=AuditAction.DAILY_REPORT_CREATED,
             entity_type="daily_report",
             entity_id=report.id,
             details=f"Supervisor created daily report for child {body.child_id} dated {body.date} as {target_status.value}",
@@ -932,7 +933,7 @@ def submit_daily_report(
     report.submitted_at = datetime.now(_JORDAN_TZ)
     db.add(AuditLog(
         user_id=current_user.id,
-        action="submit",
+        action=AuditAction.DAILY_REPORT_SUBMITTED,
         entity_type="daily_report",
         entity_id=report.id,
         details=f"Supervisor submitted daily report for child {report.child_id}",
@@ -1103,7 +1104,7 @@ def resolve_safety_incident(
     db.add(
         AuditLog(
             user_id=current_user.id,
-            action="resolve",
+            action=AuditAction.INCIDENT_RESOLVED,
             entity_type="incident",
             entity_id=incident.id,
             details="Supervisor resolved safety incident",
@@ -1134,9 +1135,16 @@ def _message_list(messages, current_user_id: int, db: Session):
         )
         read_set = {r.message_id for r in read_rows}
 
+    sender_ids = {m.sender_id for m in messages}
+    sender_by_id = {}
+    if sender_ids:
+        sender_by_id = {
+            u.id: u for u in db.query(User).filter(User.id.in_(sender_ids)).all()
+        }
+
     result = []
     for m in messages:
-        sender = db.query(User).filter(User.id == m.sender_id).first()
+        sender = sender_by_id.get(m.sender_id)
         result.append({
             "id": m.id,
             "direction": "sent" if m.sender_id == current_user_id else "received",
@@ -1369,7 +1377,7 @@ def delete_message_for_supervisor(
     db.add(
         AuditLog(
             user_id=current_user.id,
-            action="delete",
+            action=AuditAction.MESSAGE_DELETED,
             entity_type="message",
             entity_id=message_id,
             details="Supervisor soft-deleted message",
@@ -1708,7 +1716,7 @@ def enable_supervisor_2fa(
     db.add(
         AuditLog(
             user_id=current_user.id,
-            action="enable_2fa",
+            action=AuditAction.MFA_ENABLED,
             entity_type="user",
             entity_id=current_user.id,
             details="Supervisor enabled 2FA",
@@ -1749,7 +1757,7 @@ def disable_supervisor_2fa(
     db.add(
         AuditLog(
             user_id=current_user.id,
-            action="disable_2fa",
+            action=AuditAction.MFA_DISABLED,
             entity_type="user",
             entity_id=current_user.id,
             details="Supervisor disabled 2FA",
