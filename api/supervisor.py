@@ -256,7 +256,7 @@ def create_observation(
         mastery = mastery_map.get(mastery_str)
     
     # Parse observed_at from ISO string if provided
-    observed_at = datetime.now(timezone.utc)
+    observed_at = datetime.now(_JORDAN_TZ)
     if hasattr(observation_data, 'observed_at') and observation_data.observed_at:
         try:
             observed_at = datetime.fromisoformat(observation_data.observed_at.replace('Z', '+00:00'))
@@ -492,7 +492,7 @@ def record_observation(
         domain=domain,
         observation_text=observation_data.observation_text,
         mastery_level=mastery,
-        observed_at=datetime.now(timezone.utc)
+        observed_at=datetime.now(_JORDAN_TZ)
     )
     db.add(observation)
     db.commit()
@@ -678,7 +678,7 @@ def create_supervisor_child_daily_report(
         date=report_date,
         status=models.DailyReportStatus.SUBMITTED,
         submitted_by=current_user.id,
-        submitted_at=datetime.now(timezone.utc),
+        submitted_at=datetime.now(_JORDAN_TZ),
         arrival_time="08:00",
         leave_time="14:00",
         meals=payload.meals,

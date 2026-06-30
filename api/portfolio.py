@@ -8,6 +8,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta, timezone
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -171,7 +172,7 @@ def create_portfolio_entry(
         title=portfolio_data.title,
         description=portfolio_data.description,
         status=status_value,
-        published_at=datetime.now(timezone.utc) if status_value == models.PortfolioStatus.PUBLISHED else None
+        published_at=datetime.now(_JORDAN_TZ) if status_value == models.PortfolioStatus.PUBLISHED else None
     )
 
     db.add(portfolio)
@@ -213,7 +214,7 @@ def publish_portfolio_entry(
         raise HTTPException(status_code=400, detail="Portfolio already published")
 
     portfolio.status = models.PortfolioStatus.PUBLISHED
-    portfolio.published_at = datetime.now(timezone.utc)
+    portfolio.published_at = datetime.now(_JORDAN_TZ)
 
     db.commit()
     db.refresh(portfolio)

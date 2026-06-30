@@ -11,6 +11,7 @@ from fastapi.responses import Response, StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from datetime import date, datetime, timedelta, timezone
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -240,7 +241,7 @@ def create_incident_json(
         raise HTTPException(status_code=403, detail="Child is not enrolled in this kindergarten")
 
     occurred_dt = datetime.fromisoformat(incident_data.occurred_at.replace('Z', '+00:00'))
-    _now = datetime.now(timezone.utc) if occurred_dt.tzinfo else datetime.now()
+    _now = datetime.now(_JORDAN_TZ) if occurred_dt.tzinfo else datetime.now()
     if occurred_dt > _now:
         raise HTTPException(status_code=400, detail="occurred_at cannot be in the future")
 
@@ -266,7 +267,7 @@ def create_incident_json(
         description=incident_data.description,
         occurred_at=occurred_dt,
         followup_required_flag=incident_data.followup_required_flag or False,
-        notify_parent_at=datetime.now(timezone.utc),
+        notify_parent_at=datetime.now(_JORDAN_TZ),
         reported_by=current_user.id,
         class_id=child_enrollment.class_id if child_enrollment else None,
         parent_informed=incident_data.parent_informed if incident_data.parent_informed is not None else True,
@@ -275,7 +276,7 @@ def create_incident_json(
     
     if incident.followup_required_flag:
         # Set 48 hour SLA
-        incident.followup_sla_deadline = datetime.now(timezone.utc) + timedelta(hours=48)
+        incident.followup_sla_deadline = datetime.now(_JORDAN_TZ) + timedelta(hours=48)
     
     db.add(incident)
     db.commit()
@@ -358,7 +359,7 @@ def create_incident(
         occurred_dt = datetime.fromisoformat(occurred_at.replace('Z', '+00:00'))
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid occurred_at format. Use ISO 8601.")
-    _now = datetime.now(timezone.utc) if occurred_dt.tzinfo else datetime.now()
+    _now = datetime.now(_JORDAN_TZ) if occurred_dt.tzinfo else datetime.now()
     if occurred_dt > _now:
         raise HTTPException(status_code=400, detail="occurred_at cannot be in the future")
 
@@ -402,7 +403,7 @@ def create_incident(
         description=description,
         occurred_at=occurred_dt,
         followup_required_flag=followup_required,
-        notify_parent_at=datetime.now(timezone.utc),
+        notify_parent_at=datetime.now(_JORDAN_TZ),
         reported_by=current_user.id,
         class_id=active_enrollment.class_id,
         parent_informed=parent_informed,
@@ -410,7 +411,7 @@ def create_incident(
     )
 
     if followup_required:
-        incident.followup_sla_deadline = datetime.now(timezone.utc) + timedelta(hours=48)
+        incident.followup_sla_deadline = datetime.now(_JORDAN_TZ) + timedelta(hours=48)
 
     db.add(incident)
     db.commit()
@@ -648,7 +649,7 @@ def verify_child_document(
 
     doc.verified = True
     doc.verified_by = current_user.id
-    doc.verified_at = datetime.now(timezone.utc)
+    doc.verified_at = datetime.now(_JORDAN_TZ)
     db.commit()
     db.refresh(doc)
 

@@ -173,7 +173,7 @@ def submit_daily_report(
         raise HTTPException(status_code=400, detail="Only draft reports can be submitted")
     
     report.status = models.DailyReportStatus.SUBMITTED
-    report.submitted_at = datetime.now(timezone.utc)
+    report.submitted_at = datetime.now(_JORDAN_TZ)
     db.commit()
     db.refresh(report)
     
@@ -208,7 +208,7 @@ def approve_daily_report(
     
     report.status = models.DailyReportStatus.APPROVED
     report.approved_by = current_user.id
-    report.approved_at = datetime.now(timezone.utc)
+    report.approved_at = datetime.now(_JORDAN_TZ)
     db.commit()
     db.refresh(report)
     

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import IntegrityError
 from datetime import date, datetime, timedelta, timezone
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
@@ -65,7 +66,7 @@ def check_in_child(
         class_id=active_enrollment.class_id,
         date=today,
         status=models.AttendanceStatus.PRESENT,
-        check_in_at=datetime.now(timezone.utc),
+        check_in_at=datetime.now(_JORDAN_TZ),
         recorded_by=current_user.id
     )
     db.add(attendance)
@@ -117,7 +118,7 @@ def check_out_child(
     if not attendance:
         raise HTTPException(status_code=400, detail="Child is not checked in today")
     
-    attendance.check_out_at = datetime.now(timezone.utc)
+    attendance.check_out_at = datetime.now(_JORDAN_TZ)
     attendance.picked_by_name = picked_by_name
     db.commit()
     db.refresh(attendance)

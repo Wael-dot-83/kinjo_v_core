@@ -327,7 +327,7 @@ def submit_enrollment(
         )
 
     enrollment.status = models.EnrollmentStatus.SUBMITTED
-    enrollment.submitted_at = datetime.now(timezone.utc)
+    enrollment.submitted_at = datetime.now(_JORDAN_TZ)
     db.commit()
     db.refresh(enrollment)
 
@@ -371,7 +371,7 @@ def review_enrollment(
         if not reason or not reason.strip():
             raise HTTPException(status_code=400, detail="Rejection reason is required.")
         enrollment.status = models.EnrollmentStatus.REJECTED
-        enrollment.rejected_at = datetime.now(timezone.utc)
+        enrollment.rejected_at = datetime.now(_JORDAN_TZ)
         enrollment.status_reason = reason.strip()[:255]
         audit_action = "REJECT"
     else:
@@ -422,12 +422,12 @@ def review_enrollment(
                     )
 
         enrollment.status = models.EnrollmentStatus.ACCEPTED
-        enrollment.accepted_at = datetime.now(timezone.utc)
+        enrollment.accepted_at = datetime.now(_JORDAN_TZ)
         enrollment.status_reason = None
         audit_action = "ACCEPT"
 
     enrollment.decision_by = current_user.id
-    enrollment.decision_at = datetime.now(timezone.utc)
+    enrollment.decision_at = datetime.now(_JORDAN_TZ)
     db.commit()
     db.refresh(enrollment)
 
