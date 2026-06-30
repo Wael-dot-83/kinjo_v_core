@@ -466,7 +466,7 @@ def notify_supervisor_absence_approved(
     records_created: int,
 ) -> bool:
     """Notify supervisors of the child's class that attendance was auto-marked ABSENT."""
-    from missing_endpoints import get_supervisor_classes  # avoid circular
+    from notification_tasks import get_supervisor_classes
 
     # Find supervisors assigned to the child's class
     supervisors = db.query(models.User).filter(
