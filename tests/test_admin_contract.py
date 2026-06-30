@@ -109,6 +109,39 @@ def test_admin_base_loads_csrf_aware_dependencies_in_order():
     assert "fetchWithAuth(`${this.baseURL}${endpoint}`, options)" in api_source
 
 
+def test_premium_admin_base_delegates_to_canonical_shell():
+    source = (ROOT / "templates" / "admin_base_premium.html").read_text(encoding="utf-8")
+    assert '{% extends "admin_base.html" %}' in source
+    assert "tailwind.config" not in source
+    assert "/auth/logout" not in source
+    assert "WebGL Background" not in source
+
+
+def test_shared_admin_table_helper_is_english_only():
+    source = (ROOT / "static" / "js" / "dataTable.js").read_text(encoding="utf-8")
+    assert 'placeholder="Search..."' in source
+    assert " of ${total}" in source
+    assert "Previous" in source
+    assert "Next" in source
+    assert not any("\u0600" <= char <= "\u06ff" for char in source)
+    assert "localeCompare(vb, 'en')" in source
+
+
+def test_admin_alerts_use_english_labels_without_language_branches():
+    source = (ROOT / "static" / "js" / "admin_alerts.js").read_text(encoding="utf-8")
+    assert 'label: "Critical"' in source
+    assert 'label: "Acknowledged"' in source
+    assert 'toLocaleString("en-US")' in source
+    assert "isRtl" not in source
+    assert not any("\u0600" <= char <= "\u06ff" for char in source)
+
+
+def test_admin_profile_uses_configured_csrf_cookie_name():
+    source = (ROOT / "templates" / "admin" / "profile.html").read_text(encoding="utf-8")
+    assert "kinjo_csrf_token" in source
+    assert r"(?:^|;\s*)csrf_token=([^;]+)" not in source
+
+
 def test_all_admin_templates_extend_admin_base():
     offenders = []
     for template in ADMIN_TEMPLATES:

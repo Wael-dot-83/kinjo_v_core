@@ -1,8 +1,6 @@
 (function () {
     "use strict";
 
-    const isRtl = document.documentElement.lang === "ar" || document.documentElement.dir === "rtl";
-
     // Read kinjo_csrf_token cookie (JS-visible, set by server)
     function getCsrfToken() {
         const match = document.cookie.match(/(?:^|;\s*)kinjo_csrf_token=([^;]+)/);
@@ -32,7 +30,7 @@
         if (!dateStr) return "--";
         const d = new Date(dateStr);
         if (Number.isNaN(d.getTime())) return dateStr;
-        return d.toLocaleString(isRtl ? "ar-JO" : "en-GB");
+        return d.toLocaleString("en-US");
     }
 
     function escapeHtml(str) {
@@ -45,30 +43,28 @@
     }
 
     const SEVERITY_META = {
-        CRITICAL: { cls: "bg-danger",          ar: "حرج",     en: "Critical" },
-        HIGH:     { cls: "bg-warning text-dark", ar: "عالي",   en: "High" },
-        MEDIUM:   { cls: "bg-warning",           ar: "متوسط",  en: "Medium" },
-        LOW:      { cls: "bg-info text-dark",    ar: "منخفض",  en: "Low" },
+        CRITICAL: { cls: "bg-danger", label: "Critical" },
+        HIGH: { cls: "bg-warning text-dark", label: "High" },
+        MEDIUM: { cls: "bg-warning", label: "Medium" },
+        LOW: { cls: "bg-info text-dark", label: "Low" },
     };
 
     const STATUS_META = {
-        ACTIVE:       { cls: "bg-danger",   ar: "نشط",        en: "Active" },
-        ACKNOWLEDGED: { cls: "bg-warning text-dark", ar: "مُعترَف به", en: "Acknowledged" },
-        RESOLVED:     { cls: "bg-success",  ar: "محلول",       en: "Resolved" },
+        ACTIVE: { cls: "bg-danger", label: "Active" },
+        ACKNOWLEDGED: { cls: "bg-warning text-dark", label: "Acknowledged" },
+        RESOLVED: { cls: "bg-success", label: "Resolved" },
     };
 
     function severityBadge(severity) {
         const meta = SEVERITY_META[severity];
         if (!meta) return `<span class="badge bg-secondary">${escapeHtml(severity)}</span>`;
-        const label = isRtl ? meta.ar : meta.en;
-        return `<span class="badge ${meta.cls}">${label}</span>`;
+        return `<span class="badge ${meta.cls}">${meta.label}</span>`;
     }
 
     function statusBadge(status) {
         const meta = STATUS_META[status];
         if (!meta) return `<span class="badge bg-secondary">${escapeHtml(status)}</span>`;
-        const label = isRtl ? meta.ar : meta.en;
-        return `<span class="badge ${meta.cls}">${label}</span>`;
+        return `<span class="badge ${meta.cls}">${meta.label}</span>`;
     }
 
     function setLoading(on) {
@@ -126,7 +122,6 @@
             return;
         }
         setEmpty(false);
-        const viewLabel = isRtl ? "عرض" : "View";
         tbody.innerHTML = alerts.map((a) => `
             <tr data-alert-id="${a.id}">
                 <td>${severityBadge(a.severity)}</td>
@@ -139,7 +134,7 @@
                 <td>${statusBadge(a.status)}</td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary" data-action="view" data-alert-id="${a.id}">
-                        ${viewLabel}
+                        View
                     </button>
                 </td>
             </tr>
@@ -150,16 +145,14 @@
         const wrap = document.getElementById("alertsPagination");
         if (!wrap) return;
         const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-        const prevLabel = isRtl ? "السابق" : "Previous";
-        const nextLabel = isRtl ? "التالي"  : "Next";
         wrap.innerHTML = `
             <div class="d-flex align-items-center gap-2 mt-3">
                 <button class="btn btn-sm btn-outline-secondary" id="prevPageBtn" ${page <= 1 ? "disabled" : ""}>
-                    ${prevLabel}
+                    Previous
                 </button>
                 <span class="text-muted small">${page} / ${totalPages} &nbsp;(${total})</span>
                 <button class="btn btn-sm btn-outline-secondary" id="nextPageBtn" ${page >= totalPages ? "disabled" : ""}>
-                    ${nextLabel}
+                    Next
                 </button>
             </div>
         `;
@@ -185,24 +178,24 @@
 
         const ackRow = alert.status !== "ACTIVE" ? `
             <tr>
-                <th>${isRtl ? "تاريخ الاعتراف" : "Acknowledged At"}</th>
+                <th>Acknowledged At</th>
                 <td>${formatDate(alert.acknowledged_at)}</td>
             </tr>` : "";
 
         content.innerHTML = `
             <table class="table table-sm">
                 <tbody>
-                    <tr><th>${isRtl ? "المعرّف" : "ID"}</th><td>${escapeHtml(alert.id)}</td></tr>
-                    <tr><th>${isRtl ? "الخطورة" : "Severity"}</th><td>${severityBadge(alert.severity)}</td></tr>
-                    <tr><th>${isRtl ? "الحالة" : "Status"}</th><td>${statusBadge(alert.status)}</td></tr>
-                    <tr><th>${isRtl ? "المقياس" : "Metric"}</th><td>${escapeHtml(alert.metric)}</td></tr>
-                    <tr><th>${isRtl ? "المحافظة" : "Governorate"}</th><td>${escapeHtml(alert.governorate || "--")}</td></tr>
-                    <tr><th>${isRtl ? "الروضة" : "Kindergarten"}</th><td>${escapeHtml(alert.kindergarten_name || "--")}</td></tr>
-                    <tr><th>${isRtl ? "القيمة الحالية" : "Current Value"}</th><td>${formatNumber(alert.current_value)}</td></tr>
-                    <tr><th>${isRtl ? "العتبة" : "Threshold"}</th><td>${formatNumber(alert.threshold)}</td></tr>
-                    <tr><th>${isRtl ? "وقت التفعيل" : "Triggered At"}</th><td>${formatDate(alert.triggered_at)}</td></tr>
+                    <tr><th>ID</th><td>${escapeHtml(alert.id)}</td></tr>
+                    <tr><th>Severity</th><td>${severityBadge(alert.severity)}</td></tr>
+                    <tr><th>Status</th><td>${statusBadge(alert.status)}</td></tr>
+                    <tr><th>Metric</th><td>${escapeHtml(alert.metric)}</td></tr>
+                    <tr><th>Governorate</th><td>${escapeHtml(alert.governorate || "--")}</td></tr>
+                    <tr><th>Kindergarten</th><td>${escapeHtml(alert.kindergarten_name || "--")}</td></tr>
+                    <tr><th>Current Value</th><td>${formatNumber(alert.current_value)}</td></tr>
+                    <tr><th>Threshold</th><td>${formatNumber(alert.threshold)}</td></tr>
+                    <tr><th>Triggered At</th><td>${formatDate(alert.triggered_at)}</td></tr>
                     ${ackRow}
-                    <tr><th>${isRtl ? "الرسالة" : "Message"}</th><td>${escapeHtml(alert.message || "--")}</td></tr>
+                    <tr><th>Message</th><td>${escapeHtml(alert.message || "--")}</td></tr>
                 </tbody>
             </table>
         `;
@@ -227,7 +220,7 @@
             renderDetailModal(updated);
             await loadAlerts(currentPage);
         } catch (err) {
-            const msg = isRtl ? "فشل الاعتراف بالتنبيه." : "Failed to acknowledge alert.";
+            const msg = "Failed to acknowledge alert.";
             setError(msg);
             if (ackBtn) ackBtn.disabled = false;
         }
@@ -260,7 +253,7 @@
             renderPagination(data.total || 0, data.page || page);
             currentPage = data.page || page;
         } catch (err) {
-            const msg = isRtl ? "تعذر تحميل التنبيهات. يرجى إعادة المحاولة." : "Failed to load alerts. Please try again.";
+            const msg = "Failed to load alerts. Please try again.";
             setError(msg);
             setEmpty(false);
         } finally {
@@ -275,7 +268,7 @@
         document.getElementById("statusFilter")?.addEventListener("change", () => loadAlerts(1));
         document.getElementById("timeFilter")?.addEventListener("change", () => loadAlerts(1));
 
-        // Delegated click — handles dynamically-rendered View buttons
+        // Delegated click handles dynamically-rendered View buttons.
         document.getElementById("alertsTableBody")?.addEventListener("click", (e) => {
             const btn = e.target.closest("[data-action='view']");
             if (!btn) return;
