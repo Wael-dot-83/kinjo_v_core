@@ -274,7 +274,7 @@ def list_users(
         # Ignore any cross-kindergarten filter attempts
         if kindergarten_id and kindergarten_id != current_user.kindergarten_id:
             log_audit_event(
-                db, "ACCESS_DENIED", current_user, "User",
+                db, AuditAction.ACCESS_DENIED, current_user, "User",
                 metadata={"attempted_kindergarten_id": kindergarten_id},
                 sensitivity_level=2
             )
@@ -358,7 +358,7 @@ def create_user(
         # Manager restrictions
         if user_data.role in [models.UserRole.ADMIN, models.UserRole.MANAGER]:
             log_audit_event(
-                db, "ACCESS_DENIED", current_user, "User",
+                db, AuditAction.ACCESS_DENIED, current_user, "User",
                 metadata={"attempted_role": user_data.role.value},
                 sensitivity_level=3
             )
@@ -367,7 +367,7 @@ def create_user(
         # Force kindergarten to manager's kindergarten
         if user_data.kindergarten_id and user_data.kindergarten_id != current_user.kindergarten_id:
             log_audit_event(
-                db, "ACCESS_DENIED", current_user, "User",
+                db, AuditAction.ACCESS_DENIED, current_user, "User",
                 metadata={"attempted_kindergarten_id": user_data.kindergarten_id},
                 sensitivity_level=3
             )
@@ -493,7 +493,7 @@ def create_user(
 
         # Audit log for children creation
         log_audit_event(
-            db, "CHILDREN_CREATED", current_user, "Child",
+            db, AuditAction.CHILDREN_CREATED, current_user, "Child",
             target_ids=[child.id for child in parent_profile.children],
             metadata={"parent_user_id": new_user.id, "children_count": len(user_data.children)},
             sensitivity_level=2
@@ -501,7 +501,7 @@ def create_user(
 
     # Audit log with after state
     log_audit_event(
-        db, "USER_CREATED", current_user, "User",
+        db, AuditAction.USER_CREATED, current_user, "User",
         target_ids=new_user.id,
         after_state=model_to_dict(new_user),
         sensitivity_level=3
@@ -634,7 +634,7 @@ def get_user(
     # IDOR check
     if not can_admin_access_user(current_user, user):
         log_audit_event(
-            db, "ACCESS_DENIED", current_user, "User",
+            db, AuditAction.ACCESS_DENIED, current_user, "User",
             target_ids=user_id,
             metadata={"reason": "IDOR protection"},
             sensitivity_level=2
@@ -679,7 +679,7 @@ def update_user(
     # IDOR check
     if not can_admin_access_user(current_user, user):
         log_audit_event(
-            db, "ACCESS_DENIED", current_user, "User",
+            db, AuditAction.ACCESS_DENIED, current_user, "User",
             target_ids=user_id,
             metadata={"reason": "IDOR protection", "action": "update"},
             sensitivity_level=2
@@ -768,7 +768,7 @@ def update_user(
 
     # Audit log with diff
     log_audit_event(
-        db, "USER_UPDATED", current_user, "User",
+        db, AuditAction.USER_UPDATED, current_user, "User",
         target_ids=user.id,
         before_state=before_state,
         after_state=after_state,
@@ -826,7 +826,7 @@ def delete_user(
 
     # Audit log
     log_audit_event(
-        db, "USER_DELETED", current_user, "User",
+        db, AuditAction.USER_DELETED, current_user, "User",
         target_ids=user_id,
         before_state=before_state,
         sensitivity_level=3
@@ -864,7 +864,7 @@ def admin_reset_password(
     # Verify admin's own password
     if not verify_password(reset_data.admin_password, current_user.hashed_password):
         log_audit_event(
-            db, "ADMIN_PASSWORD_RESET_FAILED", current_user, "User",
+            db, AuditAction.ADMIN_PASSWORD_RESET_FAILED, current_user, "User",
             target_ids=user_id,
             metadata={"reason": "Admin password verification failed"},
             sensitivity_level=3
@@ -877,7 +877,7 @@ def admin_reset_password(
 
     # Audit log
     log_audit_event(
-        db, "ADMIN_PASSWORD_RESET", current_user, "User",
+        db, AuditAction.ADMIN_PASSWORD_RESET, current_user, "User",
         target_ids=user_id,
         metadata={"initiated_by": current_user.username},
         sensitivity_level=3
@@ -909,7 +909,7 @@ def request_password_reset(
 
         # Audit log
         log_audit_event(
-            db, "PASSWORD_RESET_REQUESTED", user, "User",
+            db, AuditAction.PASSWORD_RESET_REQUESTED, user, "User",
             target_ids=user.id,
             sensitivity_level=2
         )
@@ -954,7 +954,7 @@ def confirm_password_reset(
 
     # Audit log
     log_audit_event(
-        db, "PASSWORD_RESET_COMPLETED", token_record.user, "User",
+        db, AuditAction.PASSWORD_RESET_COMPLETED, token_record.user, "User",
         target_ids=token_record.user_id,
         sensitivity_level=2
     )
@@ -1010,7 +1010,7 @@ def admin_mfa_bypass(
     # Verify admin's own password after confirming target exists
     if not verify_password(mfa_request.admin_password, current_user.hashed_password):
         log_audit_event(
-            db, "MFA_BYPASS_FAILED_AUTH", current_user, "User",
+            db, AuditAction.MFA_BYPASS_FAILED_AUTH, current_user, "User",
             target_ids=user_id,
             metadata={"reason": "Admin password verification failed"},
             sensitivity_level=3
@@ -1026,7 +1026,7 @@ def admin_mfa_bypass(
 
     # Audit log with high sensitivity
     log_audit_event(
-        db, "MFA_BYPASS_INITIATED", current_user, "User",
+        db, AuditAction.MFA_BYPASS_INITIATED, current_user, "User",
         target_ids=user_id,
         metadata={
             "reason": mfa_request.reason,
@@ -1123,7 +1123,7 @@ def bulk_update_status(
 
     if access_result["forbidden"]:
         log_audit_event(
-            db, "BULK_ACCESS_DENIED", current_user, "User",
+            db, AuditAction.BULK_ACCESS_DENIED, current_user, "User",
             target_ids=access_result["forbidden"],
             metadata={"action": "bulk_status_update"},
             sensitivity_level=2
@@ -1217,7 +1217,7 @@ def bulk_update_status(
 
     # Audit log
     log_audit_event(
-        db, "BULK_STATUS_UPDATE", current_user, "User",
+        db, AuditAction.BULK_STATUS_UPDATE, current_user, "User",
         target_ids=succeeded,
         metadata={
             "new_status": bulk_data.new_status.value,
@@ -1323,7 +1323,7 @@ def bulk_delete_users(
 
     # Audit log
     log_audit_event(
-        db, "BULK_USER_DELETE", current_user, "User",
+        db, AuditAction.BULK_USER_DELETE, current_user, "User",
         target_ids=deleted_ids,
         metadata={
             "deleted_count": len(deleted_ids),
@@ -1453,7 +1453,7 @@ def bulk_create_users(
 
         # Audit log
         log_audit_event(
-            db, "BULK_USER_CREATE", current_user, "User",
+            db, AuditAction.BULK_USER_CREATE, current_user, "User",
             target_ids=[s["id"] for s in succeeded if "id" in s],
             metadata={
                 "created_count": len(succeeded),
@@ -1542,9 +1542,42 @@ async def import_users_csv(
             {field: "Column required" for field in missing_fields}
         )
 
+    # Buffer rows so we can pre-fetch conflicts in one batch
+    all_rows = list(reader)
+
+    # Batch duplicate check — one query for all usernames/emails in the file
+    all_usernames = [sanitize_csv_cell(str(r.get('username', '')).strip()) for r in all_rows if r.get('username')]
+    all_emails = [sanitize_csv_cell(str(r.get('email', '')).strip()) for r in all_rows if r.get('email')]
+    existing_conflict_users = db.query(models.User).filter(
+        or_(
+            models.User.username.in_(all_usernames),
+            models.User.email.in_(all_emails),
+        )
+    ).all() if (all_usernames or all_emails) else []
+    taken_usernames = {u.username for u in existing_conflict_users}
+    taken_emails = {u.email for u in existing_conflict_users}
+
+    # Batch active-manager check — one query for all manager KG IDs in the file
+    csv_manager_kg_ids = set()
+    for r in all_rows:
+        if r.get('role', '').strip().upper() == 'MANAGER' and r.get('kindergarten_id'):
+            try:
+                csv_manager_kg_ids.add(int(r['kindergarten_id']))
+            except (ValueError, TypeError):
+                pass
+    existing_manager_by_kg: dict = {}
+    if csv_manager_kg_ids:
+        for mgr in db.query(models.User).filter(
+            models.User.kindergarten_id.in_(csv_manager_kg_ids),
+            models.User.role == models.UserRole.MANAGER,
+            models.User.status == models.UserStatus.ACTIVE,
+        ).all():
+            if mgr.kindergarten_id not in existing_manager_by_kg:
+                existing_manager_by_kg[mgr.kindergarten_id] = mgr
+
     manager_kgs_in_csv = set()
 
-    for row in reader:
+    for row in all_rows:
         total_rows += 1
         row_num = total_rows + 1  # Account for header row
 
@@ -1590,21 +1623,18 @@ async def import_users_csv(
             failed.append(row_num)
             continue
 
-        # Check for existing
-        existing = db.query(models.User).filter(
-            or_(
-                models.User.username == user_data.username,
-                models.User.email == user_data.email
-            )
-        ).first()
-
-        if existing:
-            field = 'username' if existing.username == user_data.username else 'email'
+        # Check for existing — use pre-fetched sets (no per-row query)
+        dup_field = None
+        if user_data.username in taken_usernames:
+            dup_field = 'username'
+        elif user_data.email in taken_emails:
+            dup_field = 'email'
+        if dup_field:
             errors.append(CSVRowError(
                 row_number=row_num,
-                field=field,
+                field=dup_field,
                 error_code='DUPLICATE',
-                message=f"{field.capitalize()} already exists"
+                message=f"{dup_field.capitalize()} already exists"
             ))
             failed.append(row_num)
             continue
@@ -1620,19 +1650,26 @@ async def import_users_csv(
                 failed.append(row_num)
                 continue
 
-            try:
-                validators.validate_manager_rules(
-                    db,
-                    role=user_data.role,
-                    kindergarten_id=user_data.kindergarten_id,
-                    status_value=models.UserStatus.ACTIVE
-                )
-            except validators.ManagerRuleError as exc:
+            # Check for existing active manager — use pre-fetched dict (no per-row query)
+            if user_data.kindergarten_id is None:
                 errors.append(CSVRowError(
                     row_number=row_num,
                     field='kindergarten_id',
-                    error_code='CONFLICT' if exc.status_code == status.HTTP_409_CONFLICT else 'VALIDATION_ERROR',
-                    message=exc.message
+                    error_code='VALIDATION_ERROR',
+                    message="Manager must be assigned to a kindergarten",
+                ))
+                failed.append(row_num)
+                continue
+            existing_mgr = existing_manager_by_kg.get(user_data.kindergarten_id)
+            if existing_mgr:
+                errors.append(CSVRowError(
+                    row_number=row_num,
+                    field='kindergarten_id',
+                    error_code='CONFLICT',
+                    message=(
+                        f"Each kindergarten can have only one active manager. "
+                        f"Kindergarten {user_data.kindergarten_id} already has an active manager (ID: {existing_mgr.id})."
+                    ),
                 ))
                 failed.append(row_num)
                 continue
@@ -1659,7 +1696,7 @@ async def import_users_csv(
 
         # Audit log
         log_audit_event(
-            db, "CSV_IMPORT", current_user, "User",
+            db, AuditAction.CSV_IMPORT, current_user, "User",
             target_ids=created_ids,
             metadata={
                 "filename": file.filename,
@@ -1847,7 +1884,7 @@ def resolve_contact_message(
         db.commit()
 
         log_audit_event(
-            db, "CONTACT_MESSAGE_RESOLVED", current_user, "ContactMessage",
+            db, AuditAction.CONTACT_MESSAGE_RESOLVED, current_user, "ContactMessage",
             target_ids=message_id,
             metadata={"message_id": message_id},
             sensitivity_level=1,
@@ -4242,7 +4279,7 @@ def restore_backup(
         if success:
             log_audit_event(
                 db,
-                "BACKUP_RESTORED",
+                AuditAction.BACKUP_RESTORED,
                 current_user,
                 "Backup",
                 metadata={"backup_name": backup_name},
@@ -4291,7 +4328,7 @@ def delete_backup(
 
         # Log the deletion
         log_audit_event(
-            db, "BACKUP_DELETED", current_user, "Backup",
+            db, AuditAction.BACKUP_DELETED, current_user, "Backup",
             metadata={"backup_name": backup_name},
             sensitivity_level=2
         )
@@ -4354,7 +4391,7 @@ def cleanup_old_backups(
 
         # Log the cleanup
         log_audit_event(
-            db, "BACKUP_CLEANUP", current_user, "Backup",
+            db, AuditAction.BACKUP_CLEANUP, current_user, "Backup",
             metadata={"action": "cleanup_old_backups"},
             sensitivity_level=1
         )
@@ -5195,7 +5232,7 @@ def generate_incident_report(
         db.refresh(report)
 
         log_audit_event(
-            db, "REPORT_GENERATED", current_user, "report",
+            db, AuditAction.REPORT_GENERATED, current_user, "report",
             target_ids=report.id,
             metadata={
                 "description": f"Generated incident report ID {report.id} for scope {scope_type}",
