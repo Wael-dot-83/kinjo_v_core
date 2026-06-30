@@ -68,7 +68,7 @@ def _unlabelled_inputs(html: str) -> list[str]:
 # Fixtures
 # ---------------------------------------------------------------------------
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def admin_client(admin_token):
     """TestClient authenticated as admin."""
     with TestClient(app, raise_server_exceptions=False) as c:
