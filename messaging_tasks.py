@@ -8,8 +8,7 @@ dispatch_scheduled_messages
   - Idempotent: already-SENT messages are never re-processed.
 """
 import logging
-from datetime import datetime, timezone, timedelta
-_JORDAN_TZ = timezone(timedelta(hours=3))
+from datetime import datetime, timezone
 
 from celery_app import celery_app
 from config import settings
@@ -33,7 +32,10 @@ def dispatch_scheduled_messages_now(db=None) -> int:
 
     dispatched = 0
     try:
-        now = datetime.now(_JORDAN_TZ)
+        # scheduled_at is a UTC-semantic instant (see module docstring); comparing
+        # it against a Jordan-offset "now" breaks on SQLite, where DateTime(timezone=True)
+        # is compared as text and not normalized across offsets before ordering.
+        now = datetime.now(timezone.utc)
 
         _query = (
             db.query(models.Message)
