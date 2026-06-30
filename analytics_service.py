@@ -2561,12 +2561,22 @@ def get_registration_drilldown(
     total = query.count()
     records = query.order_by(models.EnrollmentApplication.created_at.desc()).offset(offset).limit(page_size).all()
 
+    # Batch-fetch all related objects to avoid N+1 queries
+    _child_ids = [ea.child_id for ea in records if ea.child_id]
+    _kg_ids = list({ea.kindergarten_id for ea in records if ea.kindergarten_id})
+    _reviewer_ids = list({ea.decision_by for ea in records if ea.decision_by})
+    _children_map = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(_child_ids)).all()}
+    _parent_ids = list({c.parent_id for c in _children_map.values() if c.parent_id})
+    _parents_map = {p.id: p for p in db.query(models.ParentProfile).filter(models.ParentProfile.id.in_(_parent_ids)).all()}
+    _kg_map = {k.id: k for k in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(_kg_ids)).all()}
+    _reviewer_map = {u.id: u for u in db.query(models.User).filter(models.User.id.in_(_reviewer_ids)).all()}
+
     items = []
     for ea in records:
-        child = db.query(models.Child).filter(models.Child.id == ea.child_id).first()
-        parent = db.query(models.ParentProfile).filter(models.ParentProfile.id == child.parent_id).first() if child else None
-        kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == ea.kindergarten_id).first()
-        reviewer = db.query(models.User).filter(models.User.id == ea.decision_by).first() if ea.decision_by else None
+        child = _children_map.get(ea.child_id)
+        parent = _parents_map.get(child.parent_id) if child else None
+        kg = _kg_map.get(ea.kindergarten_id)
+        reviewer = _reviewer_map.get(ea.decision_by)
 
         items.append({
             "id": ea.id,
@@ -3886,13 +3896,26 @@ def get_kg_overview_alerts(
         )
 
     alerts = query.order_by(models.ActiveAlert.triggered_at.desc()).limit(100).all()
+
+    # Batch-fetch kindergartens referenced by scoped alerts
+    _scoped_kg_ids = []
+    for _a in alerts:
+        if _a.scope_type == "KINDERGARTEN" and _a.scope_id:
+            try:
+                _scoped_kg_ids.append(int(_a.scope_id))
+            except Exception:
+                pass
+    _alert_kg_map = {k.id: k for k in db.query(models.Kindergarten).filter(
+        models.Kindergarten.id.in_(_scoped_kg_ids)
+    ).all()} if _scoped_kg_ids else {}
+
     result = []
     for alert in alerts:
         kg_name = None
         gov = None
         if alert.scope_type == "KINDERGARTEN" and alert.scope_id:
             try:
-                kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == int(alert.scope_id)).first()
+                kg = _alert_kg_map.get(int(alert.scope_id))
                 if kg:
                     kg_name = kg.name_ar or kg.name_en
                     gov = kg.governorate
@@ -4962,8 +4985,10 @@ def preview_report(
             if kg_filter:
                 incs = incs.filter(models.Incident.kindergarten_id.in_(kg_filter))
             incs = incs.limit(10).all()
+            _inc_kg_ids = list({inc.kindergarten_id for inc in incs if inc.kindergarten_id})
+            _inc_kg_map = {k.id: k for k in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(_inc_kg_ids)).all()}
             for inc in incs:
-                kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == inc.kindergarten_id).first()
+                kg = _inc_kg_map.get(inc.kindergarten_id)
                 sample_data.append({
                     "date": inc.occurred_at.date().isoformat(),
                     "kindergarten": kg.name_ar if kg else "",
@@ -4982,10 +5007,16 @@ def preview_report(
             if kg_filter:
                 apps = apps.filter(models.EnrollmentApplication.kindergarten_id.in_(kg_filter))
             apps = apps.limit(10).all()
+            _app_cids = [a.child_id for a in apps if a.child_id]
+            _app_kgids = list({a.kindergarten_id for a in apps if a.kindergarten_id})
+            _app_children = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(_app_cids)).all()}
+            _app_pids = list({c.parent_id for c in _app_children.values() if c.parent_id})
+            _app_parents = {p.id: p for p in db.query(models.ParentProfile).filter(models.ParentProfile.id.in_(_app_pids)).all()}
+            _app_kgs = {k.id: k for k in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(_app_kgids)).all()}
             for app in apps:
-                child = db.query(models.Child).filter(models.Child.id == app.child_id).first()
-                parent = db.query(models.ParentProfile).filter(models.ParentProfile.id == child.parent_id).first() if child else None
-                kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == app.kindergarten_id).first()
+                child = _app_children.get(app.child_id)
+                parent = _app_parents.get(child.parent_id) if child else None
+                kg = _app_kgs.get(app.kindergarten_id)
                 sample_data.append({
                     "child_name": f"{child.first_name} {child.last_name}" if child else "",
                     "parent_name": f"{parent.first_name} {parent.last_name}" if parent else "",

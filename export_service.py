@@ -229,12 +229,16 @@ class ExportService:
 
         enrollments = query.limit(1000).all()
 
+        # Batch-fetch related objects to avoid N+1 queries
+        _child_ids = [a.child_id for a in enrollments if a.child_id]
+        _children_map = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(_child_ids)).all()}
+        _parent_ids = list({c.parent_id for c in _children_map.values() if c.parent_id})
+        _parents_map = {p.id: p for p in db.query(models.ParentProfile).filter(models.ParentProfile.id.in_(_parent_ids)).all()}
+
         result = []
         for app in enrollments:
-            child = db.query(models.Child).filter(models.Child.id == app.child_id).first()
-            parent = None
-            if child:
-                parent = db.query(models.ParentProfile).filter(models.ParentProfile.id == child.parent_id).first()
+            child = _children_map.get(app.child_id)
+            parent = _parents_map.get(child.parent_id) if child else None
             result.append({
                 "created_at": app.created_at.isoformat() if app.created_at else None,
                 "status": app.status.value if hasattr(app.status, "value") else str(app.status),
