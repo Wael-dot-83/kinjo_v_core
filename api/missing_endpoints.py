@@ -5,7 +5,9 @@ All routes are registered under the /api prefix in main.py.
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -580,7 +582,7 @@ def mark_attendance(
             class_id=enrollment.class_id,
             date=today,
             status=models.AttendanceStatus.PRESENT,
-            check_in_at=datetime.now(timezone.utc),
+            check_in_at=datetime.now(_JORDAN_TZ),
             recorded_by=current_user.id,
         )
         db.add(attendance)
@@ -618,20 +620,26 @@ def bulk_attendance(
     updated = 0
     errors: list[dict] = []
     today = today_amman()
+    _now = datetime.now(_JORDAN_TZ)
+
+    try:
+        status_val = models.AttendanceStatus(body.status.upper())
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Invalid status: {body.status}")
+
+    # Batch-fetch enrollments for all child_ids to avoid N queries
+    enrollment_map = {
+        e.child_id: e
+        for e in db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id.in_(body.child_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).all()
+    }
 
     for cid in body.child_ids:
-        enrollment = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == cid,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
-        ).first()
+        enrollment = enrollment_map.get(cid)
         if not enrollment:
             errors.append({"child_id": cid, "error": "No active enrollment"})
-            continue
-
-        try:
-            status_val = models.AttendanceStatus(body.status.upper())
-        except ValueError:
-            errors.append({"child_id": cid, "error": f"Invalid status: {body.status}"})
             continue
 
         attendance = models.AttendanceLog(
@@ -639,7 +647,7 @@ def bulk_attendance(
             class_id=enrollment.class_id,
             date=today,
             status=status_val,
-            check_in_at=datetime.now(timezone.utc) if status_val == models.AttendanceStatus.PRESENT else None,
+            check_in_at=_now if status_val == models.AttendanceStatus.PRESENT else None,
             recorded_by=current_user.id,
         )
         db.add(attendance)
