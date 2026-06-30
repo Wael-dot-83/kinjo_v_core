@@ -2,7 +2,8 @@
 Background tasks for sending notifications.
 """
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from utils.time_utils import today_amman as _today
 import smtplib
 from email.mime.text import MIMEText
@@ -109,7 +110,7 @@ def send_email_notification(notification_id: int) -> None:
         _send_email(user.email, subject, body)
 
         notification.status = models.NotificationStatus.SENT
-        notification.sent_at = datetime.now(timezone.utc)
+        notification.sent_at = datetime.now(_JORDAN_TZ)
         db.commit()
     except (smtplib.SMTPException, httpx.HTTPError, OSError, RuntimeError, TypeError, ValueError, AttributeError) as exc:
         notification = db.query(models.Notification).filter(models.Notification.id == notification_id).first()
@@ -151,10 +152,10 @@ def send_push_notification(notification_id: int) -> None:
 
         for token in tokens:
             _send_push(token.token, title, body)
-            token.last_used_at = datetime.now(timezone.utc)
+            token.last_used_at = datetime.now(_JORDAN_TZ)
 
         notification.status = models.NotificationStatus.SENT
-        notification.sent_at = datetime.now(timezone.utc)
+        notification.sent_at = datetime.now(_JORDAN_TZ)
         db.commit()
     except (httpx.HTTPError, RuntimeError, OSError, TypeError, ValueError, AttributeError) as exc:
         notification = db.query(models.Notification).filter(models.Notification.id == notification_id).first()

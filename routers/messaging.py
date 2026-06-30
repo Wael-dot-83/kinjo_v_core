@@ -9,7 +9,8 @@ GET  /api/messages/recipients/search   — manager: search recipients by name
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -233,7 +234,7 @@ def send_message_safe(
 
     # ── Persist ────────────────────────────────────────────────────────────
     queue_status = MessageQueueStatus.SENT
-    if body.scheduled_at and body.scheduled_at > datetime.now(timezone.utc):
+    if body.scheduled_at and body.scheduled_at > datetime.now(_JORDAN_TZ):
         queue_status = MessageQueueStatus.SCHEDULED
 
     msg = Message(
@@ -380,7 +381,7 @@ def mark_message_read(
     )
     if recipient_row:
         if not recipient_row.read_at:
-            recipient_row.read_at = datetime.now(timezone.utc)
+            recipient_row.read_at = datetime.now(_JORDAN_TZ)
             if not recipient_row.delivered_at:
                 recipient_row.delivered_at = recipient_row.read_at
             db.commit()
@@ -394,7 +395,7 @@ def mark_message_read(
     if not msg:
         raise HTTPException(status_code=404)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(_JORDAN_TZ)
     row = MessageRecipient(message_id=msg.id, recipient_user_id=current_user.id, delivered_at=now, read_at=now)
     db.add(row)
     db.commit()
@@ -435,7 +436,7 @@ def broadcast_message(
     allowed_ids = _allowed_recipient_ids_for_manager(current_user, db) if current_user.role == UserRole.MANAGER else None
 
     queue_status = MessageQueueStatus.SENT
-    if payload.scheduled_at and payload.scheduled_at > datetime.now(timezone.utc):
+    if payload.scheduled_at and payload.scheduled_at > datetime.now(_JORDAN_TZ):
         queue_status = MessageQueueStatus.SCHEDULED
 
     created_ids = []

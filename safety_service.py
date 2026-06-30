@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
 from typing import List, Optional
 from datetime import datetime, date, timedelta, timezone
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from pydantic import BaseModel
 
 import models
@@ -72,7 +73,7 @@ def update_incident(
     if update_data.followup_sla_deadline:
         incident.followup_sla_deadline = update_data.followup_sla_deadline
     if update_data.close_incident:
-        incident.closed_at = datetime.now(timezone.utc)
+        incident.closed_at = datetime.now(_JORDAN_TZ)
         incident.closed_by = current_user.id
         
     db.commit()
@@ -131,7 +132,7 @@ def create_safeguarding_case(
             detail="Child is not currently enrolled in the specified kindergarten"
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(_JORDAN_TZ)
     safeguarding_case = models.SafeguardingCase(
         child_id=case_data.child_id,
         kindergarten_id=kindergarten_id,

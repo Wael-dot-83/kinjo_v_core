@@ -7,7 +7,8 @@ the manager's own kindergarten(s).
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from utils.time_utils import today_amman as _today
 from typing import Optional
 
@@ -153,7 +154,7 @@ def delete_class(
     )
     if active_count:
         raise HTTPException(status_code=409, detail=f"Cannot delete class with {active_count} active enrollment(s).")
-    cls.deleted_at = datetime.now(timezone.utc)
+    cls.deleted_at = datetime.now(_JORDAN_TZ)
     db.commit()
 
 
@@ -226,7 +227,7 @@ def unassign_supervisor_from_class(
     )
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found.")
-    assignment.deleted_at = datetime.now(timezone.utc)
+    assignment.deleted_at = datetime.now(_JORDAN_TZ)
     db.commit()
 
 
@@ -239,7 +240,7 @@ def swap_supervisor(
 ):
     """Remove all current supervisors from a class and assign a new primary one."""
     _get_class_or_403(class_id, current_user, db)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(_JORDAN_TZ)
     # Soft-delete existing assignments
     db.query(SupervisorAssignment).filter(
         SupervisorAssignment.class_id == class_id,
@@ -458,7 +459,7 @@ def send_report_to_parents(
 
     report.status = DailyReportStatus.SENT_TO_PARENT
     report.approved_by = current_user.id
-    report.approved_at = datetime.now(timezone.utc)
+    report.approved_at = datetime.now(_JORDAN_TZ)
     db.add(AuditLog(
         user_id=current_user.id,
         action="send_to_parent",

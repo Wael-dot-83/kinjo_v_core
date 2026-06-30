@@ -2,7 +2,8 @@
 Supervisor Service Module
 Handles all supervisor-specific operations and class management
 """
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from utils.time_utils import today_amman as _today
 from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session, joinedload
@@ -408,7 +409,7 @@ class SupervisorService:
             )
 
         if not observed_at:
-            observed_at = datetime.now(timezone.utc)
+            observed_at = datetime.now(_JORDAN_TZ)
 
         observation = models.Observation(
             child_id=child_id,

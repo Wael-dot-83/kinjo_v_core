@@ -24,7 +24,8 @@ Validation utilities and audit logging for KInJo platform
 import logging
 import re
 import unicodedata
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from utils.time_utils import today_amman as _today
 from typing import Optional, List
 from fastapi import HTTPException, status
@@ -634,9 +635,9 @@ def mark_profile_complete_if_ready(db, child_id: int):
         return False, ["parent.profile"]
     from datetime import datetime, timezone
     child.profile_complete = True
-    child.profile_completed_at = datetime.now(timezone.utc)
+    child.profile_completed_at = datetime.now(_JORDAN_TZ)
     parent.profile_complete = True
-    parent.profile_completed_at = datetime.now(timezone.utc)
+    parent.profile_completed_at = datetime.now(_JORDAN_TZ)
     db.commit()
     return True, []
 
@@ -845,7 +846,7 @@ def validate_daily_report_completeness(report_data: dict) -> List[str]:
 
 def validate_daily_report_deadline() -> None:
     """Validate that daily report submission is before 4:00 PM deadline"""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(_JORDAN_TZ)
     deadline_hour = 16  # 4:00 PM
 
     if now.hour >= deadline_hour:

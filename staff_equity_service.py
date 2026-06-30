@@ -6,6 +6,8 @@ for supervisors and staff within kindergartens.
 import logging
 from collections import Counter
 from datetime import datetime, timedelta, timezone
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func, and_
@@ -50,7 +52,7 @@ class StaffEquityService:
 
     @staticmethod
     def _utcnow_naive() -> datetime:
-        return datetime.now(timezone.utc).replace(tzinfo=None)
+        return datetime.now(_JORDAN_TZ).replace(tzinfo=None)
 
     def teacher_workload_gini(
         self,

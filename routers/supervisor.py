@@ -15,6 +15,7 @@ import os
 import secrets
 import uuid
 from datetime import date, datetime, timedelta, timezone
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from utils.time_utils import today_amman as _today
 from typing import Optional
 
@@ -790,7 +791,7 @@ def create_daily_report(
         raise HTTPException(status_code=400, detail="Supervisor can only save as DRAFT or SUBMITTED.")
 
     target_status = DailyReportStatus.DRAFT if body.status == "DRAFT" else DailyReportStatus.SUBMITTED
-    now = datetime.now(timezone.utc)
+    now = datetime.now(_JORDAN_TZ)
     provided_fields = getattr(body, "model_fields_set", set())
 
     if existing and force:
@@ -897,7 +898,7 @@ def update_daily_report(
     if report.status != DailyReportStatus.DRAFT:
         raise HTTPException(status_code=403, detail="Report is already submitted and cannot be edited.")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(_JORDAN_TZ)
     for field in ("arrival_time", "leave_time", "breakfast", "snack", "milk",
                   "lunch", "nap_start", "nap_end", "activities", "notes"):
         val = getattr(body, field)
@@ -928,7 +929,7 @@ def submit_daily_report(
     if report.status != DailyReportStatus.DRAFT:
         raise HTTPException(status_code=403, detail="Only DRAFT reports can be submitted.")
     report.status = DailyReportStatus.SUBMITTED
-    report.submitted_at = datetime.now(timezone.utc)
+    report.submitted_at = datetime.now(_JORDAN_TZ)
     db.add(AuditLog(
         user_id=current_user.id,
         action="submit",
@@ -973,7 +974,7 @@ def create_safety_incident(
 
     occurred_at = (
         datetime.fromisoformat(body.occurred_at) if body.occurred_at
-        else datetime.now(timezone.utc)
+        else datetime.now(_JORDAN_TZ)
     )
 
     incident = Incident(
@@ -1092,7 +1093,7 @@ def resolve_safety_incident(
             f.write(raw)
         attachment_url = f"/{settings.STATIC_DIR}/uploads/incidents/{file_name}"
 
-    incident.closed_at = datetime.now(timezone.utc)
+    incident.closed_at = datetime.now(_JORDAN_TZ)
     incident.closed_by = current_user.id
     if resolution_notes:
         incident.resolution_notes = resolution_notes
@@ -1241,7 +1242,7 @@ def mark_message_read(
     msg = db.query(Message).filter(Message.id == message_id, Message.recipient_id == current_user.id).first()
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found.")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(_JORDAN_TZ)
     recipient_row = db.query(MessageRecipient).filter(
         MessageRecipient.message_id == message_id,
         MessageRecipient.recipient_user_id == current_user.id,
@@ -1362,7 +1363,7 @@ def delete_message_for_supervisor(
         if not state:
             state = MessageUserState(message_id=message_id, user_id=current_user.id)
             db.add(state)
-        state.deleted_at = datetime.now(timezone.utc)
+        state.deleted_at = datetime.now(_JORDAN_TZ)
     except OperationalError:
         msg.is_read = True  # fallback: mark as read when soft-delete table is unavailable
     db.add(
@@ -1695,12 +1696,12 @@ def enable_supervisor_2fa(
     prefs = _read_notification_preferences(current_user)
     prefs["_security"] = {
         "backup_code_hashes": [_backup_code_hash(code) for code in backup_codes],
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(_JORDAN_TZ).isoformat(),
     }
 
     _sync_totp_secret(current_user, encrypted_secret)
     current_user.mfa_enabled = True
-    current_user.mfa_enrolled_at = datetime.now(timezone.utc)
+    current_user.mfa_enrolled_at = datetime.now(_JORDAN_TZ)
     _write_notification_preferences(current_user, prefs)
 
     otpauth_uri = provisioning_uri(secret, current_user.email or current_user.username)
@@ -1780,7 +1781,7 @@ def change_supervisor_password(
         raise HTTPException(status_code=400, detail="New password confirmation does not match.")
 
     current_user.hashed_password = get_password_hash(body.new_password)
-    current_user.password_changed_at = datetime.now(timezone.utc)
+    current_user.password_changed_at = datetime.now(_JORDAN_TZ)
     db.commit()
     return {"status": "ok"}
 

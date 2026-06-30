@@ -8,7 +8,8 @@ dispatch_scheduled_messages
   - Idempotent: already-SENT messages are never re-processed.
 """
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+_JORDAN_TZ = timezone(timedelta(hours=3))
 
 from celery_app import celery_app
 from config import settings
@@ -32,7 +33,7 @@ def dispatch_scheduled_messages_now(db=None) -> int:
 
     dispatched = 0
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(_JORDAN_TZ)
 
         _query = (
             db.query(models.Message)
