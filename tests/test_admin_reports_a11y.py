@@ -5,73 +5,48 @@ Tests for the analytics reports admin page.
 - formatDateSafe / formatToAmman behavior
 """
 import re
-import urllib.request
-import json
-from datetime import datetime, timezone
 import unittest
-from unittest.mock import patch
+from datetime import datetime, timezone
+
+import pytest
+from fastapi.testclient import TestClient
+
+from main import app
 
 
 class AnalyticsReportsTemplateTests(unittest.TestCase):
     """Tests for templates/admin/analytics/reports.html."""
 
-    BASE_URL = "http://127.0.0.1:8000"
+    @pytest.fixture(autouse=True)
+    def _inject_fixtures(self, admin_token):
+        self._admin_token = admin_token
 
-    def _login_token(self):
-        data = urllib.parse.urlencode({
-            "username": "admin",
-            "password": "Admin@1234",
-        }).encode()
-        req = urllib.request.Request(f"{self.BASE_URL}/api/auth/login", data=data, method="POST")
-        with urllib.request.urlopen(req) as resp:
-            cookie = resp.headers.get("Set-Cookie", "")
-            for part in cookie.split(";"):
-                if part.strip().startswith("kinjo_csrf_token="):
-                    return part.strip().split("=", 1)[1]
-        return None
+    def _get_reports_html(self) -> str:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            client.cookies.set("kinjo_token", self._admin_token)
+            resp = client.get("/admin/analytics/reports")
+            assert resp.status_code == 200, f"Page returned {resp.status_code}"
+            return resp.text
 
     def test_standards_mode_and_rtl_attributes(self):
         """Verify DOCTYPE and lang/dir on the rendered page."""
-        token = self._login_token()
-        req = urllib.request.Request(
-            f"{self.BASE_URL}/admin/analytics/reports",
-            headers={"Cookie": f"kinjo_csrf_token={token}"},
+        html = self._get_reports_html()
+        self.assertTrue(
+            html.lstrip().lower().startswith("<!doctype html>"),
+            "Page must start with <!DOCTYPE html>",
         )
-        with urllib.request.urlopen(req) as resp:
-            raw = resp.read()
-            # Strip BOM if present
-            if raw.startswith(b"\xef\xbb\xbf"):
-                raw = raw[3:]
-            html = raw.decode("utf-8", errors="replace")
-            self.assertTrue(
-                html.lstrip().lower().startswith("<!doctype html>"),
-                "Page must start with <!DOCTYPE html>",
-            )
-            # The <html> tag must include lang and dir attributes
-            self.assertRegex(html, r'<html\s[^>]*lang="[^"]+"', msg="<html> must have lang attr")
-            self.assertRegex(html, r'<html\s[^>]*dir="[^"]+"',  msg="<html> must have dir attr")
+        self.assertRegex(html, r'<html\s[^>]*lang="[^"]+"', msg="<html> must have lang attr")
+        self.assertRegex(html, r'<html\s[^>]*dir="[^"]+"', msg="<html> must have dir attr")
 
     def test_no_duplicate_ids(self):
-        token = self._login_token()
-        req = urllib.request.Request(
-            f"{self.BASE_URL}/admin/analytics/reports",
-            headers={"Cookie": f"kinjo_csrf_token={token}"},
-        )
-        with urllib.request.urlopen(req) as resp:
-            html = resp.read().decode("utf-8", errors="replace")
+        html = self._get_reports_html()
         ids = re.findall(r'id="([^"]+)"', html)
         dups = sorted({i for i in ids if ids.count(i) > 1})
         self.assertEqual(dups, [], f"Duplicate IDs found: {dups}")
 
     def test_all_filter_inputs_have_labels(self):
         """Every <select id="x"> should have a matching <label for="x">."""
-        token = self._login_token()
-        req = urllib.request.Request(
-            f"{self.BASE_URL}/admin/analytics/reports",
-            headers={"Cookie": f"kinjo_csrf_token={token}"},
-        )
-        with urllib.request.urlopen(req) as resp:
-            html = resp.read().decode("utf-8", errors="replace")
+        html = self._get_reports_html()
         select_ids = set(re.findall(r'<select[^>]*id="([^"]+)"', html))
         labeled = set()
         for sel_id in select_ids:
@@ -90,7 +65,6 @@ class TimezoneHelperTests(unittest.TestCase):
         self.assertEqual(iso, "2026-06-14T08:00:00+00:00")
 
     def test_intl_amman_renders_valid_string(self):
-        # Simulate the JS Intl call in Python
         try:
             from zoneinfo import ZoneInfo
             amman = ZoneInfo("Asia/Amman")
