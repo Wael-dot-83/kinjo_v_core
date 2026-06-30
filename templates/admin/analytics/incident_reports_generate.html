@@ -1,28 +1,28 @@
 {% extends "admin_base.html" %}
 
-{% block title %}{{ _t('Generate Incident Report') }} — KinJo{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Generate Incident Report{% else %}إنشاء تقرير الحوادث{% endif %} — KinJo{% endblock %}
 
 
 
 {% block content %}
 <div class="page-header mb-4">
-  <h1 class="page-title" k-text-glow>
+  <h1 class="page-title" cyberlume-glow-text>
     <i class="bi bi-file-earmark-plus me-2"></i>
-    {{ _t('Generate Incident Report') }}
+    {% if ui_lang == 'en' %}Generate Incident Report{% else %}إنشاء تقرير الحوادث{% endif %}
   </h1>
 </div>
 
 <div class="row justify-content-center">
     <div class="col-lg-8">
-        <div class="k-card ">
+        <div class="cyberlume-card ">
             <div class="card-header bg-white py-3">
-                <h5 class="k-card-title mb-0">{{ _t('Generate New Incident Report') }}</h5>
+                <h5 class="cyberlume-card-title mb-0">{% if ui_lang == 'en' %}Generate New Incident Report{% else %}إنشاء تقرير جديد للحوادث{% endif %}</h5>
             </div>
             <div class="card-body p-4">
                 <form id="generateReportForm" onsubmit="generateReport(event)">
                     <!-- Scope Selection -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">{{ _t('Report Scope') }}</label>
+                        <label class="form-label fw-bold">{% if ui_lang == 'en' %}Report Scope{% else %}نطاق التقرير{% endif %}</label>
                         <div class="row g-3" id="scopeOptions">
                             <!-- Options will be loaded dynamically -->
                         </div>
@@ -30,56 +30,56 @@
 
                     <!-- Time Period Selection -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">{{ _t('Time Period') }}</label>
+                        <label class="form-label fw-bold">{% if ui_lang == 'en' %}Time Period{% else %}الفترة الزمنية{% endif %}</label>
                         <div class="row g-3">
                             <div>
-                                <div class="form-check custom-k-card-check">
+                                <div class="form-check custom-cyberlume-card-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="periodWeek"
                                         value="week" checked>
                                     <label class="form-check-label w-100" for="periodWeek">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-week text-primary fs-4 mb-2 d-block"></i>
-                                            <strong>{{ _t('Current Week') }}</strong>
-                                            <div class="small text-on-surface-variant">{{ _t('Last 7 days') }}</div>
+                                            <strong>{% if ui_lang == 'en' %}Current Week{% else %}الأسبوع الحالي{% endif %}</strong>
+                                            <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Last 7 days{% else %}آخر 7 أيام{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
                             </div>
                             <div>
-                                <div class="form-check custom-k-card-check">
+                                <div class="form-check custom-cyberlume-card-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="periodMonth"
                                         value="month">
                                     <label class="form-check-label w-100" for="periodMonth">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-month text-success fs-4 mb-2 d-block"></i>
-                                            <strong>{{ _t('Current Month') }}</strong>
-                                            <div class="small text-on-surface-variant">{{ _t('Last 30 days') }}</div>
+                                            <strong>{% if ui_lang == 'en' %}Current Month{% else %}الشهر الحالي{% endif %}</strong>
+                                            <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Last 30 days{% else %}آخر 30 يوم{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
                             </div>
                             <div>
-                                <div class="form-check custom-k-card-check">
+                                <div class="form-check custom-cyberlume-card-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="period3Years"
                                         value="3years">
                                     <label class="form-check-label w-100" for="period3Years">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-range text-warning fs-4 mb-2 d-block"></i>
-                                            <strong>{{ _t('Last 3 Years') }}</strong>
-                                            <div class="small text-on-surface-variant">{{ _t('Rolling backward') }}</div>
+                                            <strong>{% if ui_lang == 'en' %}Last 3 Years{% else %}آخر 3 سنوات{% endif %}</strong>
+                                            <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Rolling backward{% else %}متحرك للخلف{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
                             </div>
                             <div>
-                                <div class="form-check custom-k-card-check">
+                                <div class="form-check custom-cyberlume-card-check">
                                     <input class="form-check-input" type="radio" name="periodType" id="periodAnnual"
                                         value="annual">
                                     <label class="form-check-label w-100" for="periodAnnual">
                                         <div class="p-3 border rounded">
                                             <i class="bi bi-calendar-year text-info fs-4 mb-2 d-block"></i>
-                                            <strong>{{ _t('Current Year') }}</strong>
-                                            <div class="small text-on-surface-variant">{{ _t('Annual summary') }}</div>
+                                            <strong>{% if ui_lang == 'en' %}Current Year{% else %}السنة الحالية{% endif %}</strong>
+                                            <div class="small text-on-surface-variant">{% if ui_lang == 'en' %}Annual summary{% else %}ملخص سنوي{% endif %}</div>
                                         </div>
                                     </label>
                                 </div>
@@ -91,7 +91,7 @@
                     <div class="d-grid">
                         <button type="submit" class="btn cyberlume-btn cyberlume-btn-primary btn-lg" id="generateBtn">
                             <i class="bi bi-file-earmark-plus me-2"></i>
-                            {{ _t('Generate Report') }}
+                            {% if ui_lang == 'en' %}Generate Report{% else %}إنشاء التقرير{% endif %}
                         </button>
                     </div>
                 </form>
@@ -104,15 +104,15 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{{ _t('Report Generated Successfully') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _t('Close') }}"></button>
+                <h5 class="modal-title">{% if ui_lang == 'en' %}Report Generated Successfully{% else %}تم إنشاء التقرير بنجاح{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
-                <p>{{ _t('The incident report has been generated successfully. You can now view the report or create another one.') }}</p>
+                <p>{% if ui_lang == 'en' %}The incident report has been generated successfully. You can now view the report or create another one.{% else %}تم إنشاء تقرير الحوادث بنجاح. يمكنك الآن عرض التقرير أو إنشاء تقرير آخر.{% endif %}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{{ _t('Generate Another Report') }}</button>
-                <a href="/admin/reports/incidents" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]">{{ _t('View Reports') }}</a>
+                <button type="button" class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Generate Another Report{% else %}إنشاء تقرير آخر{% endif %}</button>
+                <a href="/admin/reports/incidents" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]">{% if ui_lang == 'en' %}View Reports{% else %}عرض التقارير{% endif %}</a>
             </div>
         </div>
 </div>
@@ -136,7 +136,7 @@
                 col.className = 'col-md-6';
 
                 const formCheck = document.createElement('div');
-                formCheck.className = 'form-check custom-k-card-check';
+                formCheck.className = 'form-check custom-cyberlume-card-check';
 
                 const input = document.createElement('input');
                 input.className = 'form-check-input';
@@ -150,8 +150,8 @@
                 label.className = 'form-check-label w-100';
                 label.htmlFor = input.id;
 
-                const k-card = document.createElement('div');
-                k-card.className = 'p-3 border rounded';
+                const cyberlume-card = document.createElement('div');
+                cyberlume-card.className = 'p-3 border rounded';
 
                 const icon = document.createElement('i');
                 icon.className = getScopeIcon(scope.type) + ' fs-4 mb-2 d-block';
@@ -164,10 +164,10 @@
                 subtitle.className = 'small text-on-surface-variant';
                 subtitle.textContent = getScopeDescription(scope);
 
-                k-card.appendChild(icon);
-                k-card.appendChild(title);
-                k-card.appendChild(subtitle);
-                label.appendChild(k-card);
+                cyberlume-card.appendChild(icon);
+                cyberlume-card.appendChild(title);
+                cyberlume-card.appendChild(subtitle);
+                label.appendChild(cyberlume-card);
                 formCheck.appendChild(input);
                 formCheck.appendChild(label);
                 col.appendChild(formCheck);

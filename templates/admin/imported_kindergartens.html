@@ -1,6 +1,6 @@
 {% extends "admin_base.html" %}
 
-{% block title %}{{ _t('Imported Kindergartens — KinJo') }}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Imported Kindergartens — KinJo{% else %}الروضات المستوردة — KinJo{% endif %}{% endblock %}
 
 
 
@@ -10,9 +10,9 @@
             <div class="glass-panel border border-white/10 rounded-2xl p-6 relative overflow-hidden group mb-6">
                 <div class="absolute -top-32 -right-32 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500"></div>
                 <div class="flex items-center justify-between mb-8 border-b border-white/5 pb-4 relative z-10">
-                    <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center"><span class="material-symbols-outlined text-primary">analytics</span></div><h1 class="font-display-md text-display-md text-on-surface font-bold tracking-tight">{{ _t('Imported Kindergartens') }}</h1></div>
+                    <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center"><span class="material-symbols-outlined text-primary">analytics</span></div><h1 class="font-display-md text-display-md text-on-surface font-bold tracking-tight">{% if ui_lang == 'en' %}Imported Kindergartens{% else %}الروضات المستوردة{% endif %}</h1></div>
                     <a href="/admin/import-kindergartens" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(47,125,98,0.3)]">
-                        <span class="material-symbols-outlined text-sm">upload</span> {{ _t('Import More') }}
+                        <span class="material-symbols-outlined text-sm">upload</span> {% if ui_lang == 'en' %}Import More{% else %}استيراد المزيد{% endif %}
                     </a>
                 </div>
                 <div class="relative z-10">
@@ -20,31 +20,31 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                         <div>
                             <input type="text" class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="searchInput"
-                                placeholder="{{ _t('Search by name or phone') }}"
-                                aria-label="{{ _t('Search by name or phone') }}">
+                                placeholder="{% if ui_lang == 'en' %}Search by name or phone{% else %}بحث بالاسم أو الهاتف{% endif %}"
+                                aria-label="{% if ui_lang == 'en' %}Search by name or phone{% else %}بحث بالاسم أو الهاتف{% endif %}">
                         </div>
                         <div>
                             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="governorateFilter"
-                                    aria-label="{{ _t('All Governorates') }}">
-                                <option value="">{{ _t('All Governorates') }}</option>
+                                    aria-label="{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}">
+                                <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
                             </select>
                         </div>
                         <div>
                             <select class="w-full bg-surface-container/50 border border-white/10 text-on-surface rounded-lg px-3 py-2 outline-none focus:border-primary/50 transition-colors appearance-none" id="cityFilter"
-                                    aria-label="{{ _t('All Cities') }}">
-                                <option value="">{{ _t('All Cities') }}</option>
+                                    aria-label="{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}">
+                                <option value="">{% if ui_lang == 'en' %}All Cities{% else %}جميع المدن{% endif %}</option>
                             </select>
                         </div>
                         <div>
                             <button class="w-full flex justify-center items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-white/10 text-on-surface hover:bg-white/5 transition-colors" id="clearFilters">
-                                {{ _t('Clear Filters') }}
+                                {% if ui_lang == 'en' %}Clear Filters{% else %}مسح الفلاتر{% endif %}
                             </button>
                         </div>
                     </div>
 
                     <!-- Results info -->
                     <div class="mb-3">
-                        <small class="text-on-surface-variant" id="resultsInfo">{{ _t('Loading...') }}</small>
+                        <small class="text-on-surface-variant" id="resultsInfo">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</small>
                     </div>
 
                     <!-- Table -->
@@ -52,26 +52,26 @@
                         <table class="w-full text-start" id="kindergartensTable">
                             <thead>
                                 <tr>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Name (AR)') }}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Name (EN)') }}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Governorate') }}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('District') }}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Area') }}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Phone') }}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Address') }}</th>
-                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{{ _t('Imported At') }}</th>
+                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Name (AR){% else %}الاسم (عربي){% endif %}</th>
+                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Name (EN){% else %}الاسم (إنجليزي){% endif %}</th>
+                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</th>
+                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</th>
+                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
+                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Address{% else %}العنوان{% endif %}</th>
+                                    <th class="px-4 py-3 border-b border-white/10 bg-white/5 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-start">{% if ui_lang == 'en' %}Imported At{% else %}تاريخ الاستيراد{% endif %}</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBody">
                                 <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-<td colspan="8" class="text-center">{{ _t('Loading...') }}</td>
+<td colspan="8" class="text-center">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
                     <!-- Pagination -->
-                    <nav aria-label="{{ _t('Pagination') }}" id="paginationNav" style="display: none;">
+                    <nav aria-label="{% if ui_lang == 'en' %}Pagination{% else %}التنقل بين الصفحات{% endif %}" id="paginationNav" style="display: none;">
                         <ul class="pagination justify-content-center" id="pagination"></ul>
                     </nav>
                 </div>

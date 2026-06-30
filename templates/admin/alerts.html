@@ -1,18 +1,18 @@
 {% extends "admin_base.html" %}
 
-{% block title %}{{ _t('Alert Management') }} — KinJo{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Alert Management{% else %}إدارة التنبيهات{% endif %} — KinJo{% endblock %}
 
 {% block breadcrumb %}
 <a href="/admin/dashboard" class="breadcrumb-item">
-  <i class="bi bi-house"></i> {{ _t('Dashboard') }}
+  <i class="bi bi-house"></i> {% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}
 </a>
 <span class="breadcrumb-separator">/</span>
 <a href="/admin/analytics" class="breadcrumb-item">
-  {{ _t('Analytics') }}
+  {% if ui_lang == 'en' %}Analytics{% else %}التحليلات{% endif %}
 </a>
 <span class="breadcrumb-separator">/</span>
 <span class="breadcrumb-item active">
-  {{ _t('Alerts') }}
+  {% if ui_lang == 'en' %}Alerts{% else %}التنبيهات{% endif %}
 </span>
 {% endblock %}
 
@@ -21,18 +21,18 @@
   <div>
     <div class="page-header-eyebrow">
       <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-      {{ _t('System Monitoring') }}
+      {% if ui_lang == 'en' %}System Monitoring{% else %}مراقبة النظام{% endif %}
     </div>
     <h1 class="page-header-title">
-      {{ _t('Alert Management') }}
+      {% if ui_lang == 'en' %}Alert Management{% else %}إدارة التنبيهات{% endif %}
     </h1>
     <p class="text-muted mt-1 mb-0">
-      {{ _t('View and manage system alerts across all governorates.') }}
+      {% if ui_lang == 'en' %}View and manage system alerts across all governorates.{% else %}عرض وإدارة تنبيهات النظام عبر جميع المحافظات.{% endif %}
     </p>
   </div>
   <button id="refreshAlertsBtn" class="btn btn-ghost">
     <i class="bi bi-arrow-clockwise me-1"></i>
-    {{ _t('Refresh') }}
+    {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
   </button>
 </div>
 
@@ -43,44 +43,44 @@
       <div class="row g-3 align-items-end">
         <div class="col-md-3">
           <label for="severityFilter" class="form-label small fw-semibold">
-            {{ _t('Severity') }}
+            {% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}
           </label>
           <select id="severityFilter" class="form-select form-select-sm">
-            <option value="">{{ _t('All Severities') }}</option>
-            <option value="CRITICAL">{{ _t('Critical') }}</option>
-            <option value="HIGH">{{ _t('High') }}</option>
-            <option value="MEDIUM">{{ _t('Medium') }}</option>
-            <option value="LOW">{{ _t('Low') }}</option>
+            <option value="">{% if ui_lang == 'en' %}All Severities{% else %}جميع المستويات{% endif %}</option>
+            <option value="CRITICAL">{% if ui_lang == 'en' %}Critical{% else %}حرج{% endif %}</option>
+            <option value="HIGH">{% if ui_lang == 'en' %}High{% else %}عالي{% endif %}</option>
+            <option value="MEDIUM">{% if ui_lang == 'en' %}Medium{% else %}متوسط{% endif %}</option>
+            <option value="LOW">{% if ui_lang == 'en' %}Low{% else %}منخفض{% endif %}</option>
           </select>
         </div>
         <div class="col-md-3">
           <label for="governorateFilter" class="form-label small fw-semibold">
-            {{ _t('Governorate') }}
+            {% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}
           </label>
           <select id="governorateFilter" class="form-select form-select-sm">
-            <option value="">{{ _t('All Governorates') }}</option>
+            <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}جميع المحافظات{% endif %}</option>
           </select>
         </div>
         <div class="col-md-3">
           <label for="statusFilter" class="form-label small fw-semibold">
-            {{ _t('Status') }}
+            {% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}
           </label>
           <select id="statusFilter" class="form-select form-select-sm">
-            <option value="">{{ _t('All Statuses') }}</option>
-            <option value="ACTIVE" selected>{{ _t('Active') }}</option>
-            <option value="ACKNOWLEDGED">{{ _t('Acknowledged') }}</option>
-            <option value="RESOLVED">{{ _t('Resolved') }}</option>
+            <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}جميع الحالات{% endif %}</option>
+            <option value="ACTIVE" selected>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}</option>
+            <option value="ACKNOWLEDGED">{% if ui_lang == 'en' %}Acknowledged{% else %}مُعترَف به{% endif %}</option>
+            <option value="RESOLVED">{% if ui_lang == 'en' %}Resolved{% else %}محلول{% endif %}</option>
           </select>
         </div>
         <div class="col-md-3">
           <label for="timeFilter" class="form-label small fw-semibold">
-            {{ _t('Time Range') }}
+            {% if ui_lang == 'en' %}Time Range{% else %}النطاق الزمني{% endif %}
           </label>
           <select id="timeFilter" class="form-select form-select-sm">
-            <option value="">{{ _t('All Time') }}</option>
-            <option value="24h">{{ _t('Last 24 Hours') }}</option>
-            <option value="7d">{{ _t('Last 7 Days') }}</option>
-            <option value="30d" selected>{{ _t('Last 30 Days') }}</option>
+            <option value="">{% if ui_lang == 'en' %}All Time{% else %}كل الأوقات{% endif %}</option>
+            <option value="24h">{% if ui_lang == 'en' %}Last 24 Hours{% else %}آخر 24 ساعة{% endif %}</option>
+            <option value="7d">{% if ui_lang == 'en' %}Last 7 Days{% else %}آخر 7 أيام{% endif %}</option>
+            <option value="30d" selected>{% if ui_lang == 'en' %}Last 30 Days{% else %}آخر 30 يوم{% endif %}</option>
           </select>
         </div>
       </div>
@@ -89,19 +89,19 @@
 
   <div id="alertsLoading" class="d-none alert alert-secondary py-2">
     <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
-    {{ _t('Loading alerts…') }}
+    {% if ui_lang == 'en' %}Loading alerts…{% else %}جار تحميل التنبيهات…{% endif %}
   </div>
   <div id="alertsError" class="d-none alert alert-danger py-2" role="alert"></div>
   <div id="alertsEmpty" class="d-none alert alert-success py-2">
     <i class="bi bi-check-circle me-2"></i>
-    {{ _t('No alerts found matching the criteria.') }}
+    {% if ui_lang == 'en' %}No alerts found matching the criteria.{% else %}لا توجد تنبيهات تطابق المعايير.{% endif %}
   </div>
 
   <!-- Alerts Table -->
   <div class="card">
     <div class="card-header">
       <h2 class="card-title mb-0">
-        {{ _t('Alerts') }}
+        {% if ui_lang == 'en' %}Alerts{% else %}التنبيهات{% endif %}
       </h2>
     </div>
     <div class="card-body p-0">
@@ -109,15 +109,15 @@
         <table class="table table-hover align-middle mb-0" id="alertsTable">
           <thead class="table-light">
             <tr>
-              <th class="ps-4">{{ _t('Severity') }}</th>
-              <th>{{ _t('Governorate') }}</th>
-              <th>{{ _t('Kindergarten') }}</th>
-              <th>{{ _t('Metric') }}</th>
-              <th>{{ _t('Current Value') }}</th>
-              <th>{{ _t('Threshold') }}</th>
-              <th>{{ _t('Triggered') }}</th>
-              <th>{{ _t('Status') }}</th>
-              <th>{{ _t('Actions') }}</th>
+              <th class="ps-4">{% if ui_lang == 'en' %}Severity{% else %}الخطورة{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Kindergarten{% else %}الروضة{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Metric{% else %}المؤشر{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Current Value{% else %}القيمة الحالية{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Threshold{% else %}الحد{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Triggered{% else %}وقت الإنشاء{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</th>
             </tr>
           </thead>
           <tbody id="alertsTableBody"></tbody>
@@ -135,21 +135,21 @@
         <div class="modal-header">
           <h5 class="modal-title">
             <i class="bi bi-info-circle me-2"></i>
-            {{ _t('Alert Details') }}
+            {% if ui_lang == 'en' %}Alert Details{% else %}تفاصيل التنبيه{% endif %}
           </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"
-            aria-label="{{ _t('Close') }}"></button>
+            aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
         </div>
         <div class="modal-body">
           <div id="alertDetailContent"></div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" data-bs-dismiss="modal">
-            {{ _t('Close') }}
+            {% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}
           </button>
           <button class="btn btn-warning" id="acknowledgeAlertBtn">
             <i class="bi bi-check-lg me-1"></i>
-            {{ _t('Acknowledge') }}
+            {% if ui_lang == 'en' %}Acknowledge{% else %}اعتراف{% endif %}
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 {% extends "admin_base.html" %}
 
-{% block title %}{{ _t('Import Kindergartens — KinJo') }}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Import Kindergartens — KinJo{% else %}استيراد الروضات — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
 <a href="/admin/dashboard" class="breadcrumb-item">
@@ -8,10 +8,10 @@
 </a>
 <span class="breadcrumb-separator">/</span>
 <a href="/admin/import-kindergartens" class="breadcrumb-item">
-    {{ _t('Data Management') }}
+    {% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}
 </a>
 <span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{{ _t('Import Kindergartens') }}</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الروضات{% endif %}</span>
 {% endblock %}
 
 {% block content %}
@@ -19,16 +19,16 @@
     <div>
         <h1 class="page-title">
             <i class="bi bi-upload" aria-hidden="true"></i>
-            {{ _t('Import Kindergartens') }}
+            {% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الروضات{% endif %}
         </h1>
         <p class="page-subtitle">
-            {{ _t('Upload an Excel file to import kindergarten records into the system.') }}
+            {% if ui_lang == 'en' %}Upload an Excel file to import kindergarten records into the system.{% else %}ارفع ملف Excel لاستيراد بيانات الروضات إلى النظام.{% endif %}
         </p>
     </div>
     <div class="page-actions">
         <a href="/admin/imported-kindergartens" class="btn btn-ghost">
             <i class="bi bi-list me-1"></i>
-            {{ _t('View Imported') }}
+            {% if ui_lang == 'en' %}View Imported{% else %}عرض المستوردة{% endif %}
         </a>
     </div>
 </div>
@@ -38,17 +38,17 @@
         <div class="alert alert-info d-flex align-items-start gap-2 mb-4">
             <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
             <div>
-                <strong>{{ _t('Required columns (exact Arabic headers):') }}</strong>
+                <strong>{% if ui_lang == 'en' %}Required columns (exact Arabic headers):{% else %}الأعمدة المطلوبة (بالعناوين العربية الدقيقة):{% endif %}</strong>
                 <ul class="mb-1 mt-1">
-                    <li>اسم الروضة (عربي) — <span class="text-danger fw-semibold">{{ _t('Required') }}</span></li>
-                    <li>اسم الروضة (إنجليزي) — {{ _t('Optional') }}</li>
-                    <li>المحافظة — <span class="text-danger fw-semibold">{{ _t('Required') }}</span></li>
-                    <li>اللواء — <span class="text-danger fw-semibold">{{ _t('Required') }}</span></li>
-                    <li>المنطقة — {{ _t('Optional') }}</li>
-                    <li>العنوان التفصيلي — {{ _t('Optional') }}</li>
-                    <li>رقم الهاتف — <span class="text-danger fw-semibold">{{ _t('Required') }}</span></li>
+                    <li>اسم الروضة (عربي) — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
+                    <li>اسم الروضة (إنجليزي) — {% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %}</li>
+                    <li>المحافظة — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
+                    <li>اللواء — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
+                    <li>المنطقة — {% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %}</li>
+                    <li>العنوان التفصيلي — {% if ui_lang == 'en' %}Optional{% else %}اختياري{% endif %}</li>
+                    <li>رقم الهاتف — <span class="text-danger fw-semibold">{% if ui_lang == 'en' %}Required{% else %}مطلوب{% endif %}</span></li>
                 </ul>
-                <small class="text-muted">{{ _t('Data will be validated and imported with duplicate protection.') }}</small>
+                <small class="text-muted">{% if ui_lang == 'en' %}Data will be validated and imported with duplicate protection.{% else %}سيتم التحقق من البيانات واستيرادها مع الحماية من التكرار.{% endif %}</small>
             </div>
         </div>
 
@@ -56,26 +56,26 @@
             <div class="mb-3">
                 <label for="excelFile" class="form-label fw-semibold">
                     <i class="bi bi-file-earmark-excel me-1 text-success"></i>
-                    {{ _t('Select Excel File (.xlsx)') }}
+                    {% if ui_lang == 'en' %}Select Excel File (.xlsx){% else %}اختر ملف Excel (.xlsx){% endif %}
                 </label>
                 <input type="file" class="form-control" id="excelFile" name="file" accept=".xlsx,.xls" required
                        aria-describedby="excelFileHelp">
                 <div id="excelFileHelp" class="form-text">
-                    {{ _t('Supported formats: .xlsx, .xls') }}
+                    {% if ui_lang == 'en' %}Supported formats: .xlsx, .xls{% else %}الصيغ المدعومة: .xlsx, .xls{% endif %}
                 </div>
             </div>
             <button type="submit" class="btn btn-primary" id="importBtn">
                 <i class="bi bi-upload me-1"></i>
-                {{ _t('Import Kindergartens') }}
+                {% if ui_lang == 'en' %}Import Kindergartens{% else %}استيراد الروضات{% endif %}
             </button>
         </form>
 
         <div id="progress" class="mt-4" style="display: none;">
             <div class="progress">
                 <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 100%"
-                     aria-label="{{ _t('Import in progress') }}"></div>
+                     aria-label="{% if ui_lang == 'en' %}Import in progress{% else %}جاري الاستيراد{% endif %}"></div>
             </div>
-            <p class="text-center text-muted mt-2 small">{{ _t('Processing import…') }}</p>
+            <p class="text-center text-muted mt-2 small">{% if ui_lang == 'en' %}Processing import…{% else %}جاري معالجة الاستيراد…{% endif %}</p>
         </div>
     </div>
 </div>
@@ -83,14 +83,14 @@
 <div id="results" class="mb-4" style="display: none;">
     <h2 class="page-title mb-3" style="font-size:1.1rem;">
         <i class="bi bi-clipboard-data me-2" aria-hidden="true"></i>
-        {{ _t('Import Results') }}
+        {% if ui_lang == 'en' %}Import Results{% else %}نتائج الاستيراد{% endif %}
     </h2>
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
             <div class="card text-center">
                 <div class="card-body">
                     <div class="fs-2 fw-bold text-success" id="importedCount">0</div>
-                    <div class="text-muted small">{{ _t('Imported') }}</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Imported{% else %}مستورد{% endif %}</div>
                 </div>
             </div>
         </div>
@@ -98,7 +98,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <div class="fs-2 fw-bold text-warning" id="updatedCount">0</div>
-                    <div class="text-muted small">{{ _t('Updated') }}</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Updated{% else %}مُحدَّث{% endif %}</div>
                 </div>
             </div>
         </div>
@@ -106,7 +106,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <div class="fs-2 fw-bold text-secondary" id="skippedCount">0</div>
-                    <div class="text-muted small">{{ _t('Skipped') }}</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Skipped{% else %}تم تخطيه{% endif %}</div>
                 </div>
             </div>
         </div>
@@ -114,7 +114,7 @@
             <div class="card text-center">
                 <div class="card-body">
                     <div class="fs-2 fw-bold text-danger" id="errorCount">0</div>
-                    <div class="text-muted small">{{ _t('Errors') }}</div>
+                    <div class="text-muted small">{% if ui_lang == 'en' %}Errors{% else %}أخطاء{% endif %}</div>
                 </div>
             </div>
         </div>
@@ -122,20 +122,20 @@
 
     <div id="importedTable" class="card mb-3" style="display: none;">
         <div class="card-header">
-            <h3 class="card-title">{{ _t('Imported / Updated Records') }}</h3>
+            <h3 class="card-title">{% if ui_lang == 'en' %}Imported / Updated Records{% else %}السجلات المستوردة / المحدَّثة{% endif %}</h3>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0" id="resultsTable">
                     <thead class="table-light">
                         <tr>
-                            <th>{{ _t('Name (AR)') }}</th>
-                            <th>{{ _t('Name (EN)') }}</th>
-                            <th>{{ _t('Governorate') }}</th>
-                            <th>{{ _t('District') }}</th>
-                            <th>{{ _t('Area') }}</th>
-                            <th>{{ _t('Phone') }}</th>
-                            <th>{{ _t('Status') }}</th>
+                            <th>{% if ui_lang == 'en' %}Name (AR){% else %}الاسم (عربي){% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Name (EN){% else %}الاسم (إنجليزي){% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}District{% else %}اللواء{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Area{% else %}المنطقة{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Phone{% else %}الهاتف{% endif %}</th>
+                            <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
                         </tr>
                     </thead>
                     <tbody id="resultsBody"></tbody>
@@ -146,7 +146,7 @@
 
     <div id="errorsSection" class="mb-3" style="display: none;">
         <div class="alert alert-danger">
-            <strong><i class="bi bi-exclamation-triangle me-1"></i>{{ _t('Errors') }}</strong>
+            <strong><i class="bi bi-exclamation-triangle me-1"></i>{% if ui_lang == 'en' %}Errors{% else %}الأخطاء{% endif %}</strong>
             <ul class="mb-0 mt-2" id="errorList"></ul>
         </div>
     </div>

@@ -1,7 +1,7 @@
 {% extends "admin_base.html" %}
 {% from 'components/page-header.html' import page_header %}
 
-{% block title %}{% if user_obj %}{{ _t('Edit User') }}{% else %}{{ _t('Add New User') }}{% endif %}{% endblock %}
+{% block title %}{% if user_obj %}{% if ui_lang == 'en' %}Edit User{% else %}تعديل المستخدم{% endif %}{% else %}{% if ui_lang == 'en' %}Add New User{% else %}إضافة مستخدم جديد{% endif %}{% endif %}{% endblock %}
 
 {% block page_header %}
 {{ page_header(
@@ -22,69 +22,70 @@ breadcrumbs=[
             <div class="card-body p-4">
                 <form id="userForm"class="needs-validation"novalidate
                     data-user-id="{{ user_obj.id if user_obj else '' }}">
-                    <h5 class="mb-4 text-muted">{{ _t('Account Details') }}</h5>
+                    <h5 class="mb-4 text-muted">{% if ui_lang == 'en' %}Account Details{% else %}بيانات الحساب{% endif %}</h5>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label for="username"class="form-label required">{{ _t('Username') }}</label>
+                            <label for="username"class="form-label required">{% if ui_lang == 'en' %}Username{% else %}اسم المستخدم{% endif %}</label>
                             <input type="text"class="form-control"id="username"name="username"
                                 value="{{ user_obj.username if user_obj else '' }}"{% if user_obj %}disabled{% else
                                 %}required{% endif %} pattern="[a-zA-Z0-9_]+"minlength="3">
-                            <div class="form-text">{{ _t('English letters, numbers, and underscores only, no spaces.') }}</div>
-                            <div class="invalid-feedback">{{ _t('Required (English letters, numbers, and underscores only)') }}</div>
+                            <div class="form-text">{% if ui_lang == 'en' %}English letters, numbers, and underscores only, no spaces.{% else %}أحرف إنجليزية وأرقام وشرطة سفلية فقط، بدون مسافات.{% endif %}</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Required (English letters, numbers, and underscores only){% else %}مطلوب (أحرف إنجليزية وأرقام وشرطة سفلية فقط){% endif %}</div>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="email"class="form-label required">{{ _t('Email') }}</label>
+                            <label for="email"class="form-label required">{% if ui_lang == 'en' %}Email{% else %}البريد الإلكتروني{% endif %}</label>
                             <input type="email"class="form-control"id="email"name="email"
                                 value="{{ user_obj.email if user_obj else '' }}"required>
-                            <div class="invalid-feedback">{{ _t('Please enter a valid email') }}</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please enter a valid email{% else %}يرجى إدخال بريد إلكتروني صحيح{% endif %}</div>
                         </div>
                     </div>
 
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label for="password"class="form-label {% if not user_obj %}required{% endif %}">{{ _t('Password') }}</label>
+                            <label for="password"class="form-label {% if not user_obj %}required{% endif %}">{% if ui_lang == 'en' %}Password{% else %}كلمة
+                                المرور{% endif %}</label>
                             <input type="password"class="form-control"id="password"name="password"{% if not user_obj
                                 %}required{% endif %} minlength="8">
                             {% if user_obj %}
-                            <div class="form-text">{{ _t('Leave blank to keep current password.') }}</div>
+                            <div class="form-text">{% if ui_lang == 'en' %}Leave blank to keep current password.{% else %}اتركها فارغة للإبقاء على كلمة المرور الحالية.{% endif %}</div>
                             {% endif %}
-                            <div class="invalid-feedback">{{ _t('Password must be at least 8 characters') }}</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Password must be at least 8 characters{% else %}كلمة المرور يجب أن تكون 8 أحرف على الأقل{% endif %}</div>
                         </div>
 
                         <div class="col-md-6">
-                            <label for="role"class="form-label required">{{ _t('Role (Permission)') }}</label>
+                            <label for="role"class="form-label required">{% if ui_lang == 'en' %}Role (Permission){% else %}الدور (الصلاحية){% endif %}</label>
                             <select class="form-select"id="role"name="role"required
                                 onchange="toggleKindergartenField()">
-                                <option value="">{{ _t('Select role...') }}</option>
+                                <option value="">{% if ui_lang == 'en' %}Select role...{% else %}اختر الدور...{% endif %}</option>
                                 <option value="MANAGER"{% if user_obj and user_obj.role.value=='MANAGER' %}selected{%
-                                    endif %}>{{ _t('Kindergarten Manager') }}</option>
+                                    endif %}>{% if ui_lang == 'en' %}Kindergarten Manager{% else %}مدير روضة{% endif %}</option>
                                 <option value="SUPERVISOR"{% if user_obj and user_obj.role.value=='SUPERVISOR'
-                                    %}selected{% endif %}>{{ _t('Supervisor') }}</option>
+                                    %}selected{% endif %}>{% if ui_lang == 'en' %}Supervisor{% else %}مشرف{% endif %}</option>
                                 <option value="PARENT"{% if user_obj and user_obj.role.value=='PARENT' %}selected{%
-                                    endif %}>{{ _t('Parent') }}</option>
+                                    endif %}>{% if ui_lang == 'en' %}Parent{% else %}ولي أمر{% endif %}</option>
                             </select>
                             <div class="form-text"id="roleHelp"></div>
-                            <div class="invalid-feedback">{{ _t('Please select a role') }}</div>
+                            <div class="invalid-feedback">{% if ui_lang == 'en' %}Please select a role{% else %}يرجى اختيار الصلاحية{% endif %}</div>
                         </div>
                     </div>
 
                     <div id="kindergartenSection"
                         class="mb-4 {% if user_obj and user_obj.role.value == 'ADMIN' %}d-none{% endif %} {% if is_manager_user %}d-none{% endif %}">
-                        <label for="kindergarten_id"class="form-label">{{ _t('Linked Kindergarten') }}</label>
+                        <label for="kindergarten_id"class="form-label">{% if ui_lang == 'en' %}Linked Kindergarten{% else %}الروضة المرتبطة{% endif %}</label>
                         {% if is_manager_user %}
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
-                            {{ _t('As a manager, you can only create users for your kindergarten:') }}
+                            {% if ui_lang == 'en' %}As a manager, you can only create users for your kindergarten:{% else %}كمدير، يمكنك فقط إنشاء المستخدمين لروضتك:{% endif %}
                             <strong>{{ (kindergartens[0].name_en if ui_lang == 'en' and kindergartens and kindergartens[0].name_en else kindergartens[0].name_ar) if kindergartens else ('Unspecified' if ui_lang == 'en' else 'غير محدد') }}</strong>
                         </div>
                         {% endif %}
                         <div class="row g-2 mb-3"id="kgFilters">
                             <div class="col-md-6">
-                                <label for="kgGovernorateFilter"class="form-label">{{ _t('Governorate') }}</label>
+                                <label for="kgGovernorateFilter"class="form-label">{% if ui_lang == 'en' %}Governorate{% else %}المحافظة{% endif %}</label>
                                 <select class="form-select"id="kgGovernorateFilter">
-                                    <option value="">{{ _t('All Governorates') }}</option>
+                                    <option value="">{% if ui_lang == 'en' %}All Governorates{% else %}كل المحافظات{% endif %}</option>
                                     {% set govs = namespace(items=[]) %}
                                     {% for kg in kindergartens %}
                                     {% if kg.governorate and kg.governorate not in govs.items %}
@@ -97,15 +98,16 @@ breadcrumbs=[
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="kgSearch"class="form-label">{{ _t('Search by kindergarten name or phone') }}</label>
+                                <label for="kgSearch"class="form-label">{% if ui_lang == 'en' %}Search by kindergarten name or phone{% else %}بحث باسم الروضة أو الهاتف{% endif %}</label>
                                 <input type="text"class="form-control"id="kgSearch"
-                                    placeholder="{{ _t('Search by name or phone') }}">
+                                    placeholder="{% if ui_lang == 'en' %}Search by name or phone{% else %}ابحث باسم الروضة أو الهاتف{% endif %}">
                             </div>
                         </div>
                         <!-- Removed corrupted text, only correct Arabic message remains below -->
-                        <small class="text-muted d-block mb-2"id="kgNoResults"style="display: none;">{{ _t('No results found.') }}</small>
+                        <small class="text-muted d-block mb-2"id="kgNoResults"style="display: none;">{% if ui_lang == 'en' %}No results found.{% else %}لم يتم العثور على
+                            نتائج.{% endif %}</small>
                         <select class="form-select"id="kindergarten_id"name="kindergarten_id">
-                            <option value="">-- {{ _t('Select Kindergarten') }} --</option>
+                            <option value="">-- {% if ui_lang == 'en' %}Select Kindergarten{% else %}اختر الروضة{% endif %} --</option>
                             {% for kg in kindergartens %}
                             <option value="{{ kg.id }}"data-governorate="{{ kg.governorate or '' }}"
                                 data-name="{{ (kg.name_ar or '') }} {{ (kg.name_en or '') }}"
@@ -117,32 +119,33 @@ breadcrumbs=[
                             </option>
                             {% endfor %}
                         </select>
-                        <div class="form-text">{{ _t('Required for managers, supervisors, and parents to link them to a specific kindergarten.') }}</div>
+                        <div class="form-text">{% if ui_lang == 'en' %}Required for managers, supervisors, and parents to link them to a specific kindergarten.{% else %}مطلوب للمدراء والمشرفين وأولياء الأمور لربطهم بروضة محددة.{% endif %}</div>
                     </div>
 
                     {% if user_obj %}
                     <div class="mb-4">
-                        <label for="status"class="form-label">{{ _t('Account Status') }}</label>
+                        <label for="status"class="form-label">{% if ui_lang == 'en' %}Account Status{% else %}حالة الحساب{% endif %}</label>
                         <select class="form-select"id="status"name="status">
-                            <option value="ACTIVE"{% if user_obj.status.value=='ACTIVE' %}selected{% endif %}>{{ _t('Active') }}
+                            <option value="ACTIVE"{% if user_obj.status.value=='ACTIVE' %}selected{% endif %}>{% if ui_lang == 'en' %}Active{% else %}نشط{% endif %}
                             </option>
                             <option value="SUSPENDED"{% if user_obj.status.value=='SUSPENDED' %}selected{% endif %}>
-                                {{ _t('Suspended') }}</option>
-                            <option value="INACTIVE"{% if user_obj.status.value=='INACTIVE' %}selected{% endif %}>{{ _t('Inactive') }}</option>
+                                {% if ui_lang == 'en' %}Suspended{% else %}موقوف{% endif %}</option>
+                            <option value="INACTIVE"{% if user_obj.status.value=='INACTIVE' %}selected{% endif %}>{% if ui_lang == 'en' %}Inactive{% else %}غير
+                                نشط{% endif %}</option>
                         </select>
                     </div>
                     {% endif %}
 
                     <div class="d-flex justify-content-between border-top pt-4">
-                        <a href="/admin/users"class="btn btn-outline-secondary">{{ _t('Cancel') }}</a>
+                        <a href="/admin/users"class="btn btn-outline-secondary">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</a>
                         <button type="submit"class="btn btn-primary"id="submitBtn">
                             <span class="btn-text">
                                 <i class="bi bi-save me-2"></i>
-                                {% if user_obj %}{{ _t('Save Changes') }}{% else %}{{ _t('Create User') }}{% endif %}
+                                {% if user_obj %}{% if ui_lang == 'en' %}Save Changes{% else %}حفظ التعديلات{% endif %}{% else %}{% if ui_lang == 'en' %}Create User{% else %}إنشاء المستخدم{% endif %}{% endif %}
                             </span>
                             <span class="btn-loading d-none">
                                 <span class="spinner-border spinner-border-sm me-2"></span>
-                                {{ _t('Processing...') }}
+                                {% if ui_lang == 'en' %}Processing...{% else %}جاري المعالجة...{% endif %}
                             </span>
                         </button>
                     </div>
@@ -160,58 +163,58 @@ breadcrumbs=[
             <div class="modal-header">
                 <h5 class="modal-title"id="passwordResetModalLabel">
                     <i class="bi bi-key me-2 text-warning"></i>
-                    {{ _t('Reset Password') }}
+                    {% if ui_lang == 'en' %}Reset Password{% else %}إعادة تعيين كلمة المرور{% endif %}
                 </h5>
-                <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{{ _t('Close') }}"></button>
+                <button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
                 <form id="passwordResetForm"novalidate>
                     <div class="mb-3">
-                        <label for="resetPassword"class="form-label fw-semibold">{{ _t('New Password') }}</label>
+                        <label for="resetPassword"class="form-label fw-semibold">{% if ui_lang == 'en' %}New Password{% else %}كلمة المرور الجديدة{% endif %}</label>
                         <div class="input-group">
                             <input type="password"class="form-control"id="resetPassword"required minlength="8"
                                 autocomplete="new-password"aria-describedby="resetPasswordHelp">
                             <button class="btn btn-outline-secondary"type="button"
                                 onclick="togglePasswordVisibility('resetPassword', this)"
-                                aria-label="{{ _t('Show password') }}">
+                                aria-label="{% if ui_lang == 'en' %}Show password{% else %}إظهار كلمة المرور{% endif %}">
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
-                        <div id="resetPasswordHelp"class="form-text">{{ _t('Password must be at least 8 characters') }}</div>
+                        <div id="resetPasswordHelp"class="form-text">{% if ui_lang == 'en' %}Password must be at least 8 characters{% else %}كلمة المرور يجب أن تكون 8 أحرف على الأقل{% endif %}</div>
                     </div>
                     <div class="mb-3">
-                        <label for="confirmResetPassword"class="form-label fw-semibold">{{ _t('Confirm Password') }}</label>
+                        <label for="confirmResetPassword"class="form-label fw-semibold">{% if ui_lang == 'en' %}Confirm Password{% else %}تأكيد كلمة المرور{% endif %}</label>
                         <div class="input-group">
                             <input type="password"class="form-control"id="confirmResetPassword"required minlength="8"
                                 autocomplete="new-password">
                             <button class="btn btn-outline-secondary"type="button"
                                 onclick="togglePasswordVisibility('confirmResetPassword', this)"
-                                aria-label="{{ _t('Show password') }}">
+                                aria-label="{% if ui_lang == 'en' %}Show password{% else %}إظهار كلمة المرور{% endif %}">
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="adminPassword"class="form-label fw-semibold">{{ _t('Admin Password') }}</label>
+                        <label for="adminPassword"class="form-label fw-semibold">{% if ui_lang == 'en' %}Admin Password{% else %}كلمة مرور المدير{% endif %}</label>
                         <input type="password"class="form-control"id="adminPassword"required minlength="8"
                             autocomplete="current-password">
-                        <div class="form-text">{{ _t('Enter your current password for confirmation.') }}</div>
+                        <div class="form-text">{% if ui_lang == 'en' %}Enter your current password for confirmation.{% else %}أدخل كلمة مرورك الحالية للتأكيد.{% endif %}</div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button"class="btn btn-outline-secondary"data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i>
-                    {{ _t('Cancel') }}
+                    {% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}
                 </button>
                 <button type="button"class="btn btn-warning"id="resetPasswordBtn">
                     <span class="btn-text">
                         <i class="bi bi-key me-2"></i>
-                        {{ _t('Reset') }}
+                        {% if ui_lang == 'en' %}Reset{% else %}إعادة التعيين{% endif %}
                     </span>
                     <span class="btn-loading d-none">
                         <span class="spinner-border spinner-border-sm me-2"role="status"aria-hidden="true"></span>
-                        {{ _t('Processing...') }}
+                        {% if ui_lang == 'en' %}Processing...{% else %}جاري المعالجة...{% endif %}
                     </span>
                 </button>
             </div>

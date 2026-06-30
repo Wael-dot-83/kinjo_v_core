@@ -1,13 +1,13 @@
 {% extends 'admin_base.html' %}
-{% block title %}{{ _t('Impersonation — KinJo') }}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Impersonation — KinJo{% else %}انتحال الهوية — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
 <a href="/admin/dashboard" class="breadcrumb-item">
     <i class="bi bi-house"></i>
-    <span>{{ _t('Dashboard') }}</span>
+    <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
 </a>
 <span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{{ _t('Impersonation') }}</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Impersonation{% else %}انتحال الهوية{% endif %}</span>
 {% endblock %}
 
 {% block extra_head %}{% endblock %}
@@ -17,15 +17,15 @@
     <div>
         <p class="text-danger small mb-1">
             <i class="bi bi-person-fill-lock me-1" aria-hidden="true"></i>
-            {{ _t('System Administrator') }}
+            {% if ui_lang == 'en' %}System Administrator{% else %}المشرف العام{% endif %}
         </p>
         <h1 class="page-title">
-            {{ _t('Impersonate Manager') }}
+            {% if ui_lang == 'en' %}Impersonate Manager{% else %}انتحال هوية مدير{% endif %}
         </h1>
     </div>
     <div class="page-actions">
         <a href="/dashboard" class="btn btn-ghost">
-            <i class="bi bi-arrow-right me-2"></i>{{ _t('Back') }}
+            <i class="bi bi-arrow-right me-2"></i>{% if ui_lang == 'en' %}Back{% else %}رجوع{% endif %}
         </a>
     </div>
 </div>
@@ -38,9 +38,9 @@
             <div class="d-flex align-items-start gap-3">
                 <i class="bi bi-exclamation-triangle-fill fs-4 flex-shrink-0 mt-1"></i>
                 <div>
-                    <div class="fw-800 mb-1">{{ _t('Warning: This action is recorded in the audit log') }}</div>
+                    <div class="fw-800 mb-1">{% if ui_lang == 'en' %}Warning: This action is recorded in the audit log{% else %}تحذير: هذا الإجراء مُسجَّل في سجل المراجعة{% endif %}</div>
                     <div style="font-size:0.85rem;opacity:0.9;">
-                        {{ _t('Session data (from — to — reason — time) will be permanently recorded in the security audit log.') }}
+                        {% if ui_lang == 'en' %}Session data (from — to — reason — time) will be permanently recorded in the security audit log.{% else %}سيتم تسجيل بيانات هذه الجلسة (من — إلى — السبب — الوقت) في سجل المراجعة الأمنية بشكل دائم.{% endif %}
                     </div>
                 </div>
             </div>
@@ -57,49 +57,49 @@
             <div class="card-header">
                 <h6 class="card-title-sm mb-0">
                     <i class="bi bi-person-fill-gear me-2 text-primary"></i>
-                    {{ _t('Select Manager') }}
+                    {% if ui_lang == 'en' %}Select Manager{% else %}اختر المدير{% endif %}
                 </h6>
             </div>
             <div class="card-body">
                 <form id="impersonateForm" novalidate autocomplete="off">
 
                     <div class="mb-3">
-                        <label class="field-label" for="managerSearch">{{ _t('Search & Filter Managers') }}</label>
+                        <label class="field-label" for="managerSearch">{% if ui_lang == 'en' %}Search & Filter Managers{% else %}بحث وتصفية المديرين{% endif %}</label>
                         <input type="search" class="form-control" id="managerSearch"
-                               placeholder="{{ _t('Search by manager name or kindergarten...') }}"
-                               aria-label="{{ _t('Search manager list') }}"
+                               placeholder="{% if ui_lang == 'en' %}Search by manager name or kindergarten...{% else %}ابحث باسم المدير أو الروضة...{% endif %}"
+                               aria-label="{% if ui_lang == 'en' %}Search manager list{% else %}بحث في قائمة المديرين{% endif %}"
                                oninput="filterManagers(this.value)">
                     </div>
 
                     <div class="mb-4">
-                        <label class="field-label mb-2" for="managerSelect">{{ _t('Manager') }} <span class="text-danger">*</span></label>
+                        <label class="field-label mb-2" for="managerSelect">{% if ui_lang == 'en' %}Manager{% else %}المدير{% endif %} <span class="text-danger">*</span></label>
                         <div id="managerListLoading" class="text-center py-3 text-muted">
-                            <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">{{ _t('Loading...') }}</span></div>
-                            {{ _t('Loading managers...') }}
+                            <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}</span></div>
+                            {% if ui_lang == 'en' %}Loading managers...{% else %}جاري تحميل المديرين...{% endif %}
                         </div>
                         <div id="managerListWrap" class="manager-list d-none" role="listbox"
-                             aria-label="{{ _t('Manager list') }}">
+                             aria-label="{% if ui_lang == 'en' %}Manager list{% else %}قائمة المديرين{% endif %}">
                             <!-- Items rendered by JS -->
                         </div>
                         <div id="managerListEmpty" class="text-muted small text-center py-3 d-none">
-                            {{ _t('No managers match the search') }}
+                            {% if ui_lang == 'en' %}No managers match the search{% else %}لا يوجد مديرون يطابقون البحث{% endif %}
                         </div>
                     </div>
 
                     <div class="mb-4">
-                        <label class="field-label" for="impersonateReason">{{ _t('Reason for Impersonation') }}</label>
+                        <label class="field-label" for="impersonateReason">{% if ui_lang == 'en' %}Reason for Impersonation{% else %}سبب انتحال الهوية{% endif %}</label>
                         <textarea class="form-control" id="impersonateReason" rows="3" maxlength="500"
-                                  placeholder="{{ _t('e.g. Reviewing a technical issue reported by the manager...') }}"
-                                  aria-label="{{ _t('Reason for impersonation') }}"></textarea>
-                        <div class="form-text">{{ _t('Providing a reason is recommended to facilitate future review') }}</div>
+                                  placeholder="{% if ui_lang == 'en' %}e.g. Reviewing a technical issue reported by the manager...{% else %}مثال: مراجعة مشكلة تقنية بلّغ عنها المدير...{% endif %}"
+                                  aria-label="{% if ui_lang == 'en' %}Reason for impersonation{% else %}سبب انتحال الهوية{% endif %}"></textarea>
+                        <div class="form-text">{% if ui_lang == 'en' %}Providing a reason is recommended to facilitate future review{% else %}يُوصى بذكر السبب لتسهيل المراجعة لاحقاً{% endif %}</div>
                     </div>
 
                     <button type="submit" class="btn btn-danger w-100 py-2" id="startImpersonateBtn">
                         <span class="btn-text">
-                            <i class="bi bi-person-fill-lock me-2"></i>{{ _t('Start Impersonation') }}
+                            <i class="bi bi-person-fill-lock me-2"></i>{% if ui_lang == 'en' %}Start Impersonation{% else %}بدء انتحال الهوية{% endif %}
                         </span>
                         <span class="btn-loading d-none">
-                            <span class="spinner-border spinner-border-sm me-2"></span>{{ _t('Processing...') }}
+                            <span class="spinner-border spinner-border-sm me-2"></span>{% if ui_lang == 'en' %}Processing...{% else %}جاري...{% endif %}
                         </span>
                     </button>
 
@@ -112,18 +112,18 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="card-title-sm mb-0">
                     <i class="bi bi-clock-history me-2 text-muted"></i>
-                    {{ _t('Recent Impersonation Events') }}
+                    {% if ui_lang == 'en' %}Recent Impersonation Events{% else %}آخر عمليات انتحال الهوية{% endif %}
                 </h6>
                 <span class="badge bg-light text-muted border small" id="auditCount"></span>
             </div>
 
             <div id="auditLoading" class="card-body text-center py-4 text-muted">
-                <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">{{ _t('Loading...') }}</span></div>{{ _t('Loading...') }}
+                <div class="spinner-border spinner-border-sm me-2" role="status"><span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جاري...{% endif %}</span></div>{% if ui_lang == 'en' %}Loading...{% else %}جاري التحميل...{% endif %}
             </div>
 
             <div id="auditEmpty" class="card-body text-center py-4 text-muted d-none">
                 <i class="bi bi-shield-check d-block fs-2 mb-2 opacity-25"></i>
-                <small>{{ _t('No previous events') }}</small>
+                <small>{% if ui_lang == 'en' %}No previous events{% else %}لا توجد عمليات سابقة{% endif %}</small>
             </div>
 
             <div id="auditList" class="d-none">
@@ -141,27 +141,27 @@
             <div class="modal-header border-0">
                 <h5 class="modal-title fw-700 text-danger" id="confirmModalLabel">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    {{ _t('Confirm Impersonation') }}
+                    {% if ui_lang == 'en' %}Confirm Impersonation{% else %}تأكيد انتحال الهوية{% endif %}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"
-                        aria-label="{{ _t('Close') }}"></button>
+                        aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
             </div>
             <div class="modal-body">
-                <p>{{ _t('You are about to impersonate:') }}</p>
+                <p>{% if ui_lang == 'en' %}You are about to impersonate:{% else %}أنت على وشك انتحال هوية:{% endif %}</p>
                 <div class="p-3 bg-light rounded mb-3">
                     <div class="fw-700" id="confirmManagerName"></div>
                     <div class="small text-muted" id="confirmManagerKG"></div>
                 </div>
                 <div class="alert alert-warning py-2 small mb-0">
                     <i class="bi bi-shield-exclamation me-2"></i>
-                    {{ _t('This action will be recorded in the security audit log.') }}
+                    {% if ui_lang == 'en' %}This action will be recorded in the security audit log.{% else %}سيتم تسجيل هذه العملية في سجل المراجعة الأمني.{% endif %}
                 </div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{{ _t('Cancel') }}</button>
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">{% if ui_lang == 'en' %}Cancel{% else %}إلغاء{% endif %}</button>
                 <button type="button" class="btn btn-danger" id="confirmImpBtn" onclick="executeImpersonation()">
-                    <span class="btn-text"><i class="bi bi-person-fill-lock me-2"></i>{{ _t('Confirm &amp; Start') }}</span>
-                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ _t('Processing...') }}</span>
+                    <span class="btn-text"><i class="bi bi-person-fill-lock me-2"></i>{% if ui_lang == 'en' %}Confirm &amp; Start{% else %}تأكيد وبدء{% endif %}</span>
+                    <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{% if ui_lang == 'en' %}Processing...{% else %}جاري...{% endif %}</span>
                 </button>
             </div>
         </div>

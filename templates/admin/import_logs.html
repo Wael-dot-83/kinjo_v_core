@@ -1,23 +1,23 @@
 {% extends "admin_base.html" %}
 
-{% block title %}{{ _t('Import Logs — KinJo') }}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Import Logs — KinJo{% else %}سجلات الاستيراد — KinJo{% endif %}{% endblock %}
 
 {% block breadcrumb %}
-<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{{ _t('Dashboard') }}">
+<a href="/admin/dashboard" class="breadcrumb-item" aria-label="{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}">
   <i class="bi bi-house" aria-hidden="true"></i>
 </a>
 <span class="breadcrumb-separator">/</span>
-<a href="/admin/imported-kindergartens" class="breadcrumb-item">{{ _t('Data Management') }}</a>
+<a href="/admin/imported-kindergartens" class="breadcrumb-item">{% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}</a>
 <span class="breadcrumb-separator">/</span>
-<span class="breadcrumb-item active">{{ _t('Import Logs') }}</span>
+<span class="breadcrumb-item active">{% if ui_lang == 'en' %}Import Logs{% else %}سجلات الاستيراد{% endif %}</span>
 {% endblock %}
 
 {% block content %}
 <div class="page-header mb-4">
   <h1 class="page-title">
-    <i class="bi bi-clock-history me-2" aria-hidden="true"></i>{{ _t('Import Logs') }}
+    <i class="bi bi-clock-history me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Import Logs{% else %}سجلات الاستيراد{% endif %}
   </h1>
-  <p class="page-subtitle text-muted">{{ _t('History of all CSV and Excel import jobs') }}</p>
+  <p class="page-subtitle text-muted">{% if ui_lang == 'en' %}History of all CSV and Excel import jobs{% else %}سجل جميع عمليات استيراد ملفات CSV وExcel{% endif %}</p>
 </div>
 
 <!-- Filters -->
@@ -25,37 +25,37 @@
   <div class="card-body">
     <div class="row g-3 align-items-end">
       <div class="col-md-3">
-        <label for="typeFilter" class="form-label small fw-semibold">{{ _t('Import Type') }}</label>
-        <select id="typeFilter" class="form-select form-select-sm" aria-label="{{ _t('Import Type') }}">
-          <option value="">{{ _t('All Types') }}</option>
-          <option value="CSV_USERS">{{ _t('CSV — Users') }}</option>
-          <option value="EXCEL_KINDERGARTENS">{{ _t('Excel — Kindergartens') }}</option>
+        <label for="typeFilter" class="form-label small fw-semibold">{% if ui_lang == 'en' %}Import Type{% else %}نوع الاستيراد{% endif %}</label>
+        <select id="typeFilter" class="form-select form-select-sm" aria-label="{% if ui_lang == 'en' %}Import Type{% else %}نوع الاستيراد{% endif %}">
+          <option value="">{% if ui_lang == 'en' %}All Types{% else %}جميع الأنواع{% endif %}</option>
+          <option value="CSV_USERS">{% if ui_lang == 'en' %}CSV — Users{% else %}CSV — مستخدمون{% endif %}</option>
+          <option value="EXCEL_KINDERGARTENS">{% if ui_lang == 'en' %}Excel — Kindergartens{% else %}Excel — حضانات{% endif %}</option>
         </select>
       </div>
       <div class="col-md-3">
-        <label for="statusFilter" class="form-label small fw-semibold">{{ _t('Status') }}</label>
-        <select id="statusFilter" class="form-select form-select-sm" aria-label="{{ _t('Status') }}">
-          <option value="">{{ _t('All Statuses') }}</option>
-          <option value="SUCCESS">{{ _t('Success') }}</option>
-          <option value="PARTIAL">{{ _t('Partial') }}</option>
-          <option value="FAILED">{{ _t('Failed') }}</option>
+        <label for="statusFilter" class="form-label small fw-semibold">{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</label>
+        <select id="statusFilter" class="form-select form-select-sm" aria-label="{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}">
+          <option value="">{% if ui_lang == 'en' %}All Statuses{% else %}جميع الحالات{% endif %}</option>
+          <option value="SUCCESS">{% if ui_lang == 'en' %}Success{% else %}ناجح{% endif %}</option>
+          <option value="PARTIAL">{% if ui_lang == 'en' %}Partial{% else %}جزئي{% endif %}</option>
+          <option value="FAILED">{% if ui_lang == 'en' %}Failed{% else %}فشل{% endif %}</option>
         </select>
       </div>
       <div class="col-md-3">
-        <label for="dateFrom" class="form-label small fw-semibold">{{ _t('Date From') }}</label>
+        <label for="dateFrom" class="form-label small fw-semibold">{% if ui_lang == 'en' %}Date From{% else %}من تاريخ{% endif %}</label>
         <input type="date" id="dateFrom" class="form-control form-control-sm">
       </div>
       <div class="col-md-3">
-        <label for="dateTo" class="form-label small fw-semibold">{{ _t('Date To') }}</label>
+        <label for="dateTo" class="form-label small fw-semibold">{% if ui_lang == 'en' %}Date To{% else %}إلى تاريخ{% endif %}</label>
         <input type="date" id="dateTo" class="form-control form-control-sm">
       </div>
     </div>
     <div class="mt-3 d-flex gap-2">
       <button id="applyFiltersBtn" class="btn btn-primary btn-sm">
-        <i class="bi bi-funnel" aria-hidden="true"></i> {{ _t('Apply Filters') }}
+        <i class="bi bi-funnel" aria-hidden="true"></i> {% if ui_lang == 'en' %}Apply Filters{% else %}تطبيق الفلاتر{% endif %}
       </button>
       <button id="resetFiltersBtn" class="btn btn-ghost btn-sm">
-        <i class="bi bi-x-lg" aria-hidden="true"></i> {{ _t('Reset') }}
+        <i class="bi bi-x-lg" aria-hidden="true"></i> {% if ui_lang == 'en' %}Reset{% else %}إعادة تعيين{% endif %}
       </button>
     </div>
   </div>
@@ -64,34 +64,34 @@
 <!-- Logs Table -->
 <div class="card">
   <div class="card-header d-flex align-items-center justify-content-between">
-    <h2 class="card-title mb-0">{{ _t('Import History') }}</h2>
+    <h2 class="card-title mb-0">{% if ui_lang == 'en' %}Import History{% else %}سجل الاستيراد{% endif %}</h2>
     <button id="refreshBtn" class="btn btn-ghost btn-sm">
-      <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> {{ _t('Refresh') }}
+      <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> {% if ui_lang == 'en' %}Refresh{% else %}تحديث{% endif %}
     </button>
   </div>
   <div class="card-body p-0">
     <div id="logsContainer">
       <div class="text-center py-5 text-muted" id="logsLoading">
-        <div class="spinner-border spinner-border-sm me-2" role="status" aria-label="{{ _t('Loading') }}"></div>
-        {{ _t('Loading import logs…') }}
+        <div class="spinner-border spinner-border-sm me-2" role="status" aria-label="{% if ui_lang == 'en' %}Loading{% else %}جاري التحميل{% endif %}"></div>
+        {% if ui_lang == 'en' %}Loading import logs…{% else %}جاري تحميل سجلات الاستيراد…{% endif %}
       </div>
       <div class="text-center py-5 text-muted" id="logsEmpty" style="display:none;">
         <i class="bi bi-inbox fs-1 mb-3 d-block opacity-50" aria-hidden="true"></i>
-        {{ _t('No import logs found.') }}
+        {% if ui_lang == 'en' %}No import logs found.{% else %}لا توجد سجلات استيراد.{% endif %}
       </div>
       <div class="table-responsive" id="logsTableWrap" style="display:none;">
         <table class="table table-hover mb-0">
           <thead class="table-light">
             <tr>
-              <th class="ps-4">{{ _t('ID') }}</th>
-              <th>{{ _t('Type') }}</th>
-              <th>{{ _t('File') }}</th>
-              <th>{{ _t('Imported By') }}</th>
-              <th>{{ _t('Rows') }}</th>
-              <th>{{ _t('Errors') }}</th>
-              <th>{{ _t('Status') }}</th>
-              <th>{{ _t('Date') }}</th>
-              <th><span class="visually-hidden">{{ _t('Actions') }}</span></th>
+              <th class="ps-4">{% if ui_lang == 'en' %}ID{% else %}الرقم{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Type{% else %}النوع{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}File{% else %}الملف{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Imported By{% else %}بواسطة{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Rows{% else %}الصفوف{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Errors{% else %}الأخطاء{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Status{% else %}الحالة{% endif %}</th>
+              <th>{% if ui_lang == 'en' %}Date{% else %}التاريخ{% endif %}</th>
+              <th><span class="visually-hidden">{% if ui_lang == 'en' %}Actions{% else %}إجراءات{% endif %}</span></th>
             </tr>
           </thead>
           <tbody id="logsTableBody"></tbody>
@@ -106,8 +106,8 @@
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-file-text me-2" aria-hidden="true"></i>{{ _t('Import Detail') }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _t('Close') }}"></button>
+        <h5 class="modal-title"><i class="bi bi-file-text me-2" aria-hidden="true"></i>{% if ui_lang == 'en' %}Import Detail{% else %}تفاصيل الاستيراد{% endif %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
       </div>
       <div class="modal-body" id="logDetailBody">
         <div class="text-center py-4">
