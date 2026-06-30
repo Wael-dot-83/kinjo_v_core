@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
 import validators
+from audit_actions import AuditAction
 from config import settings
 from database import get_db
 from dependencies import get_current_user
@@ -373,7 +374,7 @@ def review_enrollment(
         enrollment.status = models.EnrollmentStatus.REJECTED
         enrollment.rejected_at = datetime.now(_JORDAN_TZ)
         enrollment.status_reason = reason.strip()[:255]
-        audit_action = "REJECT"
+        audit_action = AuditAction.ENROLLMENT_REJECTED
     else:
         # Verify profile completeness before accepting
         child = enrollment.child
@@ -424,7 +425,7 @@ def review_enrollment(
         enrollment.status = models.EnrollmentStatus.ACCEPTED
         enrollment.accepted_at = datetime.now(_JORDAN_TZ)
         enrollment.status_reason = None
-        audit_action = "ACCEPT"
+        audit_action = AuditAction.ENROLLMENT_ACCEPTED
 
     enrollment.decision_by = current_user.id
     enrollment.decision_at = datetime.now(_JORDAN_TZ)
