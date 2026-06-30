@@ -18,7 +18,9 @@ APScheduler wiring (add to main.py lifespan):
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from typing import List, Optional, Tuple
 
 import httpx
@@ -38,7 +40,7 @@ _BATCH     = 50   # rows per Ollama call batch
 
 
 def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(_JORDAN_TZ)
 
 
 # ---------------------------------------------------------------------------

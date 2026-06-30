@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import Optional
 from datetime import date, datetime, timedelta, timezone
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from utils.time_utils import today_amman as _today
 import csv
 import io
@@ -111,7 +113,7 @@ def _export_audit_logs(
     if period != "all":
         try:
             days = int(period)
-            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+            cutoff = datetime.now(_JORDAN_TZ).replace(tzinfo=None) - timedelta(days=days)
             query = query.filter(models.AuditLog.created_at >= cutoff)
         except ValueError:
             pass

@@ -37,8 +37,11 @@ _MIN_SAMPLES_LOGISTIC = 10   # minimum rows needed to fit logistic regression
 _MIN_SAMPLES_KMEANS   = 4    # minimum staff needed for k-means
 
 
+_JORDAN_TZ = timezone(timedelta(hours=3))
+
+
 def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(_JORDAN_TZ)
 
 
 def _start_job(db: Session, job_name: str) -> AIJobLog:
