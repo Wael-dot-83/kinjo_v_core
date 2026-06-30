@@ -596,7 +596,7 @@
 
 {% block extra_scripts %}
 {# ── Heatmap application (must load before Google Maps callback fires) ── #}
-<script src="/static/js/jordan_cesium_map.js?v=6" charset="utf-8"></script>
+<script defer src="/static/js/jordan_cesium_map.js?v=6" charset="utf-8"></script>
 {# ── Google Maps JavaScript API — satellite imagery ───────────────────── #}
 <script async defer
   src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key | default('') }}&callback=_gmapsLoaded&v=weekly"></script>

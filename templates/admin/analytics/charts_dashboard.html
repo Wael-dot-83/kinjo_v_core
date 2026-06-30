@@ -11,12 +11,12 @@
 {% endblock %}
 
 {% block extra_head %}
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"
+<script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"
   integrity="sha384-cCVCZkAjYNxaYKbM8lsArLznDF/SvMFr1jcZrvOpSTCa0W40ZAdLzHCEulnUa5i7"
   crossorigin="anonymous"></script>
 <script>
   if (typeof Plotly === 'undefined') {
-    document.write('<script src="/static/vendor/plotly-2.35.2.min.js" integrity="sha384-ymzmAVk+3V1std11H4NbH/o85BHnBJTNzz3SjtDbixaVMkt2qOIcV3dzOUSuONeA" crossorigin="anonymous"><\/script>');
+    document.write('<script defer src="/static/vendor/plotly-2.35.2.min.js" integrity="sha384-ymzmAVk+3V1std11H4NbH/o85BHnBJTNzz3SjtDbixaVMkt2qOIcV3dzOUSuONeA" crossorigin="anonymous"><\/script>');
   }
 </script>
 <style>
