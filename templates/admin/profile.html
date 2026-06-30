@@ -829,7 +829,7 @@
 
   // ── CSRF helper ────────────────────────────────────────────────────────────
   function getCsrfToken() {
-    const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+    const m = document.cookie.match(/(?:^|;\s*)kinjo_csrf_token=([^;]+)/);
     return m ? decodeURIComponent(m[1]) : '';
   }
 
