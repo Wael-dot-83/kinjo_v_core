@@ -245,38 +245,48 @@ class ManagerAnalyticsService:
             models.User.status == models.UserStatus.ACTIVE
         ).all()
 
-        result = []
         today = _today()
+        sup_ids = [s.id for s in supervisors]
+        if not sup_ids:
+            return []
 
+        children_by_sup = dict(
+            db.query(models.Class.supervisor_id, func.count(models.Child.id))
+            .join(models.EnrollmentApplication, models.EnrollmentApplication.class_id == models.Class.id)
+            .join(models.Child, models.Child.id == models.EnrollmentApplication.child_id)
+            .filter(
+                models.Class.supervisor_id.in_(sup_ids),
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            )
+            .group_by(models.Class.supervisor_id)
+            .all()
+        )
+
+        classes_by_sup = dict(
+            db.query(models.Class.supervisor_id, func.count(models.Class.id))
+            .filter(
+                models.Class.supervisor_id.in_(sup_ids),
+                models.Class.is_active == True,
+            )
+            .group_by(models.Class.supervisor_id)
+            .all()
+        )
+
+        reports_today_by_sup = dict(
+            db.query(models.DailyReport.submitted_by, func.count(models.DailyReport.id))
+            .filter(
+                models.DailyReport.submitted_by.in_(sup_ids),
+                models.DailyReport.date == today,
+            )
+            .group_by(models.DailyReport.submitted_by)
+            .all()
+        )
+
+        result = []
         for supervisor in supervisors:
-            # Count children assigned to supervisor's classes
-            children_count = db.query(
-                func.count(models.Child.id)
-            ).join(
-                models.EnrollmentApplication
-            ).join(
-                models.Class
-            ).filter(
-                models.Class.supervisor_id == supervisor.id,
-                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-            ).scalar() or 0
-
-            # Count assigned classes
-            classes_count = db.query(
-                func.count(models.Class.id)
-            ).filter(
-                models.Class.supervisor_id == supervisor.id,
-                models.Class.is_active == True
-            ).scalar() or 0
-
-            # Count reports submitted today
-            reports_today = db.query(
-                func.count(models.DailyReport.id)
-            ).filter(
-                models.DailyReport.submitted_by == supervisor.id,
-                models.DailyReport.date == today
-            ).scalar() or 0
-
+            children_count = children_by_sup.get(supervisor.id, 0)
+            classes_count = classes_by_sup.get(supervisor.id, 0)
+            reports_today = reports_today_by_sup.get(supervisor.id, 0)
             result.append({
                 "supervisor_id": supervisor.id,
                 "name": supervisor.username,
@@ -462,52 +472,61 @@ class ManagerAnalyticsService:
             models.Class.is_active == True
         ).all()
 
+        class_ids = [c.id for c in classes]
+        if not class_ids:
+            return []
+
+        sup_id_set = {c.supervisor_id for c in classes if c.supervisor_id}
+        supervisors_by_id = {
+            u.id: u for u in db.query(models.User).filter(models.User.id.in_(sup_id_set)).all()
+        } if sup_id_set else {}
+
+        enrolled_by_class = dict(
+            db.query(models.EnrollmentApplication.class_id, func.count(models.EnrollmentApplication.id))
+            .filter(
+                models.EnrollmentApplication.class_id.in_(class_ids),
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            )
+            .group_by(models.EnrollmentApplication.class_id)
+            .all()
+        )
+
+        attendance_by_class = dict(
+            db.query(models.EnrollmentApplication.class_id, func.count(models.AttendanceLog.id))
+            .select_from(models.AttendanceLog)
+            .join(models.Child, models.Child.id == models.AttendanceLog.child_id)
+            .join(models.EnrollmentApplication, models.EnrollmentApplication.child_id == models.Child.id)
+            .filter(
+                models.EnrollmentApplication.class_id.in_(class_ids),
+                models.AttendanceLog.date >= start_date,
+                models.AttendanceLog.date <= end_date,
+            )
+            .group_by(models.EnrollmentApplication.class_id)
+            .all()
+        )
+
+        incidents_by_class = dict(
+            db.query(models.Incident.class_id, func.count(models.Incident.id))
+            .filter(
+                models.Incident.class_id.in_(class_ids),
+                models.Incident.occurred_at >= start_date,
+                models.Incident.occurred_at <= end_date,
+            )
+            .group_by(models.Incident.class_id)
+            .all()
+        )
+
+        operating_days = (end_date - start_date).days + 1
+
         result = []
         for class_obj in classes:
-            # Get supervisor for this class
-            supervisor = db.query(models.User).filter(
-                models.User.id == class_obj.supervisor_id
-            ).first()
+            supervisor = supervisors_by_id.get(class_obj.supervisor_id)
+            enrolled_count = enrolled_by_class.get(class_obj.id, 0)
+            attendance_logs = attendance_by_class.get(class_obj.id, 0)
+            incidents = incidents_by_class.get(class_obj.id, 0)
 
-            # Count enrolled children
-            enrolled_count = db.query(
-                func.count(models.EnrollmentApplication.id)
-            ).filter(
-                models.EnrollmentApplication.class_id == class_obj.id,
-                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-            ).scalar() or 0
-
-            # Attendance rate for this class
-            attendance_logs = db.query(
-                func.count(models.AttendanceLog.id)
-            ).join(
-                models.Child
-            ).join(
-                models.EnrollmentApplication
-            ).filter(
-                models.EnrollmentApplication.class_id == class_obj.id,
-                models.AttendanceLog.date >= start_date,
-                models.AttendanceLog.date <= end_date
-            ).scalar() or 0
-
-            operating_days = (end_date - start_date).days + 1
             expected = enrolled_count * operating_days
             attendance_rate = (attendance_logs / expected * 100) if expected > 0 else 0
-
-            # Incident count
-            incidents = db.query(
-                func.count(models.Incident.id)
-            ).join(
-                models.Child
-            ).join(
-                models.EnrollmentApplication
-            ).filter(
-                models.EnrollmentApplication.class_id == class_obj.id,
-                models.Incident.occurred_at >= start_date,
-                models.Incident.occurred_at <= end_date
-            ).scalar() or 0
-
-            # Capacity utilization
             utilization = (enrolled_count / class_obj.capacity_total * 100) if class_obj.capacity_total > 0 else 0
 
             result.append({
@@ -544,59 +563,64 @@ class ManagerAnalyticsService:
             models.User.status == models.UserStatus.ACTIVE
         ).all()
 
+        sup_ids = [s.id for s in supervisors]
+        if not sup_ids:
+            return []
+
+        children_by_sup = dict(
+            db.query(models.Class.supervisor_id, func.count(models.Child.id))
+            .join(models.EnrollmentApplication, models.EnrollmentApplication.class_id == models.Class.id)
+            .join(models.Child, models.Child.id == models.EnrollmentApplication.child_id)
+            .filter(
+                models.Class.supervisor_id.in_(sup_ids),
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            )
+            .group_by(models.Class.supervisor_id)
+            .all()
+        )
+
+        classes_by_sup = dict(
+            db.query(models.Class.supervisor_id, func.count(models.Class.id))
+            .filter(
+                models.Class.supervisor_id.in_(sup_ids),
+                models.Class.is_active == True,
+            )
+            .group_by(models.Class.supervisor_id)
+            .all()
+        )
+
+        reports_by_sup = dict(
+            db.query(models.DailyReport.submitted_by, func.count(models.DailyReport.id))
+            .filter(
+                models.DailyReport.submitted_by.in_(sup_ids),
+                models.DailyReport.date >= start_date,
+                models.DailyReport.date <= end_date,
+            )
+            .group_by(models.DailyReport.submitted_by)
+            .all()
+        )
+
+        incidents_by_sup = dict(
+            db.query(models.Class.supervisor_id, func.count(models.Incident.id))
+            .join(models.Incident, models.Incident.class_id == models.Class.id)
+            .filter(
+                models.Class.supervisor_id.in_(sup_ids),
+                models.Incident.occurred_at >= start_date,
+                models.Incident.occurred_at <= end_date,
+            )
+            .group_by(models.Class.supervisor_id)
+            .all()
+        )
+
         result = []
         for supervisor in supervisors:
-            # Count children under supervision
-            children_count = db.query(
-                func.count(models.Child.id)
-            ).join(
-                models.EnrollmentApplication
-            ).join(
-                models.Class
-            ).filter(
-                models.Class.supervisor_id == supervisor.id,
-                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-            ).scalar() or 0
-
-            # Count classes
-            classes_count = db.query(
-                func.count(models.Class.id)
-            ).filter(
-                models.Class.supervisor_id == supervisor.id,
-                models.Class.is_active == True
-            ).scalar() or 0
-
-            # Reports submitted in period
-            reports_submitted = db.query(
-                func.count(models.DailyReport.id)
-            ).filter(
-                models.DailyReport.submitted_by == supervisor.id,
-                models.DailyReport.date >= start_date,
-                models.DailyReport.date <= end_date
-            ).scalar() or 0
-
-            # Incidents reported
-            incidents = db.query(
-                func.count(models.Incident.id)
-            ).join(
-                models.Child
-            ).join(
-                models.EnrollmentApplication
-            ).join(
-                models.Class
-            ).filter(
-                models.Class.supervisor_id == supervisor.id,
-                models.Incident.occurred_at >= start_date,
-                models.Incident.occurred_at <= end_date
-            ).scalar() or 0
-
             result.append({
                 "supervisor_id": supervisor.id,
                 "supervisor_name": supervisor.username,
-                "classes_managed": classes_count,
-                "children_supervised": children_count,
-                "reports_submitted": reports_submitted,
-                "incidents_reported": incidents,
+                "classes_managed": classes_by_sup.get(supervisor.id, 0),
+                "children_supervised": children_by_sup.get(supervisor.id, 0),
+                "reports_submitted": reports_by_sup.get(supervisor.id, 0),
+                "incidents_reported": incidents_by_sup.get(supervisor.id, 0),
                 "period_start": start_date.isoformat(),
                 "period_end": end_date.isoformat()
             })

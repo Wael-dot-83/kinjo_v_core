@@ -70,23 +70,21 @@ class PredictiveAnalyticsService:
             if not child_ids:
                 continue
 
-            daily_rates = []
-            for day_offset in range(lookback_days):
-                d = _today() - timedelta(days=day_offset)
-                total = len(child_ids)
-                present = (
-                    db.query(func.count(AttendanceLog.id))
-                    .filter(
-                        AttendanceLog.child_id.in_(child_ids),
-                        AttendanceLog.date == d,
-                        AttendanceLog.status == AttendanceStatus.PRESENT,
-                    )
-                    .scalar()
-                    or 0
+            total = len(child_ids)
+            daily_counts = dict(
+                db.query(AttendanceLog.date, func.count(AttendanceLog.id))
+                .filter(
+                    AttendanceLog.child_id.in_(child_ids),
+                    AttendanceLog.date >= cutoff,
+                    AttendanceLog.status == AttendanceStatus.PRESENT,
                 )
-                daily_rates.append(present / total * 100.0 if total > 0 else 0.0)
-
-            daily_rates.reverse()
+                .group_by(AttendanceLog.date)
+                .all()
+            )
+            daily_rates = [
+                daily_counts.get(_today() - timedelta(days=i), 0) / total * 100.0 if total > 0 else 0.0
+                for i in range(lookback_days - 1, -1, -1)
+            ]
             if len(daily_rates) < window_days:
                 continue
 
@@ -146,43 +144,52 @@ class PredictiveAnalyticsService:
             ).all()
             kg_ids = [k.id for k in kgs]
 
+        kg_ids = [k.id for k in kgs]
+        cutoff_30d = self._utcnow_naive() - timedelta(days=30)
+
+        capacity_by_kg = dict(
+            db.query(Class.kindergarten_id, func.sum(Class.capacity_total))
+            .filter(
+                Class.kindergarten_id.in_(kg_ids),
+                Class.capacity_total.isnot(None),
+            )
+            .group_by(Class.kindergarten_id)
+            .all()
+        ) if kg_ids else {}
+
+        enrolled_by_kg = dict(
+            db.query(EnrollmentApplication.kindergarten_id, func.count(EnrollmentApplication.id))
+            .filter(
+                EnrollmentApplication.kindergarten_id.in_(kg_ids),
+                EnrollmentApplication.status.in_([
+                    EnrollmentStatus.ACTIVE,
+                    EnrollmentStatus.ACCEPTED,
+                ]),
+            )
+            .group_by(EnrollmentApplication.kindergarten_id)
+            .all()
+        ) if kg_ids else {}
+
+        enrolled_30d_by_kg = dict(
+            db.query(EnrollmentApplication.kindergarten_id, func.count(EnrollmentApplication.id))
+            .filter(
+                EnrollmentApplication.kindergarten_id.in_(kg_ids),
+                EnrollmentApplication.status.in_([
+                    EnrollmentStatus.ACTIVE,
+                    EnrollmentStatus.ACCEPTED,
+                ]),
+                EnrollmentApplication.created_at < cutoff_30d,
+            )
+            .group_by(EnrollmentApplication.kindergarten_id)
+            .all()
+        ) if kg_ids else {}
+
         results = []
         for kg in kgs:
             kg_id = kg.id
-            total_capacity = (
-                db.query(func.sum(Class.capacity_total))
-                .filter(Class.kindergarten_id == kg_id, Class.capacity_total.isnot(None))
-                .scalar()
-                or 0
-            )
-
-            total_enrolled = (
-                db.query(func.count(EnrollmentApplication.id))
-                .filter(
-                    EnrollmentApplication.kindergarten_id == kg_id,
-                    EnrollmentApplication.status.in_([
-                        EnrollmentStatus.ACTIVE,
-                        EnrollmentStatus.ACCEPTED,
-                    ]),
-                )
-                .scalar()
-                or 0
-            )
-
-            enrollment_30d_ago = (
-                db.query(func.count(EnrollmentApplication.id))
-                .filter(
-                    EnrollmentApplication.kindergarten_id == kg_id,
-                    EnrollmentApplication.status.in_([
-                        EnrollmentStatus.ACTIVE,
-                        EnrollmentStatus.ACCEPTED,
-                    ]),
-                    EnrollmentApplication.created_at < self._utcnow_naive() - timedelta(days=30),
-                )
-                .scalar()
-                or 0
-            )
-
+            total_capacity = capacity_by_kg.get(kg_id) or 0
+            total_enrolled = enrolled_by_kg.get(kg_id, 0)
+            enrollment_30d_ago = enrolled_30d_by_kg.get(kg_id, 0)
             monthly_growth = total_enrolled - enrollment_30d_ago
             daily_growth = monthly_growth / 30.0
 

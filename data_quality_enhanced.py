@@ -85,43 +85,43 @@ class EnhancedDataQualityService:
             .all()
         )
 
-        results = []
         today = _today()
         yesterday = today - timedelta(days=1)
+        kg_ids = [kg.id for kg in active_kgs]
 
+        children_by_kg = dict(
+            db.query(
+                EnrollmentApplication.kindergarten_id,
+                func.count(func.distinct(EnrollmentApplication.child_id)),
+            )
+            .filter(
+                EnrollmentApplication.kindergarten_id.in_(kg_ids),
+                EnrollmentApplication.is_active.is_(True),
+            )
+            .group_by(EnrollmentApplication.kindergarten_id)
+            .all()
+        ) if kg_ids else {}
+
+        reports_by_kg = dict(
+            db.query(DailyReport.kindergarten_id, func.count(DailyReport.id))
+            .filter(
+                DailyReport.kindergarten_id.in_(kg_ids),
+                DailyReport.date == yesterday,
+                DailyReport.status.in_([
+                    DailyReportStatus.SUBMITTED,
+                    DailyReportStatus.APPROVED,
+                    DailyReportStatus.SENT_TO_PARENT,
+                ]),
+            )
+            .group_by(DailyReport.kindergarten_id)
+            .all()
+        ) if kg_ids else {}
+
+        results = []
         for kg in active_kgs:
-            active_children = (
-                db.query(EnrollmentApplication.child_id)
-                .filter(
-                    EnrollmentApplication.kindergarten_id == kg.id,
-                    EnrollmentApplication.is_active.is_(True),
-                )
-                .distinct()
-                .count()
-            )
-
-            reports_submitted = (
-                db.query(func.count(DailyReport.id))
-                .filter(
-                    DailyReport.kindergarten_id == kg.id,
-                    DailyReport.date == yesterday,
-                    DailyReport.status.in_(
-                        [
-                            DailyReportStatus.SUBMITTED,
-                            DailyReportStatus.APPROVED,
-                            DailyReportStatus.SENT_TO_PARENT,
-                        ]
-                    ),
-                )
-                .scalar()
-                or 0
-            )
-
-            if active_children > 0:
-                completeness = round((reports_submitted / active_children) * 100.0, 1)
-            else:
-                completeness = 100.0
-
+            active_children = children_by_kg.get(kg.id, 0)
+            reports_submitted = reports_by_kg.get(kg.id, 0)
+            completeness = round((reports_submitted / active_children) * 100.0, 1) if active_children > 0 else 100.0
             results.append({
                 "kindergarten_id": kg.id,
                 "kindergarten_name": kg.name_ar,

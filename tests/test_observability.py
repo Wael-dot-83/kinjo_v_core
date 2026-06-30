@@ -176,14 +176,17 @@ class TestEnhancedDataQualityService:
         base_query.filter.return_value = base_query
         base_query.all.return_value = [kg_mock]
 
+        # Batch children query: .filter().group_by().all() → [(kg_id, count)]
         child_query = MagicMock()
         child_query.filter.return_value = child_query
-        child_query.distinct.return_value = child_query
-        child_query.count.return_value = 10
+        child_query.group_by.return_value = child_query
+        child_query.all.return_value = [(1, 10)]
 
+        # Batch reports query: .filter().group_by().all() → [(kg_id, count)]
         report_query = MagicMock()
         report_query.filter.return_value = report_query
-        report_query.scalar.return_value = 8
+        report_query.group_by.return_value = report_query
+        report_query.all.return_value = [(1, 8)]
 
         mock_db.query.side_effect = [base_query, child_query, report_query]
 
