@@ -1356,7 +1356,7 @@ async def admin_kg_overview(request: Request, current_user: User = Depends(get_c
     return templates.TemplateResponse(
         request=request,
         name="admin/kg_overview.html",
-        context={"current_user": current_user, "today": _today(), "now": datetime.now(timezone.utc).strftime("%d %B %Y, %I:%M %p")}
+        context={"current_user": current_user, "today": _today(), "now": datetime.now(timezone(timedelta(hours=3))).strftime("%d %B %Y, %I:%M %p")}
     )
 
 
