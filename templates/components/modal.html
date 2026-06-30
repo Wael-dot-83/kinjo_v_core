@@ -5,7 +5,7 @@
     <div class="modal-content k-card" style="padding: 0; border: none;">
       <div class="modal-header border-0 pb-0">
         <h5 class="modal-title font-weight-bold" id="{{ id }}-title">{{ title }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _t('close', 'Close') }}"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% if ui_lang == 'en' %}Close{% else %}إغلاق{% endif %}"></button>
       </div>
       <div class="modal-body">
         {{ caller() }}

@@ -16,7 +16,7 @@
         <tr>
           <td colspan="{{ columns|length }}" class="text-center py-4">
             <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">{{ _t('loading', 'Loading...') }}</span>
+              <span class="visually-hidden">{% if ui_lang == 'en' %}Loading...{% else %}جار التحميل...{% endif %}</span>
             </div>
           </td>
         </tr>
@@ -25,7 +25,7 @@
   </div>
   <div class="k-flex k-justify-between k-items-center k-mt-4 k-px-4 k-pb-4" id="{{ id }}-pagination">
     <div class="k-text-muted text-sm">
-      <span id="{{ id }}-count">0</span> {{ _t('results', 'results') }}
+      <span id="{{ id }}-count">0</span> {% if ui_lang == 'en' %}results{% else %}نتيجة{% endif %}
     </div>
     <div class="btn-group">
       <button type="button" class="k-btn k-btn-outline k-btn-prev" disabled>
