@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 {% if ui_lang == 'en' %}
 <html lang="en" dir="ltr" style="visibility: hidden">
 {% else %}
@@ -10,7 +10,7 @@
     <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
     <meta
       name="description"
-      content="{% if ui_lang == 'en' %}KinJo Admin - Professional Kindergarten Management System{% else %}KinJo - إدارة احترافية لرياض الأطفال{% endif %}"
+      content="{% if ui_lang == 'en' %}KinJo Admin - Professional Kindergarten Management System{% else %}KinJo - Ø¥Ø¯Ø§Ø±Ø© Ø§Ø­ØªØ±Ø§ÙÙŠØ© Ù„Ø±ÙŠØ§Ø¶ Ø§Ù„Ø£Ø·ÙØ§Ù„{% endif %}"
     />
     <meta name="author" content="KinJo Team" />
     <meta name="theme-color" content="#2563eb" />
@@ -64,7 +64,7 @@
     <script src="/static/js/page_load_timer.js"></script>
 
     <title>
-      {% block title %}{% if ui_lang == 'en' %}KinJo Admin{% else %}إدارة كينجو{% endif %}{% endblock %}
+      {% block title %}{% if ui_lang == 'en' %}KinJo Admin{% else %}Ø¥Ø¯Ø§Ø±Ø© ÙƒÙŠÙ†Ø¬Ùˆ{% endif %}{% endblock %}
     </title>
 
     {% block extra_head %}{% endblock %}
@@ -73,14 +73,14 @@
   <body class="admin-container">
     <!-- Skip navigation link (accessibility) -->
     <a href="#admin-main-content" class="admin-skip-link">
-      {% if ui_lang == 'en' %}Skip to main content{% else %}تخطي إلى المحتوى الرئيسي{% endif %}
+      {% if ui_lang == 'en' %}Skip to main content{% else %}ØªØ®Ø·ÙŠ Ø¥Ù„Ù‰ Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ{% endif %}
     </a>
 
     {% include 'components/impersonation_banner.html' %}
 
     <div class="admin-layout" id="admin-layout">
       <!-- Sidebar -->
-      <aside class="admin-sidebar" id="admin-sidebar" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}التنقل الرئيسي{% endif %}">
+      <aside class="admin-sidebar" id="admin-sidebar" aria-label="{% if ui_lang == 'en' %}Main navigation{% else %}Ø§Ù„ØªÙ†Ù‚Ù„ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ{% endif %}">
         <div class="admin-sidebar-header">
           <a href="/admin/dashboard" class="admin-sidebar-logo">
             <i class="bi bi-building-fill" aria-hidden="true"></i>
@@ -88,7 +88,7 @@
           </a>
         </div>
 
-        <nav class="admin-sidebar-nav" aria-label="{% if ui_lang == 'en' %}Admin sidebar{% else %}الشريط الجانبي للمسؤول{% endif %}">
+        <nav class="admin-sidebar-nav" aria-label="{% if ui_lang == 'en' %}Admin sidebar{% else %}Ø§Ù„Ø´Ø±ÙŠØ· Ø§Ù„Ø¬Ø§Ù†Ø¨ÙŠ Ù„Ù„Ù…Ø³Ø¤ÙˆÙ„{% endif %}">
           <!-- Dashboard -->
           <a
             href="/admin/dashboard"
@@ -97,7 +97,7 @@
             data-nav="dashboard"
           >
             <i class="bi bi-speedometer2 admin-nav-icon" aria-hidden="true"></i>
-            <span class="admin-nav-text">{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
+            <span class="admin-nav-text">{% if ui_lang == 'en' %}Dashboard{% else %}Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…{% endif %}</span>
           </a>
 
           <!-- Communication -->
@@ -108,10 +108,10 @@
             data-nav="communication"
           >
             <i class="bi bi-envelope-fill admin-nav-icon" aria-hidden="true"></i>
-            <span class="admin-nav-text">{% if ui_lang == 'en' %}Communication{% else %}التواصل{% endif %}</span>
+            <span class="admin-nav-text">{% if ui_lang == 'en' %}Communication{% else %}Ø§Ù„ØªÙˆØ§ØµÙ„{% endif %}</span>
           </a>
 
-          {# ── Administration group (collapsible) ── #}
+          {# â”€â”€ Administration group (collapsible) â”€â”€ #}
           {% set _admin_active = request.url.path.startswith('/admin/users')
                               or request.url.path.startswith('/admin/analytics')
                               or request.url.path == '/admin/heatmap'
@@ -125,7 +125,7 @@
                     aria-controls="admin-nav-admin-items"
                     data-nav-group="admin">
               <span class="admin-nav-group-label">
-                {% if ui_lang == 'en' %}Administration{% else %}الإدارة{% endif %}
+                {% if ui_lang == 'en' %}Administration{% else %}Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©{% endif %}
               </span>
               <i class="bi bi-chevron-down admin-nav-group-chevron" aria-hidden="true"></i>
             </button>
@@ -139,7 +139,7 @@
                 data-nav="users"
               >
                 <i class="bi bi-people-fill admin-nav-icon" aria-hidden="true"></i>
-                <span class="admin-nav-text">{% if ui_lang == 'en' %}User Management{% else %}إدارة المستخدمين{% endif %}</span>
+                <span class="admin-nav-text">{% if ui_lang == 'en' %}User Management{% else %}Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†{% endif %}</span>
               </a>
 
               <!-- Performance & Governance KPIs -->
@@ -150,7 +150,7 @@
                 data-nav="analytics"
               >
                 <i class="bi bi-graph-up-arrow admin-nav-icon" aria-hidden="true"></i>
-                <span class="admin-nav-text">{% if ui_lang == 'en' %}Performance & KPIs{% else %}الأداء والمؤشرات{% endif %}</span>
+                <span class="admin-nav-text">{% if ui_lang == 'en' %}Performance & KPIs{% else %}Ø§Ù„Ø£Ø¯Ø§Ø¡ ÙˆØ§Ù„Ù…Ø¤Ø´Ø±Ø§Øª{% endif %}</span>
               </a>
 
               <!-- Heatmap Indicators -->
@@ -161,7 +161,7 @@
                 data-nav="heatmap"
               >
                 <i class="bi bi-map-fill admin-nav-icon" aria-hidden="true"></i>
-                <span class="admin-nav-text">{% if ui_lang == 'en' %}Heatmap Indicators{% else %}خريطة المؤشرات{% endif %}</span>
+                <span class="admin-nav-text">{% if ui_lang == 'en' %}Heatmap Indicators{% else %}Ø®Ø±ÙŠØ·Ø© Ø§Ù„Ù…Ø¤Ø´Ø±Ø§Øª{% endif %}</span>
               </a>
 
               <!-- Risk Heatmap Dashboard -->
@@ -172,7 +172,7 @@
                 data-nav="risk-heatmap"
               >
                 <i class="bi bi-geo-alt-fill admin-nav-icon" aria-hidden="true"></i>
-                <span class="admin-nav-text">{% if ui_lang == 'en' %}Risk Heatmap{% else %}خريطة المخاطر{% endif %}</span>
+                <span class="admin-nav-text">{% if ui_lang == 'en' %}Risk Heatmap{% else %}Ø®Ø±ÙŠØ·Ø© Ø§Ù„Ù…Ø®Ø§Ø·Ø±{% endif %}</span>
               </a>
 
               <!-- 3D KPI Dashboard -->
@@ -183,7 +183,7 @@
                 data-nav="kpi-3d"
               >
                 <i class="bi bi-bar-chart-steps admin-nav-icon" aria-hidden="true"></i>
-                <span class="admin-nav-text">{% if ui_lang == 'en' %}3D KPI Dashboard{% else %}مؤشرات ثلاثية الأبعاد{% endif %}</span>
+                <span class="admin-nav-text">{% if ui_lang == 'en' %}3D KPI Dashboard{% else %}Ù…Ø¤Ø´Ø±Ø§Øª Ø«Ù„Ø§Ø«ÙŠØ© Ø§Ù„Ø£Ø¨Ø¹Ø§Ø¯{% endif %}</span>
               </a>
 
               <!-- Risk Assessment -->
@@ -194,7 +194,7 @@
                 data-nav="risk-assessment"
               >
                 <i class="bi bi-shield-exclamation admin-nav-icon" aria-hidden="true"></i>
-                <span class="admin-nav-text">{% if ui_lang == 'en' %}Risk Assessment{% else %}تقييم المخاطر{% endif %}</span>
+                <span class="admin-nav-text">{% if ui_lang == 'en' %}Risk Assessment{% else %}ØªÙ‚ÙŠÙŠÙ… Ø§Ù„Ù…Ø®Ø§Ø·Ø±{% endif %}</span>
               </a>
 
             </div>
@@ -208,7 +208,18 @@
             data-nav="governance"
           >
             <i class="bi bi-clipboard2-data-fill admin-nav-icon" aria-hidden="true"></i>
-            <span class="admin-nav-text">{% if ui_lang == 'en' %}Governance{% else %}حوكمة التقارير{% endif %}</span>
+            <span class="admin-nav-text">{% if ui_lang == 'en' %}Governance{% else %}Ø­ÙˆÙƒÙ…Ø© Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±{% endif %}</span>
+          </a>
+
+                    <!-- Analytics Reports -->
+          <a
+            href="/admin/analytics/daily-reports"
+            class="admin-nav-item {% if active_nav == 'daily-reports' %}active{% endif %}"
+            {% if active_nav == 'daily-reports' %}aria-current="page"{% endif %}
+            data-nav="daily-reports"
+          >
+            <i class="bi bi-file-earmark-bar-graph admin-nav-icon" aria-hidden="true"></i>
+            <span class="admin-nav-text">{{ _t('daily_reports', 'Daily Reports') }}</span>
           </a>
 
           <!-- Safety & Security -->
@@ -219,7 +230,7 @@
             data-nav="security"
           >
             <i class="bi bi-shield-fill-check admin-nav-icon" aria-hidden="true"></i>
-            <span class="admin-nav-text">{% if ui_lang == 'en' %}Safety & Security{% else %}السلامة والأمان{% endif %}</span>
+            <span class="admin-nav-text">{% if ui_lang == 'en' %}Safety & Security{% else %}Ø§Ù„Ø³Ù„Ø§Ù…Ø© ÙˆØ§Ù„Ø£Ù…Ø§Ù†{% endif %}</span>
           </a>
 
           <!-- Data Management -->
@@ -230,7 +241,7 @@
             data-nav="data"
           >
             <i class="bi bi-database-fill admin-nav-icon" aria-hidden="true"></i>
-            <span class="admin-nav-text">{% if ui_lang == 'en' %}Data Management{% else %}إدارة البيانات{% endif %}</span>
+            <span class="admin-nav-text">{% if ui_lang == 'en' %}Data Management{% else %}Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª{% endif %}</span>
           </a>
 
           <!-- Audit Logs -->
@@ -241,7 +252,7 @@
             data-nav="audit"
           >
             <i class="bi bi-clock-history admin-nav-icon" aria-hidden="true"></i>
-            <span class="admin-nav-text">{% if ui_lang == 'en' %}Audit Logs{% else %}سجل المهام{% endif %}</span>
+            <span class="admin-nav-text">{% if ui_lang == 'en' %}Audit Logs{% else %}Ø³Ø¬Ù„ Ø§Ù„Ù…Ù‡Ø§Ù…{% endif %}</span>
           </a>
         </nav>
       </aside>
@@ -256,7 +267,7 @@
               class="admin-btn admin-btn-ghost admin-btn-icon d-lg-none"
               id="sidebar-toggle"
               type="button"
-              aria-label="{% if ui_lang == 'en' %}Toggle sidebar menu{% else %}تبديل القائمة الجانبية{% endif %}"
+              aria-label="{% if ui_lang == 'en' %}Toggle sidebar menu{% else %}ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø¬Ø§Ù†Ø¨ÙŠØ©{% endif %}"
               aria-expanded="false"
               aria-controls="admin-sidebar"
             >
@@ -264,11 +275,11 @@
             </button>
 
             <!-- Breadcrumb -->
-            <nav class="admin-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
+            <nav class="admin-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}Ù…Ø³Ø§Ø± Ø§Ù„ØªÙ†Ù‚Ù„{% endif %}">
               {% block breadcrumb %}
               <a href="/admin/dashboard" class="admin-breadcrumb-item">
                 <i class="bi bi-house-fill" aria-hidden="true"></i>
-                <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
+                <span>{% if ui_lang == 'en' %}Dashboard{% else %}Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…{% endif %}</span>
               </a>
               {% endblock %}
             </nav>
@@ -276,7 +287,7 @@
 
           <div class="admin-header-right">
             <!-- Language Switcher -->
-            <div class="admin-lang-switcher" role="group" aria-label="{% if ui_lang == 'en' %}Language{% else %}اللغة{% endif %}">
+            <div class="admin-lang-switcher" role="group" aria-label="{% if ui_lang == 'en' %}Language{% else %}Ø§Ù„Ù„ØºØ©{% endif %}">
               <button
                 type="button"
                 class="admin-lang-btn {% if ui_lang == 'en' %}active{% endif %}"
@@ -289,7 +300,7 @@
                 class="admin-lang-btn {% if ui_lang == 'ar' %}active{% endif %}"
                 onclick="setAdminLanguage('ar')"
                 {% if ui_lang == 'ar' %}aria-pressed="true"{% else %}aria-pressed="false"{% endif %}
-                title="العربية"
+                title="Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©"
               >AR</button>
             </div>
 
@@ -300,7 +311,7 @@
                 type="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
-                aria-label="{% if ui_lang == 'en' %}User menu{% else %}قائمة المستخدم{% endif %}"
+                aria-label="{% if ui_lang == 'en' %}User menu{% else %}Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…{% endif %}"
               >
                 <div class="admin-user-avatar-circle" aria-hidden="true">
                   {{ current_user.username[:2] | upper if current_user else 'AD' }}
@@ -313,14 +324,14 @@
                 <li>
                   <a class="dropdown-item" href="/profile">
                     <i class="bi bi-person me-2" aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}Profile{% else %}الملف الشخصي{% endif %}
+                    {% if ui_lang == 'en' %}Profile{% else %}Ø§Ù„Ù…Ù„Ù Ø§Ù„Ø´Ø®ØµÙŠ{% endif %}
                   </a>
                 </li>
                 <li><hr class="dropdown-divider" /></li>
                 <li>
                   <a class="dropdown-item text-danger" href="/logout">
                     <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}Logout{% else %}تسجيل الخروج{% endif %}
+                    {% if ui_lang == 'en' %}Logout{% else %}ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬{% endif %}
                   </a>
                 </li>
               </ul>
@@ -360,7 +371,7 @@
       (function () {
         "use strict";
 
-        /* ── Language switcher ─────────────────────────────────── */
+        /* â”€â”€ Language switcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         window.setAdminLanguage = function (lang) {
           if (lang !== "ar" && lang !== "en") return;
           document.cookie =
@@ -368,7 +379,7 @@
           window.location.reload();
         };
 
-        /* ── Sidebar mobile toggle ─────────────────────────────── */
+        /* â”€â”€ Sidebar mobile toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         function setupSidebarToggle() {
           var sidebar = document.getElementById("admin-sidebar");
           var layout  = document.getElementById("admin-layout");
@@ -390,12 +401,12 @@
           });
         }
 
-        /* ── Global error handler ─────────────────────────────── */
+        /* â”€â”€ Global error handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         window.addEventListener("error", function (e) {
           console.error("Admin interface error:", e.error);
         });
 
-        /* ── Nav group collapsible ──────────────────────────────── */
+        /* â”€â”€ Nav group collapsible â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         function setupNavGroups() {
           document.querySelectorAll(".admin-nav-group").forEach(function (group) {
             var btn   = group.querySelector(".admin-nav-group-title");
@@ -424,9 +435,10 @@
           setupNavGroups();
         });
 
-        /* ── Anti-FOUC: reveal page ──────────────────────────── */
+        /* â”€â”€ Anti-FOUC: reveal page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
         document.documentElement.style.visibility = "";
       })();
     </script>
   </body>
 </html>
+
