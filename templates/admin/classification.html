@@ -1,6 +1,6 @@
 {% extends 'admin_base.html' %}
 
-{% block title %}{{ _t('Classification & Benchmarks') }}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Classification & Benchmarks{% else %}التصنيف والمقارنات{% endif %}{% endblock %}
 
 
 
@@ -8,8 +8,8 @@
 <!-- Page Header -->
 <div class="row pt-2 pb-2 mb-3 border-bottom align-items-center">
     <div>
-        <h1 class="h3 fw-bold mb-1">{{ _t('Classification & Benchmarks') }}</h1>
-        <p class="text-on-surface-variant small mb-0">{{ _t('Fair comparison between kindergartens, managers, and supervisors within the same segment and geographic scope.') }}
+        <h1 class="h3 fw-bold mb-1">{% if ui_lang == 'en' %}Classification & Benchmarks{% else %}التصنيف والمقارنات المعيارية{% endif %}</h1>
+        <p class="text-on-surface-variant small mb-0">{% if ui_lang == 'en' %}Fair comparison between kindergartens, managers, and supervisors within the same segment and geographic scope.{% else %}مقارنة عادلة بين الروضات والمديرين والمشرفين ضمن نفس الشريحة والنطاق الجغرافي.{% endif %}
         </p>
     </div>
     <div class="col-md-4 text-md-end mt-2 mt-md-0 d-flex justify-content-md-end align-items-center gap-2">

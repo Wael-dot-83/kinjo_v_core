@@ -1062,6 +1062,54 @@
     {"value": "full_audit", "label": "Full Audit Log"if ui_lang == 'en' else "سجل التدقيق الكامل"}
   ]
 ) }}
+
+<!-- Help Express Modal -->
+<div class="modal fade" id="helpExpressModal" tabindex="-1"
+     aria-labelledby="helpModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="helpModalTitle">
+          {% if ui_lang == 'ar' %}دليل لوحة التحليلات{% else %}Analytics Dashboard Guide{% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{% if ui_lang == 'ar' %}إغلاق{% else %}Close{% endif %}"></button>
+      </div>
+      <div class="modal-body" id="helpModalContent">
+        <h6>{% if ui_lang == 'ar' %}نظرة عامة{% else %}Overview{% endif %}</h6>
+        <p>
+          {% if ui_lang == 'ar' %}
+            تعرض هذه اللوحة مؤشرات الأداء الرئيسية والتحليلات عبر شبكة رياض الأطفال بأكملها.
+            استخدم الفلاتر لتحديد الفترة الزمنية والمحافظة.
+          {% else %}
+            This dashboard presents key performance indicators and analytics across the entire kindergarten network.
+            Use the filters to narrow down by time period and governorate.
+          {% endif %}
+        </p>
+        <h6>{% if ui_lang == 'ar' %}مؤشرات الشبكة{% else %}Network KPIs{% endif %}</h6>
+        <ul>
+          <li>{% if ui_lang == 'ar' %}عدد الروضات{% else %}Total kindergartens{% endif %}</li>
+          <li>{% if ui_lang == 'ar' %}إجمالي الأطفال{% else %}Total enrolled children{% endif %}</li>
+          <li>{% if ui_lang == 'ar' %}متوسط الحضور{% else %}Average attendance rate{% endif %}</li>
+          <li>{% if ui_lang == 'ar' %}معدل الحوادث{% else %}Incident rate{% endif %}</li>
+        </ul>
+        <h6>{% if ui_lang == 'ar' %}التصدير{% else %}Exporting Reports{% endif %}</h6>
+        <p>
+          {% if ui_lang == 'ar' %}
+            انقر على زر التصدير لتنزيل التقرير بالصيغة المطلوبة.
+          {% else %}
+            Click the Export button to download the report in the selected format.
+          {% endif %}
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          {% if ui_lang == 'ar' %}إغلاق{% else %}Close{% endif %}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -1200,52 +1248,4 @@ document.addEventListener('DOMContentLoaded', function() {
     tooltipTriggerList.forEach(function(el) { new bootstrap.Tooltip(el); });
 });
 </script>
-
-<!-- Help Express Modal -->
-<div class="modal fade" id="helpExpressModal" tabindex="-1"
-     aria-labelledby="helpModalTitle" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="helpModalTitle">
-          {% if ui_lang == 'ar' %}دليل لوحة التحليلات{% else %}Analytics Dashboard Guide{% endif %}
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"
-                aria-label="{% if ui_lang == 'ar' %}إغلاق{% else %}Close{% endif %}"></button>
-      </div>
-      <div class="modal-body" id="helpModalContent">
-        <h6>{% if ui_lang == 'ar' %}نظرة عامة{% else %}Overview{% endif %}</h6>
-        <p>
-          {% if ui_lang == 'ar' %}
-            تعرض هذه اللوحة مؤشرات الأداء الرئيسية والتحليلات عبر شبكة رياض الأطفال بأكملها.
-            استخدم الفلاتر لتحديد الفترة الزمنية والمحافظة.
-          {% else %}
-            This dashboard presents key performance indicators and analytics across the entire kindergarten network.
-            Use the filters to narrow down by time period and governorate.
-          {% endif %}
-        </p>
-        <h6>{% if ui_lang == 'ar' %}مؤشرات الشبكة{% else %}Network KPIs{% endif %}</h6>
-        <ul>
-          <li>{% if ui_lang == 'ar' %}عدد الروضات{% else %}Total kindergartens{% endif %}</li>
-          <li>{% if ui_lang == 'ar' %}إجمالي الأطفال{% else %}Total enrolled children{% endif %}</li>
-          <li>{% if ui_lang == 'ar' %}متوسط الحضور{% else %}Average attendance rate{% endif %}</li>
-          <li>{% if ui_lang == 'ar' %}معدل الحوادث{% else %}Incident rate{% endif %}</li>
-        </ul>
-        <h6>{% if ui_lang == 'ar' %}التصدير{% else %}Exporting Reports{% endif %}</h6>
-        <p>
-          {% if ui_lang == 'ar' %}
-            انقر على زر التصدير لتنزيل التقرير بالصيغة المطلوبة.
-          {% else %}
-            Click the Export button to download the report in the selected format.
-          {% endif %}
-        </p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          {% if ui_lang == 'ar' %}إغلاق{% else %}Close{% endif %}
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock %}

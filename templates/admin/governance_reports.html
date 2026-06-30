@@ -1,6 +1,6 @@
 {% extends 'admin_base.html' %}
 
-{% block title %}{{ _t('Daily Reports Governance') }}{% endblock %}
+{% block title %}{% if ui_lang == 'en' %}Daily Reports Governance{% else %}حوكمة التقارير اليومية{% endif %}{% endblock %}
 
 
 
@@ -8,7 +8,7 @@
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="mb-1"><i class="bi bi-clipboard2-data me-2"></i>{{ _t('Daily Reports Governance') }}</h4>
+        <h4 class="mb-1"><i class="bi bi-clipboard2-data me-2"></i>{% if ui_lang == 'en' %}Daily Reports Governance{% else %}حوكمة التقارير اليومية{% endif %}</h4>
     </div>
     <div class="d-flex gap-2 align-items-center">
         <label for="startDate" class="visually-hidden">{{ _t('Start Date') }}</label>
