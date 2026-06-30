@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy import or_, and_, desc, func, select, exists
 from typing import List, Optional, Dict, Literal, Union, Any
 from datetime import datetime, date, timezone, timedelta
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 from utils.time_utils import today_amman as _today
 from jose import JWTError, jwt
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -832,7 +834,7 @@ def send_message(
         models.Message.sender_id == current_user.id,
         models.Message.message_body == message_body,
         models.Message.subject == subject,
-        models.Message.created_at >= datetime.now(timezone.utc) - duplicate_check_window
+        models.Message.created_at >= datetime.now(_JORDAN_TZ) - duplicate_check_window
     ).first()
 
     if recent_message:
@@ -1390,7 +1392,7 @@ def mark_message_read(
     if state and state.deleted_at:
         raise not_found_error("Message not found")
 
-    read_timestamp = datetime.now(timezone.utc)
+    read_timestamp = datetime.now(_JORDAN_TZ)
     if message.thread_type == models.MessageThreadType.ANNOUNCEMENT:
         recipient_state = db.query(models.MessageRecipient).filter(
             models.MessageRecipient.message_id == message.id,
@@ -1455,7 +1457,7 @@ def delete_message(
         db.add(state)
 
     if not state.deleted_at:
-        state.deleted_at = datetime.now(timezone.utc)
+        state.deleted_at = datetime.now(_JORDAN_TZ)
 
     db.commit()
 
@@ -1501,7 +1503,7 @@ def archive_message(
         )
         db.add(state)
 
-    state.archived_at = datetime.now(timezone.utc)
+    state.archived_at = datetime.now(_JORDAN_TZ)
     db.commit()
 
     log_audit_event(
@@ -1614,7 +1616,7 @@ def bulk_message_action(
 
         if payload.action == "read":
             if message.sender_id != current_user.id:
-                read_timestamp = state.read_at or datetime.now(timezone.utc)
+                read_timestamp = state.read_at or datetime.now(_JORDAN_TZ)
                 state.read_at = read_timestamp
                 if message.thread_type == models.MessageThreadType.ANNOUNCEMENT:
                     recipient_state = db.query(models.MessageRecipient).filter(
@@ -1624,11 +1626,11 @@ def bulk_message_action(
                     if recipient_state and not recipient_state.read_at:
                         recipient_state.read_at = read_timestamp
         elif payload.action == "archive":
-            state.archived_at = datetime.now(timezone.utc)
+            state.archived_at = datetime.now(_JORDAN_TZ)
         elif payload.action == "unarchive":
             state.archived_at = None
         elif payload.action == "delete":
-            state.deleted_at = datetime.now(timezone.utc)
+            state.deleted_at = datetime.now(_JORDAN_TZ)
         else:
             failed_ids.append(message_id)
             errors.append({"id": str(message_id), "error": "invalid_action"})
