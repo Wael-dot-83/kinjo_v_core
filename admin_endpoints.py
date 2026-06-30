@@ -5705,6 +5705,16 @@ def acknowledge_alert(
     db.commit()
     db.refresh(alert)
 
+    log_audit_event(
+        db,
+        AuditAction.ALERT_ACKNOWLEDGED,
+        current_user,
+        "ActiveAlert",
+        target_ids=alert_id,
+        metadata={"metric": alert.metric_type, "severity": alert.severity.value if hasattr(alert.severity, "value") else str(alert.severity)},
+        sensitivity_level=2,
+    )
+
     # Build response (mirrors get_admin_alerts logic for the single record)
     threshold_val: Optional[float] = None
     if alert.threshold_id:
