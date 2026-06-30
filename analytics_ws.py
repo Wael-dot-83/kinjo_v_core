@@ -8,7 +8,7 @@ import logging
 from builtins import Exception as BuiltinException
 from jose import JWTError, jwt
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import models
 from config import settings
@@ -250,7 +250,7 @@ async def _compute_admin_dashboard_data(db):
     ).scalar()
 
     incidents_today = db.query(func.count(models.Incident.id)).filter(
-        func.date(models.Incident.created_at) == datetime.now(timezone.utc).date()
+        func.date(models.Incident.created_at) == datetime.now(timezone(timedelta(hours=3))).date()
     ).scalar()
 
     # Calculate system health score

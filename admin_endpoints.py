@@ -1304,7 +1304,8 @@ def bulk_delete_users(
             "correlation_id": get_correlation_id()
         }
 
-    # Execute delete — batch-load users to avoid N+1
+    # Execute soft-delete — batch-load users to avoid N+1
+    _now = datetime.now(_JORDAN_TZ)
     deleted_ids = []
     target_users = {
         u.id: u for u in
@@ -1313,7 +1314,9 @@ def bulk_delete_users(
     for user_id in access_result["allowed"]:
         user = target_users.get(user_id)
         if user:
-            db.delete(user)
+            user.deleted_at = _now
+            user.deleted_by = current_user.id
+            user.status = models.UserStatus.INACTIVE
             deleted_ids.append(user_id)
 
     db.commit()

@@ -220,7 +220,7 @@ class StaffEquityService:
         db: Session,
         kindergarten_id: Optional[int] = None,
     ) -> Dict[str, Any]:
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(timezone(timedelta(hours=3))).date()
 
         query = db.query(
             Class.id,

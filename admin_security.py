@@ -14,7 +14,7 @@ This module provides:
 import uuid
 import json
 import hashlib
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, timedelta, date
 from typing import Optional, List, Dict, Any, Callable, Union
 from contextvars import ContextVar
 from enum import Enum
@@ -653,7 +653,7 @@ def generate_confirmation_token(
     actor_id: int
 ) -> str:
     """Generate a confirmation token for dangerous bulk operations"""
-    payload = f"{action}:{sorted(target_ids)}:{actor_id}:{datetime.now(timezone.utc).date()}"
+    payload = f"{action}:{sorted(target_ids)}:{actor_id}:{datetime.now(timezone(timedelta(hours=3))).date()}"
     return hashlib.sha256(payload.encode()).hexdigest()[:32]
 
 

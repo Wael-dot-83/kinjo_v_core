@@ -975,7 +975,7 @@ class KPIService:
     ) -> EnhancedKPICard:
         """Create an enhanced KPI card with all metadata"""
         if last_updated is None:
-            last_updated = datetime.now(timezone.utc)
+            last_updated = datetime.now(_JORDAN_TZ)
 
         definition = KPI_DEFINITIONS.get(kpi_key, {})
         if not definition:
@@ -4372,7 +4372,7 @@ def get_enhanced_manager_kpi_dashboard(
         )
 
     period_days = (period_end - period_start).days + 1
-    last_updated = datetime.now(timezone.utc)
+    last_updated = datetime.now(_JORDAN_TZ)
 
     # Compute all KPIs in one pass via bundle (authoritative path)
     bundle = KPIService.compute_kpi_bundle(db, single_kindergarten_id, period_start, period_end)
