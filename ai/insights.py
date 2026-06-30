@@ -40,9 +40,15 @@ logger = logging.getLogger(__name__)
 
 RULE_VERSION = "rules-v1.0"
 
+_JORDAN_TZ = timezone(timedelta(hours=3))
+
 
 def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(_JORDAN_TZ)
+
+
+def _today_amman() -> date:
+    return datetime.now(_JORDAN_TZ).date()
 
 
 def _start_job(db: Session, job_name: str, job_type: str) -> AIJobLog:
@@ -162,7 +168,7 @@ def _run_absence_detection(db: Session) -> int:
                 severity="MEDIUM",
                 target_entity_type="child",
                 target_entity_id=row.child_id,
-                details={"consecutive_absent_days": 3, "as_of": str(date.today())},
+                details={"consecutive_absent_days": 3, "as_of": str(_today_amman())},
             )
             count += 1
         _finish_job(db, job, count)
@@ -230,7 +236,7 @@ def _run_allergy_alerts(db: Session) -> int:
                 details={
                     "class_id": row.class_id,
                     "allergen_detected_in_menu": True,
-                    "date": str(date.today()),
+                    "date": str(_today_amman()),
                 },
             )
             count += 1
@@ -421,7 +427,7 @@ def _run_ratio_compliance_forecast(db: Session) -> int:
         # Build set of upcoming 3 weekday DOW values (Postgres: 0=Sun,1=Mon..6=Sat)
         upcoming_dows: set[int] = set()
         for delta in range(1, 4):
-            d = date.today() + timedelta(days=delta)
+            d = _today_amman() + timedelta(days=delta)
             upcoming_dows.add(d.weekday() + 1 if d.weekday() < 6 else 0)  # convert python DOW to pg DOW
         count = 0
         for row in rows:

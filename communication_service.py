@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 import models
 import validators
 from admin_security import forbidden_error, not_found_error, validation_error, log_audit_event, model_to_dict
+from audit_actions import AuditAction
 from config import settings
 from database import get_db, SessionLocal
 from dependencies import get_current_user
@@ -877,7 +878,7 @@ def send_message(
 
         log_audit_event(
             db=db,
-            action="MESSAGE_SENT",
+            action=AuditAction.MESSAGE_SENT,
             actor=current_user,
             target_type="Message",
             target_ids=msg.id,
@@ -970,7 +971,7 @@ def send_message(
 
         log_audit_event(
             db=db,
-            action="MESSAGE_ANNOUNCEMENT_SENT",
+            action=AuditAction.MESSAGE_ANNOUNCEMENT_SENT,
             actor=current_user,
             target_type="Message",
             target_ids=msg.id,
@@ -995,7 +996,7 @@ def send_message(
         if recipients:
             log_audit_event(
                 db=db,
-                action="MESSAGE_NOTIFICATIONS_QUEUED",
+                action=AuditAction.MESSAGE_NOTIFICATIONS_QUEUED,
                 actor=current_user,
                 target_type="Message",
                 target_ids=msg.id,
@@ -1350,7 +1351,7 @@ def get_message(
 
     log_audit_event(
         db=db,
-        action="MESSAGE_VIEWED",
+        action=AuditAction.MESSAGE_VIEWED,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
@@ -1412,7 +1413,7 @@ def mark_message_read(
 
     log_audit_event(
         db=db,
-        action="MESSAGE_READ",
+        action=AuditAction.MESSAGE_READ,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
@@ -1460,7 +1461,7 @@ def delete_message(
 
     log_audit_event(
         db=db,
-        action="MESSAGE_DELETED",
+        action=AuditAction.MESSAGE_DELETED,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
@@ -1505,7 +1506,7 @@ def archive_message(
 
     log_audit_event(
         db=db,
-        action="MESSAGE_ARCHIVED",
+        action=AuditAction.MESSAGE_ARCHIVED,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
@@ -1549,7 +1550,7 @@ def unarchive_message(
 
     log_audit_event(
         db=db,
-        action="MESSAGE_UNARCHIVED",
+        action=AuditAction.MESSAGE_UNARCHIVED,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
@@ -1757,7 +1758,7 @@ def reply_to_message(
 
     log_audit_event(
         db=db,
-        action="MESSAGE_REPLIED",
+        action=AuditAction.MESSAGE_REPLIED,
         actor=current_user,
         target_type="Message",
         target_ids=reply_msg.id,
@@ -1776,7 +1777,7 @@ def reply_to_message(
         if recipients:
             log_audit_event(
                 db=db,
-                action="MESSAGE_NOTIFICATIONS_QUEUED",
+                action=AuditAction.MESSAGE_NOTIFICATIONS_QUEUED,
                 actor=current_user,
                 target_type="Message",
                 target_ids=reply_msg.id,
@@ -1879,7 +1880,7 @@ def upload_message_attachment(
 
     log_audit_event(
         db=db,
-        action="MESSAGE_ATTACHMENT_ADDED",
+        action=AuditAction.MESSAGE_ATTACHMENT_ADDED,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
@@ -1951,7 +1952,7 @@ def download_message_attachment(
 
     log_audit_event(
         db=db,
-        action="MESSAGE_ATTACHMENT_DOWNLOADED",
+        action=AuditAction.MESSAGE_ATTACHMENT_DOWNLOADED,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,

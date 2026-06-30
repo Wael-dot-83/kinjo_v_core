@@ -76,8 +76,15 @@ def _ollama_generate(prompt: str, system: str = "") -> tuple[str, float]:
 # Helpers shared across all summarisers
 # ---------------------------------------------------------------------------
 
+_JORDAN_TZ = timezone(timedelta(hours=3))
+
+
 def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(_JORDAN_TZ)
+
+
+def _today_amman() -> date:
+    return datetime.now(_JORDAN_TZ).date()
 
 
 def _start_job(db: Session, job_name: str) -> AIJobLog:
@@ -270,7 +277,7 @@ def _run_observation_narratives(db: Session) -> int:
             )
             content_en, confidence = _ollama_generate(prompt, _OBS_SYSTEM)
             _store_recommendation(
-                db, row.child_id, date.today(), None,
+                db, row.child_id, _today_amman(), None,
                 "observation_summary", None, content_en, confidence, features,
             )
             count += 1
@@ -414,7 +421,7 @@ def _run_governance_case_studies(db: Session) -> int:
             # but we reuse ai_parent_recommendations with a special type.
             rec = AIParentRecommendation(
                 child_id=None,  # admin-level
-                report_date=date.today(),
+                report_date=_today_amman(),
                 recommendation_type="governance_case_study",
                 content_en=content_en,
                 model_version=_LLM_MODEL,
@@ -493,7 +500,7 @@ def _run_activity_suggestions(db: Session) -> int:
             )
             content_en, confidence = _ollama_generate(prompt, _CURRICULUM_SYSTEM)
             _store_recommendation(
-                db, row.child_id, date.today(), None,
+                db, row.child_id, _today_amman(), None,
                 "activity_suggestion", None, content_en, confidence, features,
             )
             count += 1
