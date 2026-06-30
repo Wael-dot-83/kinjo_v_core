@@ -127,28 +127,35 @@ def list_classes(
         query = query.filter(models.Class.is_active == is_active)
 
     classes_orm = query.all()
-    
-    result = []
     today = datetime.now(_JORDAN_TZ).date()
-    
-    for c in classes_orm:
-        # Get active primary supervisor
-        current_supervisor = None
-        current_primary_assignment = db.query(models.SupervisorAssignment).filter(
-            models.SupervisorAssignment.class_id == c.id,
+
+    # Batch-fetch active primary supervisor assignments for all classes
+    class_ids = [c.id for c in classes_orm]
+    primary_assignments: dict = {}
+    if class_ids:
+        from sqlalchemy import or_ as _or
+        for assignment in db.query(models.SupervisorAssignment).filter(
+            models.SupervisorAssignment.class_id.in_(class_ids),
             models.SupervisorAssignment.is_primary == True,
             models.SupervisorAssignment.start_date <= today,
-            (models.SupervisorAssignment.end_date == None) | (models.SupervisorAssignment.end_date >= today)
-        ).first()
-        
-        if current_primary_assignment and current_primary_assignment.supervisor:
-            s_user = current_primary_assignment.supervisor
-            current_supervisor = {
-                "id": s_user.id,
-                "name": s_user.username  # User model uses username, not first/last name
-            }
-            
-        c_dict = {
+            _or(
+                models.SupervisorAssignment.end_date == None,
+                models.SupervisorAssignment.end_date >= today,
+            ),
+        ).all():
+            # Keep first (earliest) match per class
+            if assignment.class_id not in primary_assignments:
+                primary_assignments[assignment.class_id] = assignment
+
+    result = []
+    for c in classes_orm:
+        current_supervisor = None
+        assignment = primary_assignments.get(c.id)
+        if assignment and assignment.supervisor:
+            s_user = assignment.supervisor
+            current_supervisor = {"id": s_user.id, "name": s_user.username}
+
+        result.append({
             "id": c.id,
             "name_ar": c.name_ar,
             "name_en": c.name_en,
@@ -156,9 +163,8 @@ def list_classes(
             "max_age_months": c.max_age_months,
             "capacity_total": c.capacity_total,
             "is_active": c.is_active,
-            "current_supervisor": current_supervisor
-        }
-        result.append(c_dict)
+            "current_supervisor": current_supervisor,
+        })
 
     return {"classes": result}
 

@@ -1077,6 +1077,18 @@ def bulk_create_users(
     created_users = []
     errors = []
 
+    # Pre-fetch all conflicting usernames/emails in one query to avoid N lookups
+    all_usernames = {u.username for u in bulk_data.users if u.username}
+    all_emails = {u.email for u in bulk_data.users if u.email}
+    existing_users = db.query(models.User).filter(
+        or_(
+            models.User.username.in_(all_usernames),
+            models.User.email.in_(all_emails),
+        )
+    ).all()
+    taken_usernames = {u.username for u in existing_users}
+    taken_emails = {u.email for u in existing_users}
+
     for i, user_data in enumerate(bulk_data.users):
         try:
             # Cannot create admin users via bulk create
@@ -1084,21 +1096,16 @@ def bulk_create_users(
                 errors.append({
                     "row": i + 1,
                     "field": "role",
-                    "message": "Cannot create admin users"
+                    "message": "Cannot create admin users",
                 })
                 continue
 
-            # Check if username or email already exists
-            existing = db.query(models.User).filter(
-                or_(models.User.username == user_data.username,
-                    models.User.email == user_data.email)
-            ).first()
-
-            if existing:
+            # Check against pre-fetched conflict set
+            if user_data.username in taken_usernames or user_data.email in taken_emails:
                 errors.append({
                     "row": i + 1,
                     "field": "username/email",
-                    "message": "Username or email already exists"
+                    "message": "Username or email already exists",
                 })
                 continue
 
