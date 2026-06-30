@@ -535,7 +535,7 @@
           if (val === null || val === undefined) val = "-";
           // Try to format if it looks like ISO date
           if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
-             val = formatLocalDate(val);
+             val = formatDateSafe(val);
           }
           return `<td>${escapeHtml(String(val))}</td>`;
         })

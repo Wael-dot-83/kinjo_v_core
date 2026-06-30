@@ -10,7 +10,7 @@
     <meta name="csrf-token" content="{{ csrf_token | default('') }}" />
     <meta
       name="description"
-      content="{% if ui_lang == 'en' %}KinJo Admin - Professional Kindergarten Management System{% else %}KinJo - Ø¥Ø¯Ø§Ø±Ø© Ø§Ø­ØªØ±Ø§ÙÙŠØ© Ù„Ø±ÙŠØ§Ø¶ Ø§Ù„Ø£Ø·ÙØ§Ù„{% endif %}"
+      content="{% if ui_lang == 'en' %}KinJo Admin - Professional Kindergarten Management System{% else %}KinJo - إدارة احترافية لرياض الأطفال{% endif %}"
     />
     <meta name="author" content="KinJo Team" />
     <meta name="theme-color" content="#2563eb" />
@@ -47,7 +47,12 @@
       crossorigin="anonymous"
     />
 
-    <!-- Kinjo New Design System -->
+    <!-- Google Material Symbols -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <!-- Kinjo Admin Design System -->
+    <link rel="stylesheet" href="/static/css/admin_design_system.css?v=2.9" />
+    <link rel="stylesheet" href="/static/css/sidebar-professional.css?v=1.0" />
     <link rel="stylesheet" href="/static/css/design-tokens.css?v=1" />
     <link rel="stylesheet" href="/static/css/layout.css?v=1" />
     <link rel="stylesheet" href="/static/css/components.css?v=1" />
@@ -59,11 +64,16 @@
     <link rel="stylesheet" href="/static/css/rtl.css" />
     {% endif %}
 
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css" />
+    <!-- Odometer -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/odometer.js/0.4.8/themes/odometer-theme-default.css" crossorigin="anonymous" />
+
     <script src="/static/js/sanitize.js"></script>
     <script src="/static/js/page_load_timer.js"></script>
 
     <title>
-      {% block title %}{% if ui_lang == 'en' %}KinJo Admin{% else %}Ø¥Ø¯Ø§Ø±Ø© ÙƒÙŠÙ†Ø¬Ùˆ{% endif %}{% endblock %}
+      {% block title %}{% if ui_lang == 'en' %}KinJo Admin{% else %}إدارة كينجو{% endif %}{% endblock %}
     </title>
 
     {% block extra_head %}{% endblock %}
@@ -72,7 +82,7 @@
   <body class="admin-container">
     <!-- Skip navigation link (accessibility) -->
     <a href="#admin-main-content" class="admin-skip-link">
-      {% if ui_lang == 'en' %}Skip to main content{% else %}ØªØ®Ø·ÙŠ Ø¥Ù„Ù‰ Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ{% endif %}
+      {% if ui_lang == 'en' %}Skip to main content{% else %}تخطي إلى المحتوى الرئيسي{% endif %}
     </a>
 
     {% include 'components/impersonation_banner.html' %}
@@ -272,7 +282,7 @@
               class="admin-btn admin-btn-ghost admin-btn-icon d-lg-none"
               id="sidebar-toggle"
               type="button"
-              aria-label="{% if ui_lang == 'en' %}Toggle sidebar menu{% else %}ØªØ¨Ø¯ÙŠÙ„ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø¬Ø§Ù†Ø¨ÙŠØ©{% endif %}"
+              aria-label="{% if ui_lang == 'en' %}Toggle sidebar menu{% else %}تبديل القائمة الجانبية{% endif %}"
               aria-expanded="false"
               aria-controls="admin-sidebar"
             >
@@ -280,11 +290,11 @@
             </button>
 
             <!-- Breadcrumb -->
-            <nav class="admin-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}Ù…Ø³Ø§Ø± Ø§Ù„ØªÙ†Ù‚Ù„{% endif %}">
+            <nav class="admin-breadcrumb" aria-label="{% if ui_lang == 'en' %}Breadcrumb{% else %}مسار التنقل{% endif %}">
               {% block breadcrumb %}
               <a href="/admin/dashboard" class="admin-breadcrumb-item">
                 <i class="bi bi-house-fill" aria-hidden="true"></i>
-                <span>{% if ui_lang == 'en' %}Dashboard{% else %}Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…{% endif %}</span>
+                <span>{% if ui_lang == 'en' %}Dashboard{% else %}لوحة التحكم{% endif %}</span>
               </a>
               {% endblock %}
             </nav>
@@ -292,7 +302,7 @@
 
           <div class="admin-header-right">
             <!-- Language Switcher -->
-            <div class="admin-lang-switcher" role="group" aria-label="{% if ui_lang == 'en' %}Language{% else %}Ø§Ù„Ù„ØºØ©{% endif %}">
+            <div class="admin-lang-switcher" role="group" aria-label="{% if ui_lang == 'en' %}Language{% else %}اللغة{% endif %}">
               <button
                 type="button"
                 class="admin-lang-btn {% if ui_lang == 'en' %}active{% endif %}"
@@ -305,7 +315,7 @@
                 class="admin-lang-btn {% if ui_lang == 'ar' %}active{% endif %}"
                 onclick="setAdminLanguage('ar')"
                 {% if ui_lang == 'ar' %}aria-pressed="true"{% else %}aria-pressed="false"{% endif %}
-                title="Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©"
+                title="العربية"
               >AR</button>
             </div>
 
@@ -316,7 +326,7 @@
                 type="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
-                aria-label="{% if ui_lang == 'en' %}User menu{% else %}Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…{% endif %}"
+                aria-label="{% if ui_lang == 'en' %}User menu{% else %}قائمة المستخدم{% endif %}"
               >
                 <div class="admin-user-avatar-circle" aria-hidden="true">
                   {{ current_user.username[:2] | upper if current_user else 'AD' }}
@@ -329,14 +339,14 @@
                 <li>
                   <a class="dropdown-item" href="/profile">
                     <i class="bi bi-person me-2" aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}Profile{% else %}Ø§Ù„Ù…Ù„Ù Ø§Ù„Ø´Ø®ØµÙŠ{% endif %}
+                    {% if ui_lang == 'en' %}Profile{% else %}الملف الشخصي{% endif %}
                   </a>
                 </li>
                 <li><hr class="dropdown-divider" /></li>
                 <li>
                   <a class="dropdown-item text-danger" href="#" data-action="logout">
                     <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>
-                    {% if ui_lang == 'en' %}Logout{% else %}ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬{% endif %}
+                    {% if ui_lang == 'en' %}Logout{% else %}تسجيل الخروج{% endif %}
                   </a>
                 </li>
               </ul>
@@ -351,6 +361,15 @@
         <div class="admin-content" id="admin-content">{% block content %}{% endblock %}</div>
       </main>
     </div>
+
+    <!-- Chart.js (global Chart constructor required by analytics/kpi pages) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js" crossorigin="anonymous"></script>
+
+    <!-- Odometer (animated counters) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/odometer.js/0.4.8/odometer.min.js" crossorigin="anonymous"></script>
 
     <!-- Bootstrap JavaScript -->
     <script
