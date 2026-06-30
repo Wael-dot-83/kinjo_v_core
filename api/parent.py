@@ -49,33 +49,61 @@ def get_parent_dashboard(
         models.Child.parent_id == parent_profile.id
     ).all()
 
+    today = datetime.now(_JORDAN_TZ).date()
+    child_ids = [c.id for c in children]
+
+    # Batch-fetch enrollments, attendance, and latest reports — avoids 3N per-child queries
+    enrollments_by_child: dict = {}
+    attendance_by_child: dict = {}
+    latest_report_by_child: dict = {}
+
+    if child_ids:
+        enrollments_by_child = {
+            e.child_id: e
+            for e in db.query(models.EnrollmentApplication).filter(
+                models.EnrollmentApplication.child_id.in_(child_ids),
+                models.EnrollmentApplication.status.in_([
+                    models.EnrollmentStatus.ACTIVE,
+                    models.EnrollmentStatus.WAITLISTED,
+                    models.EnrollmentStatus.PENDING_REVIEW,
+                ]),
+            ).all()
+        }
+        attendance_by_child = {
+            a.child_id: a
+            for a in db.query(models.AttendanceLog).filter(
+                models.AttendanceLog.child_id.in_(child_ids),
+                models.AttendanceLog.date == today,
+            ).all()
+        }
+        from sqlalchemy import func as _func
+        subq = (
+            db.query(
+                models.DailyReport.child_id,
+                _func.max(models.DailyReport.date).label("max_date"),
+            )
+            .filter(
+                models.DailyReport.child_id.in_(child_ids),
+                models.DailyReport.status.in_([
+                    models.DailyReportStatus.APPROVED,
+                    models.DailyReportStatus.SENT_TO_PARENT,
+                ]),
+            )
+            .group_by(models.DailyReport.child_id)
+            .subquery()
+        )
+        for r in db.query(models.DailyReport).join(
+            subq,
+            (models.DailyReport.child_id == subq.c.child_id)
+            & (models.DailyReport.date == subq.c.max_date),
+        ).all():
+            latest_report_by_child[r.child_id] = r
+
     children_data = []
     for child in children:
-        # Get active enrollment
-        enrollment = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == child.id,
-            models.EnrollmentApplication.status.in_([
-                models.EnrollmentStatus.ACTIVE,
-                models.EnrollmentStatus.WAITLISTED,
-                models.EnrollmentStatus.PENDING_REVIEW
-            ])
-        ).first()
-
-        # Today's attendance
-        today = datetime.now(_JORDAN_TZ).date()
-        attendance = db.query(models.AttendanceLog).filter(
-            models.AttendanceLog.child_id == child.id,
-            models.AttendanceLog.date == today
-        ).first()
-
-        # Latest approved or sent-to-parent daily report
-        latest_report = db.query(models.DailyReport).filter(
-            models.DailyReport.child_id == child.id,
-            models.DailyReport.status.in_([
-                models.DailyReportStatus.APPROVED,
-                models.DailyReportStatus.SENT_TO_PARENT,
-            ])
-        ).order_by(models.DailyReport.date.desc()).first()
+        enrollment = enrollments_by_child.get(child.id)
+        attendance = attendance_by_child.get(child.id)
+        latest_report = latest_report_by_child.get(child.id)
 
         child_info = {
             "id": child.id,
@@ -84,24 +112,26 @@ def get_parent_dashboard(
             "age_months": validators.validate_age_months(child.date_of_birth),
             "enrollment": None,
             "attendance_today": None,
-            "latest_report_date": None
+            "latest_report_date": None,
         }
 
         if enrollment:
             child_info["enrollment"] = {
                 "status": enrollment.status.value,
                 "kindergarten_id": enrollment.kindergarten_id,
-                "class_id": enrollment.class_id
+                "class_id": enrollment.class_id,
             }
 
         if attendance:
             child_info["attendance_today"] = {
                 "checked_in": attendance.check_in_at.strftime("%H:%M") if attendance.check_in_at else None,
-                "checked_out": attendance.check_out_at.strftime("%H:%M") if attendance.check_out_at else None
+                "checked_out": attendance.check_out_at.strftime("%H:%M") if attendance.check_out_at else None,
             }
 
         if latest_report:
-            child_info["latest_report_date"] = latest_report.date.isoformat() if isinstance(latest_report.date, date) else latest_report.date
+            child_info["latest_report_date"] = (
+                latest_report.date.isoformat() if isinstance(latest_report.date, date) else latest_report.date
+            )
 
         children_data.append(child_info)
 
@@ -196,17 +226,36 @@ def get_parent_children(
         models.Child.deleted_at.is_(None),
     ).all()
 
+    child_ids = [c.id for c in children]
+
+    # Batch-fetch all enrollments for all children at once
+    all_enrollments: list = []
+    kg_ids: set = set()
+    if child_ids:
+        all_enrollments = db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id.in_(child_ids)
+        ).all()
+        kg_ids = {e.kindergarten_id for e in all_enrollments if e.kindergarten_id}
+
+    # Batch-fetch all kindergartens referenced by those enrollments
+    kgs_by_id = {}
+    if kg_ids:
+        kgs_by_id = {
+            kg.id: kg
+            for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
+        }
+
+    # Group enrollments by child_id
+    from collections import defaultdict as _dd
+    enrollments_by_child = _dd(list)
+    for e in all_enrollments:
+        enrollments_by_child[e.child_id].append(e)
+
     children_data = []
     for child in children:
-        enrollments = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == child.id
-        ).all()
-
         enrollment_list = []
-        for e in enrollments:
-            kg = db.query(models.Kindergarten).filter(
-                models.Kindergarten.id == e.kindergarten_id
-            ).first()
+        for e in enrollments_by_child[child.id]:
+            kg = kgs_by_id.get(e.kindergarten_id)
             enrollment_list.append({
                 "id": e.id,
                 "kindergarten_id": e.kindergarten_id,
@@ -224,7 +273,7 @@ def get_parent_children(
             "father_name": child.father_name,
             "mother_first_name": child.mother_first_name,
             "mother_last_name": child.mother_last_name,
-            "profile_complete": child.profile_complete if hasattr(child, 'profile_complete') else False,
+            "profile_complete": child.profile_complete if hasattr(child, "profile_complete") else False,
             "enrollments": enrollment_list,
         })
 
