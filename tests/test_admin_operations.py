@@ -1013,6 +1013,31 @@ class TestAdminAlerts:
         r = client.get("/api/admin/alerts?governorate=Amman", headers=headers)
         assert r.status_code == 200
 
+    def test_acknowledge_alert(self, client, test_db):
+        """PATCH /api/admin/alerts/{id}/acknowledge sets status=ACKNOWLEDGED and logs audit."""
+        admin = _make_admin(test_db, "alrt_adm", "6")
+        alert = _make_alert(test_db, scope_type="GOVERNORATE", scope_id="Amman")
+        headers = _tok(client, "alrt_adm6")
+        headers["X-CSRF-Token"] = "test"
+        client.cookies.set("kinjo_csrf_token", "test")
+        r = client.patch(f"/api/admin/alerts/{alert.id}/acknowledge", headers=headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["status"] == "ACKNOWLEDGED"
+        assert data["acknowledged_at"] is not None
+        # Verify idempotency — second call returns 409
+        r2 = client.patch(f"/api/admin/alerts/{alert.id}/acknowledge", headers=headers)
+        assert r2.status_code == 409
+
+    def test_acknowledge_alert_not_found(self, client, test_db):
+        """PATCH /api/admin/alerts/999999/acknowledge returns 404."""
+        admin = _make_admin(test_db, "alrt_adm", "7")
+        headers = _tok(client, "alrt_adm7")
+        headers["X-CSRF-Token"] = "test"
+        client.cookies.set("kinjo_csrf_token", "test")
+        r = client.patch("/api/admin/alerts/999999/acknowledge", headers=headers)
+        assert r.status_code == 404
+
 
 # ---------------------------------------------------------------------------
 # Heatmap SQLAlchemyError branch
