@@ -82,67 +82,104 @@ def get_manager_dashboard(
         func.date(models.Incident.occurred_at) >= week_ago
     ).scalar() or 0
 
-    # Attendance Trend (Last 7 days)
-    attendance_trend = []
-    for i in range(7):
-        d = today - timedelta(days=(6-i))
-        # Get simplified Arabic day name logic or just use English day name and let frontend handled it
-        day_date = d
-        count = db.query(func.count(models.AttendanceLog.id)).join(
-            models.Child
-        ).join(
-            models.EnrollmentApplication
-        ).filter(
+    # Attendance Trend (Last 7 days) — single GROUP BY query
+    seven_days_ago = today - timedelta(days=6)
+    attendance_by_date = {
+        row[0]: row[1]
+        for row in db.query(
+            models.AttendanceLog.date,
+            func.count(models.AttendanceLog.id),
+        )
+        .join(models.Child)
+        .join(models.EnrollmentApplication)
+        .filter(
             models.EnrollmentApplication.kindergarten_id == kindergarten_id,
-            models.AttendanceLog.date == day_date
-        ).scalar() or 0
-        attendance_trend.append({"date": str(day_date), "count": count})
+            models.AttendanceLog.date >= seven_days_ago,
+            models.AttendanceLog.date <= today,
+        )
+        .group_by(models.AttendanceLog.date)
+        .all()
+    }
+    attendance_trend = [
+        {"date": str(today - timedelta(days=6 - i)), "count": attendance_by_date.get(today - timedelta(days=6 - i), 0)}
+        for i in range(7)
+    ]
 
     # Enrollment Status Breakdown
     enrollment_stats = db.query(
-        models.EnrollmentApplication.status, 
+        models.EnrollmentApplication.status,
         func.count(models.EnrollmentApplication.id)
     ).filter(
         models.EnrollmentApplication.kindergarten_id == kindergarten_id
     ).group_by(models.EnrollmentApplication.status).all()
-    
+
     enrollment_breakdown = {status.name: count for status, count in enrollment_stats}
 
-    # Classes with enrollment counts
+    # Classes with enrollment counts — 3 batch GROUP BY queries instead of 3N
     classes = db.query(models.Class).filter(
         models.Class.kindergarten_id == kindergarten_id,
         models.Class.is_active == True
     ).all()
-    
-    classes_data = []
-    for c in classes:
-        enrolled_count = db.query(func.count(models.EnrollmentApplication.id)).filter(
-            models.EnrollmentApplication.class_id == c.id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).scalar() or 0
-        
-        present_count = db.query(func.count(models.AttendanceLog.id)).join(
-             models.Child
-        ).join(
-            models.EnrollmentApplication
-        ).filter(
-            models.EnrollmentApplication.class_id == c.id,
-            models.AttendanceLog.date == today
-        ).scalar() or 0
 
-        pending_assignment = db.query(func.count(models.EnrollmentApplication.id)).filter(
-             models.EnrollmentApplication.class_id == c.id,
-             models.EnrollmentApplication.status.in_([models.EnrollmentStatus.PENDING_REVIEW, models.EnrollmentStatus.WAITLISTED])
-        ).scalar() or 0
+    class_ids = [c.id for c in classes]
+    enrolled_by_class = {
+        row[0]: row[1]
+        for row in db.query(
+            models.EnrollmentApplication.class_id,
+            func.count(models.EnrollmentApplication.id),
+        )
+        .filter(
+            models.EnrollmentApplication.class_id.in_(class_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        )
+        .group_by(models.EnrollmentApplication.class_id)
+        .all()
+    } if class_ids else {}
 
-        classes_data.append({
+    present_by_class = {
+        row[0]: row[1]
+        for row in db.query(
+            models.EnrollmentApplication.class_id,
+            func.count(models.AttendanceLog.id),
+        )
+        .join(models.Child, models.Child.id == models.EnrollmentApplication.child_id)
+        .join(models.AttendanceLog, models.AttendanceLog.child_id == models.Child.id)
+        .filter(
+            models.EnrollmentApplication.class_id.in_(class_ids),
+            models.AttendanceLog.date == today,
+        )
+        .group_by(models.EnrollmentApplication.class_id)
+        .all()
+    } if class_ids else {}
+
+    pending_by_class = {
+        row[0]: row[1]
+        for row in db.query(
+            models.EnrollmentApplication.class_id,
+            func.count(models.EnrollmentApplication.id),
+        )
+        .filter(
+            models.EnrollmentApplication.class_id.in_(class_ids),
+            models.EnrollmentApplication.status.in_([
+                models.EnrollmentStatus.PENDING_REVIEW,
+                models.EnrollmentStatus.WAITLISTED,
+            ]),
+        )
+        .group_by(models.EnrollmentApplication.class_id)
+        .all()
+    } if class_ids else {}
+
+    classes_data = [
+        {
             "id": c.id,
             "name": c.name_ar or c.name_en,
             "capacity": c.capacity_total,
-            "enrolled": enrolled_count,
-            "present": present_count,
-            "pending": pending_assignment
-        })
+            "enrolled": enrolled_by_class.get(c.id, 0),
+            "present": present_by_class.get(c.id, 0),
+            "pending": pending_by_class.get(c.id, 0),
+        }
+        for c in classes
+    ]
 
     dashboard = {
         "kindergarten": {

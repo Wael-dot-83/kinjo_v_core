@@ -1201,7 +1201,7 @@ async def parent_reports(
             for child in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()
         }
         for report in reports:
-            report.child_name = child_name_by_id.get(report.child_id, "Ø·ÙÙ„")
+            report.child_name = child_name_by_id.get(report.child_id, "طفل")
 
     return templates.TemplateResponse(
         request=request,

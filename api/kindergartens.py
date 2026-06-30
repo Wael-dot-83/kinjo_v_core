@@ -389,13 +389,13 @@ def delete_kindergarten(
         kindergarten.status = models.KindergartenStatus.INACTIVE
         action = "archived"
         message = "Kindergarten archived successfully"
-        audit_action = "KINDERGARTEN_ARCHIVED"
+        audit_action = AuditAction.KINDERGARTEN_ARCHIVED
     else:
         # No dependencies - allow hard delete
         db.delete(kindergarten)
         action = "deleted"
         message = "Kindergarten permanently deleted"
-        audit_action = "KINDERGARTEN_DELETED"
+        audit_action = AuditAction.KINDERGARTEN_DELETED
 
     db.commit()
 
