@@ -376,9 +376,12 @@ def get_class_children(
         )
         .all()
     )
+    child_ids = [e.child_id for e in enrollments if e.child_id]
+    child_map = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()}
+
     children = []
     for e in enrollments:
-        child = db.query(models.Child).filter(models.Child.id == e.child_id).first()
+        child = child_map.get(e.child_id)
         if child:
             children.append({
                 "child_id": child.id,
@@ -413,9 +416,12 @@ def get_class_supervisors(
         )
         .all()
     )
+    sup_ids = [a.supervisor_id for a in assignments if a.supervisor_id]
+    sup_map = {u.id: u for u in db.query(models.User).filter(models.User.id.in_(sup_ids)).all()}
+
     supervisors = []
     for a in assignments:
-        sup = db.query(models.User).filter(models.User.id == a.supervisor_id).first()
+        sup = sup_map.get(a.supervisor_id)
         if sup:
             supervisors.append({
                 "user_id": sup.id,
@@ -743,9 +749,12 @@ def supervisor_my_children(
         .all()
     )
 
+    child_ids = [e.child_id for e in enrollments if e.child_id]
+    child_map = {c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()}
+
     children = []
     for e in enrollments:
-        child = db.query(models.Child).filter(models.Child.id == e.child_id).first()
+        child = child_map.get(e.child_id)
         if child:
             children.append({
                 "child_id": child.id,
