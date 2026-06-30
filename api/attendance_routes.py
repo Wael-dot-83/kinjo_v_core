@@ -307,14 +307,21 @@ def get_attendance_report(
         present_count = sum(1 for child_id in matrix if matrix[child_id][date_str]["status"] == "present")
         totals["per_day"][date_str] = present_count
 
-    # Children info
+    # Children info — batch-fetch enrollments and classes to avoid N+1
+    _cids = [c.id for c in children]
+    _enrollments_map = {
+        e.child_id: e for e in db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id.in_(_cids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).all()
+    }
+    _class_ids = list({e.class_id for e in _enrollments_map.values() if e.class_id})
+    _classes_map = {c.id: c for c in db.query(models.Class).filter(models.Class.id.in_(_class_ids)).all()}
+
     children_info = []
     for child in children:
-        enrollment = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == child.id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).first()
-        class_info = db.query(models.Class).filter(models.Class.id == enrollment.class_id).first() if enrollment else None
+        enrollment = _enrollments_map.get(child.id)
+        class_info = _classes_map.get(enrollment.class_id) if enrollment else None
 
         children_info.append({
             "id": child.id,

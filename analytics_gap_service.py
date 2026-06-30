@@ -593,10 +593,13 @@ class AnalyticsGapService:
         density_color = _colour_by_threshold(density, 2, 5, lower_is_better=True)
 
         # Per-KG breakdown for heatmap-style bar
+        _kg_name_map = {
+            k.id: (k.name_en or k.name_ar)
+            for k in self.db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
+        }
         kg_incident_data: List[Tuple[str, float]] = []
         for kg_id in kg_ids:
-            kg = self.db.query(models.Kindergarten).filter(models.Kindergarten.id == kg_id).first()
-            kg_name = (kg.name_en or kg.name_ar) if kg else str(kg_id)
+            kg_name = _kg_name_map.get(kg_id, str(kg_id))
             kd_days = (
                 self.db.query(func.count(models.AttendanceLog.id))
                 .join(models.Class, models.AttendanceLog.class_id == models.Class.id)
