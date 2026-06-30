@@ -12,7 +12,7 @@
     async init() {
       try {
         // Fetch translations for the current language
-        const data = await window.dataFetcher.fetch(`/api/i18n/${this.currentLang}`);
+        const data = await window.dataFetcher.fetch(`/static/i18n/admin_${this.currentLang}.json`);
         this.translations = data || {};
         this.isLoaded = true;
       } catch (e) {

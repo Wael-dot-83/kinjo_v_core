@@ -610,7 +610,7 @@ function renderDeltaIndicator(delta, elementId, metricKey) {
   if (!element) return;
 
   const unavailableText = adminAnalyticsText(
-    `<span title="${adminAnalyticsText('لا توجد بيانات كافية للفترة السابقة للمقارنة', 'Not enough data in the previous period to compare')}" class="cursor-help border-b border-dashed border-on-surface-variant/50">${adminAnalyticsText("لا توجد بيانات", "No Data")}</span>`,
+    "غير متوفر للفترة السابقة",
     "No previous-period data"
   );
 

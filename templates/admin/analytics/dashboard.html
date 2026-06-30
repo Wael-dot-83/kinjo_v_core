@@ -22,7 +22,13 @@
       <span>{{ _t('Loading data...') }}</span>
     </small>
   </div>
-  <div class="analytics-page-actions d-flex align-items-center">
+  <div class="analytics-page-actions d-flex align-items-center gap-2">
+    <button type="button" class="btn btn-outline-secondary" id="helpBtn"
+            data-bs-toggle="modal" data-bs-target="#helpExpressModal"
+            aria-label="{% if ui_lang == 'ar' %}مساعدة{% else %}Help{% endif %}">
+      <i class="bi bi-question-circle me-1"></i>
+      {% if ui_lang == 'ar' %}مساعدة{% else %}Help{% endif %}
+    </button>
     <button type="button" class="btn btn-primary" id="refreshBtn" onclick="loadAdminAnalytics()">
       <i class="bi bi-arrow-clockwise me-2"></i>
       {{ _t('Refresh Data') }}
@@ -1065,7 +1071,6 @@
 <script defer src="/static/js/chart_utils.js?v=2.1"charset="utf-8"></script>
 <script defer src="/static/js/kpi-validation.js?v=2.1"charset="utf-8"></script>
 <script defer src="/static/js/admin_analytics.js?v=2.1"charset="utf-8"></script>
-<script defer src="/static/js/admin_advanced_analytics.js?v=3.0"charset="utf-8"></script>
 <style>
     .admin-content:has(.analytics-dashboard) {
       background: var(--admin-bg-gray-100, #F5F5F5);
@@ -1195,4 +1200,52 @@ document.addEventListener('DOMContentLoaded', function() {
     tooltipTriggerList.forEach(function(el) { new bootstrap.Tooltip(el); });
 });
 </script>
+
+<!-- Help Express Modal -->
+<div class="modal fade" id="helpExpressModal" tabindex="-1"
+     aria-labelledby="helpModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="helpModalTitle">
+          {% if ui_lang == 'ar' %}دليل لوحة التحليلات{% else %}Analytics Dashboard Guide{% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{% if ui_lang == 'ar' %}إغلاق{% else %}Close{% endif %}"></button>
+      </div>
+      <div class="modal-body" id="helpModalContent">
+        <h6>{% if ui_lang == 'ar' %}نظرة عامة{% else %}Overview{% endif %}</h6>
+        <p>
+          {% if ui_lang == 'ar' %}
+            تعرض هذه اللوحة مؤشرات الأداء الرئيسية والتحليلات عبر شبكة رياض الأطفال بأكملها.
+            استخدم الفلاتر لتحديد الفترة الزمنية والمحافظة.
+          {% else %}
+            This dashboard presents key performance indicators and analytics across the entire kindergarten network.
+            Use the filters to narrow down by time period and governorate.
+          {% endif %}
+        </p>
+        <h6>{% if ui_lang == 'ar' %}مؤشرات الشبكة{% else %}Network KPIs{% endif %}</h6>
+        <ul>
+          <li>{% if ui_lang == 'ar' %}عدد الروضات{% else %}Total kindergartens{% endif %}</li>
+          <li>{% if ui_lang == 'ar' %}إجمالي الأطفال{% else %}Total enrolled children{% endif %}</li>
+          <li>{% if ui_lang == 'ar' %}متوسط الحضور{% else %}Average attendance rate{% endif %}</li>
+          <li>{% if ui_lang == 'ar' %}معدل الحوادث{% else %}Incident rate{% endif %}</li>
+        </ul>
+        <h6>{% if ui_lang == 'ar' %}التصدير{% else %}Exporting Reports{% endif %}</h6>
+        <p>
+          {% if ui_lang == 'ar' %}
+            انقر على زر التصدير لتنزيل التقرير بالصيغة المطلوبة.
+          {% else %}
+            Click the Export button to download the report in the selected format.
+          {% endif %}
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          {% if ui_lang == 'ar' %}إغلاق{% else %}Close{% endif %}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

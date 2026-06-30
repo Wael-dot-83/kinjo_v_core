@@ -217,7 +217,16 @@ def seeded_scenario(db_sessionmaker):
         "enrollment_ids": enrollment_ids,
     }
 
-    # Teardown
+    # Teardown: delete audit logs first (FK constraint from audit_logs → users)
+    conc_user_ids = [
+        u.id for u in db.query(models.User).filter(
+            models.User.username.like(f"%_conc_{suffix}%")
+        ).all()
+    ]
+    if conc_user_ids:
+        db.query(models.AuditLog).filter(
+            models.AuditLog.user_id.in_(conc_user_ids)
+        ).delete(synchronize_session=False)
     for eid in enrollment_ids:
         db.query(models.EnrollmentApplication).filter(
             models.EnrollmentApplication.id == eid

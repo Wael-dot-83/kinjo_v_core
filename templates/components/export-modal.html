@@ -33,7 +33,24 @@
                 </div>
 
                 <form id="{{ form_id }}" class="space-y-6">
-                    
+
+                    {% if report_types %}
+                    <!-- Report Type Selection -->
+                    <div>
+                        <label class="block font-label-sm text-on-surface-variant mb-2" for="exportReportType">
+                            {% if ui_lang == 'en' %}Report Type{% else %}نوع التقرير{% endif %}
+                        </label>
+                        <div class="relative">
+                            <select class="w-full bg-black/20 border border-white/10 text-on-surface rounded-xl px-4 py-3 outline-none focus:border-primary/50 transition-colors appearance-none cursor-pointer" id="exportReportType">
+                                {% for rt in report_types %}
+                                <option value="{{ rt.value }}"{% if loop.first %} selected{% endif %}>{{ rt.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <span class="material-symbols-outlined absolute end-3 top-3.5 text-on-surface-variant pointer-events-none">expand_more</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- Format Selection -->
                     <div>
                         <label class="block font-label-sm text-on-surface-variant mb-2">{% if ui_lang == 'en' %}Export Format{% else %}صيغة التصدير{% endif %}</label>

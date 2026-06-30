@@ -1990,7 +1990,7 @@ async def dev_auto_login(
         }
     })
     _set_authenticated_session(response, access_token=access_token, remember_me=True)
-    _set_ui_language_cookie(response, "en")
+    _set_ui_language_cookie(response, "ar")
     return response
 
 
