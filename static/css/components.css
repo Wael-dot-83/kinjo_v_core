@@ -1,0 +1,116 @@
+/* static/css/components.css */
+
+/* Button Components */
+.k-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--kinjo-spacing-2);
+  padding: var(--kinjo-spacing-2) var(--kinjo-spacing-4);
+  font-family: inherit;
+  font-size: var(--kinjo-font-size-sm);
+  font-weight: var(--kinjo-font-weight-medium);
+  border-radius: var(--kinjo-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--kinjo-transition-fast);
+  text-decoration: none;
+}
+.k-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.k-btn-primary {
+  background-color: var(--kinjo-color-primary);
+  color: var(--kinjo-color-text-inverse);
+}
+.k-btn-primary:hover:not(:disabled) {
+  background-color: var(--kinjo-color-primary-hover);
+}
+
+.k-btn-outline {
+  border-color: var(--kinjo-color-border);
+  background-color: transparent;
+  color: var(--kinjo-color-text-primary);
+}
+.k-btn-outline:hover:not(:disabled) {
+  background-color: var(--kinjo-color-bg-hover);
+}
+
+/* Card Components (for KPIs and Panels) */
+.k-card {
+  background-color: var(--kinjo-color-bg-surface);
+  border: 1px solid var(--kinjo-color-border);
+  border-radius: var(--kinjo-radius-lg);
+  box-shadow: var(--kinjo-shadow-sm);
+  padding: var(--kinjo-spacing-5);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Data Table Components */
+.k-table-container {
+  width: 100%;
+  overflow-x: auto;
+  background: var(--kinjo-color-bg-surface);
+  border: 1px solid var(--kinjo-color-border);
+  border-radius: var(--kinjo-radius-lg);
+}
+
+.k-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: start;
+}
+
+.k-table th,
+.k-table td {
+  padding: var(--kinjo-spacing-3) var(--kinjo-spacing-4);
+  border-block-end: 1px solid var(--kinjo-color-border);
+}
+
+.k-table th {
+  background-color: var(--kinjo-color-bg-body);
+  color: var(--kinjo-color-text-secondary);
+  font-weight: var(--kinjo-font-weight-semibold);
+  font-size: var(--kinjo-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.k-table tbody tr:hover {
+  background-color: var(--kinjo-color-bg-hover);
+}
+
+/* Form Inputs */
+.k-input {
+  display: block;
+  width: 100%;
+  padding: var(--kinjo-spacing-2) var(--kinjo-spacing-3);
+  font-size: var(--kinjo-font-size-sm);
+  border: 1px solid var(--kinjo-color-border);
+  border-radius: var(--kinjo-radius-md);
+  background-color: var(--kinjo-color-bg-surface);
+  color: var(--kinjo-color-text-primary);
+  transition: border-color var(--kinjo-transition-fast), box-shadow var(--kinjo-transition-fast);
+}
+.k-input:focus {
+  outline: none;
+  border-color: var(--kinjo-color-primary);
+  box-shadow: 0 0 0 2px var(--kinjo-color-ring);
+}
+
+/* Badges */
+.k-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  font-size: var(--kinjo-font-size-xs);
+  font-weight: var(--kinjo-font-weight-medium);
+  border-radius: var(--kinjo-radius-full);
+}
+.k-badge-success { background-color: #d1fae5; color: #065f46; }
+.k-badge-warning { background-color: #fef3c7; color: #92400e; }
+.k-badge-danger { background-color: #fee2e2; color: #991b1b; }
+.k-badge-info { background-color: #dbeafe; color: #1e40af; }

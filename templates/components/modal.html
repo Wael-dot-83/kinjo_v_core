@@ -1,0 +1,16 @@
+{# templates/components/modal.html #}
+{% macro modal(id, title, size='md') %}
+<div class="modal fade" id="{{ id }}" tabindex="-1" aria-labelledby="{{ id }}-title" aria-hidden="true">
+  <div class="modal-dialog modal-{{ size }} modal-dialog-centered">
+    <div class="modal-content k-card" style="padding: 0; border: none;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title font-weight-bold" id="{{ id }}-title">{{ title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _t('close', 'Close') }}"></button>
+      </div>
+      <div class="modal-body">
+        {{ caller() }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}

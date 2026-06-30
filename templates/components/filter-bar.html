@@ -1,0 +1,32 @@
+{# templates/components/filter-bar.html #}
+{% macro filter_bar(id, filters, on_apply="applyFilters()") %}
+<div class="k-card k-mb-4" id="{{ id }}">
+  <form class="k-flex k-items-center k-gap-4 k-w-full" style="flex-wrap: wrap;" onsubmit="event.preventDefault(); {{ on_apply }};">
+    {% for filter in filters %}
+    <div class="k-filter-item" style="flex: 1; min-width: 200px;">
+      <label for="{{ filter.id }}" class="form-label visually-hidden">{{ filter.label }}</label>
+      {% if filter.type == 'select' %}
+      <select class="k-input k-dynamic-dropdown" id="{{ filter.id }}" name="{{ filter.id }}" data-api="{{ filter.api }}" aria-label="{{ filter.label }}">
+        <option value="">{{ _t('loading_options', 'Loading...') }}</option>
+      </select>
+      {% elif filter.type == 'date' %}
+      <input type="date" class="k-input" id="{{ filter.id }}" name="{{ filter.id }}" aria-label="{{ filter.label }}" />
+      {% elif filter.type == 'search' %}
+      <div class="input-group">
+        <span class="input-group-text k-bg-surface"><i class="bi bi-search"></i></span>
+        <input type="text" class="k-input" id="{{ filter.id }}" name="{{ filter.id }}" placeholder="{{ filter.placeholder }}" aria-label="{{ filter.label }}" />
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+    <div class="k-filter-actions">
+      <button type="submit" class="k-btn k-btn-primary">
+        <i class="bi bi-funnel-fill me-1"></i> {{ _t('apply_filters', 'Apply') }}
+      </button>
+      <button type="reset" class="k-btn k-btn-outline ms-2" onclick="setTimeout({{ on_apply }}, 0)">
+        <i class="bi bi-arrow-counterclockwise me-1"></i> {{ _t('reset', 'Reset') }}
+      </button>
+    </div>
+  </form>
+</div>
+{% endmacro %}

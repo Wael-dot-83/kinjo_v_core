@@ -1,0 +1,27 @@
+/* static/css/utilities.css */
+
+.k-text-primary { color: var(--kinjo-color-primary) !important; }
+.k-text-success { color: var(--kinjo-color-success) !important; }
+.k-text-warning { color: var(--kinjo-color-warning) !important; }
+.k-text-danger { color: var(--kinjo-color-danger) !important; }
+.k-text-muted { color: var(--kinjo-color-text-muted) !important; }
+
+.k-bg-primary { background-color: var(--kinjo-color-primary) !important; }
+.k-bg-success { background-color: var(--kinjo-color-success) !important; }
+.k-bg-warning { background-color: var(--kinjo-color-warning) !important; }
+.k-bg-danger { background-color: var(--kinjo-color-danger) !important; }
+
+.k-mt-1 { margin-block-start: var(--kinjo-spacing-1) !important; }
+.k-mt-2 { margin-block-start: var(--kinjo-spacing-2) !important; }
+.k-mt-4 { margin-block-start: var(--kinjo-spacing-4) !important; }
+.k-mb-2 { margin-block-end: var(--kinjo-spacing-2) !important; }
+.k-mb-4 { margin-block-end: var(--kinjo-spacing-4) !important; }
+
+.k-flex { display: flex !important; }
+.k-items-center { align-items: center !important; }
+.k-justify-between { justify-content: space-between !important; }
+.k-gap-2 { gap: var(--kinjo-spacing-2) !important; }
+.k-gap-4 { gap: var(--kinjo-spacing-4) !important; }
+
+.k-w-full { width: 100% !important; }
+.k-h-full { height: 100% !important; }

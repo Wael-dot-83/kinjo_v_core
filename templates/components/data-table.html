@@ -1,59 +1,40 @@
-{% macro loading_state() %}
-<div class="text-center py-5" role="status" aria-live="polite" aria-busy="true">
-    <div class="spinner-border text-primary" aria-hidden="true"></div>
-    <div class="mt-2 text-muted small">{{ 'Loading data…' if ui_lang == 'en' else 'جاري تحميل البيانات…' }}</div>
+{# templates/components/data-table.html #}
+{% macro data_table(id, columns) %}
+<div class="k-card k-table-container k-mb-4" id="{{ id }}-container">
+  <div class="table-responsive">
+    <table class="k-table" id="{{ id }}">
+      <thead>
+        <tr>
+          {% for col in columns %}
+          <th scope="col" {% if col.sortable %}class="sortable" data-sort="{{ col.key }}"{% endif %}>
+            {{ col.label }}
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody id="{{ id }}-body">
+        <tr>
+          <td colspan="{{ columns|length }}" class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">{{ _t('loading', 'Loading...') }}</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="k-flex k-justify-between k-items-center k-mt-4 k-px-4 k-pb-4" id="{{ id }}-pagination">
+    <div class="k-text-muted text-sm">
+      <span id="{{ id }}-count">0</span> {{ _t('results', 'results') }}
+    </div>
+    <div class="btn-group">
+      <button type="button" class="k-btn k-btn-outline k-btn-prev" disabled>
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <button type="button" class="k-btn k-btn-outline k-btn-next" disabled>
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </div>
 </div>
-{% endmacro %}
-
-{% macro table_skeleton(rows=4, cols=5) %}
-<tbody aria-hidden="true">
-  {% for r in range(rows) %}
-  <tr class="table-skeleton-row">
-    {% for c in range(cols) %}
-    <td><div class="table-skeleton-cell" style="width: {{ 35 + ((r * 17 + c * 13) % 45) }}%"></div></td>
-    {% endfor %}
-  </tr>
-  {% endfor %}
-</tbody>
-{% endmacro %}
-
-{% macro pagination(current_page=1, total_pages=1, base_url="#", pagination_id="", aria_label="Page navigation") %}
-{% if total_pages > 1 %}
-<nav aria-label="{{ aria_label }}" {% if pagination_id %}id="{{ pagination_id }}"{% endif %}>
-    <ul class="pagination justify-content-center mb-0">
-        <li class="page-item{% if current_page <= 1 %} disabled{% endif %}">
-            <a class="page-link" href="{{ base_url }}?page=1"
-               {% if current_page <= 1 %}tabindex="-1" aria-disabled="true"{% endif %}
-               aria-label="{{ 'First page' if ui_lang == 'en' else 'الصفحة الأولى' }}">
-                <i class="bi bi-chevron-double-{% if ui_dir == 'rtl' %}right{% else %}left{% endif %}" aria-hidden="true"></i>
-            </a>
-        </li>
-        <li class="page-item{% if current_page <= 1 %} disabled{% endif %}">
-            <a class="page-link" href="{{ base_url }}?page={{ current_page - 1 }}"
-               {% if current_page <= 1 %}tabindex="-1" aria-disabled="true"{% endif %}>
-                {{ 'Previous' if ui_lang == 'en' else 'السابق' }}
-            </a>
-        </li>
-        {% for page in range([1, current_page - 2] | max, [total_pages + 1, current_page + 3] | min) %}
-        <li class="page-item{% if page == current_page %} active{% endif %}">
-            <a class="page-link" href="{{ base_url }}?page={{ page }}"
-               {% if page == current_page %}aria-current="page"{% endif %}>{{ page }}</a>
-        </li>
-        {% endfor %}
-        <li class="page-item{% if current_page >= total_pages %} disabled{% endif %}">
-            <a class="page-link" href="{{ base_url }}?page={{ current_page + 1 }}"
-               {% if current_page >= total_pages %}tabindex="-1" aria-disabled="true"{% endif %}>
-                {{ 'Next' if ui_lang == 'en' else 'التالي' }}
-            </a>
-        </li>
-        <li class="page-item{% if current_page >= total_pages %} disabled{% endif %}">
-            <a class="page-link" href="{{ base_url }}?page={{ total_pages }}"
-               {% if current_page >= total_pages %}tabindex="-1" aria-disabled="true"{% endif %}
-               aria-label="{{ 'Last page' if ui_lang == 'en' else 'الصفحة الأخيرة' }}">
-                <i class="bi bi-chevron-double-{% if ui_dir == 'rtl' %}left{% else %}right{% endif %}" aria-hidden="true"></i>
-            </a>
-        </li>
-    </ul>
-</nav>
-{% endif %}
 {% endmacro %}

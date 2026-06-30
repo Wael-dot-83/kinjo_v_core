@@ -1,0 +1,122 @@
+/* static/css/layout.css */
+body.admin-container {
+  margin: 0;
+  padding: 0;
+  background-color: var(--kinjo-color-bg-body);
+  color: var(--kinjo-color-text-primary);
+  font-family: var(--kinjo-font-family);
+  -webkit-font-smoothing: antialiased;
+}
+
+.admin-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.admin-sidebar {
+  width: 280px;
+  background-color: var(--kinjo-color-bg-surface);
+  border-inline-end: 1px solid var(--kinjo-color-border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: transform var(--kinjo-transition-normal);
+  z-index: 1000;
+}
+
+.admin-sidebar-header {
+  padding: var(--kinjo-spacing-4);
+  border-block-end: 1px solid var(--kinjo-color-border);
+  display: flex;
+  align-items: center;
+}
+
+.admin-sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--kinjo-spacing-3);
+  font-size: var(--kinjo-font-size-xl);
+  font-weight: var(--kinjo-font-weight-bold);
+  color: var(--kinjo-color-primary);
+  text-decoration: none;
+}
+
+.admin-sidebar-nav {
+  padding: var(--kinjo-spacing-4) 0;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+/* Main Area */
+.admin-main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.admin-header {
+  height: 64px;
+  background-color: var(--kinjo-color-bg-surface);
+  border-block-end: 1px solid var(--kinjo-color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--kinjo-spacing-6);
+  flex-shrink: 0;
+}
+
+.admin-header-left,
+.admin-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--kinjo-spacing-4);
+}
+
+/* Content */
+.admin-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: var(--kinjo-spacing-6);
+}
+
+/* Page Containers */
+.admin-page-container {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* Grid Layouts */
+.admin-grid {
+  display: grid;
+  gap: var(--kinjo-spacing-6);
+}
+.admin-grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.admin-grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.admin-grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.admin-grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+@media (max-width: 1024px) {
+  .admin-grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-grid-cols-3 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+}
+
+@media (max-width: 991px) {
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    inset-inline-start: 0;
+    transform: translateX(calc(-100% * var(--transform-direction, 1)));
+  }
+  [dir="rtl"] .admin-sidebar {
+    --transform-direction: -1;
+  }
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+  .admin-grid-cols-2 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+}
