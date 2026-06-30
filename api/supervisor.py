@@ -518,32 +518,43 @@ def get_supervisor_children(
 
     from supervisor_service import SupervisorService
     children = SupervisorService.get_supervisor_children(db, current_user)
-    
-    # Enrich with today's attendance status
-    today = datetime.now(_JORDAN_TZ).date()
-    results = []
-    
-    for child in children:
-        # Get active enrollment for class info
-        enrollment = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == child.id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).first()
 
-        attendance = db.query(models.AttendanceLog).filter(
-            models.AttendanceLog.child_id == child.id,
-            models.AttendanceLog.date == today
-        ).first()
-        
+    if not children:
+        return {"children": []}
+
+    today = datetime.now(_JORDAN_TZ).date()
+    child_ids = [c.id for c in children]
+
+    # Batch-fetch enrollments and attendance records — avoids 2N per-child queries
+    enrollments_by_child = {
+        e.child_id: e
+        for e in db.query(models.EnrollmentApplication).filter(
+            models.EnrollmentApplication.child_id.in_(child_ids),
+            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+        ).all()
+    }
+    attendance_by_child = {
+        a.child_id: a
+        for a in db.query(models.AttendanceLog).filter(
+            models.AttendanceLog.child_id.in_(child_ids),
+            models.AttendanceLog.date == today,
+        ).all()
+    }
+
+    results = []
+    for child in children:
+        enrollment = enrollments_by_child.get(child.id)
+        attendance = attendance_by_child.get(child.id)
+
         status = "absent"
         check_in_time = None
         check_out_time = None
-        
+
         if attendance:
             status = "present" if not attendance.check_out_at else "checked_out"
             check_in_time = attendance.check_in_at.strftime("%H:%M") if attendance.check_in_at else None
             check_out_time = attendance.check_out_at.strftime("%H:%M") if attendance.check_out_at else None
-            
+
         results.append({
             "id": child.id,
             "first_name": child.first_name,
@@ -565,9 +576,9 @@ def get_supervisor_children(
             "attendance_status": status,
             "check_in_time": check_in_time,
             "check_out_time": check_out_time,
-            "name": f"{child.first_name} {child.last_name}" # Full name
+            "name": f"{child.first_name} {child.last_name}",
         })
-        
+
     return {"children": results}
 
 
@@ -805,13 +816,20 @@ def list_children(
     total_pages = max(1, (total_count + page_size - 1) // page_size)
     children = query.offset((page - 1) * page_size).limit(page_size).all()
 
+    child_ids = [c.id for c in children]
+    enrollments_by_child = {}
+    if child_ids:
+        enrollments_by_child = {
+            e.child_id: e
+            for e in db.query(models.EnrollmentApplication).filter(
+                models.EnrollmentApplication.child_id.in_(child_ids),
+                models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE,
+            ).all()
+        }
+
     result = []
     for child in children:
-        # Get enrollment info
-        enrollment = db.query(models.EnrollmentApplication).filter(
-            models.EnrollmentApplication.child_id == child.id,
-            models.EnrollmentApplication.status == models.EnrollmentStatus.ACTIVE
-        ).first()
+        enrollment = enrollments_by_child.get(child.id)
 
         child_info = {
             "id": child.id,
@@ -827,7 +845,7 @@ def list_children(
             child_info["enrollment_id"] = enrollment.id
             child_info["class_id"] = enrollment.class_id
             child_info["kindergarten_id"] = enrollment.kindergarten_id
-            
+
         result.append(child_info)
 
     return {
@@ -887,17 +905,21 @@ def get_supervisor_dashboard(
         models.DailyReport.status == models.DailyReportStatus.DRAFT
     ).scalar() or 0
     
-    # Build class details list
+    # Build class details list — batch fetch to avoid N+1
+    classes_by_id = {
+        c.id: c
+        for c in db.query(models.Class).filter(models.Class.id.in_(class_ids)).all()
+    } if class_ids else {}
     classes_detail = []
     for a in assignments:
-        class_obj = db.query(models.Class).filter(models.Class.id == a.class_id).first()
+        class_obj = classes_by_id.get(a.class_id)
         if class_obj:
             classes_detail.append({
                 "id": class_obj.id,
                 "name_ar": class_obj.name_ar,
                 "name_en": class_obj.name_en,
                 "kindergarten_id": class_obj.kindergarten_id,
-                "is_primary": a.is_primary
+                "is_primary": a.is_primary,
             })
 
     return {
