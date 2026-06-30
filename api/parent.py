@@ -312,10 +312,19 @@ def get_parent_enrollments(
         models.EnrollmentApplication.child_id.in_(child_ids)
     ).all()
 
+    children_by_id = {
+        c.id: c for c in db.query(models.Child).filter(models.Child.id.in_(child_ids)).all()
+    }
+    kg_ids = {e.kindergarten_id for e in enrollments if e.kindergarten_id}
+    kgs_by_id = {
+        kg.id: kg
+        for kg in db.query(models.Kindergarten).filter(models.Kindergarten.id.in_(kg_ids)).all()
+    } if kg_ids else {}
+
     enrollment_data = []
     for e in enrollments:
-        child = db.query(models.Child).filter(models.Child.id == e.child_id).first()
-        kg = db.query(models.Kindergarten).filter(models.Kindergarten.id == e.kindergarten_id).first()
+        child = children_by_id.get(e.child_id)
+        kg = kgs_by_id.get(e.kindergarten_id)
         enrollment_data.append({
             "id": e.id,
             "child_id": e.child_id,
