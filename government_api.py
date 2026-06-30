@@ -42,6 +42,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 import models
+from audit_actions import AuditAction
 from config import settings
 from database import get_db
 from dependencies import get_current_user
@@ -122,7 +123,7 @@ def _log_government_request(
     try:
         log = models.AuditLog(
             user_id=user.id if user else None,
-            action="GOVERNMENT_API_ACCESS",
+            action=AuditAction.GOVERNMENT_API_ACCESS,
             entity_type="government_api",
             entity_id=None,
             details=_json.dumps({"endpoint": endpoint, "params": dict(request.query_params)}),

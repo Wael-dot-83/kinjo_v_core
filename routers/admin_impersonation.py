@@ -9,13 +9,16 @@ GET  /api/admin/impersonate/audit   — recent impersonation audit log entries
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
+
+_JORDAN_TZ = timezone(timedelta(hours=3))
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from audit_actions import AuditAction
 from database import get_db
 from models import AuditLog, Kindergarten, User, UserRole
 from rate_limiter import limiter
@@ -101,7 +104,7 @@ def start_impersonation(
             db,
             admin_id=current_admin.id,
             target_id=payload.target_user_id,
-            action="IMPERSONATION_ATTEMPT_FAILED",
+            action=AuditAction.IMPERSONATION_ATTEMPT_FAILED,
             reason=f"User not found: {payload.target_user_id}",
             ip=_get_ip(request),
         )
@@ -111,7 +114,7 @@ def start_impersonation(
             db,
             admin_id=current_admin.id,
             target_id=target.id,
-            action="IMPERSONATION_ATTEMPT_FAILED",
+            action=AuditAction.IMPERSONATION_ATTEMPT_FAILED,
             reason=f"Target role is {target.role.value}, not MANAGER",
             ip=_get_ip(request),
         )
@@ -127,14 +130,14 @@ def start_impersonation(
         "user_id": target.id,
         "username": target.full_name or target.username,
         "role": target.role.value,
-        "started_at": datetime.now(timezone.utc).isoformat(),
+        "started_at": datetime.now(_JORDAN_TZ).isoformat(),
     }
 
     _write_audit(
         db,
         admin_id=current_admin.id,
         target_id=target.id,
-        action="IMPERSONATION_START",
+        action=AuditAction.IMPERSONATION_START,
         reason=payload.reason,
         ip=_get_ip(request),
     )
@@ -179,7 +182,7 @@ def exit_impersonation(
         db,
         admin_id=current_admin.id,   # always use JWT-verified identity
         target_id=target_id or current_admin.id,
-        action="IMPERSONATION_END",
+        action=AuditAction.IMPERSONATION_END,
         reason=None,
         ip=_get_ip(request),
     )

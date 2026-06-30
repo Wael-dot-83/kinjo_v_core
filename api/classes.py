@@ -12,6 +12,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
+from audit_actions import AuditAction
 import validators
 from config import settings
 from database import get_db
@@ -97,7 +98,7 @@ def create_class(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="CLASS_CREATED",
+        action=AuditAction.CLASS_CREATED,
         entity_type="Class",
         entity_id=class_obj.id,
         sensitivity_level=2
@@ -326,7 +327,7 @@ def update_class(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="CLASS_UPDATED",
+        action=AuditAction.CLASS_UPDATED,
         entity_type="Class",
         entity_id=class_obj.id,
         sensitivity_level=2
@@ -378,7 +379,7 @@ def deactivate_class(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="CLASS_DEACTIVATED",
+        action=AuditAction.CLASS_DEACTIVATED,
         entity_type="Class",
         entity_id=class_obj.id,
         sensitivity_level=2
@@ -422,7 +423,7 @@ def delete_class(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="CLASS_DELETED",
+        action=AuditAction.CLASS_DELETED,
         entity_type="Class",
         entity_id=class_id,
         sensitivity_level=3
@@ -512,7 +513,7 @@ def assign_child_to_class(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="CHILD_ASSIGNED_TO_CLASS",
+        action=AuditAction.CHILD_ASSIGNED_TO_CLASS,
         entity_type="EnrollmentApplication",
         entity_id=enrollment.id,
         details=f"Child {child.first_name} {child.last_name} assigned to class {class_obj.name_en}",

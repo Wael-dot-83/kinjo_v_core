@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func
 import models
 import validators
+from audit_actions import AuditAction
 from validators import ValidationError
 
 
@@ -142,7 +143,7 @@ class SupervisorService:
         validators.log_audit_action(
             db=db,
             user_id=manager_user.id,
-            action="SUPERVISOR_ASSIGNED",
+            action=AuditAction.SUPERVISOR_ASSIGNED,
             entity_type="SupervisorAssignment",
             entity_id=assignment.id,
             details=f"Supervisor {supervisor_id} assigned to Class {class_id}",
@@ -221,7 +222,7 @@ class SupervisorService:
         validators.log_audit_action(
             db=db,
             user_id=manager_user.id,
-            action="REPLACEMENT_SUPERVISOR_ASSIGNED",
+            action=AuditAction.REPLACEMENT_SUPERVISOR_ASSIGNED,
             entity_type="SupervisorAssignment",
             entity_id=assignment.id,
             details=f"Replacement supervisor {replacement_supervisor_id} for Class {class_id}. Reason: {reason}",

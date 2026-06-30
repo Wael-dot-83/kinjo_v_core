@@ -11,6 +11,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
+from audit_actions import AuditAction
 import validators
 from config import settings
 from database import get_db
@@ -78,7 +79,7 @@ def check_in_child(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="ATTENDANCE_CHECK_IN",
+        action=AuditAction.ATTENDANCE_CHECK_IN,
         entity_type="AttendanceLog",
         entity_id=attendance.id,
         details=f"Child {child_id} checked in",
@@ -124,7 +125,7 @@ def check_out_child(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="ATTENDANCE_CHECK_OUT",
+        action=AuditAction.ATTENDANCE_CHECK_OUT,
         entity_type="AttendanceLog",
         entity_id=attendance.id,
         details=f"Child {child_id} checked out",
@@ -431,7 +432,7 @@ def correct_attendance_status(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="ATTENDANCE_STATUS_CORRECTED",
+        action=AuditAction.ATTENDANCE_STATUS_CORRECTED,
         entity_type="AttendanceLog",
         entity_id=att.id,
         details=f"Status changed from {old_status} to {att.status.value} by user {current_user.id}",

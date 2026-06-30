@@ -10,6 +10,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
+from audit_actions import AuditAction
 import validators
 from config import settings
 from database import get_db
@@ -197,7 +198,7 @@ def create_kindergarten(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="KINDERGARTEN_CREATED",
+        action=AuditAction.KINDERGARTEN_CREATED,
         entity_type="Kindergarten",
         entity_id=kindergarten.id,
         sensitivity_level=2
@@ -320,7 +321,7 @@ def update_kindergarten(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="KINDERGARTEN_UPDATED",
+        action=AuditAction.KINDERGARTEN_UPDATED,
         entity_type="Kindergarten",
         entity_id=kindergarten.id,
         sensitivity_level=2
@@ -446,7 +447,7 @@ def archive_kindergarten(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="KINDERGARTEN_ARCHIVED",
+        action=AuditAction.KINDERGARTEN_ARCHIVED,
         entity_type="Kindergarten",
         entity_id=kindergarten_id,
         sensitivity_level=2
@@ -485,7 +486,7 @@ def restore_kindergarten(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="KINDERGARTEN_RESTORED",
+        action=AuditAction.KINDERGARTEN_RESTORED,
         entity_type="Kindergarten",
         entity_id=kindergarten_id,
         sensitivity_level=2
@@ -557,7 +558,7 @@ def create_kindergarten_service(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="KINDERGARTEN_SERVICE_CREATED",
+        action=AuditAction.KINDERGARTEN_SERVICE_CREATED,
         entity_type="KindergartenService",
         entity_id=service.id,
         sensitivity_level=2
@@ -589,7 +590,7 @@ def update_kindergarten_service(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="KINDERGARTEN_SERVICE_UPDATED",
+        action=AuditAction.KINDERGARTEN_SERVICE_UPDATED,
         entity_type="KindergartenService",
         entity_id=service.id,
         sensitivity_level=2
@@ -617,7 +618,7 @@ def delete_kindergarten_service(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="KINDERGARTEN_SERVICE_DELETED",
+        action=AuditAction.KINDERGARTEN_SERVICE_DELETED,
         entity_type="KindergartenService",
         entity_id=service_id,
         sensitivity_level=2

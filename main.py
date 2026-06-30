@@ -90,6 +90,7 @@ from mfa_service import (
 import validators
 from captcha_service import captcha_error_message, captcha_required, verify_captcha
 from admin_security import CorrelationIdMiddleware, APIError, api_error_handler
+from audit_actions import AuditAction
 from rate_limiter import limiter, rate_limit_exceeded_handler
 from performance_monitor import PerformanceMiddleware, setup_database_monitoring, start_system_monitoring
 from backup_manager import backup_scheduler
@@ -805,7 +806,7 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
             _log_auth_event(
                 db=db,
                 user_id=target_user.id,
-                action="LOGIN_LOCKED",
+                action=AuditAction.LOGIN_LOCKED,
                 details="Account lockout enforced",
                 ip_address=ip_address,
                 sensitivity_level=3,
@@ -817,7 +818,7 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
         _log_auth_event(
             db=db,
             user_id=target_user.id if target_user else None,
-            action="LOGIN_FAILED",
+            action=AuditAction.LOGIN_FAILED,
             details="Credential validation failed",
             ip_address=ip_address,
             sensitivity_level=3,
@@ -853,7 +854,7 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
         _log_auth_event(
             db=db,
             user_id=user.id,
-            action="MFA_REQUIRED",
+            action=AuditAction.MFA_REQUIRED,
             details=f"purpose={purpose}",
             ip_address=ip_address,
             sensitivity_level=2,
@@ -881,7 +882,7 @@ async def _do_login(request: Request, form_data: OAuth2PasswordRequestForm, db: 
     _log_auth_event(
         db=db,
         user_id=user.id,
-        action="LOGIN_SUCCESS",
+        action=AuditAction.LOGIN_SUCCESS,
         details=f"Login successful (remember_me={remember_me})",
         ip_address=ip_address,
         sensitivity_level=2,
@@ -984,7 +985,7 @@ async def logout(
         _log_auth_event(
             db=db,
             user_id=current_user.id,
-            action="LOGOUT",
+            action=AuditAction.LOGOUT,
             details="Logout",
             ip_address=_get_request_ip(request),
             sensitivity_level=1
@@ -1051,7 +1052,7 @@ async def mfa_verify(
         _log_auth_event(
             db=db,
             user_id=user.id,
-            action="MFA_FAILED",
+            action=AuditAction.MFA_FAILED,
             details=f"purpose={purpose}",
             ip_address=_get_request_ip(request),
             sensitivity_level=3,
@@ -1086,7 +1087,7 @@ async def mfa_verify(
     _log_auth_event(
         db=db,
         user_id=user.id,
-        action="MFA_VERIFIED",
+        action=AuditAction.MFA_VERIFIED,
         details=f"purpose={purpose}",
         ip_address=_get_request_ip(request),
         sensitivity_level=2,
@@ -1140,7 +1141,7 @@ async def refresh_token(
     _log_auth_event(
         db=db,
         user_id=current_user.id,
-        action="TOKEN_REFRESH",
+        action=AuditAction.TOKEN_REFRESH,
         details="Access token refreshed",
         ip_address=_get_request_ip(request),
         sensitivity_level=1,
@@ -1485,7 +1486,7 @@ async def register(
     _log_auth_event(
         db=db,
         user_id=user.id,
-        action="REGISTER_SUCCESS",
+        action=AuditAction.REGISTER_SUCCESS,
         details=f"Parent registration via {request.url.path}",
         ip_address=_get_request_ip(request),
         sensitivity_level=2,

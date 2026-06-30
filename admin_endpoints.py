@@ -2654,7 +2654,7 @@ def create_admin_message(
 
     log_audit_event(
         db=db,
-        action="ADMIN_MESSAGE_SENT",
+        action=AuditAction.ADMIN_MESSAGE_SENT,
         actor=current_user,
         target_type="Message",
         target_ids=message.id,
@@ -2677,7 +2677,7 @@ def create_admin_message(
         if notifications_enabled and recipient_users:
             log_audit_event(
                 db=db,
-                action="MESSAGE_NOTIFICATIONS_QUEUED",
+                action=AuditAction.MESSAGE_NOTIFICATIONS_QUEUED,
                 actor=current_user,
                 target_type="Message",
                 target_ids=message.id,
@@ -2688,7 +2688,7 @@ def create_admin_message(
             warnings.append("Message notifications are disabled; status will be reviewed later.")
             log_audit_event(
                 db=db,
-                action="MESSAGE_NOTIFICATIONS_SKIPPED",
+                action=AuditAction.MESSAGE_NOTIFICATIONS_SKIPPED,
                 actor=current_user,
                 target_type="Message",
                 target_ids=message.id,
@@ -2872,7 +2872,7 @@ def preview_message_recipients(
 
     log_audit_event(
         db=db,
-        action="ADMIN_MESSAGE_PREVIEW",
+        action=AuditAction.ADMIN_MESSAGE_PREVIEW,
         actor=current_user,
         target_type="Preview",
         target_ids=None,
@@ -2947,7 +2947,7 @@ def preview_admin_message_post(
 
     log_audit_event(
         db=db,
-        action="ADMIN_MESSAGE_PREVIEW",
+        action=AuditAction.ADMIN_MESSAGE_PREVIEW,
         actor=current_user,
         target_type="Preview",
         target_ids=None,
@@ -4912,7 +4912,7 @@ async def send_governance_reminder_endpoint(
 
     log_audit_event(
         db=db,
-        action="GOVERNANCE_REMINDER_SENT",
+        action=AuditAction.GOVERNANCE_REMINDER_SENT,
         actor=current_user,
         target_type="GovernanceReminder",
         target_ids=reminder.id,
@@ -5015,7 +5015,7 @@ async def import_kindergartens(
         # Log audit event
         log_audit_event(
             db=db,
-            action="KINDERGARTEN_IMPORT",
+            action=AuditAction.KINDERGARTEN_IMPORT,
             actor=current_user,
             target_type="Kindergarten",
             metadata={

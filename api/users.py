@@ -15,6 +15,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
+from audit_actions import AuditAction
 import validators
 from captcha_service import captcha_error_message, captcha_required, verify_captcha
 from config import settings
@@ -47,7 +48,7 @@ def _log_access_denied(
         validators.log_audit_action(
             db=db,
             user_id=user.id,
-            action="ACCESS_DENIED",
+            action=AuditAction.ACCESS_DENIED,
             entity_type=entity_type,
             entity_id=None,
             details=f"{action}: {details}" if details else action,
@@ -517,7 +518,7 @@ def create_user(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="USER_CREATED",
+        action=AuditAction.USER_CREATED,
         entity_type="User",
         entity_id=new_user.id,
         sensitivity_level=3
@@ -633,7 +634,7 @@ def create_staff(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="STAFF_CREATED",
+        action=AuditAction.STAFF_CREATED,
         entity_type="User",
         entity_id=new_staff.id,
         sensitivity_level=2
@@ -769,7 +770,7 @@ def update_user(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="USER_UPDATED",
+        action=AuditAction.USER_UPDATED,
         entity_type="User",
         entity_id=user.id,
         sensitivity_level=3,
@@ -817,7 +818,7 @@ def delete_user(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="USER_DELETED",
+        action=AuditAction.USER_DELETED,
         entity_type="User",
         entity_id=user_id,
         sensitivity_level=3
@@ -912,7 +913,7 @@ def reset_password(
     validators.log_audit_action(
         db=db,
         user_id=token_record.user.id,
-        action="PASSWORD_RESET",
+        action=AuditAction.PASSWORD_RESET,
         entity_type="User",
         entity_id=token_record.user.id,
         sensitivity_level=2
@@ -979,7 +980,7 @@ def bulk_update_status(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="BULK_STATUS_UPDATE",
+        action=AuditAction.BULK_STATUS_UPDATE,
         entity_type="User",
         entity_id=None,
         details=f"Updated {updated_count} users to status {bulk_data.new_status.value}",
@@ -1042,7 +1043,7 @@ def bulk_delete_users(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="BULK_USER_DELETE",
+        action=AuditAction.BULK_USER_DELETE,
         entity_type="User",
         entity_id=None,
         details=f"Deleted {deleted_count} users",
@@ -1136,7 +1137,7 @@ def bulk_create_users(
     validators.log_audit_action(
         db=db,
         user_id=current_user.id,
-        action="BULK_USER_CREATE",
+        action=AuditAction.BULK_USER_CREATE,
         entity_type="User",
         entity_id=None,
         details=f"Created {len(created_users)} users, {len(errors)} errors",

@@ -10,6 +10,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 
 import models
+from audit_actions import AuditAction
 import validators
 from captcha_service import captcha_error_message, captcha_required, verify_captcha
 from config import settings
@@ -143,7 +144,7 @@ def register_parent(
     validators.log_audit_action(
         db=db,
         user_id=user.id,
-        action="REGISTER",
+        action=AuditAction.REGISTER,
         entity_type="User",
         entity_id=user.id,
         details="Parent registration",
