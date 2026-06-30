@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime, timezone
+from utils.time_utils import today_amman as _today
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -198,7 +199,7 @@ def assign_supervisor_to_class(
         class_id=body.class_id,
         supervisor_id=body.supervisor_id,
         is_primary=body.is_primary,
-        start_date=date.today(),
+        start_date=_today(),
     )
     db.add(assignment)
     db.commit()
@@ -249,7 +250,7 @@ def swap_supervisor(
     if not new_sup or new_sup.role != UserRole.SUPERVISOR or new_sup.kindergarten_id != current_user.kindergarten_id:
         raise HTTPException(status_code=403, detail="Invalid supervisor for this kindergarten.")
 
-    a = SupervisorAssignment(class_id=class_id, supervisor_id=body.supervisor_id, is_primary=True, start_date=date.today())
+    a = SupervisorAssignment(class_id=class_id, supervisor_id=body.supervisor_id, is_primary=True, start_date=_today())
     db.add(a)
     db.commit()
     return {"class_id": class_id, "new_supervisor_id": body.supervisor_id}

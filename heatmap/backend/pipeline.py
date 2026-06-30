@@ -28,6 +28,7 @@ import random
 import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from utils.time_utils import today_amman as _today
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -838,7 +839,7 @@ def run_daily_pipeline(
       5. Evaluate alert rules
       6. Persist everything; write map_daily_run_log
     """
-    today = snapshot_date or date.today()
+    today = snapshot_date or _today()
     run_id = run_id or str(uuid.uuid4())
     started = time.monotonic()
     summary: Dict[str, Any] = {
@@ -1038,7 +1039,7 @@ def backfill(
     Runs in chronological order (oldest first) so the correlation and
     regression engines can build up enough history to be meaningful.
     """
-    end = end_date or date.today()
+    end = end_date or _today()
     summaries: List[Dict[str, Any]] = []
     for i in range(days - 1, -1, -1):  # oldest day first → most recent day last
         day = end - timedelta(days=i)

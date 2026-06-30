@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import Optional
 from datetime import date, datetime, timedelta, timezone
+from utils.time_utils import today_amman as _today
 import csv
 import io
 import json
@@ -155,7 +156,7 @@ def _export_audit_logs(
         return Response(
             content=json.dumps(export_data, default=str),
             media_type="application/json",
-            headers={"Content-Disposition": f"attachment; filename=audit_logs_{date.today()}.json"}
+            headers={"Content-Disposition": f"attachment; filename=audit_logs_{_today()}.json"}
         )
 
     output = io.StringIO()
@@ -175,7 +176,7 @@ def _export_audit_logs(
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=audit_logs_{date.today()}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=audit_logs_{_today()}.csv"}
     )
 
 

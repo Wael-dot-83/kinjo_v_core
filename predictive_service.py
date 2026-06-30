@@ -6,6 +6,7 @@ import logging
 import math
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+from utils.time_utils import today_amman as _today
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import func, and_, extract
@@ -49,7 +50,7 @@ class PredictiveAnalyticsService:
             )
             kg_ids = [k[0] for k in kg_ids]
 
-        cutoff = date.today() - timedelta(days=max(lookback_days, window_days + 1))
+        cutoff = _today() - timedelta(days=max(lookback_days, window_days + 1))
 
         for kg_id in kg_ids:
             active_children = (
@@ -71,7 +72,7 @@ class PredictiveAnalyticsService:
 
             daily_rates = []
             for day_offset in range(lookback_days):
-                d = date.today() - timedelta(days=day_offset)
+                d = _today() - timedelta(days=day_offset)
                 total = len(child_ids)
                 present = (
                     db.query(func.count(AttendanceLog.id))
@@ -238,7 +239,7 @@ class PredictiveAnalyticsService:
 
         monthly_counts = []
         for m in range(months_ahead + 1):
-            month_start = date.today().replace(day=1) - timedelta(days=m * 30)
+            month_start = _today().replace(day=1) - timedelta(days=m * 30)
             count = (
                 db.query(func.count(EnrollmentApplication.id))
                 .filter(

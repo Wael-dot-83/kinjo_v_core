@@ -30,6 +30,7 @@ import io
 import json
 import math
 from datetime import date, datetime, timedelta, timezone
+from utils.time_utils import today_amman as _today
 from typing import List, Optional
 
 import numpy as np
@@ -323,7 +324,7 @@ async def get_enrollment_forecast(
     if current_user.role not in (models.UserRole.ADMIN, models.UserRole.MANAGER):
         raise HTTPException(status_code=403, detail="Admin or Manager role required")
 
-    target_year = year if year else (date.today().year + 1)
+    target_year = year if year else (_today().year + 1)
     _log_government_request(db, request, "enrollment-forecast", current_user)
     forecasts = _build_forecasts(db, target_year, governorate)
 
@@ -351,7 +352,7 @@ async def export_enrollment_forecast_csv(
     if current_user.role not in (models.UserRole.ADMIN, models.UserRole.MANAGER):
         raise HTTPException(status_code=403, detail="Admin or Manager role required")
 
-    target_year = year if year else (date.today().year + 1)
+    target_year = year if year else (_today().year + 1)
     _log_government_request(db, request, "enrollment-forecast-csv", current_user)
     forecasts = _build_forecasts(db, target_year, governorate)
 
@@ -420,7 +421,7 @@ async def get_quality_certificate(
 
     _log_government_request(db, request, "quality-certificates", current_user)
 
-    period_start = date.today() - timedelta(days=90)
+    period_start = _today() - timedelta(days=90)
 
     # ---- Component 1: Incident rate per child (30%) ----
     active_children = db.execute(text("""
@@ -526,7 +527,7 @@ async def get_quality_certificate(
     else:
         rating = "Poor"
 
-    valid_until = (date.today() + timedelta(days=365)).isoformat()
+    valid_until = (_today() + timedelta(days=365)).isoformat()
 
     return QualityCertificate(
         nursery_id=nursery_id,
@@ -763,7 +764,7 @@ async def get_child_density(
     _log_government_request(db, request, "child-density", current_user)
 
     # Children born within the last 6 years
-    cutoff_date = date.today() - timedelta(days=6 * 365)
+    cutoff_date = _today() - timedelta(days=6 * 365)
 
     density_rows = db.execute(text("""
         SELECT

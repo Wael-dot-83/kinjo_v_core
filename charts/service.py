@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import date, timedelta
+from utils.time_utils import today_amman as _today
 from typing import Callable, Dict, Optional, Tuple
 
 import pandas as pd
@@ -44,7 +45,7 @@ _advisor = ChartAdvisor()
 # ---------------------------------------------------------------------------
 
 def _date_bounds(req: ChartRequest) -> Tuple[date, date]:
-    today = date.today()
+    today = _today()
     d_from = date.fromisoformat(req.date_from) if req.date_from else today - timedelta(days=365)
     d_to = date.fromisoformat(req.date_to) if req.date_to else today
     return d_from, d_to

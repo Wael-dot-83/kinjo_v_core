@@ -3,6 +3,7 @@ Background tasks for sending notifications.
 """
 import logging
 from datetime import datetime, timezone
+from utils.time_utils import today_amman as _today
 import smtplib
 from email.mime.text import MIMEText
 
@@ -37,7 +38,7 @@ def _push_to_ws(notification: models.Notification) -> None:
 def get_supervisor_classes(db: SessionLocal, supervisor_id: int) -> list[int]:
     """Get class IDs assigned to supervisor for current date"""
     from datetime import date
-    today = date.today()
+    today = _today()
     assignments = db.query(models.SupervisorAssignment).filter(
         models.SupervisorAssignment.supervisor_id == supervisor_id,
         models.SupervisorAssignment.start_date <= today,
@@ -172,7 +173,7 @@ def check_daily_report_compliance() -> None:
 
     db = SessionLocal()
     try:
-        today = date.today()
+        today = _today()
 
         # Get all active supervisors
         supervisors = db.query(models.User).filter(
@@ -288,7 +289,7 @@ def send_daily_report_reminder() -> None:
 
     db = SessionLocal()
     try:
-        today = date.today()
+        today = _today()
 
         supervisors = db.query(models.User).filter(
             models.User.role == models.UserRole.SUPERVISOR,

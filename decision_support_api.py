@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date, timedelta
+from utils.time_utils import today_amman as _today
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -94,7 +95,7 @@ def get_decision_support_dashboard(
 ) -> dict[str, Any]:
     """Return scoped decision-support aggregates for the dashboard."""
 
-    today = date.today()
+    today = _today()
     recent_since = today - timedelta(days=30)
     kg_ids = _scoped_kindergarten_ids(db, current_user)
     if not kg_ids:

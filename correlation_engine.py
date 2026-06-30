@@ -5,6 +5,7 @@ Automated pairwise Pearson/Spearman scanner with domain-filter and causal probes
 import logging
 import math
 from datetime import date, datetime, timedelta, timezone
+from utils.time_utils import today_amman as _today
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import func, and_, cast, Float, Date
@@ -151,7 +152,7 @@ class CorrelationEngine:
         return datetime.now(timezone.utc).replace(tzinfo=None)
 
     def _daily_attendance_rate(self, db: Session, days: int) -> List[Tuple[date, float]]:
-        cutoff = date.today() - timedelta(days=max(MIN_SAMPLE_SIZE, days))
+        cutoff = _today() - timedelta(days=max(MIN_SAMPLE_SIZE, days))
         rows = (
             db.query(
                 AttendanceLog.date,
@@ -177,7 +178,7 @@ class CorrelationEngine:
         return result
 
     def _daily_incident_count(self, db: Session, days: int) -> List[Tuple[date, float]]:
-        cutoff = date.today() - timedelta(days=max(MIN_SAMPLE_SIZE, days))
+        cutoff = _today() - timedelta(days=max(MIN_SAMPLE_SIZE, days))
         rows = (
             db.query(
                 func.date(Incident.created_at).label("d"),
@@ -191,7 +192,7 @@ class CorrelationEngine:
         return [(row[0], float(row[1])) for row in rows]
 
     def _daily_report_count(self, db: Session, days: int) -> List[Tuple[date, float]]:
-        cutoff = date.today() - timedelta(days=max(MIN_SAMPLE_SIZE, days))
+        cutoff = _today() - timedelta(days=max(MIN_SAMPLE_SIZE, days))
         rows = (
             db.query(
                 DailyReport.date,

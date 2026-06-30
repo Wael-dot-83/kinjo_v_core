@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date
+from utils.time_utils import today_amman as _today
 from typing import Dict, List, Optional, Set, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -181,7 +182,7 @@ def list_daily_reports_for_organization(
     current_admin: models.User = Depends(get_current_admin_user),
     db: Session = Depends(get_db),
 ) -> DailyReportsOrganizationResponse:
-    selected_date = date_param or date.today()
+    selected_date = date_param or _today()
 
     selected_kindergarten_ids = _parse_kindergarten_ids(kindergarten_ids)
     governorate_filter = (governorate or governorate_id or "").strip()
@@ -205,7 +206,7 @@ def list_daily_reports_for_organization(
         return DailyReportsOrganizationResponse(
             date=selected_date.isoformat(),
             date_ar=_format_date_ar(selected_date),
-            is_future_date=selected_date > date.today(),
+            is_future_date=selected_date > _today(),
             message="لا توجد تقارير متاحة بناءً على الاختيارات",
             kindergartens=[],
         )
@@ -215,7 +216,7 @@ def list_daily_reports_for_organization(
         return DailyReportsOrganizationResponse(
             date=selected_date.isoformat(),
             date_ar=_format_date_ar(selected_date),
-            is_future_date=selected_date > date.today(),
+            is_future_date=selected_date > _today(),
             message="لا توجد تقارير متاحة بناءً على الاختيارات",
             kindergartens=[],
         )
@@ -368,7 +369,7 @@ def list_daily_reports_for_organization(
         )
 
     response_message: Optional[str] = None
-    is_future_date = selected_date > date.today()
+    is_future_date = selected_date > _today()
     if total_rows_all == 0:
         response_message = "لا توجد تقارير متاحة بناءً على الاختيارات"
     elif total_actual_reports == 0:

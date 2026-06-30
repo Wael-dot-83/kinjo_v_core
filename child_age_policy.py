@@ -10,6 +10,7 @@ from __future__ import annotations
 import calendar
 from dataclasses import dataclass
 from datetime import date, timedelta
+from utils.time_utils import today_amman as _today
 from typing import Optional
 
 from sqlalchemy import and_
@@ -43,20 +44,20 @@ def _subtract_months(base: date, months: int) -> date:
 
 def get_child_age_bounds(today: Optional[date] = None) -> ChildAgeBounds:
     """Return inclusive DOB bounds for the child age policy."""
-    today = today or date.today()
+    today = today or _today()
     max_date = today - timedelta(days=MIN_CHILD_AGE_DAYS)
     min_date = _subtract_months(today, MAX_CHILD_AGE_MONTHS)
     return ChildAgeBounds(min_date=min_date, max_date=max_date)
 
 
 def calculate_age_days(dob: date, today: Optional[date] = None) -> int:
-    today = today or date.today()
+    today = today or _today()
     return (today - dob).days
 
 
 def calculate_age_months(dob: date, today: Optional[date] = None) -> int:
     """Full months difference based on calendar boundaries."""
-    today = today or date.today()
+    today = today or _today()
     months = (today.year - dob.year) * 12 + (today.month - dob.month)
     if today.day < dob.day:
         months -= 1

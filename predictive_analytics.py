@@ -1,6 +1,7 @@
 """Predictive analytics service backed by historical ORM data."""
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from utils.time_utils import today_amman as _today
 from enum import Enum
 from math import sqrt
 from typing import Dict, List, Sequence, Tuple
@@ -93,7 +94,7 @@ class PredictiveAnalytics:
         return [start + timedelta(days=offset) for offset in range(days + 1)]
 
     def _attendance_series(self, db: Session, kindergarten_id: int, days_window: int = 90) -> List[float]:
-        end_day = date.today()
+        end_day = _today()
         start_day = end_day - timedelta(days=max(7, days_window))
 
         q_active = db.query(models.EnrollmentApplication.child_id).filter(models.EnrollmentApplication.is_active.is_(True))
@@ -128,7 +129,7 @@ class PredictiveAnalytics:
         ]
 
     def _incidents_series(self, db: Session, kindergarten_id: int, days_window: int = 120) -> List[float]:
-        end_day = date.today()
+        end_day = _today()
         start_day = end_day - timedelta(days=max(14, days_window))
 
         q_rows = (
@@ -159,7 +160,7 @@ class PredictiveAnalytics:
         return [float(counts_by_date.get(day, 0)) for day in self._date_buckets(start_day, end_day)]
 
     def _capacity_series(self, db: Session, kindergarten_id: int, days_window: int = 180) -> List[float]:
-        end_day = date.today()
+        end_day = _today()
         start_day = end_day - timedelta(days=max(30, days_window))
 
         q_cap = db.query(func.sum(models.Class.capacity_total)).filter(models.Class.is_active.is_(True))
@@ -232,7 +233,7 @@ class PredictiveAnalytics:
             model_used=ModelType.LINEAR,
             accuracy_score=r2,
             historical_data_points=len(values),
-            prediction_date=date.today(),
+            prediction_date=_today(),
             forecast_period_days=max(1, days_ahead),
         )
 
@@ -272,7 +273,7 @@ class PredictiveAnalytics:
         return self._build_prediction(PredictionType.CAPACITY, values, days_ahead, percent_metric=True)
 
     def _enrollment_series(self, db: Session, kindergarten_id: int, days_window: int = 180) -> List[float]:
-        end_day = date.today()
+        end_day = _today()
         start_day = end_day - timedelta(days=max(30, days_window))
 
         rows = (
@@ -354,7 +355,7 @@ class PredictiveAnalytics:
             seasonality_detected=False,
             change_points=[],
             forecast_values=forecast_values,
-            forecast_dates=[date.today() + timedelta(days=i) for i in range(1, len(forecast_values) + 1)],
+            forecast_dates=[_today() + timedelta(days=i) for i in range(1, len(forecast_values) + 1)],
             r_squared=r2,
             mean_absolute_error=mae,
         )

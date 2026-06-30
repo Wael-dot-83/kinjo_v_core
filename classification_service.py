@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date, timedelta
+from utils.time_utils import today_amman as _today
 from statistics import mean
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -101,7 +102,7 @@ def _ensure_parent_only(user: models.User) -> None:
 
 
 def _normalize_period(period_start: Optional[date], period_end: Optional[date]) -> Tuple[date, date]:
-    today = date.today()
+    today = _today()
     if period_end is None:
         period_end = today
     if period_start is None:

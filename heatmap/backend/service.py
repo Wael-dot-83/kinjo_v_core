@@ -19,6 +19,7 @@ import logging
 import math
 import os
 from datetime import date, datetime, timedelta, timezone
+from utils.time_utils import today_amman as _today
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -483,7 +484,7 @@ def _count_supervisors(db: Session, kindergarten_id: int) -> int:
 
 def _count_recent_reports(db: Session, kindergarten_id: int, days: int = 30) -> int:
     try:
-        since = date.today() - timedelta(days=days)
+        since = _today() - timedelta(days=days)
         return int(
             db.query(func.count(models.DailyReport.id))
             .filter(models.DailyReport.kindergarten_id == kindergarten_id)
@@ -525,7 +526,7 @@ def compute_kindergarten_kpi_scores(db: Session, kindergarten: models.Kindergart
 
     license_score = 50.0
     if kindergarten.license_valid_until is not None:
-        license_score = 100.0 if kindergarten.license_valid_until >= date.today() else 25.0
+        license_score = 100.0 if kindergarten.license_valid_until >= _today() else 25.0
 
     location_score = 100.0 if kindergarten.latitude is not None and kindergarten.longitude is not None else 60.0
     nursery_score = round((status_score + license_score + location_score) / 3.0, 2)

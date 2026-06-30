@@ -9,6 +9,7 @@ Each task:
 import logging
 import os
 from datetime import date, datetime, timezone
+from utils.time_utils import today_amman as _today
 from typing import Any, Dict, Optional
 
 from celery_app import celery_app
@@ -77,8 +78,8 @@ def run_export_job(self, export_job_id: int) -> Dict[str, Any]:
         if report_type == "kpi_dashboard":
             result = export_service.export_kpi_dashboard(user, None, fmt)
         else:
-            date_from = date.fromisoformat(filters["date_from"]) if "date_from" in filters else date.today()
-            date_to = date.fromisoformat(filters["date_to"]) if "date_to" in filters else date.today()
+            date_from = date.fromisoformat(filters["date_from"]) if "date_from" in filters else _today()
+            date_to = date.fromisoformat(filters["date_to"]) if "date_to" in filters else _today()
             result = export_service.export_analytics_report(user, report_type, date_from, date_to, fmt)
 
         os.makedirs(_EXPORT_DIR, exist_ok=True)

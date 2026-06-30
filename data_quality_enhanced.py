@@ -4,6 +4,7 @@ uniqueness, and validity dimensions. Extends the original data_quality_service.p
 """
 import logging
 from datetime import date, datetime, timedelta, timezone
+from utils.time_utils import today_amman as _today
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func, and_, text
@@ -85,7 +86,7 @@ class EnhancedDataQualityService:
         )
 
         results = []
-        today = date.today()
+        today = _today()
         yesterday = today - timedelta(days=1)
 
         for kg in active_kgs:
@@ -198,14 +199,14 @@ class EnhancedDataQualityService:
         self,
         db: Session,
     ) -> Dict[str, Any]:
-        attendance_date = date.today()
+        attendance_date = _today()
         duplicate_attendance = (
             db.query(
                 AttendanceLog.child_id,
                 AttendanceLog.date,
                 func.count(AttendanceLog.id).label("cnt"),
             )
-            .filter(AttendanceLog.date >= date.today() - timedelta(days=7))
+            .filter(AttendanceLog.date >= _today() - timedelta(days=7))
             .group_by(AttendanceLog.child_id, AttendanceLog.date)
             .having(func.count(AttendanceLog.id) > 1)
             .count()
@@ -279,7 +280,7 @@ class EnhancedDataQualityService:
 
         future_dob = (
             db.query(func.count(Child.id))
-            .filter(Child.date_of_birth > date.today())
+            .filter(Child.date_of_birth > _today())
             .scalar()
             or 0
         )

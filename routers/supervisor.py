@@ -15,6 +15,7 @@ import os
 import secrets
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from utils.time_utils import today_amman as _today
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
@@ -763,7 +764,7 @@ def create_daily_report(
     assert_supervisor_owns_child(current_user.id, body.child_id, db)
     target_date = date.fromisoformat(body.date)
 
-    if target_date > date.today():
+    if target_date > _today():
         raise HTTPException(status_code=400, detail="Cannot create reports for future dates")
 
     # Reject duplicate report for same child + date unless caller explicitly
@@ -1390,7 +1391,7 @@ def get_supervisor_kpi(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_supervisor),
 ):
-    today = date.today()
+    today = _today()
     try:
         date_from = date.fromisoformat(from_date) if from_date else today - timedelta(days=6)
     except ValueError:

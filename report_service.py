@@ -4,6 +4,7 @@ Report generation service for admin incident reports
 import json
 import logging
 from datetime import datetime, date, timedelta
+from utils.time_utils import today_amman as _today
 from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
@@ -106,7 +107,7 @@ class ReportService:
     def calculate_date_range(period_type: str, reference_date: Optional[date] = None) -> tuple[date, date]:
         """Calculate start and end dates for different period types"""
         if reference_date is None:
-            reference_date = date.today()
+            reference_date = _today()
 
         if period_type == "week":
             # This week (last 7 days)

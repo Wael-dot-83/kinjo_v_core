@@ -6,6 +6,7 @@ and morning routine completion metrics.
 import logging
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
+from utils.time_utils import today_amman as _today
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func, and_
@@ -215,7 +216,7 @@ class GovernanceQualityService:
         target_hour: int = 10,
         days: int = 7,
     ) -> Dict[str, Any]:
-        cutoff_date = date.today() - timedelta(days=max(1, days))
+        cutoff_date = _today() - timedelta(days=max(1, days))
 
         query = (
             db.query(DailyReport.date, DailyReport.created_at)

@@ -3,6 +3,7 @@ Supervisor Service Module
 Handles all supervisor-specific operations and class management
 """
 from datetime import date, datetime, timezone
+from utils.time_utils import today_amman as _today
 from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func
@@ -26,7 +27,7 @@ class SupervisorService:
             raise ValidationError("User is not a supervisor", level=4)
 
         # Get current date
-        today = date.today()
+        today = _today()
 
         # Find active assignments
         assignments = db.query(models.SupervisorAssignment).filter(
@@ -295,7 +296,7 @@ class SupervisorService:
         Get attendance status for all children in supervisor's classes
         """
         if not target_date:
-            target_date = date.today()
+            target_date = _today()
 
         children = SupervisorService.get_supervisor_children(db, supervisor_user)
 
@@ -344,7 +345,7 @@ class SupervisorService:
         Get list of children who need daily reports for the given date
         """
         if not report_date:
-            report_date = date.today()
+            report_date = _today()
 
         children = SupervisorService.get_supervisor_children(db, supervisor_user)
         child_ids = [c.id for c in children]
@@ -466,7 +467,7 @@ class SupervisorService:
         Get comprehensive dashboard data for supervisor
         """
         if not target_date:
-            target_date = date.today()
+            target_date = _today()
 
         # Get assigned classes
         classes = SupervisorService.get_supervisor_assigned_classes(db, supervisor_user)

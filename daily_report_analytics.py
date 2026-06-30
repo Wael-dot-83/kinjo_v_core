@@ -15,6 +15,7 @@ import csv
 import json
 import logging
 from datetime import date, datetime, timedelta
+from utils.time_utils import today_amman as _today
 from typing import Optional, List, Dict, Any
 
 import pandas as pd
@@ -1048,7 +1049,7 @@ def analytics_dashboard_page(
         context={
             "user": user,
             "kindergartens": kindergartens,
-            "default_date_from": (date.today() - timedelta(days=8)).isoformat(),
-            "default_date_to": date.today().isoformat(),
+            "default_date_from": (_today() - timedelta(days=8)).isoformat(),
+            "default_date_to": _today().isoformat(),
         }
     )

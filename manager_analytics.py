@@ -9,6 +9,7 @@ Provides manager-scoped analytics including:
 
 from typing import Optional, List, Dict, Tuple
 from datetime import date, datetime, timedelta
+from utils.time_utils import today_amman as _today
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 import math
@@ -245,7 +246,7 @@ class ManagerAnalyticsService:
         ).all()
 
         result = []
-        today = date.today()
+        today = _today()
 
         for supervisor in supervisors:
             # Count children assigned to supervisor's classes
@@ -303,7 +304,7 @@ class ManagerAnalyticsService:
             trend: "increasing|decreasing|stable"
         }
         """
-        today = date.today()
+        today = _today()
         start_date = today - timedelta(days=lookback_days)
 
         # Get historical attendance rates
@@ -387,7 +388,7 @@ class ManagerAnalyticsService:
             baseline_std: float
         }
         """
-        today = date.today()
+        today = _today()
         start_date = today - timedelta(days=lookback_days)
 
         # Collect attendance rates

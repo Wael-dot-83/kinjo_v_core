@@ -7,6 +7,7 @@ from i18n import gettext as _i18n_gettext
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from datetime import date, timedelta, datetime, timezone
+from utils.time_utils import today_amman as _today
 import typing
 from typing import Optional
 
@@ -47,7 +48,7 @@ def language_context_processor(request: Request) -> dict:
             request.cookies.get(settings.CSRF_COOKIE_NAME, ""),
         ),
         "impersonation": impersonation,
-        "current_year": date.today().year,
+        "current_year": _today().year,
         "support_contact_email": settings.SUPPORT_CONTACT_EMAIL,
         "support_contact_phone": settings.SUPPORT_CONTACT_PHONE,
         # CAPTCHA_SITE_KEY is the public key â€” safe to expose to templates/JS.
@@ -285,14 +286,14 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
 
     if user_role == "SUPERVISOR":
-        return templates.TemplateResponse(request=request, name="dashboard/supervisor.html", context={"current_user": current_user, "today": date.today()})
+        return templates.TemplateResponse(request=request, name="dashboard/supervisor.html", context={"current_user": current_user, "today": _today()})
     elif user_role == "PARENT":
-        return templates.TemplateResponse(request=request, name="dashboard/parent.html", context={"current_user": current_user, "today": date.today()})
+        return templates.TemplateResponse(request=request, name="dashboard/parent.html", context={"current_user": current_user, "today": _today()})
     elif user_role == "ADMIN":
-        return templates.TemplateResponse(request=request, name="admin_dashboard.html", context={"current_user": current_user, "today": date.today()})
+        return templates.TemplateResponse(request=request, name="admin_dashboard.html", context={"current_user": current_user, "today": _today()})
     else:
         # Manager
-        return templates.TemplateResponse(request=request, name="dashboard/index.html", context={"current_user": current_user, "today": date.today()})
+        return templates.TemplateResponse(request=request, name="dashboard/index.html", context={"current_user": current_user, "today": _today()})
 
 
 @router.get("/supervisor/dashboard", response_class=HTMLResponse)
@@ -304,7 +305,7 @@ async def supervisor_dashboard(request: Request, current_user: User = Depends(ge
     return templates.TemplateResponse(
         request=request,
         name="dashboard/supervisor.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 
@@ -317,7 +318,7 @@ async def parent_dashboard(request: Request, current_user: User = Depends(get_cu
     return templates.TemplateResponse(
         request=request,
         name="dashboard/parent.html",
-        context={"current_user": current_user, "today": date.today()},
+        context={"current_user": current_user, "today": _today()},
     )
 
 
@@ -687,7 +688,7 @@ async def attendance_history(
     if user_role == "PARENT":
         return RedirectResponse(url="/parent/dashboard")
 
-    today = date.today()
+    today = _today()
     # Pre-set the week range when coming from the dashboard action card
     if period == "week":
         default_start = (today - timedelta(days=6)).isoformat()
@@ -749,14 +750,14 @@ async def list_reports(request: Request, current_user: User = Depends(get_curren
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role == 'PARENT':
         return RedirectResponse(url="/parent/dashboard")
-    return templates.TemplateResponse(request=request, name="reports/list.html", context={"current_user": current_user, "today": date.today()})
+    return templates.TemplateResponse(request=request, name="reports/list.html", context={"current_user": current_user, "today": _today()})
 
 @router.get("/reports/create", response_class=HTMLResponse)
 async def create_report_page(request: Request, current_user: User = Depends(get_current_user_or_redirect)):
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role not in ('SUPERVISOR', 'ADMIN', 'MANAGER'):
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="reports/form.html", context={"current_user": current_user, "today": date.today()})
+    return templates.TemplateResponse(request=request, name="reports/form.html", context={"current_user": current_user, "today": _today()})
 
 @router.get("/reports/{report_id}", response_class=HTMLResponse)
 async def view_report(request: Request, report_id: int, current_user: User = Depends(get_current_user_or_redirect)):
@@ -881,7 +882,7 @@ async def attendance_daily(request: Request, db: Session = Depends(get_db), curr
 
         context = {
             "current_user": current_user,
-            "today": date.today(),
+            "today": _today(),
             "user_kindergarten": kindergarten,
             "is_manager_supervisor": True,
             "is_supervisor": False,
@@ -891,7 +892,7 @@ async def attendance_daily(request: Request, db: Session = Depends(get_db), curr
         # Admin can see all kindergartens
         context = {
             "current_user": current_user,
-            "today": date.today(),
+            "today": _today(),
             "is_manager_supervisor": False,
             "is_supervisor": False,
             "supervisor_class_ids": []
@@ -915,7 +916,7 @@ async def attendance_check_in(request: Request, db: Session = Depends(get_db), c
 
         context = {
             "current_user": current_user,
-            "today": date.today(),
+            "today": _today(),
             "user_kindergarten": kindergarten,
             "is_manager_supervisor": True,
             "is_supervisor": user_role == 'SUPERVISOR',
@@ -925,7 +926,7 @@ async def attendance_check_in(request: Request, db: Session = Depends(get_db), c
 
         # For supervisors, get their assigned class IDs
         if user_role == 'SUPERVISOR':
-            today = date.today()
+            today = _today()
             assignments = db.query(models.SupervisorAssignment).filter(
                 models.SupervisorAssignment.supervisor_id == current_user.id,
                 models.SupervisorAssignment.start_date <= today,
@@ -939,7 +940,7 @@ async def attendance_check_in(request: Request, db: Session = Depends(get_db), c
         # Admin can see all kindergartens
         context = {
             "current_user": current_user,
-            "today": date.today(),
+            "today": _today(),
             "is_manager_supervisor": False,
             "is_supervisor": False,
             "supervisor_class_ids": [],
@@ -958,7 +959,7 @@ async def daily_reports_list(request: Request, current_user: User = Depends(get_
     return templates.TemplateResponse(
         request=request,
         name="reports/list.html",
-        context={"current_user": current_user, "today": date.today()},
+        context={"current_user": current_user, "today": _today()},
     )
 
 
@@ -976,7 +977,7 @@ async def admin_daily_reports_organization_page(
         name="admin/daily_reports_organization.html",
         context={
             "current_user": current_user,
-            "today": date.today(),
+            "today": _today(),
         },
     )
 
@@ -987,7 +988,7 @@ async def create_daily_report(request: Request, current_user: User = Depends(get
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'MANAGER':
         return templates.TemplateResponse(request=request, name="403.html", status_code=403, context={"current_user": current_user})
-    return templates.TemplateResponse(request=request, name="reports/form.html", context={"current_user": current_user, "today": date.today()})
+    return templates.TemplateResponse(request=request, name="reports/form.html", context={"current_user": current_user, "today": _today()})
 
 
 @router.get("/curriculum", response_class=HTMLResponse)
@@ -1139,13 +1140,13 @@ async def parent_reports(
     if user_role != "PARENT":
         return RedirectResponse(url="/dashboard")
 
-    selected_date = date.today()
+    selected_date = _today()
     raw_date = request.query_params.get("date")
     if raw_date:
         try:
             selected_date = date.fromisoformat(raw_date)
         except ValueError:
-            selected_date = date.today()
+            selected_date = _today()
 
     parent_profile = db.query(models.ParentProfile).filter(
         models.ParentProfile.user_id == current_user.id
@@ -1343,7 +1344,7 @@ async def admin_dashboard_page(request: Request, current_user: User = Depends(ge
     return templates.TemplateResponse(
         request=request,
         name="admin_dashboard.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 
@@ -1355,7 +1356,7 @@ async def admin_kg_overview(request: Request, current_user: User = Depends(get_c
     return templates.TemplateResponse(
         request=request,
         name="admin/kg_overview.html",
-        context={"current_user": current_user, "today": date.today(), "now": datetime.now(timezone.utc).strftime("%d %B %Y, %I:%M %p")}
+        context={"current_user": current_user, "today": _today(), "now": datetime.now(timezone.utc).strftime("%d %B %Y, %I:%M %p")}
     )
 
 
@@ -1369,7 +1370,7 @@ async def admin_kpi_dashboard(request: Request, current_user: User = Depends(get
         name="admin/kpi.html",
         context={
             "current_user": current_user,
-            "today": date.today(),
+            "today": _today(),
             "jordan_governorates": settings.JORDAN_GOVERNORATES,
         }
     )
@@ -1384,7 +1385,7 @@ async def admin_analytics(request: Request, current_user: User = Depends(get_cur
     return templates.TemplateResponse(
         request=request,
         name="admin/analytics/dashboard.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 @router.get("/admin/analytics/reports", response_class=HTMLResponse)
@@ -1395,7 +1396,7 @@ async def admin_reports(request: Request, current_user: User = Depends(get_curre
     return templates.TemplateResponse(
         request=request,
         name="admin/analytics/reports.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 
@@ -1407,7 +1408,7 @@ async def admin_governance_reports(request: Request, current_user: User = Depend
     return templates.TemplateResponse(
         request=request,
         name="admin/governance_reports.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 
@@ -1419,7 +1420,7 @@ async def admin_classification(request: Request, current_user: User = Depends(ge
     return templates.TemplateResponse(
         request=request,
         name="admin/classification.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 
@@ -1431,7 +1432,7 @@ async def manager_benchmarking(request: Request, current_user: User = Depends(ge
     return templates.TemplateResponse(
         request=request,
         name="manager/benchmarking.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 
@@ -1443,7 +1444,7 @@ async def manager_kpi_page(request: Request, current_user: User = Depends(get_cu
     return templates.TemplateResponse(
         request=request,
         name="manager/kpi.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 
@@ -1455,7 +1456,7 @@ async def supervisor_kpi_page(request: Request, current_user: User = Depends(get
     return templates.TemplateResponse(
         request=request,
         name="supervisor/kpi.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 
@@ -1467,7 +1468,7 @@ async def supervisor_performance(request: Request, current_user: User = Depends(
     return templates.TemplateResponse(
         request=request,
         name="supervisor/performance.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 
@@ -1479,7 +1480,7 @@ async def supervisor_observations(request: Request, current_user: User = Depends
     return templates.TemplateResponse(
         request=request,
         name="supervisor/observations.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 
@@ -1525,7 +1526,7 @@ async def admin_charts_explorer(request: Request, current_user: User = Depends(g
     return templates.TemplateResponse(
         request=request,
         name="admin/analytics/charts_dashboard.html",
-        context={"current_user": current_user, "today": date.today()}
+        context={"current_user": current_user, "today": _today()}
     )
 
 
@@ -1547,7 +1548,7 @@ async def admin_analytics_drilldown(
             "current_user": current_user,
             "dimension_type": dimension_type,
             "dimension_id": dimension_id,
-            "today": date.today()
+            "today": _today()
         }
     )
 
@@ -1582,7 +1583,7 @@ async def parent_absence_requests(
         context={
             "current_user": current_user,
             "children": children,
-            "today": date.today(),
+            "today": _today(),
         }
     )
 
@@ -1603,7 +1604,7 @@ async def manager_absence_requests(
         name="manager/absence_requests.html",
         context={
             "current_user": current_user,
-            "today": date.today(),
+            "today": _today(),
         }
     )
 
@@ -1740,7 +1741,7 @@ async def admin_alerts_page(request: Request, current_user: User = Depends(get_c
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="admin/alerts.html", context={"current_user": current_user, "today": date.today()})
+    return templates.TemplateResponse(request=request, name="admin/alerts.html", context={"current_user": current_user, "today": _today()})
 
 
 # -----------------------------------------------------------------------------
@@ -1754,7 +1755,7 @@ async def admin_heatmap_page(request: Request, current_user: User = Depends(get_
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="admin/heatmap.html", context={
         "current_user": current_user,
-        "today": date.today(),
+        "today": _today(),
         "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
     })
 
@@ -1769,7 +1770,7 @@ async def admin_import_logs_page(request: Request, current_user: User = Depends(
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="admin/import_logs.html", context={"current_user": current_user, "today": date.today()})
+    return templates.TemplateResponse(request=request, name="admin/import_logs.html", context={"current_user": current_user, "today": _today()})
 
 
 # -----------------------------------------------------------------------------
@@ -1782,7 +1783,7 @@ async def admin_import_users_page(request: Request, current_user: User = Depends
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="admin/import_users.html", context={"current_user": current_user, "today": date.today()})
+    return templates.TemplateResponse(request=request, name="admin/import_users.html", context={"current_user": current_user, "today": _today()})
 
 
 # -----------------------------------------------------------------------------
@@ -1795,7 +1796,7 @@ async def admin_governance_reminders_page(request: Request, current_user: User =
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
     if user_role != 'ADMIN':
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="admin/governance_reminders.html", context={"current_user": current_user, "today": date.today()})
+    return templates.TemplateResponse(request=request, name="admin/governance_reminders.html", context={"current_user": current_user, "today": _today()})
 
 
 # -----------------------------------------------------------------------------

@@ -4,6 +4,7 @@ Computes notification-to-view conversion, report view rate, and parent portal ac
 """
 import logging
 from datetime import date, datetime, timedelta, timezone
+from utils.time_utils import today_amman as _today
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func, and_, distinct
@@ -45,7 +46,7 @@ class ParentEngagementService:
         kindergarten_id: Optional[int] = None,
         days: int = 30,
     ) -> Dict[str, Any]:
-        cutoff_date = date.today() - timedelta(days=max(1, days))
+        cutoff_date = _today() - timedelta(days=max(1, days))
 
         reports_query = db.query(func.count(DailyReport.id)).filter(
             DailyReport.date >= cutoff_date,

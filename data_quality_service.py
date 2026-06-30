@@ -1,6 +1,7 @@
 """Data quality and realtime dashboard service layer."""
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
+from utils.time_utils import today_amman as _today
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
@@ -70,7 +71,7 @@ class DataQualityService:
 
     def _timeliness_score(self, db: Session, kindergarten_id: Optional[int]) -> float:
         """Score based on yesterday daily-report completion for active children."""
-        report_date = date.today() - timedelta(days=1)
+        report_date = _today() - timedelta(days=1)
         active_children_q = db.query(models.EnrollmentApplication.child_id)
         active_children_q = self._active_enrollment_filter(active_children_q, kindergarten_id)
         active_child_ids = [child_id for (child_id,) in active_children_q.distinct().all()]
@@ -175,7 +176,7 @@ class DataQualityService:
         user_role: str,
     ) -> Dict[str, Any]:
         """Return a websocket-safe realtime dashboard payload for manager/supervisor scopes."""
-        today = date.today()
+        today = _today()
 
         active_children_count = (
             self._active_enrollment_filter(

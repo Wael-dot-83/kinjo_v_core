@@ -6,6 +6,7 @@ Provides manager-scoped operational analytics and predictive indicators
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
+from utils.time_utils import today_amman as _today
 from typing import Optional, List, Dict
 from pydantic import BaseModel, ConfigDict
 
@@ -141,7 +142,7 @@ def get_manager_kpis(
     ManagerScope.validate_manager(current_user)
     kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
 
-    today = date.today()
+    today = _today()
     start_date = today - timedelta(days=period_days)
 
     kpis = {
@@ -173,7 +174,7 @@ def get_manager_kpis(
                 db, kg_id
             )
         },
-        "generated_at": date.today().isoformat()
+        "generated_at": _today().isoformat()
     }
 
     return kpis
@@ -193,7 +194,7 @@ def get_enrollment_trend(
     ManagerScope.validate_manager(current_user)
     kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
 
-    today = date.today()
+    today = _today()
     start_date = today - timedelta(days=period_days)
 
     trend = ManagerAnalyticsService.compute_enrollment_trend(
@@ -208,7 +209,7 @@ def get_enrollment_trend(
             "grouping": grouping
         },
         "trend": trend,
-        "generated_at": date.today().isoformat()
+        "generated_at": _today().isoformat()
     }
 
 
@@ -231,7 +232,7 @@ def get_attendance_forecast(
     ManagerScope.validate_manager(current_user)
     kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
 
-    today = date.today()
+    today = _today()
     start_date = today - timedelta(days=lookback_days)
     forecast_end = today + timedelta(days=forecast_days)
 
@@ -248,7 +249,7 @@ def get_attendance_forecast(
             "forecast_end": forecast_end.isoformat()
         },
         **result,
-        "generated_at": date.today().isoformat()
+        "generated_at": _today().isoformat()
     }
 
 
@@ -272,7 +273,7 @@ def detect_attendance_anomalies(
     ManagerScope.validate_manager(current_user)
     kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
 
-    today = date.today()
+    today = _today()
     start_date = today - timedelta(days=lookback_days)
 
     result = ManagerAnalyticsService.detect_anomalies(
@@ -287,7 +288,7 @@ def detect_attendance_anomalies(
             "lookback_days": lookback_days
         },
         **result,
-        "generated_at": date.today().isoformat()
+        "generated_at": _today().isoformat()
     }
 
 
@@ -309,7 +310,7 @@ def drilldown_by_class(
     ManagerScope.validate_manager(current_user)
     kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
 
-    today = date.today()
+    today = _today()
     start_date = today - timedelta(days=period_days)
 
     classes = ManagerAnalyticsService.get_drilldown_by_class(
@@ -325,7 +326,7 @@ def drilldown_by_class(
         },
         "classes": classes,
         "total_classes": len(classes),
-        "generated_at": date.today().isoformat()
+        "generated_at": _today().isoformat()
     }
 
 
@@ -347,7 +348,7 @@ def drilldown_by_supervisor(
     ManagerScope.validate_manager(current_user)
     kg_id = ManagerScope.get_manager_kindergarten_id(current_user)
 
-    today = date.today()
+    today = _today()
     start_date = today - timedelta(days=period_days)
 
     supervisors = ManagerAnalyticsService.get_drilldown_by_supervisor(
@@ -363,7 +364,7 @@ def drilldown_by_supervisor(
         },
         "supervisors": supervisors,
         "total_supervisors": len(supervisors),
-        "generated_at": date.today().isoformat()
+        "generated_at": _today().isoformat()
     }
 
 
@@ -395,7 +396,7 @@ def export_analytics_csv(
     import io
     import csv
 
-    today = date.today()
+    today = _today()
     start_date = today - timedelta(days=period_days)
 
     # Create CSV content based on report type

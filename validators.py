@@ -25,6 +25,7 @@ import logging
 import re
 import unicodedata
 from datetime import date, datetime, timezone
+from utils.time_utils import today_amman as _today
 from typing import Optional, List
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -269,7 +270,7 @@ def validate_jordan_governorate(governorate: str) -> str:
 
 
 def _build_child_age_error_message(date_of_birth: date) -> Optional[str]:
-    today = date.today()
+    today = _today()
     age_days = calculate_age_days(date_of_birth, today)
     age_months = calculate_age_months(date_of_birth, today)
     status_label = classify_dob(date_of_birth, today)
@@ -314,7 +315,7 @@ def validate_child_age_strict(date_of_birth: date) -> None:
 
 def get_child_age_info(date_of_birth: date) -> dict:
     """Get detailed age information for a child including eligibility status."""
-    today = date.today()
+    today = _today()
     age_days = calculate_age_days(date_of_birth, today)
     age_months = calculate_age_months(date_of_birth, today)
     age_years = age_days / 365.25
@@ -520,7 +521,7 @@ def validate_national_id(national_id: str) -> bool:
 
 def validate_enrollment_dates(start_date: date, end_date: Optional[date]) -> None:
     """Validate enrollment dates are valid"""
-    if start_date < date.today():
+    if start_date < _today():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Enrollment start date cannot be in the past"

@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 import secrets
 from datetime import date, datetime, timedelta
+from utils.time_utils import today_amman as _today
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -562,7 +563,7 @@ def get_governorate_history(
     if gov is None:
         raise not_found_error(f"Unknown governorate: {slug!r}")
 
-    cutoff = date.today() - timedelta(days=days)
+    cutoff = _today() - timedelta(days=days)
     risk_rows = (
         db.query(models.MapRiskSnapshot)
         .filter(models.MapRiskSnapshot.governorate_code == gov["code"])

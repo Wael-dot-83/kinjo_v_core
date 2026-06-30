@@ -8,6 +8,7 @@ import math
 from admin_security import require_admin
 import json
 from data_science.report_generator import generate_government_report
+from utils.time_utils import today_amman as _today
 
 router = APIRouter(prefix="/api/analytics", tags=["Advanced Analytics"])
 
@@ -178,7 +179,7 @@ def get_demographics(
 ):
     """Fetches Demographic & Density Distributions (Age, Gender, KG Sizes)."""
     from datetime import date
-    today = date.today()
+    today = _today()
 
     # Join Child -> Enrollment -> Kindergarten
     query = db.query(

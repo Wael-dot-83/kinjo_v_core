@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy import or_, and_, desc, func, select, exists
 from typing import List, Optional, Dict, Literal, Union, Any
 from datetime import datetime, date, timezone, timedelta
+from utils.time_utils import today_amman as _today
 from jose import JWTError, jwt
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -2125,7 +2126,7 @@ def list_surveys(
     query = db.query(models.Survey).filter(models.Survey.kindergarten_id == current_user.kindergarten_id)
     
     if active_only:
-        today = date.today()
+        today = _today()
         query = query.filter(models.Survey.start_date <= today, models.Survey.end_date >= today)
         
     return query.all()
