@@ -85,6 +85,9 @@ class AuditAction:
     # Reports
     REPORT_GENERATED = "REPORT_GENERATED"
 
+    # Audit log management
+    AUDIT_LOG_CLEANUP = "AUDIT_LOG_CLEANUP"
+
     # Message lifecycle (communication_service)
     MESSAGE_SENT = "MESSAGE_SENT"
     MESSAGE_ANNOUNCEMENT_SENT = "MESSAGE_ANNOUNCEMENT_SENT"

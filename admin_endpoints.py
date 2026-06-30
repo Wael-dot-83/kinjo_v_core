@@ -6136,16 +6136,15 @@ def get_admin_own_audit_log(
 
 
 @router.post("/admin/audit-log/cleanup")
+@limiter.limit(settings.RATE_LIMIT_ADMIN_WRITE)
 def cleanup_audit_logs(
+    request: Request,
     days: int = Query(90, ge=30, description="Delete audit log entries older than this many days"),
     dry_run: bool = Query(False, description="If true, return count without deleting"),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """Delete audit log entries older than *days* days. Minimum 30 days. Admin only."""
-    if current_user.role != models.UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Admin access required")
-
     cutoff = datetime.now(_JORDAN_TZ) - timedelta(days=days)
     query = db.query(models.AuditLog).filter(models.AuditLog.created_at < cutoff)
     count = query.count()
@@ -6157,12 +6156,11 @@ def cleanup_audit_logs(
     db.commit()
 
     log_audit_event(
-        db=db,
-        user_id=current_user.id,
-        action=AuditAction.DATA_EXPORT,
-        entity_type="AuditLog",
-        entity_id=None,
-        details=f"Deleted {count} audit log entries older than {days} days (cutoff: {cutoff.isoformat()})",
+        db,
+        AuditAction.AUDIT_LOG_CLEANUP,
+        current_user,
+        "AuditLog",
+        metadata={"deleted_count": count, "retention_days": days, "cutoff": cutoff.isoformat()},
         sensitivity_level=3,
     )
 
